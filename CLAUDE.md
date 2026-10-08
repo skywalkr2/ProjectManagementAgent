@@ -36,11 +36,21 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 - Python 3.12+ with uv, FastAPI, Pydantic v2, pytest, ruff. Web: React + TypeScript with Vite and Vitest.
 - `uv run pytest` · `uv run ruff check .` · `uv run python -m engine.selfcheck` · `npm --prefix web test` ·
   `npm --prefix web run build`
-- These exist from build milestone 1 (design Part 12). Until then, say which checks you could not run.
+- These exist from build milestone 1 (design Part 13). Until then, say which checks you could not run.
+
+## Deployment and configuration
+- The same code runs locally or hosted (design Part 11); every difference is a setting, never a check for a host in code.
+- Anything a person might reasonably want different is a config key (design 4.0): settable in files, environment variables
+  (`COCKPIT__<FILE>__<KEY>`), flags and profiles, and editable in the Settings panel. Hard-coding one is a bug.
+- Never assume the app is served at the root: every route, link, cookie and asset path comes from `server.public_url` and
+  `server.base_path`.
+- Hosted mode refuses to start unless the deploy checks pass (design 11.5). Never weaken a check to get a deployment running.
+- Hosting platform names appear only in `deploy/` and docs. No user's domain, account or secret anywhere in the repository;
+  examples use `example.com`.
 
 ## Before finishing any change
 - Run the tests and the self-check: specificity, provider, pattern and boundary scans, config coverage, manifests, both
-  fictional workspaces, the core with no packs enabled, web build.
+  fictional workspaces, the core with no packs enabled, root and nested base paths, deploy checks, web build.
 - New config keys have a schema entry, a default, a description and demo values in both workspaces.
 - No new specific in code; if a scan flags one, move it to config or data, never add it to an allowlist to pass.
 

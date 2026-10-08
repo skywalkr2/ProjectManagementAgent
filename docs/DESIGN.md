@@ -18,7 +18,8 @@ edges. Other uses (publishing support, personal projects, social media) are plug
 
 **How to read this document.** Part 1 says what the product is and where its edges are. Parts 2 to 4 are the architecture, the
 plugin system and the configuration every change must respect. Parts 5 to 7 specify the core. Part 8 is the product rules,
-Part 9 the reference pack, Part 10 the guardrails against specifics in code, Part 11 security, Part 12 the build plan.
+Part 9 the reference pack, Part 10 the guardrails against specifics in code, Part 11 deployment (local or hosted), Part 12
+security, Part 13 the build plan.
 
 ### Terms
 
@@ -106,7 +107,8 @@ adapter.
 
 - **Autonomous sending.** Nothing goes out without the PM approving the exact content. A scheduled post is approved content
   that the PM scheduled; the cockpit never decides on its own to send.
-- **Multi-tenant hosting.** The base is a local, single-user app (Part 11). Storage sits behind a repository layer so a
+- **Multi-tenant hosting.** One deployment serves one workspace. It runs on the PM's own machine or on a web host the PM
+  controls (Part 11), never as a shared service holding several customers' data. Storage sits behind a repository layer so a
   multi-user build can come later without rewriting the engine.
 - **Real-time collaborative editing.** One writer at a time per workspace.
 
@@ -163,6 +165,9 @@ plugins/                bundled plugins, each generic for its domain
 workspaces/
   demo-a/               fictional workspace (committed fixture)
   demo-b/               a second, different fictional workspace
+deploy/                 packaging and deployment recipes (Part 11)
+  container/            the container image every hosted recipe builds on
+  <target>/             one folder per hosting target; may name that host, never a user's domain
 tests/
 docs/
   DESIGN.md             this document
@@ -206,7 +211,11 @@ committed here, as fixtures; tests copy them to a temporary folder before runnin
 | Output layout: sections, columns, sort orders | `config/render.yaml` + templates | "Action Items: Project, Notes, Owner, Due, Status" |
 | Status labels and their colors | `config/status.yaml` | "At Risk" maps to amber |
 | Calendar meaning ("this week", non-working days) | `config/calendar.yaml` | week ends Friday; a team's holidays |
-| Tab order, hidden panels, quick links | `config/ui.yaml` | hide the Portfolio tab in a personal workspace |
+| Tab order, hidden panels, quick links, branding | `config/ui.yaml` | hide the Portfolio tab in a personal workspace |
+| Where and how the app runs: mode, address, base path | `config/server.yaml` | hosted at `https://example.com/admin` |
+| How people sign in | `config/auth.yaml` | password with a one-time code, or a sign-in provider |
+| Where data is stored and backed up | `config/storage.yaml` | files with snapshots pushed to a private git remote |
+| Packaging for a hosting platform | a recipe in `deploy/<target>/` | a container plus a reverse proxy |
 | Which AI provider and model does which task | `config/ai.yaml` | "routine tasks on provider A's small model" |
 | A plugin's settings | `config/plugins/<plugin>.yaml` | the reference pack's portfolio grouping label |
 | Prompts and instructions the AI gets | `prompts/` templates | the changeset instructions, the update-writing style |
@@ -225,9 +234,10 @@ extension point. It is never an `if team == "X"` or an `if plugin == "Y"` in the
 - **React + TypeScript**, built with **Vite**, tested with **Vitest**. The UI gets its panel definitions from the API.
 - **Plugins** are Python packages. Installed ones are found by the entry-point group `pm_cockpit.plugins`; bundled and private
   ones by scanning `plugins/` and `<workspace>/plugins/`.
-- **Storage** starts as JSON and YAML files in the workspace git repository, behind a repository layer; SQLite or Postgres
-  later.
-- **Runs locally** as a single-user app (Part 11).
+- **Storage** starts as JSON and YAML files in the workspace git repository, behind a repository layer; other backends
+  (SQLite, Postgres, object storage for sources) plug in through the same layer (4.15).
+- **Runs locally or hosted** from the same code (Part 11). One container image serves every hosted target; the UI build
+  works under any base path without rebuilding.
 
 The reasons are recorded in `docs/decisions.md`.
 
@@ -235,7 +245,7 @@ The reasons are recorded in `docs/decisions.md`.
 
 ## Part 3. Plugin system
 
-The plugin system is what makes the core a base. Build it first (Part 12, milestone 1) and build the reference pack on it, so the
+The plugin system is what makes the core a base. Build it first (Part 13, milestone 1) and build the reference pack on it, so the
 first real use proves the extension points instead of bypassing them.
 
 ### 3.1 Kinds of plugins
@@ -295,7 +305,9 @@ where it came from.
 | Today contributor | lines on the Today list | `lines(workspace) -> [TodayLine]` |
 | Job | scheduled work | name, default schedule, needs network, `run()` |
 | Event handler | a reaction to a core event | `subscribe(event, handler)` (3.4) |
-| API route | extra endpoints | mounted under `/api/plugins/<plugin>/` |
+| API route | extra endpoints | mounted under `<base path>/api/plugins/<plugin>/` |
+| Auth provider | a way to sign in | `begin(request)`, `complete(request) -> identity or refusal`, `capabilities()` (11.4) |
+| Storage backend | where records, sources and snapshots live | the repository layer's interface: read, write with merge, lock, list, snapshot (4.15) |
 | Check | the plugin's own self-check | `check() -> problems` |
 
 A new extension point is added to the core when a plugin needs something none of these provide. It is generic, documented here,
@@ -356,6 +368,28 @@ pack in the core.
 All config is YAML (rules prose in Markdown), validated against a schema at startup and by the self-check. Every key has a
 default, so a new workspace runs with an almost empty config. Each file starts with a comment block explaining every key. Core
 config lives in `config/`; each plugin's lives in `config/plugins/<plugin>.yaml`.
+
+### 4.0 Configuration principles
+
+The goal: a person changes how their installation looks, behaves, runs and is secured without changing code.
+
+- **Behavior that someone might reasonably want different is a setting.** Names, labels, wording, layout, schedules,
+  thresholds, routing, which plugins run, where the app is served, how people sign in and where data lives are all config.
+  Hard-coding one of these is a bug.
+- **One schema per file, one source of truth.** Schemas live with the code that reads them (Pydantic models). They produce
+  the validator, the defaults, the comment block in each file, the documentation and the settings forms in the app.
+- **Layers, in order of precedence:** built-in defaults, then the workspace's config files, then environment variables, then
+  command-line flags. Any key can be set from the environment as `COCKPIT__<FILE>__<KEY>` (for example
+  `COCKPIT__SERVER__BASE_PATH=/admin`), which is how hosting platforms usually pass settings. `cockpit config show` prints the
+  effective value of every key and which layer it came from.
+- **Profiles:** `config/profiles/<name>.yaml` holds overrides for one environment (`local`, `hosted`); `COCKPIT_PROFILE`
+  picks one. The same workspace can run on a laptop and on a host with only the profile changing.
+- **Settings in the app:** the Admin tab has a Settings panel with a form per config file, generated from the schemas, with
+  each key's description and default. Saving validates, backs up, writes the file and commits it to the workspace's git, the
+  same way the applier does. Keys set by an environment variable or flag show as locked, with where they came from. Secrets
+  are never shown or typed into config; the form takes a reference (`env:NAME`, `keychain:NAME`, `file:/path`).
+- **Safe to change while running:** most settings apply on save. Settings that need a restart (address, port, base path,
+  storage backend) say so and offer it.
 
 ### 4.1 `config/workspace.yaml`
 
@@ -457,19 +491,61 @@ Plain-language standing rules the PM states while working ("record who raised ea
 
 - **Status:** the status labels in use, their colors, and which count as open, done or at risk.
 - **Calendar:** the week end that "this week" runs through, holidays, and per-team non-working days (by `non_working_calendar`).
-- **UI:** tab order, hidden or reordered panels, quick links in the header.
+- **UI:** tab order, hidden or reordered panels, quick links in the header, and branding: product name shown in the header
+  and browser tab, logo, accent colors, light or dark theme.
 
 ### 4.12 `config/plugins/<plugin>.yaml`
 
 Each enabled plugin's settings, validated against the schema the plugin's manifest names. Same rules as core config: every key
 has a default and a description, and both fictional workspaces carry demo values.
 
+### 4.13 `config/server.yaml`
+
+- `mode`: `local` (default) or `hosted`. Hosted turns on the deploy checks (11.5) and refuses to start if they fail.
+- `bind`: address and port to listen on (local default `127.0.0.1:8765`; hosted usually `0.0.0.0` with the port the platform
+  gives).
+- `public_url`: the address people use, e.g. `https://example.com`. Required when hosted.
+- `base_path`: where the app is mounted under that address, e.g. `/admin` (default `/`). The UI, the API
+  (`<base_path>/api`), cookies and every link the app makes use it; nothing in code assumes the root.
+- `hide`: when hosted, how the app answers someone who isn't signed in: `login` (show the sign-in page) or `not-found`
+  (answer 404 everywhere except a configurable sign-in path, so a passer-by can't tell the app is there).
+- `trusted_proxies`: the addresses or networks of reverse proxies whose forwarded headers (client address, protocol) are
+  believed. Headers from anyone else are ignored.
+- `allowed_hosts`: host names the app answers to; requests for any other host are refused.
+- `headers`: security headers (content security policy, HSTS, frame and referrer policy), with safe defaults that can be
+  tightened; `robots: noindex` by default.
+- `cors`: off by default.
+- `role`: `all` (default: web server, scheduler and workers in one process), `web` or `worker`, for hosts that run them
+  separately.
+
+### 4.14 `config/auth.yaml`
+
+- `providers`: an ordered list of sign-in methods, each with a `type` (a registered auth provider, 11.4) and its settings.
+  Several may be enabled; the sign-in page offers each.
+- `users`: who may sign in, by identity per provider (an email address for a sign-in provider, a username for a password).
+  Everyone listed has full access in the base; roles are a later feature.
+- `require_second_factor`: when hosted, a password alone is refused; defaults to true.
+- `session`: idle timeout, absolute lifetime, remember-device length, cookie name.
+- `lockout`: failed attempts before a pause, pause length, rate limit per address.
+- `recovery`: how to get back in when locked out (one-time recovery codes generated at setup; a command run on the server
+  that resets a user).
+
+### 4.15 `config/storage.yaml`
+
+- `backend`: `files` (default: JSON and YAML in the workspace folder) or a registered storage backend (SQLite, Postgres,
+  object storage for sources). Changing backend runs an export and import, with a snapshot first.
+- `path`: where the workspace lives on disk, when the backend uses one. Hosted platforms need it on a persistent volume.
+- `snapshots`: how often to commit, and an optional `remote` (a private git repository) to push to after each snapshot, so a
+  hosted install has an off-site copy.
+- `backups`: optional export of the whole workspace on a schedule, to a folder or an object store.
+
 ---
 
 ## Part 5. Data model and storage
 
-Start with JSON and YAML files in the workspace git repository; move to SQLite or Postgres for multi-user. The engine talks to
-storage through a repository layer so the swap is local. Plugins store records through the same layer.
+Start with JSON and YAML files in the workspace git repository. The engine talks to storage through a repository layer, and
+the backend is chosen in `config/storage.yaml` (4.15), so moving to SQLite, Postgres or object storage is a config change plus a
+backend plugin. Plugins store records through the same layer.
 
 ### 5.1 Core entities
 
@@ -663,7 +739,9 @@ name. Grouping in the UI uses the same normalizer.
 ### 6.14 Scheduler and offline behavior
 
 Jobs that need the network wait while it's down and run when it returns ("Offline" shown, not failed). After sleep, the first
-refresh runs on wake when data is stale. A held job doesn't count as a run. Plugin jobs follow the same rules.
+refresh runs on wake when data is stale. A held job doesn't count as a run. Plugin jobs follow the same rules. Jobs run in
+the process whose `server.role` is `all` or `worker`; a lock in the storage layer makes sure only one scheduler runs at a time,
+even when a host starts more than one copy.
 
 ### 6.15 Today builder
 
@@ -727,7 +805,7 @@ runs and tell the PM. A usage limit pauses that provider until its reset (and th
 loop.
 
 **Data handling.** Each provider has `allowed_data` levels. Inputs marked restricted only go to providers allowed to see them; if
-none is, the request goes to the PM instead. Secrets come from the environment or the OS keychain, never from config files.
+none is, the request goes to the PM instead. Secrets come from secret references (Part 12), never from config files.
 
 **Naming.** The assistant's display name is configuration and is the only name people see; vendor and model names appear only in
 `config/ai.yaml`, the adapters, the usage reports and the evaluation reports.
@@ -745,14 +823,16 @@ none is, the request goes to the PM instead. Secrets come from the environment o
 
 ### 7.1 Shell and layout
 
-- One header bar: product name, date, live indicator and last check, tabs (a segmented control, vertically centered, same height
+- One header bar: product name and logo (from `config/ui.yaml`), date, live indicator and last check, tabs (a segmented control, vertically centered, same height
   as the buttons), a Today button with a count, configurable quick links, Refresh, a Jobs menu, Log.
 - Tabs and their panels come from a **panel registry**: the core registers its panels, plugins register theirs, and
   `config/ui.yaml` may reorder or hide them. Default layout:
   - **Work tab:** Automation issues (when any), then a row with **What changed** (two columns wide) and **Waiting to go out**,
     then **Follow-ups** (two columns wide) and **My meetings**.
   - **Portfolio tab:** project health table grouped by the configured grouping; plugins add sections.
-  - **Admin tab:** request an update; the assistant's queue; plugins (enabled, version, what each may reach, its issues).
+  - **Admin tab:** request an update; the assistant's queue; plugins (enabled, version, what each may reach, its issues);
+    **Settings** (a form per config file, 4.0); **Security** (who is signed in, recent sign-ins and failures, deploy check
+    results when hosted).
   - A tab per pack when the pack declares one.
 
 ### 7.2 Plugin panels
@@ -977,6 +1057,8 @@ plugin system adds a second failure to prevent: the core growing special cases f
   organization's specifics.
 - **Workspaces** (config and data, outside this repository) hold every deployment specific.
 - **Private plugins** (`<workspace>/plugins/`) may be specific to that deployment and never enter this repository.
+- **Deploy recipes** (`deploy/<target>/`) may name their hosting platform. They never contain a user's domain, account or
+  secrets; examples everywhere use `example.com`.
 - **Rationale** lives in `docs/decisions.md` (product) or the workspace's `docs/decisions.md` (deployment): dated entries with
   what, who decided and why. Code comments explain what the code does in general terms; they never quote a user or carry a date.
 
@@ -1001,6 +1083,8 @@ plugin system adds a second failure to prevent: the core growing special cases f
    ones it uses.
 8. **UI labels:** user-visible strings that name the assistant, people or groups come from config; a test renders the UI against
    both fictional workspaces.
+9. **Deployment:** hosting platform names appear only in `deploy/` and docs; every recipe's profile passes the deploy checks
+   (11.5); the UI and API tests run under the root path and under a nested base path.
 
 ### 10.3 Process (for every requirement)
 
@@ -1025,28 +1109,145 @@ or routing rule) or rules.md, not code.
 
 ---
 
-## Part 11. Security and privacy
+## Part 11. Deployment
 
-- **Local, single user.** The API listens on `127.0.0.1` only and requires a per-install session token that the UI receives at
-  launch. Exposing it beyond the machine is a later, multi-user feature with real authentication.
-- **Secrets** come from the environment or the OS keychain, referenced in config as `env:NAME` or `keychain:NAME`, never stored
-  in config or data. Plugins get only the secrets their manifest names.
-- **Outbound is gated twice:** content leaves only through the publisher after approval (8.1), and network calls from plugins go
-  through the host's HTTP client, limited to the hosts each manifest declares.
-- **Data levels** (open, internal, restricted) follow every source into packets, AI providers and plugins (6.16, 3.5).
-- **Audit:** every changeset, approval, send and plugin enable or disable is logged in the workspace and kept in its git history.
-- **Plugins run in-process** in the base, so enabling a third-party plugin means trusting its code; the Admin tab shows what each
-  plugin may reach before it is enabled. Running untrusted plugins in a separate process is a later step.
+The same code runs on the PM's own computer or on a web host. What differs is configuration (`config/server.yaml`,
+`config/auth.yaml`, `config/storage.yaml`, a profile) and packaging (`deploy/`). Nothing in the engine, API or UI checks which
+host it is on; every difference is a setting the code reads, tested both ways.
+
+### 11.1 Modes
+
+| | Local | Hosted |
+|---|---|---|
+| Where it runs | the PM's computer | a server, a container platform, or a machine behind a tunnel, reached at the PM's own domain |
+| Who can reach it | only this machine (`127.0.0.1`) | anyone on the internet who gets past sign-in |
+| Sign-in | an install token handed to the browser at launch; a password optional | required: at least one provider from 11.4; passwords need a second factor |
+| Storage | files in the workspace folder | files on a persistent volume, or another backend; snapshots pushed to a private remote |
+| Scheduler | runs while the computer is awake; catches up after sleep (6.14) | runs continuously; one scheduler at a time |
+| Command-line AI agents | available if installed | only if the image includes them; capability routing falls back otherwise |
+| Start-up checks | config validation | config validation and the deploy checks (11.5); start is refused if any fail |
+
+### 11.2 Serving under a path, and hiding
+
+The app can live at the root of its own domain or under a path on a site that serves something else: for example
+`https://example.com/admin` while the public site stays at `https://example.com/`. `server.base_path` sets it. What makes that
+work without code changes:
+
+- The UI is built with relative asset paths and reads its base path and API address from a small config document the server
+  returns, so one build works under any path.
+- Every route, redirect, cookie path and generated link is built from `public_url` and `base_path`. Tests run the UI and API
+  both at `/` and under a nested path.
+- A reverse proxy in front (the host's routing rules, a tunnel, a web server) forwards only that path to the app; the rest of
+  the site never reaches it.
+
+**Hiding** (`server.hide: not-found`) makes the app answer 404 to anyone not signed in, except at the sign-in path, which can be
+set to something hard to guess. It also sends `noindex`. Hiding cuts noise from scanners; it is not protection. Sign-in (11.4)
+and the deploy checks (11.5) protect the app, and hosted mode never relies on hiding alone.
+
+### 11.3 Deploying without code changes
+
+Everything in this part is set through config files, environment variables or flags (4.0), so a hosting platform's settings
+page is enough: `COCKPIT_PROFILE=hosted`, `COCKPIT__SERVER__PUBLIC_URL=https://example.com`,
+`COCKPIT__SERVER__BASE_PATH=/admin`, and secrets stored as platform secrets and referenced by `env:` names.
+`cockpit init --profile hosted` writes a starting profile with every key commented, and `cockpit deploy check` lists what is
+missing before the first start.
+
+### 11.4 Sign-in
+
+Sign-in methods are auth providers, an extension point (3.3). The core ships:
+
+- **Install token:** the default in local mode. A random token is created at install and handed to the browser when the PM
+  starts the app. Not accepted as the only method in hosted mode.
+- **Password with a second factor:** passwords hashed with a memory-hard algorithm (argon2id); one-time codes from an
+  authenticator app; passkeys (WebAuthn) as a second factor or instead of the password. Recovery codes shown once at setup.
+- **Sign-in provider (OpenID Connect):** any standard provider, configured by issuer, client id and a client secret reference;
+  only identities listed in `auth.users` get in.
+- **Identity-aware proxy:** for hosts that put their own access gateway in front. The app verifies the signed token the proxy
+  adds (signature against the proxy's published keys, issuer, audience, expiry, all from config); it never trusts a plain
+  header naming the user. Best combined with an app sign-in, so one misconfiguration doesn't open the app.
+
+**Sessions:** secure, HTTP-only, same-site cookies scoped to the base path; idle and absolute timeouts; sign out everywhere.
+Every state-changing request carries a CSRF token. Failed sign-ins are rate limited and locked out per `auth.lockout`. Every
+sign-in and failure is logged and shown on the Security panel (7.1).
+
+### 11.5 Deploy checks
+
+`cockpit deploy check` runs these; the self-check runs them against both fictional workspaces with a hosted profile; a hosted
+server runs them at start and refuses to serve if any fail.
+
+- `public_url` is HTTPS, and requests arrive over HTTPS (directly, or from a trusted proxy that says so).
+- At least one provider other than the install token is enabled; passwords require a second factor; at least one user is
+  listed.
+- The session signing key comes from a secret, is long enough, and isn't a default.
+- Every secret reference resolves, and no secret value appears in any config file.
+- `allowed_hosts` and `trusted_proxies` are set; CORS is off or limited to listed origins; security headers are on.
+- Storage is persistent (the backend reports it) and the last snapshot succeeded; a snapshot remote or backup is configured, or
+  the PM has explicitly accepted running without one.
+- `public_url` and `base_path` agree with what the proxy forwards (checked by fetching the app's own health address through
+  `public_url`).
+- No enabled plugin declares a network host or data level the deployment's settings forbid.
+
+Warnings that don't block start: command-line AI agents unavailable, budgets unset, only one sign-in method (no fallback if it
+breaks).
+
+### 11.6 Packaging and recipes
+
+The engine needs long-running jobs, a file system and git, so it runs as a process or a container, not as short-lived edge
+functions.
+
+- **Local:** `cockpit serve --workspace <path>` starts everything and opens the browser with the install token. Optional
+  start-at-login service files for each operating system.
+- **Container image** (`deploy/container/`): one image with the API, the built UI and the scheduler; runs as a non-root user;
+  the workspace on a mounted volume; configured only through environment variables and mounted config. Every hosted recipe
+  builds on it.
+- **Recipes** (`deploy/<target>/`): one folder per hosting target, with its profile, any platform config files and a
+  step-by-step README, plus a test that the profile passes the deploy checks.
+
+First recipes, in order:
+
+1. **Tunnel to a machine the PM owns:** the app runs on the PM's computer or a small always-on box. A tunnel publishes only
+   `public_url` + `base_path`, without opening ports, and the tunnel provider's access gateway sits in front (the
+   identity-aware proxy provider), plus the app's own sign-in. For example: Cloudflare Tunnel, with Cloudflare Access protecting
+   only the `/admin` path of a domain whose public site is served elsewhere. File storage and git stay as they are.
+2. **Container host:** the image on a platform with a persistent volume (a small virtual server behind a reverse proxy, or a
+   container service). Cloudflare's container service can run the image, but at the time of writing its container disks don't
+   persist, so it needs a storage backend other than local files (4.15); check the platform's current limits when writing
+   that recipe.
+
+The UI build can also be served from a static host with the API elsewhere (it reads its API address from config), but that is
+not a first recipe.
 
 ---
 
-## Part 12. Build plan
+## Part 12. Security and privacy
+
+- **Two modes, one model.** Local mode listens on `127.0.0.1` and uses the install token. Hosted mode requires real sign-in and
+  passes the deploy checks before it serves (Part 11). Roles for several users are later; in the base, everyone allowed in has
+  full access.
+- **Secrets** come from the environment, the OS keychain or a mounted file, referenced in config as `env:NAME`,
+  `keychain:NAME` or `file:/path`, never stored in config or data. Hosted platforms pass them as environment secrets. Plugins
+  get only the secrets their manifest names.
+- **Outbound is gated twice:** content leaves only through the publisher after approval (8.1), and network calls from plugins go
+  through the host's HTTP client, limited to the hosts each manifest declares.
+- **Data levels** (open, internal, restricted) follow every source into packets, AI providers and plugins (6.16, 3.5).
+- **Audit:** every changeset, approval, send, settings change, sign-in and plugin enable or disable is logged in the workspace
+  and kept in its git history.
+- **Plugins run in-process** in the base, so enabling a third-party plugin means trusting its code; the Admin tab shows what each
+  plugin may reach before it is enabled. Running untrusted plugins in a separate process is a later step.
+- **Internet-facing hygiene** (hosted): dependencies pinned and scanned in CI; the container runs as a non-root user with a
+  read-only file system apart from the workspace volume; uploaded files are stored as data, never executed, and served only as
+  downloads.
+
+---
+
+## Part 13. Build plan
 
 Each milestone ends with tests passing against both fictional workspaces, the core passing alone, and the scans green.
 
 1. **Skeleton, guardrails and the plugin host:** repository layout (2.2), tooling (uv, ruff, pytest, Vite, Vitest), config
-   schemas with defaults, `engine.plugin_api` with registries for every extension point, manifests, the event bus, the scans
-   and the self-check, both fictional workspaces, the fake plugin.
+   schemas with defaults, config layers (defaults, files, environment, flags, profiles) and `cockpit config show`,
+   `engine.plugin_api` with registries for every extension point, manifests, the event bus, the scans and the self-check, both
+   fictional workspaces, the fake plugin, and `cockpit serve` in local mode with the install token and base path support.
 2. **Records and rendering:** core record types and `ext` fields, templates, render-time ordering, roll-ups, drafts, the
    clipboard channel and the fake page channel.
 3. **Changesets and the applier:** op registry (core and plugin ops), generated JSON Schema, validation, normalization, backup,
@@ -1055,7 +1256,8 @@ Each milestone ends with tests passing against both fictional workspaces, the co
 5. **Dispatcher and the AI provider layer with a stub adapter:** the `AiTask` contract, task-kind registry, adapter interface,
    capability routing, `Run` records; the stub adapter turns fixtures into changesets from templates, so everything runs with no
    AI account.
-6. **UI part 1:** shell, panel registry with declarative panels, What changed, Waiting to go out with the diff renderer.
+6. **UI part 1:** shell (branding from config, working under any base path), panel registry with declarative panels, What
+   changed, Waiting to go out with the diff renderer, the Settings panel generated from the config schemas.
 7. **Questions and actions:** services, notices, names normalizer and sweep, Follow-ups by person and by group, Reassign.
 8. **Publisher:** dry run, content-hash approval, scheduled drafts, concurrency check (fake channel first).
 9. **The reference pack** (Part 9) on the fictional workspaces, using only the plugin API. Anything it needs that the API lacks
@@ -1065,13 +1267,16 @@ Each milestone ends with tests passing against both fictional workspaces, the co
     classification, budgets, data-level routing; the golden fixture set and `evaluate`. A second vendor's adapter later needs no
     change outside its adapter and `config/ai.yaml` (a test proves it with two adapters).
 12. **Governor, scheduler, offline behavior, issues and the fixer.**
-13. **Today builder, meetings, weekly check-up, update writer.**
-14. **Real connectors and channels** (one wiki, one tracker) as plugins, configured only through config.
+13. **Hosted deployment:** auth providers (password with a second factor, passkeys, OpenID Connect, identity-aware proxy),
+    sessions, CSRF, lockout, hiding, the deploy checks, the Security panel, the container image and the first two recipes.
+14. **Today builder, meetings, weekly check-up, update writer.**
+15. **Real connectors and channels** (one wiki, one tracker) as plugins, configured only through config.
 
 **Plugin API 1.0** is declared when both packs run on it unchanged. Until then it is 0.x and may change.
 
-**After the base** (each a pack or plugin, in whatever order is useful): publishing support, social media channels, mailbox and
-calendar connectors, more AI vendors, running untrusted plugins out of process, multi-user storage.
+**After the base** (each a pack, plugin or recipe, in whatever order is useful): publishing support, social media channels,
+mailbox and calendar connectors, more AI vendors, more deploy recipes and storage backends, running untrusted plugins out of
+process, roles for several users.
 
 ---
 

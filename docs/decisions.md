@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-08: Local and hosted deployment from the same code; configuration first
+
+**Decided by:** project owner.
+
+**What:** The app runs in two modes, set by configuration: local (on the PM's computer, reachable only from it) and hosted (on a
+web host the PM controls, at the PM's domain, optionally under a path such as `/admin` and optionally hidden from anyone not
+signed in). Hosted mode requires real sign-in (pluggable auth providers) and refuses to start unless a set of deploy checks pass.
+Packaging lives in `deploy/`: one container image plus a recipe per hosting target, starting with a tunnel to a machine the PM
+owns and then a container host. Every setting can come from files, environment variables, flags or profiles, and is editable in
+a Settings panel generated from the config schemas.
+
+**Why:** The owner wants to run the product locally or on a web host, behind security checks, at a configurable hidden path, and
+to change an installation without changing code. Hiding a path is not security on its own, so the deploy checks make real
+sign-in, HTTPS and secret handling a condition of serving. The engine needs long-running jobs, a file system and git, so hosted
+targets run it as a container or a process, not as short-lived edge functions. This replaces the earlier "local only" part of the
+technology stack decision.
+
 ## 2026-10-08: Design recast as a generic core with plugins
 
 **Decided by:** project owner.
