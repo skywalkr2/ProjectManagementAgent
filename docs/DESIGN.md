@@ -377,6 +377,10 @@ The goal: a person changes how their installation looks, behaves, runs and is se
 - **Behavior that someone might reasonably want different is a setting.** Names, labels, wording, layout, schedules,
   thresholds, routing, which plugins run, where the app is served, how people sign in and where data lives are all config.
   Hard-coding one of these is a bug.
+- **Where anything is looked up is a setting.** Every page, page tree, query, folder, feed, field name and schedule the
+  product reads lives in config (`watch.yaml`, `facts.yaml`, a connector's settings), named by a key. Code and default
+  prompts say "the configured source for this kind of fact", never "the release page" or "the sprint field". A behavior that
+  needs a new kind of source gets a config key and a lookup step, not a literal.
 - **One schema per file, one source of truth.** Schemas live with the code that reads them (Pydantic models). They produce
   the validator, the defaults, the comment block in each file, the documentation and the settings forms in the app.
 - **Layers, in order of precedence:** built-in defaults, then the workspace's config files, then environment variables, then
@@ -594,6 +598,8 @@ kinds:
   an optional `from` (a kind this one is looked up from), `missing` (`tbd` or `ask-pm`; never a question to someone else),
   `terms` and `no_questions_to`.
 - Sources named in lookups are watched, so a schedule change updates every date that depends on it.
+- Connector field names (`release`, `sprint`, `fix_version`), watch entries and keys are all values here, not code; a
+  connector reads whatever field it is told to.
 
 ---
 
@@ -877,7 +883,9 @@ capabilities, and falls through the fallback chain if it can't serve the task. A
 lacks a required capability fails the self-check.
 
 **Prompts are workspace content, not code.** Instructions, examples and style guides live in `prompts/` templates; the core and
-plugins ship defaults that the workspace can override. Per-provider variations (one vendor prefers XML-tagged sections, another
+plugins ship defaults that the workspace can override. Default templates refer to sources through template variables filled
+from config (`{{ facts.production_date.sources }}`, `{{ scope.domains }}`), never by a page title, query or field name written
+into the text. Per-provider variations (one vendor prefers XML-tagged sections, another
 JSON) are handled by the adapter's prompt formatter, not by forking the instructions.
 
 **Evaluation before any switch.** A golden set of fictional fixtures (inputs with the expected changesets and questions) scores a
@@ -920,7 +928,8 @@ check-up and the UI all ask it; no other part of the product decides scope on it
 
 ### 6.19 Facts and lookups
 
-Some facts have a published home: a work item's release lives in the tracker, a release's production date on a schedule page.
+Some facts have a published home. In the reference pack's setup, for example, a work item's release lives in a tracker field
+and a release's production date on a schedule page; which tracker, which field and which pages are settings.
 Asking a person for them wastes their time and goes stale. `config/facts.yaml` (4.16) names those kinds and where each is
 looked up.
 
@@ -1147,8 +1156,11 @@ kinds, not on one vendor: a wiki vendor's connector and channel live in their ow
 - **Renderers and templates:** the summary page (rows roll up from project pages), project pages, the archive.
 - **Triage defaults:** the `container-not-mapped`, `owner-not-ours` and `child-item` rules pre-filled for page trees and
   tracker sub-tasks.
-- **Fact defaults** (`config/facts.yaml`): `ship_release` (from the delivery tracker, else the tracker item's sprint or fix
-  version) and `production_date` (from the delivery team's schedule page, one per delivery team); no release yet means TBD.
+- **Fact defaults** (a starting `config/facts.yaml`): `ship_release` (a delivery tracker's release field, else the tracker
+  item's sprint or fix version field) and `production_date` (a schedule page per delivery team); no release yet means TBD.
+  The pack ships these as a template with placeholders; the workspace fills in which connector, which field names and which
+  pages. Until it does, a Today line says "Set up: choose the schedule page for each delivery team", and the kinds behave as
+  `missing: ask-pm`. Nothing in the pack's code names a field or a page.
 - **Routing defaults:** program-date questions observed, not asked; dates never asked of release or delivery people.
 - **AI task kinds:** `workplace-pm/checkup-goals` and `workplace-pm/status-update` with their prompt templates.
 - **Panels:** portfolio health by program, milestones to check.
@@ -1186,6 +1198,9 @@ plugin system adds a second failure to prevent: the core growing special cases f
   organization's specifics.
 - **Workspaces** (config and data, outside this repository) hold every deployment specific.
 - **Private plugins** (`<workspace>/plugins/`) may be specific to that deployment and never enter this repository.
+- **Sources are config** in core and bundled plugins alike: code never names a page, page tree, query, folder, feed, field or
+  schedule to read; it takes them from config keys (4.0). A plugin may name the product it connects to, never what to read in
+  it.
 - **Deploy recipes** (`deploy/<target>/`) may name their hosting platform. They never contain a user's domain, account or
   secrets; examples everywhere use `example.com`.
 - **Rationale** lives in `docs/decisions.md` (product) or the workspace's `docs/decisions.md` (deployment): dated entries with
@@ -1193,8 +1208,9 @@ plugin system adds a second failure to prevent: the core growing special cases f
 
 ### 10.2 Enforcement (automated, part of the test suite and the self-check)
 
-1. **Specificity scan:** reads every name, alias, team, org, group, system name, URL host and page id from the fictional
-   workspaces, and with `--workspace <path>` from a private workspace too, and fails if any appears in core code, bundled
+1. **Specificity scan:** reads every name, alias, team, org, group, system name, URL host, page id, page title, query, folder
+   path and connector field name (from people data and from `watch.yaml`, `facts.yaml`, `scope.yaml` and connector settings)
+   from the fictional workspaces, and with `--workspace <path>` from a private workspace too, and fails if any appears in core code, bundled
    plugins, tests outside fixtures, or UI source. Findings from a private workspace print only file and line, never the matched
    value, so a scan log can't leak it.
 2. **Provider scan:** fails if an AI vendor or model name (from the adapter registry and `config/ai.yaml`) appears anywhere
@@ -1210,10 +1226,12 @@ plugin system adds a second failure to prevent: the core growing special cases f
    (core plus the fake connector, fake channel and clipboard), so anything that only works for one dataset or one pack fails.
 7. **Manifests:** what each plugin registers matches its manifest; declared network hosts, secrets and data levels are the only
    ones it uses.
-8. **UI labels:** user-visible strings that name the assistant, people or groups come from config; a test renders the UI against
+8. **Prompt templates:** default templates in core and bundled plugins are scanned like code (scans 1 and 3), so a source
+   written into a prompt fails the same way as one written into code.
+9. **UI labels:** user-visible strings that name the assistant, people or groups come from config; a test renders the UI against
    both fictional workspaces.
-9. **Deployment:** hosting platform names appear only in `deploy/` and docs; every recipe's profile passes the deploy checks
-   (11.5); the UI and API tests run under the root path and under a nested base path.
+10. **Deployment:** hosting platform names appear only in `deploy/` and docs; every recipe's profile passes the deploy checks
+    (11.5); the UI and API tests run under the root path and under a nested base path.
 
 ### 10.3 Process (for every requirement)
 

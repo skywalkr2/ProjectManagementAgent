@@ -42,6 +42,8 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 - The same code runs locally or hosted (design Part 11); every difference is a setting, never a check for a host in code.
 - Anything a person might reasonably want different is a config key (design 4.0): settable in files, environment variables
   (`COCKPIT__<FILE>__<KEY>`), flags and profiles, and editable in the Settings panel. Hard-coding one is a bug.
+- Where anything is looked up (a page, tree, query, folder, feed, field name, schedule) is config (`watch.yaml`,
+  `facts.yaml`, connector settings). Code and default prompts refer to "the configured source", never "the release page".
 - Never assume the app is served at the root: every route, link, cookie and asset path comes from `server.public_url` and
   `server.base_path`.
 - Hosted mode refuses to start unless the deploy checks pass (design 11.5). Never weaken a check to get a deployment running.

@@ -3,6 +3,19 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-08: Every source is a setting
+
+**Decided by:** project owner.
+
+**What:** Where anything is looked up (a page, page tree, query, folder, feed, field name or schedule) is always configuration,
+never code or default prompt text. Core and bundled plugins refer to sources by config key; default prompt templates use
+template variables filled from config. Packs ship source settings as templates with placeholders that the workspace fills in,
+with a Today setup line until it does. The specificity scan now also reads page titles, queries, folder paths and field names
+from the fictional workspaces' config, and scans default prompt templates as well as code.
+
+**Why:** Rules like "look on the release page" are easy to write straight into code or prompts while building for one
+deployment, and each one ties the product to that deployment's tools and page layout.
+
 ## 2026-10-08: Lessons from the original deployment since the first design
 
 **Decided by:** project owner.
