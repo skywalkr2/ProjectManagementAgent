@@ -61,6 +61,8 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 - One row per thing in the UI; lists, not run-on lines; labels in plain words; the model's name never shown.
 - Action owners are people, written in the workspace's owner format; names stored in full on every write path.
 - Questions are written for their reader and link only what the reader can open; decisions are questions to the PM.
+- Scope is enforced, not suggested (design 6.18): only the tracked area gets actions and detailed questions. Other areas are
+  observed; at most one impact question goes to that area's contact. Scope decisions come from the scope resolver only.
 - Rules before AI; never let two versions of a change race; saves merge, never clobber; recover after sleep and outages.
 
 ## Demo data

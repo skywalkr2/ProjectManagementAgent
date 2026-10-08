@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-08: Scope is enforced by the applier, with named domains and one contact each
+
+**Decided by:** project owner.
+
+**What:** `config/scope.yaml` gains `domains` (other areas, each with match patterns and one `contact`, usually that area's
+program manager), `cross_domain` (impact-only questions, to the contact only, batched) and `unclassified` (ask the PM; never
+tracked by default). The applier refuses actions owned by anyone outside the tracked area and questions to anyone outside it,
+except an impact question to a domain's contact that names the tracked item it affects. A scope sweep finds existing actions and
+questions that break this and files one bulk decision to the PM. A new `other-domain` triage matcher closes changes that sit
+entirely in another area. One scope resolver is the only place scope is decided.
+
+**Why:** In the original deployment, scope was advisory: the AI was told what to track but nothing stopped it. Changes on shared
+pages that mixed several teams' work produced action items and detailed questions for people in other areas, who don't answer to
+the workspace; that work is the program level's concern. The PM's inbox filled with follow-ups that should never have existed.
+Making scope a deterministic check, with one named contact per other area and only impact questions allowed, stops the failure
+at the write path instead of relying on the model.
+
 ## 2026-10-08: Local and hosted deployment from the same code; configuration first
 
 **Decided by:** project owner.

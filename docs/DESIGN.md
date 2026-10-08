@@ -408,7 +408,8 @@ Approval before anything goes out is not a setting; it is always on.
 
 People with `full_name`, `aliases`, `role`, `team` (optional), `org` (optional), `how_to_reach` (per channel),
 `why_they_matter`, `track_only` (their items are observed, never chased), `non_working_calendar`, `verified` (spelling checked
-against a primary source). The single source for names.
+against a primary source). The single source for names. A person's area (tracked, a domain, or unknown) comes from their team
+and `config/scope.yaml` (4.4); `track_only` marks someone inside the tracked area whose items are still only observed.
 
 ### 4.3 `config/routing.yaml`
 
@@ -419,17 +420,44 @@ guess.
 
 ### 4.4 `config/scope.yaml`
 
-- `tracked`: patterns (owners, teams, item prefixes, systems) whose items get questions, follow-ups and overdue flags
-- `observed`: items recorded as facts but never chased (milestones someone else runs)
-- `parked`: categories recorded in a parked list and otherwise ignored
-- `new_scope`: what counts as new work beyond agreed scope, and that it becomes a pending decision until the owner decides
+Scope says which area is the workspace's own and which belongs to someone else. The applier (6.7) and the scope sweep (6.18)
+enforce it; it is never left to the AI's judgment.
+
+- `tracked`: the workspace's own area: patterns (teams, owners, systems, item prefixes). Only people and items here get action
+  items, detailed questions, follow-ups and overdue flags.
+- `domains`: other areas the PM sees but doesn't run, each with `match` patterns (teams, systems, item prefixes, page trees)
+  and a `contact`: the one person who speaks for that area toward this workspace, usually its program manager. Items in a
+  domain are observed: recorded as facts, never assigned, never chased.
+- `cross_domain`: what may be asked of another area. `allow`: `impact-only` (default) or `none`. `to`: `contact` (always; never
+  individuals inside the domain). `batch`: `later` (default), so cross-domain asks collect into one message per contact.
+  `max_open_per_contact`.
+- `observed`: other items recorded as facts but never chased (milestones someone else runs) that aren't part of a named domain.
+- `parked`: categories recorded in a parked list and otherwise ignored.
+- `unclassified`: what happens to a person or item that matches nothing: `ask` (default: one routing decision to the PM to
+  place them) or `observed`. Never tracked by default.
+- `new_scope`: what counts as new work beyond agreed scope, and that it becomes a pending decision until the owner decides.
+
+```yaml
+tracked:
+  teams: [Orders Core, Orders Platform]
+domains:
+  - name: Payments
+    match: {teams: ["Payments*"], prefixes: [PAY-]}
+    contact: Dana Fox            # program manager who answers for Payments toward us
+  - name: Storefront
+    match: {teams: ["Web*", "Mobile*"], trees: [storefront roadmap]}
+    contact: Ana Ortiz
+cross_domain: {allow: impact-only, to: contact, batch: later}
+unclassified: ask
+```
 
 ### 4.5 `config/watch.yaml`, `config/triage.yaml`, `config/schedule.yaml`
 
 - **Watch:** entries naming a connector instance and what to watch through it (a page with or without children and depth, a
   tree, people's recent edits, a query, a folder, a feed). The settings each entry accepts come from the connector's schema.
 - **Triage:** rules, each with `name`, `kind` (a registered matcher), parameters, and a `why` template shown to the PM. The core
-  matchers are generic: `same-edit`, `cosmetic`, `already-seen-file`, `diff-terms-absent`, `owner-not-ours`,
+  matchers are generic: `same-edit`, `cosmetic`, `already-seen-file`, `diff-terms-absent`, `owner-not-ours`, `other-domain` (a
+  change entirely inside another domain that names no tracked item: kept as a source and closed as observed),
   `container-not-mapped` (an item under a watched container that maps to no project), `child-item`, `unknown-key`. Plugins may
   register more.
 - **Schedule:** jobs (core and plugin) with cron-like times, working hours, which jobs need the network, catch-up behavior
@@ -628,8 +656,8 @@ pulled-back items are recorded so rules can be tuned.
 - Batches queued requests (batch size, scheduled batches, immediate kinds that run within a minute of the PM handing them in,
   with a short delay so a note can follow).
 - **Packet:** for each request, the input, the related records, every open action with its exact key (so the AI can close what
-  the input completed), open questions to the people involved, the rules file, and the op reference (core and enabled plugins'
-  ops). A plugin's AI task kind builds its own packet with the same parts available.
+  the input completed), open questions to the people involved, the area each related person and item is in with each domain's
+  contact (6.18), the rules file, and the op reference (core and enabled plugins' ops). A plugin's AI task kind builds its own packet with the same parts available.
 - **Self-check:** validates each changeset with the applier's checks right after the run and sends failures back for one fix
   round. Recovers the request id from unreadable output and re-queues it.
 - Picks the provider and model from `config/ai.yaml`, with the fallback chain on usage limits or auth failures; a request with
@@ -654,6 +682,11 @@ registry, so the AI is asked for exactly what the applier accepts. The applier h
 - Restricted sources never cited on open outputs.
 - New actions name a person as owner in the workspace's owner format (a team alone or a blank is refused; an unknown person
   means ask the PM first).
+- **Scope** (6.18): an action's owner must be in the tracked area or be the PM. An action for anyone else is refused, with the
+  reason, and the AI records the work as a fact on the observed item instead. A question to anyone outside the tracked area is
+  refused unless `cross_domain.allow` is `impact-only`, it goes to that domain's `contact`, it is marked `impact`, and it names
+  in `affects` the tracked project or item it is about. Questions to people inside another domain who aren't its contact are
+  always refused. An op naming a person whose area is unknown is held and one routing decision goes to the PM.
 - Questions carry links to what they're about; questions to anyone but the PM link only things the recipient can open (no local
   files, no cockpit pages) and contain no assistant bookkeeping in labels.
 - Op-specific checks (paths stay under allowed roots; files don't overwrite unless told).
@@ -726,7 +759,8 @@ name. Grouping in the UI uses the same normalizer.
 ### 6.13 Governor and fixer
 
 - Every few minutes: re-queue requests whose run never finished, push work waiting too long in working hours, repair changes no
-  request carries, detect stale data and outages, run the name sweep and the notices, snapshot the workspace hourly.
+  request carries, detect stale data and outages, run the name sweep, the scope sweep (6.18) and the notices, snapshot the
+  workspace hourly.
 - Problems in the automation become `Issue`s. "Fix it" starts a fix run (the `code-fix` tier in `config/ai.yaml`) whose change
   comes back as a **proposed fix** with a diff; it goes live only when the PM clicks Apply. Proposed fixes can't be hidden by
   "dismiss all".
@@ -817,6 +851,21 @@ none is, the request goes to the PM instead. Secrets come from secret references
 - **Updates on request:** facts since a date, written in the sender's voice; learns from the edited "as sent" version (roles
   not names where the sender prefers, soft asks, commitments exactly as stated).
 
+### 6.18 Scope
+
+One resolver answers "whose area is this?" for any person, team, item or project: tracked, a named domain (with its contact),
+observed, parked or unknown, from `config/scope.yaml` and people data. The applier, triage, routing, notices, Today, the
+check-up and the UI all ask it; no other part of the product decides scope on its own.
+
+- **Scope sweep:** on a schedule, and whenever scope config or people data changes, finds open actions, notices and questions
+  whose owner or recipient is outside the tracked area and files **one** decision to the PM, grouped by domain, with bulk
+  choices: drop them (kept in the dropped register with the reason "outside our area"), turn them into observed facts, or
+  replace them with one impact question to the domain's contact. Nothing changes until the PM picks.
+- **Cross-domain asks:** questions to a domain's contact collect into one message per contact (batch `later`), each tied to the
+  tracked item it affects. When that item closes or leaves scope, its cross-domain question is dropped.
+- **Moving the line:** when the PM says an item or team is ours (or isn't), the "Respond to the assistant" flow proposes the
+  scope config change; the applier and the sweep take it from there.
+
 ---
 
 ## Part 7. UI specification (React)
@@ -879,7 +928,8 @@ ship a React component, registered at build time against the same panel interfac
 ### 7.5 Follow-ups
 
 - **By person:** "You" first (decisions with Answer; your action items), then everyone A to Z, one section per person (names
-  normalized). Each person: open questions (pill: ready to send / waiting Nd / later), then "Their action items N"
+  normalized). Only people in the tracked area and domain contacts get a section; a contact's cross-domain questions are
+  grouped under the domain's name. Each person: open questions (pill: ready to send / waiting Nd / later), then "Their action items N"
   (collapsible, with "due" and "N to send" tags). Header: **Copy N** and **Mark sent**, plus **Send** when the person has a
   channel configured in `how_to_reach` (it creates a draft that waits for approval like any other).
 - **Copy** builds one message: greeting with first name, questions first (numbered when several), then "Action items with you:"
@@ -936,7 +986,8 @@ apply to the reference pack are in 9.5.
 | A question to someone else says only what they need to answer: no bookkeeping, no options about how your outputs are organized, no long quotes of their own words, only links they can open, the whole gap in one ask | applier link and label checks, AI rules |
 | Unsure who it goes to: the PM routes it first | questions service hold |
 | Decisions are questions addressed to the PM, by recipient | questions service, Today, check-up |
-| Don't chase what you only observe | scope config |
+| Only the tracked area gets detailed questions; other areas are observed, not chased | applier scope check, scope sweep |
+| A question about another area's work goes only to that area's contact, only about the effect on our work, one batched message per contact | applier scope check, `cross_domain` config |
 | A question asked in the conversation it came from is filed as asked | AI rules |
 | When an answer arrives, re-check every open question to that person | answer flow |
 | When an input answers questions, close them; search sources before filing a new one | packet includes open questions |
@@ -950,6 +1001,7 @@ apply to the reference pack are in 9.5.
 | Before adding an action, search open and done actions for the same deliverable | applier near-duplicate warning |
 | When an input completes actions, close them across every related project | packet lists open actions with keys |
 | Action owners are people, in the workspace's owner format | applier, names normalizer |
+| Actions go only to people in the tracked area or the PM; another area's work is a fact, not an action | applier scope check, scope sweep |
 | Separate who did it from who reported it | actions service |
 | A nudge isn't a completion | Followed up vs They finished it |
 | Each follow-up the PM owns after a meeting is its own action; files they send are linked where they can open them | AI rules, meeting template |
