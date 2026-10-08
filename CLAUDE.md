@@ -63,6 +63,8 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 - Questions are written for their reader and link only what the reader can open; decisions are questions to the PM.
 - Scope is enforced, not suggested (design 6.18): only the tracked area gets actions and detailed questions. Other areas are
   observed; at most one impact question goes to that area's contact. Scope decisions come from the scope resolver only.
+- Facts a configured source holds (releases, schedule dates) are looked up, never asked (design 6.19); none found means TBD.
+- Ids never repeat. A rename is one op that updates every reference. A code fix is the last resort, used only when no op can do it.
 - Rules before AI; never let two versions of a change race; saves merge, never clobber; recover after sleep and outages.
 
 ## Demo data

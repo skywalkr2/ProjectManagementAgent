@@ -3,6 +3,32 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-08: Lessons from the original deployment since the first design
+
+**Decided by:** project owner.
+
+Each came from a failure in the original deployment.
+
+- **Other areas, even when named in minutes or program pages.** Domains now match owner labels as they appear on pages and in
+  minutes, and the applier refuses an action whose owner label matches another domain. The owner described this as
+  `other_team_owners` and `program_managers` per area; in the product they are each domain's `match.owners` and `contact`.
+- **Dates are looked up, not asked.** New `config/facts.yaml` and fact resolver (6.19): an item's release comes from the
+  delivery tracker or the tracker item's sprint or fix version, the release's production date from the delivery team's schedule
+  page, and nothing found means TBD. The applier refuses questions for those facts, and any date question to the people listed
+  in `no_questions_to`. This is a separate file rather than part of `scope.yaml` (where the owner first put it) because it is
+  about where facts live, not whose area something is, and other packs need the same mechanism (publication dates, for example).
+  Why: people were asked for dates that a schedule page already held, and the answers went stale.
+- **Fixes merge on Apply.** A proposed fix keeps the original files and Apply runs a three-way merge, with a union merge for
+  Markdown; only a real conflict stops it, and then the fix is redone automatically. Why: a whole-file staleness check made
+  nearly every fix on a busy file go stale. The UI never offers an instruction it can't carry out, and a fix shows and is counted
+  only on its issue card.
+- **Rename is one op.** `record.rename` updates every stored reference through a reference index and keeps the page id, so the
+  page is renamed in place. Why: renames done as several edits missed places and broke links.
+- **A code fix is the last resort.** `dev.request` must show that no existing op fits; data that needs a new op waits with its
+  fix and runs after Apply. Why: requests that ops could do became code fixes, and data changes needing a new op were refused by
+  the running applier.
+- **Ids never repeat.** Closed ids are retired. Why: a reused question id made old references point at the wrong question.
+
 ## 2026-10-08: Scope is enforced by the applier, with named domains and one contact each
 
 **Decided by:** project owner.

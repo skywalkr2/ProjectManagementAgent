@@ -202,7 +202,8 @@ committed here, as fixtures; tests copy them to a temporary folder before runnin
 | A whole kind of work | a pack | workplace status pages; publishing support |
 | Logic only one organization or person needs | a private plugin in that workspace's `plugins/` | a page layout one program insists on |
 | Who someone is, their team, role, how to reach them | `data/people.json` | "Jane Doe leads delivery for the billing teams" |
-| Who answers which kind of question | `config/routing.yaml` | "delivery-date questions go to the project's delivery lead" |
+| Who answers which kind of question | `config/routing.yaml` | "requirements questions go to the project's product owner" |
+| Where a kind of fact is looked up instead of asked | `config/facts.yaml` | "an item's release comes from the tracker; its date from the schedule page" |
 | What the portfolio tracks vs only observes | `config/scope.yaml` | "only items owned by these teams get follow-ups" |
 | Which sources to watch, through which connector | `config/watch.yaml` | a page id, a tracker query, a folder path, a feed |
 | Which changes close without the AI | `config/triage.yaml` | "diff only touches rows of other owners" |
@@ -293,7 +294,7 @@ where it came from.
 |---|---|---|
 | Connector | an input source | `poll(state) -> changes`, `fetch(ref)`, `search(query)`, `capabilities()`; typed errors: no-access, not-found, outage, auth |
 | Channel | an output target | `current(target)`, `diff(current, draft)`, `send(approved_draft)`, `verify(result)`, `capabilities()` (versioned, pull-edits, schedule, length limits, media) |
-| Record type | a kind of thing to track, or extra fields on a core record | a Pydantic model, a storage folder, display labels, migrations |
+| Record type | a kind of thing to track, or extra fields on a core record | a Pydantic model, a storage folder, display labels, migrations, the references it stores to other records (for rename) |
 | Op type | a changeset operation | required fields, `validate`, `normalize`, files it may touch, `apply`, `describe` (one readable line) |
 | Op validator | extra checks on an existing op, core or plugin | `validate(op, workspace) -> problems` (can refuse, never modify) |
 | Triage matcher | a rule kind for `config/triage.yaml` | `match(change, params) -> reason or None` |
@@ -414,7 +415,7 @@ and `config/scope.yaml` (4.4); `track_only` marks someone inside the tracked are
 ### 4.3 `config/routing.yaml`
 
 Ordered rules that choose a recipient for a question by topic, project, owner team or kind:
-`when: {topic: delivery-date, project_field: delivery_lead} then: {to: "{project.delivery_lead}"}`.
+`when: {topic: requirements, project_field: product_owner} then: {to: "{project.product_owner}"}`.
 A rule can say `ask_user_first` (unsure: the PM routes it). Unmatched questions go to the PM as a routing decision, never to a
 guess.
 
@@ -425,9 +426,10 @@ enforce it; it is never left to the AI's judgment.
 
 - `tracked`: the workspace's own area: patterns (teams, owners, systems, item prefixes). Only people and items here get action
   items, detailed questions, follow-ups and overdue flags.
-- `domains`: other areas the PM sees but doesn't run, each with `match` patterns (teams, systems, item prefixes, page trees)
-  and a `contact`: the one person who speaks for that area toward this workspace, usually its program manager. Items in a
-  domain are observed: recorded as facts, never assigned, never chased.
+- `domains`: other areas the PM sees but doesn't run, each with `match` patterns (teams, owner labels as they appear on
+  pages and in minutes, systems, item prefixes, page trees) and a `contact`: the one person who speaks for that area toward
+  this workspace, usually its program manager. Items in a domain are observed: recorded as facts, never assigned, never
+  chased, even when meeting minutes or program pages name people in it.
 - `cross_domain`: what may be asked of another area. `allow`: `impact-only` (default) or `none`. `to`: `contact` (always; never
   individuals inside the domain). `batch`: `later` (default), so cross-domain asks collect into one message per contact.
   `max_open_per_contact`.
@@ -442,7 +444,7 @@ tracked:
   teams: [Orders Core, Orders Platform]
 domains:
   - name: Payments
-    match: {teams: ["Payments*"], prefixes: [PAY-]}
+    match: {teams: ["Payments*"], owners: ["Payments (*)"], prefixes: [PAY-]}
     contact: Dana Fox            # program manager who answers for Payments toward us
   - name: Storefront
     match: {teams: ["Web*", "Mobile*"], trees: [storefront roadmap]}
@@ -508,7 +510,8 @@ evaluation: {required_before_switch: true, min_score: 0.9}
 ### 4.9 `config/dispatch.yaml`, `config/governor.yaml`
 
 Batch size, immediate-run kinds, timeouts, attempts; governor thresholds (stuck after N minutes, stale after N hours, outage
-when more than N keys fail).
+when more than N keys fail); `fixer`: `union_merge` (file patterns merged by union on Apply, default `["*.md"]`) and
+`redo_attempts` (how many times a conflicting fix is redone before it goes to the PM, default 2).
 
 ### 4.10 `config/rules.md`
 
@@ -567,6 +570,31 @@ has a default and a description, and both fictional workspaces carry demo values
   hosted install has an off-site copy.
 - `backups`: optional export of the whole workspace on a schedule, to a folder or an object store.
 
+### 4.16 `config/facts.yaml`
+
+Kinds of fact that a published source holds, so they are looked up and never asked of a person (6.19).
+
+```yaml
+kinds:
+  ship_release:                    # which release a work item ships in
+    lookup:                        # tried in order; the first answer wins
+      - {connector: delivery-tracker, field: release}
+      - {connector: tracker, field: [sprint, fix_version]}
+    missing: tbd                   # nothing found: show "TBD", never ask
+  production_date:                 # when that release reaches production
+    from: ship_release
+    lookup:
+      - {watch: release-schedules, key: delivery_team}   # one watched schedule page per delivery team
+    missing: tbd
+    terms: [date, release, ship, go-live, production]   # how a question asking for this kind reads
+    no_questions_to: [release-managers, delivery-leads]  # people or groups never asked for this kind
+```
+
+- `kinds`: each with ordered `lookup` steps (a connector field, a watched source keyed by a record field, or a plugin's lookup),
+  an optional `from` (a kind this one is looked up from), `missing` (`tbd` or `ask-pm`; never a question to someone else),
+  `terms` and `no_questions_to`.
+- Sources named in lookups are watched, so a schedule change updates every date that depends on it.
+
 ---
 
 ## Part 5. Data model and storage
@@ -599,6 +627,8 @@ reads a plugin's `ext` fields; the plugin's ops, renderers and panels do.
 
 - Every input is saved as a text file under `sources/` and registered before anything is done with it.
 - Ids and dates come from the actual date received, never from a meeting or date mentioned in the content.
+- Ids never repeat. Every id (questions above all) comes from a per-workspace counter that only goes up; a closed, dropped or
+  deleted record's id is retired, so a reference in a log or a sent message always means one thing.
 - Times are stored with their zone and converted for display; date-only values display as that calendar day.
 - Never save a copy of a file loaded earlier in a long operation: re-read, merge, write. Saves that can race (a refresh writing
   the inbox while a run marks items) merge by item, not overwrite.
@@ -672,7 +702,19 @@ registry, so the AI is asked for exactly what the applier accepts. The applier h
 `action.update`, `action.close`, `action.assign`, `decision.add`, `milestone.add`, `risk.add`, `question.add`,
 `question.update`, `question.move`, `question.done`, `question.drop`, `meeting.add`, `meeting.update`, `draft.request`
 (ask for a rendered draft to a channel), `parked`, `inbox` (set a change's state), `lookup`, `watch.add`, `watch.remove`,
-`rule.add`, `doc`, `dev.request` (a code change request: becomes an issue for the fixer). Plugins register more, namespaced.
+`rule.add`, `doc`, `record.rename`, `dev.request` (a code change request: becomes an issue for the fixer). Plugins register more,
+namespaced.
+
+**Rename is one op.** `record.rename` changes a record's name everywhere it is stored: the record, its output settings (page
+title), roll-up rows and links, the watch list, question labels, parked items and source tags. The core keeps a reference index
+(which records, outputs and labels mention which record) so nothing is missed, and plugins register the references they store.
+The output target keeps its id, so the publisher renames the page in place; a title-only change is a draft like any other and
+shows as "renamed (same page)".
+
+**A change request becomes a code fix only when no op can do it.** `dev.request` must list the ops it considered and why none
+fits; the validator checks the list against the registry and refuses the request when an existing op could do the job, sending
+it back to be done as a changeset. When a fix adds a new op (in a private plugin, 6.13), the changeset that needs it waits with
+the fix and is applied after Apply, once the new op is registered; the running applier would refuse it before.
 
 **Validation (all generic, all driven by config):**
 
@@ -682,11 +724,14 @@ registry, so the AI is asked for exactly what the applier accepts. The applier h
 - Restricted sources never cited on open outputs.
 - New actions name a person as owner in the workspace's owner format (a team alone or a blank is refused; an unknown person
   means ask the PM first).
-- **Scope** (6.18): an action's owner must be in the tracked area or be the PM. An action for anyone else is refused, with the
-  reason, and the AI records the work as a fact on the observed item instead. A question to anyone outside the tracked area is
+- **Scope** (6.18): an action's owner must be in the tracked area or be the PM. An action for anyone else, or with an owner
+  label that matches another domain's `owners` patterns, is refused, with the reason, and the AI records the work as a fact on the observed item instead. A question to anyone outside the tracked area is
   refused unless `cross_domain.allow` is `impact-only`, it goes to that domain's `contact`, it is marked `impact`, and it names
   in `affects` the tracked project or item it is about. Questions to people inside another domain who aren't its contact are
   always refused. An op naming a person whose area is unknown is held and one routing decision goes to the PM.
+- **Facts are looked up, not asked** (6.19): a question that asks for a fact kind with lookup sources (marked `asks_for`, or
+  matching that kind's `terms`) is refused and sent back as a `lookup`; a question matching a kind's `terms` to anyone in its
+  `no_questions_to` is always refused. A lookup that finds nothing records TBD, not a question.
 - Questions carry links to what they're about; questions to anyone but the PM link only things the recipient can open (no local
   files, no cockpit pages) and contain no assistant bookkeeping in labels.
 - Op-specific checks (paths stay under allowed roots; files don't overwrite unless told).
@@ -764,6 +809,13 @@ name. Grouping in the UI uses the same normalizer.
 - Problems in the automation become `Issue`s. "Fix it" starts a fix run (the `code-fix` tier in `config/ai.yaml`) whose change
   comes back as a **proposed fix** with a diff; it goes live only when the PM clicks Apply. Proposed fixes can't be hidden by
   "dismiss all".
+- **Apply merges; it doesn't check for staleness.** Busy files change between the fix run and the click, so a whole-file "has
+  it changed since?" check would make nearly every fix stale. A proposed fix keeps the original of every file it touches. Apply
+  does a three-way merge (original, current, proposed) per file, with a union merge for files listed in `fixer.union_merge`
+  (default: Markdown) so rows both sides appended are kept. Only a real conflict stops it, and then the fix is redone
+  automatically against the current files (up to `fixer.redo_attempts`, then the issue goes to the PM with the conflict shown).
+- **One place per fix:** a proposed fix shows on its issue card only, and is counted there (Today, the header, the issue list
+  count it once).
 - **What the fixer may change:** the workspace's config, rules, prompts, templates and private plugins, applied in the
   workspace with a git snapshot first. A fix that needs the core or a bundled plugin is written as a patch and an issue for this
   repository, never applied to the installed engine, so deployments don't drift from the product.
@@ -866,6 +918,20 @@ check-up and the UI all ask it; no other part of the product decides scope on it
 - **Moving the line:** when the PM says an item or team is ours (or isn't), the "Respond to the assistant" flow proposes the
   scope config change; the applier and the sweep take it from there.
 
+### 6.19 Facts and lookups
+
+Some facts have a published home: a work item's release lives in the tracker, a release's production date on a schedule page.
+Asking a person for them wastes their time and goes stale. `config/facts.yaml` (4.16) names those kinds and where each is
+looked up.
+
+- **Resolver:** for a kind, tries its lookup steps in order (following `from` chains, e.g. item to release to date) and returns
+  the value with its source and when it was read. Plugins add lookup steps through the lookup extension point (3.3).
+- **Use everywhere:** records, renders and packets show the looked-up value with its source; the AI gets it in the packet and
+  never needs to ask.
+- **Missing:** a kind with `missing: tbd` shows "TBD" until a source has it. No question is filed; when the source fills in,
+  the watcher picks it up.
+- **Enforced:** the applier refuses questions for these facts (6.7), so a model that ignores the packet can't send one.
+
 ---
 
 ## Part 7. UI specification (React)
@@ -905,11 +971,13 @@ ship a React component, registered at build time against the same panel interfac
 
 - One row per incoming change (source tag, linked title, state pill with a tooltip of details). The assistant's changesets for
   that change are nested inside ("What the assistant did (N)"), next to "Show the change" (word-level diff).
-- One row per piece of the assistant's own work that didn't come from a change (requests, answers, code fixes), tagged with the
-  assistant's name.
+- One row per piece of the assistant's own work that didn't come from a change (requests, answers), tagged with the
+  assistant's name. Code fixes are not here; they live on their issue card in Automation issues (6.13).
 - Buttons per row: new change: Process with the assistant / Done / Ignore. Reviewed: **Looks good** (closes the change and
-  files its changesets), **Send back** (required note; option "Undo it, then send"), **Undo**. Proposed code fix: Apply /
-  Discard / See the code change (always visible, sorted first). Auto-closed: "This is ours" / "Take a closer look".
+  files its changesets), **Send back** (required note; option "Undo it, then send"), **Undo**. Auto-closed: "This is ours" /
+  "Take a closer look".
+- **Automation issues** (above What changed when any are open): one card per issue; a proposed fix shows on its card with
+  Apply / Discard / See the code change, always visible, sorted first.
 - Filter: Needs attention, Processed, With the assistant, The assistant's own work, Done, Auto-closed, Ignored, All.
   "All looks good" for the reviewed rows shown, with a confirm.
 
@@ -948,6 +1016,8 @@ ship a React component, registered at build time against the same panel interfac
   bullets and "Label: url" as a named link.
 - Copyable text stays clean: no approval or provenance notes inside what the PM pastes.
 - One row per thing: never show the same work in two cards.
+- Never answer with an instruction the screen can't carry out: every message, error and empty state either offers a button
+  that does the next step or says what the app is already doing about it.
 - Labels in plain words; no internal ids in anything the PM reads. Labels that name the assistant, people or groups come from
   config.
 
@@ -982,11 +1052,13 @@ apply to the reference pack are in 9.5.
 |---|---|
 | Asking is a core feature: anything the automation can't settle becomes a question, never just a log line | jobs call the questions service |
 | Look it up before asking a person (creators, editors, text, status) | `lookup` op and lookups |
+| Dates a published schedule holds are looked up, never asked: the release from the tracker, its date from the delivery team's schedule; no release yet means TBD | `config/facts.yaml`, applier fact check |
+| Question ids never repeat; a closed question's id is retired | id counter in the storage layer |
 | Every question links what it names | applier |
 | A question to someone else says only what they need to answer: no bookkeeping, no options about how your outputs are organized, no long quotes of their own words, only links they can open, the whole gap in one ask | applier link and label checks, AI rules |
 | Unsure who it goes to: the PM routes it first | questions service hold |
 | Decisions are questions addressed to the PM, by recipient | questions service, Today, check-up |
-| Only the tracked area gets detailed questions; other areas are observed, not chased | applier scope check, scope sweep |
+| Only the tracked area gets detailed questions; other areas are observed, not chased, even when minutes or program pages name their people | applier scope check, scope sweep |
 | A question about another area's work goes only to that area's contact, only about the effect on our work, one batched message per contact | applier scope check, `cross_domain` config |
 | A question asked in the conversation it came from is filed as asked | AI rules |
 | When an answer arrives, re-check every open question to that person | answer flow |
@@ -1040,6 +1112,9 @@ apply to the reference pack are in 9.5.
 | Saves merge, never clobber | storage layer |
 | Recover by itself after sleep or network loss | scheduler |
 | A proposed code change never goes live unseen | fixer + Apply |
+| A fix applies by three-way merge, not a staleness check; only a real conflict stops it, and then it is redone | fixer |
+| A change request becomes a code fix only when no op can do it; data that needs a new op waits for the fix | `dev.request` validator, fixer |
+| A rename is one op that updates every place the name is stored and keeps the page | `record.rename`, reference index |
 | A failing plugin is an issue, not an outage | plugin host |
 
 ---
@@ -1072,7 +1147,9 @@ kinds, not on one vendor: a wiki vendor's connector and channel live in their ow
 - **Renderers and templates:** the summary page (rows roll up from project pages), project pages, the archive.
 - **Triage defaults:** the `container-not-mapped`, `owner-not-ours` and `child-item` rules pre-filled for page trees and
   tracker sub-tasks.
-- **Routing defaults:** delivery-date questions to the project's delivery lead; program-date questions observed, not asked.
+- **Fact defaults** (`config/facts.yaml`): `ship_release` (from the delivery tracker, else the tracker item's sprint or fix
+  version) and `production_date` (from the delivery team's schedule page, one per delivery team); no release yet means TBD.
+- **Routing defaults:** program-date questions observed, not asked; dates never asked of release or delivery people.
 - **AI task kinds:** `workplace-pm/checkup-goals` and `workplace-pm/status-update` with their prompt templates.
 - **Panels:** portfolio health by program, milestones to check.
 - **Today lines:** dashboard drafts waiting, milestones to check this week.
