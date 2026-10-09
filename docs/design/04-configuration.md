@@ -186,7 +186,7 @@ tasks:                         # tier and parameters per AI task kind (defaults 
   update: {tier: deep, temperature: 0.4}                      # drafting: a little room for wording
   ask: deep                    # ad hoc requests to the assistant (6.25)
   agenda: routine
-  # a pack's writing kinds, for example: {tier: deep, temperature: 0.7, output: draft}
+  # a pack's drafting kinds, for example: {tier: deep, temperature: 0.5, output: draft}
   # and its reviews: {tier: review, independent: true}   (never the account that wrote the input, 6.16)
 budgets:
   per_run_usd: 0.25            # across all accounts; per-provider optional
@@ -194,8 +194,8 @@ budgets:
   per_month_usd: 30
   warn_at: 0.8
   confirm_above_usd: 0.25      # a run estimated above this asks first, with the estimate (6.16)
-  per_task: {}                 # caps by task kind, e.g. {writing/draft-chapter: {per_run_usd: 2, per_month_usd: 40}}
-  per_record: {}               # default caps by record type, e.g. {writing/work: 60}; a record can set its own
+  per_task: {}                 # caps by task kind, e.g. {sales/draft-sow: {per_run_usd: 1, per_month_usd: 20}}
+  per_record: {}               # default caps by record type, e.g. {sales/opportunity: 15}; a record can set its own
 prices: {}                     # overrides for models whose price the provider's catalog doesn't give
 evaluation: {required_before_switch: true, min_score: 0.9, runs: 3}
 ```
@@ -204,10 +204,11 @@ Budget defaults suit one person: a typical notes run is about 5,000 to 10,000 to
 fraction of a cent on a low-cost model and a few cents on a top-tier one (prices change; the provider catalogs have the current
 ones). A runaway loop hits `per_run_usd` or `per_day_usd` long before it costs real money; the PM is warned at `warn_at`.
 
-Writing work costs more: a chapter draft reads the outline, the plan and summaries of the chapters around it and writes a few
-thousand words, and an independent review reads it again on another account. A whole book is many such runs, plus revisions.
-That is why packs with writing task kinds raise `per_task` caps only for those kinds, set a `per_record` cap per work, and
-every run above `confirm_above_usd` waits for the person's go with its estimate (6.16). The defaults stay low, so nothing
+Drafting long documents costs more: a proposal or statement of work reads its template, the account's notes and the sections
+around the one being written, writes a few thousand words, and an independent review reads it again on another account. A
+long document is many such runs, plus revisions. That is why packs with drafting task kinds raise `per_task` caps only for
+those kinds, set a `per_record` cap per document or deal, and every run above `confirm_above_usd` waits for the person's go with
+its estimate (6.16). The defaults stay low, so nothing
 expensive happens unless the person chose it.
 
 ## 4.9 `config/dispatch.yaml`, `config/governor.yaml`

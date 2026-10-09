@@ -7,19 +7,19 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
 
 **Decided by:** project owner.
 
-**What:** Plugins cooperate in four ways, all through the core (design 3.9): shared core records (a book is one project that
-the writing and publishing packs both link to), versioned interfaces a plugin provides and others use (required or
+**What:** Plugins cooperate in four ways, all through the core (design 3.9): shared core records (a launch is one project
+that the publishing pack and a social media pack both link to), versioned interfaces a plugin provides and others use (required or
 optional), event subscriptions (now a `1.0` extension point, no longer planned), and requests for another plugin's task
 kinds. Plugins still never import each other. Each pack works alone; optional interfaces add features when both are enabled.
 CI tests each pack alone, each pair sharing an interface, and the core with none.
 
-**Why:** Writing a book and launching it are one piece of work across two packs; without a contract between them the PM would
-retype everything and the packs would grow hidden dependencies on each other's internals.
+**Why:** Some work spans packs (a launch and its announcements, a won deal and its delivery); without a contract between them
+the PM would retype everything and the packs would grow hidden dependencies on each other's internals.
 
 **Impact:** adds work to version 1 milestone 4 (the plugin host; a few days of build time), before the plugin API is frozen.
 Nothing changes in the launch slice.
 
-## 2026-10-09: Core features the sales and writing packs need
+## 2026-10-09: Core features for document-heavy packs
 
 **Decided by:** project owner, after checking the candidate packs against the core.
 
@@ -27,7 +27,7 @@ Nothing changes in the launch slice.
 
 - **Long text** (5.0): prose fields stored once per version by hash, with authorship by passage, instead of full copies in the
   ledger; needed before real data exists, because changing the ledger format later is a migration.
-- **Drafts and prose output** (6.7): writing tasks produce a `text.draft` the person reviews; drafts are not claims, so they
+- **Drafts and prose output** (6.7): drafting tasks produce a `text.draft` the person reviews; drafts are not claims, so they
   are not held to the evidence rule, but checkable facts inside them are.
 - **File channel** (6.3): approved content saved to a configured folder, beside the clipboard.
 - **Stages** (6.26, 4.21): one mechanism for work that moves through steps, replacing per-pack stage fields; the publishing
@@ -35,22 +35,19 @@ Nothing changes in the launch slice.
 - **Independent second opinion** (6.16): a review on a different account from the one that wrote the work.
 - **Cost control** (6.16, 4.8): estimates before a run, a go for anything above `budgets.confirm_above_usd` (spending money is
   irreversible, so it confirms like sending does, 7.6), budgets per task kind and per record, spend shown by pack, task kind and
-  record. Writing work can cost the person real money; it must never happen without their choice.
+  record. Drafting long documents can cost the person real money; it must never happen without their choice.
 
 **Impact:** adds work to version 1 milestone 6 (about a week of build time; no owner time beyond reading the design). Nothing
-changes in the launch slice. The sales and writing packs stay in the Later horizon.
+changes in the launch slice. The sales pack stays in the Later horizon.
 
-## 2026-10-09: Sales and writing packs recorded as candidates
+## 2026-10-09: Sales pack recorded as a candidate
 
 **Decided by:** project owner.
 
-**What:** Two future packs are recorded in design 13.3: a sales pack (business-to-business sales of installed services:
-accounts, opportunities, proposals, SOWs, contracts, regulatory requirements as workspace data) and a writing pack (from idea
-to manuscript, with the writer's approval at every stage, review by an independent model, a print-ready PDF and an ebook).
-Both need four generic core points: document output, stage gates, an independent second opinion, and long text.
+**What:** A future sales pack is recorded in design 13.3: business-to-business sales of installed services (accounts,
+opportunities, proposals, SOWs, contracts, regulatory requirements as workspace data).
 
-**Impact:** none on the launch slice or version 1; both are in the Later horizon. Version 1 keeps its extension points
-generic enough for them.
+**Impact:** none on the launch slice or version 1; it is in the Later horizon.
 
 ## 2026-10-09: License is AGPL-3.0
 

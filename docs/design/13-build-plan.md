@@ -104,7 +104,7 @@ enforced limits, roles for several users.
 
 ## 13.3 Candidate packs
 
-Recorded so the core's extension points are checked against them; neither is scheduled (`docs/project/scope.md`, Later).
+Recorded so the core's extension points are checked against them; not scheduled (`docs/project/scope.md`, Later).
 
 **Sales pack** (`plugins/sales/`): an assistant for business-to-business sales of installed services, from first contact to
 signed work.
@@ -120,25 +120,7 @@ signed work.
 - **Data:** customer details are `restricted` (4.8), so they go only to AI accounts allowed that level. One employer's
   pricing, terms or approval rules are a private plugin in that workspace.
 
-**Writing pack** (`plugins/writing/`): an assistant that takes a writer from an idea to a finished manuscript, beside the
-publishing pack, which takes a finished book to launch.
-
-- **Stages:** ideation, research, outline and chapter plans, drafting, independent review, the writer's review chapter by
-  chapter, revision, proposal, manuscript, ebook. Each stage ends with the writer's approval; nothing moves on without it.
-- **Record types:** works, ideas, research notes with their sources, outlines, chapter plans, chapter drafts with versions,
-  reviews and the writer's feedback, proposals.
-- **AI tasks:** one per stage. Research claims carry evidence from their sources (6.7). Drafts are written in the writer's
-  voice from their outline and notes, and every chapter waits for the writer's review.
-- **Independent review:** a draft is checked by a model from a different account than the one that wrote it; findings are
-  lints the writer decides on, never automatic rewrites.
-- **Works with publishing:** provides `writing/manuscript@1` (3.9), so a finished book becomes a launch without retyping.
-- **Outputs:** a print-ready manuscript PDF to the configured trim size, margins, bleed and fonts for the chosen
-  self-publishing platform, and an ebook from the same manuscript (the owner has a converter that can become this pack's
-  renderer).
-- **Playbook:** craft and structure guidance by genre, chapter review checklists, and the platforms' rules for disclosing
-  AI-assisted content.
-
-**Core needs both packs share** are designed into version 1 (milestone 6), so the plugin API is frozen with them in place:
-long text with versions and authorship (5.0), drafts and prose output (6.7), the file channel (6.3), stages (6.26), the
+**Core needs for document-heavy packs** are designed into version 1 (milestone 6), so the plugin API is frozen with them in
+place: long text with versions and authorship (5.0), drafts and prose output (6.7), the file channel (6.3), stages (6.26), the
 independent second opinion (6.16), and cost control with estimates, a go above a configured amount and budgets per task kind
-and per record (6.16, 4.8). The packs themselves stay in the Later horizon.
+and per record (6.16, 4.8).

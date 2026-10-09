@@ -114,12 +114,12 @@ the op. Required on `action.add`, `action.close`, `question.done`, `fact`, `issu
 `dependency.update`, and any `record.set` that changes a date, status or owner. When the request came from the PM's own note,
 the evidence can be that note. Evidence is kept in the ledger and shown on the row ("closed because the email said: ...").
 
-**Drafts are not claims.** Some work is writing, not extracting: a chapter, a proposal, a statement of work, a status update.
+**Drafts are not claims.** Some work is writing, not extracting: a proposal, a statement of work, a status update, a blurb.
 A draft has no quote to cite, so it is not held to the evidence rule; instead it is written only into a `long_text` field
 (5.0) through a `text.draft` op, marked as written by the assistant, and shown as **not yet reviewed** until the person
 approves it. Factual statements inside a draft that the task kind declares checkable (a date, a price, a regulation, a
 research finding) still need evidence, listed beside the draft. A task kind says which it produces: ops (extraction) or a
-draft (writing).
+draft.
 
 **Prose output.** For a draft, the model writes plain prose, not prose packed inside JSON, which long outputs and cheaper
 models get wrong. The core wraps the text into the `text.draft` op itself, and the applier checks it like any other change
@@ -455,8 +455,8 @@ lacks a required capability fails the self-check.
 
 **Independent second opinion.** A task kind can ask for a review that is independent of the work under review: the router
 then picks an account (and, where the tiers allow, a vendor) different from the run that produced it (`independent: true` on
-a task, 4.8). Its findings are lints the person decides on, never automatic rewrites. The writing pack uses it for every
-chapter; the core can use it to check a draft before it reaches another person. If no independent account is configured, the
+a task, 4.8). Its findings are lints the person decides on, never automatic rewrites. Packs that draft long documents use it
+on each one; the core can use it to check a draft before it reaches another person. If no independent account is configured, the
 review waits for the person and says why, instead of quietly reviewing with the same model.
 
 **Prompts are workspace content, not code.** Instructions, examples and style guides live in `prompts/` templates; the core and
@@ -483,20 +483,20 @@ builds, so `routing` (4.8) can pin preferred hosts, and the quality panel can co
 packet on any model, and any run can become an evaluation case.
 
 **Usage, limits and cost.** Every run is a `Run` record: provider, model, units and cost. A usage limit pauses that provider
-until its reset (and the fallback takes over); it is not retried in a loop. Notes and messages cost little; writing work
-(chapters, proposals, research, independent reviews) can cost the person real money, so spending is something they decide,
+until its reset (and the fallback takes over); it is not retried in a loop. Notes and messages cost little; drafting work
+(proposals, statements of work, long copy, research, independent reviews) can cost the person real money, so spending is something they decide,
 never something that happens to them:
 
 - **Estimate first.** Before a run, the cost is estimated from the packet size, the expected output (from past runs of that
   task kind, or the kind's declared default before there are any) and the model's price. Anything above
-  `budgets.confirm_above_usd` asks first, with the estimate ("Draft chapter 7: about $0.80"). A batch (draft all twelve
-  chapters) shows one total and runs only on the person's go.
-- **Budgets at every level.** Per run, day and month across everything; per task kind; and per record, so a book, deal or
-  project can have its own cap ("this book so far: $14.20 of $60"). Packs may also set a default per pack. Reaching a cap stops
+  `budgets.confirm_above_usd` asks first, with the estimate ("Draft the proposal: about $0.80"). A batch (draft all twelve
+  sections) shows one total and runs only on the person's go.
+- **Budgets at every level.** Per run, day and month across everything; per task kind; and per record, so a deal, document or
+  project can have its own cap ("this deal so far: $4.20 of $15"). Packs may also set a default per pack. Reaching a cap stops
   new runs of that scope and tells the person; it never cuts a run off halfway.
 - **Escalation and reviews count.** A retry on a stronger tier and an independent review are estimated and counted like any
   run; escalation is skipped, and the item held, when it would cross a cap.
-- **Spend only on what changed.** Revising a chapter sends that chapter and short summaries of the rest, not the manuscript;
+- **Spend only on what changed.** Revising a section sends that section and short summaries of the rest, not the whole document;
   stable parts go first so providers that cache prefixes charge less (6.6).
 - **Visible.** Spend by pack, task kind, record, model and day is shown in the usage panel, and a record's spend on the record.
   Packs declare a typical cost per task kind, and their documentation says what a typical project costs on a low-cost and a
@@ -646,15 +646,15 @@ path for the launch?", "which contributors haven't replied this week?", "draft a
 
 ## 6.26 Stages
 
-Work that moves through steps (a title from manuscript to launch, a deal from first contact to signed, a book from idea to
-manuscript) uses one core mechanism instead of a status field per pack. A record type declares its **stages** in order (in a
+Work that moves through steps (a title from manuscript to launch, a deal from first contact to signed, a document from
+outline to approved) uses one core mechanism instead of a status field per pack. A record type declares its **stages** in order (in a
 pack's defaults, editable in `config/stages.yaml`, 4.21), each with:
 
-- **Entry checks:** what must be true to move into it (all chapters reviewed, a SOW approved, the launch date set), evaluated
+- **Entry checks:** what must be true to move into it (all sections reviewed, a SOW approved, the launch date set), evaluated
   by rules before any AI.
 - **Who moves it:** the person (default), or a rule for steps that need no judgment. The assistant can propose a move, never
   make one.
-- **What it starts:** task kinds or jobs that run on entry (draft the proposal, build the manuscript), each estimated and
+- **What it starts:** task kinds or jobs that run on entry (draft the proposal, build the print files), each estimated and
   budgeted (6.16).
 
 Moving a record is an op (`stage.move`), so it is in the ledger and can be undone. When a record's entry checks pass, Today

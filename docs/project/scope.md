@@ -49,7 +49,6 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Hosted mode, sign-in providers | won't | won't | Part 11 |
 | Social, email and newsletter channels | won't | won't | 3.7 |
 | Sales pack (accounts, opportunities, proposals, SOWs, contracts, regulatory data per jurisdiction) | won't | won't | 13.3 |
-| Writing pack (idea to manuscript with stage approvals, independent review, print PDF and ebook) | won't | won't | 13.3 |
 | Plugins working together: interfaces, event subscriptions, requests for another plugin's work, shared core records | won't | must | 3.9 |
 | Long text fields with versions and authorship | won't | must | 5.0 |
 | Drafts with prose output (`text.draft`), not held to the evidence rule but marked unreviewed | won't | must | 6.7 |

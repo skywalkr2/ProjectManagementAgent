@@ -25,8 +25,8 @@ plugin_api: ">=1.0,<2"            # plugin API versions this plugin works with
 description: Track side projects with goals, next steps and a weekly review.
 depends_on: []                    # other plugins it cannot work without, with version ranges
 interfaces:                       # how it works with other plugins, only through the core (3.9)
-  provides: []                    # e.g. [writing/manuscript@1]
-  uses: []                        # e.g. [{interface: writing/manuscript@1, optional: true}]
+  provides: []                    # e.g. [publishing/title@1]
+  uses: []                        # e.g. [{interface: publishing/title@1, optional: true}]
 subscribes: []                    # core and interface events it reacts to (3.4), e.g. [stage.moved]
 provides:                         # checked against what the code registers
   record_types: [personal-projects/goal]
@@ -87,7 +87,7 @@ The core uses an internal event bus from the start, and plugins subscribe to it 
 publishes events after each step: `source.saved`, `change.filed`, `change.closed`, `request.queued`,
 `changeset.applied`, `changeset.undone`, `record.changed`, `draft.created`, `draft.approved`, `draft.sent`, `question.asked`,
 `question.answered`, `action.added`, `action.closed`, `problem.opened`, `job.finished`, `stage.moved`. Interfaces add their own
-events (`writing/manuscript.completed`), published by the core when the providing plugin's op applies.
+events (`publishing/title.date_changed`), published by the core when the providing plugin's op applies.
 
 Handlers may read, queue requests, file questions and open automation problems. They may not write records directly; anything that changes
 knowledge goes through an op and the applier.
@@ -172,42 +172,41 @@ the output schema, how to use ops. Playbooks say what good practice is. A new pa
 
 ## 3.9 Plugins working together
 
-Packs are most useful together: a book is written with the writing pack and launched with the publishing pack; a deal in the
-sales pack may need a proposal drafted in the writing pack's way. Plugins never import or call each other, so they meet only
-through the core, in four ways:
+Packs are more useful together: a social media pack can announce a launch the publishing pack runs; a deal won in the sales
+pack becomes a project to deliver. Plugins never import or call each other, so they meet only through the core, in four ways:
 
 1. **Shared core records.** People, teams, projects, sources, actions, questions, facts, stages and budgets are core records
-   every plugin sees (within its declared data levels). Plugin records link to them by id. A book is one core `Project`; the
-   writing pack's work and the publishing pack's title both link to it, so either can find the other's records without
+   every plugin sees (within its declared data levels). Plugin records link to them by id. A launch is one core `Project`;
+   the publishing pack's title and the social pack's posts both link to it, so either can find the other's records without
    knowing their shape, and the PM sees one project with both packs' panels.
-2. **Interfaces.** A plugin may provide a named, versioned interface (`writing/manuscript@1`): the fields of its records other
+2. **Interfaces.** A plugin may provide a named, versioned interface (`publishing/title@1`): the fields of its records other
    plugins may read, the events it raises, and the task kinds others may request. The shape is a schema the host checks, so a
    provider can change its internals freely and must bump the version to change the contract. A plugin that uses an interface
    declares it, as required or optional; the host shows this to the PM before enabling, and gives the using plugin a
-   read-only view of exactly those fields, never the provider's records.
+   read-only view of exactly those fields, never the provider's records. An interface can also be defined by the plugin that
+   uses it, for others to provide: the publishing pack defines `publishing/manuscript-source@1`, so a folder connector or any
+   installed or private plugin that produces finished manuscripts can start a launch.
 3. **Events.** A plugin subscribes to core events and to the events of interfaces it uses (3.4). A handler may read, queue a
    request and file a question to the PM; it never writes another plugin's records. Any change goes through an op and the
    applier, as a changeset the PM sees when it comes from another plugin.
 4. **Requests for another plugin's work.** A plugin may queue a request for a task kind another plugin's interface offers
-   (the writing pack's "back-cover copy in the author's voice"). It runs as that plugin's task, under its playbook, with the
+   (the publishing pack's "short blurb in the imprint's voice"). It runs as that plugin's task, under its playbook, with the
    normal cost estimate and go (6.16) and the normal review.
 
 **Optional means optional.** Each pack works alone. When both sides of an optional interface are enabled, extra actions
 appear; when one is disabled, they disappear and nothing breaks. Records stay linked by id and come back on re-enabling.
 
-**Writing and publishing, for example.** The writing pack provides `writing/manuscript@1`: the work's title and contributors
-(person ids), word count, the approved manuscript and ebook files, front and back matter, and an authorship summary from long
-text (5.0: how much the assistant drafted and the person changed). The publishing pack uses it optionally:
+**Publishing and social media, for example.** The publishing pack provides `publishing/title@1`: the title, contributors
+(person ids), formats, launch date, approved cover and blurb, and the launch milestones. A social media pack uses it
+optionally:
 
-- When a work reaches its final stage, `writing/manuscript.completed` puts "Start a launch for this book?" on Today. Starting
-  it creates a title linked to the same project, filled from the interface, as a changeset the PM approves.
-- The title's "manuscript received" entry check (6.26) passes from the interface instead of being ticked by hand; a later
-  revision of the manuscript raises an event that shows on the title as a change to look over.
-- The launch plan uses the authorship summary to fill the platforms' AI-disclosure answers, for the PM to check.
-- Publishing requests marketing copy (blurb, back-cover text, announcement) from the writing pack's task kinds, so it is in
-  the author's voice and reviewed like any draft.
+- When a title gets a launch date, "Plan the launch posts?" appears on Today. Planning creates posts linked to the same
+  project, scheduled relative to the launch date, as drafts the PM approves.
+- When the launch date moves, `publishing/title.date_changed` marks every post scheduled from it as a change to look over,
+  instead of leaving them on the old dates.
+- The social pack requests blurb variants from the publishing pack's task kinds, so the copy matches the approved blurb and is
+  reviewed like any draft.
 
 **Tested together.** CI runs every bundled pack alone, every pair that shares an interface, and the core with no packs, on
 both fictional workspaces. An interface version that a user declares but no enabled plugin provides is a self-check failure
 when required and a quiet absence when optional.
-
