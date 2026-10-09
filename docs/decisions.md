@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Real use starts with the publishing pack
+
+**Decided by:** project owner.
+
+**What:** No real data goes into the cockpit until the publishing pack is ready; all testing is on fictional data. The
+2026-10-30 go/no-go and the November freeze no longer apply, and the 2026-12-01 launch goes ahead without the tool. Build
+order from now: (1) the plugin host (brief in `docs/project/next-task.md`); (2) what the publishing pack needs from the core:
+stages, dependencies and baselines, the file channel, cost control; (3) the publishing pack; (4) Ask the assistant and the
+remaining document features.
+
+**Impact:** real use moves from the launch run-up to after the publishing pack; Ask the assistant moves after it.
+
 ## 2026-10-09: Build on now; the launch slice was too thin to validate
 
 **Decided by:** project owner, after trying the launch slice.
