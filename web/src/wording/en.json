@@ -65,6 +65,8 @@
   "changes.held.one": "1 waits for you",
   "changes.held.other": "{n} wait for you",
   "changes.nothing_done": "{assistant} found nothing to record.",
+  "changes.did_nothing": "Nothing recorded",
+  "changes.summary_label": "{assistant} says",
   "changes.looks_good": "Looks good",
   "changes.reopen": "Take another look",
   "changes.send_back": "Send back with a note",

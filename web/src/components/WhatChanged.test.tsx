@@ -117,3 +117,14 @@ test("a who-is question offers the likely people first", async () => {
   await user.click(screen.getByRole("button", { name: "Use this person" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-7/answer")?.body).toEqual({ person: "PER-5" }));
 });
+
+test("when nothing was recorded, the assistant's summary says why", async () => {
+  const item = change("REQ-9", { source: null, source_title: null, note: "Write an email to the printer" });
+  item.changeset!.ops = [];
+  item.changeset!.summary = "You asked for an email draft; writing emails isn't something I can do from here.";
+  fakeApi({ "GET changes": () => [item] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText(item.changeset!.summary)).toBeInTheDocument();
+  expect(screen.getByText("Helper says")).toBeInTheDocument();
+  expect(screen.getByText(/Nothing recorded/)).toBeInTheDocument();
+});

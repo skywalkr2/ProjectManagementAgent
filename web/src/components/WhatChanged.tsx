@@ -210,7 +210,13 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
             </div>
           )}
           {item.waiting && item.state !== "review" && <p className="hint">{item.waiting}</p>}
-          {cs && cs.ops.length === 0 && <p className="hint">{t("changes.nothing_done")}</p>}
+          {cs && cs.summary.trim() && (
+            <div className="assistant-summary">
+              <span className="what">{t("changes.summary_label")}</span>
+              <p>{cs.summary}</p>
+            </div>
+          )}
+          {cs && cs.ops.length === 0 && !cs.summary.trim() && <p className="hint">{t("changes.nothing_done")}</p>}
           {cs && cs.ops.length > 0 && (
             <ul className="children" aria-label={tn("changes.did", cs.ops.length)}>
               {cs.ops.map((op) => (
@@ -238,7 +244,7 @@ function subLine(item: S["ChangeItem"], t: T, tn: TN): string {
   if (item.state === "needs_you" || item.state === "failed") return t("changes.sub.stopped", { when });
   const ops = item.changeset?.ops ?? [];
   const held = ops.filter((o) => o.status === "held" || o.ask?.status === "open").length;
-  const did = tn("changes.did", ops.length);
+  const did = ops.length ? tn("changes.did", ops.length) : t("changes.did_nothing");
   return held ? t("changes.sub.held", { did, held: tn("changes.held", held), when }) : t("changes.sub.did", { did, when });
 }
 

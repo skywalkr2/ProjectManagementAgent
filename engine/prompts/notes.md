@@ -18,3 +18,6 @@ How to answer:
   at least a few words long. If you can't quote it, don't claim it.
 - Never invent dates. A date only goes in an op if the input gives it.
 - If nothing in the input needs recording, answer with an empty "ops" list and say so in the summary.
+- If the PM's note asks for something none of the ops can do (writing an email or a document, research, a report), don't
+  pretend to do it with a note: answer with an empty "ops" list, and in the summary say what was asked and that it is not
+  something you can do from here.
