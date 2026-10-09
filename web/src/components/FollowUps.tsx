@@ -166,8 +166,16 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
   const area = useRef<HTMLTextAreaElement>(null);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
+  const [copied, setCopiedState] = useState<string | null>(() => remembered(s.person));
   const message = draft ?? s.message;
+  // Once this exact message is copied, the row's next step is Mark sent; editing it again goes back to Copy.
+  const isCopied = copied !== null && copied === message && s.to_send > 0;
   const waitingReplies = s.questions.filter((q) => q.status === "sent").length;
+
+  const setCopied = (text: string | null) => {
+    setCopiedState(text);
+    remember(s.person, text);
+  };
 
   const markSent = (text: string | null) =>
     act(
@@ -176,7 +184,12 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
         message: t("toast.marked_sent", { name: s.name }),
         undo: () => api.unmarkSent(s.person, { question_ids: counts.question_ids, action_ids: counts.action_ids }),
       }),
-    ).then(() => setDraft(null));
+    ).then((result) => {
+      if (result) {
+        setDraft(null);
+        setCopied(null);
+      }
+    });
 
   const edit = () => {
     setOpen(true);
@@ -186,6 +199,7 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(message);
+      setCopied(message);
       push({
         message: t("toast.copied", { name: s.name }),
         action: { label: t("followups.mark_sent"), run: () => markSent(message) },
@@ -201,13 +215,17 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
   };
 
   const menu: MenuAction[] = [];
-  if (s.to_send > 0) {
+  if (isCopied) {
+    menu.push({ id: "copyagain", label: t("followups.copy_again"), run: () => void copy() });
+    menu.push({ id: "edit", label: t("followups.edit"), run: edit });
+  } else if (s.to_send > 0) {
     menu.push({ id: "edit", label: t("followups.edit"), run: edit });
     menu.push({ id: "marksent", label: t("followups.mark_sent_without_copy"), run: () => void markSent(null) });
   }
+  const primary = isCopied ? () => void markSent(copied) : () => void copy();
   useRowKeys(ref, {
     toggle: () => setOpen((v) => !v),
-    primary: s.to_send > 0 ? () => void copy() : undefined,
+    primary: s.to_send > 0 ? primary : undefined,
     copy: s.to_send > 0 ? () => void copy() : undefined,
     edit: s.to_send > 0 ? edit : undefined,
   });
@@ -224,15 +242,17 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
   return (
     <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={`p-${s.person}`}>
       <div className="row">
-        <span className={`kind ${s.to_send ? "k-send" : "k-done"}`}>{t(s.to_send ? "followups.ready" : "followups.waiting")}</span>
+        <span className={`kind ${isCopied ? "k-wait" : s.to_send ? "k-send" : "k-done"}`}>
+          {t(isCopied ? "followups.copied" : s.to_send ? "followups.ready" : "followups.waiting")}
+        </span>
         <button type="button" className="expander text" aria-expanded={open} onClick={() => setOpen(!open)}>
           <strong id={`p-${s.person}`}>{s.name}</strong>
           <span className="sub">{summary}</span>
         </button>
         <div className="acts">
           {s.to_send > 0 && (
-            <button type="button" className="btn primary" onClick={() => void copy()}>
-              {tn("followups.copy", s.to_send)}
+            <button type="button" className="btn primary" onClick={primary}>
+              {isCopied ? t("followups.mark_sent") : tn("followups.copy", s.to_send)}
             </button>
           )}
           <RowMenu label={s.name} actions={menu} />
@@ -306,4 +326,24 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
       )}
     </li>
   );
+}
+
+const COPIED_KEY = "cockpit.copied.";
+
+/** The message last copied for a person, kept for this browser session so a refresh keeps "Mark sent" as the next step. */
+function remembered(person: string): string | null {
+  try {
+    return window.sessionStorage.getItem(COPIED_KEY + person);
+  } catch {
+    return null;
+  }
+}
+
+function remember(person: string, text: string | null): void {
+  try {
+    if (text === null) window.sessionStorage.removeItem(COPIED_KEY + person);
+    else window.sessionStorage.setItem(COPIED_KEY + person, text);
+  } catch {
+    // storage can be unavailable (private windows); the in-page state still works
+  }
 }

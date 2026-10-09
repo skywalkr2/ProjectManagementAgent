@@ -146,6 +146,8 @@
   "followups.copy.other": "Copy {n}",
   "followups.edit": "Edit before copying",
   "followups.mark_sent": "Mark sent",
+  "followups.copy_again": "Copy again",
+  "followups.copied": "Copied",
   "followups.mark_sent_without_copy": "Mark sent without copying",
   "followups.q.ready": "ready to send",
   "followups.q.waiting_days.one": "waiting 1 day",

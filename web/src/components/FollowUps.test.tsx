@@ -49,7 +49,10 @@ test("Copy puts the edited message on the clipboard, then Mark sent records it w
   await user.type(box, " PS");
   await user.click(screen.getByRole("button", { name: "Copy message" }));
   expect(await navigator.clipboard.readText()).toBe(sections[1].message + " PS");
-  await user.click(await screen.findByRole("button", { name: "Mark sent" }));
+  // The toast offers Mark sent, and so does the row itself once the message is copied.
+  expect(screen.getAllByRole("button", { name: "Mark sent" })).toHaveLength(2);
+  expect(screen.queryByRole("button", { name: "Copy 2" })).toBeNull();
+  await user.click(screen.getAllByRole("button", { name: "Mark sent" })[0]);
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/mark-sent")).toBe(true));
   expect(calls.find((c) => c.route === "POST followups/PER-2/mark-sent")!.body).toEqual({ text: sections[1].message + " PS" });
   await user.click(await screen.findByRole("button", { name: "Undo" }));
@@ -65,4 +68,22 @@ test("the workspace can rename the section", async () => {
   fakeApi({ "GET followups": () => sections, "GET people": () => [] });
   renderApp(<FollowUps />, { "followups.title": "Chasers" });
   expect(await screen.findByRole("heading", { name: "Chasers" })).toBeInTheDocument();
+});
+
+
+test("after copying, the row's next step is Mark sent, even once the toast is gone", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET followups": () => sections,
+    "GET people": () => [],
+    "POST followups/PER-2/mark-sent": () => ({ questions: 1, actions: 1, question_ids: ["Q-1"], action_ids: ["ACT-1"] }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Copy 2" }));
+  await user.click(await screen.findByRole("button", { name: "Dismiss" }));
+  const row = screen.getByRole("listitem", { name: /Robin Sample/ });
+  await user.click(within(row).getByRole("button", { name: "Mark sent" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST followups/PER-2/mark-sent")?.body).toEqual({ text: sections[1].message }),
+  );
 });

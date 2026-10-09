@@ -115,7 +115,8 @@ test.describe.serial("acceptance scenario", () => {
     expect(copied.startsWith(copied.split("\n")[0])).toBe(true);
     expect(copied).toContain(owner.name.split(" ")[0]);
     expect(copied).not.toMatch(/ACT-|Q-\d|PER-/);
-    await page.getByRole("button", { name: "Mark sent" }).click();
+    await expect(section.getByRole("button", { name: "Mark sent" })).toBeVisible();
+    await section.getByRole("button", { name: "Mark sent" }).click();
     await expect(section).toContainText("nothing new to send");
     await page.getByRole("button", { name: "Undo" }).last().click();
     await expect(section.getByRole("button", { name: /^Copy \d+$/ })).toBeVisible();
