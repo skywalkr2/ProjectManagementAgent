@@ -209,3 +209,6 @@ For your information; nothing here needs an answer.
   prose that the person reviews (6.7), a file channel (6.3), stages for work that moves through steps (6.26), an independent
   second opinion on another account (6.16), and cost control: estimates, a go above a set amount, budgets per task kind and per
   record (6.16). In version 1, before the plugin API is frozen.
+- **Plugins working together** (3.9): packs share core records (a book is one project for both the writing and publishing
+  packs), offer versioned interfaces to each other, subscribe to events and can request each other's task kinds, always
+  through the core. Each pack still works alone.

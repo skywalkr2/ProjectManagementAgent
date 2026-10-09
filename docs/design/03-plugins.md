@@ -23,7 +23,11 @@ name: personal-projects
 version: 0.1.0
 plugin_api: ">=1.0,<2"            # plugin API versions this plugin works with
 description: Track side projects with goals, next steps and a weekly review.
-depends_on: []                    # other plugins, with version ranges
+depends_on: []                    # other plugins it cannot work without, with version ranges
+interfaces:                       # how it works with other plugins, only through the core (3.9)
+  provides: []                    # e.g. [writing/manuscript@1]
+  uses: []                        # e.g. [{interface: writing/manuscript@1, optional: true}]
+subscribes: []                    # core and interface events it reacts to (3.4), e.g. [stage.moved]
 provides:                         # checked against what the code registers
   record_types: [personal-projects/goal]
   ops: [personal-projects/goal.add, personal-projects/goal.update]
@@ -61,7 +65,8 @@ where it came from.
 | Panel | a UI view | declarative view spec (7.2); bundled plugins may also ship a React component | 1.0 |
 | Today contributor | lines on the Today list | `lines(workspace) -> [TodayLine]` | 1.0 |
 | Job | scheduled work | name, default schedule, needs network, `run()` | 1.0 |
-| Event handler | a reaction to a core event | `subscribe(event, handler)` (3.4) | planned |
+| Interface | a versioned contract other plugins can use: record fields to read, events, task kinds to request (3.9) | declared in the manifest; the shape is a schema checked by the host | 1.0 |
+| Event handler | a reaction to a core or interface event | `subscribe(event, handler)` (3.4) | 1.0 |
 | API route | extra endpoints | mounted under `<base path>/api/plugins/<plugin>/` | planned |
 | Auth provider | a way to sign in | `begin(request)`, `complete(request) -> identity or refusal`, `capabilities()` (11.4) | core only |
 | Storage backend | where records and sources live | the repository layer: transactions, versions, ledger, leases, export (5.0, 4.15) | core only |
@@ -78,10 +83,11 @@ and covered by a test that uses it from a plugin.
 
 ## 3.4 Events
 
-The core uses an internal event bus from the start; plugin subscriptions are a `planned` extension point (3.3). The core
+The core uses an internal event bus from the start, and plugins subscribe to it through the manifest (3.2). The core
 publishes events after each step: `source.saved`, `change.filed`, `change.closed`, `request.queued`,
 `changeset.applied`, `changeset.undone`, `record.changed`, `draft.created`, `draft.approved`, `draft.sent`, `question.asked`,
-`question.answered`, `action.added`, `action.closed`, `problem.opened`, `job.finished`.
+`question.answered`, `action.added`, `action.closed`, `problem.opened`, `job.finished`, `stage.moved`. Interfaces add their own
+events (`writing/manuscript.completed`), published by the core when the providing plugin's op applies.
 
 Handlers may read, queue requests, file questions and open automation problems. They may not write records directly; anything that changes
 knowledge goes through an op and the applier.
@@ -98,6 +104,8 @@ Enforced by the plugin host, the applier, the publisher and the self-check:
   plugin is enabled. The core enforces them on what it hands out (its HTTP client, its secret store, the records and packets
   it passes), but in-process code is not sandboxed: enabling a third-party plugin means trusting its code (12.3).
 - **Config is like core config.** `config/plugins/<plugin>.yaml`, with a schema, defaults and descriptions.
+- **Plugins meet only through the core** (3.9): interfaces, events and shared core records. A plugin never imports another
+  plugin, reads its tables or calls its code.
 - **Code against the API, not the internals.** Plugins import only `engine.plugin_api`. The plugin API follows semantic
   versioning; a breaking change is a new major version.
 - **Failures stay contained.** A plugin that raises becomes an automation `Problem`; the core and other plugins keep running. Disabling a
@@ -161,3 +169,45 @@ instructions and before the glossary and rules, so they are cached with it.
 
 **Prompts and playbooks are different.** Prompt templates (`prompts/`) say how a task is done mechanically: the packet layout,
 the output schema, how to use ops. Playbooks say what good practice is. A new pack usually needs a playbook and no new prompts.
+
+## 3.9 Plugins working together
+
+Packs are most useful together: a book is written with the writing pack and launched with the publishing pack; a deal in the
+sales pack may need a proposal drafted in the writing pack's way. Plugins never import or call each other, so they meet only
+through the core, in four ways:
+
+1. **Shared core records.** People, teams, projects, sources, actions, questions, facts, stages and budgets are core records
+   every plugin sees (within its declared data levels). Plugin records link to them by id. A book is one core `Project`; the
+   writing pack's work and the publishing pack's title both link to it, so either can find the other's records without
+   knowing their shape, and the PM sees one project with both packs' panels.
+2. **Interfaces.** A plugin may provide a named, versioned interface (`writing/manuscript@1`): the fields of its records other
+   plugins may read, the events it raises, and the task kinds others may request. The shape is a schema the host checks, so a
+   provider can change its internals freely and must bump the version to change the contract. A plugin that uses an interface
+   declares it, as required or optional; the host shows this to the PM before enabling, and gives the using plugin a
+   read-only view of exactly those fields, never the provider's records.
+3. **Events.** A plugin subscribes to core events and to the events of interfaces it uses (3.4). A handler may read, queue a
+   request and file a question to the PM; it never writes another plugin's records. Any change goes through an op and the
+   applier, as a changeset the PM sees when it comes from another plugin.
+4. **Requests for another plugin's work.** A plugin may queue a request for a task kind another plugin's interface offers
+   (the writing pack's "back-cover copy in the author's voice"). It runs as that plugin's task, under its playbook, with the
+   normal cost estimate and go (6.16) and the normal review.
+
+**Optional means optional.** Each pack works alone. When both sides of an optional interface are enabled, extra actions
+appear; when one is disabled, they disappear and nothing breaks. Records stay linked by id and come back on re-enabling.
+
+**Writing and publishing, for example.** The writing pack provides `writing/manuscript@1`: the work's title and contributors
+(person ids), word count, the approved manuscript and ebook files, front and back matter, and an authorship summary from long
+text (5.0: how much the assistant drafted and the person changed). The publishing pack uses it optionally:
+
+- When a work reaches its final stage, `writing/manuscript.completed` puts "Start a launch for this book?" on Today. Starting
+  it creates a title linked to the same project, filled from the interface, as a changeset the PM approves.
+- The title's "manuscript received" entry check (6.26) passes from the interface instead of being ticked by hand; a later
+  revision of the manuscript raises an event that shows on the title as a change to look over.
+- The launch plan uses the authorship summary to fill the platforms' AI-disclosure answers, for the PM to check.
+- Publishing requests marketing copy (blurb, back-cover text, announcement) from the writing pack's task kinds, so it is in
+  the author's voice and reviewed like any draft.
+
+**Tested together.** CI runs every bundled pack alone, every pair that shares an interface, and the core with no packs, on
+both fictional workspaces. An interface version that a user declares but no enabled plugin provides is a self-check failure
+when required and a quiet absence when optional.
+

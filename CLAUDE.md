@@ -26,6 +26,9 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 ## Plugins
 - Plugins import only `engine.plugin_api`, declare what they provide and what they may reach in `plugin.yaml`, and namespace
   their identifiers as `<plugin>/<name>`.
+- Plugins work together only through the core (design 3.9): shared core records, versioned interfaces they provide or use,
+  events, and requests for another plugin's task kinds. Never by importing another plugin or reading its records directly.
+  Every pack works alone; optional interfaces add features when both sides are enabled.
 - Plugins change knowledge only through ops and the applier, and send only through the publisher after the PM approves the
   exact content.
 - Bundled plugins ship config and data for both fictional workspaces.

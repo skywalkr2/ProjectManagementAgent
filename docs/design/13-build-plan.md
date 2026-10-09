@@ -52,7 +52,9 @@ Each milestone ends with tests passing against both fictional workspaces, the co
    action notices; Reassign; checking corrections against the data.
 
 4. **Plugin host and the plugin API (0.x).** Manifests, registries for the `1.0` extension points (3.3), the fake plugin;
-   move the walking skeleton's built-ins behind the same interfaces.
+   move the walking skeleton's built-ins behind the same interfaces. Plugins working together (3.9): interfaces with
+   schemas and versions, event subscriptions, requests for another plugin's task kinds, and two fake plugins that use each
+   other in tests.
 
 5. **Watchers, triage, supersede.** Fake connectors with fixture changes; the matcher registry; the auto-closed list.
 
@@ -129,6 +131,7 @@ publishing pack, which takes a finished book to launch.
   voice from their outline and notes, and every chapter waits for the writer's review.
 - **Independent review:** a draft is checked by a model from a different account than the one that wrote it; findings are
   lints the writer decides on, never automatic rewrites.
+- **Works with publishing:** provides `writing/manuscript@1` (3.9), so a finished book becomes a launch without retyping.
 - **Outputs:** a print-ready manuscript PDF to the configured trim size, margins, bleed and fonts for the chosen
   self-publishing platform, and an ebook from the same manuscript (the owner has a converter that can become this pack's
   renderer).

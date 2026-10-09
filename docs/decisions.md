@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Plugins work together through the core
+
+**Decided by:** project owner.
+
+**What:** Plugins cooperate in four ways, all through the core (design 3.9): shared core records (a book is one project that
+the writing and publishing packs both link to), versioned interfaces a plugin provides and others use (required or
+optional), event subscriptions (now a `1.0` extension point, no longer planned), and requests for another plugin's task
+kinds. Plugins still never import each other. Each pack works alone; optional interfaces add features when both are enabled.
+CI tests each pack alone, each pair sharing an interface, and the core with none.
+
+**Why:** Writing a book and launching it are one piece of work across two packs; without a contract between them the PM would
+retype everything and the packs would grow hidden dependencies on each other's internals.
+
+**Impact:** adds work to version 1 milestone 4 (the plugin host; a few days of build time), before the plugin API is frozen.
+Nothing changes in the launch slice.
+
 ## 2026-10-09: Core features the sales and writing packs need
 
 **Decided by:** project owner, after checking the candidate packs against the core.

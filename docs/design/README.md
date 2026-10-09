@@ -28,7 +28,7 @@ Section numbers are stable: "6.18" is section 18 of Part 6, in `06-engine.md`.
 |---|---|---|
 | 1 | [01-product.md](01-product.md) | What the product is, the core loop, what's core and what's a plugin, non-goals |
 | 2 | [02-architecture.md](02-architecture.md) | Layers, repository and workspace layout, where things go, technology choices |
-| 3 | [03-plugins.md](03-plugins.md) | Plugin kinds, manifest, extension points, rules for plugins, lifecycle, worked examples |
+| 3 | [03-plugins.md](03-plugins.md) | Plugin kinds, manifest, extension points, rules for plugins, lifecycle, worked examples, playbooks, plugins working together |
 | 4 | [04-configuration.md](04-configuration.md) | Configuration principles and every config file |
 | 5 | [05-data.md](05-data.md) | Storage model (database, ledger, ids), entities, storage rules |
 | 6 | [06-engine.md](06-engine.md) | Every core component: plugin host, connectors, channels, applier, questions, scope, facts, AI layer, quality signals |
