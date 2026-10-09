@@ -268,3 +268,29 @@ def model_for(kind: str) -> type[Record]:
         return REGISTRY[kind]
     except KeyError:
         raise KeyError(f"unknown record kind {kind!r}") from None
+
+
+def values_at(data: object, path: str) -> list[object]:
+    """The values at a reference path such as "owner", "members[]" or "owners[].person"."""
+    if not path:
+        return [data]
+    head, _, rest = path.partition(".")
+    if head.endswith("[]"):
+        items = data.get(head[:-2], []) if isinstance(data, dict) else []
+        return [v for item in items for v in values_at(item, rest)]
+    if not isinstance(data, dict):
+        return []
+    return values_at(data.get(head), rest)
+
+
+def referrers(view: Any, kind: str, record_id: str) -> list[tuple[str, str]]:
+    """Every live record that refers to this one, as (kind, id), from the declared references."""
+    found = []
+    for other_kind, refs in REFERENCES.items():
+        paths = [path for path, target in refs if target == kind]
+        if not paths:
+            continue
+        for stored in view.list(other_kind):
+            if any(record_id in values_at(stored.data, p) for p in paths):
+                found.append((other_kind, stored.id))
+    return found

@@ -8,7 +8,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from engine.config import ConfigError, load_config
-from engine.records import REFERENCES
+from engine.records import REFERENCES, values_at
 from engine.selfcheck.scans import (
     REPO,
     Finding,
@@ -67,7 +67,7 @@ def _check_references(store: Store, name: str) -> list[Finding]:
     for kind, refs in REFERENCES.items():
         for stored in view.list(kind):
             for field, target in refs:
-                for value in _values(stored.data, field):
+                for value in values_at(stored.data, field):
                     if value is not None and value not in ids.get(target, set()):
                         findings.append(
                             Finding(
@@ -78,18 +78,6 @@ def _check_references(store: Store, name: str) -> list[Finding]:
                             )
                         )
     return findings
-
-
-def _values(data: object, path: str) -> list[object]:
-    if not path:
-        return [data]
-    head, _, rest = path.partition(".")
-    if head.endswith("[]"):
-        items = data.get(head[:-2], []) if isinstance(data, dict) else []
-        return [v for item in items for v in _values(item, rest)]
-    if not isinstance(data, dict):
-        return []
-    return _values(data.get(head), rest)
 
 
 def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = print) -> int:

@@ -250,3 +250,43 @@ def test_a_reply_is_handed_in_against_its_question_and_closes_it(api):
     worker.run_pending()
     assert client.app.state.store.read().get("question", qid).data["status"] == "answered"
     assert client.post(f"{base}/questions/{qid}/reply", json={"text": "again"}).status_code == 409
+
+
+def test_people_can_be_added_renamed_and_removed_when_unused(api):
+    client, base, _ = api
+    new = client.post(f"{base}/people", json={"full_name": "Pat Example", "role": "Proofreader"}).json()["id"]
+    assert client.post(f"{base}/people", json={"full_name": "pat example"}).status_code == 409
+    assert client.post(f"{base}/people/{new}", json={"full_name": "Pat Sample"}).status_code == 200
+    names = {p["id"]: p["name"] for p in client.get(f"{base}/people").json()}
+    assert names[new] == "Pat Sample"
+    assert client.post(f"{base}/people/{new}/remove").status_code == 200
+    assert new not in {p["id"] for p in client.get(f"{base}/people").json()}
+    assert client.post(f"{base}/people/{new}/restore").status_code == 200
+    assert new in {p["id"] for p in client.get(f"{base}/people").json()}
+
+
+def test_a_person_in_use_cannot_be_removed_and_a_rename_shows_everywhere(api):
+    client, base, _ = api
+    editor = by_role("Editor")
+    r = client.post(f"{base}/people/{editor['id']}/remove")
+    assert r.status_code == 409 and "left instead" in r.json()["detail"]
+    client.post(f"{base}/people/{editor['id']}", json={"full_name": "Renamed Editor"})
+    sec = next(s for s in client.get(f"{base}/followups").json() if s["person"] == editor["id"])
+    assert sec["name"] == "Renamed Editor" and sec["message"].startswith("Hi Renamed")
+    pm = next(p for p in client.get(f"{base}/people").json() if p["is_pm"])
+    assert client.post(f"{base}/people/{pm['id']}/remove").status_code == 409
+
+
+def test_projects_can_be_added_and_edited(api):
+    client, base, _ = api
+    owner = by_role("Editor")["id"]
+    body = {"name": "Second title", "target": "2027-03-01", "owner": owner, "status": "Planning"}
+    prj = client.post(f"{base}/projects", json=body).json()["id"]
+    assert client.post(f"{base}/projects", json={"name": "second title"}).status_code == 409
+    assert client.post(f"{base}/projects", json={"name": "X", "owner": "PER-999"}).status_code == 404
+    client.post(f"{base}/projects/{prj}", json={"status": "Writing"})
+    view = next(p for p in client.get(f"{base}/projects").json() if p["id"] == prj)
+    assert view["status"] == "Writing" and view["target"] == "2027-03-01" and view["owner"] == owner
+    assert client.post(f"{base}/projects/{prj}/remove").status_code == 200
+    in_use = fixture_records(DEMO_B, "project")[0]["id"]
+    assert client.post(f"{base}/projects/{in_use}/remove").status_code == 409

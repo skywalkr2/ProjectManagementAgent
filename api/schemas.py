@@ -219,6 +219,61 @@ class PersonView(BaseModel):
     id: str
     name: str
     role: str | None
+    org: str | None = None
+    aliases: list[str] = []
+    status: Literal["active", "left"] = "active"
+    is_pm: bool = False
+
+
+class PersonIn(BaseModel):
+    full_name: str = Field(min_length=1)
+    role: str | None = None
+    org: str | None = None
+    aliases: list[str] = []
+
+
+class PersonPatch(BaseModel):
+    full_name: str | None = Field(None, min_length=1)
+    role: str | None = None
+    org: str | None = None
+    aliases: list[str] | None = None
+    status: Literal["active", "left"] | None = None
+
+
+class ProjectView(BaseModel):
+    id: str
+    name: str
+    group: str | None
+    status: str | None
+    phase: str | None
+    target: str | None
+    owner: str | None
+    owner_name: str | None
+    summary: str | None
+
+
+class ProjectIn(BaseModel):
+    name: str = Field(min_length=1)
+    group: str | None = None
+    status: str | None = None
+    phase: str | None = None
+    target: str | None = Field(None, description="A date, YYYY-MM-DD.")
+    owner: str | None = None
+    summary: str | None = None
+
+
+class ProjectPatch(BaseModel):
+    name: str | None = Field(None, min_length=1)
+    group: str | None = None
+    status: str | None = None
+    phase: str | None = None
+    target: str | None = None
+    owner: str | None = None
+    summary: str | None = None
+
+
+class Created(BaseModel):
+    id: str
 
 
 class BackupTarget(BaseModel):

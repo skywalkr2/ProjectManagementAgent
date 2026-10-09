@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Build on now; the launch slice was too thin to validate
+
+**Decided by:** project owner, after trying the launch slice.
+
+**What:** Building continues now instead of waiting for 2026-10-31, in this order: (1) people and projects screens, so a
+real workspace can be set up without editing files; (2) "Ask the assistant" for drafting on request (6.25); (3) the early
+branch work (plugin host, document features, synced folder, developer guide). The launch-slice copy for the launch is commit
+`49e95e7`; the owner runs that copy for real launch work if newer builds are unsettled. The settings screen for AI accounts
+waits for the automatic restart (6.14), since AI settings changed from the browser need it; `cockpit ai test` covers setup
+until then.
+
+**Why:** In real use the slice could not be validated: there was no way to set up the imprint's people and projects without
+editing data files, and the first thing the owner asked for (drafting an email) was not built.
+
+**Impact:** the go/no-go on 2026-10-30 judges whatever is built by then; the November freeze applies to the copy in use, not to
+development. Owner time unchanged.
+
 ## 2026-10-09: Lessons from switching AI providers
 
 **Decided by:** project owner, from the owner's experience switching the AI provider in a private tool.

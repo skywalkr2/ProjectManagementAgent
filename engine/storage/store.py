@@ -258,6 +258,17 @@ class Tx:
         self._c.execute("UPDATE records SET version=?, deleted=1 WHERE kind=? AND id=?", (version, kind, record_id))
         self._log(self._clock(), ctx, kind, record_id, version, None, None, None)
 
+    def undelete(self, kind: str, record_id: str, ctx: WriteContext, *, read_version: int) -> None:
+        """Bring back a deleted record under its own id; the ledger records it like any other write."""
+        current = self.get(kind, record_id, include_deleted=True)
+        if current is None or not current.deleted:
+            raise StoreError(f"{kind} {record_id} isn't deleted")
+        if read_version != current.version:
+            raise ConflictError(kind, record_id, ["(record changed since it was read)"])
+        version = current.version + 1
+        self._c.execute("UPDATE records SET version=?, deleted=0 WHERE kind=? AND id=?", (version, kind, record_id))
+        self._log(self._clock(), ctx, kind, record_id, version, None, None, None)
+
     # ---- import support ----------------------------------------------------------------------------------------------
 
     def restore_record(self, stored: Stored) -> None:

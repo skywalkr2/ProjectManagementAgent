@@ -10,6 +10,12 @@ Last updated: 2026-10-09.
 
 - [x] Built, tested and pushed; CI green on the development branch (2026-10-09).
 
+## 2a. Build on now (decided 2026-10-09; launch-slice copy is commit `49e95e7`)
+
+- [ ] People and projects screens: add, edit, rename; remove when nothing refers to them.
+- [ ] Ask the assistant: draft on request (an email, a message), edit and copy (6.25).
+- [ ] Then the 3a work below, starting now instead of 2026-10-31.
+
 ## 2. Owner validation (now to 2026-10-30)
 
 - [ ] Run it locally on the fictional imprint (README, "Try it").

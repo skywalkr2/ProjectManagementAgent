@@ -19,6 +19,7 @@ from api.schemas import (
     BackupStatus,
     ChangeItem,
     ChangesetView,
+    Created,
     FollowupAction,
     FollowupQuestion,
     FollowupSection,
@@ -28,7 +29,12 @@ from api.schemas import (
     Option,
     OpView,
     PersonChoice,
+    PersonIn,
+    PersonPatch,
     PersonView,
+    ProjectIn,
+    ProjectPatch,
+    ProjectView,
     Reply,
     RequestCounts,
     Requeued,
@@ -49,6 +55,7 @@ from engine.followups import mark_sent, sections, unmark_sent
 from engine.intake import IntakeError, hand_in, source_text
 from engine.names import People
 from engine.prompts import render
+from engine.records import referrers
 from engine.storage import Store, StoreError, WriteContext
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -286,9 +293,119 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/people")
     def people() -> list[PersonView]:
+        pm = cfg.workspace.user.person
         return [
-            PersonView(id=p.id, name=p.data["full_name"], role=p.data.get("role")) for p in store.read().list("person")
+            PersonView(
+                id=p.id,
+                name=p.data["full_name"],
+                role=p.data.get("role"),
+                org=p.data.get("org"),
+                aliases=p.data.get("aliases", []),
+                status=p.data.get("status", "active"),
+                is_pm=p.id == pm,
+            )
+            for p in store.read().list("person")
         ]
+
+    def _same_name(kind: str, field: str, value: str, except_id: str | None = None) -> None:
+        for rec in store.read().list(kind):
+            if rec.id != except_id and rec.data[field].strip().lower() == value.strip().lower():
+                raise HTTPException(status_code=409, detail=f"{value} already exists.")
+
+    @r.post("/people")
+    def add_person(body: PersonIn) -> Created:
+        _same_name("person", "full_name", body.full_name)
+
+        def do() -> str:
+            with store.transaction() as tx:
+                return tx.create("person", body.model_dump(), _setup("person.add")).id
+
+        new = guard(do)
+        changed()
+        return Created(id=new)
+
+    @r.post("/people/{pid}")
+    def edit_person(pid: str, body: PersonPatch) -> Ok:
+        """Change a person. Records refer to people by id, so a new name shows everywhere at once."""
+        need("person", pid)
+        changes = body.model_dump(exclude_unset=True)
+        if changes.get("full_name"):
+            _same_name("person", "full_name", changes["full_name"], except_id=pid)
+        guard(lambda: _update(store, "person", pid, changes, _setup("person.edit")))
+        changed()
+        return Ok(ok=pid)
+
+    @r.post("/people/{pid}/remove")
+    def remove_person(pid: str) -> Ok:
+        need("person", pid)
+        if pid == cfg.workspace.user.person:
+            raise HTTPException(status_code=409, detail="That's you; you can't be removed.")
+        guard(lambda: _remove(store, "person", pid))
+        changed()
+        return Ok(ok=pid)
+
+    @r.post("/people/{pid}/restore")
+    def restore_person(pid: str) -> Ok:
+        guard(lambda: _restore(store, "person", pid))
+        changed()
+        return Ok(ok=pid)
+
+    @r.get("/projects")
+    def projects() -> list[ProjectView]:
+        names = People(store, cfg)
+        return [
+            ProjectView(
+                id=p.id,
+                name=p.data["name"],
+                group=p.data.get("group"),
+                status=p.data.get("status"),
+                phase=p.data.get("phase"),
+                target=str(p.data["target"]) if p.data.get("target") else None,
+                owner=p.data.get("owner"),
+                owner_name=names.name(p.data["owner"]) if p.data.get("owner") else None,
+                summary=p.data.get("summary"),
+            )
+            for p in store.read().list("project")
+        ]
+
+    @r.post("/projects")
+    def add_project(body: ProjectIn) -> Created:
+        _same_name("project", "name", body.name)
+        if body.owner:
+            need("person", body.owner)
+
+        def do() -> str:
+            with store.transaction() as tx:
+                return tx.create("project", body.model_dump(exclude_none=True), _setup("project.add")).id
+
+        new = guard(do)
+        changed()
+        return Created(id=new)
+
+    @r.post("/projects/{prj}")
+    def edit_project(prj: str, body: ProjectPatch) -> Ok:
+        need("project", prj)
+        changes = body.model_dump(exclude_unset=True)
+        if changes.get("name"):
+            _same_name("project", "name", changes["name"], except_id=prj)
+        if changes.get("owner"):
+            need("person", changes["owner"])
+        guard(lambda: _update(store, "project", prj, changes, _setup("project.edit")))
+        changed()
+        return Ok(ok=prj)
+
+    @r.post("/projects/{prj}/remove")
+    def remove_project(prj: str) -> Ok:
+        need("project", prj)
+        guard(lambda: _remove(store, "project", prj))
+        changed()
+        return Ok(ok=prj)
+
+    @r.post("/projects/{prj}/restore")
+    def restore_project(prj: str) -> Ok:
+        guard(lambda: _restore(store, "project", prj))
+        changed()
+        return Ok(ok=prj)
 
     @r.post("/backup")
     def backup_now() -> Status:
@@ -314,6 +431,36 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-store"})
 
     return r
+
+
+def _setup(op: str) -> WriteContext:
+    return WriteContext(actor="pm", trust="trusted", op=op)
+
+
+def _update(store: Store, kind: str, record_id: str, changes: dict[str, Any], ctx: WriteContext) -> None:
+    with store.transaction() as tx:
+        cur = _existing(tx, kind, record_id)
+        tx.update(kind, record_id, changes, ctx, read_version=cur.version)
+
+
+def _remove(store: Store, kind: str, record_id: str) -> None:
+    """Remove a record nothing refers to; otherwise say what still does."""
+    with store.transaction() as tx:
+        cur = _existing(tx, kind, record_id)
+        using = referrers(tx, kind, record_id)
+        if using:
+            what = ", ".join(sorted({k for k, _ in using}))
+            hint = " Mark them as left instead." if kind == "person" else ""
+            raise ValueError(f"Still used by {len(using)} record(s) ({what}), so it can't be removed.{hint}")
+        tx.delete(kind, record_id, _setup(f"{kind}.remove"), read_version=cur.version)
+
+
+def _restore(store: Store, kind: str, record_id: str) -> None:
+    with store.transaction() as tx:
+        cur = tx.get(kind, record_id, include_deleted=True)
+        if cur is None:
+            raise KeyError(f"{kind} {record_id} doesn't exist")
+        tx.undelete(kind, record_id, _setup(f"{kind}.restore"), read_version=cur.version)
 
 
 def _existing(tx: Any, kind: str, record_id: str) -> Any:
