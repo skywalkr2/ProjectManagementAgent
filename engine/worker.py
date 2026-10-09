@@ -39,6 +39,13 @@ class Events:
     def __init__(self) -> None:
         self._cond = threading.Condition()
         self.version = 0
+        self.closed = False
+
+    def close(self) -> None:
+        """Release every waiter and make later waits return at once, so live streams can end."""
+        with self._cond:
+            self.closed = True
+            self._cond.notify_all()
 
     def changed(self) -> None:
         with self._cond:
@@ -47,7 +54,7 @@ class Events:
 
     def wait(self, after: int, timeout: float) -> int:
         with self._cond:
-            self._cond.wait_for(lambda: self.version > after, timeout=timeout)
+            self._cond.wait_for(lambda: self.version > after or self.closed, timeout=timeout)
             return self.version
 
 

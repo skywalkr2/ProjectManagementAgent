@@ -8,6 +8,7 @@ import shutil
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from engine.config import ConfigError
 from engine.storage import Store, StoreError
@@ -141,8 +142,18 @@ def cmd_serve(args: argparse.Namespace) -> int:
             store.close()
 
     app = create_app(ws, cfg, token, on_shutdown=shut_down, start_worker=True)
+
+    class Server(uvicorn.Server):
+        def handle_exit(self, sig: int, frame: Any) -> None:
+            # Live streams end first, so the server isn't kept waiting on open connections.
+            app.state.events.close()
+            super().handle_exit(sig, frame)
+
+    server = Server(uvicorn.Config(app, host=cfg.server.host, port=cfg.server.port, log_level="warning"))
     try:
-        uvicorn.run(app, host=cfg.server.host, port=cfg.server.port, log_level="warning")
+        server.run()
+    except KeyboardInterrupt:
+        pass
     finally:
         shut_down()
     return 0
