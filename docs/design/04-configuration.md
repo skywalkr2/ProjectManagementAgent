@@ -200,6 +200,7 @@ budgets:
   per_record: {}               # default caps by record type, e.g. {sales/opportunity: 15}; a record can set its own
 prices: {}                     # overrides for models whose price the provider's catalog doesn't give
 evaluation: {required_before_switch: true, min_score: 0.9, runs: 3}
+probation: {runs: 20}          # per task kind: a new account's work always waits for review this many runs (6.16)
 ```
 
 Budget defaults suit one person: a typical notes run is about 5,000 to 10,000 tokens in and about 1,000 out, which costs a

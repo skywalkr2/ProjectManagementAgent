@@ -13,7 +13,7 @@ Last updated: 2026-10-09.
 ## 2. Owner validation (now to 2026-10-30)
 
 - [ ] Run it locally on the fictional imprint (README, "Try it").
-- [ ] Add an AI key and run `cockpit evaluate`; choose a model from the report.
+- [ ] Add an AI key, run `cockpit ai test` (every tier answers), then `cockpit evaluate`; choose a model from the report.
 - [ ] Set up the private imprint workspace and an off-device backup folder; one backup succeeds.
 - [ ] A week of real launch notes and emails through it; does it save time?
 - [ ] **Go / no-go on 2026-10-30** (criteria in `schedule.md`). Go: use it through the launch. No-go: parked until after.
@@ -71,6 +71,10 @@ Last updated: 2026-10-09.
 Hosted mode and sign-in (Part 11), social, email and newsletter channels, the sales pack (13.3).
 
 ## Open items
+
+- [ ] **Provider lessons in version 1** (decisions, "Lessons from switching AI providers"): per-model parameter
+  capabilities, agent lock-down test, `sign_in_hint`, automatic restart, first-run notice, probation, canonical form for
+  channels, premise checks, `project.add`, person-owned fields, office-file extractors.
 
 - [ ] **Milestone 10 overlap.** `scope.md` puts version 1 at milestones 1 to 9, but lists some milestone 10 items as version 1
   musts: escalation on failure, budgets, native adapters. Cost control (M6) needs budgets. Decide which milestone 10 items

@@ -223,3 +223,7 @@ For your information; nothing here needs an answer.
 - **Draft checks and plugin hooks** (6.7, 3.3, 3.4, 4.6, 4.12): paragraph-anchored drafts, lints computed in code and anchored
   to passages, lints on drafts counting for escalation, a project's own language, declared outside programs, a person's own
   data files for a plugin, and a `text.accepted` event.
+- **Lessons from switching AI providers** (6.16, 6.14, 6.13, 6.3, 6.7): no silent default provider, a smoke test of every
+  tier with exact parameters, vendor error text read only in the adapter, no new work on old code after settings change,
+  canonical form and a re-pull after publishing, premise checks before "can't do", `project.add` and person-owned fields,
+  office-file extractors, and probation for a new account.

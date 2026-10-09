@@ -27,6 +27,8 @@
   "backup.overdue": "Backup overdue · last {age}",
   "backup.now": "Back up now",
 
+  "restart.needed": "Settings or code changed. Restart the cockpit to use them; new work waits until then.",
+
   "handin.open": "Hand something in",
   "handin.title": "Hand something in",
   "handin.note": "Your note",

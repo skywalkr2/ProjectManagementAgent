@@ -13,7 +13,10 @@ automation `Problem` naming the plugin, not a crash.
 
 The interface in 3.3. Each returns plain data; errors are typed (no-access, not-found, outage, auth). The core ships paste-in
 and upload, a local-folder connector and the fake connector. Everything else (wikis, trackers, mailboxes, calendars, feeds,
-social accounts) is a plugin. Files are read as text from documents and spreadsheets by a shared extractor that plugins reuse.
+social accounts) is a plugin. Files are read as text by the text extractors (3.3): the core ships extractors for documents, spreadsheets (cells and
+their comments), presentations (slide text, tables and speaker notes) and PDFs, and plugins add others. Packets carry the
+extracted text, so a run never asks the PM to paste what is already in a file it can read. A file type with no extractor is
+flagged to the PM once, as unsupported, not request by request.
 
 ## 6.3 Channels (outputs)
 
@@ -22,6 +25,11 @@ back, scheduled sending, length limits, media. The core ships the clipboard chan
 it anywhere), the **file channel** (the approved content is written to a configured folder, in whatever format a renderer
 produced: text, a document, a PDF, an ebook; with a synced folder, by default the project's `outputs/` folder, 5.0) and the fake channel. Wiki pages, email, blogs and social networks are plugins.
 Channels are called only by the publisher (6.12).
+
+**Canonical form.** A channel normalizes values the way its system stores them (a width written as `15%` that the system
+keeps as `15.0%`), and every diff compares normalized forms. After a publish, the publisher pulls the target again and checks
+that no difference remains. A remaining difference is an automation problem with a report (6.13), never a new draft, so a
+format-only change can't sit in Waiting to go out forever or be published again and again as a no-op.
 
 ## 6.4 Watchers
 
@@ -120,6 +128,11 @@ A draft has no quote to cite, so it is not held to the evidence rule; instead it
 approves it. Factual statements inside a draft that the task kind declares checkable (a date, a price, a regulation, a
 research finding) still need evidence, listed beside the draft. A task kind says which it produces: ops (extraction) or a
 draft.
+
+**Person-owned fields.** A record type can mark fields that only the person sets (a project's priority or capacity): an op
+from the assistant that sets one is refused as an invariant. `project.add` adds a project as a row of the portfolio (name,
+parent, group, status, phase, target, notes) without anything else a pack would attach; person-owned fields stay empty
+for the person to fill.
 
 **Proposed versions and accepting them.** Two ops create a pending version of a `long_text` field: `text.draft` (written by
 the assistant) and `text.propose` (the person's own work arriving from outside the cockpit: a handed-back working copy or a
@@ -361,6 +374,12 @@ wherever they are shown.
   waiting for the network, paused until a limit resets).
 - **No self-modifying code.** The product never writes or applies code changes to itself or to a workspace's plugins. What
   an installation can change on its own is data and, with the PM's confirmation, config (system ops, 6.7).
+- **Check the premise first.** Before concluding that a request can't be done (a report) or reaching for an outside lookup, a
+  run checks the workspace's own records for its targets: records, drafts, saved research, earlier answers. Local knowledge
+  comes first. A "can't do" outcome must name the records it checked; when its targets don't exist at all, the outcome is a
+  question to the PM ("these aren't in your records: did you mean ...?"), never a report. A note the PM adds to a request is an
+  instruction the run must act on, and an outcome identical to the previous one for the same request is refused and sent back
+  once with that reason.
 - **Reports, not fixes.** A problem the PM wants looked at, or a request no op can do, becomes a **report** (`dev.request`): a
   draft with what happened, the steps and records involved, the version and the relevant log lines, with workspace specifics
   left out unless the PM keeps them in. The PM reads it, approves it and sends it through `reports` (4.9): the clipboard by
@@ -379,6 +398,13 @@ failed). After sleep, the first refresh runs on wake when data is stale, after t
 job doesn't count as a run: a refresh that failed leaves the data marked stale, with its age, so nothing looks fresh that isn't. Plugin jobs follow the same rules. Jobs run in
 the process whose `server.role` is `all` or `worker`; the scheduler lease in the jobs table (5.0) makes sure only one scheduler
 runs at a time, even when a host starts more than one copy.
+
+**Settings and code that change under a running process.** Before each job the process checks whether its config files or
+its own code changed since it started (file hashes, the schema version of each config file, the installed version). Config
+that changed is validated and reloaded; config that fails validation pauses the work with the reason shown. Code that changed,
+or a config schema newer than the running code, stops new jobs: the process finishes the current one and restarts itself
+(locally it re-executes; hosted, it exits for its supervisor to start the new code). Until it has restarted, waiting work
+says "Settings or code changed; restarting before the next run". Old code never quietly runs new config.
 
 ## 6.15 Today builder
 
@@ -478,6 +504,28 @@ then picks an account (and, where the tiers allow, a vendor) different from the 
 a task, 4.8). Its findings are lints the person decides on, never automatic rewrites. Packs that draft long documents use it
 on each one; the core can use it to check a draft before it reaches another person. If no independent account is configured, the
 review waits for the person and says why, instead of quietly reviewing with the same model.
+
+**No silent provider.** Which account runs work is never a default. A tier naming an account that isn't in
+`config/ai.yaml` is a config error: start-up and the self-check fail and name the tier. A tier with no account yet leaves its
+work waiting, saying which tier needs one. The stand-in adapter runs only where a workspace configures it explicitly (fixtures, tests). Every run records its
+provider and model, and the first run on an account after it was added or changed shows on the run's change as "first run
+on <account>".
+
+**Smoke test on every change.** Adding or changing an account, a model or a tier runs `cockpit ai test` before the first real
+run: one small live call per configured tier, with that tier's exact parameters, so a parameter one model refuses (a reasoning
+setting on an automatically routed model, say) is caught before real work fails. For agent adapters it also runs
+`lockdown_test()`: writing to the agent's outbox works, writing anywhere else is refused, and starting a shell is refused.
+Each model's accepted parameters come from the adapter's `models()`, and the self-check rejects a tier whose parameters its
+model doesn't accept.
+
+**Errors are read in one place.** `classify_error()` in the adapter is the only code that reads a vendor's error text or exit
+output. Everything else works from its classification. A sign-in failure (`auth`) always becomes a question to the PM that
+includes the adapter's `sign_in_hint()` (its own login command or page), and never reaches any other path.
+
+**Probation for a new account.** A newly approved account's changesets carry a "new account" tag and always wait for review
+(nothing closes on its own) for `ai.probation.runs` runs per task kind (default 20). The PM's Looks good and Send back on them
+count toward that account's evaluation score (6.20), because a model can pass the fixtures and still follow instructions too
+literally in real use.
 
 **Prompts are workspace content, not code.** Instructions, examples and style guides live in `prompts/` templates; the core and
 plugins ship defaults that the workspace can override. Default templates refer to sources through template variables filled

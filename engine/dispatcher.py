@@ -81,6 +81,7 @@ def process(
     inputs = Inputs(request_id, req.data.get("source"), packet.raw_input, packet.note, trust)
     ctx = Context(store, cfg, People(store, cfg), task_kind(req.data["task"]).ops, inputs, hidden_words(cfg))
 
+    previous_ops = _previous_ops(store, req.data.get("previous"))
     task: AiTask = packet.task
     changeset: ChangesetIn | None = None
     problems = []
@@ -105,6 +106,13 @@ def process(
                 )
                 continue
             return needs_you(store, request_id, f"The assistant's answer couldn't be read: {err}.")
+        if previous_ops is not None and _ops_of(changeset) == previous_ops:
+            if attempt < cfg.dispatch.fix_rounds:
+                task = replace(task, request=packet.task.request + "\n\n" + REPEATED)
+                continue
+            return needs_you(
+                store, request_id, "The assistant gave the same answer again after your note. Look at it with them."
+            )
         problems = check(changeset, ctx)
         if needs_another_round(problems) and attempt < cfg.dispatch.fix_rounds:
             task = replace(task, request=packet.task.request + "\n\n" + feedback(problems))
@@ -114,6 +122,25 @@ def process(
     cs_id = apply_changeset(changeset, problems, ctx, run=run_id, now=now)
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
     return cs_id
+
+
+REPEATED = (
+    "This answer is the same as the one the PM sent back. The PM's note in this request is an instruction: act on it. "
+    "If the note shows the request was based on a misunderstanding, record what the PM said instead of repeating."
+)
+
+
+def _ops_of(changeset: ChangesetIn) -> str:
+    return json.dumps([op.model_dump(mode="json", exclude_none=True) for op in changeset.ops], sort_keys=True)
+
+
+def _previous_ops(store: Store, previous: str | None) -> str | None:
+    """The ops of the answer the PM sent back, to refuse the same answer again."""
+    old = store.read().get("request", previous) if previous else None
+    cs = store.read().get("changeset", old.data["changeset"]) if old and old.data.get("changeset") else None
+    if cs is None:
+        return None
+    return json.dumps([o["op"] for o in cs.data["ops"]], sort_keys=True)
 
 
 def _ai_failure(err: AiError) -> str:
@@ -205,6 +232,7 @@ def send_back(store: Store, changeset_id: str, note: str, now: datetime | None =
                 "state": "queued",
                 "waiting": "With the assistant, next in line",
                 "created_at": now.isoformat(),
+                "previous": old.id,
             },
             _PM,
         ).id

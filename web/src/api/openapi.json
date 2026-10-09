@@ -1048,6 +1048,18 @@
           "requests": {
             "$ref": "#/components/schemas/RequestCounts"
           },
+          "restart_needed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why new work waits until the cockpit restarts, if it does.",
+            "title": "Restart Needed"
+          },
           "version": {
             "title": "Version",
             "type": "integer"

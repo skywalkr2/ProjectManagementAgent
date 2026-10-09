@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
 import tempfile
@@ -68,6 +69,11 @@ def _parser() -> argparse.ArgumentParser:
     sp.add_argument("--force", action="store_true", help="take it even if the other copy still seems to be running")
     sp.set_defaults(func=cmd_takeover)
 
+    sp = sub.add_parser("ai", help="check the AI setup")
+    ws_arg(sp)
+    sp.add_argument("action", choices=["test"], help="test: one small live call per tier and account")
+    sp.set_defaults(func=cmd_ai)
+
     sp = sub.add_parser("backup", help="copy the workspace to the configured backup folders now")
     ws_arg(sp)
     sp.set_defaults(func=cmd_backup)
@@ -117,6 +123,10 @@ def cmd_serve(args: argparse.Namespace) -> int:
     lease = Lease(store)
     lease.acquire()
     lease.keep_alive(on_lost=lambda: print("cockpit: another copy took over this workspace.", file=sys.stderr))
+    from engine.ai.smoke import untested_since_change
+
+    if untested_since_change(ws):
+        print("Note: the AI settings haven't passed `cockpit ai test` since they last changed.", file=sys.stderr)
     token = ws.install_token()
     prefix = "" if cfg.server.base_path == "/" else cfg.server.base_path
     url = f"http://{cfg.server.host}:{cfg.server.port}{prefix}/?token={token}"
@@ -193,6 +203,21 @@ def cmd_takeover(args: argparse.Namespace) -> int:
         store.close()
     print("This workspace is free to open here." if held else "Nobody was holding this workspace.")
     return 0
+
+
+def cmd_ai(args: argparse.Namespace) -> int:
+    from engine.ai.smoke import record, smoke_test
+
+    ws = resolve(args.workspace)
+    cfg = ws.config()
+    results = smoke_test(cfg, os.environ)
+    for r in results:
+        role = "main" if r.main else "fallback"
+        print(f"{'ok  ' if r.ok else 'FAIL'}  {r.tier:<10} {role:<8} {r.account or '-'}: {r.detail}")
+    record(ws, results)
+    failed = [r for r in results if r.main and not r.ok]
+    print("All tiers answered." if not failed else f"{len(failed)} tier(s) can't run; fix ai.yaml and test again.")
+    return 1 if failed else 0
 
 
 def cmd_backup(args: argparse.Namespace) -> int:

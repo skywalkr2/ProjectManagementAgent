@@ -85,6 +85,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             ),
             requests=RequestCounts(**counts),
             version=events.version,
+            restart_needed=worker.restart_needed,
         )
 
     @r.post("/handin")

@@ -121,7 +121,15 @@ def _run_case(
             shutil.copyfile(ai_config, ws.config_dir / "ai.yaml")
         flags: dict[str, Any] = {}
         if stub:
-            flags = {"ai.tiers.routine.use": "stub/default", "ai.tiers.routine.fallback": []}
+            flags = {
+                "ai.providers.stub": {
+                    "adapter": "stub",
+                    "models": {"default": "scripted"},
+                    "allowed_data": ["open", "internal", "restricted"],
+                },
+                "ai.tiers.routine.use": "stub/default",
+                "ai.tiers.routine.fallback": [],
+            }
             set_responder(lambda task, answer=case["stub_answer"]: json.dumps(answer))
         elif account:
             flags = {"ai.tiers.routine.use": account, "ai.tiers.routine.fallback": []}

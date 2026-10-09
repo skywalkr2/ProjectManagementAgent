@@ -40,6 +40,14 @@ export function Header(props: {
               ? t("live.on", { time: time(props.live.lastUpdate) })
               : t(`live.${props.live.state}`)}
           </span>
+          {status.data?.restart_needed && (
+            <span className="backup attention" role="status">
+              <span className="mark" aria-hidden="true">
+                !
+              </span>
+              {t("restart.needed")}
+            </span>
+          )}
           {b && (
             <span className={b.needs_attention ? "backup attention" : "backup"}>
               {b.needs_attention && (

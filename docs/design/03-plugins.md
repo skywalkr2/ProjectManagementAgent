@@ -62,7 +62,8 @@ where it came from.
 | Lint | a soft check computed in code (a rate per 1,000 words against a measured profile, say) | `lint(op, workspace) -> problems`, each with a lint id, the passage it points to (a range or paragraph id) and guidance; severity from `config/checks.yaml` (4.17) with the plugin's default | 1.0 |
 | Working-copy format | a file format people edit long text in with their own tools (5.0) | `hand_out(record, field, version) -> file` and `take_back(file, base_version) -> text, unmapped`: deterministic, no AI; anything it cannot map is reported, never dropped | 1.0 |
 | Triage matcher | a rule kind for `config/triage.yaml` | `match(change, params) -> reason or None` | 1.0 |
-| AI adapter | a kind of AI account: a vendor's native API, an aggregator, or an agent | `models()`, `run()`, `classify_error()`, `health()` (6.16) | 1.0 |
+| AI adapter | a kind of AI account: a vendor's native API, an aggregator, or an agent | `models()` (with the parameters each model accepts), `run()`, `classify_error()` (the only code that reads the vendor's error text), `sign_in_hint()` (how the person signs back in), `health()`, and for agents `lockdown_test()` (6.16) | 1.0 |
+| Text extractor | text from a file type (documents, spreadsheets with comments, presentations with tables and speaker notes, PDFs) | `extract(file) -> text, notes`; the core ships the common office formats | 1.0 |
 | AI task kind | a new kind of AI work | packet builder, output (ops, or a draft for a `long_text` field, 6.7), the ops it may use (its output schema is generated from them), required capabilities, independent review or not, typical cost, default prompt template, default tier and parameters | 1.0 |
 | Renderer | how records become content for a channel | template files, optional render function | 1.0 |
 | Lookup | a fact the AI can ask the engine to fetch | `lookup(query) -> result` | 1.0 |

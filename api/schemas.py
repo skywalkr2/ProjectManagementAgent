@@ -78,6 +78,7 @@ class Status(BaseModel):
     backup: BackupStatus
     requests: RequestCounts
     version: int
+    restart_needed: str | None = Field(None, description="Why new work waits until the cockpit restarts, if it does.")
 
 
 class Option(BaseModel):

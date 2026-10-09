@@ -38,7 +38,11 @@ uv run cockpit serve --workspace /tmp/lantern               # prints a link to o
 
 The fictional workspace uses a stand-in AI that files whatever you hand in as a note. To use a real account, add it to the
 workspace's `config/ai.yaml` with its key as a reference (`auth: env:MY_AI_KEY`, never the key itself) and point the
-`routine` tier at it. Before relying on a model, score it on the fictional cases:
+`routine` and `deep` tiers at it. Then check every tier with one small live call each:
+
+```
+MY_AI_KEY=... uv run cockpit ai test --workspace /tmp/lantern
+``` Before relying on a model, score it on the fictional cases:
 
 ```
 MY_AI_KEY=... uv run cockpit evaluate --from workspaces/demo-b --ai-config /tmp/lantern/config/ai.yaml \

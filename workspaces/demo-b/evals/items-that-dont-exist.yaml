@@ -1,0 +1,19 @@
+id: items-that-dont-exist
+title: The PM asks to close items that were never recorded
+note: 'Close the actions for the bookmarks order and the poster proofs, they are both done.'
+expect:
+- op: question.add
+  to: PER-1
+forbid:
+- op: action.close
+- op: note
+  text_has:
+  - can't
+stub_answer:
+  summary: Neither item is in your records, so nothing was closed; asking which you meant.
+  ops:
+  - op: question.add
+    to: me
+    kind: question
+    title: 'I have no actions for a bookmarks order or poster proofs. Did you mean other actions, or should I add these as done?'
+    project: PRJ-1

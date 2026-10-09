@@ -2,15 +2,35 @@
 
 from __future__ import annotations
 
+import hashlib
 import os
 import threading
 from collections.abc import Callable
+from pathlib import Path
 
 from engine.ai.router import Router
 from engine.config import Config
 from engine.dispatcher import needs_you, process
-from engine.storage import Store
+from engine.storage import Store, WriteContext
 from engine.workspace import Workspace
+
+CODE_ROOTS = (Path(__file__).resolve().parent, Path(__file__).resolve().parents[1] / "api")
+RESTART_NEEDED = "Settings or code changed since the cockpit started; restart it to use them."
+
+
+def config_fingerprint(ws: Workspace) -> str:
+    """A hash of the workspace's config files, to notice edits made while the process runs."""
+    digest = hashlib.sha256()
+    for path in sorted(ws.config_dir.glob("*.yaml")):
+        digest.update(path.name.encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def code_fingerprint() -> str:
+    """The newest modification time of the running program's own source files."""
+    newest = max((p.stat().st_mtime for root in CODE_ROOTS if root.is_dir() for p in root.rglob("*.py")), default=0.0)
+    return repr(newest)
 
 
 class Events:
@@ -45,6 +65,25 @@ class Worker:
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._started_with = (config_fingerprint(ws), code_fingerprint())
+        self.restart_needed: str | None = None
+
+    def _changed_since_start(self) -> bool:
+        """Old code never runs new settings: once config or code changed, no new job starts in this process."""
+        if self.restart_needed is None and (config_fingerprint(self.ws), code_fingerprint()) != self._started_with:
+            self.restart_needed = RESTART_NEEDED
+        return self.restart_needed is not None
+
+    def _hold_queued(self) -> None:
+        ctx = WriteContext(actor="engine", trust="trusted", op="worker.hold")
+        held = False
+        with self.store.transaction() as tx:
+            for r in tx.list("request"):
+                if r.data["state"] == "queued" and r.data.get("waiting") != RESTART_NEEDED:
+                    tx.update("request", r.id, {"waiting": RESTART_NEEDED}, ctx, read_version=r.version)
+                    held = True
+        if held:
+            self.events.changed()
 
     def start(self) -> None:
         self._thread = threading.Thread(target=self._loop, name="cockpit-worker", daemon=True)
@@ -65,6 +104,9 @@ class Worker:
         while not self._stop.is_set():
             queued = [r for r in self.store.read().list("request") if r.data["state"] == "queued"]
             if not queued:
+                break
+            if self._changed_since_start():
+                self._hold_queued()
                 break
             try:
                 process(self.ws, self.store, self.cfg, self.router_factory(), queued[0].id)

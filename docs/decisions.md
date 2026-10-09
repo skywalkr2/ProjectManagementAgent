@@ -3,6 +3,38 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Lessons from switching AI providers
+
+**Decided by:** project owner, from the owner's experience switching the AI provider in a private tool.
+
+**What** (design 6.16, 6.14, 6.13, 6.3, 6.7, 3.3, 6.2):
+- **No silent provider:** no default account; a tier naming a missing account is a config error; an empty tier makes its
+  work wait with the reason. The first run on a new account is shown as such.
+- **Smoke test on every change** (`cockpit ai test`): one live call per tier and account with each task's exact parameters;
+  agent adapters also get a lock-down test; models declare the parameters they accept and the self-check rejects a tier
+  whose model can't take them.
+- **Errors read in one place:** only the adapter's `classify_error()` reads vendor error text; a sign-in failure becomes a
+  question to the PM with the adapter's `sign_in_hint()`.
+- **Changed settings or code under a running process:** no new job starts on old code with new config; the process restarts
+  (the launch slice pauses new work and asks for a restart).
+- **Canonical form for outside systems:** channels normalize values as the system stores them; after a publish the target is
+  pulled again, and a remaining difference is an automation problem, not a draft.
+- **Check the premise first:** local records before outside lookups; "can't do" must name what it checked; missing targets
+  become a question to the PM; a PM's note is an instruction, and an identical answer after a send-back is refused.
+- **Real gaps:** `project.add`, person-owned fields the assistant can't set, and text extractors for office files (spreadsheet
+  comments, presentation tables and speaker notes), with unsupported types flagged once.
+- **Probation for a new account:** its work always waits for review for `ai.probation.runs` runs per task kind, and the PM's
+  Looks good and Send back count toward its score.
+
+Classified as concepts in the core, with two settings (`ai.probation.runs`, and the per-model parameter capabilities in the
+adapter) and new evaluation data (a request naming items that don't exist).
+
+**Impact:** in the launch slice now (about a day, done): no default account and config errors for missing ones,
+`cockpit ai test` with a start-up notice when untested, pausing work when settings or code change under the server, refusing an
+identical answer after a send-back, and the new evaluation case. The rest lands in version 1 (adapters and probation in
+milestone 10's items moved into version 1, extractors and channels in milestones 5 and 6). No owner time beyond running
+`cockpit ai test` after adding a key.
+
 ## 2026-10-09: Long text formats divide text into units
 
 **Decided by:** project owner, answering a question from a plugin kept in another repository.

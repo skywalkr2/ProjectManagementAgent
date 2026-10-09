@@ -42,6 +42,10 @@ def choices(cfg: Config, task_kind: str, data_level: str, *, tier: str | None = 
     tier_cfg = cfg.ai.tiers.get(tier_name)
     if tier_cfg is None:
         raise NoProvider(f"the {tier_name!r} tier isn't set up in ai.yaml")
+    if not tier_cfg.use:
+        raise NoProvider(
+            f"no AI account is set up for the {tier_name!r} tier; add one to ai.yaml and set tiers.{tier_name}.use"
+        )
     picked: list[Choice] = []
     refused: list[str] = []
     for ref in [tier_cfg.use, *tier_cfg.fallback]:

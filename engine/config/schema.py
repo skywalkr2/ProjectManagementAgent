@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ConfigModel(BaseModel):
@@ -114,7 +114,9 @@ class ProviderSettings(ConfigModel):
 
 
 class TierSettings(ConfigModel):
-    use: str = Field("stub/default", description="provider/model short name that does this tier's work.")
+    use: str = Field(
+        "", description="provider/model short name that does this tier's work; empty means no account is set up yet."
+    )
     fallback: list[str] = Field(default_factory=list, description="Tried in order when the main one can't serve.")
     escalate_to: str | None = Field(None, description="A stronger tier to retry on when checks keep failing.")
 
@@ -154,7 +156,7 @@ def _default_tasks() -> dict[str, TaskSettings]:
 
 class AiFile(FileModel):
     providers: dict[str, ProviderSettings] = Field(
-        default_factory=lambda: {"stub": ProviderSettings()}, description="Every AI account this workspace may use."
+        default_factory=dict, description="Every AI account this workspace may use (none until one is added)."
     )
     tiers: dict[str, TierSettings] = Field(default_factory=_default_tiers, description="What the work needs.")
     tasks: dict[str, TaskSettings] = Field(default_factory=_default_tasks, description="Tier and settings per task.")
@@ -163,6 +165,24 @@ class AiFile(FileModel):
         default_factory=dict, description="Prices by provider/model, for models whose provider doesn't publish them."
     )
     evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings, description="How models are compared.")
+
+    @model_validator(mode="after")
+    def _tiers_name_real_accounts(self) -> AiFile:
+        """A tier may be empty (no account yet), but never name an account or tier that doesn't exist."""
+        problems = []
+        for name, tier in self.tiers.items():
+            for ref in ([tier.use] if tier.use else []) + tier.fallback:
+                provider = ref.partition("/")[0]
+                if provider not in self.providers:
+                    problems.append(f"tiers.{name} names {ref!r}, but there is no account {provider!r} in providers")
+            if tier.escalate_to and tier.escalate_to not in self.tiers:
+                problems.append(f"tiers.{name}.escalate_to names {tier.escalate_to!r}, which isn't a tier")
+        for kind, task in self.tasks.items():
+            if task.tier not in self.tiers:
+                problems.append(f"tasks.{kind}.tier names {task.tier!r}, which isn't a tier")
+        if problems:
+            raise ValueError("; ".join(problems))
+        return self
 
 
 # ---- config/dispatch.yaml --------------------------------------------------------------------------------------------

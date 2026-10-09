@@ -165,6 +165,7 @@ class Request(Record):
     attempts: int = 0
     created_at: datetime
     changeset: str | None = None
+    previous: str | None = Field(None, description="The request this one redoes after the PM sent it back.")
 
 
 class Changeset(Record):
@@ -254,7 +255,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "action": [("project", "project"), ("owners[].person", "person"), ("owners[].team", "team"), ("source", "source")],
     "question": [("to", "person"), ("projects[]", "project"), ("source", "source")],
     "source": [("projects[]", "project")],
-    "request": [("source", "source"), ("changeset", "changeset")],
+    "request": [("source", "source"), ("changeset", "changeset"), ("previous", "request")],
     "changeset": [("request", "request"), ("run", "run")],
     "fact": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("source", "source")],
