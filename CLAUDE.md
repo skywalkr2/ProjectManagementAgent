@@ -38,6 +38,9 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
   Not in code, not in prompt templates (those say how a task is done mechanically). The workspace's rules override playbook
   entries by id. This is an assistant for the person running projects, not a methodology tool: build in what happens every
   day; leave the rest to "ask the assistant" (design 6.25).
+- The PM brings their own accounts: native vendor APIs, any OpenAI-compatible endpoint (many vendors, local servers),
+  aggregators such as OpenRouter, command-line agents. Capabilities and prices are per model, from the adapter's `models()`;
+  never hard-code a model id or assume a capability from a vendor's name.
 - A new vendor is a new adapter plus config. If a feature seems to need a vendor-specific call outside an adapter, add a
   capability to the adapter interface instead.
 

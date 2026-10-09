@@ -93,6 +93,8 @@ apply to the reference pack are in 9.5.
 | The export can be imported back; restore to a point in time is tested | round-trip test, `cockpit restore` |
 | A local install nags until there is a backup off the computer | `config/storage.yaml` backups, Today, header |
 | Switching AI vendor or model is a config change, approved by the PM after an evaluation run | provider layer, evaluation |
+| The PM's own AI accounts, any vendor, an aggregator or a local model; capabilities and prices per model, from the provider's catalog | adapters' `models()`, `config/ai.yaml` |
+| A new AI account sees only open data until the PM raises it, and the screen says who will see it | `allowed_data` defaults, Settings |
 | Restricted inputs only reach AI providers and plugins allowed to see them | `allowed_data`, plugin `data_levels` |
 | Error output is cleaned and short; the raw output is one click away | API error shape |
 | Saves merge, never clobber | storage layer |

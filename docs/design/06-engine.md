@@ -336,8 +336,36 @@ and things the automation handles never appear.
 
 ## 6.16 AI provider layer (any model, by configuration)
 
-The product starts with one vendor's models and must be able to move to another (or mix several) by editing `config/ai.yaml`.
-Nothing outside the adapters knows which vendor is in use.
+The PM brings their own AI accounts: a personal key with a model vendor, an aggregator that reaches many vendors with one key,
+a model running on their own computer, or a command-line agent signed in as them. The product can use one or mix several, and
+moving between them is an edit to `config/ai.yaml` (4.8). Nothing outside the adapters knows which vendor is in use.
+
+**Kinds of provider, and the adapters that serve them:**
+
+| Kind | What it is | Adapter |
+|---|---|---|
+| Native API | a vendor's own API, with its own features (structured output, caching, files) | one per vendor where its API differs: `anthropic`, `openai`, more as plugins |
+| OpenAI-compatible API | any endpoint that speaks the widely used chat-completions format: many vendors offer one (xAI, for example), as do inference hosts and local model servers | one generic `openai-compatible` adapter, configured with `base_url`, key and model ids |
+| Aggregator | one account and key for many vendors' models, with its own model catalog, prices and routing options (OpenRouter, for example) | `openrouter`, a thin layer over `openai-compatible` that reads the catalog and passes routing options |
+| Local model | a model server on the PM's computer | `openai-compatible` with a local `base_url`; data never leaves the machine |
+| Command-line agent | a vendor's coding agent run as a program, signed in with the PM's own login | `cli-agent` (agent mode, below) |
+
+A new vendor that speaks the common format needs only a `providers:` entry. A native adapter is added when a vendor's own API
+offers something the common format doesn't, and it is an adapter plugin, not a core change. Some vendors' agents can sign in
+with the person's subscription instead of a paid key; whether that use is allowed is the vendor's terms, and the PM's call.
+
+**Capabilities and prices are per model, not per adapter.** Through an aggregator, one account reaches models with very
+different abilities and prices. So each adapter has `models()`: the models the account can use, each with its capabilities
+(structured output, tool calling, vision, context and output size, prompt caching) and price, read from the provider's own
+catalog where it publishes one, otherwise from the adapter's defaults and `prices:` in config. A model the catalog doesn't
+describe is treated as having no optional capabilities until the PM says otherwise or an evaluation shows them. New models show
+up through the catalog, with no code change.
+
+**Adding an account** (Settings, AI): pick the kind; for an OpenAI-compatible endpoint, pick from known endpoints (a list the
+adapters ship as data) or enter an address; paste the key, which goes to the keychain while config keeps only the reference;
+**Test** checks the key and lists the models with their capabilities and prices; choose which models fill which tiers; set
+`allowed_data` (new accounts start at `open`, and the screen says who will see the data: the vendor, and for an aggregator the
+aggregator too); run the evaluation (below) before a model is approved for a tier.
 
 **One provider-neutral contract.** Every call is an `AiTask`:
 
@@ -362,8 +390,9 @@ registers its own, plugins add theirs (3.3).
 
 **Adapter interface** (each adapter is a module in `engine/ai/adapters/` or an installed plugin, registered by name):
 
-- `capabilities()`: structured output, tool calling, vision, file access, code editing, max context, max output, streaming,
-  prompt caching (whether a marked stable prefix is cached or discounted), billing unit and price per unit;
+- `models()`: the models this account can use, each with `capabilities()` (structured output, tool calling, vision, file
+  access, code editing, max context, max output, streaming, prompt caching: whether a marked stable prefix is cached or
+  discounted) and price per billing unit, from the provider's catalog where it has one;
 - `run(task) -> result` with output, usage and timing;
 - `classify_error(exit_code, error_stream, transport_error) -> rate_limited | quota_until(date) | auth | timeout |
   invalid_output | provider_down | other`. It reads **only** the runner's own exit code, error stream and transport errors,
@@ -371,11 +400,14 @@ registers its own, plugins add theirs (3.3).
   are both kept on the `Run`, so a usage limit is never hidden behind "failed before doing any work";
 - `health()` for the governor.
 
-Adding a vendor means adding an adapter and a `providers:` entry; nothing else changes.
+Adding a vendor that speaks the common format means adding a `providers:` entry; one with its own API means adding an adapter
+plugin and an entry. Nothing else changes.
 
 **Routing by capability, not by name.** Each task kind declares what it needs (a code fix needs code editing and file access; a
-screenshot needs vision; most need structured output and a context size). The router picks the tier's provider, checks its
-capabilities, and falls through the fallback chain if it can't serve the task. A config that maps a task kind to a provider that
+screenshot needs vision; most need structured output and a context size). The router picks the tier's provider and model,
+checks that model's capabilities and the request's data level against `allowed_data`, and falls through the fallback chain if
+it can't serve the task. Fallbacks can cross accounts and vendors (a usage limit on one account moves the work to the next).
+When the common format lacks structured output for a model, the adapter asks for JSON and the applier's checks still decide. A config that maps a task kind to a provider that
 lacks a required capability fails the self-check.
 
 **Prompts are workspace content, not code.** Instructions, examples and style guides live in `prompts/` templates; the core and

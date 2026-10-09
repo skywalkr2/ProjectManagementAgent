@@ -135,23 +135,48 @@ ship defaults and the workspace's `prompts/` and template folders override them.
 
 ## 4.8 `config/ai.yaml`
 
-The whole AI setup, so changing vendor or model is a config edit (details in 6.16):
+The whole AI setup, so changing vendor, account or model is a config edit (details in 6.16). Each provider entry is one of the
+PM's own accounts: a key they pay for, a local model server, or a command-line agent signed in as them. Vendor names appear only
+here, in the adapters and in usage and evaluation reports; model ids are always config, never code.
 
 ```yaml
-providers:                     # every AI the workspace may use
-  primary:
-    adapter: anthropic-api     # an installed AI adapter; the only place a vendor appears
-    auth: env:PRIMARY_AI_KEY   # a reference to a secret, never the secret itself
+version: 1
+providers:                       # every AI account the workspace may use; names are the PM's choice
+  my-anthropic:
+    adapter: anthropic           # a native adapter, for features its own API offers
+    auth: keychain:anthropic-key # a reference to a secret, never the secret itself
     models: {small: <model id>, large: <model id>}
     allowed_data: [open, internal, restricted]
+  my-openai:
+    adapter: openai
+    auth: keychain:openai-key
+    models: {small: <model id>, large: <model id>}
+    allowed_data: [open, internal]
+  my-xai:
+    adapter: openai-compatible   # one generic adapter for any endpoint that speaks the common chat format
+    base_url: <the vendor's API address>
+    auth: keychain:xai-key
+    models: {large: <model id>}
+    allowed_data: [open, internal]
+  router:
+    adapter: openrouter          # an aggregator: one key, many vendors' models; a thin layer over openai-compatible
+    auth: keychain:openrouter-key
+    models: {small: <vendor/model id>, large: <vendor/model id>, vision: <vendor/model id>}
+    routing: {data_collection: deny, allow_fallbacks: false}   # passed to the aggregator as its own routing options
+    allowed_data: [open]         # data passes through the aggregator and the model's vendor
+  local:
+    adapter: openai-compatible
+    base_url: http://localhost:11434/v1   # a model server on this computer
+    models: {small: <model name>}
+    allowed_data: [open, internal, restricted]   # never leaves the machine
   coding-agent:
-    adapter: cli-agent         # any command-line agent: start command, args, how to pass the packet, where it writes
+    adapter: cli-agent           # any command-line agent: start command, args, how to pass the packet, where it writes
     command: <path to the agent CLI>
     allowed_data: [open, internal]
-tiers:                         # what the work needs, mapped to a provider and model
-  routine:  {use: primary/small, fallback: [coding-agent]}
-  deep:     {use: primary/large}
-  vision:   {use: primary/large}          # screenshots and images
+tiers:                           # what the work needs, mapped to provider/model; any mix of accounts
+  routine:  {use: my-anthropic/small, fallback: [router/small, local/small]}
+  deep:     {use: my-anthropic/large, fallback: [my-openai/large]}
+  vision:   {use: router/vision}               # screenshots and images
   code-fix: {use: coding-agent}
 tasks:                         # which tier each AI task kind uses (defaults shown; plugin kinds use their declared default)
   change: routine
@@ -162,7 +187,8 @@ tasks:                         # which tier each AI task kind uses (defaults sho
   ask: deep                    # ad hoc requests to the assistant (6.25)
   agenda: routine
   fix: code-fix
-budgets: {per_run_usd: 5, per_day_usd: 20, per_month_usd: 200}
+budgets: {per_run_usd: 5, per_day_usd: 20, per_month_usd: 200}   # across all accounts; per-provider budgets optional
+prices: {}                     # overrides for models whose price the provider's catalog doesn't give
 evaluation: {required_before_switch: true, min_score: 0.9}
 ```
 

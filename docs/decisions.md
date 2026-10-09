@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: The PM's own AI accounts, any vendor or aggregator
+
+**Decided by:** project owner.
+
+**What:** The AI layer is built around the PM's own accounts. Provider kinds: native vendor APIs (`anthropic`, `openai`
+adapters, more as plugins), any OpenAI-compatible endpoint through one generic adapter (many vendors such as xAI, inference
+hosts, local model servers), aggregators (`openrouter`, with its catalog and routing options such as refusing providers that
+collect data), and command-line agents signed in as the PM. Capabilities and prices are per model, from each provider's catalog
+(`models()`), with config overrides. Settings has an Add account flow (keychain for the key, Test, model list, tier choice,
+data level starting at `open`, evaluation). Fallbacks may cross accounts and vendors.
+
+**Why:** People want to use the accounts they already pay for, and aggregators reach many vendors with one key; per-adapter
+capabilities can't describe an aggregator's hundreds of models. **Impact:** launch slice uses `openai-compatible` plus one native
+adapter on the owner's key (no extra work: one adapter was planned, and the generic one covers most vendors); the aggregator
+adapter, catalog and Add account flow land in version 1 (milestone 10). Delays nothing.
+
 ## 2026-10-09: Playbooks, ask the assistant, and project management support
 
 **Decided by:** project owner.

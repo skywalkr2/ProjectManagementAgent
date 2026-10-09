@@ -18,7 +18,7 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Records by id, names resolved at the boundary | must | must | 5.1, 6.11 |
 | Op tiers, invariants and lints | must | must | 6.7 |
 | Paste-in with "your note" and "pasted content" | must | must | 12.2 |
-| One AI task kind (notes and messages), first vendor adapter | must | must | 6.16 |
+| One AI task kind (notes and messages); `openai-compatible` and one native adapter on the owner's own key | must | must | 6.16 |
 | Actions, questions, follow-ups by person, Copy and Mark sent | must | must | 6.8, 6.9, 7.5 |
 | Clipboard channel | must | must | 6.3 |
 | Undo from the ledger | must | must | 6.7 |
@@ -39,6 +39,7 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Issues and assumptions, risk fields and reviews (`raid.yaml`) | won't | could | 6.24, 4.20 |
 | Escalation suggestions, communications cadence, meeting agendas | won't | could | 6.24 |
 | Automation `Issue` renamed `Problem` | n/a (naming) | must | 5.1 |
+| Aggregator adapter with catalog and routing options; Add account flow; models from provider catalogs | won't | must | 6.16 |
 | Hosted mode, sign-in providers | won't | won't | Part 11 |
 | Social, email and newsletter channels | won't | won't | 3.7 |
 

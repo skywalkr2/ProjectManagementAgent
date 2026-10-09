@@ -192,4 +192,6 @@ For your information; nothing here needs an answer.
 - **Project management support** (6.24): project issues and assumptions, optional risk fields and reviews, one suggested
   escalation for long-unanswered questions, communication cadence, meeting agendas; and **asking the assistant** (6.25) for
   anything not built in. The automation `Issue` record is now `Problem`, so "issue" keeps its project meaning.
+- **AI accounts** (6.16, 4.8): the PM's own accounts with any vendor, any OpenAI-compatible endpoint (including local models),
+  aggregators such as OpenRouter, or command-line agents; capabilities and prices are per model, from provider catalogs.
 
