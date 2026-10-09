@@ -13,6 +13,7 @@ The working checklist to the first public release is [`roadmap-to-1.0.md`](roadm
 | 2026-10-19 to 10-30 | **Launch slice, part 2** (milestone 2, trimmed) | run the acceptance scenario; use it on a week of real launch notes and emails |
 | **2026-10-30** | **Go / no-go** (criteria below) | 30-minute review |
 | 2026-10-31 to 12-01 | **Freeze.** If go: use it for the launch run-up, fixes only. If no-go: parked. | as the launch allows |
+| from 2026-10-31 | **Plugin host early** (milestone 4, minimal) on a separate development branch; the copy in use for the launch stays frozen | none required; optional play in a sandbox workspace |
 | **2026-12-01** | **Launch** | |
 | by 2026-12-11 | **Retrospective:** what helped, what got in the way; new lessons go into design Part 8; re-plan version 1 | 1 hour |
 | from 2026-12-14 | **Version 1** (`scope.md`), re-planned from what the launch slice actually took | |

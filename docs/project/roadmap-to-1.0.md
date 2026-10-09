@@ -20,8 +20,13 @@ Last updated: 2026-10-09.
 
 ## 3. Freeze and launch (2026-10-31 to 2026-12-01)
 
-- [ ] Fixes only, nothing new.
+- [ ] Fixes only on the copy in use, nothing new.
 - [ ] Launch on 2026-12-01.
+
+## 3a. Plugin host early (from 2026-10-31, separate branch)
+
+- [ ] Minimal plugin host: plugin API 0.x, manifests, registries, plugins working together (3.9), one example plugin.
+- [ ] A sandbox workspace for trying plugins, apart from the launch workspace.
 
 ## 4. Retrospective (by 2026-12-11)
 
@@ -32,7 +37,7 @@ Last updated: 2026-10-09.
 
 - [ ] **M1–2: rest of the core.** The parts the launch slice trimmed (13.1).
 - [ ] **M3: scope and facts.** Scope resolver; facts looked up from configured sources, never asked (6.18, 6.19).
-- [ ] **M4: plugin host.** Plugin API 0.x; plugins working together through interfaces, events and requests (3.9).
+- [ ] **M4: plugin host.** Finish what 3a started: the remaining `1.0` extension points and moving built-ins behind them.
 - [ ] **M5: watchers and triage.** Inputs arrive on their own instead of being pasted.
 - [ ] **M6: records, rendering and the publisher.** Drafts, Waiting to go out with diffs, plus:
   - [ ] long text with versions and authorship (5.0)
