@@ -66,6 +66,9 @@ Section numbers are stable: "6.18" is section 18 of Part 6, in `06-engine.md`.
 | Ledger | The append-only log of every applied op with before and after values; the basis for history and undo (5.0) |
 | Invariant / lint | A check that always refuses a changeset / a check that returns it once for a fix, then warns (6.7) |
 | Draft | Content waiting to go out through a channel: a page version, a message, a post |
+| Audience | Who can see a destination: open, or a named group. A restricted source names the audiences allowed to see it (4.1) |
+| Read-back | How the assistant restates a rule or setting the PM just gave, with what it changed and Undo (6.7) |
+| Handoff | A request about code another project owns, drafted for that project's owner instead of fixed here (4.18) |
 | Connector | A plugin component that brings inputs in (a wiki, a tracker, a mailbox, a feed) |
 | Channel | A plugin component that takes approved drafts out (a wiki page, an email, a blog, a social network) |
 | Plugin | A package that registers components at the core's extension points |

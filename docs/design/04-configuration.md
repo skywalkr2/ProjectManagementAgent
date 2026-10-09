@@ -46,9 +46,13 @@ The goal: a person changes how their installation looks, behaves, runs and is se
 - `plugins`: `enabled` (names with optional version ranges), extra search `paths`
 - `connectors`: named connector instances, each with a `type` (a registered connector) and its settings
 - `channels`: named channel instances, each with a `type` (a registered channel) and its settings
-- `our_accounts`: accounts the cockpit sends with, per connector or channel, so lookups know "that edit was us"
+- `our_accounts`: accounts the cockpit publishes and sends with, per connector or channel; edits by them are marked
+  `by_us` and given to every run (6.4, 6.6)
 - `owner_format`: how an owner is written and parsed, e.g. `"{full_name}"` (default) or `"{team} ({full_name})"`
-- `restricted_sources`: how restricted inputs are marked and where they may appear
+- `audiences`: who can see each destination: `open`, or a named group (members by person or team id). Each channel target
+  names its audience, and may name a banner shown on it (e.g. "Restricted: program leads only").
+- `restrictions`: how a restricted source is recognized (a label, a folder, a sender, a marking in the text) and which
+  audiences may see it. A source with no restriction allows every audience. Checked by the audiences invariant (6.7).
 
 Approval before anything goes out is not a setting; it is always on.
 
@@ -232,7 +236,10 @@ has a default and a description, and both fictional workspaces carry demo values
 - `sources_store`: `local` (default: `sources/` in the workspace) or a registered object store.
 - `export`: how often the readable export is written and committed (default hourly and after each batch), and an optional
   `remote` (a private git repository) to push to, so a hosted install has an off-site copy.
-- `backups`: optional full backup (database file plus sources) on a schedule, to a folder or an object store.
+- `backups`: full backups (a consistent copy of the database plus sources) on a schedule, to one or more targets **off this
+  computer**: a synced folder, an external drive, an object store, or the export remote. `encrypt` with a key reference
+  (`keychain:NAME`) for any target outside the PM's control. Until an off-device target is set up and has succeeded, local mode
+  shows a Today line and a header mark ("No off-device backup") (11.1); the header always shows the age of the last backup.
 - `retention`: per source kind and restriction level, how long raw text is kept after its facts are recorded (default: forever
   locally, 180 days hosted for mail and replies); `forget_person` behavior (delete or anonymize free text that names them,
   repoint their records to "former contact"). The ledger keeps that a source existed and what was learned from it.
@@ -279,6 +286,24 @@ lints:
   unreachable-link: {severity: warn}
 ```
 
-Severities: `refuse`, `return` (back to the AI once, then to the PM with a warning), `warn`, `off`. Invariants (6.7) are not
+Severities: `refuse`, `return` (back to the AI once; then held for the PM if the item will reach another person, or applied
+with a warning if it stays internal, 6.7), `warn`, `off`. Invariants (6.7) are not
 listed and can't be lowered. Plugins register their own lints with defaults here.
+
+## 4.18 `config/code_owners.yaml`
+
+Which project owns which code or tool, so a request about something the PM uses but this product doesn't own (a dashboard that
+reads the published pages, a script another team runs) goes to its owner instead of the fixer:
+
+```yaml
+version: 1
+owners:
+  - name: portfolio dashboard
+    match: {terms: [dashboard, chart, tile], outputs: [summary page readers]}
+    owner: Ana Ortiz                 # a person record
+    handoff: {channel: team-chat, target: dashboard requests}
+```
+
+A matching request becomes a `handoff` draft (6.7), with the request, what the PM saw and links, for the PM to approve and send.
+Anything that matches nothing and needs code goes to the fixer as before.
 

@@ -59,10 +59,14 @@ kind of task. Always read Parts 1, 2 and 10.
 
 ## Data and safety model
 - SQLite is the system of record; every applied op is written to the ledger in the same transaction; `data/` is a readable
-  export, never read back except by import (design 5.0). Writes state the record versions they read.
+  export that `cockpit import` and `cockpit restore` load back, and the round trip is tested (design 5.0). The running engine
+  never reads `data/`. Writes state the record versions they read.
 - Records refer to people, teams and projects by id; names live on their own record and are rendered (design 5.1, 6.11).
-- Every op has a tier: data, outbound or system. System ops never apply automatically from an input; the PM confirms them
-  (design 6.7, 12.2). Untrusted content is marked in packets and never becomes a rule, recipient or source on its own.
+- Every op has a tier: data, outbound or system. System ops from an input or the assistant's own initiative never apply
+  automatically; the PM confirms them. System ops from the PM's own note apply at once with a read-back and Undo (design 6.7,
+  12.2). Untrusted content is marked in packets and never becomes a rule, recipient or source on its own.
+- Lints that still fail after one return are held for the PM when the item will reach another person, and only warn when it
+  stays internal.
 - Checks are invariants (always refuse, not configurable) or lints (severity in `config/checks.yaml`). Don't make a fuzzy check
   an invariant, and never lower an invariant.
 
@@ -71,7 +75,10 @@ kind of task. Always read Parts 1, 2 and 10.
   that exact content.
 - The AI's only write path is a changeset validated by the applier.
 - One row per thing in the UI; lists, not run-on lines; labels in plain words; the model's name never shown.
-- Action owners are people: stored as a person id, shown in the workspace's owner format.
+- Every action names at least one person: owners are a list of person ids (optional team each), shown in the owner format.
+  An action without a known owner is held for "Pick an owner".
+- Every waiting state shows why and until when. Runner errors are classified from the runner's exit code and error stream,
+  never from model output. A correction is checked against the data before anything changes.
 - Questions are written for their reader and link only what the reader can open; decisions are questions to the PM.
 - Scope is enforced, not suggested (design 6.18): only the tracked area gets actions and detailed questions. Other areas are
   observed; at most one impact question goes to that area's contact. Scope decisions come from the scope resolver only.

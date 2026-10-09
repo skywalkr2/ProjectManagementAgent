@@ -105,7 +105,7 @@ changed the storage, identity and safety models underneath.
 | 10 `CLAUDE.md` | repository `CLAUDE.md` |
 | (new) | Part 3 plugins, 6.1 plugin host, 6.18 scope, 6.19 facts, 6.20 quality signals, 6.21 rules review, Part 9 reference pack, Part 11 deployment, Part 12 security |
 
-## 6. Questions for you
+## 6. Questions for you (first round)
 
 Your experience running the first version would settle these better than more design:
 
@@ -121,3 +121,46 @@ Your experience running the first version would settle these better than more de
 5. **Lints versus refusals.** Which of your wording and question checks truly must refuse, and which would be fine as "send back
    once, then warn"?
 6. **What's missing.** Any failure from running it that isn't in Part 8 or the lessons above.
+
+## 7. After your review: how each point was handled
+
+Thank you for the answers. Everything below is now in the design; section numbers point to where.
+
+### Your cautions
+
+| You said | What changed |
+|---|---|
+| Keep git as a working recovery path | The ledger is exported with the records. `import(export(db))` round-trips in the self-check; `cockpit restore --as-of <time>` imports the last export before then and replays the ledger; any single record can be shown and restored as of a past time (5.0). |
+| Back up off the machine in local mode too | Backups to a synced folder, drive, object store or the export remote, encrypted when outside the PM's control. Local mode shows a Today line and a header mark until one has succeeded, and the header always shows the last backup's age (4.15, 7.6, 11.1). |
+| Hold hosted mode and the social pack | Hosted mode, packs after the second, and social media start only once the reference pack is in daily use with steady quality signals (Part 13). |
+
+### Your answers
+
+| Question | What changed |
+|---|---|
+| 1. Agent mode and the database | The packet always carries the glossary, active lessons, applicable rules, and **every** open action and question with ids (compact, never cut by the size budget). New ops `glossary.add`, `glossary.update`, `lesson.add`. Bounded search lookups over sources and records, and a source's previous version (6.6, 6.22). |
+| 2. Confirming system ops | System ops from the PM's own note apply at once, with a read-back on the card ("Here's how I read your rule: ...") and Undo. A confirm is needed only for system ops from pasted or watched content or the assistant's own initiative (6.7, 12.2). |
+| 3. Undo conflicts | Ops in a changeset can share a group; the applier groups the known pairs itself (fact + the question it closed, action + its notice, rename + its outputs). Undo is per field across groups and all or nothing within one; a conflicting group is listed and skipped. Outbound can't be undone: a published edit gets a reverting draft, a sent message shows "already sent" (6.7). |
+| 4. Owner format and teams | Owners are a list of person ids, each with an optional team. Team-only owners are refused. An action whose person isn't known is held as "Pick an owner" and added only once it has one. Reassign swaps one person (5.1, 6.7, 6.9). |
+| 5. Lints versus refusals | Your must-refuse list is now invariants: model name, restricted content on a disallowed audience, questions to others without links or with links they can't open, actions without a person or for a team outside scope, unreadable output (retried). Your send-back list is lints. After one return, anything that will reach another person is **held for the PM**; internal items warn (4.17, 6.7). |
+
+### What was missing
+
+| Failure you saw | Where it's handled |
+|---|---|
+| Runner errors read from model output; a usage limit hidden because only stdout was kept | `classify_error` reads only exit code, error stream and transport errors; both streams kept on the `Run` (6.16, 5.1) |
+| Waiting items looked stuck | Every waiting state says why and until when ("next batch at 3:00", "paused until the limit resets") (7.6, 5.1) |
+| A correction taken at face value; a code fix for a problem that didn't exist | The feedback run states where the item actually is first; if the data disagrees, it asks the PM. A `dev.request` from a correction must cite the data (6.8, 6.7) |
+| Open versus restricted wasn't enough | Audiences: each destination is open or a named group with an optional banner; each restriction names the audiences it allows; an invariant checks every draft (4.1, 6.7, 12.1) |
+| Shared masters edited outside the tool | Channels declare `external_editors`; the publisher checks `lock_status` and waits or warns; outside edits are diffed and come in as changes (3.3, 6.12) |
+| No network on wake treated as an outage, and the refresh counted as fresh | Connectivity checked first; no network files nothing; a failed refresh leaves data marked stale with its age (6.4, 6.14) |
+| Runs asked who created pages the tool itself published | Edits and pages by `our_accounts` are marked `by_us` and given to every run; lookups answer "we did" (4.1, 6.4, 6.6) |
+| Requests about another project's code | `config/code_owners.yaml` says who owns what; matching requests become a `handoff` draft for that owner, never a fix. Your first design had this route; the restructure had dropped it (4.18, 6.7, 6.13) |
+
+### Still open
+
+1. **Packet size with every open action included.** Fine for one PM's workload; a very large portfolio may need the compact form
+   trimmed further (for example, actions for other projects shown as id, owner and title only). Tell us if your real counts
+   suggest a limit.
+2. **Read-back wording.** Should the read-back also say what the rule will *not* cover, given the over-application you saw?
+

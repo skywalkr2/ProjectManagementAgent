@@ -9,7 +9,9 @@
   `keychain:NAME` or `file:/path`, never stored in config or data. Hosted platforms pass them as environment secrets. Plugins
   get only the secrets their manifest names from the core's secret store.
 - **Outbound is gated:** content leaves only through the publisher after the PM approves the exact content (6.12, 8.1).
-- **Data levels** (open, internal, restricted) follow every source into packets, AI providers and plugins (6.16, 3.5).
+- **Data levels** (open, internal, restricted) decide which AI providers and plugins may see a source (6.16, 3.5).
+  **Audiences** decide where its content may appear: each destination is open or a named group, and each restriction names the
+  audiences it allows (4.1, 6.7).
 - **Audit:** the ledger (5.0) records every applied op with its actor and provenance; approvals, sends, settings changes,
   sign-ins and plugin enable or disable are recorded alongside. The readable export keeps it in git history.
 
@@ -24,7 +26,8 @@ send…"). The model can't be relied on to tell instructions from content, so th
   untrusted parts (6.6), and every request records whether it came from an input, the PM or a schedule.
 - **Tiers, not judgment.** What an input can cause is limited by op tier (6.7): it can add knowledge (data ops) and produce
   drafts that wait for approval (outbound ops). It can never change rules, watched sources, scope, facts sources, config,
-  plugins or code (system ops) without the PM confirming the exact change, with the prompting source shown beside it.
+  plugins or code (system ops) without the PM confirming the exact change, with the prompting source shown beside it. System
+  ops from the PM's own note apply at once with a read-back and Undo; the risk there is misreading, not injection.
 - **Untrusted text doesn't become structure on its own.** An address, a name or a URL that appears only in untrusted content
   can't become a new recipient, a new person, a new watched source or a rule without passing through a hold and the PM.
 - **Lookups only through configured sources.** The `lookup` op names a configured connector, fact kind or lookup step with

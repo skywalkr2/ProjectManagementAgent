@@ -15,7 +15,7 @@ apply to the reference pack are in 9.5.
 | Spell names from a primary source; mark unverified spellings | people `verified` flag |
 | Acronyms come from a glossary with sources; guesses are marked assumed and asked | glossary data, AI rules |
 | One identifier is not three: check the glossary before splitting a compound id | glossary patterns |
-| Restricted inputs stay off open outputs and outside messages | restriction field, applier check |
+| Restricted content appears only on destinations whose audience its source allows, under that destination's banner | `audiences` and `restrictions`, audiences invariant |
 | Locale spelling everywhere except verbatim quotes | language config |
 | The model's name never appears in user-visible text | language config, applier and UI tests |
 | Check every URL responds before putting it where the PM clicks | link checker in the self-check |
@@ -29,7 +29,7 @@ apply to the reference pack are in 9.5.
 | Look it up before asking a person (creators, editors, text, status) | `lookup` op and lookups |
 | Dates a published schedule holds are looked up, never asked: the release from the tracker, its date from the delivery team's schedule; no release yet means TBD | `config/facts.yaml`, applier fact check |
 | Question ids never repeat; a closed question's id is retired | id counter in the storage layer |
-| Every question links what it names | applier |
+| Every question to someone else links what it names, with links they can open | applier invariant |
 | A question to someone else says only what they need to answer: no bookkeeping, no options about how your outputs are organized, no long quotes of their own words, only links they can open, the whole gap in one ask | applier link and label checks, AI rules |
 | Unsure who it goes to: the PM routes it first | questions service hold |
 | Decisions are questions addressed to the PM, by recipient | questions service, Today, check-up |
@@ -44,7 +44,9 @@ apply to the reference pack are in 9.5.
 
 | Rule | Enforced by |
 |---|---|
-| Extract every action from raw notes and minutes, one per owner and task, counted against the source | AI rules, packet check |
+| Extract every action from raw notes and minutes, one per task, with every owner the minutes name, counted against the source | AI rules, packet check |
+| Every action names a person; an action whose owner isn't known waits for "Pick an owner" | applier invariant, held actions |
+| Shared ownership is allowed: an action can have several owners, each followed up separately | owners list, per-person told dates |
 | Before adding an action, search open and done actions for the same deliverable | applier near-duplicate warning |
 | When an input completes actions, close them across every related project | packet lists open actions with keys |
 | Action owners are people: stored as a person id, shown in the workspace's owner format | applier "people resolve" invariant |
@@ -81,6 +83,15 @@ apply to the reference pack are in 9.5.
 | Never let two versions of one change race | supersede |
 | A run that produced nothing is retried, then goes to the PM | dispatcher attempts |
 | A usage limit is a pause until reset, not a failure loop | AI adapters' `classify_error` |
+| Runner errors are classified from the runner's exit code and error stream only, never from the model's output; both streams are kept | `classify_error` contract, `Run` record |
+| No network on wake is not a failure or an outage; a failed refresh never counts as fresh | connectivity check, scheduler |
+| Every waiting state shows why and until when | `Request.waiting`, UI rule |
+| A correction is checked against the data before anything is changed or fixed | feedback task packet, `dev.request` validator |
+| Shared masters edited outside the tool are checked for an open lock and diffed, never overwritten | channel `lock_status`, pull-edits |
+| Edits by our own accounts are ours: no one is asked who made them | `our_accounts`, `by_us` |
+| A request about code another project owns is handed off, not fixed | `config/code_owners.yaml`, `handoff` |
+| The export can be imported back; restore to a point in time is tested | round-trip test, `cockpit restore` |
+| A local install nags until there is a backup off the computer | `config/storage.yaml` backups, Today, header |
 | Switching AI vendor or model is a config change, approved by the PM after an evaluation run | provider layer, evaluation |
 | Restricted inputs only reach AI providers and plugins allowed to see them | `allowed_data`, plugin `data_levels` |
 | Error output is cleaned and short; the raw output is one click away | API error shape |

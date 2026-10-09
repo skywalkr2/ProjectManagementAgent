@@ -47,7 +47,7 @@ where it came from.
 | Point | What a plugin adds | Interface (sketch) | Plugin API |
 |---|---|---|---|
 | Connector | an input source | `poll(state) -> changes`, `fetch(ref)`, `search(query)`, `capabilities()`; typed errors: no-access, not-found, outage, auth | 1.0 |
-| Channel | an output target | `current(target)`, `diff(current, draft)`, `send(approved_draft)`, `verify(result)`, `capabilities()` (versioned, pull-edits, schedule, length limits, media) | 1.0 |
+| Channel | an output target | `current(target)`, `diff(current, draft)`, `send(approved_draft)`, `verify(result)`, `lock_status(target)`, `capabilities()` (versioned, pull-edits, external-editors, schedule, length limits, media) | 1.0 |
 | Record type | a kind of thing to track, or extra fields on a core record | a Pydantic model, its table, display labels, migrations, the ids it stores (for merges and deletes) | 1.0 |
 | Op type | a changeset operation | tier (data, outbound, system), required fields, `validate`, `normalize`, record types it may write, `apply`, `describe` (one readable line) | 1.0 |
 | Op validator | extra checks on an existing op, core or plugin | `validate(op, workspace) -> problems` (can refuse, never modify) | 1.0 |

@@ -14,6 +14,7 @@ host it is on; every difference is a setting the code reads, tested both ways.
 | Storage | the workspace folder (database, config, sources) | the same on a persistent volume; export pushed to a private remote |
 | Scheduler | runs while the computer is awake; catches up after sleep (6.14) | runs continuously; one scheduler at a time |
 | Command-line AI agents | available if installed | only if the image includes them; capability routing falls back otherwise |
+| Backups | off-device backup expected; Today and the header nag until one is set up and has succeeded (4.15) | required by the deploy checks |
 | Start-up checks | config validation | config validation and the deploy checks (11.5); start is refused if any fail |
 
 ## 11.2 Serving under a path, and hiding

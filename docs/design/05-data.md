@@ -10,15 +10,27 @@ database gives for free and files make you rebuild by hand. So:
   writer, fine locally and on a persistent volume when hosted. Postgres is a later backend for multi-user (4.15).
 - **Config stays YAML** in `config/`, edited by people and committed to git (Part 4).
 - **Sources stay files:** every input's text is saved under `sources/` by content hash and registered in the database.
-- **`data/` is a readable export:** on a schedule and after each applied changeset batch, the engine writes records as JSON
-  files under `data/` (one file per record type, stable ordering) and commits them, with `config/`, to the workspace's git.
-  That gives history, diffs, off-site backup (4.15) and a plain-text view. The export is output, never read back except by
-  `cockpit import` (fixtures, recovery, moving backends).
+- **`data/` is a readable export and a working recovery path:** on a schedule and after each applied changeset batch, the
+  engine writes records as JSON files under `data/` (one file per record type, stable ordering) and the ledger as append-only
+  files under `data/ledger/`, and commits them, with `config/`, to the workspace's git. That gives history, diffs, off-site
+  backup (4.15) and a plain-text view. The running engine never reads it; `cockpit import` does (recovery, fixtures, moving
+  backends).
 - **Fictional workspaces** are committed as `config/` plus `data/` JSON; tests import them into a fresh database.
 
 **The ledger.** Every applied op is written, in the same transaction as the change itself, to an append-only ledger: changeset
 id, op, record id, field, value before, value after, request, provenance (6.6), actor (assistant, PM, rule, plugin) and time.
 The ledger is the history view, the audit log and the basis for undo (6.7). It is never edited.
+
+**Recovery.** Git history is only useful if it can be loaded back, so recovery is a tested feature, not an afterthought:
+
+- **Round trip:** `import(export(db))` gives back the same records, ids, versions and ledger. The self-check runs it on both
+  fictional workspaces, and every record or config migration is tested through it.
+- **Point in time:** `cockpit restore --as-of <time>` imports the last export before that time and replays the ledger up to
+  it. A restore is itself recorded in the ledger, so it can be undone.
+- **One record:** the Admin tab can show any record as it was at a past time (from the ledger) and restore just that record,
+  as a changeset the PM sees.
+- **Off the machine:** local installs keep everything on one computer, so backups to somewhere else are expected, not
+  optional (4.15, 11.1).
 
 **Record versions.** Every record carries a version that goes up on each write. Writes state the version they read; a write
 against a newer version is merged field by field when the fields differ and refused when the same field changed, so two
@@ -45,17 +57,19 @@ the project's name. Renaming is then one field (6.7), and there is nothing to no
 | `Person` | id, full_name, aliases, role, team, org, area (derived from team and scope, 6.18), how_to_reach (per channel), why_they_matter, track_only, non_working_calendar, verified, status (active, left) |
 | `Team` | id, name, aliases, members (person ids), area |
 | `Project` | id, name, group (portfolio grouping; its label comes from config, e.g. "Program"), status, phase, target, priority, summary, owner (person id), links, tags, risks[] (text, raised_by, owner, status), decisions[], milestones[], players (person ids), log[] (dated update log), facts[] (internal knowledge with source id), hold flag, `ext` (fields added by plugins, keyed by plugin) |
-| `Action` | id (stable key), project id, store, text, owner (person id, optional team id), due, status, notes, told{person id: date}, followups[] |
+| `Action` | id (stable key), project id, store, text, owners[] (each a person id with an optional team id; at least one), due, status (held until it has an owner, open, done), notes, told{person id: date}, followups[] |
 | `Question` | id, to (person id), title, text, links[], kind (question, decision, action-notice, routing, impact), affects (record ids), asks_for (fact kind or none), batch (now, later), projects (ids), asked_at, on_answer, key (dedupe), answer_pending, feedback_pending |
 | `Meeting` | id, title, due, attendees (person ids), before and after notes, status |
-| `Source` | id, received_at (zoned), from (person id or text), kind, connector instance, title, content hash, projects (ids), trust (trusted, untrusted; 12.2), restriction, url |
+| `Source` | id, received_at (zoned), from (person id or text), by_us (written by one of `our_accounts`), kind, connector instance, title, content hash, projects (ids), trust (trusted, untrusted; 12.2), restriction (a marking and the audiences allowed to see it, 4.1), url |
 | `Change` | id, source id, title, link, diff, detected_at, who, state (new, queued, processed, done, ignored), result, auto rule, superseded_by, covers[] |
-| `Request` | id, kind (an AI task kind), ref, note (the PM's own words, trusted), state, attempts, created, origin (input, PM, schedule) |
-| `Changeset` | id, change id?, request id?, summary, ops[], status (applied, rejected, held, undone, proposed, discarded), problems[] (invariants and lints, 6.7), dismissed, quiet, feedback[] |
+| `Request` | id, kind (an AI task kind), ref, note (the PM's own words, trusted), state, waiting (why and until when, 7.6), attempts, created, origin (input, PM, schedule) |
+| `Changeset` | id, change id?, request id?, summary, ops[] (each with an optional `group`, 6.7), read_back (for PM-stated rules, 6.7), status (applied, rejected, held, undone, proposed, discarded), problems[] (invariants and lints, 6.7), dismissed, quiet, feedback[] |
 | `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result |
 | `Rule` | id, text, applies_to (task kinds, projects, people), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) (4.10) |
 | `Issue` | id, summary, detail, plugin (when one raised it), status (open, fix-requested, fixing, fix-proposed, fixed, closed), fix (proposed diff with originals, 6.13) |
-| `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), outcome |
+| `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), exit code, error stream (kept apart from the output), outcome |
+| `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, patterns (how compound ids split) (6.22) |
+| `Lesson` | id, text, learned_from (request or source), applies_to, status (active, promoted to a rule, retired) (6.22) |
 | `Signal` | id, kind (sent back, undone, dropped, reworded, pulled back, draft edited), record ids, note, time (6.20) |
 
 Plugins add record types in their own tables (namespaced) and fields on core records under `ext.<plugin>`. Core code never reads

@@ -3,6 +3,32 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Changes from the first design's author
+
+**Decided by:** project owner, on the review by the author of the first design, who ran it daily.
+
+- **Recovery is a tested feature.** The ledger is exported with the records; `import(export(db))` round-trips in the self-check;
+  `cockpit restore --as-of` and single-record restore from the ledger. Why: restoring from git history was used in practice,
+  and an export that can't be loaded back is only an archive.
+- **Off-device backups in local mode**, with a Today line and header mark until one succeeds and the last backup's age always
+  shown. Why: the biggest open risk of the first deployment was the whole knowledge base on one laptop.
+- **Breadth waits for use:** hosted mode, packs beyond the second and social media start after the reference pack is in daily
+  use.
+- **The packet replaces browsing:** it always carries the glossary, active lessons, applicable rules and every open action and
+  question; new `glossary.add`, `glossary.update`, `lesson.add` ops; bounded search lookups over sources and records.
+- **PM-stated system ops apply at once with a read-back and Undo;** only system ops from inputs or the assistant's own initiative
+  wait for a confirm. Why: the risk with the PM's own rules was misreading, which a read-back catches and a confirm doesn't.
+- **Undo groups:** dependent ops are restored all or nothing; outbound can't be undone (reverting drafts, "already sent").
+- **Owners are a list** (shared ownership is deliberate in some programs); team-only owners are refused and an action without a
+  known person is held for "Pick an owner".
+- **Lint outcomes depend on destination:** after one return, anything reaching another person is held for the PM; internal items
+  warn. Missing links on questions to others, restricted content on the wrong audience and unreadable output are invariants.
+- **Gaps from running it:** runner errors classified only from exit code and error stream; every waiting state shows why and until
+  when; corrections checked against the data first; audiences per destination instead of open versus restricted; shared masters
+  with lock checks and outside edits as changes; connectivity checked before refreshing, and failed refreshes stay stale; edits by
+  our own accounts marked as ours; requests about other projects' code handed off (`config/code_owners.yaml`), restoring the
+  handoff route the first design had and the restructure had dropped.
+
 ## 2026-10-09: Systems review changes
 
 **Decided by:** project owner, after a systems design review of the whole design.

@@ -26,8 +26,13 @@ publisher (6.12).
 
 Run on schedule through connectors; compare against snapshots; file a `Change` per real difference with a readable diff. Rules:
 
-- An outage (many keys failing at once, or connection errors) is one logged issue, not a question per key. A single item is
+- **Check connectivity first.** A refresh starts with a quick reachability check per connector; with no network it waits
+  (6.14) instead of running a string of failing checks. No network is not an outage and files nothing.
+- An outage (many keys failing at once with the network up) is one logged issue, not a question per key. A single item is
   asked about only after it fails on consecutive runs.
+- **Our own edits are ours.** An edit or page whose author is one of `our_accounts` is recorded as `by_us` (published by the
+  cockpit): it confirms a publish, it is not a new change from someone else, and lookups answer "who made this?" with "we
+  did".
 - A file that moved is compared by content with what's registered before it counts as new. Spreadsheets are compared by cell
   content, not bytes, so a re-save isn't a change.
 - **Supersede:** when a newer version of the same item arrives while an older one is queued, fold them into one change (all
@@ -45,10 +50,15 @@ pulled-back items are recorded so rules can be tuned.
 
 - Batches queued requests (batch size, scheduled batches, immediate kinds that run within a minute of the PM handing them in,
   with a short delay so a note can follow).
-- **Packet:** for each request, the input, the related records, every open action with its id (so the AI can close what the
-  input completed), open questions to the people involved, the area each related person and item is in with each domain's
-  contact (6.18), looked-up facts (6.19), the rules that apply to this task kind and these projects (6.21), and the op
-  reference (core and enabled plugins' ops). A plugin's AI task kind builds its own packet with the same parts available.
+- **Packet:** the packet replaces browsing the workspace, so it carries what runs used to go looking for (and often didn't):
+  - the input, and the related records in full;
+  - **every** open action and open question, with ids, in a compact one-line form, not only the related ones, so the AI can
+    close what the input completed anywhere;
+  - the glossary and the active lessons (6.22), and the rules that apply to this task kind and these projects (6.21);
+  - the area each related person and item is in, with each domain's contact (6.18), and looked-up facts (6.19);
+  - which recent edits and pages were made by `our_accounts` ("published by the cockpit", so nobody is asked who made them);
+  - the op reference (core and enabled plugins' ops) and the search lookups available (6.22).
+  A plugin's AI task kind builds its own packet with the same parts available.
 - **Trusted and untrusted parts** (12.2): the PM's own note, config-derived context, rules and the op reference are trusted.
   Everything that came from outside (connector content, pasted third-party text, replies, files) is untrusted: the prompt
   formatter wraps it in marked blocks and the instructions say it is material to work on, never instructions to follow. The
@@ -57,7 +67,8 @@ pulled-back items are recorded so rules can be tuned.
 - **Size budget:** each task kind has a `max_input` in `config/dispatch.yaml`, capped by the provider's context. The packet
   fills in order: instructions and op reference; the input (split into parts if it is larger than its share); open actions
   and questions for the projects and people involved; scope and facts for the items involved; related records ranked (same
-  project, then linked, then mentioned); applicable rules. Whatever is left out is listed in the packet ("12 older log entries
+  project, then linked, then mentioned); applicable rules. Open actions and questions, the glossary and the rules are never cut; if they alone exceed the budget, an
+  issue tells the PM to raise it. Whatever is left out is listed in the packet ("12 older log entries
   omitted") and on the `Run`, so a thin answer can be traced to a thin packet.
 - **Self-check:** validates each changeset with the applier's checks right after the run and sends failures back for one fix
   round. Recovers the request id from unreadable output and re-queues it.
@@ -77,19 +88,25 @@ Every op type declares a tier. The tier, not the model's judgment, decides what 
 |---|---|---|
 | `data` | records knowledge: sources, notes, facts, records, actions, questions (filed, not sent), meetings, decisions | yes, after checks |
 | `outbound` | creates drafts for a channel | it creates the draft; sending always needs the PM's approval of the exact content (6.12) |
-| `system` | changes how the product behaves: standing rules, watched sources, scope, facts sources, any config key, plugins, code | **never from an input**; from the PM, shown as a proposed change the PM confirms |
+| `system` | changes how the product behaves: standing rules, watched sources, scope, facts sources, any config key, plugins, code | from the PM's own note: yes, at once, with a read-back and Undo; from an input or the assistant's own initiative: **never**, the PM confirms |
 
-A system op in a changeset whose request came from an input (an email, a page, a reply) is held and becomes one decision for
-the PM showing exactly what would change and the source that prompted it. This is what keeps a hostile or careless input from
-rewriting the rules (12.2).
+A system op in a changeset whose request came from an input (an email, a page, a reply) or from the assistant's own initiative
+(a scheduled review, a suggestion) is held and becomes one decision for the PM showing exactly what would change and the source
+that prompted it. This is what keeps a hostile or careless input from rewriting the rules (12.2).
+
+A system op that comes from the PM's own note applies at once, because asking for a click on a rule the PM just typed is daily
+friction and the injection risk isn't there. The real risk with PM-stated rules is misreading, so the review card carries a
+**read-back**: "Here's how I read your rule: ..." in plain words, with what it changed and Undo. A read-back shows the
+interpretation, which a confirm button doesn't.
 
 **Core op types.**
 Data: `source`, `note`, `fact`, `record.set`, `record.add`, `record.del`, `record.log`, `record.rename`, `action.add`,
 `action.update`, `action.close`, `action.assign`, `decision.add`, `milestone.add`, `risk.add`, `question.add`,
 `question.update`, `question.move`, `question.done`, `question.drop`, `meeting.add`, `meeting.update`, `person.add`,
-`person.merge`, `parked`, `inbox` (set a change's state), `lookup`, `watch.item` (follow one more item inside an
-already-configured source), `doc`.
-Outbound: `draft.request` (ask for a rendered draft to a channel).
+`person.merge`, `glossary.add`, `glossary.update`, `lesson.add`, `parked`, `inbox` (set a change's state), `lookup`,
+`watch.item` (follow one more item inside an already-configured source), `doc`.
+Outbound: `draft.request` (ask for a rendered draft to a channel), `handoff` (a request for another project, drafted as a
+message or ticket for its owner, 4.18).
 System: `rule.add`, `rule.retire`, `watch.add`, `watch.remove` (new or removed sources), `config.set` (any config key,
 including scope and facts), `plugin.enable`, `plugin.disable`, `dev.request` (a code change request: becomes an issue for the
 fixer).
@@ -102,7 +119,9 @@ draft like any other that shows as "renamed (same page)".
 
 **A change request becomes a code fix only when no op can do it.** `dev.request` must list the ops it considered and why none
 fits; the validator checks the list against the registry and refuses the request when an existing op could do the job, sending
-it back to be done as a changeset. When a fix adds a new op (in a private plugin, 6.13), the changeset that needs it waits with
+it back to be done as a changeset. A request about code another project owns (4.18) is refused as a `dev.request` and
+redone as a `handoff`. A request that comes from the PM's correction must first say what the data shows (6.8): a fix for a
+problem that isn't in the data is refused. When a fix adds a new op (in a private plugin, 6.13), the changeset that needs it waits with
 the fix and is applied after Apply, once the new op is registered; the running applier would refuse it before.
 
 ### Checks: invariants and lints
@@ -114,7 +133,10 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
 - Schema and required fields; every id resolves to exactly one record; record versions (5.0).
 - Tier rules (above).
 - **People resolve:** every person or team in an owner, recipient or attendee field resolves to one id (6.11). An unknown or
-  ambiguous name holds the op and files one routing decision; a team alone or a blank as an action owner is refused.
+  ambiguous name holds the op and files one routing decision.
+- **Every action names a person.** An action may have several owners (each a person, optionally with a team); a team alone or
+  a blank is refused. An action whose person isn't known yet is held, with one question to the PM ("Pick an owner"), and is
+  added only once it has one.
 - **Scope** (6.18): an action's owner must be in the tracked area or be the PM. An action for anyone else, or with an owner
   label that matches another domain's `owners` patterns, is refused with the reason, and the AI records the work as a fact on
   the observed item instead. A question to anyone outside the tracked area is refused unless `cross_domain.allow` is
@@ -122,17 +144,25 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
   about. Questions to people inside another domain who aren't its contact are always refused.
 - **Facts** (6.19): a question whose `asks_for` is a fact kind with lookup sources is refused and sent back as a `lookup`; a
   question to anyone in a kind's `no_questions_to` that asks for that kind is refused. A lookup that finds nothing records TBD.
-- Restricted sources never cited on open outputs; untrusted content never becomes a rule, a config value or a recipient on its
-  own (12.2).
+- **Audiences:** content reaches a destination only if every source it draws on allows that destination's audience (4.1). A
+  restricted source can appear on a page locked to a named group that it allows, under that page's banner, and nowhere else.
+- Untrusted content never becomes a rule, a config value or a recipient on its own (12.2).
 - The model's name never appears in anything a person sees.
-- Questions to anyone but the PM never link local files or cockpit pages.
+- A question to anyone but the PM has at least one link, and only links they can open (no local files, no cockpit pages).
+- Unreadable output never applies; the dispatcher retries the run (6.6).
 - Every record edit that changes a published output comes with an update-log op.
 - Op-specific checks (paths stay under allowed roots; files don't overwrite unless told).
 
-**Lints** are judgment calls. Each has a severity in `config/checks.yaml` (4.17): `return` (default: back to the AI once with
-the reasons, then to the PM with a warning on the row), `warn`, `off`, or raised to `refuse`.
+**Lints** are judgment calls. Each has a severity in `config/checks.yaml` (4.17): `return` (default), `warn`, `off`, or raised
+to `refuse`. `return` sends the changeset back to the AI once with the reasons; if the problem is still there, what happens next
+depends on where the item goes:
 
-- Wording on anything that reaches a shared output: blocked phrases, locale spelling, run-on separators.
+- anything that will **reach another person** (a question to someone else, a draft for a channel) is **held for the PM**,
+  because the PM sends questions as written and a warning on a ready-to-send item gets missed;
+- anything that **stays internal** (a note, a fact, an action's notes) applies with a **warning** on its row.
+
+- Wording on anything that reaches a shared output: blocked phrases (including "confirm / check whether" in actions), locale
+  spelling, run-on separators.
 - A question whose text matches a fact kind's `terms` but doesn't declare `asks_for`.
 - A question that links to something the recipient may not be able to open, or carries bookkeeping in its label.
 - A new action that looks like an open or done action for the same deliverable.
@@ -148,9 +178,15 @@ item keys and known titles.
 **Apply** is one transaction: check record versions, apply the ops in order, write a ledger entry per field changed (5.0),
 re-render affected outputs into drafts, commit. On error the transaction rolls back and the error is recorded on the changeset.
 
-**Undo** builds a reverse changeset from the ledger's before-values and applies it field by field. A field something else has
-changed since is a conflict, not a reason to refuse everything: the undo restores the rest and lists the conflicting fields for
-the PM (keep the current value or restore the old one).
+**Undo** builds a reverse changeset from the ledger's before-values. Ops that depend on each other share a **group**, and undo
+is per field across groups but all or nothing within a group:
+
+- The applier groups the known pairs itself (an answer recorded as a fact with the question it closed; a new action with the
+  notice that told its owner; a rename with the outputs it re-rendered); the AI may group others.
+- A group with a conflict (a field something else has changed since) is listed and skipped, never half restored; the PM can
+  keep the current values or restore the group.
+- **Outbound can't be undone.** Undoing a published page edit drafts a reverting edit for approval; a sent message shows as
+  "already sent", with a follow-up offered if the PM wants to correct it.
 
 **Classification:** a changeset is "for the PM" only if it drafts an output, files a question, adds a decision or action, holds
 a system op, or otherwise needs a decision. Everything else is filed quietly (still findable). The change it came from closes as
@@ -168,6 +204,10 @@ a system op, or otherwise needs a decision. Everything else is filed quietly (st
   open question to that person against the same answer.
 - Feedback flow ("Respond to the assistant"): reword, reroute, drop (kept in a dropped-questions register with the reason) or
   close; every op that settles a pending request clears that question's pending flag.
+- **Check a correction against the data first.** A correction ("this shouldn't be in X's list") is a claim about the data. The
+  feedback task's packet carries the current state of what it names, and the run starts by stating where the item actually is.
+  When the data doesn't match the correction, the answer is a question to the PM with what was found, not a change and never a
+  code fix.
 - Aging: "waiting Nd" after Mark sent; chase suggestions after a configured number of days.
 
 ## 6.9 Actions service
@@ -175,9 +215,9 @@ a system op, or otherwise needs a decision. Everything else is filed quietly (st
 - One store interface over every action store (project records, portfolio actions, plugin stores), each action with a stable key.
 - **Mark done** for the PM's own; for others' actions **Followed up** (recorded internally, stays open, counts as told) and
   **They finished it** (credited to the owner, "reported by" the PM). Never credit the PM for someone else's work.
-- **Reassign:** swap the owner's person id, keeping the team ("Product (Jane Doe)" to
-  "Product (Sam Lee)"); in a multi-owner field, only the named person's part; refuses first names it can't resolve.
-- **Assign:** give a team-only or blank owner a person.
+- **Reassign:** swap one person in the owners list, keeping their team ("Product (Jane Doe)" to "Product (Sam Lee)"); the
+  other owners stay. Told dates, Followed up and They finished it are per person.
+- **Assign:** give a held action (one waiting for "Pick an owner") its first owner, which adds it.
 - Any change in who does something or when updates the action (and any matching meeting) in the same step.
 
 ## 6.10 Action notices
@@ -212,6 +252,10 @@ wherever they are shown.
   decisions newest first). Records can stay in any order.
 - Roll-ups (a summary page from project pages) are renderer features configured in `config/render.yaml`; a row edited directly
   on the roll-up after its source is kept unless forced.
+- **Shared masters:** some targets are also edited outside the cockpit (a shared spreadsheet, wiki columns the team owns).
+  Channels declare it (`external_editors`). Before writing, the publisher checks the channel's lock status (someone has it
+  open) and waits or tells the PM; outside edits are diffed against the last pulled copy and come in as changes, never
+  overwritten.
 - **Publisher:** dry run, then send only drafts whose exact content the PM approved (content hash), with the channel's
   concurrency check when it has one (nobody edited since the pull) and the target's own validation. Pulls skip targets with
   unsent drafts and flag any whose remote copy moved on. Scheduled drafts are approved first and sent at their time; editing a
@@ -234,6 +278,8 @@ wherever they are shown.
   automatically against the current files (up to `fixer.redo_attempts`, then the issue goes to the PM with the conflict shown).
 - **One place per fix:** a proposed fix shows on its issue card only, and is counted there (Today, the header, the issue list
   count it once).
+- **Requests for other projects:** a request about code another project owns (4.18) never reaches the fixer; it becomes a
+  `handoff` draft for that project's owner.
 - **What the fixer may change:** the workspace's config, rules, prompts, templates and private plugins, applied in the
   workspace with the export committed first. A fix that needs the core or a bundled plugin is written as a patch and an issue for this
   repository, never applied to the installed engine, so deployments don't drift from the product.
@@ -242,8 +288,9 @@ wherever they are shown.
 
 ## 6.14 Scheduler and offline behavior
 
-Jobs that need the network wait while it's down and run when it returns ("Offline" shown, not failed). After sleep, the first
-refresh runs on wake when data is stale. A held job doesn't count as a run. Plugin jobs follow the same rules. Jobs run in
+Jobs that need the network wait while it's down and run when it returns ("Offline, waiting for the network" shown, not
+failed). After sleep, the first refresh runs on wake when data is stale, after the connectivity check (6.4). A held or failed
+job doesn't count as a run: a refresh that failed leaves the data marked stale, with its age, so nothing looks fresh that isn't. Plugin jobs follow the same rules. Jobs run in
 the process whose `server.role` is `all` or `worker`; the scheduler lease in the jobs table (5.0) makes sure only one scheduler
 runs at a time, even when a host starts more than one copy.
 
@@ -285,7 +332,10 @@ registers its own, plugins add theirs (3.3).
 - `capabilities()`: structured output, tool calling, vision, file access, code editing, max context, max output, streaming,
   billing unit and price per unit;
 - `run(task) -> result` with output, usage and timing;
-- `classify_error(raw) -> rate_limited | quota_until(date) | auth | timeout | invalid_output | provider_down | other`;
+- `classify_error(exit_code, error_stream, transport_error) -> rate_limited | quota_until(date) | auth | timeout |
+  invalid_output | provider_down | other`. It reads **only** the runner's own exit code, error stream and transport errors,
+  never the model's output: a model writing "not logged in" in a report is text, not an auth failure. Output and error stream
+  are both kept on the `Run`, so a usage limit is never hidden behind "failed before doing any work";
 - `health()` for the governor.
 
 Adding a vendor means adding an adapter and a `providers:` entry; nothing else changes.
@@ -388,3 +438,19 @@ task kind, weekly by default) proposes, as held system ops the PM confirms:
 
 Rules carry `applies_to`, so a packet includes only the rules for its task kind and projects (6.6), and the review keeps the
 active list short enough to read.
+
+## 6.22 Glossary, lessons and search
+
+Runs used to read reference material on demand and write to it when they learned something. The packet now carries it, and
+ops record what is learned:
+
+- **Glossary:** terms and acronyms with meaning, status (confirmed, assumed, unknown), source and split patterns for compound
+  ids. Every packet includes it. `glossary.add` and `glossary.update` record new terms; an assumed or unknown term can become
+  one question to whoever the routing rules say knows it.
+- **Lessons:** things a run learned about how this workspace works ("minutes from this group list owners after the dash").
+  `lesson.add` records them; active lessons go into packets they apply to; the rules review (6.21) can promote a lesson to a
+  standing rule or retire it.
+- **Search lookups:** a bounded `lookup` over the workspace, in the same loop as fact lookups (6.16): full-text search over
+  sources and records ("has this been asked or answered before?"), and the previous version of a source ("what did this page
+  say last time?"). Results come back in the next call, with a limit on calls per run.
+
