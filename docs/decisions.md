@@ -31,8 +31,8 @@ adapter) and new evaluation data (a request naming items that don't exist).
 
 **Impact:** in the launch slice now (about a day, done): no default account and config errors for missing ones,
 `cockpit ai test` with a start-up notice when untested, pausing work when settings or code change under the server, refusing an
-identical answer after a send-back, and the new evaluation case. The rest lands in version 1 (adapters and probation in
-milestone 10's items moved into version 1, extractors and channels in milestones 5 and 6). No owner time beyond running
+identical answer after a send-back, and the new evaluation case. The rest is version 1 work, listed in the roadmap's open
+items; where the adapter items land depends on the open milestone 10 decision. No owner time beyond running
 `cockpit ai test` after adding a key.
 
 ## 2026-10-09: Long text formats divide text into units
