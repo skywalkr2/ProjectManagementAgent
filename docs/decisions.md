@@ -3,6 +3,37 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Systems review changes
+
+**Decided by:** project owner, after a systems design review of the whole design.
+
+- **Database and ledger instead of files plus git as the store.** SQLite is the system of record; every applied op is written
+  to an append-only ledger in the same transaction; records carry versions; ids come from sequences; jobs and the single
+  running instance use leases; `data/` becomes a readable JSON export committed to git. Why: half of the storage rules
+  (merge-on-save, one writer, ids never repeat, undo only if unchanged, one scheduler) were database guarantees rebuilt by hand
+  on files, each learned from a failure. Undo becomes a reverse changeset with field-level conflicts instead of file restores.
+  Supersedes the storage part of the 2026-10-08 technology stack entry.
+- **Ids, not names.** Records refer to people, teams and projects by id; names are rendered. Why: storing "Team (Full Name)"
+  strings is what required a names normalizer on every write, a name sweep and a rename reference index across every copy.
+- **Op tiers and untrusted input.** Every op is data, outbound or system; system ops (rules, sources, scope, config, plugins,
+  code) never apply automatically from an input. Packets mark untrusted content; lookups only reach configured sources;
+  evaluation includes hostile inputs. Why: the design had no prompt-injection model, and mailbox and social plugins plus hosted
+  mode make that exposure real.
+- **Invariants and lints.** Firm checks always refuse and can't be lowered; fuzzy checks (wording, keyword-matched date
+  questions, near-duplicates) return the changeset once, then warn, with severities in `config/checks.yaml`. Why: fuzzy checks
+  that refuse produce false positives that push people to switch checks off.
+- **Walking skeleton first; extension points marked 1.0, core only or planned.** The build plan reaches a version the PM uses
+  in milestone 2 (paste-in, one AI task, about ten ops, the ledger, clipboard, a minimal UI). Only the extension points the two
+  packs use are frozen at plugin API 1.0. Why: fifteen milestones before daily use, and sixteen hooks before any plugin, freeze
+  guesses.
+- **Gaps closed:** quality signals from the PM's corrections and private evaluation cases (6.20); standing rules as
+  `config/rules.yaml` entries with a review that merges, retires and promotes rules into config (6.21); config versions and
+  migrations, presets, basic and advanced levels, `config explain` (4.0); honest plugin security (declared reach is enforced on
+  what the core hands out, not a sandbox, 12.3); one running instance per workspace; packet size budgets (6.6); retention and
+  forget-a-person (4.15, 12.4).
+- **The design is split into one file per part** under `docs/design/`, keeping section numbers, with a reading map in its
+  README. Why: at 1,400 lines every coding session paid to read most of it.
+
 ## 2026-10-08: Every source is a setting
 
 **Decided by:** project owner.

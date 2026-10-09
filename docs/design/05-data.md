@@ -1,0 +1,80 @@
+# Part 5. Data model and storage
+
+## 5.0 Storage model
+
+**A database is the system of record; git keeps a readable history.** Many of the product's rules (saves merge and never
+clobber, one writer at a time, ids never repeat, undo only what hasn't changed since, one scheduler at a time) are guarantees a
+database gives for free and files make you rebuild by hand. So:
+
+- **SQLite** in the workspace (`cockpit.db`) holds every record. One file, transactional, safe for concurrent readers and one
+  writer, fine locally and on a persistent volume when hosted. Postgres is a later backend for multi-user (4.15).
+- **Config stays YAML** in `config/`, edited by people and committed to git (Part 4).
+- **Sources stay files:** every input's text is saved under `sources/` by content hash and registered in the database.
+- **`data/` is a readable export:** on a schedule and after each applied changeset batch, the engine writes records as JSON
+  files under `data/` (one file per record type, stable ordering) and commits them, with `config/`, to the workspace's git.
+  That gives history, diffs, off-site backup (4.15) and a plain-text view. The export is output, never read back except by
+  `cockpit import` (fixtures, recovery, moving backends).
+- **Fictional workspaces** are committed as `config/` plus `data/` JSON; tests import them into a fresh database.
+
+**The ledger.** Every applied op is written, in the same transaction as the change itself, to an append-only ledger: changeset
+id, op, record id, field, value before, value after, request, provenance (6.6), actor (assistant, PM, rule, plugin) and time.
+The ledger is the history view, the audit log and the basis for undo (6.7). It is never edited.
+
+**Record versions.** Every record carries a version that goes up on each write. Writes state the version they read; a write
+against a newer version is merged field by field when the fields differ and refused when the same field changed, so two
+writers never silently overwrite each other.
+
+**Ids.** Ids come from per-kind sequences in the database and are never reused (`Q-1042` is always the same question, even
+after it closes). Ids are shown only where the PM needs a handle (logs, the Admin tab), never in labels or outgoing messages.
+
+**Jobs.** Scheduled and queued work lives in a jobs table with leases: a worker takes a job by writing a lease with an expiry,
+so a crashed worker's job is picked up again, and only one scheduler holds the scheduler lease at a time.
+
+**One running instance per workspace.** The engine takes an instance lease at start (instance id, host, heartbeat). A second
+instance on the same workspace (the laptop and a host at once, say) refuses to start and says who holds it. `cockpit takeover`
+takes the lease after the holder's heartbeat has expired, or immediately with a confirmation.
+
+## 5.1 Core entities
+
+Records refer to each other **by id, never by name**. Names (people, projects, groups) are stored once, on their own record,
+and rendered wherever they appear: owners in the workspace's owner format, question labels from a template, page titles from
+the project's name. Renaming is then one field (6.7), and there is nothing to normalize after the fact (6.11).
+
+| Entity | Key fields |
+|---|---|
+| `Person` | id, full_name, aliases, role, team, org, area (derived from team and scope, 6.18), how_to_reach (per channel), why_they_matter, track_only, non_working_calendar, verified, status (active, left) |
+| `Team` | id, name, aliases, members (person ids), area |
+| `Project` | id, name, group (portfolio grouping; its label comes from config, e.g. "Program"), status, phase, target, priority, summary, owner (person id), links, tags, risks[] (text, raised_by, owner, status), decisions[], milestones[], players (person ids), log[] (dated update log), facts[] (internal knowledge with source id), hold flag, `ext` (fields added by plugins, keyed by plugin) |
+| `Action` | id (stable key), project id, store, text, owner (person id, optional team id), due, status, notes, told{person id: date}, followups[] |
+| `Question` | id, to (person id), title, text, links[], kind (question, decision, action-notice, routing, impact), affects (record ids), asks_for (fact kind or none), batch (now, later), projects (ids), asked_at, on_answer, key (dedupe), answer_pending, feedback_pending |
+| `Meeting` | id, title, due, attendees (person ids), before and after notes, status |
+| `Source` | id, received_at (zoned), from (person id or text), kind, connector instance, title, content hash, projects (ids), trust (trusted, untrusted; 12.2), restriction, url |
+| `Change` | id, source id, title, link, diff, detected_at, who, state (new, queued, processed, done, ignored), result, auto rule, superseded_by, covers[] |
+| `Request` | id, kind (an AI task kind), ref, note (the PM's own words, trusted), state, attempts, created, origin (input, PM, schedule) |
+| `Changeset` | id, change id?, request id?, summary, ops[], status (applied, rejected, held, undone, proposed, discarded), problems[] (invariants and lints, 6.7), dismissed, quiet, feedback[] |
+| `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result |
+| `Rule` | id, text, applies_to (task kinds, projects, people), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) (4.10) |
+| `Issue` | id, summary, detail, plugin (when one raised it), status (open, fix-requested, fixing, fix-proposed, fixed, closed), fix (proposed diff with originals, 6.13) |
+| `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), outcome |
+| `Signal` | id, kind (sent back, undone, dropped, reworded, pulled back, draft edited), record ids, note, time (6.20) |
+
+Plugins add record types in their own tables (namespaced) and fields on core records under `ext.<plugin>`. Core code never reads
+a plugin's `ext` fields; the plugin's ops, renderers and panels do. Each record type declares the ids it stores so a delete or a
+merge (two people records that turn out to be one person) can be checked and carried through.
+
+## 5.2 Storage rules (each one came from a real failure)
+
+- Every input is saved under `sources/` and registered before anything is done with it.
+- Ids and dates come from the actual date received, never from a meeting or date mentioned in the content.
+- Ids never repeat; a closed, dropped or deleted record's id is retired, so a reference in a log or a sent message always means
+  one thing.
+- Times are stored with their zone and converted for display; date-only values display as that calendar day.
+- Every write is a transaction that states the record versions it read; long operations re-read before they write. Nothing
+  saves a copy loaded earlier.
+- Every write that changes knowledge goes through the applier (or a core service that writes the ledger the same way), so it is
+  validated, recorded and visible.
+- Names live on their own record; everything else stores the id.
+- The export and the workspace's git history are never rewritten. The export is committed on a schedule, before every
+  migration (record or config, 4.0) and before every applied fix.
+- Retention follows `config/storage.yaml` (4.15): raw source text can be deleted after its facts are recorded; the ledger keeps
+  that a source existed and what was learned from it.

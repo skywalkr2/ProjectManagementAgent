@@ -1,7 +1,8 @@
 # PM Cockpit
 
-A generic, extensible AI-assisted cockpit for running projects: a core loop plus plugins. The full design is in
-`docs/DESIGN.md`; read Parts 1 to 4 and Part 10 before any change, and the part for the component you are touching.
+A generic, extensible AI-assisted cockpit for running projects: a core loop plus plugins. The design is in `docs/design/`,
+one file per part; section "6.18" is in `06-engine.md`. Start at `docs/design/README.md`, which says what to read for each
+kind of task. Always read Parts 1, 2 and 10.
 
 ## The boundary (non-negotiable)
 - Core code (`engine/`, `api/`, `web/src/`) contains **no** specific person, team, organization, product, program, system,
@@ -15,8 +16,8 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 - Code comments describe what the code does in general terms. They never quote a user, name a person or carry a date.
   Rationale goes in `docs/decisions.md` (product) or the workspace's `docs/decisions.md` (deployment).
 - When a user states a rule, decide first: concept (core), extension (plugin or new extension point), setting (config key with
-  schema and default), fact (data), standing instruction (`rules.md`) or custom to one deployment (private plugin). Say which in
-  your reply. Default to config or rules.md.
+  schema and default), fact (data), standing instruction (`rules.yaml`) or custom to one deployment (private plugin). Say which in
+  your reply. Default to config or `rules.yaml`.
 
 ## Plugins
 - Plugins import only `engine.plugin_api`, declare what they provide and what they may reach in `plugin.yaml`, and namespace
@@ -36,7 +37,7 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 - Python 3.12+ with uv, FastAPI, Pydantic v2, pytest, ruff. Web: React + TypeScript with Vite and Vitest.
 - `uv run pytest` · `uv run ruff check .` · `uv run python -m engine.selfcheck` · `npm --prefix web test` ·
   `npm --prefix web run build`
-- These exist from build milestone 1 (design Part 13). Until then, say which checks you could not run.
+- These exist from build milestone 1 (design 13.1). Until then, say which checks you could not run.
 
 ## Deployment and configuration
 - The same code runs locally or hosted (design Part 11); every difference is a setting, never a check for a host in code.
@@ -56,12 +57,21 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 - New config keys have a schema entry, a default, a description and demo values in both workspaces.
 - No new specific in code; if a scan flags one, move it to config or data, never add it to an allowlist to pass.
 
+## Data and safety model
+- SQLite is the system of record; every applied op is written to the ledger in the same transaction; `data/` is a readable
+  export, never read back except by import (design 5.0). Writes state the record versions they read.
+- Records refer to people, teams and projects by id; names live on their own record and are rendered (design 5.1, 6.11).
+- Every op has a tier: data, outbound or system. System ops never apply automatically from an input; the PM confirms them
+  (design 6.7, 12.2). Untrusted content is marked in packets and never becomes a rule, recipient or source on its own.
+- Checks are invariants (always refuse, not configurable) or lints (severity in `config/checks.yaml`). Don't make a fuzzy check
+  an invariant, and never lower an invariant.
+
 ## Product rules that shape every feature
 - The assistant drafts; the human approves everything outward. Nothing publishes, sends or posts without the PM approving
   that exact content.
 - The AI's only write path is a changeset validated by the applier.
 - One row per thing in the UI; lists, not run-on lines; labels in plain words; the model's name never shown.
-- Action owners are people, written in the workspace's owner format; names stored in full on every write path.
+- Action owners are people: stored as a person id, shown in the workspace's owner format.
 - Questions are written for their reader and link only what the reader can open; decisions are questions to the PM.
 - Scope is enforced, not suggested (design 6.18): only the tracked area gets actions and detailed questions. Other areas are
   observed; at most one impact question goes to that area's contact. Scope decisions come from the scope resolver only.

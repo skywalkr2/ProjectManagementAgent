@@ -23,6 +23,7 @@ Design stage. Nothing is built yet.
 
 ## Documents
 
-- [`docs/DESIGN.md`](docs/DESIGN.md): the full product design and build plan
+- [`docs/design/`](docs/design/README.md): the full product design, one file per part, and the build plan
+- [`docs/design/CHANGES.md`](docs/design/CHANGES.md): what changed since the first version of the design, and why
 - [`docs/decisions.md`](docs/decisions.md): product decisions and why they were made
 - [`CLAUDE.md`](CLAUDE.md): working rules for coding agents in this repository

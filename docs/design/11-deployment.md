@@ -1,0 +1,107 @@
+# Part 11. Deployment
+
+The same code runs on the PM's own computer or on a web host. What differs is configuration (`config/server.yaml`,
+`config/auth.yaml`, `config/storage.yaml`, a profile) and packaging (`deploy/`). Nothing in the engine, API or UI checks which
+host it is on; every difference is a setting the code reads, tested both ways.
+
+## 11.1 Modes
+
+| | Local | Hosted |
+|---|---|---|
+| Where it runs | the PM's computer | a server, a container platform, or a machine behind a tunnel, reached at the PM's own domain |
+| Who can reach it | only this machine (`127.0.0.1`) | anyone on the internet who gets past sign-in |
+| Sign-in | an install token handed to the browser at launch; a password optional | required: at least one provider from 11.4; passwords need a second factor |
+| Storage | the workspace folder (database, config, sources) | the same on a persistent volume; export pushed to a private remote |
+| Scheduler | runs while the computer is awake; catches up after sleep (6.14) | runs continuously; one scheduler at a time |
+| Command-line AI agents | available if installed | only if the image includes them; capability routing falls back otherwise |
+| Start-up checks | config validation | config validation and the deploy checks (11.5); start is refused if any fail |
+
+## 11.2 Serving under a path, and hiding
+
+The app can live at the root of its own domain or under a path on a site that serves something else: for example
+`https://example.com/admin` while the public site stays at `https://example.com/`. `server.base_path` sets it. What makes that
+work without code changes:
+
+- The UI is built with relative asset paths and reads its base path and API address from a small config document the server
+  returns, so one build works under any path.
+- Every route, redirect, cookie path and generated link is built from `public_url` and `base_path`. Tests run the UI and API
+  both at `/` and under a nested path.
+- A reverse proxy in front (the host's routing rules, a tunnel, a web server) forwards only that path to the app; the rest of
+  the site never reaches it.
+
+**Hiding** (`server.hide: not-found`) makes the app answer 404 to anyone not signed in, except at the sign-in path, which can be
+set to something hard to guess. It also sends `noindex`. Hiding cuts noise from scanners; it is not protection. Sign-in (11.4)
+and the deploy checks (11.5) protect the app, and hosted mode never relies on hiding alone.
+
+## 11.3 Deploying without code changes
+
+Everything in this part is set through config files, environment variables or flags (4.0), so a hosting platform's settings
+page is enough: `COCKPIT_PROFILE=hosted`, `COCKPIT__SERVER__PUBLIC_URL=https://example.com`,
+`COCKPIT__SERVER__BASE_PATH=/admin`, and secrets stored as platform secrets and referenced by `env:` names.
+`cockpit init --profile hosted` writes a starting profile with every key commented, and `cockpit deploy check` lists what is
+missing before the first start.
+
+## 11.4 Sign-in
+
+Sign-in methods are auth providers, an extension point (3.3). The core ships:
+
+- **Install token:** the default in local mode. A random token is created at install and handed to the browser when the PM
+  starts the app. Not accepted as the only method in hosted mode.
+- **Password with a second factor:** passwords hashed with a memory-hard algorithm (argon2id); one-time codes from an
+  authenticator app; passkeys (WebAuthn) as a second factor or instead of the password. Recovery codes shown once at setup.
+- **Sign-in provider (OpenID Connect):** any standard provider, configured by issuer, client id and a client secret reference;
+  only identities listed in `auth.users` get in.
+- **Identity-aware proxy:** for hosts that put their own access gateway in front. The app verifies the signed token the proxy
+  adds (signature against the proxy's published keys, issuer, audience, expiry, all from config); it never trusts a plain
+  header naming the user. Best combined with an app sign-in, so one misconfiguration doesn't open the app.
+
+**Sessions:** secure, HTTP-only, same-site cookies scoped to the base path; idle and absolute timeouts; sign out everywhere.
+Every state-changing request carries a CSRF token. Failed sign-ins are rate limited and locked out per `auth.lockout`. Every
+sign-in and failure is logged and shown on the Security panel (7.1).
+
+## 11.5 Deploy checks
+
+`cockpit deploy check` runs these; the self-check runs them against both fictional workspaces with a hosted profile; a hosted
+server runs them at start and refuses to serve if any fail.
+
+- `public_url` is HTTPS, and requests arrive over HTTPS (directly, or from a trusted proxy that says so).
+- At least one provider other than the install token is enabled; passwords require a second factor; at least one user is
+  listed.
+- The session signing key comes from a secret, is long enough, and isn't a default.
+- Every secret reference resolves, and no secret value appears in any config file.
+- `allowed_hosts` and `trusted_proxies` are set; CORS is off or limited to listed origins; security headers are on.
+- Storage is persistent (the backend reports it) and the last export succeeded; an export remote or backup is configured, or
+  the PM has explicitly accepted running without one.
+- `public_url` and `base_path` agree with what the proxy forwards (checked by fetching the app's own health address through
+  `public_url`).
+- No enabled plugin declares a network host or data level the deployment's settings forbid.
+
+Warnings that don't block start: command-line AI agents unavailable, budgets unset, only one sign-in method (no fallback if it
+breaks).
+
+## 11.6 Packaging and recipes
+
+The engine needs long-running jobs, a file system and git, so it runs as a process or a container, not as short-lived edge
+functions.
+
+- **Local:** `cockpit serve --workspace <path>` starts everything and opens the browser with the install token. Optional
+  start-at-login service files for each operating system.
+- **Container image** (`deploy/container/`): one image with the API, the built UI and the scheduler; runs as a non-root user;
+  the workspace on a mounted volume; configured only through environment variables and mounted config. Every hosted recipe
+  builds on it.
+- **Recipes** (`deploy/<target>/`): one folder per hosting target, with its profile, any platform config files and a
+  step-by-step README, plus a test that the profile passes the deploy checks.
+
+First recipes, in order:
+
+1. **Tunnel to a machine the PM owns:** the app runs on the PM's computer or a small always-on box. A tunnel publishes only
+   `public_url` + `base_path`, without opening ports, and the tunnel provider's access gateway sits in front (the
+   identity-aware proxy provider), plus the app's own sign-in. For example: Cloudflare Tunnel, with Cloudflare Access protecting
+   only the `/admin` path of a domain whose public site is served elsewhere. File storage and git stay as they are.
+2. **Container host:** the image on a platform with a persistent volume (a small virtual server behind a reverse proxy, or a
+   container service). Cloudflare's container service can run the image, but at the time of writing its container disks don't
+   persist, so it needs a storage backend other than local files (4.15); check the platform's current limits when writing
+   that recipe.
+
+The UI build can also be served from a static host with the API elsewhere (it reads its API address from config), but that is
+not a first recipe.
