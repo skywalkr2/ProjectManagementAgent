@@ -62,6 +62,6 @@ license.
 
 - [`docs/design/`](docs/design/README.md): the full product design, one file per part, and the build plan
 - [`docs/design/CHANGES.md`](docs/design/CHANGES.md): what changed since the first version of the design, and why
-- [`docs/project/`](docs/project/): charter, scope, risks and schedule
+- [`docs/project/`](docs/project/): charter, scope, risks, schedule and the [roadmap to 1.0](docs/project/roadmap-to-1.0.md)
 - [`docs/decisions.md`](docs/decisions.md): product decisions and why they were made
 - [`CLAUDE.md`](CLAUDE.md): working rules for coding agents in this repository

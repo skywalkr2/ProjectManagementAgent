@@ -3,6 +3,8 @@
 Owner time is under 5 hours a week: direction, review and real use. The building is done for the owner. The launch on
 2026-12-01 never waits on the tool.
 
+The working checklist to the first public release is [`roadmap-to-1.0.md`](roadmap-to-1.0.md).
+
 ## Calendar
 
 | Dates | What | Owner time |
