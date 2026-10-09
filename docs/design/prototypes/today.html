@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Today Screen Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column (max ~880px) under a compact header; Today is a ranked queue of expandable lines. */
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --sunk: #edf0f4; --line: #d9dee7; --fg: #161a23; --muted: #596173;
+  --accent: #3446b5; --accent-fg: #ffffff; --accent-soft: #e6e9fa;
+  --warn: #8a5300; --warn-soft: #fff0d4; --risk: #b3261e; --risk-soft: #fde7e5; --ok: #1d6a44; --ok-soft: #e0f2e8;
+  --mark: #ffe28a; --mark-fg: #161a23; --focus: #3446b5; --shadow: 0 1px 2px rgba(22,26,35,.06), 0 6px 24px rgba(22,26,35,.08);
+  --display: "Newsreader", Georgia, "Times New Roman", serif;
+  --ui: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111318; --surface: #181b22; --sunk: #1f232c; --line: #2c313c; --fg: #e6e9ef; --muted: #9aa2b3;
+  --accent: #9ba7ff; --accent-fg: #10132a; --accent-soft: #242a4a;
+  --warn: #f0b75a; --warn-soft: #382a11; --risk: #ff8c82; --risk-soft: #3c1c1a; --ok: #82d4a8; --ok-soft: #15301f;
+  --mark: #5e5016; --mark-fg: #f4ecc8; --focus: #9ba7ff; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #111318; --surface: #181b22; --sunk: #1f232c; --line: #2c313c; --fg: #e6e9ef; --muted: #9aa2b3;
+  --accent: #9ba7ff; --accent-fg: #10132a; --accent-soft: #242a4a;
+  --warn: #f0b75a; --warn-soft: #382a11; --risk: #ff8c82; --risk-soft: #3c1c1a; --ok: #82d4a8; --ok-soft: #15301f;
+  --mark: #5e5016; --mark-fg: #f4ecc8; --focus: #9ba7ff; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 28px rgba(0,0,0,.35);
+  color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { background: var(--bg); color: var(--fg); }
+body { font-family: var(--ui); font-size: 15px; line-height: 1.5; padding-inline: 16px; padding-block: 0 96px; }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Header */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); margin-inline: -16px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.top-inner { max-width: 880px; margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.brand b { font-family: var(--display); font-size: 20px; font-weight: 600; letter-spacing: .005em; }
+.brand span { color: var(--muted); font-size: 13px; }
+.tabs { display: flex; gap: 2px; background: var(--sunk); padding: 3px; border-radius: 9px; }
+.tabs button { border: 0; background: transparent; padding: 5px 11px; border-radius: 7px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.tabs button[aria-current="page"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.ask { flex: 1 1 220px; display: flex; min-width: 0; }
+.ask input { width: 100%; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; }
+.ask input::placeholder { color: var(--muted); }
+.top-meta { display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: var(--muted); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; margin-right: 5px; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 12px; font-weight: 600; font-size: 13.5px; cursor: pointer; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.quiet { border-color: transparent; background: transparent; color: var(--muted); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Page */
+main { max-width: 880px; margin: 0 auto; padding-top: 22px; display: grid; gap: 18px; }
+.proto { font-size: 12.5px; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; }
+.proto kbd, .help kbd { font-family: var(--mono); font-size: 11.5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; background: var(--surface); }
+.heading { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 16px; }
+.heading h1 { font-family: var(--display); font-weight: 600; font-size: 30px; line-height: 1.1; margin: 0; text-wrap: balance; }
+.countdown { font-size: 13px; color: var(--muted); }
+.countdown b { font-family: var(--mono); font-weight: 500; color: var(--fg); font-variant-numeric: tabular-nums; }
+.newbar { justify-self: center; border: 0; background: var(--accent); color: var(--accent-fg); font-weight: 600; font-size: 13px; border-radius: 999px; padding: 6px 14px; cursor: pointer; box-shadow: var(--shadow); }
+
+.queue { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.line { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.line.is-current, .child.is-current { outline: 2px solid var(--focus); outline-offset: -1px; }
+.row { display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: start; gap: 12px; padding: 14px 14px 14px 16px; }
+.kind { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; padding: 3px 7px; margin-top: 2px; white-space: nowrap; }
+.k-decision { background: var(--accent-soft); color: var(--accent); }
+.k-risk { background: var(--risk-soft); color: var(--risk); }
+.k-review { background: var(--sunk); color: var(--fg); }
+.k-send { background: var(--ok-soft); color: var(--ok); }
+.k-held { background: var(--warn-soft); color: var(--warn); }
+.text { min-width: 0; }
+.text strong { display: block; font-weight: 650; }
+.text .sub { display: block; color: var(--muted); font-size: 13.5px; }
+.acts { display: flex; gap: 6px; align-items: center; }
+.more { width: 34px; padding-inline: 0; letter-spacing: .08em; }
+.expander { border: 0; background: none; padding: 0; text-align: left; cursor: pointer; width: 100%; }
+.expander:hover strong { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.body { border-top: 1px solid var(--line); padding: 12px 16px 16px; display: grid; gap: 12px; }
+
+.children { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.child { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 12px; background: var(--bg); }
+.child .what { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.child .title { font-weight: 600; }
+.child .meta { color: var(--muted); font-size: 13px; }
+.because { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.because button { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 13px; text-align: left; }
+.because q { font-style: italic; color: var(--fg); }
+.source { grid-column: 1 / -1; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; }
+.source .src { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.source mark { background: var(--mark); color: var(--mark-fg); padding: 0 2px; border-radius: 3px; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 600; border-radius: 5px; padding: 1px 6px; background: var(--warn-soft); color: var(--warn); margin-left: 6px; vertical-align: 1px; }
+.sendback { grid-column: 1 / -1; display: grid; gap: 6px; }
+textarea, select, .field input { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 8px 10px; }
+textarea { min-height: 96px; resize: vertical; line-height: 1.45; }
+.msg { font-family: var(--ui); min-height: 220px; }
+.hint { font-size: 12.5px; color: var(--muted); }
+.row-end { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.opts { display: grid; gap: 8px; }
+.opt { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; background: var(--bg); }
+.opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.opt input { margin-top: 4px; accent-color: var(--accent); }
+.opt b { display: block; }
+.opt span { color: var(--muted); font-size: 13.5px; }
+.lesson { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 12px; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--bg); }
+.lesson .from { font-size: 12.5px; color: var(--muted); }
+
+.empty, .footer { text-align: center; color: var(--muted); font-size: 14px; }
+.footer { border-top: 1px dashed var(--line); padding-top: 14px; }
+.answer { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+.answer .q { font-size: 13px; color: var(--muted); }
+.answer ol { margin: 0; padding-left: 20px; }
+
+/* Menu, panel, toasts, help */
+.menu { position: absolute; z-index: 40; min-width: 210px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 4px; display: grid; }
+.menu button { border: 0; background: none; text-align: left; padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: 14px; }
+.menu button:hover, .menu button:focus-visible { background: var(--sunk); outline: none; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 10px; box-shadow: var(--shadow); }
+.panel h2 { font-family: var(--display); font-size: 20px; margin: 0; font-weight: 600; }
+.field { display: grid; gap: 4px; }
+.field label { font-weight: 600; font-size: 13.5px; }
+.drop { border: 1.5px dashed var(--line); border-radius: 10px; }
+.toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: grid; gap: 8px; width: min(560px, calc(100% - 32px)); }
+.toast { background: var(--fg); color: var(--bg); border-radius: 10px; padding: 10px 12px 10px 14px; display: flex; align-items: center; gap: 10px; box-shadow: var(--shadow); font-size: 14px; }
+.toast span { flex: 1; min-width: 0; }
+.toast button { border: 0; background: transparent; color: var(--bg); font-weight: 700; cursor: pointer; padding: 4px 6px; border-radius: 6px; text-decoration: underline; text-underline-offset: 3px; }
+.toast .x { text-decoration: none; opacity: .7; }
+.help { position: fixed; inset: 0; z-index: 60; background: rgba(10,12,18,.45); display: grid; place-items: center; padding: 16px; }
+.help .panel { width: min(440px, 100%); }
+.help dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 14px; }
+
+@media (max-width: 700px) {
+  .row { grid-template-columns: minmax(0,1fr); gap: 8px; }
+  .row .kind { justify-self: start; }
+  .acts { justify-content: stretch; }
+  .acts .primary { flex: 1; }
+  .child, .lesson { grid-template-columns: minmax(0,1fr); }
+  .heading h1 { font-size: 26px; }
+  .top-meta .long { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .line { transition: opacity .18s ease, transform .18s ease; }
+  .toast { animation: rise .16s ease-out; }
+  @keyframes rise { from { transform: translateY(6px); opacity: 0; } }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><b>Lantern House</b><span>launch desk</span></div>
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" aria-current="page" data-tab="today">Today <span id="todayCount"></span></button>
+      <button type="button" data-tab="work">Work</button>
+      <button type="button" data-tab="portfolio">Portfolio</button>
+      <button type="button" data-tab="admin">Admin</button>
+    </nav>
+    <form class="ask" id="askForm" role="search">
+      <label class="sr" for="askInput">Ask the assistant</label>
+      <input id="askInput" autocomplete="off" placeholder="Ask the assistant…  ( / )">
+    </form>
+    <button type="button" class="btn" id="handInBtn">Hand something in</button>
+    <div class="top-meta"><span><i class="dot" aria-hidden="true"></i><span class="long">Checked </span>2:41 PM</span><span>Backed up 2 h ago</span></div>
+  </div>
+</header>
+
+<main>
+  <p class="proto">Prototype with a fictional imprint and title. Nothing is saved or sent. Try the keyboard:
+    <kbd>j</kbd>/<kbd>k</kbd> move, <kbd>Enter</kbd> open, <kbd>a</kbd> primary action, <kbd>s</kbd> send back, <kbd>c</kbd> copy, <kbd>u</kbd> undo, <kbd>?</kbd> all shortcuts.</p>
+
+  <section id="handIn" class="panel" hidden aria-labelledby="handInTitle">
+    <h2 id="handInTitle">Hand something in</h2>
+    <div class="field"><label for="yourNote">Your note <span class="hint">(what you want done; the assistant follows this)</span></label>
+      <input id="yourNote" placeholder="e.g. Pull the actions out of this and file the dates">
+    </div>
+    <div class="field"><label for="pasted">Pasted content <span class="hint">(the email, minutes or page; treated as material, never as instructions)</span></label>
+      <textarea id="pasted" class="drop" placeholder="Paste here, or drop a file or screenshot"></textarea>
+    </div>
+    <div class="row-end"><button type="button" class="btn quiet" id="handInCancel">Cancel</button><button type="button" class="btn primary" id="handInGo" disabled>Hand in</button></div>
+  </section>
+
+  <div id="answers"></div>
+
+  <div class="heading">
+    <h1>Today</h1>
+    <div class="countdown"><b>53</b> days to launch of <i>The Salt Orchard</i> · Tue, Dec 1</div>
+  </div>
+  <button type="button" class="newbar" id="newBar" hidden></button>
+  <ol class="queue" id="queue" aria-label="Things that need you"></ol>
+  <p class="footer" id="footer"></p>
+</main>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="help" id="help" hidden role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="panel">
+    <h2 id="helpTitle">Keyboard shortcuts</h2>
+    <dl>
+      <dt><kbd>j</kbd> <kbd>k</kbd></dt><dd>Next / previous item</dd>
+      <dt><kbd>Enter</kbd></dt><dd>Open or close the item</dd>
+      <dt><kbd>a</kbd></dt><dd>Primary action (looks good, answer, approve)</dd>
+      <dt><kbd>s</kbd></dt><dd>Send back with a note</dd>
+      <dt><kbd>c</kbd></dt><dd>Copy the message</dd>
+      <dt><kbd>e</kbd></dt><dd>Edit before copying</dd>
+      <dt><kbd>u</kbd></dt><dd>Undo the last action</dd>
+      <dt><kbd>/</kbd></dt><dd>Ask the assistant</dd>
+      <dt><kbd>Esc</kbd></dt><dd>Close menus and panels</dd>
+    </dl>
+    <div class="row-end"><button type="button" class="btn primary" id="helpClose">Close</button></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  const PEOPLE = ["Maya Okafor (editor)", "Theo Brandt (cover designer)", "Sam Rivera (typesetter)", "Ines Duarte (publicist)", "Jun Park (printer contact)", "You"];
+
+  const MAYA_MSG = "Hi Maya,\n\n1. Is the acknowledgments page final, or are more names coming?\n2. Do we have written permission from the estate for the epigraph?\n3. Which author bio goes on the jacket: the 60-word or the 100-word version?\n\nAction items with you:\n- Agree on the back-cover copy with Ines (The Salt Orchard, due Wed, Oct 14)\n\nThanks!";
+  const JUN_MSG = "Hi Jun,\n\nCould the proof copy of The Salt Orchard ship by Tue, Nov 3 instead of Thu, Nov 5? Our proof approval is due Nov 3, and the print run date depends on it. If Nov 5 is firm, what is the earliest print date after an approval on Nov 6?\n\nThanks!";
+
+  const initial = () => ([
+    { id: "dec", kind: "decision", label: "Decision", title: "Answer 1 decision", sub: "Cover finish for the hardcover · from Theo Brandt's email", primary: "Answer", type: "decision",
+      options: [
+        { v: "matte", t: "Matte", d: "Theo's recommendation. Standard price; the printer's normal 5-day finishing." },
+        { v: "soft", t: "Soft-touch", d: "About $0.40 more per copy; adds 3 working days to finishing." } ] },
+    { id: "dep", kind: "risk", label: "At risk", title: "1 dependency at risk", sub: "Proof approval (need by Nov 3) waits on the proof copy, now shipping Nov 5 · 2 working days late", primary: "Draft a question", type: "draft", to: "Jun Park", msg: JUN_MSG,
+      because: { q: "proof copies will ship on November 5", src: "Email from Jun Park (printer) · Oct 9, 11:02", text: "Thanks for the files. Our schedule is full this month, so proof copies will ship on November 5 by courier." } },
+    { id: "chg", kind: "review", label: "Review", title: "Look over 4 things the assistant did", sub: "From your production check-in notes · Oct 8", primary: "All looks good", type: "changes",
+      children: [
+        { id: "c1", what: "Added an action", title: "Send the final interior file to the printer", meta: "Sam Rivera · due Fri, Oct 16",
+          because: { q: "Sam to send the final interior file to the printer by the 16th", src: "Production check-in notes · Oct 8", text: "Interior: last typo pass done. Sam to send the final interior file to the printer by the 16th." } },
+        { id: "c2", what: "Added a shared action", title: "Agree on the back-cover copy", meta: "Maya Okafor, Ines Duarte · due Wed, Oct 14",
+          because: { q: "Maya and Ines will settle the back-cover copy by Wednesday", src: "Production check-in notes · Oct 8", text: "Jacket: Maya and Ines will settle the back-cover copy by Wednesday; Theo waits on it." } },
+        { id: "c3", what: "Closed an action", title: "Choose the advance-copy reviewer list", meta: "Ines Duarte · was due Oct 9",
+          because: { q: "the advance-copy reviewer list is final", src: "Production check-in notes · Oct 8", text: "Publicity: the advance-copy reviewer list is final (22 names). Mailing starts after proofs." } },
+        { id: "c4", what: "Recorded a fact", title: "Launch reading venue is holding Tue, Dec 1 at 7 pm", meta: "The Salt Orchard · launch event",
+          because: { q: "the venue is holding December 1st at 7", src: "Production check-in notes · Oct 8", text: "Launch: the venue is holding December 1st at 7; deposit due Nov 1." } } ] },
+    { id: "maya", kind: "send", label: "Send", title: "Send 3 questions to Maya Okafor", sub: "Plus 1 action item with her · ready to send", primary: "Copy", type: "copy", to: "Maya Okafor", msg: MAYA_MSG },
+    { id: "own", kind: "held", label: "Held", title: "Pick an owner for 1 action", sub: "“Book a photographer for the launch reading” · the notes didn't say who", primary: "Pick an owner", type: "owner" },
+    { id: "les", kind: "review", label: "Review", title: "Review 2 proposed lessons", sub: "Things the assistant learned; they only guide it after you accept", primary: "Review", type: "lessons",
+      lessons: [
+        { id: "l1", text: "In production check-in notes, the owner's name comes before the task.", from: "Learned from your notes · Oct 8", untrusted: false },
+        { id: "l2", text: "The printer's emails put the ship date in the subject line.", from: "Learned from an email by Jun Park · Oct 9", untrusted: true } ] }
+  ]);
+
+  const S = { lines: initial(), open: new Set(), history: [], cur: 0, waiting: 1, sendback: null, source: new Set(), pending: null };
+  const $ = (s, r = document) => r.querySelector(s);
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const snapshot = () => S.history.push(JSON.stringify({ lines: S.lines, open: [...S.open] }));
+  const qEl = $("#queue");
+
+  function highlight(text, q) {
+    const i = text.indexOf(q);
+    if (i < 0) return esc(text);
+    return esc(text.slice(0, i)) + "<mark>" + esc(q) + "</mark>" + esc(text.slice(i + q.length));
+  }
+  function becauseHTML(key, b) {
+    const shown = S.source.has(key);
+    return '<div class="because">Because: <q>' + esc(b.q) + '</q> <button type="button" data-act="source" data-key="' + key + '" aria-expanded="' + shown + '">' + (shown ? "Hide source" : "Show source") + "</button></div>" +
+      (shown ? '<div class="source"><div class="src">' + esc(b.src) + "</div>" + highlight(b.text, b.q) + "</div>" : "");
+  }
+  function sendbackHTML(key) {
+    if (S.sendback !== key) return "";
+    return '<div class="sendback"><label class="hint" for="sb-' + key + '">What should the assistant change? (required)</label><textarea id="sb-' + key + '" data-sb></textarea>' +
+      '<div class="row-end"><button type="button" class="btn quiet" data-act="sbcancel">Cancel</button><button type="button" class="btn primary" data-act="sbgo" data-key="' + key + '" disabled>Send back</button></div></div>';
+  }
+
+  function bodyHTML(l) {
+    if (l.type === "decision") {
+      return '<fieldset class="opts" style="border:0;padding:0;margin:0"><legend class="hint" style="margin-bottom:6px">Which finish for the hardcover?</legend>' +
+        l.options.map((o, i) => '<label class="opt"><input type="radio" name="dec" value="' + o.v + '"' + (i === 0 ? " checked" : "") + '><div><b>' + esc(o.t) + "</b><span>" + esc(o.d) + "</span></div></label>").join("") +
+        '</fieldset><div class="row-end"><button type="button" class="btn primary" data-act="answer" data-line="' + l.id + '">Answer</button></div>';
+    }
+    if (l.type === "draft" || l.type === "copy") {
+      return (l.because ? becauseHTML(l.id, l.because) : "") +
+        '<label class="hint" for="msg-' + l.id + '">Message to ' + esc(l.to) + " (edit freely; what you copy is what gets recorded)</label>" +
+        '<textarea class="msg" id="msg-' + l.id + '" data-msg="' + l.id + '">' + esc(l.msg) + "</textarea>" +
+        '<div class="row-end"><span class="hint">Copied text has no notes or labels in it.</span><button type="button" class="btn primary" data-act="copy" data-line="' + l.id + '">Copy message</button></div>';
+    }
+    if (l.type === "changes") {
+      return '<ul class="children">' + l.children.map((c) =>
+        '<li class="child" data-row data-child="' + c.id + '" data-line="' + l.id + '" tabindex="-1"><div><div class="what">' + esc(c.what) + '</div><div class="title">' + esc(c.title) + '</div><div class="meta">' + esc(c.meta) + "</div></div>" +
+        '<div class="acts"><button type="button" class="btn primary" data-act="childok" data-line="' + l.id + '" data-child="' + c.id + '">Looks good</button>' +
+        '<button type="button" class="btn more" data-act="menu" data-line="' + l.id + '" data-child="' + c.id + '" aria-haspopup="menu" aria-label="More actions for ' + esc(c.title) + '">•••</button></div>' +
+        becauseHTML(c.id, c.because) + sendbackHTML(c.id) + "</li>").join("") + "</ul>";
+    }
+    if (l.type === "owner") {
+      return '<div class="field"><label for="ownerPick">Who books the photographer?</label><select id="ownerPick"><option value="">Choose a person…</option>' +
+        PEOPLE.map((p) => "<option>" + esc(p) + "</option>").join("") + '</select></div><p class="hint">Every action names a person, so this one waits until you pick. Due date stays empty until you set one.</p>' +
+        '<div class="row-end"><button type="button" class="btn primary" data-act="assign" data-line="' + l.id + '" disabled>Add action</button></div>';
+    }
+    if (l.type === "lessons") {
+      return l.lessons.map((x) => '<div class="lesson"><div><div>' + esc(x.text) + (x.untrusted ? '<span class="tag">from outside content</span>' : "") + '</div><div class="from">' + esc(x.from) + "</div></div>" +
+        '<div class="acts"><button type="button" class="btn primary" data-act="lesson" data-line="' + l.id + '" data-lesson="' + x.id + '" data-v="1">Accept</button><button type="button" class="btn" data-act="lesson" data-line="' + l.id + '" data-lesson="' + x.id + '" data-v="0">Decline</button></div></div>').join("");
+    }
+    return "";
+  }
+
+  function render() {
+    const lines = S.lines;
+    qEl.innerHTML = lines.map((l) => {
+      const open = S.open.has(l.id);
+      return '<li class="line" data-row data-line="' + l.id + '" tabindex="-1">' +
+        '<div class="row"><span class="kind k-' + l.kind + '">' + esc(l.label) + "</span>" +
+        '<button type="button" class="expander text" data-act="toggle" data-line="' + l.id + '" aria-expanded="' + open + '"><strong>' + esc(l.title) + '</strong><span class="sub">' + esc(l.sub) + "</span></button>" +
+        '<div class="acts"><button type="button" class="btn primary" data-act="primary" data-line="' + l.id + '">' + esc(l.primary) + "</button>" +
+        '<button type="button" class="btn more" data-act="menu" data-line="' + l.id + '" aria-haspopup="menu" aria-label="More actions">•••</button></div></div>' +
+        (open ? '<div class="body">' + bodyHTML(l) + "</div>" : "") + "</li>";
+    }).join("");
+    $("#todayCount").textContent = lines.length ? "· " + lines.length : "";
+    $("#footer").textContent = (lines.length ? "" : "Nothing needs you right now. ") +
+      (S.waiting ? S.waiting + (S.waiting === 1 ? " item is" : " items are") + " with the assistant · next batch at 3:00 PM. " : "") + "Next check at 3:00 PM.";
+    markCurrent();
+  }
+
+  function rows() { return [...document.querySelectorAll("[data-row]")]; }
+  function markCurrent(focus) {
+    const r = rows();
+    if (!r.length) return;
+    S.cur = Math.max(0, Math.min(S.cur, r.length - 1));
+    r.forEach((el, i) => el.classList.toggle("is-current", i === S.cur));
+    if (focus) r[S.cur].focus({ preventScroll: false });
+  }
+  function lineOf(id) { return S.lines.find((l) => l.id === id); }
+
+  function toast(msg, opts) {
+    opts = opts || {};
+    const t = document.createElement("div");
+    t.className = "toast";
+    const s = document.createElement("span"); s.textContent = msg; t.appendChild(s);
+    if (opts.actionLabel) { const b = document.createElement("button"); b.type = "button"; b.textContent = opts.actionLabel; b.onclick = () => { opts.action(); t.remove(); }; t.appendChild(b); }
+    if (opts.undo !== false) { const u = document.createElement("button"); u.type = "button"; u.textContent = "Undo"; u.onclick = () => { undo(); t.remove(); }; t.appendChild(u); }
+    const x = document.createElement("button"); x.type = "button"; x.className = "x"; x.setAttribute("aria-label", "Dismiss"); x.textContent = "✕"; x.onclick = () => t.remove(); t.appendChild(x);
+    $("#toasts").appendChild(t);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduce) {
+      let timer = setTimeout(() => t.remove(), 7000);
+      t.addEventListener("mouseenter", () => clearTimeout(timer));
+      t.addEventListener("focusin", () => clearTimeout(timer));
+    }
+    while ($("#toasts").children.length > 3) $("#toasts").firstChild.remove();
+  }
+  function undo() {
+    const prev = S.history.pop();
+    if (!prev) { toast("Nothing to undo.", { undo: false }); return; }
+    const p = JSON.parse(prev); S.lines = p.lines; S.open = new Set(p.open); S.sendback = null;
+    render(); toast("Undone. Everything is back as it was.", { undo: false });
+  }
+  function removeLine(id, msg, extra) {
+    snapshot();
+    S.lines = S.lines.filter((l) => l.id !== id); S.open.delete(id);
+    render(); toast(msg, extra);
+  }
+
+  async function copyText(text, ta) {
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch (e) { if (ta) { ta.focus(); ta.select(); } return false; }
+  }
+
+  function primary(id) {
+    const l = lineOf(id); if (!l) return;
+    if (l.type === "changes") {
+      removeLine(id, "Filed " + l.children.length + " items from your production check-in notes.");
+      return;
+    }
+    if (!S.open.has(id)) { S.open.add(id); render(); const b = qEl.querySelector('[data-line="' + id + '"] .body'); if (b) { const f = b.querySelector("textarea, select, input, button"); if (f) f.focus(); } return; }
+    if (l.type === "draft" || l.type === "copy") { doCopy(id); return; }
+    if (l.type === "decision") { answer(id); return; }
+  }
+  function answer(id) {
+    const v = (qEl.querySelector('input[name="dec"]:checked') || {}).value;
+    const label = v === "soft" ? "Soft-touch" : "Matte";
+    removeLine(id, "Answered: " + label + ". Theo's question is closed and the decision is recorded.");
+  }
+  async function doCopy(id) {
+    const ta = qEl.querySelector('[data-msg="' + id + '"]');
+    const l = lineOf(id);
+    const ok = await copyText(ta ? ta.value : l.msg, ta);
+    toast(ok ? "Copied the message to " + l.to + "." : "Your browser blocked copying. The text is selected; press Ctrl+C or ⌘C.", {
+      undo: false, actionLabel: "Mark sent", action: () => removeLine(id, "Marked sent to " + l.to + ". Waiting for a reply.") });
+  }
+
+  function openMenu(btn) {
+    closeMenu();
+    const id = btn.dataset.line, child = btn.dataset.child;
+    const l = lineOf(id);
+    let items;
+    if (child) items = [["Send back with a note", "sendback"], ["Undo it", "childundo"], ["Show source", "sourcefromchild"]];
+    else if (l.type === "changes") items = [["Open each item", "toggle"], ["Send back all with a note", "sendbackall"]];
+    else if (l.type === "copy") items = [["Edit before copying", "toggle"], ["Mark sent without copying", "marksent"], ["Move to later", "later"]];
+    else if (l.type === "draft") items = [["Edit the question", "toggle"], ["Dismiss: the date is fine", "dismiss"]];
+    else if (l.type === "decision") items = [["Ask Theo a follow-up", "toggle"], ["Move to later", "later"]];
+    else items = [["Open", "toggle"], ["Move to later", "later"]];
+    const m = document.createElement("div");
+    m.className = "menu"; m.setAttribute("role", "menu"); m.id = "menu";
+    items.forEach(([label, act]) => { const b = document.createElement("button"); b.type = "button"; b.setAttribute("role", "menuitem"); b.textContent = label; b.dataset.mact = act; b.dataset.line = id; if (child) b.dataset.child = child; m.appendChild(b); });
+    document.body.appendChild(m);
+    const r = btn.getBoundingClientRect();
+    const left = Math.min(window.scrollX + r.right - m.offsetWidth, window.scrollX + document.documentElement.clientWidth - m.offsetWidth - 8);
+    m.style.left = Math.max(8, left) + "px"; m.style.top = window.scrollY + r.bottom + 6 + "px";
+    m.querySelector("button").focus();
+    m._opener = btn;
+  }
+  function closeMenu() { const m = $("#menu"); if (m) { const o = m._opener; m.remove(); if (o && document.contains(o)) o.focus(); } }
+
+  function menuAction(act, id, child) {
+    const l = lineOf(id);
+    closeMenu();
+    if (act === "toggle") { S.open.add(id); render(); return; }
+    if (act === "later") { removeLine(id, "Moved to later. It comes back on Monday."); return; }
+    if (act === "dismiss") { removeLine(id, "Dismissed. The dependency stays marked at risk on the timeline."); return; }
+    if (act === "marksent") { removeLine(id, "Marked sent to " + l.to + ". Waiting for a reply."); return; }
+    if (act === "sendbackall") { removeLine(id, "Sent back with your note. The assistant will redo it in the next batch at 3:00 PM."); return; }
+    if (act === "sendback") { S.sendback = child; S.open.add(id); render(); const ta = qEl.querySelector("[data-sb]"); if (ta) ta.focus(); return; }
+    if (act === "sourcefromchild") { S.source.add(child); render(); return; }
+    if (act === "childundo") { resolveChild(id, child, "Undone: the assistant's change is reversed and logged."); return; }
+  }
+  function resolveChild(id, child, msg) {
+    snapshot();
+    const l = lineOf(id);
+    l.children = l.children.filter((c) => c.id !== child);
+    S.sendback = null;
+    if (!l.children.length) { S.lines = S.lines.filter((x) => x.id !== id); S.open.delete(id); }
+    else { l.title = "Look over " + l.children.length + " thing" + (l.children.length === 1 ? "" : "s") + " the assistant did"; }
+    render(); toast(msg);
+  }
+
+  // Clicks
+  document.addEventListener("click", (ev) => {
+    const mb = ev.target.closest("[data-mact]");
+    if (mb) { menuAction(mb.dataset.mact, mb.dataset.line, mb.dataset.child); return; }
+    if (!ev.target.closest("#menu")) closeMenu();
+    const b = ev.target.closest("[data-act]");
+    if (!b) return;
+    const row = b.closest("[data-row]"); if (row) { S.cur = rows().indexOf(row); markCurrent(); }
+    const act = b.dataset.act, id = b.dataset.line;
+    if (act === "toggle") { S.open.has(id) ? S.open.delete(id) : S.open.add(id); render(); return; }
+    if (act === "primary") { primary(id); return; }
+    if (act === "menu") { openMenu(b); return; }
+    if (act === "answer") { answer(id); return; }
+    if (act === "copy") { doCopy(id); return; }
+    if (act === "childok") { resolveChild(id, b.dataset.child, "Looks good. Filed."); return; }
+    if (act === "source") { const k = b.dataset.key; S.source.has(k) ? S.source.delete(k) : S.source.add(k); render(); return; }
+    if (act === "sbcancel") { S.sendback = null; render(); return; }
+    if (act === "sbgo") { const key = b.dataset.key; const lid = row.dataset.line; resolveChild(lid, key, "Sent back with your note. The assistant redoes it in the next batch at 3:00 PM."); return; }
+    if (act === "assign") { const who = $("#ownerPick").value; removeLine(id, "Added “Book a photographer for the launch reading” for " + who.replace(/ \(.*\)$/, "") + "."); return; }
+    if (act === "lesson") {
+      snapshot();
+      const l = lineOf(id);
+      l.lessons = l.lessons.filter((x) => x.id !== b.dataset.lesson);
+      const msg = b.dataset.v === "1" ? "Lesson accepted. It guides the assistant from the next run." : "Lesson declined. The assistant won't use it.";
+      if (!l.lessons.length) { S.lines = S.lines.filter((x) => x.id !== id); S.open.delete(id); }
+      else { l.title = "Review " + l.lessons.length + " proposed lesson"; }
+      render(); toast(msg); return;
+    }
+  });
+  document.addEventListener("input", (ev) => {
+    if (ev.target.matches("[data-sb]")) { const go = ev.target.closest(".sendback").querySelector('[data-act="sbgo"]'); go.disabled = !ev.target.value.trim(); }
+    if (ev.target.id === "ownerPick" || ev.target.closest && ev.target.closest("#ownerPick")) { const btn = qEl.querySelector('[data-act="assign"]'); if (btn) btn.disabled = !ev.target.value; }
+    if (ev.target.id === "pasted" || ev.target.id === "yourNote") { $("#handInGo").disabled = !($("#pasted").value.trim() || $("#yourNote").value.trim()); }
+  });
+  document.addEventListener("change", (ev) => {
+    if (ev.target.id === "ownerPick") { const btn = qEl.querySelector('[data-act="assign"]'); if (btn) btn.disabled = !ev.target.value; }
+  });
+
+  // Keyboard
+  document.addEventListener("keydown", (ev) => {
+    const typing = ev.target.matches("input, textarea, select");
+    if (ev.key === "Escape") { if (!$("#help").hidden) { $("#help").hidden = true; return; } if ($("#menu")) { closeMenu(); return; } if (typing) ev.target.blur(); if (!$("#handIn").hidden) { $("#handIn").hidden = true; } return; }
+    const menu = $("#menu");
+    if (menu && (ev.key === "ArrowDown" || ev.key === "ArrowUp")) {
+      ev.preventDefault(); const items = [...menu.querySelectorAll("button")]; const i = items.indexOf(document.activeElement);
+      items[(i + (ev.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus(); return;
+    }
+    if (typing || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    const r = rows(); const cur = r[S.cur];
+    switch (ev.key) {
+      case "j": S.cur = Math.min(S.cur + 1, r.length - 1); markCurrent(true); break;
+      case "k": S.cur = Math.max(S.cur - 1, 0); markCurrent(true); break;
+      case "Enter": if (cur && cur === document.activeElement) { const id = cur.dataset.line; if (cur.dataset.child) break; S.open.has(id) ? S.open.delete(id) : S.open.add(id); render(); markCurrent(true); } break;
+      case "a": if (cur) { if (cur.dataset.child) resolveChild(cur.dataset.line, cur.dataset.child, "Looks good. Filed."); else primary(cur.dataset.line); } break;
+      case "s": if (cur && cur.dataset.child) { menuAction("sendback", cur.dataset.line, cur.dataset.child); } else if (cur) { const l = lineOf(cur.dataset.line); if (l && l.type === "changes") { S.open.add(l.id); render(); toast("Open an item and press s to send that one back.", { undo: false }); } } break;
+      case "c": case "e": if (cur) { const l = lineOf(cur.dataset.line); if (l && (l.type === "copy" || l.type === "draft")) { if (ev.key === "c" && S.open.has(l.id)) doCopy(l.id); else { S.open.add(l.id); render(); const ta = qEl.querySelector('[data-msg="' + l.id + '"]'); if (ta) ta.focus(); } } } break;
+      case "u": undo(); break;
+      case "/": ev.preventDefault(); $("#askInput").focus(); break;
+      case "?": $("#help").hidden = false; $("#helpClose").focus(); break;
+      default: return;
+    }
+  });
+  $("#helpClose").onclick = () => { $("#help").hidden = true; };
+
+  // Ask
+  $("#askForm").addEventListener("submit", (ev) => {
+    ev.preventDefault();
+    const q = $("#askInput").value.trim(); if (!q) return;
+    const card = document.createElement("section");
+    card.className = "answer"; card.setAttribute("aria-label", "Answer from the assistant");
+    const qq = document.createElement("div"); qq.className = "q"; qq.textContent = "You asked: " + q; card.appendChild(qq);
+    const p = document.createElement("div");
+    p.innerHTML = "<b>Example answer.</b> The critical path to Dec 1 for <i>The Salt Orchard</i>:<ol>" +
+      "<li>Final interior file to the printer · Sam Rivera · Fri, Oct 16</li>" +
+      "<li>Proof copy ships · printer · Thu, Nov 5 <span class=\"tag\">2 days late</span></li>" +
+      "<li>Proof approval · you · need by Tue, Nov 3</li>" +
+      "<li>Books delivered to the venue · printer · Fri, Nov 20</li></ol>" +
+      "<span class=\"hint\">From the launch timeline and the printer's Oct 9 email. Suggested change: none yet; the question to Jun is on Today.</span>";
+    card.appendChild(p);
+    const close = document.createElement("div"); close.className = "row-end";
+    const cb = document.createElement("button"); cb.type = "button"; cb.className = "btn quiet"; cb.textContent = "Close"; cb.onclick = () => card.remove();
+    close.appendChild(cb); card.appendChild(close);
+    $("#answers").prepend(card);
+    $("#askInput").value = ""; $("#askInput").blur();
+  });
+
+  // Hand in
+  $("#handInBtn").onclick = () => { $("#handIn").hidden = false; $("#yourNote").focus(); };
+  $("#handInCancel").onclick = () => { $("#handIn").hidden = true; };
+  $("#handInGo").onclick = () => {
+    $("#handIn").hidden = true; $("#yourNote").value = ""; $("#pasted").value = ""; $("#handInGo").disabled = true;
+    S.waiting += 1; render();
+    toast("Handed in. With the assistant, next batch at 3:00 PM.", { undo: false });
+  };
+
+  // A new item arrives while reading: announce, don't reflow
+  setTimeout(() => {
+    S.pending = { id: "new1", kind: "review", label: "Review", title: "Look over 1 thing the assistant did", sub: "From Ines Duarte's email · “Podcast date”", primary: "All looks good", type: "changes",
+      children: [{ id: "n1", what: "Added an action", title: "Send the podcast host an advance copy", meta: "Ines Duarte · due Fri, Oct 23",
+        because: { q: "I'll send Rhea an advance copy once proofs are in", src: "Email from Ines Duarte · Oct 9, 2:55 PM", text: "Rhea can record on Nov 12. I'll send Rhea an advance copy once proofs are in." } }] };
+    const nb = $("#newBar"); nb.textContent = "1 new · Show"; nb.hidden = false;
+  }, 9000);
+  $("#newBar").onclick = () => {
+    if (!S.pending) return;
+    S.lines.push(S.pending); S.pending = null; $("#newBar").hidden = true; render();
+  };
+
+  // Tabs (only Today is live in this prototype)
+  document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
+    if (b.dataset.tab !== "today") toast("Only Today is live in this prototype.", { undo: false });
+  }));
+
+  render();
+  markCurrent();
+})();
+</script>
+</body>
+</html>
