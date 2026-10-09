@@ -54,9 +54,9 @@ npm --prefix web test && npm --prefix web run build && npm --prefix web run e2e
 
 ## License
 
-[GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only). You may use, change and share it. If you run a changed
-version as a service that other people use over a network, you must offer those people its source code under the same
-license.
+[Apache License 2.0](LICENSE). You may use, change and share it, including at work and in commercial settings, as long as
+you keep the copyright notice and the [`NOTICE`](NOTICE) file. The license also grants a patent license from every
+contributor, which ends for anyone who sues over patents in the project.
 
 ## Documents
 

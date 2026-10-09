@@ -3,8 +3,8 @@ name = "pm-cockpit"
 version = "0.1.0"
 description = "A generic, extensible AI-assisted cockpit for running projects."
 readme = "README.md"
-license = "AGPL-3.0-only"
-license-files = ["LICENSE"]
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",

@@ -128,7 +128,21 @@ opportunities, proposals, SOWs, contracts, regulatory requirements as workspace 
 
 **Impact:** none on the launch slice or version 1; it is in the Later horizon.
 
-## 2026-10-09: License is AGPL-3.0
+## 2026-10-09: License changed to Apache-2.0
+
+**Decided by:** project owner.
+
+**What:** The product is licensed under the Apache License 2.0 (`LICENSE`, `NOTICE`, SPDX `Apache-2.0`), replacing the
+AGPL-3.0 chosen earlier the same day.
+
+**Why:** The goal is that people can use it at their companies. Many companies' open-source approval processes restrict or
+ban the AGPL, while Apache-2.0 is widely approved. The owner wants attribution (the copyright notice and `NOTICE` must be
+kept) and patent protection (an explicit patent grant from every contributor, ending for anyone who sues over patents in the
+project); Apache-2.0 gives both. Accepted trade-off: changed versions, including ones run as a service, need not be shared.
+
+**Impact:** none on scope or schedule. Dependencies stay compatible (all are MIT, BSD, Apache-2.0, MPL-2.0 or PSF).
+
+## 2026-10-09: License is AGPL-3.0 (superseded the same day by Apache-2.0)
 
 **Decided by:** project owner.
 

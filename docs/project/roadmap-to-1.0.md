@@ -59,7 +59,7 @@ Last updated: 2026-10-09.
 ## 6. Publish 1.0
 
 - [ ] Self-check against the private workspace (`cockpit selfcheck --workspace <path>`).
-- [ ] Publish as a fresh repository with one starting commit (no development history), under AGPL-3.0.
+- [ ] Publish as a fresh repository with one starting commit (no development history), under Apache-2.0.
 - [ ] Turn on secret scanning.
 - [ ] README and docs match what 1.0 does.
 
