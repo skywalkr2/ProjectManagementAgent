@@ -74,6 +74,19 @@ promotion copy. The PM is the publisher; contributors never use the tool and get
 - **AI task kinds:** `publishing/contributor-message` (read an email or note from a contributor or vendor: updates, actions,
   date changes, questions) and `publishing/promo-draft` (a social post, newsletter section or announcement, drafted to the
   clipboard channel for the PM to approve and paste).
+- **Interface it defines for others to provide** (3.9): `publishing/manuscript-source@1`, so any plugin, connector or
+  installed or private plugin that produces finished manuscripts can start a launch:
+  - **Fields:** project; title, subtitle, series and number in series, language; contributors (person ids with roles);
+    word count; editions per format, each with its file, version, content hash and approval date, plus page count and
+    trim size for print; front and back matter; description and short blurb, when the provider has marked them ready;
+    data level; an authorship breakdown in the three kinds of 5.0 (written by a person, drafted by the assistant, the
+    person's text changed by the assistant).
+  - **Events:** `approved` (a first or replacement version) and `withdrawn` (the manuscript went back into revision).
+  - **Optional task kinds a provider may offer:** short blurb, long description, back-cover copy, contributor bio.
+  - **What the pack does with it:** offers "Start a launch for this title?" on Today; on a new approved version, flags the
+    milestones that depend on the files; when page count or trim size changes, asks the PM, since it changes the spine
+    width and the print price; fills the platforms' AI-disclosure answers from the authorship breakdown, for the PM to
+    check; on `withdrawn`, marks the launch milestones that depend on the files as at risk.
 - **Today lines:** launch countdown, milestones due within the configured window, dependencies at risk (6.23).
 - **Panels:** launch timeline (baseline against current dates, with dependencies), contributors by role.
 - **Channels:** clipboard only at first; email, newsletter and social channels are later plugins.

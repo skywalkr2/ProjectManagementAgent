@@ -3,6 +3,26 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Synced folder details and the manuscript contract
+
+**Decided by:** project owner, answering questions from a plugin kept in another repository.
+
+**What:**
+- **Nested projects:** `Project` gets an optional parent; a child project's folder sits inside its parent's (a series and its
+  titles, a program and its projects).
+- **Sources travel:** every source (original file and extracted text) goes into its project's folder in the synced folder,
+  so evidence resolves on either computer; sources above a configured data level are encrypted or left out.
+- **Own files:** the cockpit records the hash of every file it writes to the folder and ignores matching files when watching;
+  outputs go to each project's `outputs/` folder, and an output changed outside asks "rebuild or keep", never counts as an edit.
+- **Authorship in three kinds:** written by the person, drafted by the assistant, the person's text changed by the assistant.
+- **`publishing/manuscript-source@1`:** fields, events, optional task kinds and the publishing pack's behavior (design 9.7).
+
+**Why:** Handover is only safe if the folder really holds everything; disclosure rules treat drafting and editing
+differently; a finished manuscript should start a launch without retyping, from any plugin.
+
+**Impact:** about a day more on the synced folder work in the early branch; the interface lands with the publishing pack
+(milestone 8). Nothing changes in the launch slice.
+
 ## 2026-10-09: Two computers through a synced folder
 
 **Decided by:** project owner, after a review from a plugin kept in another repository.

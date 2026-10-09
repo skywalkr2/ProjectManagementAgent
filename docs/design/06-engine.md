@@ -20,7 +20,7 @@ social accounts) is a plugin. Files are read as text from documents and spreadsh
 The interface in 3.3. A channel describes its capabilities: versioned targets with a concurrency check, pulling others' edits
 back, scheduled sending, length limits, media. The core ships the clipboard channel (the PM copies the approved text and pastes
 it anywhere), the **file channel** (the approved content is written to a configured folder, in whatever format a renderer
-produced: text, a document, a PDF, an ebook) and the fake channel. Wiki pages, email, blogs and social networks are plugins.
+produced: text, a document, a PDF, an ebook; with a synced folder, by default the project's `outputs/` folder, 5.0) and the fake channel. Wiki pages, email, blogs and social networks are plugins.
 Channels are called only by the publisher (6.12).
 
 ## 6.4 Watchers

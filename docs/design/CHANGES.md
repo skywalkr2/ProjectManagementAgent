@@ -214,3 +214,6 @@ For your information; nothing here needs an answer.
   through the core. Each pack still works alone.
 - **Two computers through a synced folder** (5.0): the database and git stay on local disk; a synced folder holds a readable
   export by project, the lease and nothing live; diverged histories are never merged silently.
+- **Synced folder details** (5.0, 9.7): projects can nest (a series and its titles) and their folders nest too; sources
+  travel with their project; the cockpit ignores its own files when watching; authorship has three kinds; the publishing
+  pack defines `publishing/manuscript-source@1` so any plugin that produces finished manuscripts can start a launch.

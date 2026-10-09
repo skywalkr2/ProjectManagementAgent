@@ -24,7 +24,8 @@ The ledger is the history view, the audit log and the basis for undo (6.7). It i
 **Long text.** Some fields hold long prose: a statement of work, a proposal, a report, long promotional copy. A record type marks such a field as
 `long_text`. Its content is stored once per version in a text store (by content hash, like sources), and the record and the
 ledger hold the hash, so thirty edits of a proposal are thirty versions, not thirty copies inside the ledger. Each version keeps
-**authorship by passage**: which spans the assistant wrote, which the person wrote or changed, and which model run produced the
+**authorship by passage**, in three kinds: written by the person, drafted by the assistant, and the person's text changed by the
+assistant (disclosure rules often treat drafting and editing differently), with the model run that produced the
 assistant's spans. That serves review (what changed since I last read it, as a word-level diff, 7.4), disclosure rules that ask
 how much of a work an AI wrote, and undo, which restores an earlier version like any other field. The export writes long text
 as plain files beside the records, so it reads well in git and survives the round trip.
@@ -70,6 +71,18 @@ repositories, so neither ever lives in the synced folder:
   records and long text are named in the project folder (`proposal.md`, `sections/07-pricing.md`), so the folder reads
   naturally in any editor. The layout round-trips through `cockpit import`
   like the plain export, and the self-check tests it.
+- **Nested projects nest their folders:** a project with a parent (5.1) has its folder inside its parent's, so a series folder
+  holds its titles. Moving a project to another parent moves its folder, as one op.
+- **Sources travel with their project:** handover needs every source on the other computer, so each source (the original
+  file as received, such as a `.docx`, and its extracted text) is written to its project's `sources/` folder, or to the
+  workspace-wide one when it belongs to none. Evidence then resolves on either computer. Retention (4.15) still applies.
+  Sources above a configured data level are encrypted with a key reference before they reach the folder, or left out, in
+  which case the other computer shows their evidence as "kept on the other computer" (4.15 `sync`).
+- **The cockpit knows its own files:** every file the cockpit writes into the folder (the export, its sources, and outputs
+  such as approved PDFs and ebooks from the file channel, 6.3) has its content hash recorded at write time. The watcher ignores
+  files that still match, so the cockpit's own writes are never mistaken for outside edits. Outputs go to each project's
+  `outputs/` folder; if one is changed or deleted outside, it shows as "changed outside the cockpit: rebuild or keep", never as
+  a content edit, because outputs are built from the records, not the other way round.
 - **The lease lives in the folder too:** holder, computer, heartbeat and the last changeset written. Opening the workspace on
   the other computer while the holder's heartbeat is fresh is refused, naming the computer. Once it is released or stale, the
   opening install backs up its local database, loads the folder's newer state, and takes the lease.
@@ -93,7 +106,7 @@ the project's name. Renaming is then one field (6.7), and there is nothing to no
 |---|---|
 | `Person` | id, full_name, aliases, role, team, org, area (derived from team and scope, 6.18), how_to_reach (per channel), prefers, cadence, influence, interest (6.24), why_they_matter, track_only, non_working_calendar, verified, status (active, left) |
 | `Team` | id, name, aliases, members (person ids), area |
-| `Project` | id, name, group (portfolio grouping; its label comes from config, e.g. "Program"), status, phase, target, priority, summary, owner (person id), links, tags, risks[] (text, raised_by, owner, status, and the optional fields `config/raid.yaml` turns on: probability, impact, score, mitigation, trigger, review_by), decisions[], milestones[] (each with a baseline date and a current date, 6.23), players (person ids), log[] (dated update log), facts[] (internal knowledge with source id), hold flag, `ext` (fields added by plugins, keyed by plugin) |
+| `Project` | id, name, parent (optional project id: a project inside another, such as a title in a series or a project in a program), group (portfolio grouping; its label comes from config, e.g. "Program"), status, phase, target, priority, summary, owner (person id), links, tags, risks[] (text, raised_by, owner, status, and the optional fields `config/raid.yaml` turns on: probability, impact, score, mitigation, trigger, review_by), decisions[], milestones[] (each with a baseline date and a current date, 6.23), players (person ids), log[] (dated update log), facts[] (internal knowledge with source id), hold flag, `ext` (fields added by plugins, keyed by plugin) |
 | `Action` | id (stable key), project id, store, text, owners[] (each a person id with an optional team id; at least one), due, status (held until it has an owner, open, done), notes, told{person id: date}, followups[] |
 | `Question` | id, to (person id), title, text, links[], kind (question, decision, action-notice, routing, impact), affects (record ids), asks_for (fact kind or none), batch (now, later), projects (ids), asked_at, on_answer, key (dedupe), answer_pending, feedback_pending |
 | `Meeting` | id, title, due, attendees (person ids), agenda (per attendee, 6.24), before and after notes, status |
