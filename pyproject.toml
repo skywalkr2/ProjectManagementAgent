@@ -3,6 +3,8 @@ name = "pm-cockpit"
 version = "0.1.0"
 description = "A generic, extensible AI-assisted cockpit for running projects."
 readme = "README.md"
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
@@ -22,7 +24,7 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

@@ -52,6 +52,12 @@ uv run ruff check . && uv run pytest && uv run python -m engine.selfcheck
 npm --prefix web test && npm --prefix web run build && npm --prefix web run e2e
 ```
 
+## License
+
+[GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only). You may use, change and share it. If you run a changed
+version as a service that other people use over a network, you must offer those people its source code under the same
+license.
+
 ## Documents
 
 - [`docs/design/`](docs/design/README.md): the full product design, one file per part, and the build plan

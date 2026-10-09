@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: License is AGPL-3.0
+
+**Decided by:** project owner.
+
+**What:** The product is licensed under the GNU Affero General Public License v3.0 only (`LICENSE`, SPDX `AGPL-3.0-only`).
+
+**Why:** The product is meant to be run hosted as well as locally. The AGPL keeps changed versions open when they are offered
+to others as a network service, not only when they are distributed.
+
+**Impact:** none on scope or schedule. Any dependency added later must be compatible with the AGPL.
+
 ## 2026-10-09: Launch slice implementation choices
 
 **Decided by:** built to the design; open for the project owner's review.
