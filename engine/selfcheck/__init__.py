@@ -95,7 +95,7 @@ def _values(data: object, path: str) -> list[object]:
 def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = print) -> int:
     checks: list[tuple[str, Callable[[], list[Finding]]]] = [
         ("specificity scan", lambda: scan_specificity(list(FIXTURES), private_workspace)),
-        ("provider scan", scan_providers),
+        ("provider scan", lambda: scan_providers(_fixture_ai_names())),
         ("pattern scan", scan_patterns),
         ("boundary scan", scan_boundary),
         ("config coverage", scan_config_coverage),
@@ -113,3 +113,18 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
             out(f"ok    {label}")
     out("Self-check passed." if not failed else f"Self-check failed: {failed} of {len(checks)} checks.")
     return 1 if failed else 0
+
+
+def _fixture_ai_names() -> list[str]:
+    """Adapter names and model ids from the fixtures' ai.yaml: these may appear only in adapters and config."""
+    names: list[str] = []
+    for ws in FIXTURES:
+        try:
+            cfg = load_config(ws / "config", env={})
+        except ConfigError:
+            continue
+        for provider in cfg.ai.providers.values():
+            if provider.adapter != "stub":
+                names.append(provider.adapter)
+            names += [m for m in provider.models.values() if m != "scripted"]
+    return names

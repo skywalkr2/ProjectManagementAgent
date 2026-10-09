@@ -3,3 +3,9 @@ backend: sqlite
 export:
   every_minutes: 30
   commit: true
+backups:
+  targets:
+    - path: ~/CloudDrive/lantern-backups
+      label: cloud folder
+  every_hours: 12
+  keep: 30

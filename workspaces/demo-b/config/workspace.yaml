@@ -3,6 +3,7 @@ version: 1
 name: Lantern House
 assistant_name: Quill
 user:
+  person: PER-1
   full_name: Avery Lane
   aliases: [me]
   timezone: America/New_York

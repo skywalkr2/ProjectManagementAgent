@@ -1,0 +1,2 @@
+version: 1
+lints: {blocked-wording: return, run-on-list: warn, near-duplicate-action: warn, evidence-fit: return}

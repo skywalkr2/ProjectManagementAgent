@@ -14,6 +14,7 @@ import tokenize
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import get_args
 
 import yaml
 from pydantic import BaseModel
@@ -22,7 +23,7 @@ from engine.config.schema import FILES
 
 REPO = Path(__file__).resolve().parents[2]
 CODE_DIRS = ("engine", "api", "web/src", "plugins", "tests")
-CODE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".css", ".html", ".yaml", ".yml", ".json"}
+CODE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".css", ".html", ".yaml", ".yml", ".json", ".md"}
 SKIP_PARTS = {"__pycache__", "node_modules", "fixtures", ".pytest_cache"}
 ADAPTERS = Path("engine/ai/adapters")
 MIN_TERM = 4
@@ -224,13 +225,18 @@ def scan_config_coverage() -> list[Finding]:
                 findings.append(Finding("config", "engine/config/schema.py", 0, f"{path} has no description"))
             if info.is_required():
                 findings.append(Finding("config", "engine/config/schema.py", 0, f"{path} has no default"))
-            annotation = info.annotation
-            if isinstance(annotation, type) and issubclass(annotation, BaseModel):
-                walk(annotation, path)
+            for inner in _models_in(info.annotation):
+                walk(inner, path)
 
     for name, model in FILES.items():
         walk(model, name)
     return findings
+
+
+def _models_in(annotation: object) -> list[type[BaseModel]]:
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return [annotation]
+    return [m for arg in get_args(annotation) for m in _models_in(arg)]
 
 
 # ---- helpers ---------------------------------------------------------------------------------------------------------

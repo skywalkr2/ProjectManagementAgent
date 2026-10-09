@@ -6,6 +6,7 @@ Each layer may set any key. The effective value of every key, and the layer it c
 
 from __future__ import annotations
 
+import json
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -175,6 +176,7 @@ def _describe(name: str, err: ValidationError) -> str:
 def _render_model(instance: BaseModel, model: type[BaseModel], indent: int) -> list[str]:
     lines: list[str] = []
     pad = "  " * indent
+    plain = instance.model_dump(mode="json")
     for key, info in model.model_fields.items():
         value = getattr(instance, key)
         if info.description:
@@ -182,7 +184,9 @@ def _render_model(instance: BaseModel, model: type[BaseModel], indent: int) -> l
         if isinstance(value, BaseModel):
             lines.append(f"{pad}{key}:")
             lines += _render_model(value, type(value), indent + 1)
+        elif isinstance(plain[key], (dict, list)) and plain[key]:
+            dumped = yaml.safe_dump({key: plain[key]}, sort_keys=False, default_flow_style=None).rstrip("\n")
+            lines += [pad + line for line in dumped.splitlines()]
         else:
-            dumped = yaml.safe_dump({key: value}, default_flow_style=True, sort_keys=False).strip()
-            lines.append(f"{pad}{dumped.removeprefix('{').removesuffix('}')}")
+            lines.append(f"{pad}{key}: {json.dumps(plain[key], ensure_ascii=False)}")
     return lines

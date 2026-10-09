@@ -31,6 +31,22 @@ class Link(BaseModel):
     url: str
 
 
+class Evidence(BaseModel):
+    """The exact words in a source that justify a claim."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    source: str
+    quote: str = Field(min_length=1)
+
+
+class LogEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    on: date
+    text: str = Field(min_length=1)
+
+
 class Owner(BaseModel):
     """An action owner: always a person, optionally with the team they act for."""
 
@@ -78,6 +94,7 @@ class Project(Record):
     owner: str | None = None
     links: list[Link] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
+    log: list[LogEntry] = Field(default_factory=list)
 
 
 class Action(Record):
@@ -91,6 +108,8 @@ class Action(Record):
     status: Literal["held", "open", "done"] = "open"
     notes: str | None = None
     told: dict[str, date] = Field(default_factory=dict)
+    source: str | None = None
+    evidence: Evidence | None = None
 
     @model_validator(mode="after")
     def _owners_unless_held(self) -> Action:
@@ -111,6 +130,11 @@ class Question(Record):
     projects: list[str] = Field(default_factory=list)
     batch: Literal["now", "later"] = "now"
     status: Literal["open", "sent", "answered", "dropped"] = "open"
+    sent_at: datetime | None = None
+    answer: str | None = None
+    source: str | None = None
+    options: list[str] = Field(default_factory=list, description="Choices offered, for routing and decisions.")
+    resolves: dict[str, Any] | None = Field(None, description="What answering it releases, e.g. a held op.")
 
 
 class Source(Record):
@@ -126,9 +150,100 @@ class Source(Record):
     url: str | None = None
 
 
+class Request(Record):
+    """A unit of work for the assistant."""
+
+    record_kind: ClassVar[str] = "request"
+    prefix: ClassVar[str] = "REQ"
+
+    task: str
+    note: str | None = None
+    source: str | None = None
+    origin: Literal["pm", "input", "schedule"]
+    state: Literal["queued", "running", "review", "done", "needs_you", "failed"] = "queued"
+    waiting: str | None = Field(None, description="Why it is waiting and until when, in plain words.")
+    attempts: int = 0
+    created_at: datetime
+    changeset: str | None = None
+
+
+class Changeset(Record):
+    """What the assistant proposed for one request, how it was checked and what was applied."""
+
+    record_kind: ClassVar[str] = "changeset"
+    prefix: ClassVar[str] = "CS"
+
+    request: str
+    summary: str = ""
+    ops: list[dict[str, Any]] = Field(default_factory=list)
+    status: Literal["applied", "held", "rejected", "undone", "partly_undone"]
+    problems: list[dict[str, Any]] = Field(default_factory=list)
+    trust: Literal["trusted", "untrusted"]
+    reviewed: bool = False
+    run: str | None = None
+    created_at: datetime
+
+
+class Fact(Record):
+    record_kind: ClassVar[str] = "fact"
+    prefix: ClassVar[str] = "FACT"
+
+    text: str = Field(min_length=1)
+    project: str | None = None
+    source: str | None = None
+    evidence: Evidence | None = None
+    trust: Literal["trusted", "untrusted"] = "trusted"
+
+
+class Note(Record):
+    record_kind: ClassVar[str] = "note"
+    prefix: ClassVar[str] = "NOTE"
+
+    text: str = Field(min_length=1)
+    project: str | None = None
+    source: str | None = None
+    trust: Literal["trusted", "untrusted"] = "trusted"
+
+
+class Run(Record):
+    """One call to an AI provider."""
+
+    record_kind: ClassVar[str] = "run"
+    prefix: ClassVar[str] = "RUN"
+
+    request: str
+    task: str
+    provider: str
+    model: str
+    tier: str
+    input_chars: int = 0
+    output_chars: int = 0
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    cost_usd: float | None = None
+    seconds: float = 0.0
+    outcome: Literal["ok", "invalid_output", "error"]
+    error_kind: str | None = None
+    error_detail: str | None = None
+    started_at: datetime
+
+
+class Signal(Record):
+    """A correction by the PM, the measure of how well the assistant does."""
+
+    record_kind: ClassVar[str] = "signal"
+    prefix: ClassVar[str] = "SIG"
+
+    kind: Literal["sent_back", "undone", "dropped", "reworded", "pulled_back", "draft_edited", "held_declined"]
+    refs: list[str] = Field(default_factory=list)
+    note: str | None = None
+    at: datetime
+
+
 #: Record kind to its model. The order is the export order.
 REGISTRY: dict[str, type[Record]] = {
-    model.record_kind: model for model in (Person, Team, Project, Action, Question, Source)
+    model.record_kind: model
+    for model in (Person, Team, Project, Action, Question, Source, Request, Changeset, Fact, Note, Run, Signal)
 }
 
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.
@@ -136,9 +251,14 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "person": [("team", "team")],
     "team": [("members[]", "person")],
     "project": [("owner", "person")],
-    "action": [("project", "project"), ("owners[].person", "person"), ("owners[].team", "team")],
-    "question": [("to", "person"), ("projects[]", "project")],
+    "action": [("project", "project"), ("owners[].person", "person"), ("owners[].team", "team"), ("source", "source")],
+    "question": [("to", "person"), ("projects[]", "project"), ("source", "source")],
     "source": [("projects[]", "project")],
+    "request": [("source", "source"), ("changeset", "changeset")],
+    "changeset": [("request", "request"), ("run", "run")],
+    "fact": [("project", "project"), ("source", "source")],
+    "note": [("project", "project"), ("source", "source")],
+    "run": [("request", "request")],
 }
 
 

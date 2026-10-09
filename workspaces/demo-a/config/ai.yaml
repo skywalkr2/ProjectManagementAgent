@@ -1,0 +1,27 @@
+# Fictional AI setup. Tests use only the stub account; the others show the shapes real accounts take.
+version: 1
+providers:
+  stub:
+    adapter: stub
+    models: {default: scripted}
+    allowed_data: [open, internal, restricted]
+  company-gateway:
+    adapter: openai-compatible
+    base_url: https://ai-gateway.example.com/v1
+    auth: env:GATEWAY_AI_KEY
+    models: {large: gateway-large-model}
+    allowed_data: [open, internal, restricted]
+  local:
+    adapter: openai-compatible
+    base_url: http://localhost:11434/v1
+    models: {small: local-small-model}
+    allowed_data: [open, internal, restricted]
+tiers:
+  routine: {use: stub/default, fallback: [], escalate_to: deep}
+  deep: {use: stub/default}
+tasks:
+  notes: {tier: routine, temperature: 0, max_output: 4000}
+budgets: {per_run_usd: 0.5, per_day_usd: 5, per_month_usd: 60, warn_at: 0.8}
+prices:
+  company-gateway/large: {input_per_million: 2.5, output_per_million: 10}
+evaluation: {runs: 3, min_score: 0.9}

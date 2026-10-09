@@ -1,0 +1,4 @@
+version: 1
+blocked_phrases: [confirm, check whether, check if, "TBD?", follow up on]
+run_on_separators: [" / ", "; "]
+never_shown: []

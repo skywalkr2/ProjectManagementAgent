@@ -3,6 +3,7 @@ version: 1
 name: Tallowmere Freight PMO
 assistant_name: Archie
 user:
+  person: PER-1
   full_name: Rafael Quist
   aliases: [Rafa, me]
   timezone: America/Chicago

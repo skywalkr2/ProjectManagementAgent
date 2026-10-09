@@ -1,0 +1,27 @@
+# Accounts for the AI layer tests; hosts are example domains.
+providers:
+  main:
+    adapter: openai-compatible
+    base_url: https://primary.example.net/v1
+    auth: env:MAIN_KEY
+    models: {small: main-small}
+    allowed_data: [open, internal]
+  backup:
+    adapter: openai-compatible
+    base_url: https://backup.example.net/v1
+    auth: env:BACKUP_KEY
+    models: {small: backup-small}
+    allowed_data: [open, internal]
+  public-only:
+    adapter: openai-compatible
+    base_url: https://open.example.net/v1
+    models: {small: open-small}
+    allowed_data: [open]
+tiers:
+  routine: {use: main/small, fallback: [backup/small]}
+  deep: {use: public-only/small}
+tasks:
+  notes: {tier: routine}
+prices:
+  main/small: {input_per_million: 1.0, output_per_million: 2.0}
+budgets: {per_run_usd: 0.25, per_day_usd: 0.01, per_month_usd: 1.0}

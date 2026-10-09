@@ -3,3 +3,9 @@ backend: sqlite
 export:
   every_minutes: 60
   commit: true
+backups:
+  targets:
+    - path: /Volumes/Backup/cockpit
+      label: external drive
+  every_hours: 24
+  keep: 14

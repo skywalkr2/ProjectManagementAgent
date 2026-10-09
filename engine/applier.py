@@ -1,0 +1,671 @@
+"""The applier (design 6.7): check a proposed changeset, resolve names, hold what needs the PM, apply the rest in one
+transaction with a ledger entry per field, and undo by op group.
+
+Checks are invariants (always refuse the op) or lints (severity from config/checks.yaml). Refusals and lints that
+would refuse or return are fed back to the AI by the dispatcher first; what still fails is decided here: refused ops are
+dropped and shown, returned lints hold an op that would reach another person and only warn otherwise.
+"""
+
+from __future__ import annotations
+
+import re
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, date, datetime
+from typing import Any, Literal
+
+from pydantic import ValidationError
+
+from engine.cleaning import normalize
+from engine.config import Config
+from engine.names import People
+from engine.ops import (
+    EVIDENCE_FIELDS,
+    NEEDS_EVIDENCE,
+    SETTABLE,
+    TIERS,
+    ActionAddOp,
+    ActionCloseOp,
+    ChangesetIn,
+    FactOp,
+    NoteOp,
+    OpModel,
+    PersonAddOp,
+    QuestionAddOp,
+    QuestionDoneOp,
+    RecordLogOp,
+    RecordSetOp,
+)
+from engine.records import model_for
+from engine.storage import Store, StoreError, WriteContext
+from engine.storage.store import Tx
+
+Severity = Literal["refuse", "return", "hold", "warn"]
+
+
+@dataclass(frozen=True)
+class Problem:
+    check: str
+    severity: Severity
+    op: int | None
+    message: str
+
+
+@dataclass
+class Inputs:
+    """What a changeset may cite as evidence, and who it came from."""
+
+    request: str
+    source: str | None
+    raw_input: str
+    note: str
+    trust: Literal["trusted", "untrusted"]
+
+    def evidence_source(self, quote: str) -> str | None:
+        """The source id (or "note") that contains the quote, if any does."""
+        q = normalize(quote)
+        if self.source and q and q in normalize(self.raw_input):
+            return self.source
+        if q and q in normalize(self.note):
+            return "note"
+        return None
+
+
+@dataclass
+class Context:
+    store: Store
+    cfg: Config
+    people: People
+    allowed_ops: tuple[str, ...]
+    inputs: Inputs
+    hidden_words: list[str] = field(default_factory=list)
+    confirmed_by_pm: bool = False
+
+
+# ---- checks ----------------------------------------------------------------------------------------------------------
+
+
+def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    problems: list[Problem] = []
+    view = ctx.store.read()
+    lints = ctx.cfg.checks.lints
+    open_actions = [a for a in view.list("action") if a.data["status"] != "done"]
+
+    def refuse(i: int, check_name: str, message: str) -> None:
+        problems.append(Problem(check_name, "refuse", i, message))
+
+    def lint(i: int, name: str, message: str) -> None:
+        severity = lints.get(name, "off")
+        if severity != "off":
+            problems.append(Problem(name, severity, i, message))
+
+    for i, op in enumerate(cs.ops):
+        name = op.op
+        if name not in ctx.allowed_ops:
+            refuse(i, "allowed-ops", f"{name} isn't an op this task may use")
+            continue
+        # evidence
+        evidence = getattr(op, "evidence", None)
+        needs = name in NEEDS_EVIDENCE or (isinstance(op, RecordSetOp) and op.field in EVIDENCE_FIELDS)
+        if needs and evidence is None:
+            refuse(i, "evidence", f"{name} needs evidence: the exact words from the input that justify it")
+        if evidence is not None and ctx.inputs.evidence_source(evidence.quote) is None:
+            refuse(i, "evidence", f"the quote {evidence.quote!r} isn't in the input; copy the words exactly")
+        # targets
+        for project in _projects_of(op):
+            if view.get("project", project) is None:
+                refuse(i, "targets", f"there is no project {project}")
+        if isinstance(op, ActionCloseOp):
+            target = view.get("action", op.id)
+            if target is None:
+                refuse(i, "targets", f"there is no action {op.id}")
+            elif target.data["status"] == "done":
+                refuse(i, "targets", f"action {op.id} is already done")
+            elif evidence is not None and not _shares_words(evidence.quote, target.data["text"]):
+                lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
+        if isinstance(op, QuestionDoneOp):
+            target = view.get("question", op.id)
+            if target is None:
+                refuse(i, "targets", f"there is no question {op.id}")
+            elif target.data["status"] in ("answered", "dropped"):
+                refuse(i, "targets", f"question {op.id} is already closed")
+            elif evidence is not None and not _shares_words(evidence.quote, target.data["title"] + " " + op.answer):
+                lint(i, "evidence-fit", f"the quote doesn't seem to answer question {op.id}")
+        if isinstance(op, RecordSetOp):
+            target = view.get(op.kind, op.id)
+            if target is None:
+                refuse(i, "targets", f"there is no {op.kind} {op.id}")
+            elif op.field not in SETTABLE[op.kind]:
+                refuse(i, "targets", f"{op.kind}.{op.field} can't be changed this way")
+            else:
+                try:
+                    model_for(op.kind).model_validate({**target.data, op.field: op.value})
+                except ValidationError as err:
+                    refuse(i, "targets", f"{op.kind}.{op.field}: {err.errors()[0]['msg']}")
+        # questions to other people
+        if isinstance(op, QuestionAddOp):
+            resolved = ctx.people.resolve(op.to)
+            to_pm = resolved.person == ctx.people.pm
+            if not to_pm:
+                if not op.links:
+                    refuse(i, "question-links", "a question to someone else needs a link to what it is about")
+                for link in op.links:
+                    if not _openable(link.url):
+                        refuse(i, "question-links", f"{link.url} isn't a link the recipient can open")
+            _wording(i, op.title + " " + op.text, ctx, lint)
+        if isinstance(op, ActionAddOp):
+            _wording(i, op.text, ctx, lint)
+            if any(sep in op.text for sep in ctx.cfg.language.run_on_separators):
+                lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
+            for existing in open_actions:
+                if _similar(op.text, existing.data["text"]) >= 0.8:
+                    lint(i, "near-duplicate-action", f"looks like open action {existing.id}: {existing.data['text']}")
+                    break
+        # never shown
+        text = " ".join(_texts(op)).lower()
+        for word in ctx.hidden_words:
+            if word and re.search(r"(?<![a-z0-9])" + re.escape(word.lower()) + r"(?![a-z0-9])", text):
+                refuse(i, "never-shown", "text people will see mentions the AI model or service")
+                break
+        # tiers
+        if TIERS.get(name) == "system" and ctx.inputs.trust == "untrusted":
+            problems.append(Problem("tier", "hold", i, "changes how the product behaves; needs your confirmation"))
+    return problems
+
+
+def _wording(i: int, text: str, ctx: Context, lint: Any) -> None:
+    lowered = text.lower()
+    for phrase in ctx.cfg.language.blocked_phrases:
+        if re.search(r"(?<![a-z])" + re.escape(phrase.lower()) + r"(?![a-z])", lowered):
+            lint(i, "blocked-wording", f"avoid {phrase!r}: say what to do, or ask the real question")
+            return
+
+
+def _openable(url: str) -> bool:
+    if not re.match(r"^https?://", url):
+        return False
+    host = re.sub(r"^https?://", "", url).split("/", 1)[0].split(":", 1)[0].lower()
+    return host not in ("localhost", "127.0.0.1", "::1", "0.0.0.0") and "." in host
+
+
+def _projects_of(op: OpModel) -> list[str]:
+    if isinstance(op, (NoteOp, FactOp, ActionAddOp, QuestionAddOp)) and op.project:
+        return [op.project]
+    if isinstance(op, RecordLogOp):
+        return [op.project]
+    return []
+
+
+def _texts(op: OpModel) -> list[str]:
+    out = []
+    for key in ("text", "title", "answer", "summary"):
+        value = getattr(op, key, None)
+        if isinstance(value, str):
+            out.append(value)
+    return out
+
+
+_WORD = re.compile(r"[a-z0-9]{4,}")
+
+
+def _shares_words(a: str, b: str) -> bool:
+    return bool(set(_WORD.findall(normalize(a))) & set(_WORD.findall(normalize(b))))
+
+
+def _similar(a: str, b: str) -> float:
+    wa, wb = set(_WORD.findall(normalize(a))), set(_WORD.findall(normalize(b)))
+    return len(wa & wb) / len(wa | wb) if wa and wb else 0.0
+
+
+def needs_another_round(problems: list[Problem]) -> bool:
+    return any(p.severity in ("refuse", "return") for p in problems)
+
+
+def feedback(problems: list[Problem]) -> str:
+    lines = [
+        f"- op {p.op}: {p.message}" if p.op is not None else f"- {p.message}"
+        for p in problems
+        if p.severity in ("refuse", "return")
+    ]
+    return (
+        "Your previous answer had these problems:\n"
+        + "\n".join(lines)
+        + ("\nAnswer again with the complete corrected JSON object.")
+    )
+
+
+# ---- apply -----------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class OpOutcome:
+    index: int
+    op: dict[str, Any]
+    status: Literal["applied", "held", "refused", "undone"]
+    group: str
+    records: list[dict[str, Any]] = field(default_factory=list)
+    reason: str | None = None
+    question: str | None = None
+    problems: list[dict[str, Any]] = field(default_factory=list)
+
+
+def apply_changeset(
+    cs: ChangesetIn, problems: list[Problem], ctx: Context, *, run: str | None, now: datetime | None = None
+) -> str:
+    """Apply what passed, hold what needs the PM, record refusals. Returns the changeset id."""
+    now = now or datetime.now(UTC)
+    today = now.date()
+    by_op: dict[int, list[Problem]] = {}
+    for p in problems:
+        if p.op is not None:
+            by_op.setdefault(p.op, []).append(p)
+
+    with ctx.store.transaction() as tx:
+        cs_id = tx.new_id("changeset")
+        outcomes: list[OpOutcome] = []
+        for i, op in enumerate(cs.ops):
+            mine = by_op.get(i, [])
+            outcome = OpOutcome(
+                i,
+                op.model_dump(mode="json", exclude_none=True),
+                "applied",
+                op.group or f"op{i}",
+                problems=[asdict(p) for p in mine],
+            )
+            if any(p.severity == "refuse" for p in mine):
+                outcome.status = "refused"
+                outcome.reason = "; ".join(p.message for p in mine if p.severity == "refuse")
+            elif any(p.severity == "hold" for p in mine) or _returned_to_someone_else(op, mine, ctx):
+                outcome.status = "held"
+                outcome.reason = "; ".join(p.message for p in mine if p.severity in ("hold", "return"))
+            else:
+                hold = _needs_person_choice(op, ctx)
+                if hold is not None:
+                    outcome.status = "held"
+                    outcome.reason = hold
+            if outcome.status == "applied":
+                wctx = _wctx(ctx, cs_id, i, op)
+                outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
+                outcome.question = question
+            elif outcome.status == "held" and outcome.reason and outcome.reason.startswith("who-is"):
+                outcome.question = _routing_question(tx, op, i, cs_id, ctx, outcome.reason)
+                outcome.reason = "Waiting for you to say who this is"
+            outcomes.append(outcome)
+        status = "held" if any(o.status == "held" for o in outcomes) else "applied"
+        tx.create(
+            "changeset",
+            {
+                "request": ctx.inputs.request,
+                "summary": cs.summary,
+                "ops": [asdict(o) for o in outcomes],
+                "status": status,
+                "problems": [asdict(p) for p in problems if p.op is None],
+                "trust": ctx.inputs.trust,
+                "run": run,
+                "created_at": now.isoformat(),
+            },
+            WriteContext(actor="engine", trust="trusted", op="changeset.record"),
+            record_id=cs_id,
+        )
+    return cs_id
+
+
+def _returned_to_someone_else(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
+    if not any(p.severity == "return" for p in mine):
+        return False
+    if isinstance(op, QuestionAddOp):
+        return ctx.people.resolve(op.to).person != ctx.people.pm
+    return False
+
+
+def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
+    names: list[str] = []
+    if isinstance(op, ActionAddOp):
+        names = op.owners
+    elif isinstance(op, QuestionAddOp):
+        names = [op.to]
+    for name in names:
+        r = ctx.people.resolve(name)
+        if r.status != "ok":
+            return f"who-is:{name}:{','.join(r.candidates)}"
+    if isinstance(op, PersonAddOp) and ctx.inputs.trust == "untrusted" and not ctx.confirmed_by_pm:
+        return "A new person named only in outside content: add them?"
+    return None
+
+
+def _wctx(ctx: Context, cs_id: str, index: int, op: OpModel) -> WriteContext:
+    evidence = getattr(op, "evidence", None)
+    ev = None
+    if evidence is not None:
+        ev = {"source": ctx.inputs.evidence_source(evidence.quote), "quote": evidence.quote}
+    return WriteContext(
+        actor="assistant",
+        trust=ctx.inputs.trust,
+        op=f"{op.op}#{index}",
+        changeset=cs_id,
+        request=ctx.inputs.request,
+        evidence=ev,
+    )
+
+
+def _apply_op(
+    tx: Tx, op: OpModel, ctx: Context, w: WriteContext, today: date
+) -> tuple[list[dict[str, Any]], str | None]:
+    trust = ctx.inputs.trust
+    source = ctx.inputs.source
+    touched: list[dict[str, Any]] = []
+
+    def made(kind: str, rid: str) -> None:
+        touched.append({"kind": kind, "id": rid})
+
+    if isinstance(op, NoteOp):
+        made(
+            "note", tx.create("note", {"text": op.text, "project": op.project, "source": source, "trust": trust}, w).id
+        )
+    elif isinstance(op, FactOp):
+        ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
+        made(
+            "fact",
+            tx.create(
+                "fact", {"text": op.text, "project": op.project, "source": source, "evidence": ev, "trust": trust}, w
+            ).id,
+        )
+    elif isinstance(op, RecordSetOp):
+        cur = tx.get(op.kind, op.id)
+        tx.update(op.kind, op.id, {op.field: op.value}, w, read_version=cur.version)
+        made(op.kind, op.id)
+    elif isinstance(op, RecordLogOp):
+        cur = tx.get("project", op.project)
+        log = [*cur.data.get("log", []), {"on": today.isoformat(), "text": op.text}]
+        tx.update("project", op.project, {"log": log}, w, read_version=cur.version)
+        made("project", op.project)
+    elif isinstance(op, ActionAddOp):
+        owners = [{"person": ctx.people.resolve(n).person} for n in op.owners]
+        ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
+        data = {
+            "text": op.text,
+            "owners": owners,
+            "due": op.due.isoformat() if op.due else None,
+            "project": op.project,
+            "source": source,
+            "evidence": ev,
+            "status": "open" if owners else "held",
+        }
+        action = tx.create("action", data, w)
+        made("action", action.id)
+        if not owners:
+            q = _pm_question(
+                tx,
+                w,
+                ctx,
+                f"Pick an owner: {op.text}",
+                "routing",
+                options=[],
+                resolves={"kind": "owner", "action": action.id},
+            )
+            made("question", q)
+            return touched, q
+    elif isinstance(op, ActionCloseOp):
+        cur = tx.get("action", op.id)
+        tx.update("action", op.id, {"status": "done"}, w, read_version=cur.version)
+        made("action", op.id)
+    elif isinstance(op, QuestionAddOp):
+        to = ctx.people.resolve(op.to).person
+        data = {
+            "to": to,
+            "title": op.title,
+            "text": op.text,
+            "links": [link.model_dump() for link in op.links],
+            "projects": [op.project] if op.project else [],
+            "kind": op.kind,
+            "source": source,
+        }
+        made("question", tx.create("question", data, w).id)
+    elif isinstance(op, QuestionDoneOp):
+        cur = tx.get("question", op.id)
+        tx.update("question", op.id, {"status": "answered", "answer": op.answer}, w, read_version=cur.version)
+        made("question", op.id)
+        projects = cur.data.get("projects") or [None]
+        ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
+        fact = tx.create(
+            "fact",
+            {
+                "text": f"{cur.data['title']} {op.answer}",
+                "project": projects[0],
+                "source": source,
+                "evidence": ev,
+                "trust": trust,
+            },
+            w,
+        )
+        made("fact", fact.id)
+    elif isinstance(op, PersonAddOp):
+        made(
+            "person",
+            tx.create(
+                "person", {"full_name": op.full_name, "role": op.role, "org": op.org, "aliases": op.aliases}, w
+            ).id,
+        )
+    return touched, None
+
+
+def _pm_question(
+    tx: Tx, w: WriteContext, ctx: Context, title: str, kind: str, *, options: list[str], resolves: dict[str, Any]
+) -> str:
+    pm = ctx.people.pm
+    if pm is None:
+        raise StoreError("workspace.user.person isn't set, so there is no one to ask")
+    data = {"to": pm, "title": title, "kind": kind, "options": options, "resolves": resolves}
+    return tx.create("question", data, w).id
+
+
+def _routing_question(tx: Tx, op: OpModel, index: int, cs_id: str, ctx: Context, reason: str) -> str:
+    _, name, candidates = reason.split(":", 2)
+    options = [c for c in candidates.split(",") if c]
+    w = WriteContext(
+        actor="engine", trust="trusted", op=f"routing#{index}", changeset=cs_id, request=ctx.inputs.request
+    )
+    title = f"Who is “{name}”?"
+    return _pm_question(
+        tx,
+        w,
+        ctx,
+        title,
+        "routing",
+        options=options,
+        resolves={"kind": "held-op", "changeset": cs_id, "op": index, "name": name},
+    )
+
+
+# ---- releasing held ops and answering routing questions --------------------------------------------------------------
+
+
+def release(
+    store: Store, cfg: Config, changeset_id: str, index: int, *, person: str | None = None, now: datetime | None = None
+) -> None:
+    """Apply a held op, optionally saying who an unresolved name is."""
+    now = now or datetime.now(UTC)
+    cs = store.read().get("changeset", changeset_id)
+    if cs is None:
+        raise StoreError(f"there is no changeset {changeset_id}")
+    outcomes = cs.data["ops"]
+    outcome = outcomes[index]
+    if outcome["status"] != "held":
+        raise StoreError("that item isn't waiting for you")
+    from engine.ops import CHANGESET
+
+    op = CHANGESET.validate_python({"ops": [outcome["op"]]}).ops[0]
+    name = (outcome.get("question") and _question_name(store, outcome["question"])) or None
+    if person is not None and name is not None:
+        op = _substitute(op, name, person)
+    people = People(store, cfg)
+    req = store.read().get("request", cs.data["request"])
+    inputs = Inputs(cs.data["request"], req.data.get("source") if req else None, "", "", cs.data["trust"])
+    ctx = Context(store, cfg, people, tuple(), inputs, confirmed_by_pm=True)
+    with store.transaction() as tx:
+        if outcome.get("question"):
+            q = tx.get("question", outcome["question"])
+            if q and q.data["status"] == "open":
+                tx.update(
+                    "question",
+                    q.id,
+                    {"status": "answered", "answer": person or "added"},
+                    WriteContext(actor="pm", trust="trusted", op="question.answer"),
+                    read_version=q.version,
+                )
+        still = _needs_person_choice(op, ctx)
+        if still is not None and still.startswith("who-is"):
+            outcome["op"] = op.model_dump(mode="json", exclude_none=True)
+            outcome["question"] = _routing_question(tx, op, index, changeset_id, ctx, still)
+            tx.update(
+                "changeset",
+                changeset_id,
+                {"ops": outcomes},
+                WriteContext(actor="pm", trust="trusted", op="changeset.release"),
+                read_version=cs.version,
+            )
+            return
+        w = WriteContext(
+            actor="pm",
+            trust="trusted",
+            op=f"{op.op}#{index}",
+            changeset=changeset_id,
+            request=cs.data["request"],
+            evidence=outcome["op"].get("evidence")
+            and {"source": inputs.source, "quote": outcome["op"]["evidence"]["quote"]},
+        )
+        records, question = _apply_op(tx, op, ctx, w, now.date())
+        outcome.update(status="applied", records=records, reason=None)
+        if question:
+            outcome["question"] = question
+        status = "held" if any(o["status"] == "held" for o in outcomes) else "applied"
+        tx.update(
+            "changeset",
+            changeset_id,
+            {"ops": outcomes, "status": status},
+            WriteContext(actor="pm", trust="trusted", op="changeset.release"),
+            read_version=cs.version,
+        )
+
+
+def pick_owner(store: Store, question_id: str, person: str) -> None:
+    """Answer a "Pick an owner" question: the held action gets its first owner and opens."""
+    q = store.read().get("question", question_id)
+    if q is None or (q.data.get("resolves") or {}).get("kind") != "owner":
+        raise StoreError("that question isn't asking for an owner")
+    action_id = q.data["resolves"]["action"]
+    w = WriteContext(actor="pm", trust="trusted", op="action.assign")
+    with store.transaction() as tx:
+        if tx.get("person", person) is None:
+            raise StoreError(f"there is no person {person}")
+        a = tx.get("action", action_id)
+        tx.update("action", action_id, {"owners": [{"person": person}], "status": "open"}, w, read_version=a.version)
+        tx.update("question", question_id, {"status": "answered", "answer": person}, w, read_version=q.version)
+
+
+def _question_name(store: Store, qid: str) -> str | None:
+    q = store.read().get("question", qid)
+    return (q.data.get("resolves") or {}).get("name") if q else None
+
+
+def _substitute(op: OpModel, name: str, person: str) -> OpModel:
+    if isinstance(op, ActionAddOp):
+        return op.model_copy(update={"owners": [person if o == name else o for o in op.owners]})
+    if isinstance(op, QuestionAddOp) and op.to == name:
+        return op.model_copy(update={"to": person})
+    return op
+
+
+# ---- undo ------------------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class UndoReport:
+    restored: list[int] = field(default_factory=list)
+    skipped: list[dict[str, Any]] = field(default_factory=list)
+
+
+def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> UndoReport:
+    """Undo applied ops of a changeset by group: all or nothing within a group, skipping a group with a conflict."""
+    cs = store.read().get("changeset", changeset_id)
+    if cs is None:
+        raise StoreError(f"there is no changeset {changeset_id}")
+    outcomes = cs.data["ops"]
+    wanted = [o for o in outcomes if o["status"] == "applied" and (indices is None or o["index"] in indices)]
+    groups: dict[str, list[dict[str, Any]]] = {}
+    for o in outcomes:
+        if o["status"] == "applied":
+            groups.setdefault(o["group"], []).append(o)
+    chosen = {o["group"] for o in wanted}
+    report = UndoReport()
+    entries = [e for e in store.read().ledger() if e["changeset"] == changeset_id]
+    with store.transaction() as tx:
+        for group in chosen:
+            members = groups[group]
+            idx = {o["index"] for o in members}
+            mine = [e for e in entries if _op_index(e["op"]) in idx]
+            conflict = _conflict(tx, mine)
+            if conflict:
+                report.skipped.append({"ops": sorted(idx), "reason": conflict})
+                continue
+            _revert(tx, mine, changeset_id)
+            for o in members:
+                o["status"] = "undone"
+                report.restored.append(o["index"])
+        remaining = [o for o in outcomes if o["status"] in ("applied", "held")]
+        status = "undone" if not remaining else ("partly_undone" if report.restored else cs.data["status"])
+        tx.update(
+            "changeset",
+            changeset_id,
+            {"ops": outcomes, "status": status},
+            WriteContext(actor="pm", trust="trusted", op="changeset.undo"),
+            read_version=cs.version,
+        )
+    return report
+
+
+def _op_index(op_name: str) -> int | None:
+    _, _, idx = op_name.rpartition("#")
+    return int(idx) if idx.isdigit() else None
+
+
+def _conflict(tx: Tx, entries: list[dict[str, Any]]) -> str | None:
+    by_record: dict[tuple[str, str], dict[str, Any]] = {}
+    for e in entries:
+        key = (e["kind"], e["record_id"])
+        cur = by_record.setdefault(key, {"version": 0, "fields": set()})
+        cur["version"] = max(cur["version"], e["version"])
+        if e["field"]:
+            cur["fields"].add(e["field"])
+    for (kind, rid), info in by_record.items():
+        current = tx.get(kind, rid, include_deleted=True)
+        if current is None:
+            continue
+        if current.version > info["version"]:
+            later = tx.sql(
+                "SELECT field FROM ledger WHERE kind=? AND record_id=? AND version>? AND field IS NOT NULL",
+                (kind, rid, info["version"]),
+            ).fetchall()
+            clash = {r["field"] for r in later} & info["fields"]
+            if clash or current.deleted:
+                return f"{kind} {rid} changed since ({', '.join(sorted(clash)) or 'deleted'})"
+    return None
+
+
+def _revert(tx: Tx, entries: list[dict[str, Any]], changeset_id: str) -> None:
+    w = WriteContext(actor="pm", trust="trusted", op="undo", changeset=changeset_id)
+    by_record: dict[tuple[str, str], list[dict[str, Any]]] = {}
+    for e in entries:
+        by_record.setdefault((e["kind"], e["record_id"]), []).append(e)
+    for (kind, rid), rows in by_record.items():
+        current = tx.get(kind, rid)
+        if current is None:
+            continue
+        created = any(r["version"] == 1 for r in rows)
+        if created:
+            tx.delete(kind, rid, w, read_version=current.version)
+            continue
+        before: dict[str, Any] = {}
+        for r in sorted(rows, key=lambda r: r["seq"]):
+            if r["field"] and r["field"] not in before:
+                before[r["field"]] = r["before"]
+        tx.update(kind, rid, before, w, read_version=current.version)
