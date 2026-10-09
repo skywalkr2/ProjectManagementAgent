@@ -1,7 +1,7 @@
 # Fictional workplace PM workspace (fixture). Every name here is invented.
 version: 1
 name: Tallowmere Freight PMO
-assistant_name: Archie
+assistant_name: Shippy
 user:
   person: PER-1
   full_name: Rafael Quist
