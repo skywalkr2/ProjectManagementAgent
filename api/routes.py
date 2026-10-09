@@ -285,8 +285,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         async def gen() -> Any:
             seen = events.version
             yield f"event: hello\ndata: {seen}\n\n"
-            while True:
+            while not events.closed:
                 seen_now = await asyncio.to_thread(events.wait, seen, 15.0)
+                if events.closed:
+                    break
                 if seen_now != seen:
                     seen = seen_now
                     yield f"event: changed\ndata: {seen}\n\n"

@@ -152,6 +152,7 @@ def create_app(
     inner.include_router(build_router(ws, cfg, store, events, worker))
     inner.state.worker = worker
     inner.state.store = store
+    inner.state.events = events
 
     @inner.get("/{path:path}", include_in_schema=False)
     def ui(path: str) -> Any:
@@ -173,6 +174,7 @@ def create_app(
     outer = Starlette(routes=[Mount(base_path, app=inner)], lifespan=lifespan)
     outer.state.worker = worker
     outer.state.store = store
+    outer.state.events = events
     return outer
 
 
