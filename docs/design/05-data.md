@@ -57,6 +57,32 @@ so a crashed worker's job is picked up again, and only one scheduler holds the s
 instance on the same workspace (the laptop and a host at once, say) refuses to start and says who holds it. `cockpit takeover`
 takes the lease after the holder's heartbeat has expired, or immediately with a confirmation.
 
+**Two computers through a synced folder.** A person who works on two computers keeps one workspace and hands it over through
+a folder that a file-sync service keeps in step (4.15, `sync`). File-by-file syncing corrupts live databases and git
+repositories, so neither ever lives in the synced folder:
+
+- **Local only:** each computer keeps its own copy of the workspace (database, git history, `sources/`) on local disk. While
+  an install holds the workspace, its database is the record of truth.
+- **The synced folder is a complete, readable copy:** after every applied changeset the engine writes the export there, laid
+  out **one folder per project** (its records, every version of its long text as plain files with authorship, its history and
+  findings) plus the workspace-wide records (people, teams, config, sequences, the ledger). Each file is written beside its
+  target and then renamed into place, so a half-written file never syncs. A record type (core or plugin) declares how its
+  records and long text are named in the project folder (`proposal.md`, `sections/07-pricing.md`), so the folder reads
+  naturally in any editor. The layout round-trips through `cockpit import`
+  like the plain export, and the self-check tests it.
+- **The lease lives in the folder too:** holder, computer, heartbeat and the last changeset written. Opening the workspace on
+  the other computer while the holder's heartbeat is fresh is refused, naming the computer. Once it is released or stale, the
+  opening install backs up its local database, loads the folder's newer state, and takes the lease.
+- **Never a silent merge:** if both computers worked while unable to sync and their histories diverged (the folder's last
+  changeset is not one the local copy has seen, and the local copy has changes the folder lacks), nothing loads. The person
+  chooses which history to keep; the other is saved as a backup. Duplicate files a sync service creates on conflict are found,
+  shown, and never loaded.
+- **Edits made outside:** the folder is watched (the local-folder connector). A long-text file changed in another editor comes
+  back as a change for the person to review, marked as edited outside the cockpit, never applied silently.
+
+This moves one workspace between computers. Sharing a single project with a different workspace (another person's install)
+is a different problem, since ids and people are per workspace; it is left for later.
+
 ## 5.1 Core entities
 
 Records refer to each other **by id, never by name**. Names (people, projects, groups) are stored once, on their own record,

@@ -212,3 +212,5 @@ For your information; nothing here needs an answer.
 - **Plugins working together** (3.9): packs share core records (a launch is one project for both the publishing and a social
   media pack), offer versioned interfaces to each other, subscribe to events and can request each other's task kinds, always
   through the core. Each pack still works alone.
+- **Two computers through a synced folder** (5.0): the database and git stay on local disk; a synced folder holds a readable
+  export by project, the lease and nothing live; diverged histories are never merged silently.

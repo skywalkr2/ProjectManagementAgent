@@ -293,6 +293,9 @@ has a default and a description, and both fictional workspaces carry demo values
 - `sources_store`: `local` (default: `sources/` in the workspace) or a registered object store.
 - `export`: how often the readable export is written and committed (default hourly and after each batch), and an optional
   `remote` (a private git repository) to push to, so a hosted install has an off-site copy.
+- `sync`: hand the workspace between computers through a synced folder (5.0). `folder` (a path, off by default), `layout`
+  (`by_project`, default), `lease_stale_after_minutes` (default 10), `watch_outside_edits` (default true). The database and
+  git history stay in `path`, which must not be inside the synced folder; the self-check and start-up refuse that setup.
 - `backups`: full backups (a consistent copy of the database plus sources) on a schedule, to one or more targets **off this
   computer**: a synced folder, an external drive, an object store, or the export remote. `encrypt` with a key reference
   (`keychain:NAME`) for any target outside the PM's control. Until an off-device target is set up and has succeeded, local mode

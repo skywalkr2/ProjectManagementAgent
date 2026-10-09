@@ -51,6 +51,7 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Sales pack (accounts, opportunities, proposals, SOWs, contracts, regulatory data per jurisdiction) | won't | won't | 13.3 |
 | Plugins working together: interfaces, event subscriptions, requests for another plugin's work, shared core records | won't | must | 3.9 |
 | Long text fields with versions and authorship | won't | must | 5.0 |
+| Two computers through a synced folder (readable export by project, lease in the folder) | won't | must | 5.0, 4.15 |
 | Drafts with prose output (`text.draft`), not held to the evidence rule but marked unreviewed | won't | must | 6.7 |
 | File channel (approved content saved to a configured folder) | won't | must | 6.3 |
 | Stages for record types, with entry checks and the person's go (publishing titles first) | won't | must | 6.26, 4.21 |

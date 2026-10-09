@@ -32,6 +32,7 @@ Last updated: 2026-10-09.
 - [ ] Cost control: estimates, a go above a set amount, budgets per task kind and per record (6.16).
 - [ ] Independent second opinion (6.16).
 - [ ] File channel (6.3).
+- [ ] Two computers through a synced folder: readable export by project, lease in the folder, no silent merges (5.0).
 - [ ] Plugin developer guide generated from the plugin API, for plugins kept in other repositories.
 - [ ] A sandbox workspace for trying plugins, apart from the launch workspace.
 

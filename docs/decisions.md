@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Two computers through a synced folder
+
+**Decided by:** project owner, after a review from a plugin kept in another repository.
+
+**What:** One workspace can be handed between computers through a file-sync folder (design 5.0, 4.15 `sync`). The database
+and git history stay on each computer's local disk; the synced folder holds a complete, readable export laid out one folder
+per project, written atomically after every changeset; the lease lives in the folder; diverged histories are never merged
+silently; outside edits come back as changes to review. Sharing one project between different workspaces is left for later.
+
+**Why:** Long documents need to be readable outside the cockpit and work must continue on a second computer, but file-by-file
+syncing corrupts live databases and git repositories. A per-project exchange between separate installs was considered and
+rejected for now: ids and people are per workspace, so a project loaded into another install would collide.
+
+**Impact:** about four days of build time, added to the early branch after the document features (from 2026-10-31). No
+owner time. Nothing changes in the launch slice.
+
 ## 2026-10-09: Plugin host and document features built early, beside the freeze
 
 **Decided by:** project owner.
