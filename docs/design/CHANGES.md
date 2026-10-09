@@ -220,3 +220,6 @@ For your information; nothing here needs an answer.
 - **Working copies and review** (5.0, 6.7, 7.2): long text can be handed out as a file for the person's own tools and taken
   back for review; the person's outside work and the assistant's drafts both wait as proposed versions, accepted passage by
   passage in a two-way or three-way compare view. An op validator's refusal counts as an invariant failure (6.16).
+- **Draft checks and plugin hooks** (6.7, 3.3, 3.4, 4.6, 4.12): paragraph-anchored drafts, lints computed in code and anchored
+  to passages, lints on drafts counting for escalation, a project's own language, declared outside programs, a person's own
+  data files for a plugin, and a `text.accepted` event.

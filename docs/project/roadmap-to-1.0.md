@@ -29,6 +29,8 @@ Last updated: 2026-10-09.
 - [ ] Long text with versions and authorship (5.0).
 - [ ] Drafts with prose output; proposed versions and accepting them per passage (6.7).
 - [ ] Compare view for long text, two-way and three-way (7.2).
+- [ ] Paragraph-anchored drafts; lints computed in code, anchored to passages; lints on drafts count for escalation (6.7, 3.3, 6.16).
+- [ ] Events: `record.changed` with full details, `text.accepted` (3.4).
 - [ ] Working copies: hand out for the person's own tools, take back, review (5.0, 3.3).
 - [ ] Stages (6.26).
 - [ ] Cost control: estimates, a go above a set amount, budgets per task kind and per record (6.16).
@@ -47,7 +49,8 @@ Last updated: 2026-10-09.
 
 - [ ] **M1–2: rest of the core.** The parts the launch slice trimmed (13.1).
 - [ ] **M3: scope and facts.** Scope resolver; facts looked up from configured sources, never asked (6.18, 6.19).
-- [ ] **M4: plugin host.** Finish what 3a started: the remaining `1.0` extension points and moving built-ins behind them.
+- [ ] **M4: plugin host.** Finish what 3a started: the remaining `1.0` extension points and moving built-ins behind them;
+  project language (5.1), declared programs (`requires.tools`), plugin data files (4.12).
 - [ ] **M5: watchers and triage.** Inputs arrive on their own instead of being pasted.
 - [ ] **M6: records, rendering and the publisher.** Drafts, Waiting to go out with diffs, the publisher; the document
   features come from 3a.

@@ -125,7 +125,9 @@ unclassified: ask
 ## 4.6 `config/language.yaml`
 
 Locale and spelling list, blocked phrases on shared outputs (question-style wording: "confirm", "check whether", "TBD?"),
-separators that mean a run-on list, words that must never appear in user-visible text (the model's name), date formats.
+separators that mean a run-on list, words that must never appear in user-visible text (the model's name), date formats. The
+workspace locale is the default; a project with its own `language` (5.1) uses that language's spelling list, wording lints and
+date formats instead, from a `languages:` map in this file keyed by language tag (`en-GB`, `en-US`).
 
 ## 4.7 `config/render.yaml` and templates
 
@@ -254,6 +256,11 @@ config.
 Each enabled plugin's settings, validated against the schema the plugin's manifest names. Same rules as core config: every key
 has a default and a description, and both fictional workspaces carry demo values.
 
+**A person's own data files for a plugin** (templates with their images, fonts, profiles, word lists) go in
+`<workspace>/plugin-data/<plugin>/`, laid over the data the plugin ships, by the same relative path or id: the person's file
+wins, and removing it brings the shipped one back. They are versioned with the workspace's config, carried by the synced
+folder (5.0), checked by the plugin's `check()`, and read through the plugin API, never by path from outside the folder.
+
 ## 4.13 `config/server.yaml`
 
 - `mode`: `local` (default) or `hosted`. Hosted turns on the deploy checks (11.5) and refuses to start if they fail.
@@ -352,7 +359,9 @@ lints:
 
 Severities: `refuse`, `return` (back to the AI once; then held for the PM if the item will reach another person, or applied
 with a warning if it stays internal, 6.7), `warn`, `off`. Invariants (6.7) are not
-listed and can't be lowered. Plugins register their own lints with defaults here.
+listed and can't be lowered. Plugins register their own lints with defaults here, as data (patterns, word lists) or as code
+through the lint extension point (3.3); either way each problem names the passage it points to, its guidance goes back with
+that passage in the return round, and it shows on that passage in the compare view (7.2).
 
 ## 4.18 `config/code_owners.yaml`
 

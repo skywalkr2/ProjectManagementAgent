@@ -41,6 +41,8 @@ requires:
   network: []                     # hosts it may reach; empty means none
   secrets: []                     # secret names it reads (values come from env or keychain)
   data_levels: [open, internal]   # the most sensitive inputs it may see
+  tools: []                       # programs it runs, e.g. [{name: java, min_version: "17", probe: "java -version",
+                                  #   optional: true, features: [<plugin>/advanced-validator]}]
 entry: personal_projects:register # called with a registrar from engine.plugin_api
 ```
 
@@ -56,6 +58,7 @@ where it came from.
 | Record type | a kind of thing to track, or extra fields on a core record | a Pydantic model, its table, display labels, migrations, the ids it stores (for merges and deletes) | 1.0 |
 | Op type | a changeset operation | tier (data, outbound, system), required fields, `validate`, `normalize`, record types it may write, `apply`, `describe` (one readable line) | 1.0 |
 | Op validator | extra checks on an existing op, core or plugin | `validate(op, workspace) -> problems` (can refuse, never modify; a refusal counts as an invariant failure, so it must be deterministic, 6.16) | 1.0 |
+| Lint | a soft check computed in code (a rate per 1,000 words against a measured profile, say) | `lint(op, workspace) -> problems`, each with a lint id, the passage it points to (a range or paragraph id) and guidance; severity from `config/checks.yaml` (4.17) with the plugin's default | 1.0 |
 | Working-copy format | a file format people edit long text in with their own tools (5.0) | `hand_out(record, field, version) -> file` and `take_back(file, base_version) -> text, unmapped`: deterministic, no AI; anything it cannot map is reported, never dropped | 1.0 |
 | Triage matcher | a rule kind for `config/triage.yaml` | `match(change, params) -> reason or None` | 1.0 |
 | AI adapter | a kind of AI account: a vendor's native API, an aggregator, or an agent | `models()`, `run()`, `classify_error()`, `health()` (6.16) | 1.0 |
@@ -87,7 +90,10 @@ and covered by a test that uses it from a plugin.
 The core uses an internal event bus from the start, and plugins subscribe to it through the manifest (3.2). The core
 publishes events after each step: `source.saved`, `change.filed`, `change.closed`, `request.queued`,
 `changeset.applied`, `changeset.undone`, `record.changed`, `draft.created`, `draft.approved`, `draft.sent`, `question.asked`,
-`question.answered`, `action.added`, `action.closed`, `problem.opened`, `job.finished`, `stage.moved`. Interfaces add their own
+`question.answered`, `action.added`, `action.closed`, `problem.opened`, `job.finished`, `stage.moved`, `text.accepted`.
+`record.changed` carries the record kind and id, the fields changed, the new version and the op that changed it.
+`text.accepted` fires when a new version of a `long_text` field is written by `text.accept` (6.7), with the record, field, new
+and previous version, where it came from (assistant draft, proposed version, or a direct edit) and its authorship summary. Interfaces add their own
 events (`publishing/title.date_changed`), published by the core when the providing plugin's op applies.
 
 Handlers may read, queue requests, file questions and open automation problems. They may not write records directly; anything that changes
@@ -104,6 +110,9 @@ Enforced by the plugin host, the applier, the publisher and the self-check:
 - **Reach is declared.** Network hosts, secrets and data levels come from the manifest and are shown to the PM before the
   plugin is enabled. The core enforces them on what it hands out (its HTTP client, its secret store, the records and packets
   it passes), but in-process code is not sandboxed: enabling a third-party plugin means trusting its code (12.3).
+- **Programs are declared.** A plugin runs outside programs only through the plugin API's `run_tool`, only for tools in
+  `requires.tools`, with a timeout and no shell. The enable screen and the self-check probe each declared tool and show what is
+  missing; a missing required tool keeps the plugin off, a missing optional one turns off only the features listed with it.
 - **Config is like core config.** `config/plugins/<plugin>.yaml`, with a schema, defaults and descriptions.
 - **Plugins meet only through the core** (3.9): interfaces, events and shared core records. A plugin never imports another
   plugin, reads its tables or calls its code.

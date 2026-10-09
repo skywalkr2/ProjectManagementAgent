@@ -134,6 +134,13 @@ models get wrong. The core wraps the text into the `text.draft` op itself, and t
 (target, length limits, never-shown words, wording lints). A draft that would end mid-sentence because the model hit its output
 limit is continued once, then held.
 
+**Paragraph anchors.** A task kind that revises existing long text can ask for an anchored draft (`output: draft, anchored:
+true`). The core gives each base paragraph an id in the packet, and the model starts each paragraph it writes with the ids it
+comes from: one id for a kept or rewritten paragraph, several for a merge, the same id on two paragraphs for a split, `new` for
+an added one, plus a closing list of ids it removed. A core invariant checks that every base id is accounted for and no unknown
+id appears; plugin validators can then check the map. The core strips the markers before storing, keeps the paragraph map
+with the pending version, and the compare view (7.2) and authorship (5.0) use it.
+
 ### Op tiers
 
 Every op type declares a tier. The tier, not the model's judgment, decides what may apply on its own.
@@ -458,7 +465,9 @@ When the common format lacks structured output for a model, the adapter asks for
 run's changeset still fails an invariant after its one fix round, or would be held for a lint, the request is re-run once on the
 escalation tier before the PM sees it. A refusal from an op validator (3.3), core or plugin, counts as an invariant failure here, with the
 validator's reasons sent in the fix round; validators must therefore be deterministic, and a check that needs judgment is a
-lint with a severity instead. The decision uses deterministic signals only (check failures, evidence that doesn't match,
+lint with a severity instead. A draft or proposed version of long text always waits for review, so for it a `return` lint
+still failing after the fix round counts as "would be held": it gets the one re-run on the escalation tier (estimated, counted,
+and skipped when it would cross a cap), then stays pending with the findings shown on their passages. A `warn` lint only shows. The decision uses deterministic signals only (check failures, evidence that doesn't match,
 unresolved names, a truncated packet), never the model's own confidence. Each `Run` records which tier produced the accepted
 answer, so the quality panel (6.20) shows where the cheap model is enough. A config that maps a task kind to a provider that
 lacks a required capability fails the self-check.

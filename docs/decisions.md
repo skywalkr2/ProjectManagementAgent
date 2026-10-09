@@ -3,6 +3,29 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Draft checks, plugin lints, project language, tools, plugin data, text events
+
+**Decided by:** project owner, answering questions from a plugin kept in another repository.
+
+**What:**
+- **Paragraph anchors** (6.7): revising tasks can ask for anchored drafts; the core checks every base paragraph is accounted
+  for, strips the markers before storing and keeps the paragraph map for review and authorship.
+- **Lints in code** (3.3, 4.17): a lint extension point whose problems point to passages; guidance goes back per passage and
+  shows in the compare view.
+- **Lints on drafts** (6.16): for a draft or proposed version, a `return` lint still failing counts as "would be held", so it
+  gets the escalation re-run, then stays pending with its findings; `warn` only shows.
+- **Project language** (5.1, 4.6): a project can override the workspace locale for lints, spelling, dates and drafting.
+- **Declared programs** (3.2, 3.5): `requires.tools`, run only through the plugin API, probed on enable and by the
+  self-check; a missing optional tool turns off only its features.
+- **Plugin data files** (4.12): `<workspace>/plugin-data/<plugin>/` laid over shipped data, versioned and synced.
+- **Events** (3.4): `record.changed` carries kind, id, fields, version and op; a new `text.accepted` event.
+
+**Why:** Each is needed by any pack that drafts long text or ships its own data, not by one plugin; deciding them before the
+plugin API is frozen avoids a breaking change later.
+
+**Impact:** anchors, code lints, lints on drafts and the events add about two days to the early branch (from 2026-10-31);
+project language, declared programs and plugin data files land in version 1 milestone 4. No owner time.
+
 ## 2026-10-09: Working copies, a compare view, and validators as invariants
 
 **Decided by:** project owner, answering requests from a plugin kept in another repository.
