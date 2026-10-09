@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-ErrorKind = Literal["rate_limited", "quota", "auth", "timeout", "invalid_output", "provider_down", "other"]
+ErrorKind = Literal["rate_limited", "quota", "auth", "no_key", "timeout", "invalid_output", "provider_down", "other"]
 
 
 @dataclass(frozen=True)

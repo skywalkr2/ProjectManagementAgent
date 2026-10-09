@@ -1,0 +1,11 @@
+id: nothing-to-record
+title: 'Small talk: record nothing'
+pasted: Thanks everyone for a great meeting today!
+forbid:
+- op: action.add
+- op: question.add
+- op: fact
+- op: action.close
+stub_answer:
+  summary: Nothing to record.
+  ops: []

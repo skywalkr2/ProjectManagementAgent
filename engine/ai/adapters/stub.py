@@ -36,7 +36,9 @@ class StubAdapter:
 
 
 def _first_line(request: str) -> str:
-    match = re.search(r"<untrusted[^>]*>\s*(.+?)\s*</untrusted>", request, re.S)
+    match = re.search(r"<untrusted[^>]*>\s*(.+?)\s*</untrusted>", request, re.S) or re.search(
+        r"<note>\s*(.+?)\s*</note>", request, re.S
+    )
     text = match.group(1) if match else request
     for line in text.splitlines():
         if line.strip():

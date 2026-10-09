@@ -1,0 +1,60 @@
+id: production-checkin
+title: Minutes with three actions, one shared
+pasted: 'Production check-in, Oct 8
+
+
+  Interior: last typo pass done.
+
+  Jacket: Theo will send two spine options by Friday Oct 16.
+
+  Publicity: Ines to draft the launch announcement by Oct 20.
+
+  Print: Sam and Theo to agree the trim size with the printer by Oct 13.'
+expect:
+- op: action.add
+  owners:
+  - PER-3
+  text_has:
+  - spine
+  due: '2026-10-16'
+- op: action.add
+  owners:
+  - PER-5
+  text_has:
+  - announcement
+  due: '2026-10-20'
+- op: action.add
+  owners:
+  - PER-3
+  - PER-4
+  text_has:
+  - trim
+  due: '2026-10-13'
+stub_answer:
+  summary: Three actions from the check-in.
+  ops:
+  - op: action.add
+    text: Send two spine options
+    owners:
+    - Theo Brandt
+    due: '2026-10-16'
+    project: PRJ-1
+    evidence:
+      quote: Theo will send two spine options by Friday Oct 16
+  - op: action.add
+    text: Draft the launch announcement
+    owners:
+    - Ines Duarte
+    due: '2026-10-20'
+    project: PRJ-1
+    evidence:
+      quote: Ines to draft the launch announcement by Oct 20
+  - op: action.add
+    text: Agree the trim size with the printer
+    owners:
+    - Sam Rivera
+    - Theo Brandt
+    due: '2026-10-13'
+    project: PRJ-1
+    evidence:
+      quote: Sam and Theo to agree the trim size with the printer by Oct 13

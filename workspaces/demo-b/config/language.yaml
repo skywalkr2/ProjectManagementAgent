@@ -2,3 +2,8 @@ version: 1
 blocked_phrases: [confirm, check whether, check if, "TBD?"]
 run_on_separators: [" / ", "; "]
 never_shown: []
+messages:
+  greeting: "Hi {first_name},"
+  actions_heading: "Action items with you:"
+  closing: "Thanks so much!"
+  date_format: "%a, %b %d"

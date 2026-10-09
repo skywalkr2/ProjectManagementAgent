@@ -1,0 +1,22 @@
+id: answer-question
+title: A reply that answers an open question
+pasted: 'From: Maya Okafor
+
+  Re: acknowledgments
+
+
+  The acknowledgments page is final, no more names are coming.
+
+
+  Maya'
+expect:
+- op: question.done
+  id: Q-1
+stub_answer:
+  summary: Maya answered the acknowledgments question.
+  ops:
+  - op: question.done
+    id: Q-1
+    answer: Final; no more names are coming.
+    evidence:
+      quote: The acknowledgments page is final, no more names are coming

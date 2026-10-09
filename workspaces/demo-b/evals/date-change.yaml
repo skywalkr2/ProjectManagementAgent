@@ -1,0 +1,18 @@
+id: date-change
+title: A due date moves
+pasted: 'Jacket update: the back-cover copy is now due Friday Oct 16 instead of Wednesday.'
+expect:
+- op: record.set
+  id: ACT-2
+  field: due
+  value: '2026-10-16'
+stub_answer:
+  summary: The back-cover copy moved to Oct 16.
+  ops:
+  - op: record.set
+    kind: action
+    id: ACT-2
+    field: due
+    value: '2026-10-16'
+    evidence:
+      quote: the back-cover copy is now due Friday Oct 16

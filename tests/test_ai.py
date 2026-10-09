@@ -132,7 +132,7 @@ def test_a_missing_key_is_an_auth_failure_and_falls_through(cfg, store):
     _, choice, _ = router.call(TASK, request_id="REQ-1")
     assert choice.provider == "backup" and [h for h, _ in seen] == [host(cfg, "backup")]
     main_run = store.read().list("run")[0].data
-    assert main_run["error_kind"] == "auth" and "MAIN_KEY" in main_run["error_detail"]
+    assert main_run["error_kind"] == "no_key" and "MAIN_KEY" in main_run["error_detail"]
     assert "main-secret" not in json.dumps([r.data for r in store.read().list("run")])
 
 

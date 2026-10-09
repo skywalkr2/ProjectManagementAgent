@@ -58,3 +58,37 @@ def test_takeover_frees_a_workspace_left_open(tmp_path, demo, capsys):
     assert main(["takeover", "--workspace", str(target)]) == 1
     assert "still looks alive" in capsys.readouterr().err
     assert main(["takeover", "--workspace", str(target), "--force"]) == 0
+
+
+def test_evaluate_with_the_stub_checks_the_cases(capsys):
+    from tests.conftest import DEMO_B
+
+    assert main(["evaluate", "--from", str(DEMO_B), "--stub", "--runs", "1"]) == 0
+    assert "Overall pass rate: 100%" in capsys.readouterr().out
+
+
+def test_evaluate_with_a_missing_key_fails_and_says_so(tmp_path, capsys):
+    import yaml
+
+    from tests.conftest import DEMO_B
+
+    ai = yaml.safe_load((DEMO_B / "config" / "ai.yaml").read_text())
+    real = next(name for name, p in ai["providers"].items() if p.get("auth", "").startswith("env:"))
+    model = next(iter(ai["providers"][real]["models"]))
+    ai["providers"][real]["auth"] = "env:COCKPIT_TEST_KEY_THAT_IS_NOT_SET"
+    path = tmp_path / "ai.yaml"
+    path.write_text(yaml.safe_dump(ai))
+    args = ["evaluate", "--from", str(DEMO_B), "--account", f"{real}/{model}", "--ai-config", str(path), "--runs", "1"]
+    assert main([*args, "--case", "close-action", "--json"]) == 1
+    assert "wasn't found" in capsys.readouterr().out
+
+
+def test_backup_needs_a_target_then_copies(tmp_path, demo, capsys, monkeypatch):
+    ws = tmp_path / "ws"
+    main(["init", str(ws), "--from", str(demo), "--no-git"])
+    monkeypatch.setenv("COCKPIT__STORAGE__BACKUPS__TARGETS", "[]")
+    assert main(["backup", "-w", str(ws)]) == 1
+    monkeypatch.setenv("COCKPIT__STORAGE__BACKUPS__TARGETS", f'[{{"path": "{tmp_path / "offsite"}"}}]')
+    assert main(["backup", "-w", str(ws)]) == 0
+    assert len(list((tmp_path / "offsite").iterdir())) == 1
+    assert "Backed up" in capsys.readouterr().out

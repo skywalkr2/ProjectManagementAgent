@@ -204,7 +204,15 @@ class ChecksFile(FileModel):
     lints: dict[str, Severity] = Field(default_factory=_default_lints, description="How strict each soft check is.")
 
 
+class MessageSettings(ConfigModel):
+    greeting: str = Field("Hi {first_name},", description="The first line of a copied message.")
+    actions_heading: str = Field("Action items with you:", description="The line above someone's action items.")
+    closing: str = Field("Thanks!", description="The last line of a copied message.")
+    date_format: str = Field("%a, %b %d", description="How dates appear in messages (strftime codes).")
+
+
 class LanguageFile(FileModel):
+    messages: MessageSettings = Field(default_factory=MessageSettings, description="Wording of copied messages.")
     blocked_phrases: list[str] = Field(
         default_factory=lambda: ["confirm", "check whether", "check if", "TBD?"],
         description="Wording not allowed in actions and shared text; actions say what to do.",

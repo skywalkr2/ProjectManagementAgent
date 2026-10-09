@@ -69,7 +69,7 @@ def process(
 
     packet = build(ws, store, cfg, request_id, now.date())
     if packet.too_long:
-        return _needs_you(
+        return needs_you(
             store,
             request_id,
             (
@@ -89,9 +89,9 @@ def process(
         try:
             result, _choice, run_id = router.call(task, request_id=request_id)
         except (BudgetReached, NoProvider) as err:
-            return _needs_you(store, request_id, str(err))
+            return needs_you(store, request_id, str(err))
         except AiError as err:
-            return _needs_you(store, request_id, _ai_failure(err))
+            return needs_you(store, request_id, _ai_failure(err))
         try:
             changeset = parse(result.text)
         except Unreadable as err:
@@ -104,7 +104,7 @@ def process(
                     + (f"Your previous answer couldn't be read: {err}. Answer with only the JSON object."),
                 )
                 continue
-            return _needs_you(store, request_id, f"The assistant's answer couldn't be read: {err}.")
+            return needs_you(store, request_id, f"The assistant's answer couldn't be read: {err}.")
         problems = check(changeset, ctx)
         if needs_another_round(problems) and attempt < cfg.dispatch.fix_rounds:
             task = replace(task, request=packet.task.request + "\n\n" + feedback(problems))
@@ -121,6 +121,7 @@ def _ai_failure(err: AiError) -> str:
         "rate_limited": "The AI account is rate limited",
         "quota": "The AI account is out of credit",
         "auth": "The AI account refused the key",
+        "no_key": "The AI account's key wasn't found",
         "timeout": "The AI account didn't answer in time",
         "provider_down": "The AI service is down",
     }.get(err.kind, "The AI call failed")
@@ -134,7 +135,7 @@ def _set(store: Store, request_id: str, **changes: object) -> None:
         tx.update("request", request_id, changes, _ENGINE, read_version=cur.version)
 
 
-def _needs_you(store: Store, request_id: str, why: str) -> None:
+def needs_you(store: Store, request_id: str, why: str) -> None:
     _set(store, request_id, state="needs_you", waiting=why)
     return None
 

@@ -1,0 +1,16 @@
+id: no-owner
+title: An action nobody owns yet
+pasted: 'Launch: someone needs to order bookmarks for the reading.'
+expect:
+- op: action.add
+  status: held
+  text_has:
+  - bookmarks
+stub_answer:
+  summary: One action without an owner.
+  ops:
+  - op: action.add
+    text: Order bookmarks for the launch reading
+    project: PRJ-1
+    evidence:
+      quote: someone needs to order bookmarks for the reading

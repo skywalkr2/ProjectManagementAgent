@@ -78,16 +78,38 @@ def id_number(record_id: str) -> int | None:
 
 
 class Store:
-    """Access to a workspace's records, sequences and ledger."""
+    """Access to a workspace's records, sequences and ledger.
+
+    Each thread gets its own connection, so a reader sees committed data only, never another thread's open
+    transaction. Writes from one Store are serialized; SQLite serializes writes between processes."""
 
     def __init__(self, path: Path, *, clock: Callable[[], str] = utc_now):
         self.path = path
         self.clock = clock
-        self._conn = connect(path)
         self._lock = threading.RLock()
+        self._local = threading.local()
+        self._all: list[sqlite3.Connection] = []
+        self._closed = False
+        _ = self._conn  # open the first connection now so a bad path fails here
+
+    @property
+    def _conn(self) -> sqlite3.Connection:
+        conn = getattr(self._local, "conn", None)
+        if conn is None:
+            if self._closed:
+                raise StoreError("the store is closed")
+            conn = connect(self.path)
+            self._local.conn = conn
+            with self._lock:
+                self._all.append(conn)
+        return conn
 
     def close(self) -> None:
-        self._conn.close()
+        with self._lock:
+            self._closed = True
+            for conn in self._all:
+                conn.close()
+            self._all.clear()
 
     @contextmanager
     def transaction(self) -> Iterator[Tx]:

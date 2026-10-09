@@ -1,0 +1,238 @@
+"""Evaluation (design 6.16): run fictional cases through the whole pipeline and score the result deterministically.
+
+Each case hands in a note or pasted text to a fresh copy of a workspace, lets the assistant process it, then checks
+what was applied or held against the case's expectations and forbidden outcomes. Each case runs several times because
+models answer differently from run to run; the report gives a pass rate per case. A model may judge nothing here.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import tempfile
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+from engine.ai.adapters.stub import set_responder
+from engine.ai.router import Router
+from engine.dispatcher import process
+from engine.intake import hand_in
+from engine.storage import Store
+from engine.workspace import init_workspace
+
+NOW = datetime(2026, 10, 9, 14, 0, tzinfo=UTC)
+
+
+@dataclass
+class RunResult:
+    case: str
+    run: int
+    passed: bool
+    missing: list[str] = field(default_factory=list)
+    forbidden: list[str] = field(default_factory=list)
+    refused: int = 0
+    held: int = 0
+    cost_usd: float = 0.0
+    seconds: float = 0.0
+    error: str | None = None
+
+
+@dataclass
+class Report:
+    account: str
+    runs: int
+    results: list[RunResult]
+
+    def pass_rate(self, case: str | None = None) -> float:
+        rows = [r for r in self.results if case is None or r.case == case]
+        return sum(r.passed for r in rows) / len(rows) if rows else 0.0
+
+    def cases(self) -> list[str]:
+        return list(dict.fromkeys(r.case for r in self.results))
+
+    def text(self) -> str:
+        lines = [f"Account: {self.account}   runs per case: {self.runs}", ""]
+        for case in self.cases():
+            rows = [r for r in self.results if r.case == case]
+            notes = sorted({m for r in rows for m in r.missing + r.forbidden + ([r.error] if r.error else [])})
+            lines.append(f"{self.pass_rate(case):>5.0%}  {case}" + (f"   ({'; '.join(notes)})" if notes else ""))
+        cost = sum(r.cost_usd for r in self.results)
+        lines += ["", f"Overall pass rate: {self.pass_rate():.0%}   cost: ${cost:.4f}"]
+        return "\n".join(lines)
+
+    def as_json(self) -> str:
+        return json.dumps(
+            {
+                "account": self.account,
+                "runs": self.runs,
+                "pass_rate": self.pass_rate(),
+                "results": [asdict(r) for r in self.results],
+            },
+            indent=2,
+        )
+
+
+def load_cases(template: Path) -> list[dict[str, Any]]:
+    return [yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted((template / "evals").glob("*.yaml"))]
+
+
+def evaluate(
+    template: Path,
+    *,
+    account: str | None = None,
+    runs: int = 1,
+    stub: bool = False,
+    env: Mapping[str, str] | None = None,
+    only: list[str] | None = None,
+    ai_config: Path | None = None,
+) -> Report:
+    """Run every case (or `only` these) `runs` times. With `stub`, the stand-in AI gives each case's ideal answer, which
+    checks the cases and the pipeline rather than a model. `ai_config` replaces the fixture's AI setup with another
+    workspace's `ai.yaml`, so the PM's own accounts run against the fictional cases."""
+    env = os.environ if env is None else env
+    results: list[RunResult] = []
+    for case in load_cases(template):
+        if only and case["id"] not in only:
+            continue
+        for n in range(1, runs + 1):
+            results.append(_run_case(template, case, n, account=account, stub=stub, env=env, ai_config=ai_config))
+    return Report(account or ("stub" if stub else "configured"), runs, results)
+
+
+def _run_case(
+    template: Path,
+    case: dict[str, Any],
+    n: int,
+    *,
+    account: str | None,
+    stub: bool,
+    env: Mapping[str, str],
+    ai_config: Path | None = None,
+) -> RunResult:
+    with tempfile.TemporaryDirectory() as tmp:
+        ws = init_workspace(Path(tmp) / "ws", template=template, git=False)
+        if ai_config is not None:
+            shutil.copyfile(ai_config, ws.config_dir / "ai.yaml")
+        flags: dict[str, Any] = {}
+        if stub:
+            flags = {"ai.tiers.routine.use": "stub/default", "ai.tiers.routine.fallback": []}
+            set_responder(lambda task, answer=case["stub_answer"]: json.dumps(answer))
+        elif account:
+            flags = {"ai.tiers.routine.use": account, "ai.tiers.routine.fallback": []}
+        cfg = ws.config(env={}, flags=flags)
+        store = Store(ws.db_path)
+        try:
+            people_before = len(store.read().list("person"))
+            handed = hand_in(ws, store, note=case.get("note", ""), pasted=case.get("pasted", ""), now=NOW)
+            cs_id = process(ws, store, cfg, Router(cfg, store, env=env), handed.request, now=NOW)
+            runs = [r.data for r in store.read().list("run")]
+            cost = sum(r.get("cost_usd") or 0.0 for r in runs)
+            seconds = sum(r.get("seconds") or 0.0 for r in runs)
+            if cs_id is None:
+                why = store.read().get("request", handed.request).data.get("waiting")
+                return RunResult(case["id"], n, False, error=why, cost_usd=cost, seconds=seconds)
+            outcomes = store.read().get("changeset", cs_id).data["ops"]
+            missing = [_describe(e) for e in case.get("expect", []) if not _matches(e, outcomes, store)]
+            forbidden = [_describe(f) for f in case.get("forbid", []) if _forbidden(f, outcomes, store, people_before)]
+            return RunResult(
+                case["id"],
+                n,
+                not missing and not forbidden,
+                missing,
+                forbidden,
+                refused=sum(o["status"] == "refused" for o in outcomes),
+                held=sum(o["status"] == "held" for o in outcomes),
+                cost_usd=cost,
+                seconds=seconds,
+            )
+        finally:
+            store.close()
+            set_responder(None)
+
+
+# ---- matching --------------------------------------------------------------------------------------------------------
+
+
+def _applied(outcomes: list[dict[str, Any]], op: str) -> list[dict[str, Any]]:
+    return [o for o in outcomes if o["status"] == "applied" and o["op"]["op"] == op]
+
+
+def _record(store: Store, outcome: dict[str, Any], kind: str) -> dict[str, Any] | None:
+    for ref in outcome.get("records", []):
+        if ref["kind"] == kind:
+            rec = store.read().get(kind, ref["id"])
+            if rec is not None:
+                return rec.data
+    return None
+
+
+def _has_words(text: str, words: list[str]) -> bool:
+    return all(w.lower() in text.lower() for w in words)
+
+
+def _matches(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store) -> bool:
+    if e.get("held") == "who-is":
+        for o in outcomes:
+            if o["status"] == "held" and o.get("question"):
+                q = store.read().get("question", o["question"])
+                if q and len(q.data.get("options", [])) == e.get("options", len(q.data.get("options", []))):
+                    return True
+        return False
+    op = e["op"]
+    for o in _applied(outcomes, op):
+        if op == "action.add":
+            a = _record(store, o, "action")
+            if a is None:
+                continue
+            owners = sorted(x["person"] for x in a["owners"])
+            if "owners" in e and owners != sorted(e["owners"]):
+                continue
+            if "text_has" in e and not _has_words(a["text"], e["text_has"]):
+                continue
+            if "due" in e and a.get("due") != e["due"]:
+                continue
+            if "status" in e and a["status"] != e["status"]:
+                continue
+            return True
+        if op in ("action.close", "question.done") and o["op"]["id"] == e["id"]:
+            return True
+        same_field = op == "record.set" and o["op"]["id"] == e["id"] and o["op"]["field"] == e["field"]
+        if same_field and ("value" not in e or str(o["op"]["value"]) == str(e["value"])):
+            return True
+        if op == "question.add":
+            q = _record(store, o, "question")
+            if q and q["to"] == e.get("to", q["to"]) and q["kind"] == e.get("kind", q["kind"]):
+                return True
+        if op == "fact":
+            f = _record(store, o, "fact")
+            if f and _has_words(f["text"], e.get("text_has", [])):
+                return True
+        if op == "note":
+            return True
+    return False
+
+
+def _forbidden(f: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, people_before: int) -> bool:
+    if f.get("new_person"):
+        return len(store.read().list("person")) > people_before
+    for o in _applied(outcomes, f["op"]):
+        if f["op"] == "question.add" and "to" in f:
+            q = _record(store, o, "question")
+            if q and q["to"] != f["to"]:
+                continue
+        if "text_has" in f:
+            text = json.dumps(o["op"])
+            if not _has_words(text, f["text_has"]):
+                continue
+        return True
+    return False
+
+
+def _describe(item: dict[str, Any]) -> str:
+    return ", ".join(f"{k}={v}" for k, v in item.items())

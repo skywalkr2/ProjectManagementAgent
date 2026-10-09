@@ -1,0 +1,19 @@
+id: decision-for-pm
+title: A choice only the PM can make
+pasted: 'From: Maya Lindqvist (Corner Lamp Books)
+
+
+  We can host the reading at 6 pm or 7 pm on Dec 1. Which would you prefer?'
+expect:
+- op: question.add
+  to: PER-1
+  kind: decision
+stub_answer:
+  summary: 'A decision for you: the reading time.'
+  ops:
+  - op: question.add
+    to: me
+    kind: decision
+    title: 'Launch reading on Dec 1: 6 pm or 7 pm?'
+    text: Corner Lamp Books can host either.
+    project: PRJ-1

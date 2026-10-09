@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 from engine.config import ConfigError
@@ -66,6 +68,20 @@ def _parser() -> argparse.ArgumentParser:
     sp.add_argument("--force", action="store_true", help="take it even if the other copy still seems to be running")
     sp.set_defaults(func=cmd_takeover)
 
+    sp = sub.add_parser("backup", help="copy the workspace to the configured backup folders now")
+    ws_arg(sp)
+    sp.set_defaults(func=cmd_backup)
+
+    sp = sub.add_parser("evaluate", help="score an AI account on a fictional workspace's cases")
+    sp.add_argument("--from", dest="template", type=Path, required=True, help="workspace whose evals/ to run")
+    sp.add_argument("--account", help="provider/model to test (default: the configured routine tier)")
+    sp.add_argument("--ai-config", type=Path, help="use this ai.yaml instead of the cases' own AI setup")
+    sp.add_argument("--runs", type=int, help="runs per case (default: ai.evaluation.runs)")
+    sp.add_argument("--case", action="append", dest="only", help="run only this case (repeatable)")
+    sp.add_argument("--stub", action="store_true", help="answer each case ideally; checks the cases, not a model")
+    sp.add_argument("--json", action="store_true", help="print the report as JSON")
+    sp.set_defaults(func=cmd_evaluate)
+
     sp = sub.add_parser("selfcheck", help="run the product's own checks")
     sp.add_argument("--workspace", "-w", help="also scan code against this private workspace's specifics")
     sp.set_defaults(func=cmd_selfcheck)
@@ -114,7 +130,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
             lease.release()
             store.close()
 
-    app = create_app(ws, cfg, token, on_shutdown=shut_down)
+    app = create_app(ws, cfg, token, on_shutdown=shut_down, start_worker=True)
     try:
         uvicorn.run(app, host=cfg.server.host, port=cfg.server.port, log_level="warning")
     finally:
@@ -177,6 +193,49 @@ def cmd_takeover(args: argparse.Namespace) -> int:
         store.close()
     print("This workspace is free to open here." if held else "Nobody was holding this workspace.")
     return 0
+
+
+def cmd_backup(args: argparse.Namespace) -> int:
+    from engine.backup import run_backup, state
+
+    ws = resolve(args.workspace)
+    cfg = ws.config()
+    if not cfg.storage.backups.targets:
+        print("cockpit: no backup folder is set; add one under storage.backups.targets.", file=sys.stderr)
+        return 1
+    status = run_backup(ws, cfg)
+    for path, result in status.items():
+        print(
+            f"{result.get('label') or path}: " + (f"failed: {result['last_error']}" if result["last_error"] else "ok")
+        )
+    print(state(ws, cfg).message)
+    return 1 if any(r["last_error"] for r in status.values()) else 0
+
+
+def cmd_evaluate(args: argparse.Namespace) -> int:
+    from engine.config import load_config
+    from engine.evaluate import evaluate
+
+    template = args.template
+    if not (template / "evals").is_dir():
+        print(f"cockpit: {template} has no evals/ folder.", file=sys.stderr)
+        return 1
+    with tempfile.TemporaryDirectory() as tmp:
+        config_dir = template / "config"
+        if args.ai_config:
+            config_dir = Path(tmp)
+            shutil.copyfile(args.ai_config, config_dir / "ai.yaml")
+        settings = load_config(config_dir, env={}).ai.evaluation
+    report = evaluate(
+        template,
+        account=args.account,
+        runs=args.runs or settings.runs,
+        stub=args.stub,
+        only=args.only,
+        ai_config=args.ai_config,
+    )
+    print(report.as_json() if args.json else report.text())
+    return 0 if report.pass_rate() >= settings.min_score else 1
 
 
 def cmd_selfcheck(args: argparse.Namespace) -> int:

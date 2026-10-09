@@ -1,0 +1,26 @@
+id: printer-proof-date
+title: 'A vendor gives a date: record it, don''t ask about it'
+pasted: 'From: Jun Park
+
+  Subject: Proof copies
+
+
+  Thanks for the files. Our schedule is full this month, so proof copies will ship on November 5 by courier.
+
+
+  Jun'
+expect:
+- op: fact
+  text_has:
+  - proof
+forbid:
+- op: question.add
+  to: PER-6
+stub_answer:
+  summary: Recorded the proof date.
+  ops:
+  - op: fact
+    text: Proof copies ship on Nov 5 by courier.
+    project: PRJ-1
+    evidence:
+      quote: proof copies will ship on November 5 by courier

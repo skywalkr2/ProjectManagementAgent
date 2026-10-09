@@ -1,0 +1,35 @@
+id: quoted-thread
+title: Act on the new message, not the quoted history
+pasted: 'From: Theo Brandt
+
+
+  Sounds good, I''ll have the spine options to you by Thursday Oct 15 instead.
+
+
+  On Thu, Oct 8, 2026 Avery Lane wrote:
+
+  > Theo will send two spine options by Friday Oct 16.
+
+  > Ines to draft the launch announcement by Oct 20.'
+expect:
+- op: action.add
+  owners:
+  - PER-3
+  text_has:
+  - spine
+  due: '2026-10-15'
+forbid:
+- op: action.add
+  text_has:
+  - announcement
+stub_answer:
+  summary: Theo's new date for the spine options.
+  ops:
+  - op: action.add
+    text: Send the spine options
+    owners:
+    - Theo Brandt
+    due: '2026-10-15'
+    project: PRJ-1
+    evidence:
+      quote: I'll have the spine options to you by Thursday Oct 15
