@@ -164,3 +164,16 @@ Thank you for the answers. Everything below is now in the design; section number
    suggest a limit.
 2. **Read-back wording.** Should the read-back also say what the rule will *not* cover, given the over-application you saw?
 
+## 8. Second round: the two open points
+
+| You said | What changed |
+|---|---|
+| Put the stable parts first so providers can cache the prefix | Packets are laid out stable first, in a fixed order: instructions and op reference, glossary, rules, lessons, all open actions and questions; then scope, facts and related records; the input last. Adapters with a `prompt_caching` capability mark the stable prefix; others ignore the mark (6.6, 6.16). |
+| Trim by size, not by rule | The request's own projects always get the full form. Other projects switch to compact form only when the open-items list passes `open_items.compact_share` of the budget (default 40%). Your counts are recorded in the design as the reference for scale (6.6, 4.9). |
+| Drop the closing hint in the compact form | Compact form is id, owner and title only; the "→ how to close it" part appears only in full form (6.6). |
+| Read-backs should show effects and overlaps | Four short lines next to Undo: **Applies to**, **Doesn't change**, **Overlaps with** (linked), **Right now it would change** (a dry-run count, expandable, with zero matches flagged). Rules now carry a structured target (record types, fields, filter) so the lines are computed, not just written: config changes are dry-run in a rolled-back transaction, prose rules count the records their target matches, and overlaps compare targets, with the AI adding contradictions in meaning (4.10, 6.7, 7.6). |
+| A contradiction should pause even a PM-typed rule | It does: the card becomes a choice of which one wins (the new rule, the existing one, or both with a narrower target) (6.7). |
+
+Nothing from either round is still open on our side. If anything new comes up from running it, the place for it is Part 8
+(product rules, each with where it is enforced).
+

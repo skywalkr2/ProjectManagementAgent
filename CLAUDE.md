@@ -63,8 +63,10 @@ kind of task. Always read Parts 1, 2 and 10.
   never reads `data/`. Writes state the record versions they read.
 - Records refer to people, teams and projects by id; names live on their own record and are rendered (design 5.1, 6.11).
 - Every op has a tier: data, outbound or system. System ops from an input or the assistant's own initiative never apply
-  automatically; the PM confirms them. System ops from the PM's own note apply at once with a read-back and Undo (design 6.7,
-  12.2). Untrusted content is marked in packets and never becomes a rule, recipient or source on its own.
+  automatically; the PM confirms them. System ops from the PM's own note apply at once with a read-back (applies to, doesn't change,
+  overlaps with, dry-run count) and Undo, unless they contradict an existing rule or setting, which waits for the PM (design
+  6.7, 12.2). Untrusted content is marked in packets and never becomes a rule, recipient or source on its own.
+- Packets put stable parts first (instructions, glossary, rules, lessons, open items) and the request last (design 6.6).
 - Lints that still fail after one return are held for the PM when the item will reach another person, and only warn when it
   stays internal.
 - Checks are invariants (always refuse, not configurable) or lints (severity in `config/checks.yaml`). Don't make a fuzzy check

@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Packet layout and read-backs, second round with the first design's author
+
+**Decided by:** project owner, on the second-round answers from the first design's author.
+
+- **Packets: stable first, request last.** Instructions, glossary, rules, lessons and all open items come first in a fixed
+  order; the input comes last. Adapters with the `prompt_caching` capability mark the stable prefix. Why: the open-items list
+  is now the largest and most repeated part of most packets.
+- **Open items trimmed by size, not rule.** Full form ("[project] text (owner, due) → how to close it") for the request's own
+  projects; other projects switch to compact form (id, owner, title, no closing hint) only past `open_items.compact_share` of
+  the budget. Why: real counts were about 50 open actions and 10 questions for one PM with about 20 projects, about 3,000
+  tokens, well within budget; the closing hint roughly doubles each line and only the request's own projects need it.
+- **Read-backs show effects and overlaps:** applies to, doesn't change, overlaps with, and a dry-run count against current
+  data; rules carry a structured target to compute them. A contradiction with an existing rule or setting pauses even a
+  PM-typed rule until the PM picks which wins. Why: the misreadings seen in practice came from rule collisions and corrections
+  aimed at the wrong place, which a restated rule wouldn't reveal but a count and an overlap would.
+
 ## 2026-10-09: Changes from the first design's author
 
 **Decided by:** project owner, on the review by the author of the first design, who ran it daily.

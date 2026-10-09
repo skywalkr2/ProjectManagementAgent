@@ -63,9 +63,9 @@ the project's name. Renaming is then one field (6.7), and there is nothing to no
 | `Source` | id, received_at (zoned), from (person id or text), by_us (written by one of `our_accounts`), kind, connector instance, title, content hash, projects (ids), trust (trusted, untrusted; 12.2), restriction (a marking and the audiences allowed to see it, 4.1), url |
 | `Change` | id, source id, title, link, diff, detected_at, who, state (new, queued, processed, done, ignored), result, auto rule, superseded_by, covers[] |
 | `Request` | id, kind (an AI task kind), ref, note (the PM's own words, trusted), state, waiting (why and until when, 7.6), attempts, created, origin (input, PM, schedule) |
-| `Changeset` | id, change id?, request id?, summary, ops[] (each with an optional `group`, 6.7), read_back (for PM-stated rules, 6.7), status (applied, rejected, held, undone, proposed, discarded), problems[] (invariants and lints, 6.7), dismissed, quiet, feedback[] |
+| `Changeset` | id, change id?, request id?, summary, ops[] (each with an optional `group`, 6.7), read_back (applies to, doesn't change, overlaps, dry-run count; 6.7), status (applied, rejected, held, undone, proposed, discarded), problems[] (invariants and lints, 6.7), dismissed, quiet, feedback[] |
 | `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result |
-| `Rule` | id, text, applies_to (task kinds, projects, people), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) (4.10) |
+| `Rule` | id, text, applies_to (task kinds, record types and fields, filter), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) (4.10) |
 | `Issue` | id, summary, detail, plugin (when one raised it), status (open, fix-requested, fixing, fix-proposed, fixed, closed), fix (proposed diff with originals, 6.13) |
 | `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), exit code, error stream (kept apart from the output), outcome |
 | `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, patterns (how compound ids split) (6.22) |

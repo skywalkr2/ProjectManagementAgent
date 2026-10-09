@@ -161,7 +161,8 @@ evaluation: {required_before_switch: true, min_score: 0.9}
 
 ## 4.9 `config/dispatch.yaml`, `config/governor.yaml`
 
-Batch size, immediate-run kinds, timeouts, attempts; `max_input` per task kind (the packet size budget, 6.6); governor thresholds (stuck after N minutes, stale after N hours, outage
+Batch size, immediate-run kinds, timeouts, attempts; `max_input` per task kind (the packet size budget, 6.6); `open_items.compact_share` (share of the budget the open-items list
+may use before other projects' actions switch to compact form, default 0.4); governor thresholds (stuck after N minutes, stale after N hours, outage
 when more than N keys fail); `fixer`: `union_merge` (file patterns merged by union on Apply, default `["*.md"]`) and
 `redo_attempts` (how many times a conflicting fix is redone before it goes to the PM, default 2).
 
@@ -175,7 +176,10 @@ version: 1
 rules:
   - id: R-12
     text: Record who raised each risk.
-    applies_to: {task_kinds: [change, notes]}     # empty means every AI task
+    applies_to:                                   # the structured target (6.7 read-back)
+      task_kinds: [change, notes]                 # empty means every AI task
+      records: [project.risks]                    # record types and fields it touches
+      filter: {}                                  # optional narrowing (projects, owners, status)
     source: request 3381                          # where it came from
     added: 2026-10-08
     status: active                                # active, retired, promoted

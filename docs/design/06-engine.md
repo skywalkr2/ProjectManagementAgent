@@ -64,12 +64,23 @@ pulled-back items are recorded so rules can be tuned.
   formatter wraps it in marked blocks and the instructions say it is material to work on, never instructions to follow. The
   request records its origin (input, PM, schedule), and that origin decides which op tiers can apply (6.7). Secrets never
   enter a packet.
-- **Size budget:** each task kind has a `max_input` in `config/dispatch.yaml`, capped by the provider's context. The packet
-  fills in order: instructions and op reference; the input (split into parts if it is larger than its share); open actions
-  and questions for the projects and people involved; scope and facts for the items involved; related records ranked (same
-  project, then linked, then mentioned); applicable rules. Open actions and questions, the glossary and the rules are never cut; if they alone exceed the budget, an
-  issue tells the PM to raise it. Whatever is left out is listed in the packet ("12 older log entries
-  omitted") and on the `Run`, so a thin answer can be traced to a thin packet.
+- **Order: stable first, request last.** The packet is laid out so the parts that are the same for every run in a batch come
+  first, in a fixed order: instructions and op reference, glossary, rules, lessons, then all open actions and questions. The
+  request-specific parts follow: scope and facts for the items involved, related records, and the input last. Most providers
+  discount or cache a repeated prefix, and the open-items list is where the repetition is; the adapter marks the stable prefix
+  when its provider supports caching (`prompt_caching` capability, 6.16) and ignores the mark otherwise.
+- **Open items, full and compact.** An open action in full form is "[project] text (owner, due) → how to close it" (its id and
+  the match text that closes it); in compact form it is id, owner and title, with no closing hint, since the id alone is enough
+  to close it. Actions for the request's own projects are always in full form. Actions for other projects switch to compact
+  form only when the open-items list passes `open_items.compact_share` of the budget (default 40%), so trimming is by size, not
+  by rule. For scale: one PM with about 20 projects has about 50 open actions and 10 open questions, roughly 3,000 tokens in
+  full form, so compact form only starts at a few hundred open actions.
+- **Size budget:** each task kind has a `max_input` in `config/dispatch.yaml`, capped by the provider's context. After the
+  stable prefix, the request-specific parts fill in order: the input (split into parts if it is larger than its share), scope
+  and facts for the items involved, related records ranked (same project, then linked, then mentioned). Open actions and
+  questions, the glossary and the rules are never dropped (only compacted as above); if they alone exceed the budget, an issue
+  tells the PM to raise it. Whatever is left out is listed in the packet ("12 older log entries omitted") and on the `Run`, so
+  a thin answer can be traced to a thin packet.
 - **Self-check:** validates each changeset with the applier's checks right after the run and sends failures back for one fix
   round. Recovers the request id from unreadable output and re-queues it.
 - Picks the provider and model from `config/ai.yaml`, with the fallback chain on usage limits or auth failures; a request with
@@ -95,9 +106,26 @@ A system op in a changeset whose request came from an input (an email, a page, a
 that prompted it. This is what keeps a hostile or careless input from rewriting the rules (12.2).
 
 A system op that comes from the PM's own note applies at once, because asking for a click on a rule the PM just typed is daily
-friction and the injection risk isn't there. The real risk with PM-stated rules is misreading, so the review card carries a
-**read-back**: "Here's how I read your rule: ..." in plain words, with what it changed and Undo. A read-back shows the
-interpretation, which a confirm button doesn't.
+friction and the injection risk isn't there. The real risk with PM-stated rules is misreading, and misreadings came from a new
+rule colliding with an existing one ("name teams, not individuals" meant for risks, applied to action owners, which another
+rule says must be people) or from a correction aimed at the wrong place. So the review card carries a **read-back** that shows
+effects and overlaps, not just a restatement, in four short lines next to Undo:
+
+1. **Applies to:** the record types and fields it touches ("risk owners on project pages").
+2. **Doesn't change:** the nearest neighbors the PM might assume it covers ("action owners still name a person").
+3. **Overlaps with:** any existing rule or setting it narrows, widens or contradicts, linked.
+4. **Right now it would change:** a dry-run count against current data ("3 open actions, 1 draft page"), expandable to the
+   items. An unexpected number is the fastest sign of a misread; **zero** matches on a rule meant to fix something is flagged
+   too, since the item may not be where the PM thinks it is.
+
+How the lines are computed: every rule and setting change carries a structured target (`applies_to`: record types, fields, an
+optional filter, 4.10). "Applies to" and "Right now it would change" come from that target: a config change is dry-run exactly
+in a transaction that is rolled back; a prose rule counts the current records its target matches. "Overlaps with" compares the
+target with every active rule's and setting's target (the same field touched, or an overlapping filter), and the AI adds any
+contradiction in meaning it sees. "Doesn't change" lists the closest records or fields the target leaves out.
+
+**A contradiction pauses.** If line 3 finds a contradiction, the op is held even though the PM typed it, and the card asks which
+one wins (the new rule, the existing one, or both with a narrower target). It is the one case where "apply at once" waits.
 
 **Core op types.**
 Data: `source`, `note`, `fact`, `record.set`, `record.add`, `record.del`, `record.log`, `record.rename`, `action.add`,
@@ -330,7 +358,7 @@ registers its own, plugins add theirs (3.3).
 **Adapter interface** (each adapter is a module in `engine/ai/adapters/` or an installed plugin, registered by name):
 
 - `capabilities()`: structured output, tool calling, vision, file access, code editing, max context, max output, streaming,
-  billing unit and price per unit;
+  prompt caching (whether a marked stable prefix is cached or discounted), billing unit and price per unit;
 - `run(task) -> result` with output, usage and timing;
 - `classify_error(exit_code, error_stream, transport_error) -> rate_limited | quota_until(date) | auth | timeout |
   invalid_output | provider_down | other`. It reads **only** the runner's own exit code, error stream and transport errors,
@@ -349,7 +377,8 @@ lacks a required capability fails the self-check.
 plugins ship defaults that the workspace can override. Default templates refer to sources through template variables filled
 from config (`{{ facts.production_date.sources }}`, `{{ scope.domains }}`), never by a page title, query or field name written
 into the text. Per-provider variations (one vendor prefers XML-tagged sections, another
-JSON) are handled by the adapter's prompt formatter, not by forking the instructions.
+JSON, one caches a marked prefix) are handled by the adapter's prompt formatter, not by forking the instructions; templates
+keep the stable-first order of 6.6.
 
 **Evaluation before any switch.** A golden set of fictional fixtures (including hostile inputs, 12.2) (inputs with the expected changesets and questions) scores a
 provider and model on: valid output rate, correct ops, wording rules followed, questions routed right, actions extracted

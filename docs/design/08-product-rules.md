@@ -101,6 +101,8 @@ apply to the reference pack are in 9.5.
 | An input can add knowledge and propose drafts, never change rules, sources, scope, config or code on its own | op tiers, 12.2 |
 | Fuzzy checks warn or send back; only firm invariants refuse | invariants and lints, `config/checks.yaml` |
 | One running instance per workspace | instance lease |
+| A rule the PM states is read back as effects and overlaps (applies to, doesn't change, overlaps with, dry-run count); a contradiction with an existing rule waits for the PM to pick | read-back, rule targets |
+| Packets put the stable parts first and the request last, so repeated prefixes can be cached | packet layout, adapter `prompt_caching` |
 | A fix applies by three-way merge, not a staleness check; only a real conflict stops it, and then it is redone | fixer |
 | A change request becomes a code fix only when no op can do it; data that needs a new op waits for the fix | `dev.request` validator, fixer |
 | A rename is one op that updates every place the name is stored and keeps the page | `record.rename`, reference index |
