@@ -1,6 +1,6 @@
 # Part 3. Plugin system
 
-The plugin system is what makes the core a base. Build it first (Part 13, milestone 1) and build the reference pack on it, so the
+The plugin system is what makes the core a base. Build it before the first pack (Part 13) and build both packs on it, so the
 first real use proves the extension points instead of bypassing them.
 
 ## 3.1 Kinds of plugins
@@ -65,7 +65,7 @@ where it came from.
 | Storage backend | where records and sources live | the repository layer: transactions, versions, ledger, leases, export (5.0, 4.15) | core only |
 | Check | the plugin's own self-check | `check() -> problems` | 1.0 |
 
-**Plugin API column:** `1.0` points are the ones the two bundled packs (Part 9 and the personal-projects pack) use; they are
+**Plugin API column:** `1.0` points are the ones the two bundled packs (publishing and workplace PM, Part 9) use; they are
 built, tested from a plugin and frozen at plugin API 1.0. `core only` points exist as internal registries the core uses for its
 own sign-in methods and storage, opened to plugins later. `planned` points are designed here but not built until a plugin needs
 them, so nothing is frozen on a guess.

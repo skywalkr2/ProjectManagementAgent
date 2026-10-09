@@ -56,7 +56,7 @@ the project's name. Renaming is then one field (6.7), and there is nothing to no
 |---|---|
 | `Person` | id, full_name, aliases, role, team, org, area (derived from team and scope, 6.18), how_to_reach (per channel), why_they_matter, track_only, non_working_calendar, verified, status (active, left) |
 | `Team` | id, name, aliases, members (person ids), area |
-| `Project` | id, name, group (portfolio grouping; its label comes from config, e.g. "Program"), status, phase, target, priority, summary, owner (person id), links, tags, risks[] (text, raised_by, owner, status), decisions[], milestones[], players (person ids), log[] (dated update log), facts[] (internal knowledge with source id), hold flag, `ext` (fields added by plugins, keyed by plugin) |
+| `Project` | id, name, group (portfolio grouping; its label comes from config, e.g. "Program"), status, phase, target, priority, summary, owner (person id), links, tags, risks[] (text, raised_by, owner, status), decisions[], milestones[] (each with a baseline date and a current date, 6.23), players (person ids), log[] (dated update log), facts[] (internal knowledge with source id), hold flag, `ext` (fields added by plugins, keyed by plugin) |
 | `Action` | id (stable key), project id, store, text, owners[] (each a person id with an optional team id; at least one), due, status (held until it has an owner, open, done), notes, told{person id: date}, followups[] |
 | `Question` | id, to (person id), title, text, links[], kind (question, decision, action-notice, routing, impact), affects (record ids), asks_for (fact kind or none), batch (now, later), projects (ids), asked_at, on_answer, key (dedupe), answer_pending, feedback_pending |
 | `Meeting` | id, title, due, attendees (person ids), before and after notes, status |
@@ -68,6 +68,7 @@ the project's name. Renaming is then one field (6.7), and there is nothing to no
 | `Rule` | id, text, applies_to (task kinds, record types and fields, filter), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) (4.10) |
 | `Issue` | id, summary, detail, plugin (when one raised it), status (open, fix-requested, fixing, fix-proposed, fixed, closed), fix (proposed diff with originals, 6.13) |
 | `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), exit code, error stream (kept apart from the output), outcome |
+| `Dependency` | id, from (the record that waits), on (the record it waits for; may be in another domain), need_by, status (on track, at risk, late, done), impact question id (6.18), notes (6.23) |
 | `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, patterns (how compound ids split) (6.22) |
 | `Lesson` | id, text, learned_from (request or source), applies_to, status (active, promoted to a rule, retired) (6.22) |
 | `Signal` | id, kind (sent back, undone, dropped, reworded, pulled back, draft edited), record ids, note, time (6.20) |

@@ -131,11 +131,11 @@ one wins (the new rule, the existing one, or both with a narrower target). It is
 Data: `source`, `note`, `fact`, `record.set`, `record.add`, `record.del`, `record.log`, `record.rename`, `action.add`,
 `action.update`, `action.close`, `action.assign`, `decision.add`, `milestone.add`, `risk.add`, `question.add`,
 `question.update`, `question.move`, `question.done`, `question.drop`, `meeting.add`, `meeting.update`, `person.add`,
-`person.merge`, `glossary.add`, `glossary.update`, `lesson.add`, `parked`, `inbox` (set a change's state), `lookup`,
+`person.merge`, `dependency.add`, `dependency.update`, `glossary.add`, `glossary.update`, `lesson.add`, `parked`, `inbox` (set a change's state), `lookup`,
 `watch.item` (follow one more item inside an already-configured source), `doc`.
 Outbound: `draft.request` (ask for a rendered draft to a channel), `handoff` (a request for another project, drafted as a
 message or ticket for its owner, 4.18).
-System: `rule.add`, `rule.retire`, `watch.add`, `watch.remove` (new or removed sources), `config.set` (any config key,
+System: `milestone.rebaseline` (resets a plan's baseline dates; a plan change is the PM's call), `rule.add`, `rule.retire`, `watch.add`, `watch.remove` (new or removed sources), `config.set` (any config key,
 including scope and facts), `plugin.enable`, `plugin.disable`, `dev.request` (a code change request: becomes an issue for the
 fixer).
 Plugins register more, namespaced, each with its tier.
@@ -482,4 +482,18 @@ ops record what is learned:
 - **Search lookups:** a bounded `lookup` over the workspace, in the same loop as fact lookups (6.16): full-text search over
   sources and records ("has this been asked or answered before?"), and the previous version of a source ("what did this page
   say last time?"). Results come back in the next call, with a limit on calls per run.
+
+## 6.23 Dependencies and baselines
+
+A plan is a chain of things waiting on other things, and slips are measured against what was planned. Both are core concepts,
+used by any pack.
+
+- **Dependencies:** a `Dependency` says one record (a milestone, an action, a project) waits on another, with a need-by date.
+  The other side may belong to another domain (6.18); then its impact question, if any, hangs off the dependency. A dependency
+  is **at risk** when the other side's current date (looked up where possible, 6.19) is after the need-by date or within the
+  configured margin, and **late** when the need-by date has passed. At-risk and late dependencies are Today lines.
+- **Baselines:** milestones and targets keep a baseline date and a current date. Variance (current minus baseline, in working
+  days from the calendar config) shows on timelines and in drafted updates ("moved from Oct 15 to Nov 2, 13 working days
+  late"). Setting a new baseline is `milestone.rebaseline`, a system op: an email can move a current date, but only the PM moves
+  the plan.
 

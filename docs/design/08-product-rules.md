@@ -101,6 +101,8 @@ apply to the reference pack are in 9.5.
 | An input can add knowledge and propose drafts, never change rules, sources, scope, config or code on its own | op tiers, 12.2 |
 | Fuzzy checks warn or send back; only firm invariants refuse | invariants and lints, `config/checks.yaml` |
 | One running instance per workspace | instance lease |
+| Slips are measured against a baseline; only the PM resets a baseline | milestone baselines, `milestone.rebaseline` (system op) |
+| What waits on what is recorded, and at-risk dependencies surface before they are late | `Dependency`, Today lines |
 | A rule the PM states is read back as effects and overlaps (applies to, doesn't change, overlaps with, dry-run count); a contradiction with an existing rule waits for the PM to pick | read-back, rule targets |
 | Packets put the stable parts first and the request last, so repeated prefixes can be cached | packet layout, adapter `prompt_caching` |
 | A fix applies by three-way merge, not a staleness check; only a real conflict stops it, and then it is redone | fixer |

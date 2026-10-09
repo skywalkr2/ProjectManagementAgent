@@ -3,6 +3,24 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Project plan, first user and design 1.0 baseline
+
+**Decided by:** project owner, after a project management review.
+
+- **No employer involvement.** This is a personal project on the owner's own account, generalizing ideas from a private tool
+  the owner built for their own use. No code, data or systems move between them; only ideas. Recorded as risk R9, closed.
+- **First real user: the owner's literary imprint**, in a private workspace, starting with its first book launch on
+  2026-12-01. The publishing pack moves to first in the build order (milestone 8); the workplace pack becomes the reference
+  pack on fictional data (milestone 9); the personal-projects pack drops out of the plan (it stays as an example in Part 3).
+  `demo-b` becomes a fictional small imprint.
+- **Launch-safe schedule:** under 5 owner hours a week; a trimmed launch slice of milestones 1 and 2 by 2026-10-30; a go/no-go
+  that day; a November freeze; the launch never depends on the tool (`docs/project/schedule.md`).
+- **Dependencies and baselines join the core** (6.23): a launch is a chain of lead times, and slips need a baseline to measure
+  against. Impact: version 1, must; not in the launch slice. Resetting a baseline is a system op.
+- **Design 1.0 is the scope baseline.** From here, changes need a one-line impact note in this log (`docs/project/scope.md`).
+  The other PMP suggestions (escalation, communications plan, agendas, risk scoring, PM issues and assumptions) wait there as
+  candidate changes.
+
 ## 2026-10-09: Packet layout and read-backs, second round with the first design's author
 
 **Decided by:** project owner, on the second-round answers from the first design's author.

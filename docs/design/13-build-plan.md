@@ -4,9 +4,13 @@ Two principles. **Use it early:** the PM works with a thin end-to-end version wi
 milestone is judged against real use (with the PM's corrections as the measure, 6.20). **Build the safety first:** the ledger,
 the tiers and the invariants are in the first usable version, because they are much harder to add once data and habits exist.
 
-**Earn the breadth:** packs beyond the reference pack, hosted mode and social media are a lot of product for a tool whose first
-deployment has one user. Milestones 12 onward (and every pack after the second) start only once the reference pack has been in
+**Earn the breadth:** packs beyond the first two, hosted mode and social media are a lot of product for a tool whose first
+deployment has one user. Milestones 12 onward (and every pack after the second) start only once the publishing pack has been in
 daily use and its quality signals (6.20) are steady.
+
+**Dates and the launch slice.** The calendar, the go/no-go and the smaller "launch slice" of milestones 1 and 2 (what is built
+before the first real deadline and what is deferred) are in `docs/project/schedule.md`. This part lists the milestones in
+order; the project plan says when.
 
 Each milestone ends with tests passing against both fictional workspaces, the core passing alone, and the scans green.
 
@@ -49,10 +53,11 @@ Each milestone ends with tests passing against both fictional workspaces, the co
 7. **UI shell and settings.** Panel registry with declarative panels, branding, the Settings panel generated from schemas
    (with levels and presets), the Admin tab including Quality.
 
-8. **The reference pack** (Part 9) on the fictional workspaces, using only the plugin API. Anything it needs that the API lacks
-   becomes a generic extension point, not a special case.
+8. **The publishing pack** (9.6 to 9.9), the first in real use, with dependencies and baselines (6.23), using only the plugin
+   API.
 
-9. **The second pack** (personal projects) to prove the extension points serve a different kind of work.
+9. **The workplace reference pack** (9.1 to 9.5) on fictional data, to prove the extension points serve a very different kind
+   of work. Anything either pack needs that the API lacks becomes a generic extension point, not a special case.
 
 10. **AI breadth and evaluation.** A command-line agent adapter, capability routing, budgets, data-level routing, packet
     budgets; the golden fixture set with hostile inputs (12.2) and `evaluate`. A second vendor's adapter needs no change outside
@@ -61,7 +66,7 @@ Each milestone ends with tests passing against both fictional workspaces, the co
 11. **Governor, scheduler, offline behavior (connectivity first, honest staleness), issues and the fixer** (merge on Apply),
     error classification from the runner's own streams, handoffs for code other projects own (4.18), the rules review (6.21).
 
-12. **Hosted deployment** (after the reference pack is in daily use). Auth providers (password with a second factor, passkeys, OpenID Connect, identity-aware proxy),
+12. **Hosted deployment** (after the publishing pack is in daily use). Auth providers (password with a second factor, passkeys, OpenID Connect, identity-aware proxy),
     sessions, CSRF, lockout, hiding, the deploy checks, the Security panel, retention and forget-a-person, the container image
     and the first two recipes.
 

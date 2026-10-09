@@ -46,11 +46,11 @@ api/                    HTTP API over the engine
 web/                    React app: shell, core panels, panel registry
 plugins/                bundled plugins, each generic for its domain
   fake/                 fixture-backed connectors and channels
-  workplace-pm/         the reference pack (Part 9)
-  personal-projects/    a small second pack that proves the extension points
+  publishing/           the first pack in real use (9.6)
+  workplace-pm/         the reference pack (Part 9), built on fictional data
 workspaces/
-  demo-a/               fictional workspace (committed fixture)
-  demo-b/               a second, different fictional workspace
+  demo-a/               fictional workplace (committed fixture for the workplace pack)
+  demo-b/               fictional small imprint (committed fixture for the publishing pack)
 deploy/                 packaging and deployment recipes (Part 11)
   container/            the container image every hosted recipe builds on
   <target>/             one folder per hosting target; may name that host, never a user's domain

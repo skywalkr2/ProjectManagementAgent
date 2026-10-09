@@ -8,8 +8,8 @@ specific to one kind of work comes from plugins:
 
 - **Connectors** bring inputs in (wikis, trackers, folders, mailboxes, feeds).
 - **Channels** take approved content out (pages, messages, email, posts).
-- **Packs** bundle record types, templates, prompts and panels for one use. The first is a workplace status-reporting pack;
-  publishing support, personal projects and social media are planned.
+- **Packs** bundle record types, templates, prompts and panels for one use. The first is publishing support for a small imprint;
+  a workplace status-reporting pack is the reference, and personal projects and social media are planned.
 
 Any AI vendor can be used through configuration.
 
@@ -19,11 +19,12 @@ storage are all settings, so you can change an installation without changing cod
 
 ## Status
 
-Design stage. Nothing is built yet.
+Design 1.0 is complete. Building starts with a small first slice; see the plan in [`docs/project/`](docs/project/).
 
 ## Documents
 
 - [`docs/design/`](docs/design/README.md): the full product design, one file per part, and the build plan
 - [`docs/design/CHANGES.md`](docs/design/CHANGES.md): what changed since the first version of the design, and why
+- [`docs/project/`](docs/project/): charter, scope, risks and schedule
 - [`docs/decisions.md`](docs/decisions.md): product decisions and why they were made
 - [`CLAUDE.md`](CLAUDE.md): working rules for coding agents in this repository

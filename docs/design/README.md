@@ -13,8 +13,12 @@ version for coding agents; `CHANGES.md` in this folder summarizes how this desig
 
 **Where this design came from.** It grew out of one use: a program manager supporting a technical leader at a large
 organization, with status on wiki pages and work in an issue tracker. That use is kept, fully specified, as the **reference
-pack** (Part 9) and is the first pack built on the core. It shows what the core must support; it does not set the product's
-edges. Other uses (publishing support, personal projects, social media) are plugins on the same core (3.7).
+pack** (Part 9): the most proven pack, built on fictional data, and the main test that the core is complete. The first pack in
+real use is **publishing support** for a small imprint (9.6). Other uses (personal projects, social media) are plugins on the
+same core (3.7).
+
+**Version.** Design 1.0, the scope baseline as of 2026-10-09. Changes from here go through the change control in
+`docs/project/scope.md`.
 
 ## Parts
 
@@ -30,7 +34,7 @@ Section numbers are stable: "6.18" is section 18 of Part 6, in `06-engine.md`.
 | 6 | [06-engine.md](06-engine.md) | Every core component: plugin host, connectors, channels, applier, questions, scope, facts, AI layer, quality signals |
 | 7 | [07-ui.md](07-ui.md) | Shell, panels, What changed, Waiting to go out, Follow-ups, interaction rules |
 | 8 | [08-product-rules.md](08-product-rules.md) | Lessons as product rules, each with where it is enforced |
-| 9 | [09-reference-pack.md](09-reference-pack.md) | The workplace PM pack |
+| 9 | [09-reference-pack.md](09-reference-pack.md) | The packs: workplace PM (reference) and publishing (first in use) |
 | 10 | [10-guardrails.md](10-guardrails.md) | Keeping specifics out of code: the boundary, scans, process, review checklist |
 | 11 | [11-deployment.md](11-deployment.md) | Local and hosted modes, base path, sign-in, deploy checks, packaging |
 | 12 | [12-security.md](12-security.md) | Security and privacy, including untrusted input and op tiers |

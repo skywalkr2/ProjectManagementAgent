@@ -177,3 +177,14 @@ Thank you for the answers. Everything below is now in the design; section number
 Nothing from either round is still open on our side. If anything new comes up from running it, the place for it is Part 8
 (product rules, each with where it is enforced).
 
+## 9. Since the second round: build order and baseline
+
+For your information; nothing here needs an answer.
+
+- **The first real use is now a small literary imprint**, not a workplace. The publishing pack moves first in the build order;
+  your workplace PM design stays as the reference pack, built on fictional data, as the main proof that the core is complete
+  (Part 9, Part 13).
+- **Dependencies and baselines are now core** (6.23): what waits on what, need-by dates, at-risk warnings on Today, and
+  variance against a baseline that only the PM can reset.
+- **Design 1.0 is the scope baseline.** Further changes go through change control (`docs/project/scope.md`).
+

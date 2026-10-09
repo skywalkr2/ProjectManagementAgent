@@ -1,7 +1,8 @@
-# Part 9. Reference pack: workplace PM
+# Part 9. Packs: workplace PM (reference) and publishing
 
-The use this design came from, built as a pack (`plugins/workplace-pm/`) on the core. It is the first pack built and the main
-test that the core is complete. Everything here is generic for workplace status reporting; the organization's specifics still
+Two bundled packs. The **workplace PM** pack (9.1 to 9.5) is the use this design came from, built as a pack
+(`plugins/workplace-pm/`) on fictional data: the most proven design and the main test that the core is complete. The
+**publishing** pack (9.6 to 9.9) is the first pack in real use, for a small imprint bringing titles to launch. Everything here is generic for workplace status reporting; the organization's specifics still
 live in a workspace.
 
 ## 9.1 The use
@@ -50,3 +51,39 @@ tracker backed by fixtures.
 | Owners are "Team (Full Name)" | suggested `owner_format`, rendered from ids |
 | Don't chase program milestones run by other PMs or things the leader doesn't own | pack's default `scope.yaml` entries |
 | The leader shouldn't have to confirm routine updates | routing defaults |
+
+## 9.6 Publishing: the use
+
+A small imprint or independent author brings a title to launch: a production chain with lead times (final manuscript, edit,
+proofread, cover, interior, proof copy, approval, distribution listing, preorders, advance copies, launch), many outside
+contributors (editor, proofreader, cover designer, typesetter, printer, distributor, reviewers, venues, media) and a stream of
+promotion copy. The PM is the publisher; contributors never use the tool and get paste-ready messages.
+
+## 9.7 Publishing: what it registers
+
+- **Record type** `publishing/title`: working title, formats, stage, launch date (with baseline, 6.23), identifier status,
+  contributors (person ids by role).
+- **Launch plan template** (`config/plugins/publishing.yaml`): the milestones of a launch, each with an offset from the launch
+  date (its lead time) and the milestones it depends on. The pack ships a starting template the PM edits; every milestone name,
+  lead time and dependency is config. `publishing/plan-from-template` creates a title's milestones and dependencies from it.
+- **Scope defaults:** the imprint's own work and its contracted contributors are the tracked area; a vendor's internal process
+  (a printer's queue, a distributor's listing pipeline) is a domain with the account contact as its one contact (4.4).
+- **Fact defaults:** placeholders for dates a vendor publishes (a distributor's listing date, a printer's ship date); none
+  found means TBD (6.19).
+- **AI task kinds:** `publishing/contributor-message` (read an email or note from a contributor or vendor: updates, actions,
+  date changes, questions) and `publishing/promo-draft` (a social post, newsletter section or announcement, drafted to the
+  clipboard channel for the PM to approve and paste).
+- **Today lines:** launch countdown, milestones due within the configured window, dependencies at risk (6.23).
+- **Panels:** launch timeline (baseline against current dates, with dependencies), contributors by role.
+- **Channels:** clipboard only at first; email, newsletter and social channels are later plugins.
+
+## 9.8 Publishing: not in the first version
+
+Integrations with distributors, retailers or printers; sales and royalty data; social posting; a public site. Each is a later
+connector or channel.
+
+## 9.9 Publishing: fictional demo setup
+
+`demo-b` is a fictional small imprint with one title, a launch plan made from the template, contributors in each role, and
+fixture emails from them. The owner's real imprint runs in a private workspace outside this repository.
+

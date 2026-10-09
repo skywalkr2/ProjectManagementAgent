@@ -4,6 +4,10 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 one file per part; section "6.18" is in `06-engine.md`. Start at `docs/design/README.md`, which says what to read for each
 kind of task. Always read Parts 1, 2 and 10.
 
+The project plan is in `docs/project/` (charter, scope, risks, schedule). Design 1.0 is the scope baseline: a change to scope
+or design needs a one-line impact note in `docs/decisions.md` first, and during a freeze only fixes are accepted. Build in the
+order of `docs/project/schedule.md`; anything it defers stays deferred.
+
 ## The boundary (non-negotiable)
 - Core code (`engine/`, `api/`, `web/src/`) contains **no** specific person, team, organization, product, program, system,
   host, URL or page id, and no vendor or service name outside `engine/ai/adapters/`.
