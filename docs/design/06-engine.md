@@ -7,7 +7,7 @@ Each component is generic, configured from Part 4, and has its own tests with fi
 Discovers plugins (entry points, `plugins/`, `<workspace>/plugins/`), reads manifests, checks versions and dependencies,
 validates plugin config, and calls each plugin's `register` with a registrar for every extension point (3.3). Checks that what a
 plugin registers matches its manifest. Runs the event bus (3.4). Wraps every call into plugin code so an exception becomes an
-`Issue` naming the plugin, not a crash.
+automation `Problem` naming the plugin, not a crash.
 
 ## 6.2 Connectors (inputs)
 
@@ -28,7 +28,7 @@ Run on schedule through connectors; compare against snapshots; file a `Change` p
 
 - **Check connectivity first.** A refresh starts with a quick reachability check per connector; with no network it waits
   (6.14) instead of running a string of failing checks. No network is not an outage and files nothing.
-- An outage (many keys failing at once with the network up) is one logged issue, not a question per key. A single item is
+- An outage (many keys failing at once with the network up) is one automation problem, not a question per key. A single item is
   asked about only after it fails on consecutive runs.
 - **Our own edits are ours.** An edit or page whose author is one of `our_accounts` is recorded as `by_us` (published by the
   cockpit): it confirms a publish, it is not a new change from someone else, and lookups answer "who made this?" with "we
@@ -54,7 +54,8 @@ pulled-back items are recorded so rules can be tuned.
   - the input, and the related records in full;
   - **every** open action and open question, with ids, in a compact one-line form, not only the related ones, so the AI can
     close what the input completed anywhere;
-  - the glossary and the active lessons (6.22), and the rules that apply to this task kind and these projects (6.21);
+  - the playbook entries for this task kind (3.8), the glossary and the active lessons (6.22), and the rules that apply to
+    this task kind and these projects (6.21);
   - the area each related person and item is in, with each domain's contact (6.18), and looked-up facts (6.19);
   - which recent edits and pages were made by `our_accounts` ("published by the cockpit", so nobody is asked who made them);
   - the op reference (core and enabled plugins' ops) and the search lookups available (6.22).
@@ -65,7 +66,8 @@ pulled-back items are recorded so rules can be tuned.
   request records its origin (input, PM, schedule), and that origin decides which op tiers can apply (6.7). Secrets never
   enter a packet.
 - **Order: stable first, request last.** The packet is laid out so the parts that are the same for every run in a batch come
-  first, in a fixed order: instructions and op reference, glossary, rules, lessons, then all open actions and questions. The
+  first, in a fixed order: instructions and op reference, playbook entries, glossary, rules, lessons, then all open actions and
+  questions. The
   request-specific parts follow: scope and facts for the items involved, related records, and the input last. Most providers
   discount or cache a repeated prefix, and the open-items list is where the repetition is; the adapter marks the stable prefix
   when its provider supports caching (`prompt_caching` capability, 6.16) and ignores the mark otherwise.
@@ -78,7 +80,7 @@ pulled-back items are recorded so rules can be tuned.
 - **Size budget:** each task kind has a `max_input` in `config/dispatch.yaml`, capped by the provider's context. After the
   stable prefix, the request-specific parts fill in order: the input (split into parts if it is larger than its share), scope
   and facts for the items involved, related records ranked (same project, then linked, then mentioned). Open actions and
-  questions, the glossary and the rules are never dropped (only compacted as above); if they alone exceed the budget, an issue
+  questions, the glossary and the rules are never dropped (only compacted as above); if they alone exceed the budget, an automation problem
   tells the PM to raise it. Whatever is left out is listed in the packet ("12 older log entries omitted") and on the `Run`, so
   a thin answer can be traced to a thin packet.
 - **Self-check:** validates each changeset with the applier's checks right after the run and sends failures back for one fix
@@ -131,12 +133,13 @@ one wins (the new rule, the existing one, or both with a narrower target). It is
 Data: `source`, `note`, `fact`, `record.set`, `record.add`, `record.del`, `record.log`, `record.rename`, `action.add`,
 `action.update`, `action.close`, `action.assign`, `decision.add`, `milestone.add`, `risk.add`, `question.add`,
 `question.update`, `question.move`, `question.done`, `question.drop`, `meeting.add`, `meeting.update`, `person.add`,
-`person.merge`, `dependency.add`, `dependency.update`, `glossary.add`, `glossary.update`, `lesson.add`, `parked`, `inbox` (set a change's state), `lookup`,
+`person.merge`, `dependency.add`, `dependency.update`, `issue.add`, `issue.update`, `issue.resolve`, `risk.realize` (a risk
+that came true becomes an issue linked to it), `assumption.add`, `assumption.update`, `meeting.agenda`, `glossary.add`, `glossary.update`, `lesson.add`, `parked`, `inbox` (set a change's state), `lookup`,
 `watch.item` (follow one more item inside an already-configured source), `doc`.
 Outbound: `draft.request` (ask for a rendered draft to a channel), `handoff` (a request for another project, drafted as a
 message or ticket for its owner, 4.18).
 System: `milestone.rebaseline` (resets a plan's baseline dates; a plan change is the PM's call), `rule.add`, `rule.retire`, `watch.add`, `watch.remove` (new or removed sources), `config.set` (any config key,
-including scope and facts), `plugin.enable`, `plugin.disable`, `dev.request` (a code change request: becomes an issue for the
+including scope and facts), `plugin.enable`, `plugin.disable`, `dev.request` (a code change request: becomes an automation problem for the
 fixer).
 Plugins register more, namespaced, each with its tier.
 
@@ -236,7 +239,8 @@ a system op, or otherwise needs a decision. Everything else is filed quietly (st
   feedback task's packet carries the current state of what it names, and the run starts by stating where the item actually is.
   When the data doesn't match the correction, the answer is a question to the PM with what was found, not a change and never a
   code fix.
-- Aging: "waiting Nd" after Mark sent; chase suggestions after a configured number of days.
+- Aging: "waiting Nd" after Mark sent; chase suggestions after a configured number of days; one escalation suggestion when
+  `routing.escalation` says so (4.3, 6.24).
 
 ## 6.9 Actions service
 
@@ -296,15 +300,16 @@ wherever they are shown.
 - Every few minutes: re-queue requests whose run never finished, push work waiting too long in working hours, repair changes no
   request carries, detect stale data and outages, run the scope sweep (6.18), the rules review (6.21) and the notices, commit
   the readable export (5.0) hourly.
-- Problems in the automation become `Issue`s. "Fix it" starts a fix run (the `code-fix` tier in `config/ai.yaml`) whose change
+- Problems in the automation become `Problem` records (shown as "automation problems", so "issue" keeps its project
+  meaning, 6.24). "Fix it" starts a fix run (the `code-fix` tier in `config/ai.yaml`) whose change
   comes back as a **proposed fix** with a diff; it goes live only when the PM clicks Apply. Proposed fixes can't be hidden by
   "dismiss all".
 - **Apply merges; it doesn't check for staleness.** Busy files change between the fix run and the click, so a whole-file "has
   it changed since?" check would make nearly every fix stale. A proposed fix keeps the original of every file it touches. Apply
   does a three-way merge (original, current, proposed) per file, with a union merge for files listed in `fixer.union_merge`
   (default: Markdown) so rows both sides appended are kept. Only a real conflict stops it, and then the fix is redone
-  automatically against the current files (up to `fixer.redo_attempts`, then the issue goes to the PM with the conflict shown).
-- **One place per fix:** a proposed fix shows on its issue card only, and is counted there (Today, the header, the issue list
+  automatically against the current files (up to `fixer.redo_attempts`, then the problem goes to the PM with the conflict shown).
+- **One place per fix:** a proposed fix shows on its problem card only, and is counted there (Today, the header, the problem list
   count it once).
 - **Requests for other projects:** a request about code another project owns (4.18) never reaches the fixer; it becomes a
   `handoff` draft for that project's owner.
@@ -497,3 +502,34 @@ used by any pack.
   late"). Setting a new baseline is `milestone.rebaseline`, a system op: an email can move a current date, but only the PM moves
   the plan.
 
+## 6.24 Project management support
+
+Core support for running projects, kept light and switchable (`config/raid.yaml`, 4.20). The cockpit keeps these current from
+the inputs and surfaces what needs attention; the PM decides.
+
+- **RAID:** risks, issues (problems happening now), assumptions and dependencies (6.23), alongside decisions. A risk that comes
+  true becomes an issue linked to it (`risk.realize`). An assumption has a check-by date and how it will be checked. Inputs
+  that confirm or break an assumption update it; a broken assumption is a Today line.
+- **Risk fields and reviews:** probability, impact, score, mitigation, trigger and review date when the workspace turns them on.
+  Open risks and unverified assumptions past their review date are Today lines ("Review 3 risks on the launch").
+- **Escalation:** a question unanswered past `routing.escalation.after` gets one suggested escalation to the configured
+  person, drafted for the PM with the question, how long it has waited and why it matters. Dismissing it is recorded; it is
+  never sent on its own and never suggested twice for the same question.
+- **Communications cadence:** people with a `cadence` (a weekly update to the leader, a fortnightly note to a vendor) get a
+  Today line when one is due, and the update writer (6.17) drafts it from what changed since the last one, in the channel and
+  form they prefer.
+- **Meeting agendas:** before a meeting, `meeting.agenda` builds one section per attendee from their open questions, their
+  actions, dependencies involving them and decisions the meeting needs, drafted to the clipboard channel. Minutes pasted
+  afterward close what the meeting settled (6.9).
+
+## 6.25 Asking the assistant
+
+Not every need deserves a built-in feature. The PM can ask the assistant anything about the workspace ("what's on the critical
+path for the launch?", "which contributors haven't replied this week?", "draft a risk review") from an Ask box.
+
+- An ask is a request of kind `ask` (4.8): its packet has the playbooks, the records the question concerns (found with search
+  lookups, 6.22) and the open items, like any other run.
+- The answer is a note on the request, with links to the records it used. If the answer suggests changes (a new risk, a
+  reassigned action), they come as ops in a changeset under the usual tiers and checks (6.7); a draft for someone else waits for
+  approval like any other.
+- An ask that comes up again and again is a signal (6.20): it may deserve a Today line, a panel or a playbook entry.

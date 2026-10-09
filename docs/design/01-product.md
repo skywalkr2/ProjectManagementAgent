@@ -51,7 +51,7 @@ configuration.
 | Questions, actions, meetings, people and ids, the ledger and undo | Kinds of things to track and extra fields on core records (record types) |
 | The AI provider layer: routing, fallbacks, budgets, evaluation | Domain ops, triage matchers, AI task kinds and their prompts |
 | The approval gate, diffs, the publisher | Templates and renderers for pages, posts and messages |
-| Scheduler, governor, issues and the fixer | UI panels, Today lines, scheduled jobs, lookups, event handlers |
+| Scheduler, governor, automation problems and the fixer | UI panels, Today lines, scheduled jobs, lookups, event handlers |
 | UI shell and core panels | Vendor adapters for AI models and for outside services |
 | Plugin host, config schemas, self-check | Packs: bundles of the above for one kind of work |
 
@@ -59,7 +59,18 @@ So the whole product runs offline on demo data, the core ships with minimal buil
 fixture files, a local-folder connector, paste-in and upload, a clipboard channel (copy a message to paste anywhere) and a stub AI
 adapter.
 
-## 1.5 Not goals for the base
+## 1.5 An assistant, not a methodology
+
+The cockpit assists the person running projects; it doesn't replace their judgment or impose a methodology. It knows good
+practice and applies it where it helps: in the core, how to support projects well (clear follow-ups, questions written for
+their reader, risks and dependencies kept current, slips caught early); in each pack, how its kind of work is done well. That
+knowledge lives in **playbooks** (3.8), which the PM can switch off entry by entry or override with their own rules.
+
+Anything a playbook doesn't build in, the PM can still ask for: "what's on the critical path?", "draft a risk review for the
+launch". The assistant answers from the records with the same playbooks in hand (6.25). Built-in features are for what
+happens every day; everything else is a question away.
+
+## 1.6 Not goals for the base
 
 - **Autonomous sending.** Nothing goes out without the PM approving the exact content. A scheduled post is approved content
   that the PM scheduled; the cockpit never decides on its own to send.

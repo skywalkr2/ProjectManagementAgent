@@ -38,7 +38,7 @@ apply to the reference pack are in 9.5.
 | A question asked in the conversation it came from is filed as asked | AI rules |
 | When an answer arrives, re-check every open question to that person | answer flow |
 | When an input answers questions, close them; search sources before filing a new one | packet includes open questions |
-| Don't flood: an outage is one issue, not N questions | watcher outage rule |
+| Don't flood: an outage is one automation problem, not N questions | watcher outage rule |
 
 ## 8.3 Actions and owners
 
@@ -103,9 +103,12 @@ apply to the reference pack are in 9.5.
 | One running instance per workspace | instance lease |
 | Slips are measured against a baseline; only the PM resets a baseline | milestone baselines, `milestone.rebaseline` (system op) |
 | What waits on what is recorded, and at-risk dependencies surface before they are late | `Dependency`, Today lines |
+| Good practice is written down once, in playbooks, and every run uses it; the PM's own rules win | playbooks (3.8), `config/playbooks.yaml` |
+| An unanswered question gets one suggested escalation, never an automatic one | `routing.escalation`, 6.24 |
+| "Issue" means a project issue; automation failures are "automation problems" | data model (5.1) |
 | A rule the PM states is read back as effects and overlaps (applies to, doesn't change, overlaps with, dry-run count); a contradiction with an existing rule waits for the PM to pick | read-back, rule targets |
 | Packets put the stable parts first and the request last, so repeated prefixes can be cached | packet layout, adapter `prompt_caching` |
 | A fix applies by three-way merge, not a staleness check; only a real conflict stops it, and then it is redone | fixer |
 | A change request becomes a code fix only when no op can do it; data that needs a new op waits for the fix | `dev.request` validator, fixer |
 | A rename is one op that updates every place the name is stored and keeps the page | `record.rename`, reference index |
-| A failing plugin is an issue, not an outage | plugin host |
+| A failing plugin is an automation problem, not an outage | plugin host |

@@ -54,19 +54,21 @@ the project's name. Renaming is then one field (6.7), and there is nothing to no
 
 | Entity | Key fields |
 |---|---|
-| `Person` | id, full_name, aliases, role, team, org, area (derived from team and scope, 6.18), how_to_reach (per channel), why_they_matter, track_only, non_working_calendar, verified, status (active, left) |
+| `Person` | id, full_name, aliases, role, team, org, area (derived from team and scope, 6.18), how_to_reach (per channel), prefers, cadence, influence, interest (6.24), why_they_matter, track_only, non_working_calendar, verified, status (active, left) |
 | `Team` | id, name, aliases, members (person ids), area |
-| `Project` | id, name, group (portfolio grouping; its label comes from config, e.g. "Program"), status, phase, target, priority, summary, owner (person id), links, tags, risks[] (text, raised_by, owner, status), decisions[], milestones[] (each with a baseline date and a current date, 6.23), players (person ids), log[] (dated update log), facts[] (internal knowledge with source id), hold flag, `ext` (fields added by plugins, keyed by plugin) |
+| `Project` | id, name, group (portfolio grouping; its label comes from config, e.g. "Program"), status, phase, target, priority, summary, owner (person id), links, tags, risks[] (text, raised_by, owner, status, and the optional fields `config/raid.yaml` turns on: probability, impact, score, mitigation, trigger, review_by), decisions[], milestones[] (each with a baseline date and a current date, 6.23), players (person ids), log[] (dated update log), facts[] (internal knowledge with source id), hold flag, `ext` (fields added by plugins, keyed by plugin) |
 | `Action` | id (stable key), project id, store, text, owners[] (each a person id with an optional team id; at least one), due, status (held until it has an owner, open, done), notes, told{person id: date}, followups[] |
 | `Question` | id, to (person id), title, text, links[], kind (question, decision, action-notice, routing, impact), affects (record ids), asks_for (fact kind or none), batch (now, later), projects (ids), asked_at, on_answer, key (dedupe), answer_pending, feedback_pending |
-| `Meeting` | id, title, due, attendees (person ids), before and after notes, status |
+| `Meeting` | id, title, due, attendees (person ids), agenda (per attendee, 6.24), before and after notes, status |
+| `Issue` | a project issue (a problem happening now): id, project id, text, raised_by, owners[], impact, status (open, resolved), opened, resolved, from_risk (when a risk came true) (6.24) |
+| `Assumption` | id, project id, text, source id, status (unverified, confirmed, invalid), check_by, how it will be checked (6.24) |
 | `Source` | id, received_at (zoned), from (person id or text), by_us (written by one of `our_accounts`), kind, connector instance, title, content hash, projects (ids), trust (trusted, untrusted; 12.2), restriction (a marking and the audiences allowed to see it, 4.1), url |
 | `Change` | id, source id, title, link, diff, detected_at, who, state (new, queued, processed, done, ignored), result, auto rule, superseded_by, covers[] |
 | `Request` | id, kind (an AI task kind), ref, note (the PM's own words, trusted), state, waiting (why and until when, 7.6), attempts, created, origin (input, PM, schedule) |
 | `Changeset` | id, change id?, request id?, summary, ops[] (each with an optional `group`, 6.7), read_back (applies to, doesn't change, overlaps, dry-run count; 6.7), status (applied, rejected, held, undone, proposed, discarded), problems[] (invariants and lints, 6.7), dismissed, quiet, feedback[] |
 | `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result |
 | `Rule` | id, text, applies_to (task kinds, record types and fields, filter), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) (4.10) |
-| `Issue` | id, summary, detail, plugin (when one raised it), status (open, fix-requested, fixing, fix-proposed, fixed, closed), fix (proposed diff with originals, 6.13) |
+| `Problem` | an automation problem (not a project issue): id, summary, detail, plugin (when one raised it), status (open, fix-requested, fixing, fix-proposed, fixed, closed), fix (proposed diff with originals, 6.13) |
 | `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), exit code, error stream (kept apart from the output), outcome |
 | `Dependency` | id, from (the record that waits), on (the record it waits for; may be in another domain), need_by, status (on track, at risk, late, done), impact question id (6.18), notes (6.23) |
 | `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, patterns (how compound ids split) (6.22) |

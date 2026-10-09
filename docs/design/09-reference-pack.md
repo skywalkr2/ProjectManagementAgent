@@ -76,6 +76,11 @@ promotion copy. The PM is the publisher; contributors never use the tool and get
 - **Today lines:** launch countdown, milestones due within the configured window, dependencies at risk (6.23).
 - **Panels:** launch timeline (baseline against current dates, with dependencies), contributors by role.
 - **Channels:** clipboard only at first; email, newsletter and social channels are later plugins.
+- **Playbook** (3.8): launch practice for a small imprint: typical lead times and the order of production steps (as defaults
+  for the launch template), what to confirm with each kind of contributor and when, how to write to editors, reviewers and
+  venues, promotion timing before and after launch, a publishing glossary (galley, ARC, ISBN, print proof, trim size, metadata)
+  and evaluation cases on fictional titles. No retailer, distributor or service names except in a vendor's own plugin.
+- **RAID preset:** risks, issues and dependencies on; assumptions off (4.20).
 
 ## 9.8 Publishing: not in the first version
 

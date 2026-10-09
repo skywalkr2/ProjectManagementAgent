@@ -31,6 +31,7 @@ provides:                         # checked against what the code registers
   panels: [personal-projects/goals]
   today: [personal-projects/goals-due]
   jobs: [personal-projects/weekly-review]
+  playbook: playbook/              # 3.8
 config_schema: personal_projects.config:Settings
 requires:
   network: []                     # hosts it may reach; empty means none
@@ -63,6 +64,7 @@ where it came from.
 | API route | extra endpoints | mounted under `<base path>/api/plugins/<plugin>/` | planned |
 | Auth provider | a way to sign in | `begin(request)`, `complete(request) -> identity or refusal`, `capabilities()` (11.4) | core only |
 | Storage backend | where records and sources live | the repository layer: transactions, versions, ledger, leases, export (5.0, 4.15) | core only |
+| Playbook | built-in practice for its kind of work: guidance, default rules, checklists, glossary, lints, evaluation cases | a `playbook/` folder (3.8) | 1.0 |
 | Check | the plugin's own self-check | `check() -> problems` | 1.0 |
 
 **Plugin API column:** `1.0` points are the ones the two bundled packs (publishing and workplace PM, Part 9) use; they are
@@ -78,9 +80,9 @@ and covered by a test that uses it from a plugin.
 The core uses an internal event bus from the start; plugin subscriptions are a `planned` extension point (3.3). The core
 publishes events after each step: `source.saved`, `change.filed`, `change.closed`, `request.queued`,
 `changeset.applied`, `changeset.undone`, `record.changed`, `draft.created`, `draft.approved`, `draft.sent`, `question.asked`,
-`question.answered`, `action.added`, `action.closed`, `issue.opened`, `job.finished`.
+`question.answered`, `action.added`, `action.closed`, `problem.opened`, `job.finished`.
 
-Handlers may read, queue requests, file questions and open issues. They may not write records directly; anything that changes
+Handlers may read, queue requests, file questions and open automation problems. They may not write records directly; anything that changes
 knowledge goes through an op and the applier.
 
 ## 3.5 Rules every plugin follows
@@ -97,7 +99,7 @@ Enforced by the plugin host, the applier, the publisher and the self-check:
 - **Config is like core config.** `config/plugins/<plugin>.yaml`, with a schema, defaults and descriptions.
 - **Code against the API, not the internals.** Plugins import only `engine.plugin_api`. The plugin API follows semantic
   versioning; a breaking change is a new major version.
-- **Failures stay contained.** A plugin that raises becomes an `Issue`; the core and other plugins keep running. Disabling a
+- **Failures stay contained.** A plugin that raises becomes an automation `Problem`; the core and other plugins keep running. Disabling a
   plugin stops its jobs and hides its panels, and keeps its data on disk.
 - **Bundled plugins ship demo config and data** for both fictional workspaces and pass the suite against both.
 
@@ -106,7 +108,7 @@ Enforced by the plugin host, the applier, the publisher and the self-check:
 - **Enable** in `config/workspace.yaml` under `plugins.enabled`. At startup the host reads manifests, checks plugin API versions
   and dependencies, validates each plugin's config, then calls `register`.
 - **Upgrade:** record schema and config changes ship as migrations (4.0). The export is committed first and the database is
-  backed up; a failed migration restores the backup and opens an issue.
+  backed up; a failed migration restores the backup and opens an automation problem.
 - **Disable:** jobs stop, panels hide, records stay. Re-enabling picks up where it left off.
 
 ## 3.7 Worked examples
@@ -122,3 +124,39 @@ These show that the extension points cover the uses in view. They are not commit
 
 If a planned pack needs something no extension point provides, add a generic extension point to the core. Never special-case a
 pack in the core.
+
+
+## 3.8 Playbooks
+
+A playbook is the built-in know-how for one kind of work: what good looks like, written down so every run uses it. The core
+ships one for **project support** in general; every pack ships one for its field (the publishing pack for bringing a title to
+launch, 9.7). The PM's own rules (`config/rules.yaml`) sit on top of both.
+
+**What a playbook holds** (`<plugin>/playbook/`, or `engine/playbook/` for the core):
+
+| Part | What it is | Example (core) |
+|---|---|---|
+| `guidance/` | practice notes for the AI, one file per task kind or topic | how to pull every action out of minutes; how to write a question its reader can answer in one reply |
+| `rules.yaml` | default standing rules, same format as the workspace's (4.10), each with an id | "record who raised each risk" |
+| `checklists/` | templates the PM can start from | a weekly review; a meeting prep list |
+| `glossary.yaml` | seed terms for the field | (publishing) galley, ARC, ISBN, print proof |
+| `lints.yaml` | soft checks for the field, with default severities (6.7) | an action phrased as "confirm" or "check whether" |
+| `evals/` | fictional cases showing the practice applied | minutes with six actions, two of them shared |
+
+**Layers:** core playbook, then pack playbooks, then the workspace's rules. Later layers win. Each entry has an id, so the PM can
+switch one off or replace it (`config/playbooks.yaml`, 4.19). A read-back (6.7) shows when a new rule overlaps a playbook entry,
+just as it does for other rules.
+
+**Where it goes in a run:** the entries that apply to a task kind go into the stable part of the packet (6.6), after the
+instructions and before the glossary and rules, so they are cached with it.
+
+**How playbooks stay generic and get better:**
+
+- Playbook text is scanned like code and prompt templates (10.2): no names, organizations, sources or vendor names, except a
+  vendor's own plugin describing its own product.
+- Playbooks are versioned with their plugin and changed by releases, never edited in a workspace.
+- When the rules review (6.21) sees a workspace rule that would help anyone in the field, it can propose it upstream as a patch
+  and an issue for this repository, the same route as fixes to the core (6.13). Lessons from real use become better defaults.
+
+**Prompts and playbooks are different.** Prompt templates (`prompts/`) say how a task is done mechanically: the packet layout,
+the output schema, how to use ops. Playbooks say what good practice is. A new pack usually needs a playbook and no new prompts.

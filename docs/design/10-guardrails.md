@@ -41,8 +41,8 @@ plugin system adds a second failure to prevent: the core growing special cases f
    (core plus the fake connector, fake channel and clipboard), so anything that only works for one dataset or one pack fails.
 7. **Manifests:** what each plugin registers matches its manifest; declared network hosts, secrets and data levels are the only
    ones it uses.
-8. **Prompt templates:** default templates in core and bundled plugins are scanned like code (scans 1 and 3), so a source
-   written into a prompt fails the same way as one written into code.
+8. **Prompt templates and playbooks:** default templates and playbook files in core and bundled plugins are scanned like code
+   (scans 1 and 3), so a source or name written into a prompt or a playbook fails the same way as one written into code.
 9. **UI labels:** user-visible strings that name the assistant, people or groups come from config; a test renders the UI against
    both fictional workspaces.
 10. **Deployment:** hosting platform names appear only in `deploy/` and docs; every recipe's profile passes the deploy checks

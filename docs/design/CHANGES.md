@@ -87,7 +87,7 @@ changed the storage, identity and safety models underneath.
 
 | First design | Now |
 |---|---|
-| 1.1 to 1.3 | 1.1 to 1.3 (generalized beyond workplace PM; 1.4 core vs plugins and 1.5 non-goals are new) |
+| 1.1 to 1.3 | 1.1 to 1.3 (generalized beyond workplace PM; 1.4 core vs plugins, 1.5 assistant not methodology and 1.6 non-goals are new) |
 | 2.1 Layers, 2.2 Where things go | 2.1, 2.3 (2.2 repository layout and 2.4 technology are new) |
 | 3.1 to 3.10 Configuration | 4.1 to 4.10 (4.0 principles and 4.11 to 4.17 are new) |
 | 4 Data model | Part 5 |
@@ -187,4 +187,9 @@ For your information; nothing here needs an answer.
 - **Dependencies and baselines are now core** (6.23): what waits on what, need-by dates, at-risk warnings on Today, and
   variance against a baseline that only the PM can reset.
 - **Design 1.0 is the scope baseline.** Further changes go through change control (`docs/project/scope.md`).
+- **Playbooks** (3.8): built-in good practice for project support in the core and for each field in its pack, overridable
+  entry by entry. Your lessons are the core playbook's first material.
+- **Project management support** (6.24): project issues and assumptions, optional risk fields and reviews, one suggested
+  escalation for long-unanswered questions, communication cadence, meeting agendas; and **asking the assistant** (6.25) for
+  anything not built in. The automation `Issue` record is now `Problem`, so "issue" keeps its project meaning.
 

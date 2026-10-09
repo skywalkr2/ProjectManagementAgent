@@ -34,6 +34,10 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 - The product supports any AI vendor through `engine/ai/` (design 6.16). Vendor and model names appear only in adapters,
   `config/ai.yaml` and usage/evaluation reports; the rest of the code calls the provider layer with an `AiTask`.
 - Prompts live in `prompts/` templates (defaults shipped by the core and plugins, overridden by the workspace), not in code.
+- Good practice for a kind of work lives in playbooks (design 3.8): the core's for project support, each pack's for its field.
+  Not in code, not in prompt templates (those say how a task is done mechanically). The workspace's rules override playbook
+  entries by id. This is an assistant for the person running projects, not a methodology tool: build in what happens every
+  day; leave the rest to "ask the assistant" (design 6.25).
 - A new vendor is a new adapter plus config. If a feature seems to need a vendor-specific call outside an adapter, add a
   capability to the adapter interface instead.
 

@@ -23,6 +23,7 @@ Each milestone ends with tests passing against both fictional workspaces, the co
 
 2. **Walking skeleton (the first version the PM uses).** One path through the whole loop, on real work:
    - paste-in with "your note" and "pasted content" (12.2);
+   - the core playbook, first version: the guidance the `notes` task needs, organized as a playbook from the start (3.8);
    - one AI task kind (`notes`) through the provider layer with the stub adapter and the first vendor's API adapter;
    - the applier with tiers, invariants and lints for about ten ops: `source`, `note`, `fact`, `record.set`, `record.log`,
      `action.add`, `action.close`, `question.add`, `question.done`, `person.add`;
@@ -53,8 +54,8 @@ Each milestone ends with tests passing against both fictional workspaces, the co
 7. **UI shell and settings.** Panel registry with declarative panels, branding, the Settings panel generated from schemas
    (with levels and presets), the Admin tab including Quality.
 
-8. **The publishing pack** (9.6 to 9.9), the first in real use, with dependencies and baselines (6.23), using only the plugin
-   API.
+8. **The publishing pack** (9.6 to 9.9), the first in real use, with its playbook, dependencies and baselines (6.23), using
+   only the plugin API.
 
 9. **The workplace reference pack** (9.1 to 9.5) on fictional data, to prove the extension points serve a very different kind
    of work. Anything either pack needs that the API lacks becomes a generic extension point, not a special case.
@@ -63,14 +64,15 @@ Each milestone ends with tests passing against both fictional workspaces, the co
     budgets; the golden fixture set with hostile inputs (12.2) and `evaluate`. A second vendor's adapter needs no change outside
     its adapter and `config/ai.yaml` (a test proves it with two adapters).
 
-11. **Governor, scheduler, offline behavior (connectivity first, honest staleness), issues and the fixer** (merge on Apply),
+11. **Governor, scheduler, offline behavior (connectivity first, honest staleness), automation problems and the fixer** (merge on Apply),
     error classification from the runner's own streams, handoffs for code other projects own (4.18), the rules review (6.21).
 
 12. **Hosted deployment** (after the publishing pack is in daily use). Auth providers (password with a second factor, passkeys, OpenID Connect, identity-aware proxy),
     sessions, CSRF, lockout, hiding, the deploy checks, the Security panel, retention and forget-a-person, the container image
     and the first two recipes.
 
-13. **Today builder, meetings, weekly check-up, update writer.**
+13. **Today builder, meetings, weekly check-up, update writer**, and project management support (6.24): issues, assumptions,
+    risk fields and reviews, escalation suggestions, communications cadence, meeting agendas; the Ask box (6.25).
 
 14. **Real connectors and channels** (one wiki, one tracker) as plugins, configured only through config.
 

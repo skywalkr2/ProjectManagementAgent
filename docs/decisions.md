@@ -3,6 +3,24 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Playbooks, ask the assistant, and project management support
+
+**Decided by:** project owner.
+
+- **Positioning:** a project management assistant, not a PMP replacement or a methodology tool (design 1.5).
+- **Playbooks** (3.8): the core ships best-practice guidance for project support and each pack for its field, as guidance
+  files, default rules, checklists, glossary seeds, lints and evaluation cases. The workspace's rules override entries by id
+  (`config/playbooks.yaml`). Playbooks are scanned like code and change only by release; good workspace rules can be proposed
+  upstream. Impact: core playbook first version in the launch slice (it is the guidance milestone 2's notes task needs anyway,
+  organized as a playbook); publishing playbook with the publishing pack in version 1. Delays nothing.
+- **Ask the assistant** (6.25): ad hoc requests answered from the records with the playbooks, so one-off PMP work doesn't need
+  built-in features. Impact: version 1, should.
+- **Project management support** (6.24), from the PMP review, accepted into the design now because adding them after the data
+  model and screens exist would cost a migration: project issues and assumptions, optional risk fields and reviews
+  (`config/raid.yaml`), one suggested escalation for long-unanswered questions, communication cadence on people, meeting
+  agendas per attendee. The automation `Issue` record is renamed `Problem` so "issue" keeps its project meaning. Impact:
+  version 1, could (the rename is a must, being only a name). Delays nothing in the launch slice.
+
 ## 2026-10-09: Project plan, first user and design 1.0 baseline
 
 **Decided by:** project owner, after a project management review.

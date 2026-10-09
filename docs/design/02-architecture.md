@@ -106,6 +106,9 @@ committed here, as fixtures; tests copy them to a temporary folder before runnin
 | Where data is stored and backed up, and for how long | `config/storage.yaml` | export pushed to a private git remote; raw emails kept 90 days |
 | Who may see each destination, and which sources are restricted to whom | `config/workspace.yaml` `audiences`, `restrictions` | a page locked to program leads may carry restricted notes |
 | Which project owns code or tools the PM uses but this product doesn't | `config/code_owners.yaml` | dashboard requests are handed to its owner |
+| Good practice for a kind of work (how to do it well) | a playbook in the core or the pack (3.8) | how to write a follow-up; launch lead times |
+| Which playbook entries are on, off or replaced | `config/playbooks.yaml` | switch off the meeting prep checklist |
+| Which project management records and risk fields are used | `config/raid.yaml` | a personal workspace without assumptions |
 | How strict each check is | `config/checks.yaml` | blocked wording sends a changeset back instead of refusing it |
 | Packaging for a hosting platform | a recipe in `deploy/<target>/` | a container plus a reverse proxy |
 | Which AI provider and model does which task | `config/ai.yaml` | "routine tasks on provider A's small model" |

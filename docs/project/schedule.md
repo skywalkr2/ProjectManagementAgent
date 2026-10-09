@@ -22,7 +22,8 @@ and the instance lease; the readable export with the import round trip; config s
 environment variables; the specificity, provider and boundary scans; both fictional workspaces (`demo-a` a workplace, `demo-b`
 a small imprint); `cockpit serve` locally with the install token.
 
-**Part 2 (milestone 2, trimmed):** paste-in with "your note" and "pasted content"; one AI task kind for notes and messages with
+**Part 2 (milestone 2, trimmed):** paste-in with "your note" and "pasted content"; the core playbook's first version (the
+guidance the notes task needs, kept as a playbook); one AI task kind for notes and messages with
 the first vendor's API adapter and the stub adapter; the applier with tiers, invariants and lints for about ten ops (`source`,
 `note`, `fact`, `record.set`, `record.log`, `action.add`, `action.close`, `question.add`, `question.done`, `person.add`);
 names resolved to ids with "who is this?" decisions; owners as a list and held actions; undo from the ledger; the clipboard

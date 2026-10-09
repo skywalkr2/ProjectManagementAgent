@@ -60,7 +60,8 @@ Approval before anything goes out is not a setting; it is always on.
 
 People are records (5.1), not config: added by the AI with `person.add` or by the PM, edited in the app, exported to
 `data/people.json`. Fields: `full_name`, `aliases`, `role`, `team`, `org`, `how_to_reach` (per channel), `why_they_matter`,
-`track_only` (inside the tracked area but only observed), `non_working_calendar`, `verified` (spelling checked against a primary
+`track_only` (inside the tracked area but only observed), communication fields (`prefers` a channel and time, `cadence` for
+regular updates such as "weekly", `influence` and `interest`, 6.24), `non_working_calendar`, `verified` (spelling checked against a primary
 source), `status`. A person's area (tracked, a domain, or unknown) comes from their team and `config/scope.yaml` (4.4). Fictional
 workspaces ship people in `data/people.json`, imported at test time.
 
@@ -70,6 +71,10 @@ Ordered rules that choose a recipient for a question by topic, project, owner te
 `when: {topic: requirements, project_field: product_owner} then: {to: "{project.product_owner}"}`.
 A rule can say `ask_user_first` (unsure: the PM routes it). Unmatched questions go to the PM as a routing decision, never to a
 guess.
+
+`escalation`: when a question has waited a number of working days (`after`, default 5 after Mark sent), suggest one
+escalation to the configured person (`to`: the area's contact, the project owner, or a named person), at most once per
+question. The suggestion is a draft for the PM to approve or dismiss, never sent on its own (6.24).
 
 ## 4.4 `config/scope.yaml`
 
@@ -154,6 +159,8 @@ tasks:                         # which tier each AI task kind uses (defaults sho
   answer: routine
   feedback: routine
   update: deep
+  ask: deep                    # ad hoc requests to the assistant (6.25)
+  agenda: routine
   fix: code-fix
 budgets: {per_run_usd: 5, per_day_usd: 20, per_month_usd: 200}
 evaluation: {required_before_switch: true, min_score: 0.9}
@@ -311,3 +318,36 @@ owners:
 A matching request becomes a `handoff` draft (6.7), with the request, what the PM saw and links, for the PM to approve and send.
 Anything that matches nothing and needs code goes to the fixer as before.
 
+## 4.19 `config/playbooks.yaml`
+
+Which playbooks are active and how the workspace adjusts them (3.8):
+
+```yaml
+version: 1
+disabled: [core/meeting-prep-checklist]      # entries switched off, by id
+replaced:                                    # an entry replaced by one of the workspace's rules
+  core/risk-raised-by: R-31
+```
+
+Every enabled plugin's playbook is active by default. The Settings panel lists entries by playbook with their text, so the PM
+can see exactly what the assistant has been told.
+
+## 4.20 `config/raid.yaml`
+
+Which project management records and fields are in use, so a personal workspace can stay light and a workplace one can be
+thorough (6.24):
+
+```yaml
+version: 1
+records: [risks, issues, assumptions, dependencies, decisions]   # any can be left out
+risk_fields: [probability, impact, mitigation, trigger, review_by]  # optional fields, any subset
+scales:
+  probability: [low, medium, high]
+  impact: [low, medium, high]
+  score: probability_x_impact                # or none
+review:
+  risks_every: 14                            # days between reviews of an open risk (Today line)
+  assumptions_every: 30
+```
+
+Packs ship presets (the publishing preset keeps risks, issues and dependencies and leaves assumptions off).

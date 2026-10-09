@@ -33,7 +33,12 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Quality panel and private evaluation cases | won't (signals recorded only) | should | 6.20 |
 | Settings panel generated from schemas | won't | should | 4.0 |
 | Workplace pack on fictional data | won't | should | 9.1 to 9.5 |
-| Escalation rules, communications plan fields, meeting agendas, risk scoring, PM issues and assumptions | won't | could | candidate changes (below) |
+| Core playbook, first version (the guidance the notes task needs) | must | must | 3.8 |
+| Publishing playbook | won't | must | 3.8, 9.7 |
+| Ask the assistant | won't | should | 6.25 |
+| Issues and assumptions, risk fields and reviews (`raid.yaml`) | won't | could | 6.24, 4.20 |
+| Escalation suggestions, communications cadence, meeting agendas | won't | could | 6.24 |
+| Automation `Issue` renamed `Problem` | n/a (naming) | must | 5.1 |
 | Hosted mode, sign-in providers | won't | won't | Part 11 |
 | Social, email and newsletter channels | won't | won't | 3.7 |
 
@@ -44,12 +49,5 @@ adds, which horizon it lands in, and what it delays. During the November freeze 
 
 ## Candidate changes waiting for a decision
 
-From the PMP review (2026-10-09), not yet in the design:
-
-| Change | Proposed horizon |
-|---|---|
-| Escalation rules for unanswered questions (suggest one note to the area's contact or the leader after N days) | version 1, could |
-| Communication preferences and cadence on people (a communications plan; "weekly update due" on Today) | version 1, could |
-| Meeting agendas per attendee from their open questions, actions and dependencies | version 1, could |
-| Risk probability, impact, mitigation, trigger and review date as configurable fields | version 1, could |
-| PM issues and assumptions as record types; rename the automation `Issue` record so "issue" keeps its PM meaning | version 1, could |
+None. The PMP review's product suggestions were accepted into design 1.0 on 2026-10-09 (`docs/decisions.md`), built in
+version 1 as listed above.
