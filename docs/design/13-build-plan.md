@@ -24,8 +24,8 @@ Each milestone ends with tests passing against both fictional workspaces, the co
 2. **Walking skeleton (the first version the PM uses).** One path through the whole loop, on real work:
    - paste-in with "your note" and "pasted content" (12.2);
    - the core playbook, first version: the guidance the `notes` task needs, organized as a playbook from the start (3.8);
-   - one AI task kind (`notes`) through the provider layer with the stub adapter, the `openai-compatible` adapter (which also
-     reaches aggregators and local models) and one native adapter, using the PM's own key;
+   - one AI task kind (`notes`) through the provider layer with the stub adapter and the `openai-compatible` adapter, which
+     works with a key from most vendors, aggregators and local model servers, using the PM's own key;
    - the applier with tiers, invariants and lints for about ten ops: `source`, `note`, `fact`, `record.set`, `record.log`,
      `action.add`, `action.close`, `question.add`, `question.done`, `person.add`;
    - names resolved to ids, with routing decisions for unknown people (6.11); owners as a list, and held actions waiting for
@@ -61,7 +61,7 @@ Each milestone ends with tests passing against both fictional workspaces, the co
 9. **The workplace reference pack** (9.1 to 9.5) on fictional data, to prove the extension points serve a very different kind
    of work. Anything either pack needs that the API lacks becomes a generic extension point, not a special case.
 
-10. **AI breadth and evaluation.** The aggregator adapter with its catalog and routing options, `models()` from provider
+10. **AI breadth and evaluation.** Native adapters for vendors with their own API format, the aggregator adapter with its catalog and routing options, `models()` from provider
     catalogs, the Add account flow in Settings, a command-line agent adapter, capability routing, budgets, data-level routing, packet
     budgets; the golden fixture set with hostile inputs (12.2) and `evaluate`. A second vendor's adapter needs no change outside
     its adapter and `config/ai.yaml` (a test proves it with two adapters).

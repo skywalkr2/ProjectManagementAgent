@@ -3,6 +3,15 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Launch slice uses only the OpenAI-compatible adapter
+
+**Decided by:** project owner.
+
+**What:** The launch slice builds one AI adapter, `openai-compatible`, which works with a key from most vendors (including
+low-cost ones), aggregators and local model servers. Native adapters for vendors with their own API format move to version 1
+(milestone 10). **Impact:** less work before the go/no-go; any vendor is still reachable at launch, directly or through an
+aggregator. Delays nothing.
+
 ## 2026-10-09: The PM's own AI accounts, any vendor or aggregator
 
 **Decided by:** project owner.
