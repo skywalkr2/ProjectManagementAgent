@@ -23,9 +23,16 @@ Last updated: 2026-10-09.
 - [ ] Fixes only on the copy in use, nothing new.
 - [ ] Launch on 2026-12-01.
 
-## 3a. Plugin host early (from 2026-10-31, separate branch)
+## 3a. Plugin host and document features early (from 2026-10-31, separate branch, about two weeks)
 
 - [ ] Minimal plugin host: plugin API 0.x, manifests, registries, plugins working together (3.9), one example plugin.
+- [ ] Long text with versions and authorship (5.0).
+- [ ] Drafts with prose output (6.7).
+- [ ] Stages (6.26).
+- [ ] Cost control: estimates, a go above a set amount, budgets per task kind and per record (6.16).
+- [ ] Independent second opinion (6.16).
+- [ ] File channel (6.3).
+- [ ] Plugin developer guide generated from the plugin API, for plugins kept in other repositories.
 - [ ] A sandbox workspace for trying plugins, apart from the launch workspace.
 
 ## 4. Retrospective (by 2026-12-11)
@@ -39,13 +46,8 @@ Last updated: 2026-10-09.
 - [ ] **M3: scope and facts.** Scope resolver; facts looked up from configured sources, never asked (6.18, 6.19).
 - [ ] **M4: plugin host.** Finish what 3a started: the remaining `1.0` extension points and moving built-ins behind them.
 - [ ] **M5: watchers and triage.** Inputs arrive on their own instead of being pasted.
-- [ ] **M6: records, rendering and the publisher.** Drafts, Waiting to go out with diffs, plus:
-  - [ ] long text with versions and authorship (5.0)
-  - [ ] drafts with prose output (6.7)
-  - [ ] the file channel (6.3)
-  - [ ] stages (6.26)
-  - [ ] independent second opinion (6.16)
-  - [ ] cost control: estimates, a go above a set amount, budgets per task kind and per record (6.16)
+- [ ] **M6: records, rendering and the publisher.** Drafts, Waiting to go out with diffs, the publisher; the document
+  features come from 3a.
 - [ ] **M7: UI shell and settings.** Today as the home queue, first-run setup, the Settings panel, installable web app (Part 7).
 - [ ] **M8: publishing pack** in daily use (9.6 to 9.9).
 - [ ] **M9: workplace pack** on fictional data (9.1 to 9.5).

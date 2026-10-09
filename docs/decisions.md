@@ -3,19 +3,27 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
-## 2026-10-09: Plugin host built early, beside the freeze
+## 2026-10-09: Plugin host and document features built early, beside the freeze
 
 **Decided by:** project owner.
 
-**What:** A minimal plugin host (milestone 4: plugin API 0.x, manifests, registries, plugins working together, one example
-plugin) is built from 2026-10-31 on a separate development branch, ahead of milestones 3 and 5 to 7. The copy the owner uses
-for the launch stays frozen (fixes only), whatever the go/no-go outcome.
+**What:** From 2026-10-31, on a separate development branch, ahead of milestones 3, 5 and 7:
 
-**Why:** The owner wants to start building and trying plugins in a sandbox workspace during the launch run-up; the plugin
-host is the one thing every plugin needs.
+1. A minimal plugin host (milestone 4): plugin API 0.x, manifests, registries, plugins working together (3.9), one example
+   plugin.
+2. The core features for document-heavy packs (from milestone 6): long text with versions and authorship (5.0), drafts with
+   prose output (6.7), stages (6.26), cost control with estimates, a go above a set amount and budgets per task kind and per
+   record (6.16), the independent second opinion (6.16), and the file channel (6.3).
+3. A plugin developer guide generated from the plugin API: every extension point, op, event and interface schema, so a plugin
+   kept in another repository can be built against it.
 
-**Impact:** changes the build order only; no owner time required (playing is optional and never ahead of the launch). The
-plugin API stays 0.x and may change until both bundled packs run on it.
+The copy the owner uses for the launch stays frozen (fixes only), whatever the go/no-go outcome.
+
+**Why:** The owner wants to build and try plugins during the launch run-up, and plugins kept in other repositories need real,
+tested contracts to build against, not a spec that changes once it meets code.
+
+**Impact:** changes the build order only; about two weeks of build time, no owner time required (trying plugins is optional
+and never ahead of the launch). The plugin API stays 0.x and may change until both bundled packs run on it.
 
 ## 2026-10-09: Plugins work together through the core
 
