@@ -91,7 +91,22 @@ repositories, so neither ever lives in the synced folder:
   chooses which history to keep; the other is saved as a backup. Duplicate files a sync service creates on conflict are found,
   shown, and never loaded.
 - **Edits made outside:** the folder is watched (the local-folder connector). A long-text file changed in another editor comes
-  back as a change for the person to review, marked as edited outside the cockpit, never applied silently.
+  back as a proposed version (`text.propose`, 6.7) for the person to review, marked as edited outside the cockpit, never
+  applied silently.
+
+**Working copies.** People often write and edit long text in the desktop tools they already use, not in the cockpit. A plugin
+that registers a working-copy format (3.3) can hand a `long_text` field out as a file in that tool's format and take it back:
+
+- **Hand-out:** through the file channel, into the project's `working/` folder (or a configured folder without sync). The core
+  records the file's hash, the record, field and long-text version it was made from, and the format's plugin.
+- **Hand-back:** when the file changes (the watcher ignores it while its hash matches) or the person uploads a file as that
+  working copy, the core saves it as a source of the project, runs the format's `take_back` with the base version (a job, not an
+  AI task: nothing to estimate or pay for), and files the result as a `text.propose` marked "handed back from a working copy",
+  with whatever could not be mapped listed beside it.
+- **Review:** a word-level diff against the base version. If the field changed in the cockpit after the hand-out, the review is
+  three-way (base, cockpit, handed back) with a choice per passage; nothing is ever merged silently.
+- **Housekeeping:** a working copy whose base has been superseded is marked stale; one never handed back can be dropped by the
+  person with no effect on the record. Retention, data levels and the synced folder apply as for any source.
 
 This moves one workspace between computers. Sharing a single project with a different workspace (another person's install)
 is a different problem, since ids and people are per workspace; it is left for later.

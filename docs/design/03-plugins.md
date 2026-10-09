@@ -55,7 +55,8 @@ where it came from.
 | Channel | an output target | `current(target)`, `diff(current, draft)`, `send(approved_draft)`, `verify(result)`, `lock_status(target)`, `capabilities()` (versioned, pull-edits, external-editors, schedule, length limits, media) | 1.0 |
 | Record type | a kind of thing to track, or extra fields on a core record | a Pydantic model, its table, display labels, migrations, the ids it stores (for merges and deletes) | 1.0 |
 | Op type | a changeset operation | tier (data, outbound, system), required fields, `validate`, `normalize`, record types it may write, `apply`, `describe` (one readable line) | 1.0 |
-| Op validator | extra checks on an existing op, core or plugin | `validate(op, workspace) -> problems` (can refuse, never modify) | 1.0 |
+| Op validator | extra checks on an existing op, core or plugin | `validate(op, workspace) -> problems` (can refuse, never modify; a refusal counts as an invariant failure, so it must be deterministic, 6.16) | 1.0 |
+| Working-copy format | a file format people edit long text in with their own tools (5.0) | `hand_out(record, field, version) -> file` and `take_back(file, base_version) -> text, unmapped`: deterministic, no AI; anything it cannot map is reported, never dropped | 1.0 |
 | Triage matcher | a rule kind for `config/triage.yaml` | `match(change, params) -> reason or None` | 1.0 |
 | AI adapter | a kind of AI account: a vendor's native API, an aggregator, or an agent | `models()`, `run()`, `classify_error()`, `health()` (6.16) | 1.0 |
 | AI task kind | a new kind of AI work | packet builder, output (ops, or a draft for a `long_text` field, 6.7), the ops it may use (its output schema is generated from them), required capabilities, independent review or not, typical cost, default prompt template, default tier and parameters | 1.0 |

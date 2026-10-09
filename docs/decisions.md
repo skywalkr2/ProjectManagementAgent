@@ -3,6 +3,27 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Working copies, a compare view, and validators as invariants
+
+**Decided by:** project owner, answering requests from a plugin kept in another repository.
+
+**What:**
+- **Working copies** (design 5.0): a plugin can register a working-copy format (3.3) to hand a `long_text` field out as a file
+  for the person's own tools and take it back deterministically; the hand-back becomes a `text.propose` held for review,
+  three-way when the base moved, never merged silently.
+- **`text.propose` and `text.accept`** (6.7): the person's outside work waits for review like an assistant draft; accepting
+  takes per-passage choices and writes one version with authorship per passage. Plain files edited in the synced folder use
+  the same path.
+- **A compare view** (7.2): two-way and three-way review of `long_text` versions that any declarative panel can use.
+- **Validators:** an op validator's refusal counts as an invariant failure for the fix round and escalation (6.16), so
+  validators must be deterministic; judgment calls are lints.
+
+**Why:** Long documents are written in the tools people already use; the cockpit is where they review and approve. Without a
+core path, every plugin would build its own hand-back, diff and merge.
+
+**Impact:** about three days more on the early branch (from 2026-10-31), which now runs about three and a half weeks. No owner
+time. Nothing changes in the launch slice.
+
 ## 2026-10-09: Synced folder details and the manuscript contract
 
 **Decided by:** project owner, answering questions from a plugin kept in another repository.

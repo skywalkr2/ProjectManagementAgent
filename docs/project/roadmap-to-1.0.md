@@ -23,11 +23,13 @@ Last updated: 2026-10-09.
 - [ ] Fixes only on the copy in use, nothing new.
 - [ ] Launch on 2026-12-01.
 
-## 3a. Plugin host and document features early (from 2026-10-31, separate branch, about two weeks)
+## 3a. Plugin host and document features early (from 2026-10-31, separate branch, about three and a half weeks)
 
 - [ ] Minimal plugin host: plugin API 0.x, manifests, registries, plugins working together (3.9), one example plugin.
 - [ ] Long text with versions and authorship (5.0).
-- [ ] Drafts with prose output (6.7).
+- [ ] Drafts with prose output; proposed versions and accepting them per passage (6.7).
+- [ ] Compare view for long text, two-way and three-way (7.2).
+- [ ] Working copies: hand out for the person's own tools, take back, review (5.0, 3.3).
 - [ ] Stages (6.26).
 - [ ] Cost control: estimates, a go above a set amount, budgets per task kind and per record (6.16).
 - [ ] Independent second opinion (6.16).

@@ -217,3 +217,6 @@ For your information; nothing here needs an answer.
 - **Synced folder details** (5.0, 9.7): projects can nest (a series and its titles) and their folders nest too; sources
   travel with their project; the cockpit ignores its own files when watching; authorship has three kinds; the publishing
   pack defines `publishing/manuscript-source@1` so any plugin that produces finished manuscripts can start a launch.
+- **Working copies and review** (5.0, 6.7, 7.2): long text can be handed out as a file for the person's own tools and taken
+  back for review; the person's outside work and the assistant's drafts both wait as proposed versions, accepted passage by
+  passage in a two-way or three-way compare view. An op validator's refusal counts as an invariant failure (6.16).

@@ -121,6 +121,14 @@ approves it. Factual statements inside a draft that the task kind declares check
 research finding) still need evidence, listed beside the draft. A task kind says which it produces: ops (extraction) or a
 draft.
 
+**Proposed versions and accepting them.** Two ops create a pending version of a `long_text` field: `text.draft` (written by
+the assistant) and `text.propose` (the person's own work arriving from outside the cockpit: a handed-back working copy or a
+plain file edited in the synced folder, 5.0). Both wait for review. `text.accept` takes the per-passage choices from the
+review (accept or reject each change; with a three-way review, which side each passage comes from) and writes one new
+version, keeping authorship per passage (5.0): accepted passages from a proposal count as written by the person, accepted
+passages from a draft as drafted or changed by the assistant. Rejecting everything discards the pending version. Each is in
+the ledger and can be undone.
+
 **Prose output.** For a draft, the model writes plain prose, not prose packed inside JSON, which long outputs and cheaper
 models get wrong. The core wraps the text into the `text.draft` op itself, and the applier checks it like any other change
 (target, length limits, never-shown words, wording lints). A draft that would end mid-sentence because the model hit its output
@@ -448,7 +456,9 @@ When the common format lacks structured output for a model, the adapter asks for
 
 **Escalate on failure, not on price.** Cheap models do most of the work; a tier can name `escalate_to` (another tier). When a
 run's changeset still fails an invariant after its one fix round, or would be held for a lint, the request is re-run once on the
-escalation tier before the PM sees it. The decision uses deterministic signals only (check failures, evidence that doesn't match,
+escalation tier before the PM sees it. A refusal from an op validator (3.3), core or plugin, counts as an invariant failure here, with the
+validator's reasons sent in the fix round; validators must therefore be deterministic, and a check that needs judgment is a
+lint with a severity instead. The decision uses deterministic signals only (check failures, evidence that doesn't match,
 unresolved names, a truncated packet), never the model's own confidence. Each `Run` records which tier produced the accepted
 answer, so the quality panel (6.20) shows where the cheap model is enough. A config that maps a task kind to a provider that
 lacks a required capability fails the self-check.
