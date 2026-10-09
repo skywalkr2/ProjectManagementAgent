@@ -27,7 +27,7 @@ real-world tested with a live AI account. See the plan in [`docs/project/`](docs
 
 ## Try it
 
-Needs Python 3.12 or newer with [uv](https://docs.astral.sh/uv/), and Node 22 with npm for the web UI.
+Needs Python 3.12 or newer with [uv](https://docs.astral.sh/uv/), and Node 22.12 or newer with npm for the web UI.
 
 ```
 uv sync
