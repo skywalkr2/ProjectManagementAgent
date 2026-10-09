@@ -49,6 +49,15 @@ MY_AI_KEY=... uv run cockpit evaluate --from workspaces/demo-b --ai-config /tmp/
     --account <provider>/<model> --runs 3
 ```
 
+Your own workspace lives outside this repository (keep it on local disk, not in a synced folder):
+
+```
+uv run cockpit init ~/cockpit/my-press --you "Your Name" --name "My Press" --assistant "Quill"
+```
+
+Then copy the AI account setup into its `config/ai.yaml`, run `cockpit ai test`, start it with `cockpit serve`, and add
+your people and projects under **People & projects**.
+
 Checks, run before finishing any change:
 
 ```

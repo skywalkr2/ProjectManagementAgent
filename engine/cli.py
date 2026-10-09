@@ -41,6 +41,9 @@ def _parser() -> argparse.ArgumentParser:
     sp.add_argument("path", type=Path)
     sp.add_argument("--from", dest="template", type=Path, help="copy config and data from this workspace (a fixture)")
     sp.add_argument("--no-git", action="store_true", help="don't make the workspace a git repository")
+    sp.add_argument("--you", help="your full name: you become the first person and the workspace's user")
+    sp.add_argument("--name", help="the workspace's display name")
+    sp.add_argument("--assistant", help="the assistant's display name")
     sp.set_defaults(func=cmd_init)
 
     sp = sub.add_parser("serve", help="run the app on this computer")
@@ -96,7 +99,9 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def cmd_init(args: argparse.Namespace) -> int:
-    ws = init_workspace(args.path, template=args.template, git=not args.no_git)
+    ws = init_workspace(
+        args.path, template=args.template, git=not args.no_git, you=args.you, name=args.name, assistant=args.assistant
+    )
     store = Store(ws.db_path)
     try:
         count = sum(len(store.read().list(kind)) for kind in store.read().kinds())

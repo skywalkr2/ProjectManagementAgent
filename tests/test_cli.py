@@ -92,3 +92,20 @@ def test_backup_needs_a_target_then_copies(tmp_path, demo, capsys, monkeypatch):
     assert main(["backup", "-w", str(ws)]) == 0
     assert len(list((tmp_path / "offsite").iterdir())) == 1
     assert "Backed up" in capsys.readouterr().out
+
+
+def test_a_fresh_workspace_knows_who_you_are(tmp_path):
+    target = tmp_path / "mine"
+    assert (
+        main(["init", str(target), "--no-git", "--you", "Pat Example", "--name", "My Press", "--assistant", "Ada"]) == 0
+    )
+    from engine.workspace import Workspace
+
+    ws = Workspace(target)
+    cfg = ws.config(env={})
+    store = Store(ws.db_path)
+    me = store.read().get("person", cfg.workspace.user.person)
+    store.close()
+    assert me.data["full_name"] == "Pat Example" and cfg.workspace.user.full_name == "Pat Example"
+    assert cfg.workspace.name == "My Press" and cfg.workspace.assistant_name == "Ada"
+    assert "# " in (target / "config" / "workspace.yaml").read_text()

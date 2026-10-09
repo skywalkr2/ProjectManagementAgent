@@ -94,11 +94,12 @@ def defaults() -> dict[str, FileModel]:
     return {name: model() for name, model in FILES.items()}
 
 
-def render_default_file(name: str) -> str:
-    """The YAML text of a config file at its defaults, with every key's description as a comment above it."""
+def render_default_file(name: str, values: FileModel | None = None) -> str:
+    """The YAML text of a config file (at its defaults, or with the given values), with every key's description as a
+    comment above it."""
     model = FILES[name]
     lines = [f"# {name}.yaml: every key has a default; delete a key to go back to it."]
-    lines += _render_model(model(), model, 0)
+    lines += _render_model(values if values is not None else model(), model, 0)
     return "\n".join(lines) + "\n"
 
 

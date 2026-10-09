@@ -76,24 +76,36 @@ def resolve(path: str | os.PathLike[str] | None) -> Workspace:
     return Workspace(root)
 
 
-def init_workspace(path: Path, *, template: Path | None = None, git: bool = True) -> Workspace:
+def init_workspace(
+    path: Path,
+    *,
+    template: Path | None = None,
+    git: bool = True,
+    you: str | None = None,
+    name: str | None = None,
+    assistant: str | None = None,
+) -> Workspace:
     """Create a workspace folder and its database. With a template, copy its config and data and load the data;
-    otherwise write default config files. The new workspace is committed to its own git repository."""
+    otherwise write default config files. Without a template, `you` (the PM's full name) becomes the first person and
+    the workspace's user, and `name` and `assistant` set the display names. The new workspace is committed to its own
+    git repository."""
+    if template is not None and (you or name or assistant):
+        raise WorkspaceError("Your name and the workspace's names come from the template; leave them out with --from.")
     root = path.expanduser().resolve()
     if root.exists() and any(root.iterdir()):
         raise WorkspaceError(f"{root} isn't empty. Choose a new folder for the workspace.")
     root.mkdir(parents=True, exist_ok=True)
     ws = Workspace(root)
     if template is not None:
-        for name in ("config", "data", "prompts", "docs"):
-            src = template / name
+        for folder in ("config", "data", "prompts", "docs"):
+            src = template / folder
             if src.is_dir():
-                shutil.copytree(src, root / name)
+                shutil.copytree(src, root / folder)
     ws.config_dir.mkdir(exist_ok=True)
-    for name in FILES:
-        target = ws.config_dir / f"{name}.yaml"
+    for file_name in FILES:
+        target = ws.config_dir / f"{file_name}.yaml"
         if not target.exists():
-            target.write_text(render_default_file(name), encoding="utf-8")
+            target.write_text(render_default_file(file_name), encoding="utf-8")
     ws.data_dir.mkdir(exist_ok=True)
     ws.sources_dir.mkdir(exist_ok=True)
     (root / ".gitignore").write_text(WORKSPACE_GITIGNORE, encoding="utf-8")
@@ -105,7 +117,29 @@ def init_workspace(path: Path, *, template: Path | None = None, git: bool = True
         if any(ws.data_dir.glob("*.json")):
             import_data(store, ws.data_dir)
             export_data(store, ws.data_dir)
+        if template is None and (you or name or assistant):
+            _set_identity(ws, store, you, name, assistant)
+            export_data(store, ws.data_dir)
     finally:
         store.close()
     commit_export(root, "Create workspace")
     return ws
+
+
+def _set_identity(ws: Workspace, store: Store, you: str | None, name: str | None, assistant: str | None) -> None:
+    """Make the PM the first person and write the workspace's names into config/workspace.yaml."""
+    from engine.config.schema import UserSettings, WorkspaceFile
+    from engine.storage import WriteContext
+
+    settings = WorkspaceFile()
+    if you:
+        with store.transaction() as tx:
+            person = tx.create(
+                "person", {"full_name": you.strip()}, WriteContext(actor="pm", trust="trusted", op="init")
+            )
+        settings.user = UserSettings(person=person.id, full_name=you.strip())
+    if name:
+        settings.name = name.strip()
+    if assistant:
+        settings.assistant_name = assistant.strip()
+    (ws.config_dir / "workspace.yaml").write_text(render_default_file("workspace", settings), encoding="utf-8")
