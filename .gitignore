@@ -26,3 +26,8 @@ web/dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Workspace runtime files (also inside the committed demo workspaces)
+cockpit.db
+cockpit.db-*
+.cockpit/

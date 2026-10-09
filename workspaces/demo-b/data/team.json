@@ -1,0 +1,19 @@
+[
+  {
+    "id": "TEAM-1",
+    "members": [
+      "PER-1",
+      "PER-2",
+      "PER-5"
+    ],
+    "name": "Lantern Editorial"
+  },
+  {
+    "id": "TEAM-2",
+    "members": [
+      "PER-3",
+      "PER-4"
+    ],
+    "name": "Lantern Design and Type"
+  }
+]

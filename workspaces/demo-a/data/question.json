@@ -1,0 +1,27 @@
+[
+  {
+    "id": "Q-1",
+    "links": [
+      {
+        "label": "Migration status page",
+        "url": "https://wiki.example.com/pages/1340"
+      }
+    ],
+    "projects": [
+      "PRJ-2"
+    ],
+    "text": "The migration page still shows the September run as in progress.",
+    "title": "Invoice Engine Migration: is the September reconciliation run complete?",
+    "to": "PER-4"
+  },
+  {
+    "id": "Q-2",
+    "kind": "decision",
+    "projects": [
+      "PRJ-1"
+    ],
+    "text": "The load-test plan won't be reviewed before the December freeze.",
+    "title": "Route Optimizer Rollout: move the cut-over to the January window?",
+    "to": "PER-1"
+  }
+]

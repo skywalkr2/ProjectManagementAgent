@@ -1,0 +1,18 @@
+# Names of AI vendors and aggregators. The provider scan fails if any of these appears in code outside this package.
+# Keep lowercase; matching is case-insensitive and by whole word.
+vendors:
+  - anthropic
+  - claude
+  - openai
+  - gpt
+  - chatgpt
+  - xai
+  - grok
+  - openrouter
+  - deepseek
+  - gemini
+  - mistral
+  - llama
+  - ollama
+  - groq
+  - cohere

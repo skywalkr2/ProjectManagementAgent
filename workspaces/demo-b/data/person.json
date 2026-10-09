@@ -1,0 +1,61 @@
+[
+  {
+    "full_name": "Avery Lane",
+    "id": "PER-1",
+    "org": "Lantern House",
+    "role": "Publisher",
+    "team": "TEAM-1"
+  },
+  {
+    "aliases": [
+      "Maya"
+    ],
+    "full_name": "Maya Okafor",
+    "how_to_reach": {
+      "email": "maya.okafor@example.org"
+    },
+    "id": "PER-2",
+    "org": "Lantern House",
+    "role": "Editor",
+    "team": "TEAM-1"
+  },
+  {
+    "aliases": [
+      "Theo"
+    ],
+    "full_name": "Theo Brandt",
+    "id": "PER-3",
+    "role": "Cover designer",
+    "team": "TEAM-2"
+  },
+  {
+    "full_name": "Sam Rivera",
+    "id": "PER-4",
+    "role": "Typesetter",
+    "team": "TEAM-2"
+  },
+  {
+    "aliases": [
+      "Ines"
+    ],
+    "full_name": "Ines Duarte",
+    "id": "PER-5",
+    "role": "Publicist",
+    "team": "TEAM-1"
+  },
+  {
+    "full_name": "Jun Park",
+    "id": "PER-6",
+    "org": "Harrowgate Print Works",
+    "role": "Printer account contact"
+  },
+  {
+    "aliases": [
+      "Maya"
+    ],
+    "full_name": "Maya Lindqvist",
+    "id": "PER-7",
+    "org": "Corner Lamp Books",
+    "role": "Bookshop events coordinator"
+  }
+]

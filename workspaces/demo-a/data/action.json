@@ -1,0 +1,48 @@
+[
+  {
+    "due": "2026-10-20",
+    "id": "ACT-1",
+    "owners": [
+      {
+        "person": "PER-3",
+        "team": "TEAM-1"
+      }
+    ],
+    "project": "PRJ-1",
+    "text": "Publish the cut-over runbook"
+  },
+  {
+    "due": "2026-10-16",
+    "id": "ACT-2",
+    "owners": [
+      {
+        "person": "PER-4",
+        "team": "TEAM-2"
+      }
+    ],
+    "project": "PRJ-2",
+    "text": "Share the reconciliation test results"
+  },
+  {
+    "due": "2026-10-14",
+    "id": "ACT-3",
+    "owners": [
+      {
+        "person": "PER-2",
+        "team": "TEAM-3"
+      },
+      {
+        "person": "PER-5",
+        "team": "TEAM-1"
+      }
+    ],
+    "project": "PRJ-1",
+    "text": "Review the load-test plan"
+  },
+  {
+    "id": "ACT-4",
+    "project": "PRJ-1",
+    "status": "held",
+    "text": "Book the cut-over war room"
+  }
+]

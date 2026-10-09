@@ -1,0 +1,5 @@
+version: 1
+backend: sqlite
+export:
+  every_minutes: 60
+  commit: true

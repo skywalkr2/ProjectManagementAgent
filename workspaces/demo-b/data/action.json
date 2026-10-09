@@ -1,0 +1,44 @@
+[
+  {
+    "due": "2026-10-16",
+    "id": "ACT-1",
+    "owners": [
+      {
+        "person": "PER-4"
+      }
+    ],
+    "project": "PRJ-1",
+    "text": "Send the final interior file to the printer"
+  },
+  {
+    "due": "2026-10-14",
+    "id": "ACT-2",
+    "owners": [
+      {
+        "person": "PER-2"
+      },
+      {
+        "person": "PER-5"
+      }
+    ],
+    "project": "PRJ-1",
+    "text": "Agree on the back-cover copy"
+  },
+  {
+    "id": "ACT-3",
+    "owners": [
+      {
+        "person": "PER-5"
+      }
+    ],
+    "project": "PRJ-1",
+    "status": "done",
+    "text": "Choose the advance-copy reviewer list"
+  },
+  {
+    "id": "ACT-4",
+    "project": "PRJ-1",
+    "status": "held",
+    "text": "Book a photographer for the launch reading"
+  }
+]

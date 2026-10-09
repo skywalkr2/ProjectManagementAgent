@@ -1,0 +1,11 @@
+# Fictional small imprint workspace (fixture). Every name here is invented.
+version: 1
+name: Lantern House
+assistant_name: Quill
+user:
+  full_name: Avery Lane
+  aliases: [me]
+  timezone: America/New_York
+owner_format: "{full_name}"
+plugins:
+  enabled: []

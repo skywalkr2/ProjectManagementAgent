@@ -1,0 +1,26 @@
+[
+  {
+    "id": "Q-1",
+    "links": [
+      {
+        "label": "Book page",
+        "url": "https://books.example.org/salt-orchard"
+      }
+    ],
+    "projects": [
+      "PRJ-1"
+    ],
+    "title": "The Salt Orchard: is the acknowledgments page final, or are more names coming?",
+    "to": "PER-2"
+  },
+  {
+    "id": "Q-2",
+    "kind": "decision",
+    "projects": [
+      "PRJ-1"
+    ],
+    "text": "Soft-touch adds about three working days to finishing.",
+    "title": "Cover finish for the hardcover: matte or soft-touch?",
+    "to": "PER-1"
+  }
+]

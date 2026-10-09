@@ -1,0 +1,31 @@
+[
+  {
+    "group": "Freight Platform",
+    "id": "PRJ-1",
+    "links": [
+      {
+        "label": "Rollout status page",
+        "url": "https://wiki.example.com/pages/1201"
+      }
+    ],
+    "name": "Route Optimizer Rollout",
+    "owner": "PER-3",
+    "status": "On track",
+    "target": "2026-12-15"
+  },
+  {
+    "group": "Customer Billing",
+    "id": "PRJ-2",
+    "name": "Invoice Engine Migration",
+    "owner": "PER-4",
+    "status": "At risk",
+    "target": "2027-02-01"
+  },
+  {
+    "group": "Freight Platform",
+    "id": "PRJ-3",
+    "name": "Carrier Portal Refresh",
+    "owner": "PER-6",
+    "status": "Not started"
+  }
+]

@@ -1,0 +1,16 @@
+[
+  {
+    "group": "Winter List",
+    "id": "PRJ-1",
+    "links": [
+      {
+        "label": "Book page",
+        "url": "https://books.example.org/salt-orchard"
+      }
+    ],
+    "name": "The Salt Orchard launch",
+    "owner": "PER-1",
+    "status": "On track",
+    "target": "2026-12-01"
+  }
+]

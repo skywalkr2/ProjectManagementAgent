@@ -19,7 +19,20 @@ storage are all settings, so you can change an installation without changing cod
 
 ## Status
 
-Design 1.0 is complete. Building starts with a small first slice; see the plan in [`docs/project/`](docs/project/).
+Design 1.0 is complete. The first half of the launch slice is built: the database with its change log, export and import,
+configuration, the self-check, two fictional workspaces and a local server. See the plan in [`docs/project/`](docs/project/).
+
+## Try it
+
+Needs Python 3.12 or newer and [uv](https://docs.astral.sh/uv/).
+
+```
+uv sync
+uv run cockpit init /tmp/lantern --from workspaces/demo-b   # a fictional imprint
+uv run cockpit serve --workspace /tmp/lantern               # prints a link to open
+uv run python -m engine.selfcheck                           # the product's own checks
+uv run pytest
+```
 
 ## Documents
 

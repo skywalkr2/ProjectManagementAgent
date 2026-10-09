@@ -46,9 +46,10 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 
 ## Stack and commands
 - Python 3.12+ with uv, FastAPI, Pydantic v2, pytest, ruff. Web: React + TypeScript with Vite and Vitest.
-- `uv run pytest` · `uv run ruff check .` · `uv run python -m engine.selfcheck` · `npm --prefix web test` ·
-  `npm --prefix web run build`
-- These exist from build milestone 1 (design 13.1). Until then, say which checks you could not run.
+- `uv run pytest` · `uv run ruff check .` · `uv run ruff format --check .` · `uv run python -m engine.selfcheck`
+- Web checks (`npm --prefix web test`, `npm --prefix web run build`) exist once the UI lands (launch slice part 2).
+- Try it: `uv run cockpit init /tmp/ws --from workspaces/demo-b` then `uv run cockpit serve -w /tmp/ws`.
+- Tests read names and ids from the fixtures instead of writing them out, so the specificity scan holds for tests too.
 
 ## Deployment and configuration
 - The same code runs locally or hosted (design Part 11); every difference is a setting, never a check for a host in code.
