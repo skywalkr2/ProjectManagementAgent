@@ -177,7 +177,6 @@ tiers:                           # what the work needs, mapped to provider/model
   routine:  {use: my-anthropic/small, fallback: [router/small, local/small]}
   deep:     {use: my-anthropic/large, fallback: [my-openai/large]}
   vision:   {use: router/vision}               # screenshots and images
-  code-fix: {use: coding-agent}
 tasks:                         # which tier each AI task kind uses (defaults shown; plugin kinds use their declared default)
   change: routine
   notes: routine
@@ -186,7 +185,6 @@ tasks:                         # which tier each AI task kind uses (defaults sho
   update: deep
   ask: deep                    # ad hoc requests to the assistant (6.25)
   agenda: routine
-  fix: code-fix
 budgets: {per_run_usd: 5, per_day_usd: 20, per_month_usd: 200}   # across all accounts; per-provider budgets optional
 prices: {}                     # overrides for models whose price the provider's catalog doesn't give
 evaluation: {required_before_switch: true, min_score: 0.9}
@@ -196,8 +194,8 @@ evaluation: {required_before_switch: true, min_score: 0.9}
 
 Batch size, immediate-run kinds, timeouts, attempts; `max_input` per task kind (the packet size budget, 6.6); `open_items.compact_share` (share of the budget the open-items list
 may use before other projects' actions switch to compact form, default 0.4); governor thresholds (stuck after N minutes, stale after N hours, outage
-when more than N keys fail); `fixer`: `union_merge` (file patterns merged by union on Apply, default `["*.md"]`) and
-`redo_attempts` (how many times a conflicting fix is redone before it goes to the PM, default 2).
+when more than N keys fail); `reports`: where reports to the product's maintainers go (`clipboard` by default, or a channel and
+target the PM configures, such as an issue tracker form) (6.13).
 
 ## 4.10 `config/rules.yaml`
 
@@ -330,7 +328,7 @@ listed and can't be lowered. Plugins register their own lints with defaults here
 ## 4.18 `config/code_owners.yaml`
 
 Which project owns which code or tool, so a request about something the PM uses but this product doesn't own (a dashboard that
-reads the published pages, a script another team runs) goes to its owner instead of the fixer:
+reads the published pages, a script another team runs) goes to its owner as a handoff:
 
 ```yaml
 version: 1
@@ -342,7 +340,7 @@ owners:
 ```
 
 A matching request becomes a `handoff` draft (6.7), with the request, what the PM saw and links, for the PM to approve and send.
-Anything that matches nothing and needs code goes to the fixer as before.
+Anything that matches nothing and needs code is about this product, and becomes a report to its maintainers (6.13).
 
 ## 4.19 `config/playbooks.yaml`
 

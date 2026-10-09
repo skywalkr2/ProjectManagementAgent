@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: No code fixer in the product
+
+**Decided by:** project owner.
+
+**What:** The AI code fixer is removed from the product entirely, in every horizon. The product never writes or applies changes
+to its own code or to a workspace's plugins. Automation problems are recorded and explained; a problem the PM wants looked at,
+or a request no op can do, becomes a report (`dev.request`, now an outbound op) that the PM approves and sends to the
+maintainers through a configured route (clipboard by default). Requests about other projects' code remain handoffs. The
+`code-fix` tier, the `fix` task kind, `fixer` config, the merge-on-Apply machinery and proposed-fix UI are gone; the "Fix it"
+button becomes "Draft a report".
+
+**Why:** The fixer was something the owner wanted for their own development, not something people installing the product should
+have: an AI changing installed code can break installations in ways their owners can't diagnose. Development happens in this
+repository with the developer's own tools, outside any installation. **Impact:** removes a milestone 11 feature; simplifies
+the core and the security model. Supersedes the fixer parts of the earlier entries ("Fixes merge on Apply", "The fixer changes
+the workspace, not the product", "A code fix is the last resort"), whose lessons still apply to any developer tool built later.
+
 ## 2026-10-09: Launch slice uses only the OpenAI-compatible adapter
 
 **Decided by:** project owner.

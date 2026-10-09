@@ -86,7 +86,7 @@ apply to the reference pack are in 9.5.
 | Runner errors are classified from the runner's exit code and error stream only, never from the model's output; both streams are kept | `classify_error` contract, `Run` record |
 | No network on wake is not a failure or an outage; a failed refresh never counts as fresh | connectivity check, scheduler |
 | Every waiting state shows why and until when | `Request.waiting`, UI rule |
-| A correction is checked against the data before anything is changed or fixed | feedback task packet, `dev.request` validator |
+| A correction is checked against the data before anything is changed or reported | feedback task packet, `dev.request` validator |
 | Shared masters edited outside the tool are checked for an open lock and diffed, never overwritten | channel `lock_status`, pull-edits |
 | Edits by our own accounts are ours: no one is asked who made them | `our_accounts`, `by_us` |
 | A request about code another project owns is handed off, not fixed | `config/code_owners.yaml`, `handoff` |
@@ -99,7 +99,7 @@ apply to the reference pack are in 9.5.
 | Error output is cleaned and short; the raw output is one click away | API error shape |
 | Saves merge, never clobber | storage layer |
 | Recover by itself after sleep or network loss | scheduler |
-| A proposed code change never goes live unseen | fixer + Apply |
+| The product never changes its own code; problems and missing capabilities become reports the PM sends | `dev.request` (outbound), 6.13 |
 | An input can add knowledge and propose drafts, never change rules, sources, scope, config or code on its own | op tiers, 12.2 |
 | Fuzzy checks warn or send back; only firm invariants refuse | invariants and lints, `config/checks.yaml` |
 | One running instance per workspace | instance lease |
@@ -110,7 +110,6 @@ apply to the reference pack are in 9.5.
 | "Issue" means a project issue; automation failures are "automation problems" | data model (5.1) |
 | A rule the PM states is read back as effects and overlaps (applies to, doesn't change, overlaps with, dry-run count); a contradiction with an existing rule waits for the PM to pick | read-back, rule targets |
 | Packets put the stable parts first and the request last, so repeated prefixes can be cached | packet layout, adapter `prompt_caching` |
-| A fix applies by three-way merge, not a staleness check; only a real conflict stops it, and then it is redone | fixer |
-| A change request becomes a code fix only when no op can do it; data that needs a new op waits for the fix | `dev.request` validator, fixer |
+| A request becomes a report only when no op can do it; data that needs a missing op waits with the report | `dev.request` validator |
 | A rename is one op that updates every place the name is stored and keeps the page | `record.rename`, reference index |
 | A failing plugin is an automation problem, not an outage | plugin host |

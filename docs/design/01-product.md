@@ -51,7 +51,7 @@ configuration.
 | Questions, actions, meetings, people and ids, the ledger and undo | Kinds of things to track and extra fields on core records (record types) |
 | The AI provider layer: routing, fallbacks, budgets, evaluation | Domain ops, triage matchers, AI task kinds and their prompts |
 | The approval gate, diffs, the publisher | Templates and renderers for pages, posts and messages |
-| Scheduler, governor, automation problems and the fixer | UI panels, Today lines, scheduled jobs, lookups, event handlers |
+| Scheduler, governor, automation problems and reports | UI panels, Today lines, scheduled jobs, lookups, event handlers |
 | UI shell and core panels | Vendor adapters for AI models and for outside services |
 | Plugin host, config schemas, self-check | Packs: bundles of the above for one kind of work |
 
@@ -74,6 +74,9 @@ happens every day; everything else is a question away.
 
 - **Autonomous sending.** Nothing goes out without the PM approving the exact content. A scheduled post is approved content
   that the PM scheduled; the cockpit never decides on its own to send.
+- **Changing its own code.** The product never writes or applies code changes to itself. A problem the automation can't solve,
+  or a request no op can do, becomes a report the PM approves and sends to the maintainers (6.13). Developing the product is
+  done in its repository, with whatever tools the developer chooses, outside any installation.
 - **Multi-tenant hosting.** One deployment serves one workspace. It runs on the PM's own machine or on a web host the PM
   controls (Part 11), never as a shared service holding several customers' data. Storage sits behind a repository layer so a
   multi-user build can come later without rewriting the engine.

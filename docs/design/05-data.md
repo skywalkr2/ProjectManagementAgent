@@ -68,7 +68,7 @@ the project's name. Renaming is then one field (6.7), and there is nothing to no
 | `Changeset` | id, change id?, request id?, summary, ops[] (each with an optional `group`, 6.7), read_back (applies to, doesn't change, overlaps, dry-run count; 6.7), status (applied, rejected, held, undone, proposed, discarded), problems[] (invariants and lints, 6.7), dismissed, quiet, feedback[] |
 | `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result |
 | `Rule` | id, text, applies_to (task kinds, record types and fields, filter), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) (4.10) |
-| `Problem` | an automation problem (not a project issue): id, summary, detail, plugin (when one raised it), status (open, fix-requested, fixing, fix-proposed, fixed, closed), fix (proposed diff with originals, 6.13) |
+| `Problem` | an automation problem (not a project issue): id, summary, detail, plugin (when one raised it), status (open, reported, resolved, dismissed), report (the drafted report, if one was sent, 6.13) |
 | `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), exit code, error stream (kept apart from the output), outcome |
 | `Dependency` | id, from (the record that waits), on (the record it waits for; may be in another domain), need_by, status (on track, at risk, late, done), impact question id (6.18), notes (6.23) |
 | `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, patterns (how compound ids split) (6.22) |

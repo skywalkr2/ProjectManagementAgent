@@ -96,7 +96,8 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 - Scope is enforced, not suggested (design 6.18): only the tracked area gets actions and detailed questions. Other areas are
   observed; at most one impact question goes to that area's contact. Scope decisions come from the scope resolver only.
 - Facts a configured source holds (releases, schedule dates) are looked up, never asked (design 6.19); none found means TBD.
-- Ids never repeat. A rename is one op that updates every reference. A code fix is the last resort, used only when no op can do it.
+- Ids never repeat. A rename is one op that updates every reference. The product never changes its own code: a request no op can do becomes a
+  report the PM sends to the maintainers (design 6.13). Developing the product happens in this repository, outside any install.
 - Rules before AI; never let two versions of a change race; saves merge, never clobber; recover after sleep and outages.
 
 ## Demo data

@@ -26,7 +26,7 @@ send…"). The model can't be relied on to tell instructions from content, so th
   untrusted parts (6.6), and every request records whether it came from an input, the PM or a schedule.
 - **Tiers, not judgment.** What an input can cause is limited by op tier (6.7): it can add knowledge (data ops) and produce
   drafts that wait for approval (outbound ops). It can never change rules, watched sources, scope, facts sources, config,
-  plugins or code (system ops) without the PM confirming the exact change, with the prompting source shown beside it. System
+  or plugins (system ops); and nothing can change the product's code at all (6.13) without the PM confirming the exact change, with the prompting source shown beside it. System
   ops from the PM's own note apply at once with a read-back and Undo; the risk there is misreading, not injection.
 - **Untrusted text doesn't become structure on its own.** An address, a name or a URL that appears only in untrusted content
   can't become a new recipient, a new person, a new watched source or a rule without passing through a hold and the PM.

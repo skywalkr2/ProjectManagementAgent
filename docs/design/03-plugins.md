@@ -156,7 +156,7 @@ instructions and before the glossary and rules, so they are cached with it.
   vendor's own plugin describing its own product.
 - Playbooks are versioned with their plugin and changed by releases, never edited in a workspace.
 - When the rules review (6.21) sees a workspace rule that would help anyone in the field, it can propose it upstream as a patch
-  and an issue for this repository, the same route as fixes to the core (6.13). Lessons from real use become better defaults.
+  and an issue for this repository, the same route as other reports to the maintainers (6.13). Lessons from real use become better defaults.
 
 **Prompts and playbooks are different.** Prompt templates (`prompts/`) say how a task is done mechanically: the packet layout,
 the output schema, how to use ops. Playbooks say what good practice is. A new pack usually needs a playbook and no new prompts.

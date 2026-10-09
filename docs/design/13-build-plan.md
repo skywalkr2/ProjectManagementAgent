@@ -66,7 +66,7 @@ Each milestone ends with tests passing against both fictional workspaces, the co
     budgets; the golden fixture set with hostile inputs (12.2) and `evaluate`. A second vendor's adapter needs no change outside
     its adapter and `config/ai.yaml` (a test proves it with two adapters).
 
-11. **Governor, scheduler, offline behavior (connectivity first, honest staleness), automation problems and the fixer** (merge on Apply),
+11. **Governor, scheduler, offline behavior (connectivity first, honest staleness), automation problems and reports**,
     error classification from the runner's own streams, handoffs for code other projects own (4.18), the rules review (6.21).
 
 12. **Hosted deployment** (after the publishing pack is in daily use). Auth providers (password with a second factor, passkeys, OpenID Connect, identity-aware proxy),

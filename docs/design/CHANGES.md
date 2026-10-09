@@ -194,4 +194,8 @@ For your information; nothing here needs an answer.
   anything not built in. The automation `Issue` record is now `Problem`, so "issue" keeps its project meaning.
 - **AI accounts** (6.16, 4.8): the PM's own accounts with any vendor, any OpenAI-compatible endpoint (including local models),
   aggregators such as OpenRouter, or command-line agents; capabilities and prices are per model, from provider catalogs.
+- **No code fixer in the product.** Your fixer lessons (merge on Apply, one place per fix, last resort) shaped the design, but
+  the product no longer changes its own code at all: an AI rewriting installed code is too risky for people who install it.
+  Automation problems are explained on their card and can become a report the PM sends to the maintainers (6.13). Development
+  happens in the repository with the developer's own tools.
 

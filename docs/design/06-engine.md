@@ -101,7 +101,7 @@ Every op type declares a tier. The tier, not the model's judgment, decides what 
 |---|---|---|
 | `data` | records knowledge: sources, notes, facts, records, actions, questions (filed, not sent), meetings, decisions | yes, after checks |
 | `outbound` | creates drafts for a channel | it creates the draft; sending always needs the PM's approval of the exact content (6.12) |
-| `system` | changes how the product behaves: standing rules, watched sources, scope, facts sources, any config key, plugins, code | from the PM's own note: yes, at once, with a read-back and Undo; from an input or the assistant's own initiative: **never**, the PM confirms |
+| `system` | changes how the product behaves: standing rules, watched sources, scope, facts sources, any config key, plugins | from the PM's own note: yes, at once, with a read-back and Undo; from an input or the assistant's own initiative: **never**, the PM confirms |
 
 A system op in a changeset whose request came from an input (an email, a page, a reply) or from the assistant's own initiative
 (a scheduled review, a suggestion) is held and becomes one decision for the PM showing exactly what would change and the source
@@ -136,11 +136,11 @@ Data: `source`, `note`, `fact`, `record.set`, `record.add`, `record.del`, `recor
 `person.merge`, `dependency.add`, `dependency.update`, `issue.add`, `issue.update`, `issue.resolve`, `risk.realize` (a risk
 that came true becomes an issue linked to it), `assumption.add`, `assumption.update`, `meeting.agenda`, `glossary.add`, `glossary.update`, `lesson.add`, `parked`, `inbox` (set a change's state), `lookup`,
 `watch.item` (follow one more item inside an already-configured source), `doc`.
-Outbound: `draft.request` (ask for a rendered draft to a channel), `handoff` (a request for another project, drafted as a
+Outbound: `draft.request` (ask for a rendered draft to a channel), `dev.request` (a report to the product's maintainers: a
+problem, or a capability no op provides; drafted for the PM to approve and send, never a code change, 6.13), `handoff` (a request for another project, drafted as a
 message or ticket for its owner, 4.18).
 System: `milestone.rebaseline` (resets a plan's baseline dates; a plan change is the PM's call), `rule.add`, `rule.retire`, `watch.add`, `watch.remove` (new or removed sources), `config.set` (any config key,
-including scope and facts), `plugin.enable`, `plugin.disable`, `dev.request` (a code change request: becomes an automation problem for the
-fixer).
+including scope and facts), `plugin.enable`, `plugin.disable`.
 Plugins register more, namespaced, each with its tier.
 
 **Rename is one op.** `record.rename` changes the record's name field; everything inside the product shows names from the
@@ -148,12 +148,13 @@ record (5.1), so it all follows. Outputs outside the product (a published page t
 listed in the output registry: the target keeps its id, the publisher renames the page in place, and a title-only change is a
 draft like any other that shows as "renamed (same page)".
 
-**A change request becomes a code fix only when no op can do it.** `dev.request` must list the ops it considered and why none
-fits; the validator checks the list against the registry and refuses the request when an existing op could do the job, sending
-it back to be done as a changeset. A request about code another project owns (4.18) is refused as a `dev.request` and
-redone as a `handoff`. A request that comes from the PM's correction must first say what the data shows (6.8): a fix for a
-problem that isn't in the data is refused. When a fix adds a new op (in a private plugin, 6.13), the changeset that needs it waits with
-the fix and is applied after Apply, once the new op is registered; the running applier would refuse it before.
+**A request becomes a report only when no op can do it.** The product never changes its own code. `dev.request` drafts a
+report for the product's maintainers, and it must list the ops it considered and why none fits; the validator checks the list
+against the registry and refuses the request when an existing op could do the job, sending it back to be done as a changeset. A
+request about code another project owns (4.18) is refused as a `dev.request` and redone as a `handoff`. A request that comes
+from the PM's correction must first say what the data shows (6.8): a report about a problem that isn't in the data is refused. A
+changeset that needs an op that doesn't exist is held with its report; once an upgrade or a private plugin adds the op, the PM
+can run it again.
 
 ### Checks: invariants and lints
 
@@ -238,7 +239,7 @@ a system op, or otherwise needs a decision. Everything else is filed quietly (st
 - **Check a correction against the data first.** A correction ("this shouldn't be in X's list") is a claim about the data. The
   feedback task's packet carries the current state of what it names, and the run starts by stating where the item actually is.
   When the data doesn't match the correction, the answer is a question to the PM with what was found, not a change and never a
-  code fix.
+  report.
 - Aging: "waiting Nd" after Mark sent; chase suggestions after a configured number of days; one escalation suggestion when
   `routing.escalation` says so (4.3, 6.24).
 
@@ -295,27 +296,24 @@ wherever they are shown.
 - Change classification for the review list: real change, order only, layout or format only, columns changed, text the target
   doesn't show. Never show an empty "+0 −0" draft.
 
-## 6.13 Governor and fixer
+## 6.13 Governor, automation problems and reports
 
 - Every few minutes: re-queue requests whose run never finished, push work waiting too long in working hours, repair changes no
   request carries, detect stale data and outages, run the scope sweep (6.18), the rules review (6.21) and the notices, commit
   the readable export (5.0) hourly.
 - Problems in the automation become `Problem` records (shown as "automation problems", so "issue" keeps its project
-  meaning, 6.24). "Fix it" starts a fix run (the `code-fix` tier in `config/ai.yaml`) whose change
-  comes back as a **proposed fix** with a diff; it goes live only when the PM clicks Apply. Proposed fixes can't be hidden by
-  "dismiss all".
-- **Apply merges; it doesn't check for staleness.** Busy files change between the fix run and the click, so a whole-file "has
-  it changed since?" check would make nearly every fix stale. A proposed fix keeps the original of every file it touches. Apply
-  does a three-way merge (original, current, proposed) per file, with a union merge for files listed in `fixer.union_merge`
-  (default: Markdown) so rows both sides appended are kept. Only a real conflict stops it, and then the fix is redone
-  automatically against the current files (up to `fixer.redo_attempts`, then the problem goes to the PM with the conflict shown).
-- **One place per fix:** a proposed fix shows on its problem card only, and is counted there (Today, the header, the problem list
-  count it once).
-- **Requests for other projects:** a request about code another project owns (4.18) never reaches the fixer; it becomes a
-  `handoff` draft for that project's owner.
-- **What the fixer may change:** the workspace's config, rules, prompts, templates and private plugins, applied in the
-  workspace with the export committed first. A fix that needs the core or a bundled plugin is written as a patch and an issue for this
-  repository, never applied to the installed engine, so deployments don't drift from the product.
+  meaning, 6.24), each with what happened, when, what it affects and what the cockpit is already doing about it (retrying,
+  waiting for the network, paused until a limit resets).
+- **No self-modifying code.** The product never writes or applies code changes to itself or to a workspace's plugins. What
+  an installation can change on its own is data and, with the PM's confirmation, config (system ops, 6.7).
+- **Reports, not fixes.** A problem the PM wants looked at, or a request no op can do, becomes a **report** (`dev.request`): a
+  draft with what happened, the steps and records involved, the version and the relevant log lines, with workspace specifics
+  left out unless the PM keeps them in. The PM reads it, approves it and sends it through `reports` (4.9): the clipboard by
+  default, or a configured channel such as the maintainers' issue tracker form.
+- **One place per problem:** a problem and its report show on its problem card only, and are counted there (Today, the header
+  and the problem list count it once).
+- **Requests for other projects:** a request about code another project owns (4.18) becomes a `handoff` draft for that
+  project's owner.
 - The self-check (Part 10) validates config schemas, plugin manifests, imports, the web build and the specificity guard; run it
   after any change.
 
@@ -331,7 +329,7 @@ runs at a time, even when a host starts more than one copy.
 
 Builds the PM's Today list from live data and from plugins' Today contributors. **Every line starts with what the PM does and
 says where:** answer N decisions, review and send N drafts, look over N changes, send N questions to a person, follow up on
-questions waiting N days, finish N of your overdue actions, hold N meetings this week, apply N proposed fixes. Status, progress
+questions waiting N days, finish N of your overdue actions, hold N meetings this week, look at N automation problems. Status, progress
 and things the automation handles never appear.
 
 ## 6.16 AI provider layer (any model, by configuration)
@@ -403,8 +401,7 @@ registers its own, plugins add theirs (3.3).
 Adding a vendor that speaks the common format means adding a `providers:` entry; one with its own API means adding an adapter
 plugin and an entry. Nothing else changes.
 
-**Routing by capability, not by name.** Each task kind declares what it needs (a code fix needs code editing and file access; a
-screenshot needs vision; most need structured output and a context size). The router picks the tier's provider and model,
+**Routing by capability, not by name.** Each task kind declares what it needs (a screenshot needs vision; most need structured output and a context size). The router picks the tier's provider and model,
 checks that model's capabilities and the request's data level against `allowed_data`, and falls through the fallback chain if
 it can't serve the task. Fallbacks can cross accounts and vendors (a usage limit on one account moves the work to the next).
 When the common format lacks structured output for a model, the adapter asks for JSON and the applier's checks still decide. A config that maps a task kind to a provider that
