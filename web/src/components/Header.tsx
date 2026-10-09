@@ -4,6 +4,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { time } from "../lib/dates";
 import type { LiveState } from "../lib/live";
+import type { View } from "../App";
 import { useWords } from "../lib/wording";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -19,6 +20,8 @@ function backupText(b: S["BackupStatus"], t: T): string {
 export function Header(props: {
   workspace: string;
   live: { state: LiveState; lastUpdate: Date | null };
+  view: View;
+  onView: (view: View) => void;
   onHandIn: () => void;
   onHelp: () => void;
 }) {
@@ -33,6 +36,18 @@ export function Header(props: {
         <div className="brand">
           <b>{props.workspace}</b>
         </div>
+        <nav className="tabs" aria-label={t("nav.label")}>
+          {(["home", "setup"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-current={props.view === v ? "page" : undefined}
+              onClick={() => props.onView(v)}
+            >
+              {t(`nav.${v}`)}
+            </button>
+          ))}
+        </nav>
         <div className="top-meta">
           <span className={`live live-${props.live.state}`}>
             <i className="dot" aria-hidden="true" />

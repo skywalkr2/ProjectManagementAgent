@@ -8,6 +8,7 @@ import { useWords } from "./lib/wording";
 import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Header } from "./components/Header";
+import { Setup } from "./components/Setup";
 import { ShortcutHelp } from "./components/ShortcutHelp";
 import { WhatChanged } from "./components/WhatChanged";
 
@@ -17,6 +18,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   const { undoLast } = useToasts();
   const [handIn, setHandIn] = useState(false);
   const [help, setHelp] = useState(false);
+  const [view, setView] = useView();
   const handlers = useMemo(
     () => ({ undo: undoLast, hand_in: () => setHandIn(true), help: () => setHelp(true) }),
     [undoLast],
@@ -32,11 +34,24 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
       <a href="#main" className="skip">
         {t("app.skip")}
       </a>
-      <Header workspace={props.rc.workspace_name} live={live} onHandIn={() => setHandIn(true)} onHelp={() => setHelp(true)} />
+      <Header
+        workspace={props.rc.workspace_name}
+        live={live}
+        view={view}
+        onView={setView}
+        onHandIn={() => setHandIn(true)}
+        onHelp={() => setHelp(true)}
+      />
       <main id="main" tabIndex={-1}>
         {handIn && <HandIn onClose={() => setHandIn(false)} />}
-        <WhatChanged />
-        <FollowUps />
+        {view === "home" ? (
+          <>
+            <WhatChanged />
+            <FollowUps />
+          </>
+        ) : (
+          <Setup />
+        )}
         <p className="footer">{t("app.footer", { key: props.rc.shortcuts.help ?? "?" })}</p>
       </main>
       <ShortcutHelp open={help} onClose={() => setHelp(false)} keys={props.rc.shortcuts} />
@@ -54,4 +69,22 @@ function useNarrow(px: number) {
     query.addEventListener("change", apply);
     return () => query.removeEventListener("change", apply);
   }, [px]);
+}
+
+export type View = "home" | "setup";
+
+/** Which view is showing, kept in the address's #fragment so a refresh or the back button keeps it. */
+function useView(): [View, (v: View) => void] {
+  const read = (): View => (window.location.hash === "#setup" ? "setup" : "home");
+  const [view, setViewState] = useState<View>(read);
+  useEffect(() => {
+    const onHash = () => setViewState(read());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+  const setView = (v: View) => {
+    window.location.hash = v === "setup" ? "setup" : "";
+    setViewState(v);
+  };
+  return [view, setView];
 }

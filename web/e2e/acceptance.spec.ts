@@ -160,6 +160,29 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
+  test("people and projects are set up from the screen, with undo", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("button", { name: "People & projects" }).click();
+    await expect(page.getByRole("heading", { name: "People" })).toBeVisible();
+    await page.getByRole("button", { name: "Add a person" }).click();
+    await page.getByLabel(/Full name/).fill("Test Person");
+    await page.getByLabel(/^Role/).fill("Proofreader");
+    await page.locator("form").getByRole("button", { name: "Add a person" }).click();
+    const row = page.locator("li.line", { hasText: "Test Person" });
+    await expect(row).toContainText("Proofreader");
+    await row.getByRole("button", { name: "Edit" }).click();
+    await row.getByLabel(/Full name/).fill("Renamed Person");
+    await row.getByRole("button", { name: "Save" }).click();
+    await expect(page.locator("li.line", { hasText: "Renamed Person" })).toBeVisible();
+    await page.getByRole("button", { name: "Undo" }).last().click();
+    await expect(page.locator("li.line", { hasText: "Test Person" })).toBeVisible();
+    await checkAccessibility(page);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
+    await page.getByRole("button", { name: "Today" }).click();
+    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+  });
+
   test("nothing broke the content security policy or threw", async () => {
     expect(problems.filter((p) => !p.includes("Failed to load resource"))).toEqual([]);
   });

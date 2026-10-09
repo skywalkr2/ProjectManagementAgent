@@ -60,6 +60,15 @@ export const api = {
   unmarkSent: (person: string, body: S["Unmark"]) =>
     call<S["Ok"]>("POST", `followups/${id(person)}/unmark-sent`, body),
   backup: () => call<S["Status"]>("POST", "backup"),
+  projects: () => call<S["ProjectView"][]>("GET", "projects"),
+  addPerson: (body: S["PersonIn"]) => call<S["Created"]>("POST", "people", body),
+  editPerson: (p: string, body: S["PersonPatch"]) => call<S["Ok"]>("POST", `people/${id(p)}`, body),
+  removePerson: (p: string) => call<S["Ok"]>("POST", `people/${id(p)}/remove`),
+  restorePerson: (p: string) => call<S["Ok"]>("POST", `people/${id(p)}/restore`),
+  addProject: (body: S["ProjectIn"]) => call<S["Created"]>("POST", "projects", body),
+  editProject: (p: string, body: S["ProjectPatch"]) => call<S["Ok"]>("POST", `projects/${id(p)}`, body),
+  removeProject: (p: string) => call<S["Ok"]>("POST", `projects/${id(p)}/remove`),
+  restoreProject: (p: string) => call<S["Ok"]>("POST", `projects/${id(p)}/restore`),
 };
 
 export const EVENTS_PATH = "api/events";
