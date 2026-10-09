@@ -135,10 +135,11 @@ models get wrong. The core wraps the text into the `text.draft` op itself, and t
 limit is continued once, then held.
 
 **Paragraph anchors.** A task kind that revises existing long text can ask for an anchored draft (`output: draft, anchored:
-true`). The core gives each base paragraph an id in the packet, and the model starts each paragraph it writes with the ids it
+true`). The core divides the base text into the units of its format (5.0) and gives each unit an id in the packet, and the model starts each paragraph it writes with the ids it
 comes from: one id for a kept or rewritten paragraph, several for a merge, the same id on two paragraphs for a split, `new` for
-an added one, plus a closing list of ids it removed. A core invariant checks that every base id is accounted for and no unknown
-id appears; plugin validators can then check the map. The core strips the markers before storing, keeps the paragraph map
+an added one, plus a closing list of ids it removed. A core invariant checks that every base id is accounted for, no unknown id
+appears, and no atomic unit (a fenced block, a poem) was split or merged with another; plugin validators can then check the
+rest of the map. The core strips the markers before storing, keeps the paragraph map
 with the pending version, and the compare view (7.2) and authorship (5.0) use it.
 
 ### Op tiers

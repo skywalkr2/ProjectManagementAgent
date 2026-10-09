@@ -3,6 +3,19 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Long text formats divide text into units
+
+**Decided by:** project owner, answering a question from a plugin kept in another repository.
+
+**What:** Each `long_text` field names its format. The core ships `plain` and `markdown`; plugins can register a text format
+(3.3) whose `units(text) -> spans` says where units start and end and which are atomic. Anchors, authorship, per-passage review
+and lint anchors all work in units, and a core invariant refuses a draft that splits or merges an atomic unit.
+
+**Why:** Splitting on blank lines breaks fenced blocks, multi-paragraph footnotes and poems; every pack with structured prose
+would otherwise re-check this in its own validators.
+
+**Impact:** about half a day on the early branch, with paragraph anchors. No owner time.
+
 ## 2026-10-09: Draft checks, plugin lints, project language, tools, plugin data, text events
 
 **Decided by:** project owner, answering questions from a plugin kept in another repository.

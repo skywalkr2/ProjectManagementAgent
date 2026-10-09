@@ -22,7 +22,10 @@ id, op, record id, field, value before, value after, request, provenance (6.6), 
 The ledger is the history view, the audit log and the basis for undo (6.7). It is never edited.
 
 **Long text.** Some fields hold long prose: a statement of work, a proposal, a report, long promotional copy. A record type marks such a field as
-`long_text`. Its content is stored once per version in a text store (by content hash, like sources), and the record and the
+`long_text` and names its format: `plain` (units are blank-line paragraphs) or `markdown` (units are its blocks; a fenced block,
+a list or a multi-paragraph footnote is one unit), both shipped by the core, or a format a plugin registers (3.3). Every
+passage-level feature works in those units: paragraph anchors (6.7), authorship, the compare view's per-passage choices (7.2)
+and lint anchors. Its content is stored once per version in a text store (by content hash, like sources), and the record and the
 ledger hold the hash, so thirty edits of a proposal are thirty versions, not thirty copies inside the ledger. Each version keeps
 **authorship by passage**, in three kinds: written by the person, drafted by the assistant, and the person's text changed by the
 assistant (disclosure rules often treat drafting and editing differently), with the model run that produced the

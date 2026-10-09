@@ -29,7 +29,7 @@ Last updated: 2026-10-09.
 - [ ] Long text with versions and authorship (5.0).
 - [ ] Drafts with prose output; proposed versions and accepting them per passage (6.7).
 - [ ] Compare view for long text, two-way and three-way (7.2).
-- [ ] Paragraph-anchored drafts; lints computed in code, anchored to passages; lints on drafts count for escalation (6.7, 3.3, 6.16).
+- [ ] Long text formats (`plain`, `markdown`, plugin-registered) dividing text into units; paragraph-anchored drafts; lints computed in code, anchored to passages; lints on drafts count for escalation (6.7, 3.3, 6.16).
 - [ ] Events: `record.changed` with full details, `text.accepted` (3.4).
 - [ ] Working copies: hand out for the person's own tools, take back, review (5.0, 3.3).
 - [ ] Stages (6.26).
