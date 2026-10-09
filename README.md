@@ -68,4 +68,4 @@ contributor, which ends for anyone who sues over patents in the project.
 - [`docs/design/CHANGES.md`](docs/design/CHANGES.md): what changed since the first version of the design, and why
 - [`docs/project/`](docs/project/): charter, scope, risks, schedule and the [roadmap to 1.0](docs/project/roadmap-to-1.0.md)
 - [`docs/decisions.md`](docs/decisions.md): product decisions and why they were made
-- [`CLAUDE.md`](CLAUDE.md): working rules for coding agents in this repository
+- [`CLAUDE.md`](CLAUDE.md): working rules for coding agents in this repository ([`AGENTS.md`](AGENTS.md) points other agents to it)
