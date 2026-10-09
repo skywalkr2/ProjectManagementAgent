@@ -202,4 +202,7 @@ For your information; nothing here needs an answer.
   call after cleaning quoted history and signatures; lessons learned from inputs wait for the PM (your lessons log was the one
   place an injected instruction could have persisted); a deterministic evaluation picks the model; a cheap model escalates to a
   stronger one only on check failures.
+- **UI review** (Part 7): Today becomes the home queue; one primary action per row; undo toasts instead of confirmations except
+  for sending; edit in place before approving; evidence on every claim; keyboard shortcuts; phone layouts; first-run setup;
+  accessibility to WCAG 2.2 AA; a front-end architecture with live updates and a generated API client.
 

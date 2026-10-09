@@ -32,7 +32,7 @@ Section numbers are stable: "6.18" is section 18 of Part 6, in `06-engine.md`.
 | 4 | [04-configuration.md](04-configuration.md) | Configuration principles and every config file |
 | 5 | [05-data.md](05-data.md) | Storage model (database, ledger, ids), entities, storage rules |
 | 6 | [06-engine.md](06-engine.md) | Every core component: plugin host, connectors, channels, applier, questions, scope, facts, AI layer, quality signals |
-| 7 | [07-ui.md](07-ui.md) | Shell, panels, What changed, Waiting to go out, Follow-ups, interaction rules |
+| 7 | [07-ui.md](07-ui.md) | UI principles, shell, Today, panels, What changed, Waiting to go out, Follow-ups, first run, settings, accessibility, front-end architecture |
 | 8 | [08-product-rules.md](08-product-rules.md) | Lessons as product rules, each with where it is enforced |
 | 9 | [09-reference-pack.md](09-reference-pack.md) | The packs: workplace PM (reference) and publishing (first in use) |
 | 10 | [10-guardrails.md](10-guardrails.md) | Keeping specifics out of code: the boundary, scans, process, review checklist |
@@ -48,7 +48,7 @@ Section numbers are stable: "6.18" is section 18 of Part 6, in `06-engine.md`.
 | Engine work | Parts 4, 5 and the Part 6 section for the component |
 | A plugin or pack | Part 3, then Part 9 as the worked example |
 | Config keys | Part 4 (4.0 first) |
-| UI | Part 7, and 6.x for the data a panel shows |
+| UI | Part 7 (7.0 first), and 6.x for the data a panel shows |
 | AI tasks, prompts, providers | 6.6, 6.7, 6.16, Part 12 |
 | Deployment, sign-in | Parts 11 and 12 |
 | Planning | Part 13 |

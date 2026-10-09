@@ -353,7 +353,7 @@ runs at a time, even when a host starts more than one copy.
 
 ## 6.15 Today builder
 
-Builds the PM's Today list from live data and from plugins' Today contributors. **Every line starts with what the PM does and
+Builds the PM's Today list, the home screen (7.7), from live data and from plugins' Today contributors. **Every line starts with what the PM does and
 says where:** answer N decisions, review and send N drafts, look over N changes, send N questions to a person, follow up on
 questions waiting N days, finish N of your overdue actions, hold N meetings this week, look at N automation problems. Status, progress
 and things the automation handles never appear.

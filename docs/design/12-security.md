@@ -68,5 +68,6 @@ send…"). The model can't be relied on to tell instructions from content, so th
 ## 12.5 Internet-facing hygiene (hosted)
 
 Dependencies pinned and scanned in CI; the container runs as a non-root user with a read-only file system apart from the
-workspace volume; uploaded files are stored as data, never executed, and served only as downloads; the database file is never
+workspace volume; uploaded files are stored as data, never executed, and served only as downloads; the UI never renders raw HTML and links from untrusted content show their real domain (7.11);
+the database file is never
 served.

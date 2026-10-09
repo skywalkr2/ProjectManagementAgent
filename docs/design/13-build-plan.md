@@ -40,7 +40,11 @@ Each milestone ends with tests passing against both fictional workspaces, the co
    - waiting states that say why and until when;
    - the clipboard channel;
    - backups to a target off the computer, with the Today and header nag until one has succeeded (4.15);
-   - a minimal UI: What changed with the assistant's work nested, and Follow-ups by person with Copy and Mark sent;
+   - a minimal UI: What changed with the assistant's work nested, and Follow-ups by person with Copy and Mark sent; one
+     column on narrow screens; one primary action per row and the wording sheet; undo toasts instead of confirmations; edit in
+     place before copying; the evidence line; keyboard shortcuts for the review loop; React Aria Components, the generated API
+     client, TanStack Query with server-sent events; safe rendering of untrusted content; Playwright running the acceptance
+     scenario with axe checks (Part 7);
    - quality signals recorded from day one (6.20).
 
 3. **Scope and facts.** The scope resolver and its invariants, the scope sweep (6.18); the fact resolver with paste-in and
@@ -57,8 +61,9 @@ Each milestone ends with tests passing against both fictional workspaces, the co
    reverting drafts for undone publishes; the fake page channel; Waiting to go out with the diff
    renderer.
 
-7. **UI shell and settings.** Panel registry with declarative panels, branding, the Settings panel generated from schemas
-   (with levels and presets), the Admin tab including Quality.
+7. **UI shell and settings.** Today as the home queue (7.7), the first-run setup (7.8), panel registry with declarative panels,
+   branding, the Settings panel (7.9), the Admin tab including Quality, side-by-side diffs, virtualized lists, phone-friendly
+   approval flows and installing as a web app.
 
 8. **The publishing pack** (9.6 to 9.9), the first in real use, with its playbook, dependencies and baselines (6.23), using
    only the plugin API.

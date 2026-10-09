@@ -86,6 +86,13 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 - Checks are invariants (always refuse, not configurable) or lints (severity in `config/checks.yaml`). Don't make a fuzzy check
   an invariant, and never lower an invariant.
 
+## UI rules (design Part 7)
+- Today is the home; panels are filtered views. One primary action per row, the rest in its menu.
+- Reversible actions act at once with an undo toast; only send, publish and post confirm.
+- No hard-coded user-facing text: everything comes from the wording sheet and config. No internal terms on screen.
+- Keyboard and phone both work; WCAG 2.2 AA; status never by color alone.
+- Never render raw HTML; links from untrusted content show their real domain. The API client is generated from OpenAPI.
+
 ## Product rules that shape every feature
 - The assistant drafts; the human approves everything outward. Nothing publishes, sends or posts without the PM approving
   that exact content.

@@ -30,7 +30,9 @@ the owner's own key; the applier with tiers, invariants and lints for about ten 
 input cleaning and one input per call; per-task op lists with small schemas, JSON repair and evidence on every claim; provenance
 on every write; the first evaluation set (10 to 20 fictional cases with hostile inputs, several runs each) comparing a low-cost
 model with a stronger one; names resolved to ids with "who is this?" decisions; owners as a list and held actions; undo from the ledger; the clipboard
-channel; What changed and Follow-ups by person with Copy and Mark sent; off-device backup with the nag; quality signals
+channel; What changed and Follow-ups by person with Copy and Mark sent, in a UI built to Part 7's principles (one column on
+narrow screens, one primary action per row, undo toasts, edit in place, evidence lines, keyboard shortcuts, safe rendering,
+Playwright with accessibility checks); off-device backup with the nag; quality signals
 recorded.
 
 **Deferred to version 1:** config profiles and `explain`; point-in-time and single-record restore (the round trip stays);

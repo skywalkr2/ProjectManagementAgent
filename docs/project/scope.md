@@ -20,6 +20,8 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Paste-in with "your note" and "pasted content" | must | must | 12.2 |
 | One AI task kind (notes and messages); the `openai-compatible` adapter on the owner's own key | must | must | 6.16 |
 | Actions, questions, follow-ups by person, Copy and Mark sent | must | must | 6.8, 6.9, 7.5 |
+| UI foundations: responsive single column, one primary action, wording sheet, undo toasts, edit in place, evidence line, keyboard shortcuts, accessible components, generated API client, live updates, safe rendering, Playwright with axe | must | must | Part 7 |
+| Today as the home queue, first-run setup, settings form UX, side-by-side diffs, virtualized lists, phone approval flows, installable web app | won't | must | 7.7 to 7.9 |
 | Clipboard channel | must | must | 6.3 |
 | Undo from the ledger | must | must | 6.7 |
 | Evidence on claims, per-task op lists, JSON repair | must | must | 6.7 |

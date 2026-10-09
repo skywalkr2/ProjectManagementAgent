@@ -43,8 +43,9 @@ plugin system adds a second failure to prevent: the core growing special cases f
    ones it uses.
 8. **Prompt templates and playbooks:** default templates and playbook files in core and bundled plugins are scanned like code
    (scans 1 and 3), so a source or name written into a prompt or a playbook fails the same way as one written into code.
-9. **UI labels:** user-visible strings that name the assistant, people or groups come from config; a test renders the UI against
-   both fictional workspaces.
+9. **UI labels and accessibility:** user-visible text comes from the wording sheet and config, never hard-coded in components
+   (a scan checks JSX for literal text); a test renders the UI against both fictional workspaces; the end-to-end runs include
+   axe accessibility checks (7.10).
 10. **Deployment:** hosting platform names appear only in `deploy/` and docs; every recipe's profile passes the deploy checks
     (11.5); the UI and API tests run under the root path and under a nested base path.
 

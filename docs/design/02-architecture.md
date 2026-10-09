@@ -126,7 +126,9 @@ extension point. It is never an `if team == "X"` or an `if plugin == "Y"` in the
 - **Python 3.12+** for the engine and API, managed with **uv**. **FastAPI** for the HTTP API. **Pydantic v2** models for config,
   records, ops and plugin manifests; JSON Schema is generated from the models, so the AI's output schema and the validator
   never disagree. **pytest** for tests, **ruff** for lint and format.
-- **React + TypeScript**, built with **Vite**, tested with **Vitest**. The UI gets its panel definitions from the API.
+- **React + TypeScript**, built with **Vite**, tested with **Vitest** and **Playwright**; TanStack Query with server-sent
+  events for live data, an API client generated from the OpenAPI schema, React Aria Components, CSS variables for theming
+  (7.11). The UI gets its panel definitions from the API.
 - **Plugins** are Python packages. Installed ones are found by the entry-point group `pm_cockpit.plugins`; bundled and private
   ones by scanning `plugins/` and `<workspace>/plugins/`.
 - **Storage:** SQLite as the system of record, with a ledger and a readable JSON export committed to git (5.0), behind a

@@ -3,6 +3,26 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: UI review changes
+
+**Decided by:** project owner, after a UI/UX and React review.
+
+- **A queue, not a dashboard:** Today is the home screen, with one ranked list of things to do; panels are filtered views
+  (version 1; the launch slice keeps a single column with What changed and Follow-ups).
+- **One primary action per row** with the rest in a menu, and a **wording sheet** so internal terms never reach the screen.
+- **Undo toasts instead of confirmations** for anything reversible; only send, publish and post confirm.
+- **Keyboard first and phone friendly:** review shortcuts, one column on narrow screens, phone-critical tasks first class.
+- **Edit in place before approving; evidence shown on every claim;** details by expanding rows, not tooltips; new items never
+  push rows around.
+- **First-run setup, real settings UX and WCAG 2.2 AA** accessibility.
+- **Front-end architecture:** TanStack Query with server-sent events from the event bus, a TypeScript client generated from
+  OpenAPI, React Aria Components, CSS variables for theming, a string table, sanitized rendering with real link domains, strict
+  content policy, Playwright with axe.
+
+**Impact:** launch slice gains the UI foundations (about one to two days of build time, no owner time); Today as the queue,
+first run, settings UX, side-by-side diffs, virtualization and phone approval flows land in version 1 (milestone 7). Delays
+nothing.
+
 ## 2026-10-09: AI review changes
 
 **Decided by:** project owner, after an AI systems review.
