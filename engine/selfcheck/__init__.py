@@ -101,6 +101,7 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
         ("config coverage", scan_config_coverage),
     ]
     checks += [(f"workspace {ws.name}", lambda ws=ws: check_workspace_fixture(ws)) for ws in FIXTURES]
+    checks.append(("api schema", check_api_schema))
     failed = 0
     for label, check in checks:
         findings = check()
@@ -113,6 +114,17 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
             out(f"ok    {label}")
     out("Self-check passed." if not failed else f"Self-check failed: {failed} of {len(checks)} checks.")
     return 1 if failed else 0
+
+
+def check_api_schema() -> list[Finding]:
+    """The committed OpenAPI schema, which the web client's types are generated from, matches the API."""
+    from api.openapi import SCHEMA_PATH, build
+
+    committed = SCHEMA_PATH.read_text(encoding="utf-8") if SCHEMA_PATH.exists() else ""
+    if committed != build():
+        rel = SCHEMA_PATH.relative_to(REPO)
+        return [Finding("api", str(rel), 0, "out of date; run `uv run python -m api.openapi`")]
+    return []
 
 
 def _fixture_ai_names() -> list[str]:

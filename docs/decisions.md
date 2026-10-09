@@ -3,6 +3,28 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Launch slice implementation choices
+
+**Decided by:** built to the design; open for the project owner's review.
+
+- **Facts are their own record kind** (`FACT-n`), not notes with a flag, so they can be looked up and undone on their own.
+- **Refusal is per item:** a refused item is dropped and named; the rest of the assistant's work for that input applies.
+- **Inputs longer than the limit wait for the PM** instead of being split (splitting is version 1).
+- **Pasted text stays local:** a workspace's `sources/` folder is not committed; backups carry it with the database.
+- **One database connection per thread,** so a reader never sees another thread's unfinished write.
+- **A missing key is its own error** ("the key wasn't found"), apart from a key the vendor refused.
+- **"Who is this?" and "Pick an owner" are answered on the item that waits** (What changed), not repeated in Follow-ups; a
+  change with an unanswered question stays under Needs attention after Looks good.
+- **Mark sent can be undone,** like every other reversible action.
+- **`config/ui.yaml`** holds wording overrides, shortcut keys, the one-column width and how long toasts stay.
+- **The UI uses system fonts,** loads nothing from elsewhere, and its content policy allows inline styles only for two fixed
+  rules of the component library, by hash. People are picked with the browser's own list control, which works best on phones.
+- **`cockpit evaluate --ai-config`** scores the PM's own accounts on the fictional cases without copying real data anywhere.
+- **Browser tests** run against a test server whose stand-in AI gives each case's ideal answer, so they check the UI and the
+  pipeline, not a model.
+
+**Impact:** none on scope or schedule; all within the launch slice.
+
 ## 2026-10-09: UI review changes
 
 **Decided by:** project owner, after a UI/UX and React review.

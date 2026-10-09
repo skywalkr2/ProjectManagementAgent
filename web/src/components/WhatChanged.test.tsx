@@ -1,0 +1,119 @@
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { S } from "../lib/api";
+import { fakeApi, renderApp } from "../test-utils";
+import { WhatChanged } from "./WhatChanged";
+
+function change(id: string, extra: Partial<S["ChangeItem"]> = {}): S["ChangeItem"] {
+  return {
+    id,
+    state: "review",
+    waiting: null,
+    created_at: "2026-10-09T14:00:00Z",
+    note: null,
+    source: "SRC-1",
+    source_title: "Email from the printer",
+    changeset: {
+      id: `CS-${id}`,
+      summary: "One fact.",
+      status: "applied",
+      reviewed: false,
+      trust: "untrusted",
+      ops: [
+        {
+          index: 0,
+          op: "fact",
+          status: "applied",
+          reason: null,
+          group: "op0",
+          title: "Proof copies ship Nov 5",
+          meta: { owners: [] },
+          evidence: { quote: "proof copies will ship on November 5" },
+          record: { kind: "fact", id: "FACT-1" },
+          ask: null,
+        },
+      ],
+    },
+    ...extra,
+  };
+}
+
+test("a change shows what was done, why, and the highlighted source", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    "GET changes": () => [change("REQ-1")],
+    "GET sources/SRC-1": () => ({
+      id: "SRC-1",
+      title: "Email from the printer",
+      kind: "pasted",
+      trust: "untrusted",
+      received_at: "2026-10-09T14:00:00Z",
+      url: null,
+      text: "Thanks. Our proof copies will ship on November 5 by courier.",
+    }),
+  });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Proof copies ship Nov 5")).toBeInTheDocument();
+  expect(screen.getByText("Recorded a fact")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Show source" }));
+  const mark = await screen.findByText((_, el) => el?.tagName === "MARK");
+  expect(mark.textContent).toContain("proof copies will ship on November 5");
+  expect(screen.getByText("outside content")).toBeInTheDocument();
+});
+
+test("Looks good acts at once and offers Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [change("REQ-1")],
+    "POST changesets/CS-REQ-1/looks-good": () => ({ ok: "CS-REQ-1" }),
+    "POST changesets/CS-REQ-1/reopen": () => ({ ok: "CS-REQ-1" }),
+  });
+  renderApp(<WhatChanged />);
+  await user.click(await screen.findByRole("button", { name: "Looks good" }));
+  await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-REQ-1/looks-good"));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-REQ-1/reopen"));
+});
+
+test("send back needs a note", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [change("REQ-1")],
+    "POST changesets/CS-REQ-1/send-back": () => ({ request: "REQ-2" }),
+  });
+  renderApp(<WhatChanged />);
+  await user.click(await screen.findByRole("button", { name: /More actions for Email from the printer/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Send back with a note" }));
+  const go = screen.getByRole("button", { name: "Send back" });
+  expect(go).toBeDisabled();
+  await user.type(screen.getByRole("textbox"), "That date is the courier's, not the printer's");
+  await user.click(go);
+  await waitFor(() => expect(calls.find((c) => c.route.endsWith("send-back"))?.body).toEqual({ note: "That date is the courier's, not the printer's" }));
+});
+
+test("a who-is question offers the likely people first", async () => {
+  const user = userEvent.setup();
+  const held = change("REQ-3");
+  held.changeset!.ops[0] = {
+    ...held.changeset!.ops[0],
+    op: "action.add",
+    status: "held",
+    reason: "Waiting for you to say who this is",
+    title: "Send spine options",
+    ask: { id: "Q-7", status: "open", about: "held-op", name: "Robin", options: [{ id: "PER-2", name: "Robin Sample" }, { id: "PER-5", name: "Robin Other" }] },
+  };
+  const calls = fakeApi({
+    "GET changes": () => [held],
+    "GET people": () => [
+      { id: "PER-2", name: "Robin Sample", role: "Editor" },
+      { id: "PER-5", name: "Robin Other", role: "Designer" },
+      { id: "PER-9", name: "Lee Third", role: null },
+    ],
+    "POST questions/Q-7/answer": () => ({ ok: "Q-7" }),
+  });
+  renderApp(<WhatChanged />);
+  const picker = await screen.findByRole("combobox", { name: "Who is “Robin”?" });
+  await user.selectOptions(picker, "PER-5");
+  await user.click(screen.getByRole("button", { name: "Use this person" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST questions/Q-7/answer")?.body).toEqual({ person: "PER-5" }));
+});

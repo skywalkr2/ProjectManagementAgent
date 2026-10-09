@@ -140,6 +140,21 @@ def needs_you(store: Store, request_id: str, why: str) -> None:
     return None
 
 
+def retry(store: Store, request_id: str) -> None:
+    """Queue a request that stopped (an AI account problem, an unreadable answer) to be processed again."""
+    with store.transaction() as tx:
+        cur = tx.get("request", request_id)
+        if cur.data["state"] not in ("needs_you", "failed"):
+            raise ValueError("this isn't waiting on you")
+        tx.update(
+            "request",
+            request_id,
+            {"state": "queued", "waiting": "With the assistant, next in line"},
+            _ENGINE,
+            read_version=cur.version,
+        )
+
+
 # ---- review ----------------------------------------------------------------------------------------------------------
 
 _PM = WriteContext(actor="pm", trust="trusted", op="review")

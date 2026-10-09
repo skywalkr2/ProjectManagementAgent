@@ -47,7 +47,10 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 ## Stack and commands
 - Python 3.12+ with uv, FastAPI, Pydantic v2, pytest, ruff. Web: React + TypeScript with Vite and Vitest.
 - `uv run pytest` · `uv run ruff check .` · `uv run ruff format --check .` · `uv run python -m engine.selfcheck`
-- Web checks (`npm --prefix web test`, `npm --prefix web run build`) exist once the UI lands (launch slice part 2).
+- Web: `npm --prefix web test` · `npm --prefix web run build` (generates the API types, type-checks) ·
+  `npm --prefix web run e2e` (Playwright with axe, at the root and a nested base path; build first).
+- After changing an API model, run `uv run python -m api.openapi`; the self-check fails while the schema is stale.
+- API routes return Pydantic models from `api/schemas.py`, never bare dicts, so the UI's types stay generated.
 - Try it: `uv run cockpit init /tmp/ws --from workspaces/demo-b` then `uv run cockpit serve -w /tmp/ws`.
 - Tests read names and ids from the fixtures instead of writing them out, so the specificity scan holds for tests too.
 

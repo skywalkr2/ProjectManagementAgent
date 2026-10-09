@@ -28,6 +28,7 @@ class BackupState:
     age_hours: float | None
     needs_attention: bool
     message: str
+    last_error: str | None = None
 
 
 def run_backup(ws: Workspace, cfg: Config, now: datetime | None = None) -> dict[str, Any]:
@@ -66,16 +67,16 @@ def state(ws: Workspace, cfg: Config, now: datetime | None = None) -> BackupStat
     if not targets:
         return BackupState(False, None, None, True, "No off-device backup is set up.")
     status = _load(ws)
+    errors = [s["last_error"] for t in targets if (s := status.get(t.path)) and s.get("last_error")]
     successes = [s["last_success"] for t in targets if (s := status.get(t.path)) and s.get("last_success")]
     if not successes:
-        errors = [s["last_error"] for t in targets if (s := status.get(t.path)) and s.get("last_error")]
         why = f" The last try failed: {errors[0]}" if errors else ""
-        return BackupState(True, None, None, True, "No backup has succeeded yet." + why)
+        return BackupState(True, None, None, True, "No backup has succeeded yet." + why, errors[0] if errors else None)
     last = max(successes)
     age = (now - datetime.fromisoformat(last)).total_seconds() / 3600
     stale = age > 2 * cfg.storage.backups.every_hours
     message = f"Backed up {_ago(age)}." + (" That's overdue." if stale else "")
-    return BackupState(True, last, round(age, 2), stale, message)
+    return BackupState(True, last, round(age, 2), stale, message, errors[0] if errors else None)
 
 
 def _ago(hours: float) -> str:

@@ -6,50 +6,52 @@ Responses carry data, not wording: labels for what the assistant did come from t
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, date, datetime
+from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
+from api.schemas import (
+    ActionState,
+    Answer,
+    Ask,
+    BackupStatus,
+    ChangeItem,
+    ChangesetView,
+    FollowupAction,
+    FollowupQuestion,
+    FollowupSection,
+    Handed,
+    HandIn,
+    Ok,
+    Option,
+    OpView,
+    PersonChoice,
+    PersonView,
+    RequestCounts,
+    Requeued,
+    SendBack,
+    SentCounts,
+    SentText,
+    SourceView,
+    Status,
+    UndoChoice,
+    UndoReport,
+    Unmark,
+)
 from engine.applier import pick_owner, release
 from engine.backup import run_backup, state
 from engine.config import Config
-from engine.dispatcher import looks_good, send_back, undo_changeset
-from engine.followups import mark_sent, sections
-from engine.intake import IntakeError, hand_in
+from engine.dispatcher import looks_good, retry, send_back, undo_changeset
+from engine.followups import mark_sent, sections, unmark_sent
+from engine.intake import IntakeError, hand_in, source_text
 from engine.names import People
 from engine.storage import Store, StoreError, WriteContext
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
 _PM = WriteContext(actor="pm", trust="trusted", op="ui")
-
-
-class HandIn(BaseModel):
-    note: str = ""
-    pasted: str = ""
-
-
-class Note(BaseModel):
-    note: str
-
-
-class Indices(BaseModel):
-    ops: list[int] | None = None
-
-
-class PersonChoice(BaseModel):
-    person: str | None = None
-
-
-class SentText(BaseModel):
-    text: str | None = None
-
-
-class Answer(BaseModel):
-    text: str
 
 
 def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
@@ -69,67 +71,71 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             raise HTTPException(status_code=409, detail=str(err)) from None
 
     @r.get("/status")
-    def status() -> dict[str, Any]:
+    def status() -> Status:
         reqs = [x.data for x in store.read().list("request")]
-        backup = state(ws, cfg)
-        return {
-            "backup": {
-                "configured": backup.configured,
-                "last_success": backup.last_success,
-                "age_hours": backup.age_hours,
-                "needs_attention": backup.needs_attention,
-                "message": backup.message,
-            },
-            "requests": {s: sum(x["state"] == s for x in reqs) for s in ("queued", "running", "review", "needs_you")},
-            "version": events.version,
-        }
+        b = state(ws, cfg)
+        counts = {s: sum(x["state"] == s for x in reqs) for s in ("queued", "running", "review", "needs_you")}
+        return Status(
+            backup=BackupStatus(
+                configured=b.configured,
+                last_success=b.last_success,
+                age_hours=b.age_hours,
+                needs_attention=b.needs_attention,
+                last_error=b.last_error,
+            ),
+            requests=RequestCounts(**counts),
+            version=events.version,
+        )
 
     @r.post("/handin")
-    def handin(body: HandIn) -> dict[str, Any]:
+    def handin(body: HandIn) -> Handed:
         handed = guard(lambda: hand_in(ws, store, note=body.note, pasted=body.pasted))
         changed()
         worker.poke()
-        return {"request": handed.request, "source": handed.source}
+        return Handed(request=handed.request, source=handed.source)
 
     @r.get("/changes")
-    def changes() -> list[dict[str, Any]]:
+    def changes() -> list[ChangeItem]:
         people = People(store, cfg)
         projects = {p.id: p.data["name"] for p in store.read().list("project")}
         sources = {s.id: s.data for s in store.read().list("source")}
-        out = []
+        out: list[ChangeItem] = []
         for req in reversed(store.read().list("request")):
             d = req.data
-            item: dict[str, Any] = {
-                "id": req.id,
-                "state": d["state"],
-                "waiting": d.get("waiting"),
-                "created_at": d["created_at"],
-                "note": d.get("note"),
-                "source": sources.get(d.get("source"), {}).get("title"),
-                "changeset": None,
-            }
+            view = None
             if d.get("changeset"):
                 cs = store.read().get("changeset", d["changeset"])
-                item["changeset"] = {
-                    "id": cs.id,
-                    "summary": cs.data["summary"],
-                    "status": cs.data["status"],
-                    "reviewed": cs.data["reviewed"],
-                    "trust": cs.data["trust"],
-                    "ops": [_op_view(o, store, people, projects, sources) for o in cs.data["ops"]],
-                }
-            out.append(item)
+                view = ChangesetView(
+                    id=cs.id,
+                    summary=cs.data["summary"],
+                    status=cs.data["status"],
+                    reviewed=cs.data["reviewed"],
+                    trust=cs.data["trust"],
+                    ops=[_op_view(o, store, people, projects) for o in cs.data["ops"]],
+                )
+            out.append(
+                ChangeItem(
+                    id=req.id,
+                    state=d["state"],
+                    waiting=d.get("waiting"),
+                    created_at=str(d["created_at"]),
+                    note=d.get("note"),
+                    source=d.get("source"),
+                    source_title=sources.get(d.get("source"), {}).get("title"),
+                    changeset=view,
+                )
+            )
         return out
 
     @r.post("/changesets/{cs_id}/looks-good")
-    def approve(cs_id: str) -> dict[str, str]:
+    def approve(cs_id: str) -> Ok:
         need("changeset", cs_id)
         guard(lambda: looks_good(store, cs_id))
         changed()
-        return {"ok": cs_id}
+        return Ok(ok=cs_id)
 
     @r.post("/changesets/{cs_id}/reopen")
-    def reopen(cs_id: str) -> dict[str, str]:
+    def reopen(cs_id: str) -> Ok:
         need("changeset", cs_id)
 
         def do() -> None:
@@ -141,74 +147,137 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         guard(do)
         changed()
-        return {"ok": cs_id}
+        return Ok(ok=cs_id)
 
     @r.post("/changesets/{cs_id}/undo")
-    def undo(cs_id: str, body: Indices) -> dict[str, Any]:
+    def undo(cs_id: str, body: UndoChoice) -> UndoReport:
         need("changeset", cs_id)
         report = guard(lambda: undo_changeset(store, cs_id, body.ops))
         changed()
-        return {"restored": report.restored, "skipped": report.skipped}
+        return UndoReport(restored=report.restored, skipped=report.skipped)
 
     @r.post("/changesets/{cs_id}/send-back")
-    def sendback(cs_id: str, body: Note) -> dict[str, str]:
+    def sendback(cs_id: str, body: SendBack) -> Requeued:
         need("changeset", cs_id)
         new = guard(lambda: send_back(store, cs_id, body.note))
         changed()
         worker.poke()
-        return {"request": new}
+        return Requeued(request=new)
 
     @r.post("/changesets/{cs_id}/ops/{index}/release")
-    def release_op(cs_id: str, index: int, body: PersonChoice) -> dict[str, str]:
+    def release_op(cs_id: str, index: int, body: PersonChoice) -> Ok:
         need("changeset", cs_id)
         guard(lambda: release(store, cfg, cs_id, index, person=body.person))
         changed()
-        return {"ok": cs_id}
+        return Ok(ok=cs_id)
 
     @r.post("/questions/{qid}/pick-owner")
-    def owner(qid: str, body: PersonChoice) -> dict[str, str]:
+    def owner(qid: str, body: PersonChoice) -> Ok:
         need("question", qid)
         if not body.person:
             raise HTTPException(status_code=422, detail="Choose a person.")
         guard(lambda: pick_owner(store, qid, body.person))
         changed()
-        return {"ok": qid}
+        return Ok(ok=qid)
 
     @r.post("/questions/{qid}/answer")
-    def answer(qid: str, body: Answer) -> dict[str, str]:
+    def answer(qid: str, body: Answer) -> Ok:
+        """Answer a question to the PM. A question asking who (who a name is, who owns an action) takes a person and
+        lets the item it holds go ahead; any other question takes a written answer."""
         need("question", qid)
+        q = store.read().get("question", qid)
+        resolves = q.data.get("resolves") or {}
+        if resolves.get("kind") in ("owner", "held-op") and not body.person:
+            raise HTTPException(status_code=422, detail="Choose a person.")
+        if body.person:
+            need("person", body.person)
+        if resolves.get("kind") == "owner":
+            guard(lambda: pick_owner(store, qid, body.person))
+        elif resolves.get("kind") == "held-op":
+            guard(lambda: release(store, cfg, resolves["changeset"], resolves["op"], person=body.person))
+        else:
+            if not (body.text or "").strip():
+                raise HTTPException(status_code=422, detail="Write an answer.")
+
+            def do() -> None:
+                with store.transaction() as tx:
+                    cur = _existing(tx, "question", qid)
+                    tx.update(
+                        "question", qid, {"status": "answered", "answer": body.text}, _PM, read_version=cur.version
+                    )
+
+            guard(do)
+        changed()
+        return Ok(ok=qid)
+
+    @r.post("/actions/{action_id}/status")
+    def action_status(action_id: str, body: ActionState) -> Ok:
+        need("action", action_id)
 
         def do() -> None:
             with store.transaction() as tx:
-                q = _existing(tx, "question", qid)
-                tx.update("question", qid, {"status": "answered", "answer": body.text}, _PM, read_version=q.version)
+                cur = _existing(tx, "action", action_id)
+                if cur.data["status"] == "held":
+                    raise ValueError("this action needs an owner first")
+                tx.update("action", action_id, {"status": body.status}, _PM, read_version=cur.version)
 
         guard(do)
         changed()
-        return {"ok": qid}
+        return Ok(ok=action_id)
+
+    @r.post("/requests/{request_id}/retry")
+    def retry_request(request_id: str) -> Ok:
+        need("request", request_id)
+        guard(lambda: retry(store, request_id))
+        changed()
+        worker.poke()
+        return Ok(ok=request_id)
+
+    @r.get("/sources/{src_id}")
+    def source(src_id: str) -> SourceView:
+        need("source", src_id)
+        src = store.read().get("source", src_id)
+        d = src.data
+        return SourceView(
+            id=src.id,
+            title=d["title"],
+            kind=d["kind"],
+            trust=d["trust"],
+            received_at=str(d["received_at"]),
+            url=d.get("url"),
+            text=source_text(ws, store, src.id),
+        )
 
     @r.get("/followups")
-    def followups() -> list[dict[str, Any]]:
-        return [s.__dict__ for s in sections(store, cfg, date.today())]
+    def followups() -> list[FollowupSection]:
+        people = People(store, cfg)
+        return [_section(s, people) for s in sections(store, cfg, date.today())]
 
     @r.post("/followups/{person}/mark-sent")
-    def sent(person: str, body: SentText) -> dict[str, int]:
+    def sent(person: str, body: SentText) -> SentCounts:
         need("person", person)
         counts = guard(lambda: mark_sent(store, cfg, person, sent_text=body.text))
         changed()
-        return counts
+        return SentCounts(**counts)
+
+    @r.post("/followups/{person}/unmark-sent")
+    def unsent(person: str, body: Unmark) -> Ok:
+        need("person", person)
+        guard(lambda: unmark_sent(store, person, body.question_ids, body.action_ids))
+        changed()
+        return Ok(ok=person)
 
     @r.get("/people")
-    def people() -> list[dict[str, Any]]:
+    def people() -> list[PersonView]:
         return [
-            {"id": p.id, "name": p.data["full_name"], "role": p.data.get("role")} for p in store.read().list("person")
+            PersonView(id=p.id, name=p.data["full_name"], role=p.data.get("role")) for p in store.read().list("person")
         ]
 
     @r.post("/backup")
-    def backup_now() -> dict[str, Any]:
-        result = run_backup(ws, cfg)
+    def backup_now() -> Status:
+        run_backup(ws, cfg)
         changed()
-        return result
+        return status()
 
     @r.get("/events")
     async def stream() -> StreamingResponse:
@@ -235,22 +304,23 @@ def _existing(tx: Any, kind: str, record_id: str) -> Any:
     return rec
 
 
-def _op_view(
-    o: dict[str, Any], store: Store, people: People, projects: dict[str, str], sources: dict[str, Any]
-) -> dict[str, Any]:
+def _ask(store: Store, people: People, qid: str | None) -> Ask | None:
+    q = store.read().get("question", qid) if qid else None
+    if q is None:
+        return None
+    resolves = q.data.get("resolves") or {}
+    about = resolves.get("kind") if resolves.get("kind") in ("held-op", "owner") else "other"
+    return Ask(
+        id=q.id,
+        status=q.data["status"],
+        about=about,
+        name=resolves.get("name"),
+        options=[Option(id=pid, name=people.name(pid)) for pid in q.data.get("options", [])],
+    )
+
+
+def _op_view(o: dict[str, Any], store: Store, people: People, projects: dict[str, str]) -> OpView:
     op = o["op"]
-    view: dict[str, Any] = {
-        "index": o["index"],
-        "op": op["op"],
-        "status": o["status"],
-        "reason": o.get("reason"),
-        "question": o.get("question"),
-        "group": o["group"],
-        "problems": o.get("problems", []),
-    }
-    evidence = op.get("evidence")
-    if evidence:
-        view["evidence"] = {"quote": evidence["quote"]}
     record = None
     for ref in o.get("records", []):
         rec = store.read().get(ref["kind"], ref["id"], include_deleted=True)
@@ -270,7 +340,6 @@ def _op_view(
             meta["action_status"] = d.get("status")
         if kind == "question":
             meta["to"] = people.name(d.get("to"))
-        view["record"] = {"kind": kind, "id": rec.id}
     elif op["op"] == "action.add":
         meta["owners"] = op.get("owners", [])
         meta["due"] = op.get("due")
@@ -279,10 +348,55 @@ def _op_view(
     if op["op"] == "record.set":
         meta["field"] = op["field"]
         meta["value"] = op["value"]
-    view["title"] = title
-    view["meta"] = meta
-    return view
+    evidence = op.get("evidence")
+    return OpView(
+        index=o["index"],
+        op=op["op"],
+        status=o["status"],
+        reason=o.get("reason"),
+        group=o["group"],
+        title=title,
+        meta=meta,
+        evidence={"quote": evidence["quote"]} if evidence else None,
+        record={"kind": record[0], "id": record[1].id} if record else None,
+        ask=_ask(store, people, o.get("question")),
+    )
 
 
-def utc_now() -> datetime:
-    return datetime.now(UTC)
+def _section(s: Any, people: People) -> FollowupSection:
+    questions = []
+    for q in s.questions:
+        resolves = q.get("resolves") or {}
+        questions.append(
+            FollowupQuestion(
+                id=q["id"],
+                title=q["title"],
+                text=q["text"],
+                links=q["links"],
+                kind=q["kind"],
+                status=q["status"],
+                waiting_days=q["waiting_days"],
+                about=resolves.get("kind"),
+                options=[Option(id=pid, name=people.name(pid)) for pid in q["options"]],
+            )
+        )
+    actions = [
+        FollowupAction(
+            id=a["id"],
+            text=a["text"],
+            due=a["due"],
+            project_name=a["project_name"],
+            told=a["told"],
+            told_days=a["told_days"],
+        )
+        for a in s.actions
+    ]
+    return FollowupSection(
+        person=s.person,
+        name=s.name,
+        is_pm=s.is_pm,
+        questions=questions,
+        actions=actions,
+        message=s.message,
+        to_send=s.to_send,
+    )

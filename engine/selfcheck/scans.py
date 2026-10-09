@@ -22,7 +22,7 @@ from pydantic import BaseModel
 from engine.config.schema import FILES
 
 REPO = Path(__file__).resolve().parents[2]
-CODE_DIRS = ("engine", "api", "web/src", "plugins", "tests")
+CODE_DIRS = ("engine", "api", "web/src", "web/e2e", "plugins", "tests")
 CODE_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".css", ".html", ".yaml", ".yml", ".json", ".md"}
 SKIP_PARTS = {"__pycache__", "node_modules", "fixtures", ".pytest_cache"}
 ADAPTERS = Path("engine/ai/adapters")

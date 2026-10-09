@@ -226,6 +226,47 @@ class LanguageFile(FileModel):
     )
 
 
+# ---- config/ui.yaml -------------------------------------------------------------------------------------------------
+
+DEFAULT_SHORTCUTS = {
+    "next": "j",
+    "previous": "k",
+    "primary": "a",
+    "send_back": "s",
+    "copy": "c",
+    "edit": "e",
+    "undo": "u",
+    "hand_in": "n",
+    "help": "?",
+}
+
+
+class UiFile(FileModel):
+    wording: dict[str, str] = Field(
+        default_factory=dict,
+        description="Overrides for the UI's wording sheet, by key (see web/src/wording/en.json for the keys).",
+    )
+    shortcuts: dict[str, str] = Field(
+        default_factory=lambda: dict(DEFAULT_SHORTCUTS),
+        description="Single-key shortcuts by action; they never fire while typing.",
+    )
+    narrow_below_px: int = Field(900, ge=320, description="Below this width the screen uses one column.")
+    toast_seconds: float = Field(7, ge=0, description="How long an undo toast stays; 0 keeps toasts until dismissed.")
+
+    @field_validator("shortcuts")
+    @classmethod
+    def _known_shortcuts(cls, value: dict[str, str]) -> dict[str, str]:
+        unknown = sorted(set(value) - set(DEFAULT_SHORTCUTS))
+        if unknown:
+            raise ValueError(f"unknown shortcut actions {unknown}; known: {sorted(DEFAULT_SHORTCUTS)}")
+        if any(len(k) != 1 for k in value.values()):
+            raise ValueError("each shortcut is a single key")
+        merged = {**DEFAULT_SHORTCUTS, **value}
+        if len(set(merged.values())) != len(merged):
+            raise ValueError("two actions share a shortcut key")
+        return merged
+
+
 # ---- registry --------------------------------------------------------------------------------------------------------
 
 #: Config file name (without .yaml) to its model, in the order `config show` lists them.
@@ -237,6 +278,7 @@ FILES: dict[str, type[FileModel]] = {
     "dispatch": DispatchFile,
     "checks": ChecksFile,
     "language": LanguageFile,
+    "ui": UiFile,
 }
 
 #: The newest version each file format has reached.

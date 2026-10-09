@@ -1,0 +1,5 @@
+version: 1
+wording: {}
+shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, undo: u, hand_in: n, help: "?"}
+narrow_below_px: 1000
+toast_seconds: 0

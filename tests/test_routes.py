@@ -100,10 +100,10 @@ def test_a_held_action_gets_an_owner(api):
     client, base, worker = api
     item = hand_in_case(client, base, worker, "no-owner")
     (op,) = item["changeset"]["ops"]
-    assert op["meta"]["action_status"] == "held" and op["question"]
+    assert op["meta"]["action_status"] == "held" and op["ask"]["about"] == "owner"
     publicist = by_role("Publicist")["id"]
-    assert client.post(f"{base}/questions/{op['question']}/pick-owner", json={}).status_code == 422
-    assert client.post(f"{base}/questions/{op['question']}/pick-owner", json={"person": publicist}).status_code == 200
+    assert client.post(f"{base}/questions/{op['ask']['id']}/pick-owner", json={}).status_code == 422
+    assert client.post(f"{base}/questions/{op['ask']['id']}/pick-owner", json={"person": publicist}).status_code == 200
     action = client.app.state.store.read().get("action", op["record"]["id"])
     assert action.data["status"] == "open" and action.data["owners"][0]["person"] == publicist
 
@@ -157,3 +157,82 @@ def test_the_openapi_schema_lists_the_routes(api):
     client, base, _ = api
     paths = client.get(f"{base}/openapi.json").json()["paths"]
     assert {"/api/handin", "/api/changes", "/api/followups", "/api/status"} <= set(paths)
+
+
+def test_a_shared_first_name_asks_who_and_releases_with_the_choice(api):
+    client, base, worker = api
+    item = hand_in_case(client, base, worker, "shared-first-name")
+    held = next(o for o in item["changeset"]["ops"] if o["status"] == "held")
+    ask = held["ask"]
+    assert ask["about"] == "held-op" and ask["name"] and len(ask["options"]) == 2
+    choice = ask["options"][0]["id"]
+    url = f"{base}/changesets/{item['changeset']['id']}/ops/{held['index']}/release"
+    assert client.post(url, json={"person": choice}).status_code == 200
+    after = next(i for i in client.get(f"{base}/changes").json() if i["id"] == item["id"])
+    assert after["changeset"]["ops"][held["index"]]["status"] == "applied"
+
+
+def test_a_source_shows_the_pasted_text(api):
+    client, base, worker = api
+    item = hand_in_case(client, base, worker, "close-action")
+    src = client.get(f"{base}/sources/{item['source']}").json()
+    assert src["trust"] == "untrusted"
+    quote = item["changeset"]["ops"][0]["evidence"]["quote"]
+    assert quote in src["text"]
+    assert client.get(f"{base}/sources/SRC-999").status_code == 404
+
+
+def test_runtime_config_carries_ui_settings(api):
+    client, base, _ = api
+    rc = client.get(f"{base}/runtime-config").json()
+    assert rc["shortcuts"]["next"] and rc["narrow_below_px"] >= 320 and rc["pm"]
+
+
+def test_mark_sent_can_be_undone(api):
+    client, base, _ = api
+    editor = by_role("Editor")["id"]
+    before = next(s for s in client.get(f"{base}/followups").json() if s["person"] == editor)
+    sent = client.post(f"{base}/followups/{editor}/mark-sent", json={}).json()
+    body = {"question_ids": sent["question_ids"], "action_ids": sent["action_ids"]}
+    assert client.post(f"{base}/followups/{editor}/unmark-sent", json=body).status_code == 200
+    after = next(s for s in client.get(f"{base}/followups").json() if s["person"] == editor)
+    assert after["to_send"] == before["to_send"] and after["message"] == before["message"]
+
+
+def test_answering_a_who_question_releases_the_item(api):
+    client, base, worker = api
+    item = hand_in_case(client, base, worker, "shared-first-name")
+    held = next(o for o in item["changeset"]["ops"] if o["status"] == "held")
+    url = f"{base}/questions/{held['ask']['id']}/answer"
+    assert client.post(url, json={"text": "no"}).status_code == 422
+    assert client.post(url, json={"person": held["ask"]["options"][1]["id"]}).status_code == 200
+    after = next(i for i in client.get(f"{base}/changes").json() if i["id"] == item["id"])
+    assert after["changeset"]["ops"][held["index"]]["status"] == "applied"
+
+
+def test_the_pm_marks_an_action_done_and_back(api):
+    client, base, _ = api
+    action = next(a for a in fixture_records(DEMO_B, "action") if a.get("status", "open") == "open")
+    assert client.post(f"{base}/actions/{action['id']}/status", json={"status": "done"}).status_code == 200
+    assert client.app.state.store.read().get("action", action["id"]).data["status"] == "done"
+    client.post(f"{base}/actions/{action['id']}/status", json={"status": "open"})
+    assert client.app.state.store.read().get("action", action["id"]).data["status"] == "open"
+
+
+def test_a_stopped_request_can_be_tried_again(api):
+    client, base, worker = api
+    from engine.ai.task import AiError
+
+    def fail(task):
+        raise AiError("quota", "out of credit")
+
+    set_responder(fail)
+    req = client.post(f"{base}/handin", json={"note": "file this"}).json()["request"]
+    worker.run_pending()
+    item = next(i for i in client.get(f"{base}/changes").json() if i["id"] == req)
+    assert item["state"] == "needs_you" and item["waiting"]
+    set_responder(None)
+    assert client.post(f"{base}/requests/{req}/retry").status_code == 200
+    worker.run_pending()
+    assert next(i for i in client.get(f"{base}/changes").json() if i["id"] == req)["state"] == "review"
+    assert client.post(f"{base}/requests/{req}/retry").status_code == 409

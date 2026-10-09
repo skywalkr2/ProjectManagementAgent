@@ -9,16 +9,18 @@ from __future__ import annotations
 import hmac
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
+from html import escape
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from starlette.applications import Starlette
 from starlette.routing import Mount
 from starlette.types import ASGIApp
 
 from api.routes import build_router
+from api.schemas import RuntimeConfig
 from engine import __version__
 from engine.ai.router import Router
 from engine.config import Config
@@ -30,6 +32,25 @@ UI_DIST = Path(__file__).resolve().parents[1] / "web" / "dist"
 
 COOKIE = "cockpit_token"
 OPEN_PATHS = {"/api/health"}
+
+# The UI loads nothing from elsewhere and runs no inline script, so the policy can be strict (design 12.5). The UI's
+# component library adds two fixed style rules (touch handling for pressable elements, and scroll locking on touch
+# screens); they are allowed by their exact hash, so nothing else inline can apply. The browser tests fail if a
+# library update changes them.
+UI_STYLE_HASHES = (
+    "'sha256-38RhXrc7EdReTKsOm23ZPOCUgniTUUcjky8QOOrQx6o='",
+    "'sha256-gYiS/BvZvRcK27JIXTuwhZ3hs2+VJ1X+2gUlE+farlg='",
+)
+SECURITY_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; script-src 'self'; "
+        f"style-src 'self' {' '.join(UI_STYLE_HASHES)}; img-src 'self' data:; connect-src 'self'; "
+        "font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+}
 
 
 def create_app(
@@ -99,21 +120,34 @@ def create_app(
             return _unauthorized()
         return await call_next(request)
 
+    # Added last so it wraps everything, including the sign-in redirects and refusals above.
+    @inner.middleware("http")
+    async def security_headers(request: Request, call_next: Any) -> Any:
+        response = await call_next(request)
+        for name, value in SECURITY_HEADERS.items():
+            response.headers.setdefault(name, value)
+        return response
+
     @inner.get("/api/health")
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
     @inner.get("/api/runtime-config")
-    def runtime_config() -> dict[str, Any]:
-        """What the UI needs before anything else: where it is served and what to call things."""
+    def runtime_config() -> RuntimeConfig:
+        """What the UI needs before anything else: where it is served, what to call things, and its settings."""
         prefix = "" if base_path == "/" else base_path
-        return {
-            "base_path": base_path,
-            "api_base": f"{prefix}/api",
-            "assistant_name": cfg.workspace.assistant_name,
-            "workspace_name": cfg.workspace.name,
-            "version": __version__,
-        }
+        return RuntimeConfig(
+            base_path=base_path,
+            api_base=f"{prefix}/api",
+            assistant_name=cfg.workspace.assistant_name,
+            workspace_name=cfg.workspace.name,
+            version=__version__,
+            pm=cfg.workspace.user.person,
+            narrow_below_px=cfg.ui.narrow_below_px,
+            toast_seconds=cfg.ui.toast_seconds,
+            shortcuts=cfg.ui.shortcuts,
+            wording=cfg.ui.wording,
+        )
 
     inner.include_router(build_router(ws, cfg, store, events, worker))
     inner.state.worker = worker
@@ -128,9 +162,11 @@ def create_app(
         if not index.exists():
             return JSONResponse({"status": "running", "ui": "not built yet"})
         candidate = (dist / path).resolve()
-        if path and candidate.is_file() and candidate.is_relative_to(dist.resolve()):
+        if path and candidate.is_file() and candidate.is_relative_to(dist.resolve()) and candidate != index.resolve():
             return FileResponse(candidate)
-        return FileResponse(index, headers={"Cache-Control": "no-store"})
+        return HTMLResponse(
+            _with_base(index.read_text(encoding="utf-8"), base_path), headers={"Cache-Control": "no-store"}
+        )
 
     if base_path == "/":
         return inner
@@ -138,6 +174,12 @@ def create_app(
     outer.state.worker = worker
     outer.state.store = store
     return outer
+
+
+def _with_base(html: str, base_path: str) -> str:
+    """Point the page's relative paths (assets, API calls) at the configured base path."""
+    href = base_path if base_path.endswith("/") else base_path + "/"
+    return html.replace("<head>", f'<head>\n    <base href="{escape(href, quote=True)}" />', 1)
 
 
 def _cookie_path(base_path: str) -> str:

@@ -19,19 +19,37 @@ storage are all settings, so you can change an installation without changing cod
 
 ## Status
 
-Design 1.0 is complete. The first half of the launch slice is built: the database with its change log, export and import,
-configuration, the self-check, two fictional workspaces and a local server. See the plan in [`docs/project/`](docs/project/).
+Design 1.0 is complete and the launch slice is built: hand something in (your note plus pasted content), the assistant
+files actions, questions, facts and notes with the evidence for each, names become people (or a "who is this?" question),
+undo from the change log, What changed and Follow-ups by person with Copy and Mark sent, off-device backups with a nag, an
+evaluation harness for choosing a model, and a web UI that works at any base path, by keyboard and on a phone. Not yet
+real-world tested with a live AI account. See the plan in [`docs/project/`](docs/project/).
 
 ## Try it
 
-Needs Python 3.12 or newer and [uv](https://docs.astral.sh/uv/).
+Needs Python 3.12 or newer with [uv](https://docs.astral.sh/uv/), and Node 22 with npm for the web UI.
 
 ```
 uv sync
+npm --prefix web ci && npm --prefix web run build            # the web UI
 uv run cockpit init /tmp/lantern --from workspaces/demo-b   # a fictional imprint
 uv run cockpit serve --workspace /tmp/lantern               # prints a link to open
-uv run python -m engine.selfcheck                           # the product's own checks
-uv run pytest
+```
+
+The fictional workspace uses a stand-in AI that files whatever you hand in as a note. To use a real account, add it to the
+workspace's `config/ai.yaml` with its key as a reference (`auth: env:MY_AI_KEY`, never the key itself) and point the
+`routine` tier at it. Before relying on a model, score it on the fictional cases:
+
+```
+MY_AI_KEY=... uv run cockpit evaluate --from workspaces/demo-b --ai-config /tmp/lantern/config/ai.yaml \
+    --account <provider>/<model> --runs 3
+```
+
+Checks, run before finishing any change:
+
+```
+uv run ruff check . && uv run pytest && uv run python -m engine.selfcheck
+npm --prefix web test && npm --prefix web run build && npm --prefix web run e2e
 ```
 
 ## Documents

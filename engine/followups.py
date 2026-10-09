@@ -19,6 +19,9 @@ from engine.storage import Store, WriteContext
 
 _PM = WriteContext(actor="pm", trust="trusted", op="followup")
 
+#: Questions that hold an item until the PM says who: answered on the item itself.
+ROUTING = ("held-op", "owner")
+
 
 @dataclass
 class Section:
@@ -45,6 +48,8 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
         d = q.data
         if d["status"] not in ("open", "sent"):
             continue
+        if (d.get("resolves") or {}).get("kind") in ROUTING:
+            continue  # answered where the item waits (What changed), so it isn't shown twice
         waiting = (today - datetime.fromisoformat(d["sent_at"]).date()).days if d.get("sent_at") else None
         section(d["to"]).questions.append(
             {
@@ -112,15 +117,15 @@ def compose(s: Section, cfg: Config, people: People) -> str:
 
 def mark_sent(
     store: Store, cfg: Config, person: str, *, sent_text: str | None = None, now: datetime | None = None
-) -> dict[str, int]:
+) -> dict[str, Any]:
     """Record that the person's open questions and untold actions went out. If the PM edited the message before
-    sending, that is recorded as a quality signal."""
+    sending, that is recorded as a quality signal. Returns the counts and the ids, which `unmark_sent` takes."""
     now = now or datetime.now(UTC)
     today = now.date()
     current = next((s for s in sections(store, cfg, today) if s.person == person), None)
     if current is None:
-        return {"questions": 0, "actions": 0}
-    counts = {"questions": 0, "actions": 0}
+        return {"questions": 0, "actions": 0, "question_ids": [], "action_ids": []}
+    counts: dict[str, Any] = {"questions": 0, "actions": 0, "question_ids": [], "action_ids": []}
     with store.transaction() as tx:
         for q in current.questions:
             if q["status"] == "open":
@@ -129,12 +134,28 @@ def mark_sent(
                     "question", q["id"], {"status": "sent", "sent_at": now.isoformat()}, _PM, read_version=rec.version
                 )
                 counts["questions"] += 1
+                counts["question_ids"].append(q["id"])
         for a in current.actions:
             if a["told"] is None:
                 rec = tx.get("action", a["id"])
                 told = {**rec.data.get("told", {}), person: today.isoformat()}
                 tx.update("action", a["id"], {"told": told}, _PM, read_version=rec.version)
                 counts["actions"] += 1
+                counts["action_ids"].append(a["id"])
     if sent_text is not None and normalize(sent_text) != normalize(current.message):
         signal(store, "draft_edited", [person], note=sent_text, now=now)
     return counts
+
+
+def unmark_sent(store: Store, person: str, question_ids: list[str], action_ids: list[str]) -> None:
+    """Undo a Mark sent: the questions are open again and the person is no longer marked as told."""
+    with store.transaction() as tx:
+        for qid in question_ids:
+            rec = tx.get("question", qid)
+            if rec is not None and rec.data["status"] == "sent":
+                tx.update("question", qid, {"status": "open", "sent_at": None}, _PM, read_version=rec.version)
+        for aid in action_ids:
+            rec = tx.get("action", aid)
+            if rec is not None and person in rec.data.get("told", {}):
+                told = {k: v for k, v in rec.data["told"].items() if k != person}
+                tx.update("action", aid, {"told": told}, _PM, read_version=rec.version)

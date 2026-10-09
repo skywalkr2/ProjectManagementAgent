@@ -65,3 +65,25 @@ def test_shutdown_hook_runs_when_the_server_stops(tmp_path, demo):
         with TestClient(create_app(ws, cfg, TOKEN, on_shutdown=lambda b=base: calls.append(b))):
             pass
     assert calls == ["/", "/admin"]
+
+
+def test_the_ui_gets_a_base_for_the_configured_path_and_a_strict_policy(tmp_path, demo):
+    import re
+
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<!doctype html><html><head><title>x</title></head><body></body></html>")
+    (dist / "assets" / "app.js").write_text("console.log(1)")
+    for base in ("/", "/tools/cockpit"):
+        ws = init_workspace(tmp_path / f"ws{len(base)}", template=demo, git=False)
+        cfg = load_config(ws.config_dir, env={}, flags={"server.base_path": base})
+        prefix = "" if base == "/" else base
+        c = TestClient(create_app(ws, cfg, TOKEN, ui_dist=dist), headers={"Authorization": f"Bearer {TOKEN}"})
+        page = c.get(f"{prefix}/some/deep/route")
+        assert page.status_code == 200
+        assert re.search(rf'<base href="{prefix}/"', page.text)
+        assert "script-src 'self'" in page.headers["content-security-policy"]
+        assert c.get(f"{prefix}/assets/app.js").text == "console.log(1)"
+        assert c.get(f"{prefix}/api/nothing-here").status_code == 404
+        refused = TestClient(create_app(ws, cfg, TOKEN, ui_dist=dist)).get(f"{prefix}/")
+        assert refused.status_code == 401 and "frame-ancestors 'none'" in refused.headers["content-security-policy"]
