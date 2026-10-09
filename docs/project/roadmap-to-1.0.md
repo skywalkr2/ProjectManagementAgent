@@ -12,7 +12,7 @@ Last updated: 2026-10-09.
 
 ## 2a. Build on now (decided 2026-10-09; launch-slice copy is commit `49e95e7`)
 
-- [ ] People and projects screens: add, edit, rename; remove when nothing refers to them.
+- [x] People and projects screens: add, edit, rename; remove when nothing refers to them; `cockpit init --you` (2026-10-09).
 - [ ] Ask the assistant: draft on request (an email, a message), edit and copy (6.25).
 - [ ] Then the 3a work below, starting now instead of 2026-10-31.
 
