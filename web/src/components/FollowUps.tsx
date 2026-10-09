@@ -10,6 +10,7 @@ import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { useAddOwnRequest } from "./HandIn";
 import { SafeLink, SafeText } from "./SafeText";
 
 export function FollowUps() {
@@ -263,37 +264,14 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
           {s.questions.length > 0 && (
             <ul className="children" aria-label={tn("followups.questions", s.questions.length)}>
               {s.questions.map((q) => (
-                <li key={q.id} className="child">
-                  <div className="full">
-                    <span className={`pill ${q.status === "open" ? "k-send" : "k-wait"}`}>
-                      {q.status === "open"
-                        ? t("followups.q.ready")
-                        : tn("followups.q.waiting_days", q.waiting_days ?? 0)}
-                    </span>
-                    <div className="title">{q.title}</div>
-                    {q.text && <SafeText text={q.text} />}
-                    {q.links.map((l) => (
-                      <div key={l.url}>
-                        <SafeLink label={l.label} url={l.url} />
-                      </div>
-                    ))}
-                  </div>
-                </li>
+                <QuestionRow key={q.id} question={q} person={s.name} />
               ))}
             </ul>
           )}
           {s.actions.length > 0 && (
             <ul className="children" aria-label={tn("followups.actions", s.actions.length)}>
               {s.actions.map((a) => (
-                <li key={a.id} className="child">
-                  <div className="full">
-                    <span className={`pill ${a.told ? "k-done" : "k-send"}`}>
-                      {a.told ? tn("followups.a.told_days", a.told_days ?? 0) : t("followups.a.to_send")}
-                    </span>
-                    <div className="title">{a.text}</div>
-                    <div className="meta">{actionMeta(a, t)}</div>
-                  </div>
-                </li>
+                <TheirActionRow key={a.id} action={a} person={s.name} />
               ))}
             </ul>
           )}
@@ -324,6 +302,109 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
           )}
         </div>
       )}
+    </li>
+  );
+}
+
+function QuestionRow(props: { question: S["FollowupQuestion"]; person: string }) {
+  const { t, tn } = useWords();
+  const act = useAct();
+  const addOwn = useAddOwnRequest();
+  const q = props.question;
+  const [replying, setReplying] = useState(false);
+  const [text, setText] = useState("");
+  const first = props.person.split(" ")[0];
+  const submit = async () => {
+    const handed = await act(
+      () => api.reply(q.id, text),
+      () => ({ message: t("toast.reply_handed_in", { name: first }) }),
+    );
+    if (handed) {
+      addOwn(handed.request);
+      setText("");
+      setReplying(false);
+    }
+  };
+  return (
+    <li className="child">
+      <div>
+        <span className={`pill ${q.status === "open" ? "k-send" : "k-wait"}`}>
+          {q.status === "open" ? t("followups.q.ready") : tn("followups.q.waiting_days", q.waiting_days ?? 0)}
+        </span>
+        <div className="title">{q.title}</div>
+        {q.text && <SafeText text={q.text} />}
+        {q.links.map((l) => (
+          <div key={l.url}>
+            <SafeLink label={l.label} url={l.url} />
+          </div>
+        ))}
+      </div>
+      <div className="acts">
+        {q.status === "sent" && !replying && (
+          <button type="button" className="btn" onClick={() => setReplying(true)}>
+            {t("followups.record_reply")}
+          </button>
+        )}
+      </div>
+      {replying && (
+        <form
+          className="answer-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <label className="hint" htmlFor={`reply-${q.id}`}>
+            {t("followups.reply_label", { name: first })}
+          </label>
+          <textarea
+            id={`reply-${q.id}`}
+            className="short"
+            autoFocus
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setReplying(false);
+            }}
+          />
+          <div className="row-end">
+            <button type="button" className="btn quiet" onClick={() => setReplying(false)}>
+              {t("action.cancel")}
+            </button>
+            <button type="submit" className="btn primary" disabled={!text.trim()}>
+              {t("followups.reply_go")}
+            </button>
+          </div>
+        </form>
+      )}
+    </li>
+  );
+}
+
+function TheirActionRow(props: { action: S["FollowupAction"]; person: string }) {
+  const { t, tn } = useWords();
+  const act = useAct();
+  const a = props.action;
+  const first = props.person.split(" ")[0];
+  const finished = () =>
+    act(
+      () => api.actionStatus(a.id, "done"),
+      () => ({ message: t("toast.they_finished", { name: first }), undo: () => api.actionStatus(a.id, "open") }),
+    );
+  return (
+    <li className="child">
+      <div>
+        <span className={`pill ${a.told ? "k-done" : "k-send"}`}>
+          {a.told ? tn("followups.a.told_days", a.told_days ?? 0) : t("followups.a.to_send")}
+        </span>
+        <div className="title">{a.text}</div>
+        <div className="meta">{actionMeta(a, t)}</div>
+      </div>
+      <div className="acts">
+        <button type="button" className="btn quiet" onClick={() => void finished()}>
+          {t("followups.they_finished")}
+        </button>
+      </div>
     </li>
   );
 }

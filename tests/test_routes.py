@@ -236,3 +236,17 @@ def test_a_stopped_request_can_be_tried_again(api):
     worker.run_pending()
     assert next(i for i in client.get(f"{base}/changes").json() if i["id"] == req)["state"] == "review"
     assert client.post(f"{base}/requests/{req}/retry").status_code == 409
+
+
+def test_a_reply_is_handed_in_against_its_question_and_closes_it(api):
+    client, base, worker = api
+    c = case("answer-question")
+    qid = next(e["id"] for e in c["expect"] if e.get("op") == "question.done")
+    set_responder(lambda task: json.dumps(c["stub_answer"]))
+    r = client.post(f"{base}/questions/{qid}/reply", json={"text": c["pasted"]})
+    assert r.status_code == 200
+    req = client.app.state.store.read().get("request", r.json()["request"]).data
+    assert qid in req["note"] and req["source"]
+    worker.run_pending()
+    assert client.app.state.store.read().get("question", qid).data["status"] == "answered"
+    assert client.post(f"{base}/questions/{qid}/reply", json={"text": "again"}).status_code == 409

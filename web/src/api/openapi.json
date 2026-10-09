@@ -809,6 +809,20 @@
         "title": "RecordRef",
         "type": "object"
       },
+      "Reply": {
+        "properties": {
+          "text": {
+            "description": "The reply as received, pasted by the PM.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "Reply",
+        "type": "object"
+      },
       "RequestCounts": {
         "properties": {
           "needs_you": {
@@ -1822,6 +1836,56 @@
           }
         },
         "summary": "Owner"
+      }
+    },
+    "/api/questions/{qid}/reply": {
+      "post": {
+        "description": "Hand in a person's reply to a question that went out, with a note saying which question it answers.",
+        "operationId": "reply_api_questions__qid__reply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "qid",
+            "required": true,
+            "schema": {
+              "title": "Qid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Reply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Handed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reply"
       }
     },
     "/api/requests/{request_id}/retry": {

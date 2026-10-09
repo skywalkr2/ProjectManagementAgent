@@ -29,6 +29,7 @@ from api.schemas import (
     OpView,
     PersonChoice,
     PersonView,
+    Reply,
     RequestCounts,
     Requeued,
     SendBack,
@@ -47,6 +48,7 @@ from engine.dispatcher import looks_good, retry, send_back, undo_changeset
 from engine.followups import mark_sent, sections, unmark_sent
 from engine.intake import IntakeError, hand_in, source_text
 from engine.names import People
+from engine.prompts import render
 from engine.storage import Store, StoreError, WriteContext
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -210,6 +212,20 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             guard(do)
         changed()
         return Ok(ok=qid)
+
+    @r.post("/questions/{qid}/reply")
+    def reply(qid: str, body: Reply) -> Handed:
+        """Hand in a person's reply to a question that went out, with a note saying which question it answers."""
+        need("question", qid)
+        q = store.read().get("question", qid)
+        if q.data["status"] not in ("open", "sent"):
+            raise HTTPException(status_code=409, detail="That question is already answered.")
+        values = {"name": People(store, cfg).name(q.data["to"]), "title": q.data["title"], "question": qid}
+        note = render("reply", values, ws.root)
+        handed = guard(lambda: hand_in(ws, store, note=note, pasted=body.text))
+        changed()
+        worker.poke()
+        return Handed(request=handed.request, source=handed.source)
 
     @r.post("/actions/{action_id}/status")
     def action_status(action_id: str, body: ActionState) -> Ok:

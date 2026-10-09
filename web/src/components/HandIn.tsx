@@ -21,6 +21,11 @@ export function useOwnRequests(): Set<string> {
   return useContext(OwnContext).ids;
 }
 
+/** Mark a request the PM just handed in from anywhere on the screen, so it shows at once. */
+export function useAddOwnRequest(): (id: string) => void {
+  return useContext(OwnContext).add;
+}
+
 const TEXT_FILE = /^text\/|\/(json|xml)$|message\/rfc822/;
 
 export function HandIn(props: { onClose: () => void }) {

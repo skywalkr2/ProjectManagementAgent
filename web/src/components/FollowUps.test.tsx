@@ -87,3 +87,23 @@ test("after copying, the row's next step is Mark sent, even once the toast is go
     expect(calls.find((c) => c.route === "POST followups/PER-2/mark-sent")?.body).toEqual({ text: sections[1].message }),
   );
 });
+
+test("a sent question takes its reply right on its row", async () => {
+  const user = userEvent.setup();
+  const sent = structuredClone(sections);
+  sent[1].questions[0].status = "sent";
+  sent[1].questions[0].waiting_days = 2;
+  const calls = fakeApi({
+    "GET followups": () => sent,
+    "GET people": () => [],
+    "POST questions/Q-1/reply": () => ({ request: "REQ-5", source: "SRC-5" }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  await user.click(screen.getByRole("button", { name: "Record reply" }));
+  await user.type(screen.getByRole("textbox", { name: /Robin's reply/ }), "Yes, the index is final.");
+  await user.click(screen.getByRole("button", { name: "Hand in reply" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST questions/Q-1/reply")?.body).toEqual({ text: "Yes, the index is final." }),
+  );
+});

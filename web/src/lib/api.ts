@@ -53,6 +53,7 @@ export const api = {
   answer: (q: string, body: S["Answer"]) => call<S["Ok"]>("POST", `questions/${id(q)}/answer`, body),
   actionStatus: (a: string, status: S["ActionState"]["status"]) =>
     call<S["Ok"]>("POST", `actions/${id(a)}/status`, { status }),
+  reply: (q: string, text: string) => call<S["Handed"]>("POST", `questions/${id(q)}/reply`, { text }),
   retry: (req: string) => call<S["Ok"]>("POST", `requests/${id(req)}/retry`),
   markSent: (person: string, text: string | null) =>
     call<S["SentCounts"]>("POST", `followups/${id(person)}/mark-sent`, { text }),

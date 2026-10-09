@@ -39,6 +39,10 @@ class Answer(BaseModel):
     person: str | None = Field(None, description="The person chosen, for questions that ask who.")
 
 
+class Reply(BaseModel):
+    text: str = Field(description="The reply as received, pasted by the PM.")
+
+
 class ActionState(BaseModel):
     status: Literal["open", "done"]
 
