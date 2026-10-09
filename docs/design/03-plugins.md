@@ -54,9 +54,10 @@ where it came from.
 | Op validator | extra checks on an existing op, core or plugin | `validate(op, workspace) -> problems` (can refuse, never modify) | 1.0 |
 | Triage matcher | a rule kind for `config/triage.yaml` | `match(change, params) -> reason or None` | 1.0 |
 | AI adapter | a kind of AI account: a vendor's native API, an aggregator, or an agent | `models()`, `run()`, `classify_error()`, `health()` (6.16) | 1.0 |
-| AI task kind | a new kind of AI work | packet builder, the ops it may use (its output schema is generated from them), required capabilities, default prompt template, default tier and parameters | 1.0 |
+| AI task kind | a new kind of AI work | packet builder, output (ops, or a draft for a `long_text` field, 6.7), the ops it may use (its output schema is generated from them), required capabilities, independent review or not, typical cost, default prompt template, default tier and parameters | 1.0 |
 | Renderer | how records become content for a channel | template files, optional render function | 1.0 |
 | Lookup | a fact the AI can ask the engine to fetch | `lookup(query) -> result` | 1.0 |
+| Stages | the steps a record type moves through | ordered stages with entry checks and what each starts (6.26), defaults for `config/stages.yaml` | 1.0 |
 | Panel | a UI view | declarative view spec (7.2); bundled plugins may also ship a React component | 1.0 |
 | Today contributor | lines on the Today list | `lines(workspace) -> [TodayLine]` | 1.0 |
 | Job | scheduled work | name, default schedule, needs network, `run()` | 1.0 |

@@ -177,6 +177,7 @@ tiers:                           # what the work needs, mapped to provider/model
   routine:  {use: my-anthropic/small, fallback: [router/small, local/small], escalate_to: deep}
   deep:     {use: my-anthropic/large, fallback: [my-openai/large]}
   vision:   {use: router/vision}               # screenshots and images
+  review:   {use: my-openai/large, fallback: [router/large]}   # independent reviews: a different account from the writer
 tasks:                         # tier and parameters per AI task kind (defaults shown; plugin kinds use their declared defaults)
   change: routine
   notes: {tier: routine, temperature: 0, max_output: 4000}    # extraction: as deterministic as the model allows
@@ -185,7 +186,16 @@ tasks:                         # tier and parameters per AI task kind (defaults 
   update: {tier: deep, temperature: 0.4}                      # drafting: a little room for wording
   ask: deep                    # ad hoc requests to the assistant (6.25)
   agenda: routine
-budgets: {per_run_usd: 0.25, per_day_usd: 2, per_month_usd: 30, warn_at: 0.8}   # across all accounts; per-provider optional
+  # a pack's writing kinds, for example: {tier: deep, temperature: 0.7, output: draft}
+  # and its reviews: {tier: review, independent: true}   (never the account that wrote the input, 6.16)
+budgets:
+  per_run_usd: 0.25            # across all accounts; per-provider optional
+  per_day_usd: 2
+  per_month_usd: 30
+  warn_at: 0.8
+  confirm_above_usd: 0.25      # a run estimated above this asks first, with the estimate (6.16)
+  per_task: {}                 # caps by task kind, e.g. {writing/draft-chapter: {per_run_usd: 2, per_month_usd: 40}}
+  per_record: {}               # default caps by record type, e.g. {writing/work: 60}; a record can set its own
 prices: {}                     # overrides for models whose price the provider's catalog doesn't give
 evaluation: {required_before_switch: true, min_score: 0.9, runs: 3}
 ```
@@ -193,6 +203,12 @@ evaluation: {required_before_switch: true, min_score: 0.9, runs: 3}
 Budget defaults suit one person: a typical notes run is about 5,000 to 10,000 tokens in and about 1,000 out, which costs a
 fraction of a cent on a low-cost model and a few cents on a top-tier one (prices change; the provider catalogs have the current
 ones). A runaway loop hits `per_run_usd` or `per_day_usd` long before it costs real money; the PM is warned at `warn_at`.
+
+Writing work costs more: a chapter draft reads the outline, the plan and summaries of the chapters around it and writes a few
+thousand words, and an independent review reads it again on another account. A whole book is many such runs, plus revisions.
+That is why packs with writing task kinds raise `per_task` caps only for those kinds, set a `per_record` cap per work, and
+every run above `confirm_above_usd` waits for the person's go with its estimate (6.16). The defaults stay low, so nothing
+expensive happens unless the person chose it.
 
 ## 4.9 `config/dispatch.yaml`, `config/governor.yaml`
 
@@ -381,3 +397,22 @@ review:
 ```
 
 Packs ship presets (the publishing preset keeps risks, issues and dependencies and leaves assumptions off).
+
+## 4.21 `config/stages.yaml`
+
+The stages of record types that move through steps (6.26). Packs ship defaults; the workspace edits, renames, adds or removes
+stages and their checks.
+
+```yaml
+version: 1
+publishing/title:
+  - {id: manuscript, label: Manuscript}
+  - {id: editing, label: Editing, entry: [manuscript-received]}
+  - {id: production, label: Production, entry: [edits-approved]}
+  - {id: proofs, label: Proofs, entry: [interior-final, cover-final]}
+  - {id: launch, label: Launch, entry: [proof-approved, launch-date-set]}
+moves: person                    # who moves records between stages by default: person or rule
+```
+
+Each entry check names a rule (4.10) or a pack's check by id; labels are wording, so they can change without touching data.
+

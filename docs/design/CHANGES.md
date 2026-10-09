@@ -205,4 +205,7 @@ For your information; nothing here needs an answer.
 - **UI review** (Part 7): Today becomes the home queue; one primary action per row; undo toasts instead of confirmations except
   for sending; edit in place before approving; evidence on every claim; keyboard shortcuts; phone layouts; first-run setup;
   accessibility to WCAG 2.2 AA; a front-end architecture with live updates and a generated API client.
-
+- **Core features for future packs** (sales, writing): long text stored once per version with authorship (5.0), drafts as
+  prose that the person reviews (6.7), a file channel (6.3), stages for work that moves through steps (6.26), an independent
+  second opinion on another account (6.16), and cost control: estimates, a go above a set amount, budgets per task kind and per
+  record (6.16). In version 1, before the plugin API is frozen.

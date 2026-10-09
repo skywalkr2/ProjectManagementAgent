@@ -50,7 +50,12 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Social, email and newsletter channels | won't | won't | 3.7 |
 | Sales pack (accounts, opportunities, proposals, SOWs, contracts, regulatory data per jurisdiction) | won't | won't | 13.3 |
 | Writing pack (idea to manuscript with stage approvals, independent review, print PDF and ebook) | won't | won't | 13.3 |
-| Core points for those packs: document output, stage gates, independent second opinion, long text | won't | won't | 13.3 |
+| Long text fields with versions and authorship | won't | must | 5.0 |
+| Drafts with prose output (`text.draft`), not held to the evidence rule but marked unreviewed | won't | must | 6.7 |
+| File channel (approved content saved to a configured folder) | won't | must | 6.3 |
+| Stages for record types, with entry checks and the person's go (publishing titles first) | won't | must | 6.26, 4.21 |
+| Independent second opinion (a review on a different account) | won't | should | 6.16 |
+| Cost control: estimate before a run, a go above a configured amount, budgets per task kind and per record, spend shown | won't (budget defaults only) | must | 6.16, 4.8 |
 
 ## Change control
 

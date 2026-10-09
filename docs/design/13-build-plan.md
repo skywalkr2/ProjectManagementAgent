@@ -59,7 +59,9 @@ Each milestone ends with tests passing against both fictional workspaces, the co
 6. **Records, rendering and the publisher.** Core record types and `ext` fields, templates, render-time ordering, roll-ups,
    drafts, content-hash approval, scheduled drafts, concurrency check, shared masters (lock status, outside edits as changes),
    reverting drafts for undone publishes; the fake page channel; Waiting to go out with the diff
-   renderer.
+   renderer. Long text fields with versions and authorship (5.0), drafts with prose output (6.7), the file channel (6.3),
+   stages (6.26), independent reviews (6.16), and cost control: estimates, a go above the configured amount, budgets per task
+   kind and per record (6.16).
 
 7. **UI shell and settings.** Today as the home queue (7.7), the first-run setup (7.8), panel registry with declarative panels,
    branding, the Settings panel (7.9), the Admin tab including Quality, side-by-side diffs, virtualized lists, phone-friendly
@@ -133,12 +135,7 @@ publishing pack, which takes a finished book to launch.
 - **Playbook:** craft and structure guidance by genre, chapter review checklists, and the platforms' rules for disclosing
   AI-assisted content.
 
-**Core needs both packs share** (to design when the first one starts, as generic extension points):
-
-- **Document output:** a file channel and long-document renderers (PDF, word-processor files, ebook formats), with page
-  setup from config.
-- **Stage gates:** a declared pipeline of stages for a record type, with entry criteria and an approval to move on, shown on
-  Today.
-- **Independent second opinion:** a router option to run a task on an account and model different from the one that produced
-  the input (6.16).
-- **Long text:** records whose main content is long prose, versioned, with word-level diffs in review.
+**Core needs both packs share** are designed into version 1 (milestone 6), so the plugin API is frozen with them in place:
+long text with versions and authorship (5.0), drafts and prose output (6.7), the file channel (6.3), stages (6.26), the
+independent second opinion (6.16), and cost control with estimates, a go above a configured amount and budgets per task kind
+and per record (6.16, 4.8). The packs themselves stay in the Later horizon.

@@ -82,7 +82,8 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
   overlaps with, dry-run count) and Undo, unless they contradict an existing rule or setting, which waits for the PM (design
   6.7, 12.2). Untrusted content is marked in packets and never becomes a rule, recipient or source on its own.
 - Packets put stable parts first (instructions, glossary, rules, lessons, open items) and the request last (design 6.6).
-- Claims carry evidence: the exact words from the cited source, which must be there (design 6.7). One input per AI call.
+- Claims carry evidence: the exact words from the cited source, which must be there (design 6.7). Drafts (prose the person
+  reviews) are not claims; they stay marked unreviewed until approved, and checkable facts inside them still need evidence. One input per AI call.
   Anything derived from untrusted content stays marked untrusted, and lessons from inputs wait for the PM (design 6.6, 6.22).
   Escalate to a stronger model on check failures, never on a model's self-reported confidence.
 - Lints that still fail after one return are held for the PM when the item will reach another person, and only warn when it
@@ -92,7 +93,7 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 
 ## UI rules (design Part 7)
 - Today is the home; panels are filtered views. One primary action per row, the rest in its menu.
-- Reversible actions act at once with an undo toast; only send, publish and post confirm.
+- Reversible actions act at once with an undo toast; only send, publish, post and spending above the configured amount confirm.
 - No hard-coded user-facing text: everything comes from the wording sheet and config. No internal terms on screen.
 - Keyboard and phone both work; WCAG 2.2 AA; status never by color alone.
 - Never render raw HTML; links from untrusted content show their real domain. The API client is generated from OpenAPI.
@@ -102,6 +103,8 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
   that exact content.
 - The AI's only write path is a changeset validated by the applier.
 - One row per thing in the UI; lists, not run-on lines; labels in plain words; the model's name never shown.
+- AI work that costs real money is the person's choice: estimate first, ask above the configured amount, budgets per task kind
+  and per record (design 6.16).
 - Every action names at least one person: owners are a list of person ids (optional team each), shown in the owner format.
   An action without a known owner is held for "Pick an owner".
 - Every waiting state shows why and until when. Runner errors are classified from the runner's exit code and error stream,

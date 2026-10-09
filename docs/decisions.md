@@ -3,6 +3,27 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Core features the sales and writing packs need
+
+**Decided by:** project owner, after checking the candidate packs against the core.
+
+**What:** Six generic features join the core design, in version 1 (milestone 6), before the plugin API is frozen:
+
+- **Long text** (5.0): prose fields stored once per version by hash, with authorship by passage, instead of full copies in the
+  ledger; needed before real data exists, because changing the ledger format later is a migration.
+- **Drafts and prose output** (6.7): writing tasks produce a `text.draft` the person reviews; drafts are not claims, so they
+  are not held to the evidence rule, but checkable facts inside them are.
+- **File channel** (6.3): approved content saved to a configured folder, beside the clipboard.
+- **Stages** (6.26, 4.21): one mechanism for work that moves through steps, replacing per-pack stage fields; the publishing
+  pack's titles use it first.
+- **Independent second opinion** (6.16): a review on a different account from the one that wrote the work.
+- **Cost control** (6.16, 4.8): estimates before a run, a go for anything above `budgets.confirm_above_usd` (spending money is
+  irreversible, so it confirms like sending does, 7.6), budgets per task kind and per record, spend shown by pack, task kind and
+  record. Writing work can cost the person real money; it must never happen without their choice.
+
+**Impact:** adds work to version 1 milestone 6 (about a week of build time; no owner time beyond reading the design). Nothing
+changes in the launch slice. The sales and writing packs stay in the Later horizon.
+
 ## 2026-10-09: Sales and writing packs recorded as candidates
 
 **Decided by:** project owner.

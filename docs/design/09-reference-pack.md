@@ -61,7 +61,8 @@ promotion copy. The PM is the publisher; contributors never use the tool and get
 
 ## 9.7 Publishing: what it registers
 
-- **Record type** `publishing/title`: working title, formats, stage, launch date (with baseline, 6.23), identifier status,
+- **Record type** `publishing/title`: working title, formats, stage (core stages, 6.26, with the pack's defaults in
+  `config/stages.yaml`), launch date (with baseline, 6.23), identifier status,
   contributors (person ids by role).
 - **Launch plan template** (`config/plugins/publishing.yaml`): the milestones of a launch, each with an offset from the launch
   date (its lead time) and the milestones it depends on. The pack ships a starting template the PM edits; every milestone name,

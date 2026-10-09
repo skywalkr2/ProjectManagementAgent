@@ -19,8 +19,9 @@ social accounts) is a plugin. Files are read as text from documents and spreadsh
 
 The interface in 3.3. A channel describes its capabilities: versioned targets with a concurrency check, pulling others' edits
 back, scheduled sending, length limits, media. The core ships the clipboard channel (the PM copies the approved text and pastes
-it anywhere) and the fake channel. Wiki pages, email, blogs and social networks are plugins. Channels are called only by the
-publisher (6.12).
+it anywhere), the **file channel** (the approved content is written to a configured folder, in whatever format a renderer
+produced: text, a document, a PDF, an ebook) and the fake channel. Wiki pages, email, blogs and social networks are plugins.
+Channels are called only by the publisher (6.12).
 
 ## 6.4 Watchers
 
@@ -112,6 +113,18 @@ repair (code fences, trailing commas, unbalanced brackets, a single top-level ob
 the op. Required on `action.add`, `action.close`, `question.done`, `fact`, `issue.resolve`, `assumption.update`,
 `dependency.update`, and any `record.set` that changes a date, status or owner. When the request came from the PM's own note,
 the evidence can be that note. Evidence is kept in the ledger and shown on the row ("closed because the email said: ...").
+
+**Drafts are not claims.** Some work is writing, not extracting: a chapter, a proposal, a statement of work, a status update.
+A draft has no quote to cite, so it is not held to the evidence rule; instead it is written only into a `long_text` field
+(5.0) through a `text.draft` op, marked as written by the assistant, and shown as **not yet reviewed** until the person
+approves it. Factual statements inside a draft that the task kind declares checkable (a date, a price, a regulation, a
+research finding) still need evidence, listed beside the draft. A task kind says which it produces: ops (extraction) or a
+draft (writing).
+
+**Prose output.** For a draft, the model writes plain prose, not prose packed inside JSON, which long outputs and cheaper
+models get wrong. The core wraps the text into the `text.draft` op itself, and the applier checks it like any other change
+(target, length limits, never-shown words, wording lints). A draft that would end mid-sentence because the model hit its output
+limit is continued once, then held.
 
 ### Op tiers
 
@@ -353,9 +366,10 @@ runs at a time, even when a host starts more than one copy.
 
 ## 6.15 Today builder
 
-Builds the PM's Today list, the home screen (7.7), from live data and from plugins' Today contributors. **Every line starts with what the PM does and
-says where:** answer N decisions, review and send N drafts, look over N changes, send N questions to a person, follow up on
-questions waiting N days, finish N of your overdue actions, hold N meetings this week, look at N automation problems. Status, progress
+Builds the PM's Today list, the home screen (7.7), from live data and from plugins' Today contributors. **Every line starts with
+what the PM does and says where:** answer N decisions, review and send N drafts, look over N changes, send N questions to a
+person, follow up on questions waiting N days, finish N of your overdue actions, hold N meetings this week, look at N automation
+problems, move N items to their next stage (6.26), approve N runs that need a go because of their cost (6.16). Status, progress
 and things the automation handles never appear.
 
 ## 6.16 AI provider layer (any model, by configuration)
@@ -439,6 +453,12 @@ unresolved names, a truncated packet), never the model's own confidence. Each `R
 answer, so the quality panel (6.20) shows where the cheap model is enough. A config that maps a task kind to a provider that
 lacks a required capability fails the self-check.
 
+**Independent second opinion.** A task kind can ask for a review that is independent of the work under review: the router
+then picks an account (and, where the tiers allow, a vendor) different from the run that produced it (`independent: true` on
+a task, 4.8). Its findings are lints the person decides on, never automatic rewrites. The writing pack uses it for every
+chapter; the core can use it to check a draft before it reaches another person. If no independent account is configured, the
+review waits for the person and says why, instead of quietly reviewing with the same model.
+
 **Prompts are workspace content, not code.** Instructions, examples and style guides live in `prompts/` templates; the core and
 plugins ship defaults that the workspace can override. Default templates refer to sources through template variables filled
 from config (`{{ facts.production_date.sources }}`, `{{ scope.domains }}`), never by a page title, query or field name written
@@ -462,9 +482,25 @@ serving it, and for an aggregator the upstream host that served it. Aggregators 
 builds, so `routing` (4.8) can pin preferred hosts, and the quality panel can compare by host. `cockpit replay <run>` re-runs a
 packet on any model, and any run can become an evaluation case.
 
-**Usage, limits and cost.** Every run is a `Run` record: provider, model, units and cost. Budgets per run, day and month stop new
-runs and tell the PM. A usage limit pauses that provider until its reset (and the fallback takes over); it is not retried in a
-loop.
+**Usage, limits and cost.** Every run is a `Run` record: provider, model, units and cost. A usage limit pauses that provider
+until its reset (and the fallback takes over); it is not retried in a loop. Notes and messages cost little; writing work
+(chapters, proposals, research, independent reviews) can cost the person real money, so spending is something they decide,
+never something that happens to them:
+
+- **Estimate first.** Before a run, the cost is estimated from the packet size, the expected output (from past runs of that
+  task kind, or the kind's declared default before there are any) and the model's price. Anything above
+  `budgets.confirm_above_usd` asks first, with the estimate ("Draft chapter 7: about $0.80"). A batch (draft all twelve
+  chapters) shows one total and runs only on the person's go.
+- **Budgets at every level.** Per run, day and month across everything; per task kind; and per record, so a book, deal or
+  project can have its own cap ("this book so far: $14.20 of $60"). Packs may also set a default per pack. Reaching a cap stops
+  new runs of that scope and tells the person; it never cuts a run off halfway.
+- **Escalation and reviews count.** A retry on a stronger tier and an independent review are estimated and counted like any
+  run; escalation is skipped, and the item held, when it would cross a cap.
+- **Spend only on what changed.** Revising a chapter sends that chapter and short summaries of the rest, not the manuscript;
+  stable parts go first so providers that cache prefixes charge less (6.6).
+- **Visible.** Spend by pack, task kind, record, model and day is shown in the usage panel, and a record's spend on the record.
+  Packs declare a typical cost per task kind, and their documentation says what a typical project costs on a low-cost and a
+  strong model.
 
 **Data handling.** Each provider has `allowed_data` levels. Inputs marked restricted only go to providers allowed to see them; if
 none is, the request goes to the PM instead. Secrets come from secret references (Part 12), never from config files.
@@ -607,3 +643,21 @@ path for the launch?", "which contributors haven't replied this week?", "draft a
   reassigned action), they come as ops in a changeset under the usual tiers and checks (6.7); a draft for someone else waits for
   approval like any other.
 - An ask that comes up again and again is a signal (6.20): it may deserve a Today line, a panel or a playbook entry.
+
+## 6.26 Stages
+
+Work that moves through steps (a title from manuscript to launch, a deal from first contact to signed, a book from idea to
+manuscript) uses one core mechanism instead of a status field per pack. A record type declares its **stages** in order (in a
+pack's defaults, editable in `config/stages.yaml`, 4.21), each with:
+
+- **Entry checks:** what must be true to move into it (all chapters reviewed, a SOW approved, the launch date set), evaluated
+  by rules before any AI.
+- **Who moves it:** the person (default), or a rule for steps that need no judgment. The assistant can propose a move, never
+  make one.
+- **What it starts:** task kinds or jobs that run on entry (draft the proposal, build the manuscript), each estimated and
+  budgeted (6.16).
+
+Moving a record is an op (`stage.move`), so it is in the ledger and can be undone. When a record's entry checks pass, Today
+shows "ready to move on" for it (6.15); when they fail, the record shows which ones and why. Stages are data on the record,
+so a title's or a deal's history of stages is a query, and dependencies and baselines (6.23) can refer to them.
+

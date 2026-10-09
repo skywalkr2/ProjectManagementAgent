@@ -21,6 +21,14 @@ database gives for free and files make you rebuild by hand. So:
 id, op, record id, field, value before, value after, request, provenance (6.6), actor (assistant, PM, rule, plugin) and time.
 The ledger is the history view, the audit log and the basis for undo (6.7). It is never edited.
 
+**Long text.** Some fields hold long prose: a chapter, a statement of work, a proposal. A record type marks such a field as
+`long_text`. Its content is stored once per version in a text store (by content hash, like sources), and the record and the
+ledger hold the hash, so thirty edits of a chapter are thirty versions, not thirty copies inside the ledger. Each version keeps
+**authorship by passage**: which spans the assistant wrote, which the person wrote or changed, and which model run produced the
+assistant's spans. That serves review (what changed since I last read it, as a word-level diff, 7.4), disclosure rules that ask
+how much of a work an AI wrote, and undo, which restores an earlier version like any other field. The export writes long text
+as plain files beside the records, so it reads well in git and survives the round trip.
+
 **Recovery.** Git history is only useful if it can be loaded back, so recovery is a tested feature, not an afterthought:
 
 - **Round trip:** `import(export(db))` gives back the same records, ids, versions and ledger. The self-check runs it on both
