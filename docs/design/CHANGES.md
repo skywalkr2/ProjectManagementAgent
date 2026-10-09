@@ -198,4 +198,8 @@ For your information; nothing here needs an answer.
   the product no longer changes its own code at all: an AI rewriting installed code is too risky for people who install it.
   Automation problems are explained on their card and can become a report the PM sends to the maintainers (6.13). Development
   happens in the repository with the developer's own tools.
+- **AI review:** claims now cite exact evidence that must exist in the source; each task kind gets only its ops; one input per
+  call after cleaning quoted history and signatures; lessons learned from inputs wait for the PM (your lessons log was the one
+  place an injected instruction could have persisted); a deterministic evaluation picks the model; a cheap model escalates to a
+  stronger one only on check failures.
 

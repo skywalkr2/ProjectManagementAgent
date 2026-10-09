@@ -22,6 +22,10 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Actions, questions, follow-ups by person, Copy and Mark sent | must | must | 6.8, 6.9, 7.5 |
 | Clipboard channel | must | must | 6.3 |
 | Undo from the ledger | must | must | 6.7 |
+| Evidence on claims, per-task op lists, JSON repair | must | must | 6.7 |
+| Input cleaning, one input per call, provenance on writes, proposed lessons | must | must | 6.6, 6.22, 12.2 |
+| First evaluation set and model comparison | must | must | 6.16 |
+| Escalation on failure, cache layers, reproducible runs, budget defaults | won't (budget defaults: must) | must | 6.16, 4.8 |
 | Off-device backup with nag | must | must | 4.15 |
 | Waiting states that say why and until when | should | must | 7.6 |
 | Scope resolver and fact lookups | could | must | 6.18, 6.19 |

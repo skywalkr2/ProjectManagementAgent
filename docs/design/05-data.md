@@ -32,6 +32,9 @@ The ledger is the history view, the audit log and the basis for undo (6.7). It i
 - **Off the machine:** local installs keep everything on one computer, so backups to somewhere else are expected, not
   optional (4.15, 11.1).
 
+**Provenance.** Each ledger entry records whether the write came from trusted or untrusted content (12.2), so every field's
+provenance is known; packets mark untrusted-derived fields as data (6.6).
+
 **Record versions.** Every record carries a version that goes up on each write. Writes state the version they read; a write
 against a newer version is merged field by field when the fields differ and refused when the same field changed, so two
 writers never silently overwrite each other.
@@ -69,10 +72,10 @@ the project's name. Renaming is then one field (6.7), and there is nothing to no
 | `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result |
 | `Rule` | id, text, applies_to (task kinds, record types and fields, filter), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) (4.10) |
 | `Problem` | an automation problem (not a project issue): id, summary, detail, plugin (when one raised it), status (open, reported, resolved, dismissed), report (the drafted report, if one was sent, 6.13) |
-| `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), exit code, error stream (kept apart from the output), outcome |
+| `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), packet hash, template and playbook versions, parameters, model as served, upstream host (aggregators), tier that produced the accepted answer, exit code, error stream (kept apart from the output), outcome (6.16) |
 | `Dependency` | id, from (the record that waits), on (the record it waits for; may be in another domain), need_by, status (on track, at risk, late, done), impact question id (6.18), notes (6.23) |
-| `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, patterns (how compound ids split) (6.22) |
-| `Lesson` | id, text, learned_from (request or source), applies_to, status (active, promoted to a rule, retired) (6.22) |
+| `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, trust (from the source), patterns (how compound ids split) (6.22) |
+| `Lesson` | id, text, learned_from (request or source), applies_to, status (proposed, active, promoted to a rule, retired), trust (6.22) |
 | `Signal` | id, kind (sent back, undone, dropped, reworded, pulled back, draft edited), record ids, note, time (6.20) |
 
 Plugins add record types in their own tables (namespaced) and fields on core records under `ext.<plugin>`. Core code never reads

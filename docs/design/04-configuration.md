@@ -162,7 +162,7 @@ providers:                       # every AI account the workspace may use; names
     adapter: openrouter          # an aggregator: one key, many vendors' models; a thin layer over openai-compatible
     auth: keychain:openrouter-key
     models: {small: <vendor/model id>, large: <vendor/model id>, vision: <vendor/model id>}
-    routing: {data_collection: deny, allow_fallbacks: false}   # passed to the aggregator as its own routing options
+    routing: {data_collection: deny, allow_fallbacks: false, order: [<preferred host>]}   # the aggregator's own options
     allowed_data: [open]         # data passes through the aggregator and the model's vendor
   local:
     adapter: openai-compatible
@@ -174,25 +174,30 @@ providers:                       # every AI account the workspace may use; names
     command: <path to the agent CLI>
     allowed_data: [open, internal]
 tiers:                           # what the work needs, mapped to provider/model; any mix of accounts
-  routine:  {use: my-anthropic/small, fallback: [router/small, local/small]}
+  routine:  {use: my-anthropic/small, fallback: [router/small, local/small], escalate_to: deep}
   deep:     {use: my-anthropic/large, fallback: [my-openai/large]}
   vision:   {use: router/vision}               # screenshots and images
-tasks:                         # which tier each AI task kind uses (defaults shown; plugin kinds use their declared default)
+tasks:                         # tier and parameters per AI task kind (defaults shown; plugin kinds use their declared defaults)
   change: routine
-  notes: routine
+  notes: {tier: routine, temperature: 0, max_output: 4000}    # extraction: as deterministic as the model allows
   answer: routine
   feedback: routine
-  update: deep
+  update: {tier: deep, temperature: 0.4}                      # drafting: a little room for wording
   ask: deep                    # ad hoc requests to the assistant (6.25)
   agenda: routine
-budgets: {per_run_usd: 5, per_day_usd: 20, per_month_usd: 200}   # across all accounts; per-provider budgets optional
+budgets: {per_run_usd: 0.25, per_day_usd: 2, per_month_usd: 30, warn_at: 0.8}   # across all accounts; per-provider optional
 prices: {}                     # overrides for models whose price the provider's catalog doesn't give
-evaluation: {required_before_switch: true, min_score: 0.9}
+evaluation: {required_before_switch: true, min_score: 0.9, runs: 3}
 ```
+
+Budget defaults suit one person: a typical notes run is about 5,000 to 10,000 tokens in and about 1,000 out, which costs a
+fraction of a cent on a low-cost model and a few cents on a top-tier one (prices change; the provider catalogs have the current
+ones). A runaway loop hits `per_run_usd` or `per_day_usd` long before it costs real money; the PM is warned at `warn_at`.
 
 ## 4.9 `config/dispatch.yaml`, `config/governor.yaml`
 
-Batch size, immediate-run kinds, timeouts, attempts; `max_input` per task kind (the packet size budget, 6.6); `open_items.compact_share` (share of the budget the open-items list
+Batch size, immediate-run kinds, timeouts, attempts; `cleaning` (patterns for signatures, disclaimers and tracking footers
+removed before AI calls, and whether quoted thread history is removed, 6.6); `max_input` per task kind (the packet size budget, 6.6); `open_items.compact_share` (share of the budget the open-items list
 may use before other projects' actions switch to compact form, default 0.4); governor thresholds (stuck after N minutes, stale after N hours, outage
 when more than N keys fail); `reports`: where reports to the product's maintainers go (`clipboard` by default, or a channel and
 target the PM configures, such as an issue tracker form) (6.13).
@@ -319,6 +324,7 @@ lints:
   fact-terms-without-asks-for: {severity: return}
   near-duplicate-action: {severity: warn, similarity: 0.85}
   unreachable-link: {severity: warn}
+  evidence-fit: {severity: return}
 ```
 
 Severities: `refuse`, `return` (back to the AI once; then held for the PM if the item will reach another person, or applied

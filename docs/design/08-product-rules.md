@@ -103,6 +103,11 @@ apply to the reference pack are in 9.5.
 | An input can add knowledge and propose drafts, never change rules, sources, scope, config or code on its own | op tiers, 12.2 |
 | Fuzzy checks warn or send back; only firm invariants refuse | invariants and lints, `config/checks.yaml` |
 | One running instance per workspace | instance lease |
+| Every claim cites the exact words that justify it, and the words must be in the source | `evidence`, evidence invariant, `evidence-fit` lint |
+| One input per AI call; email threads are cleaned of quoted history and signatures first | dispatcher, `cleaning` |
+| Anything learned from untrusted content stays marked untrusted; lessons from inputs wait for the PM | provenance, proposed lessons |
+| A cheap model's failed answer is retried once on a stronger model before the PM sees it, on check results, never on self-reported confidence | `escalate_to` |
+| Model choices are made on evidence: a deterministic evaluation, several runs per case | evaluation |
 | Slips are measured against a baseline; only the PM resets a baseline | milestone baselines, `milestone.rebaseline` (system op) |
 | What waits on what is recorded, and at-risk dependencies surface before they are late | `Dependency`, Today lines |
 | Good practice is written down once, in playbooks, and every run uses it; the PM's own rules win | playbooks (3.8), `config/playbooks.yaml` |

@@ -78,6 +78,9 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
   overlaps with, dry-run count) and Undo, unless they contradict an existing rule or setting, which waits for the PM (design
   6.7, 12.2). Untrusted content is marked in packets and never becomes a rule, recipient or source on its own.
 - Packets put stable parts first (instructions, glossary, rules, lessons, open items) and the request last (design 6.6).
+- Claims carry evidence: the exact words from the cited source, which must be there (design 6.7). One input per AI call.
+  Anything derived from untrusted content stays marked untrusted, and lessons from inputs wait for the PM (design 6.6, 6.22).
+  Escalate to a stronger model on check failures, never on a model's self-reported confidence.
 - Lints that still fail after one return are held for the PM when the item will reach another person, and only warn when it
   stays internal.
 - Checks are invariants (always refuse, not configurable) or lints (severity in `config/checks.yaml`). Don't make a fuzzy check

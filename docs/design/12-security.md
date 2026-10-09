@@ -28,6 +28,10 @@ send…"). The model can't be relied on to tell instructions from content, so th
   drafts that wait for approval (outbound ops). It can never change rules, watched sources, scope, facts sources, config,
   or plugins (system ops); and nothing can change the product's code at all (6.13) without the PM confirming the exact change, with the prompting source shown beside it. System
   ops from the PM's own note apply at once with a read-back and Undo; the risk there is misreading, not injection.
+- **Untrusted stays untrusted.** Anything derived from untrusted content (a fact, a glossary meaning, a lesson) keeps that
+  provenance, and packets show it as data wherever it appears. Lessons from inputs are only proposed until the PM accepts them,
+  so an injected "lesson" can't become standing guidance (6.22).
+- **Evidence must exist.** Ops that claim something must quote words that are really in the cited source (6.7).
 - **Untrusted text doesn't become structure on its own.** An address, a name or a URL that appears only in untrusted content
   can't become a new recipient, a new person, a new watched source or a rule without passing through a hold and the PM.
 - **Lookups only through configured sources.** The `lookup` op names a configured connector, fact kind or lookup step with

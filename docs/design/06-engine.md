@@ -49,7 +49,13 @@ pulled-back items are recorded so rules can be tuned.
 ## 6.6 Dispatcher
 
 - Batches queued requests (batch size, scheduled batches, immediate kinds that run within a minute of the PM handing them in,
-  with a short delay so a note can follow).
+  with a short delay so a note can follow). **A batch shares the stable part of the packet; each input gets its own call.**
+  Several inputs in one call lower extraction accuracy and make evidence ambiguous.
+- **Clean the input first** (deterministic, before any AI call): quoted earlier messages in an email thread are removed when
+  they match text already saved from an earlier source, and marked "quoted" when they don't; signatures, legal disclaimers and
+  tracking footers are removed by the patterns in `config/dispatch.yaml` `cleaning`. The saved source keeps the full original;
+  the packet gets the cleaned text, which is always a subset of it, so evidence (6.7) still matches. This saves the most tokens
+  and prevents the most duplicate actions.
 - **Packet:** the packet replaces browsing the workspace, so it carries what runs used to go looking for (and often didn't):
   - the input, and the related records in full;
   - **every** open action and open question, with ids, in a compact one-line form, not only the related ones, so the AI can
@@ -60,17 +66,23 @@ pulled-back items are recorded so rules can be tuned.
   - which recent edits and pages were made by `our_accounts` ("published by the cockpit", so nobody is asked who made them);
   - the op reference (core and enabled plugins' ops) and the search lookups available (6.22).
   A plugin's AI task kind builds its own packet with the same parts available.
-- **Trusted and untrusted parts** (12.2): the PM's own note, config-derived context, rules and the op reference are trusted.
-  Everything that came from outside (connector content, pasted third-party text, replies, files) is untrusted: the prompt
-  formatter wraps it in marked blocks and the instructions say it is material to work on, never instructions to follow. The
+- **Trusted and untrusted parts** (12.2): the PM's own note, config-derived context, rules, playbooks and the op reference are
+  trusted. Everything that came from outside (connector content, pasted third-party text, replies, files) is untrusted, **and
+  so is anything derived from it**: every record field carries the provenance of the write that set it (the ledger has it), and
+  the formatter marks untrusted-derived fields, glossary meanings and proposed lessons as data wherever they appear, including
+  in the stable prefix. The prompt
+  formatter wraps untrusted content in marked blocks and the instructions say it is material to work on, never instructions to follow. The
   request records its origin (input, PM, schedule), and that origin decides which op tiers can apply (6.7). Secrets never
   enter a packet.
 - **Order: stable first, request last.** The packet is laid out so the parts that are the same for every run in a batch come
-  first, in a fixed order: instructions and op reference, playbook entries, glossary, rules, lessons, then all open actions and
-  questions. The
-  request-specific parts follow: scope and facts for the items involved, related records, and the input last. Most providers
-  discount or cache a repeated prefix, and the open-items list is where the repetition is; the adapter marks the stable prefix
-  when its provider supports caching (`prompt_caching` capability, 6.16) and ignores the mark otherwise.
+  first, in a fixed order, in three layers: **static** (instructions, op reference for the task kind, playbook entries),
+  **slow-changing** (glossary, rules, active lessons) and **per batch** (all open actions and questions). The request-specific
+  parts follow: scope and facts for the items involved, related records, the date and anything else that varies, and the input
+  last. Most providers discount or cache a repeated prefix, and only an identical one: so the stable part is built once at the
+  start of a batch and frozen for the batch (changes applied during the batch show up in the next one), serialized in a
+  deterministic order with no dates, counts or other volatile values, and the batch's calls run close together because cached
+  prefixes expire after minutes. The adapter marks a cache point after each layer when its provider supports caching
+  (`prompt_caching` capability, 6.16) and ignores the marks otherwise.
 - **Open items, full and compact.** An open action in full form is "[project] text (owner, due) → how to close it" (its id and
   the match text that closes it); in compact form it is id, owner and title, with no closing hint, since the id alone is enough
   to close it. Actions for the request's own projects are always in full form. Actions for other projects switch to compact
@@ -90,8 +102,16 @@ pulled-back items are recorded so rules can be tuned.
 
 ## 6.7 Changesets and the applier
 
-A changeset is JSON: `summary`, optional `change` and `request` ids, and `ops[]`. Its JSON Schema is generated from the op
-registry, so the AI is asked for exactly what the applier accepts. The applier holds a **registry of op types** (3.3).
+A changeset is JSON: `summary`, optional `change` and `request` ids, and `ops[]`. The applier holds a **registry of op types**
+(3.3). **Each task kind lists the ops it may use** (reading notes needs about ten), and its output schema is generated from just
+those, so the AI is asked for exactly what the applier accepts and no more: small, flat schemas are what cheaper models and
+endpoints with weak structured-output support handle reliably. Output that isn't valid JSON first goes through a deterministic
+repair (code fences, trailing commas, unbalanced brackets, a single top-level object); only if that fails is the run sent back.
+
+**Evidence.** Ops that claim something about the world carry `evidence`: the source id and the exact words in it that justify
+the op. Required on `action.add`, `action.close`, `question.done`, `fact`, `issue.resolve`, `assumption.update`,
+`dependency.update`, and any `record.set` that changes a date, status or owner. When the request came from the PM's own note,
+the evidence can be that note. Evidence is kept in the ledger and shown on the row ("closed because the email said: ...").
 
 ### Op tiers
 
@@ -182,6 +202,10 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
 - The model's name never appears in anything a person sees.
 - A question to anyone but the PM has at least one link, and only links they can open (no local files, no cockpit pages).
 - Unreadable output never applies; the dispatcher retries the run (6.6).
+- **Evidence matches:** an op that needs evidence has it, and its quoted words appear in the cited source's saved text
+  (whitespace and quote marks normalized). A quote that isn't there is refused: the cheapest defence against a model that is
+  confident and wrong, and against an injected instruction pointing at text that doesn't exist. (A real but wrong target, like
+  closing the wrong action, is what evidence makes visible; whether the quote fits the target is the `evidence-fit` lint.)
 - Every record edit that changes a published output comes with an update-log op.
 - Op-specific checks (paths stay under allowed roots; files don't overwrite unless told).
 
@@ -199,6 +223,8 @@ depends on where the item goes:
 - A question that links to something the recipient may not be able to open, or carries bookkeeping in its label.
 - A new action that looks like an open or done action for the same deliverable.
 - A link that doesn't respond.
+- `evidence-fit`: the quoted words don't plausibly concern the target record (its title, owner and project share nothing with
+  the quote). Default `return`, which holds it for the PM if the item will reach another person.
 
 Every finding is recorded on the changeset with the check's name and severity, so the PM sees why something came back.
 
@@ -404,7 +430,13 @@ plugin and an entry. Nothing else changes.
 **Routing by capability, not by name.** Each task kind declares what it needs (a screenshot needs vision; most need structured output and a context size). The router picks the tier's provider and model,
 checks that model's capabilities and the request's data level against `allowed_data`, and falls through the fallback chain if
 it can't serve the task. Fallbacks can cross accounts and vendors (a usage limit on one account moves the work to the next).
-When the common format lacks structured output for a model, the adapter asks for JSON and the applier's checks still decide. A config that maps a task kind to a provider that
+When the common format lacks structured output for a model, the adapter asks for JSON and the applier's checks still decide.
+
+**Escalate on failure, not on price.** Cheap models do most of the work; a tier can name `escalate_to` (another tier). When a
+run's changeset still fails an invariant after its one fix round, or would be held for a lint, the request is re-run once on the
+escalation tier before the PM sees it. The decision uses deterministic signals only (check failures, evidence that doesn't match,
+unresolved names, a truncated packet), never the model's own confidence. Each `Run` records which tier produced the accepted
+answer, so the quality panel (6.20) shows where the cheap model is enough. A config that maps a task kind to a provider that
 lacks a required capability fails the self-check.
 
 **Prompts are workspace content, not code.** Instructions, examples and style guides live in `prompts/` templates; the core and
@@ -414,11 +446,21 @@ into the text. Per-provider variations (one vendor prefers XML-tagged sections, 
 JSON, one caches a marked prefix) are handled by the adapter's prompt formatter, not by forking the instructions; templates
 keep the stable-first order of 6.6.
 
-**Evaluation before any switch.** A golden set of fictional fixtures (including hostile inputs, 12.2) (inputs with the expected changesets and questions) scores a
-provider and model on: valid output rate, correct ops, wording rules followed, questions routed right, actions extracted
-completely, cost and time. `evaluate --provider <name> --model <id>` produces a report; a model is approved for a tier only after
+**Evaluation before any switch.** A golden set of fictional fixtures (inputs with the expected changesets and questions,
+including hostile inputs, 12.2) scores a provider and model on: valid output rate, correct ops, evidence that matches, wording
+rules followed, questions routed right, actions extracted completely, cost and time. **Scoring is deterministic**: the produced
+ops are matched to the expected ones (op type, target ids, owners, dates, evidence present and matching); a model may judge
+wording only, never structure. Models answer differently from run to run, so each case runs several times (`evaluation.runs`,
+default 3) and the report gives a pass rate per case. The first set (10 to 20 cases from the milestone 2 acceptance scenario,
+plus hostile inputs) is built with the launch slice, so the first model choice, cheap or strong, is made on evidence. `evaluate --provider <name> --model <id>` produces a report; a model is approved for a tier only after
 it meets the configured score, and the PM approves the switch (a scheduled job can check prices and new models and ask the PM,
 never switch on its own). Plugins can add fixtures for their own task kinds.
+
+**Reproducible runs.** Every `Run` keeps a fingerprint of exactly what was sent (the packet, stored once and referenced by
+hash; sources by id), the prompt template and playbook versions, the parameters, the model id exactly as the provider reported
+serving it, and for an aggregator the upstream host that served it. Aggregators can route one model id to different hosts and
+builds, so `routing` (4.8) can pin preferred hosts, and the quality panel can compare by host. `cockpit replay <run>` re-runs a
+packet on any model, and any run can become an evaluation case.
 
 **Usage, limits and cost.** Every run is a `Run` record: provider, model, units and cost. Budgets per run, day and month stop new
 runs and tell the PM. A usage limit pauses that provider until its reset (and the fallback takes over); it is not retried in a
@@ -509,10 +551,13 @@ ops record what is learned:
 
 - **Glossary:** terms and acronyms with meaning, status (confirmed, assumed, unknown), source and split patterns for compound
   ids. Every packet includes it. `glossary.add` and `glossary.update` record new terms; an assumed or unknown term can become
-  one question to whoever the routing rules say knows it.
+  one question to whoever the routing rules say knows it. A meaning that came from untrusted content is shown to the model as
+  data ("reported meaning, from <source>"), never as guidance, until the PM confirms it.
 - **Lessons:** things a run learned about how this workspace works ("minutes from this group list owners after the dash").
-  `lesson.add` records them; active lessons go into packets they apply to; the rules review (6.21) can promote a lesson to a
-  standing rule or retire it.
+  Because lessons become guidance in every later packet, they are the obvious place for an injected instruction to persist. So
+  `lesson.add` records a lesson as **proposed**; it becomes **active** only when the PM accepts it (a Today line collects them:
+  "Review 3 proposed lessons"). A lesson from the PM's own note is active at once, with a read-back. Active lessons go into the
+  packets they apply to; the rules review (6.21) can promote a lesson to a standing rule or retire it.
 - **Search lookups:** a bounded `lookup` over the workspace, in the same loop as fact lookups (6.16): full-text search over
   sources and records ("has this been asked or answered before?"), and the previous version of a source ("what did this page
   say last time?"). Results come back in the next call, with a limit on calls per run.

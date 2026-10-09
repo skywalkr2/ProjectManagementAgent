@@ -3,6 +3,31 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: AI review changes
+
+**Decided by:** project owner, after an AI systems review.
+
+Launch slice (impact: about a day of build time; owner time is reading one evaluation report; delays nothing else):
+- **Evidence on claims:** ops that assert something quote the exact words from a cited source; the quote must be there
+  (invariant) and should fit the target (`evidence-fit` lint). Why: with records by id, the dangerous error is a real but wrong
+  target; evidence exposes it, gives an audit trail and makes injection harder.
+- **Per-task op lists and small schemas, plus deterministic JSON repair, and parameters per task kind.** Why: large schemas
+  degrade cheaper models and weak structured-output endpoints.
+- **First evaluation set in the launch slice**, deterministic scoring, several runs per case, comparing a low-cost model with a
+  stronger one. Why: the model choice should rest on evidence, especially a low-cost one.
+- **Provenance everywhere; lessons from inputs are proposed until the PM accepts them;** untrusted-derived glossary meanings are
+  shown as data. Why: lessons and glossary entries reach every later packet, which made them a place for injected instructions
+  to persist.
+- **Input cleaning and one input per call.** Why: quoted history and signatures waste tokens and create duplicate actions;
+  several inputs in one call lower accuracy.
+
+Version 1:
+- **Escalation on failure** to a stronger tier on deterministic signals only.
+- **Three-layer cache layout** with a frozen batch prefix and no volatile values in it.
+- **Reproducible runs:** packet fingerprint, versions, parameters, model as served, upstream host; `cockpit replay`; pinned
+  aggregator hosts.
+- **Budget defaults lowered** to $0.25 a run, $2 a day, $30 a month, warning at 80% (applies from the launch slice).
+
 ## 2026-10-09: No code fixer in the product
 
 **Decided by:** project owner.
