@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-09: Sales and writing packs recorded as candidates
+
+**Decided by:** project owner.
+
+**What:** Two future packs are recorded in design 13.3: a sales pack (business-to-business sales of installed services:
+accounts, opportunities, proposals, SOWs, contracts, regulatory requirements as workspace data) and a writing pack (from idea
+to manuscript, with the writer's approval at every stage, review by an independent model, a print-ready PDF and an ebook).
+Both need four generic core points: document output, stage gates, an independent second opinion, and long text.
+
+**Impact:** none on the launch slice or version 1; both are in the Later horizon. Version 1 keeps its extension points
+generic enough for them.
+
 ## 2026-10-09: License is AGPL-3.0
 
 **Decided by:** project owner.

@@ -48,6 +48,9 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Native adapters (vendors with their own API format), aggregator adapter with catalog and routing options, Add account flow, models from provider catalogs | won't | must | 6.16 |
 | Hosted mode, sign-in providers | won't | won't | Part 11 |
 | Social, email and newsletter channels | won't | won't | 3.7 |
+| Sales pack (accounts, opportunities, proposals, SOWs, contracts, regulatory data per jurisdiction) | won't | won't | 13.3 |
+| Writing pack (idea to manuscript with stage approvals, independent review, print PDF and ebook) | won't | won't | 13.3 |
+| Core points for those packs: document output, stage gates, independent second opinion, long text | won't | won't | 13.3 |
 
 ## Change control
 

@@ -97,3 +97,48 @@ Each a pack, plugin or recipe, in whatever order is useful: publishing support, 
 connectors, more AI vendors, more deploy recipes, Postgres for multi-user, the `planned` extension points (event handlers, API
 routes) and opening `core only` ones (auth providers, storage backends) to plugins, running plugins out of process with
 enforced limits, roles for several users.
+
+## 13.3 Candidate packs
+
+Recorded so the core's extension points are checked against them; neither is scheduled (`docs/project/scope.md`, Later).
+
+**Sales pack** (`plugins/sales/`): an assistant for business-to-business sales of installed services, from first contact to
+signed work.
+
+- **Record types:** accounts and their sites, contacts (people records with an account), opportunities with configurable
+  stages, quotes, statements of work, contracts.
+- **Playbook:** qualification, discovery and site surveys, proposal structure, SOW scope and exclusions, contract and legal
+  review checklists, follow-up cadence. Regulatory requirements (licensing, codes, standards, permits) vary by place and
+  trade, so they are data per jurisdiction in the workspace, looked up like any configured source (6.19), never built in.
+- **AI tasks:** account notes from meetings and emails, proposal and SOW drafts, a compliance checklist against the
+  workspace's requirements. Legal and regulatory text is drafted and checked, never advice; the person approves every
+  document, and a lint marks clauses that need review by someone qualified.
+- **Data:** customer details are `restricted` (4.8), so they go only to AI accounts allowed that level. One employer's
+  pricing, terms or approval rules are a private plugin in that workspace.
+
+**Writing pack** (`plugins/writing/`): an assistant that takes a writer from an idea to a finished manuscript, beside the
+publishing pack, which takes a finished book to launch.
+
+- **Stages:** ideation, research, outline and chapter plans, drafting, independent review, the writer's review chapter by
+  chapter, revision, proposal, manuscript, ebook. Each stage ends with the writer's approval; nothing moves on without it.
+- **Record types:** works, ideas, research notes with their sources, outlines, chapter plans, chapter drafts with versions,
+  reviews and the writer's feedback, proposals.
+- **AI tasks:** one per stage. Research claims carry evidence from their sources (6.7). Drafts are written in the writer's
+  voice from their outline and notes, and every chapter waits for the writer's review.
+- **Independent review:** a draft is checked by a model from a different account than the one that wrote it; findings are
+  lints the writer decides on, never automatic rewrites.
+- **Outputs:** a print-ready manuscript PDF to the configured trim size, margins, bleed and fonts for the chosen
+  self-publishing platform, and an ebook from the same manuscript (the owner has a converter that can become this pack's
+  renderer).
+- **Playbook:** craft and structure guidance by genre, chapter review checklists, and the platforms' rules for disclosing
+  AI-assisted content.
+
+**Core needs both packs share** (to design when the first one starts, as generic extension points):
+
+- **Document output:** a file channel and long-document renderers (PDF, word-processor files, ebook formats), with page
+  setup from config.
+- **Stage gates:** a declared pipeline of stages for a record type, with entry criteria and an approval to move on, shown on
+  Today.
+- **Independent second opinion:** a router option to run a task on an account and model different from the one that produced
+  the input (6.16).
+- **Long text:** records whose main content is long prose, versioned, with word-level diffs in review.
