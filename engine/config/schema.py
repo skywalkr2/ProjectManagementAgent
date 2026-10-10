@@ -287,6 +287,62 @@ class UiFile(FileModel):
         return merged
 
 
+# ---- config/stages.yaml ---------------------------------------------------------------------------------------------
+
+
+class StageDefinition(ConfigModel):
+    id: str = Field("", min_length=1, description="Stable stage identifier, unique within this record type.")
+    label: str = Field("", description="Editable wording for this stage; changing it does not change stored data.")
+    entry: list[str] = Field(
+        default_factory=list, description="Deterministic check or standing rule ids required on entry."
+    )
+    starts: list[str] = Field(
+        default_factory=list, description="Task kinds requested on entry, waiting for the person's go."
+    )
+
+
+class TypeStages(ConfigModel):
+    moves: Literal["person", "rule"] | None = Field(None, description="Override the workspace move mode for this type.")
+    stages: list[StageDefinition] = Field(
+        default_factory=list, description="Ordered stages; an empty list removes pack stages."
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def list_form(cls, value):
+        return {"stages": value} if isinstance(value, list) else value
+
+    @model_validator(mode="after")
+    def unique_ids(self):
+        ids = [stage.id for stage in self.stages]
+        if len(ids) != len(set(ids)):
+            raise ValueError("stage ids must be unique within a record type")
+        return self
+
+
+class StagesFile(FileModel):
+    moves: Literal["person", "rule"] = Field(
+        "person", description="Who advances records: the person, or deterministic rules."
+    )
+    types: dict[str, TypeStages] = Field(
+        default_factory=dict, description="Stages by record type; each supplied list replaces pack defaults."
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def record_type_keys(cls, value):
+        if not isinstance(value, dict):
+            return value
+        value = dict(value)
+        types = dict(value.get("types", {}))
+        for key in set(value) - {"version", "moves", "types"}:
+            if key in types:
+                raise ValueError(f"record type {key} is configured twice")
+            types[key] = value.pop(key)
+        value["types"] = types
+        return value
+
+
 # ---- registry --------------------------------------------------------------------------------------------------------
 
 #: Config file name (without .yaml) to its model, in the order `config show` lists them.
@@ -299,6 +355,7 @@ FILES: dict[str, type[FileModel]] = {
     "checks": ChecksFile,
     "language": LanguageFile,
     "ui": UiFile,
+    "stages": StagesFile,
 }
 
 #: The newest version each file format has reached.

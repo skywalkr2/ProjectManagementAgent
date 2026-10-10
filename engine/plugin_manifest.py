@@ -53,6 +53,7 @@ class Requires(Strict):
 
 class Provides(Strict):
     record_types: list[str] = Field(default_factory=list)
+    stage_checks: list[str] = Field(default_factory=list)
     ops: list[str] = Field(default_factory=list)
     op_validators: list[str] = Field(default_factory=list)
     ai_task_kinds: list[str] = Field(default_factory=list)
@@ -100,7 +101,7 @@ class Manifest(Strict):
     def identifiers(self) -> Manifest:
         import re
 
-        for category in ("record_types", "ops", "ai_task_kinds", "panels", "today", "jobs"):
+        for category in ("record_types", "stage_checks", "ops", "ai_task_kinds", "panels", "today", "jobs"):
             names = getattr(self.provides, category)
             if len(set(names)) != len(names):
                 raise ValueError(f"duplicate {category}")
@@ -113,3 +114,23 @@ class Manifest(Strict):
 
 def read_manifest(path: Path) -> Manifest:
     return Manifest.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
+
+
+def declared_plugins(config_dir: Path | None, enabled: list[str]):
+    """Read available declarations without executing plugin code."""
+    from importlib.metadata import entry_points
+
+    roots = [Path(__file__).resolve().parents[1] / "plugins"]
+    if config_dir is not None:
+        roots.append(config_dir.parent / "plugins")
+    paths = [path for root in roots for path in root.glob("*/plugin.yaml")]
+    for ep in entry_points(group="pm_cockpit.plugins"):
+        module = ep.value.split(":")[0].split(".")[0]
+        paths.append(Path(ep.dist.locate_file(module)) / "plugin.yaml")
+    for path in paths:
+        if path.parent.name in enabled:
+            try:
+                yield read_manifest(path)
+            except (ValueError, OSError):
+                # The host reports invalid plugins; stage references still fail closed.
+                continue

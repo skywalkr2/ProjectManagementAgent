@@ -1,0 +1,9 @@
+version: 1
+moves: person
+types:
+  project:
+    moves: person
+    stages:
+      - {id: planned, label: Planned, entry: [], starts: []}
+      - {id: active, label: In progress, entry: [], starts: [notes]}
+      - {id: complete, label: Complete, entry: [], starts: []}
