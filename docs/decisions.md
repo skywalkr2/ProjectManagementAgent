@@ -17,6 +17,20 @@ Today for every item that was never started buried the real work.
 
 **Impact:** Two optional fields on a request (`dismissed`, `dismissed_from`), two routes, one wording set. No scope change.
 
+## 2026-10-10: Independence for second opinions is a setting per task kind
+
+**Decided by:** Claude (design), from a plugin question; the owner can override.
+
+**What:** `tasks.<kind>.independence` in `ai.yaml`: `vendor`, `account` (default) or `isolated_run`. With `isolated_run`, a
+check may use the same account in a separate run that carries only its own packet: never the writing run's history or
+session, and on an agent account only after the lock-down test. A different model on the same account is preferred
+when configured. The review says plainly which kind of independence was used, without naming the model.
+
+**Why:** Many people have one subscription for everything; requiring a second account would put second opinions out of
+their reach, while a separate packet-only run still removes the writing run's context.
+
+**Impact:** Design 6.16 (independent second opinion) when built.
+
 ## 2026-10-10: Plugin API 0.3 comes with the file channel
 
 **Decided by:** Claude (design), from a second round of plugin questions; the owner can override.
