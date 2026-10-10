@@ -155,7 +155,7 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
-  test("4. Follow-ups: one clean message per person, copied and marked sent", async ({ page }) => {
+  test("4. Follow-ups: copying marks one clean message sent, with Undo; sent items wait under their own filter", async ({ page }) => {
     await signIn(page);
     const ownerId = (byId("production-checkin").expect![0].owners as string[])[0];
     const owner = people.find((p) => p.id === ownerId)!;
@@ -165,9 +165,15 @@ test.describe.serial("acceptance scenario", () => {
     expect(copied.startsWith(copied.split("\n")[0])).toBe(true);
     expect(copied).toContain(owner.name.split(" ")[0]);
     expect(copied).not.toMatch(/ACT-|Q-\d|PER-/);
-    await expect(section.getByRole("button", { name: "Mark sent" })).toBeVisible();
-    await section.getByRole("button", { name: "Mark sent" }).click();
-    await expect(section).toContainText("nothing new to send");
+    await expect(page.getByText(`Marked as sent to ${owner.name}`)).toBeVisible();
+    // Sent items leave "To send" and wait under "Waiting on them", one line each.
+    await expect(section).toHaveCount(0);
+    await page.getByRole("button", { name: "Waiting on them" }).click();
+    const waiting = page.locator("li.line", { has: page.getByRole("heading", { name: owner.name }) });
+    await expect(waiting).toContainText(/sent (today|.* \(\d+ days?\))/);
+    await expect(waiting.getByRole("button", { name: "They finished it" }).first()).toBeVisible();
+    await checkAccessibility(page);
+    await page.getByRole("button", { name: "To send" }).click();
     await page.getByRole("button", { name: "Undo" }).last().click();
     await expect(section.getByRole("button", { name: /^Copy \d+$/ })).toBeVisible();
   });

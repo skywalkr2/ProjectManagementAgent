@@ -75,6 +75,10 @@ main:focus { outline: none; }
 .line { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 .row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 12px; padding: 14px 14px 14px 16px; }
 .row.single { grid-template-columns: minmax(0, 1fr); }
+.row.pair { grid-template-columns: minmax(0, 1fr) auto; }
+.plain-list { list-style: disc; margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.plain-list .title { font-weight: 600; overflow-wrap: anywhere; }
+.plain-list .meta { display: block; color: var(--muted); font-size: 13px; }
 .name { margin: 0; font-size: 15px; }
 .kind, .pill { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-radius: 6px; padding: 3px 7px; white-space: nowrap; }
 .kind { margin-top: 2px; }
@@ -167,6 +171,7 @@ kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); 
 
 /* One column below the configured width (set by the app from config/ui.yaml) */
 [data-narrow] .row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+[data-narrow] .row.pair { grid-template-columns: minmax(0, 1fr) auto; }
 [data-narrow] .row .kind { justify-self: start; }
 [data-narrow] .acts { justify-content: stretch; }
 [data-narrow] .acts .primary { flex: 1; }

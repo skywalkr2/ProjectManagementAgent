@@ -13,14 +13,33 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { useAddOwnRequest } from "./HandIn";
 import { SafeLink, SafeText } from "./SafeText";
 
+type Filter = "send" | "waiting";
+const FILTERS: Filter[] = ["send", "waiting"];
+
+const toSendQuestions = (s: S["FollowupSection"]) => s.questions.filter((q) => q.status === "open");
+const toSendActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told === null);
+const waitingQuestions = (s: S["FollowupSection"]) => s.questions.filter((q) => q.status === "sent");
+const waitingActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told !== null);
+
 export function FollowUps() {
   const { t } = useWords();
+  const [filter, setFilter] = useState<Filter>("send");
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
   const sections = (followups.data ?? []).filter((s) => s.questions.length || s.actions.length);
+  const shown = sections.filter((s) =>
+    filter === "send" ? s.is_pm || s.to_send > 0 : !s.is_pm && waitingQuestions(s).length + waitingActions(s).length > 0,
+  );
   return (
     <section className="panel-section" aria-labelledby="followups-title">
       <div className="heading">
         <h2 id="followups-title">{t("followups.title")}</h2>
+        <div className="filters" role="group" aria-label={t("followups.filter")}>
+          {FILTERS.map((f) => (
+            <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
+              {t(`followups.filter.${f}`)}
+            </button>
+          ))}
+        </div>
       </div>
       {followups.isPending ? (
         <p className="empty">{t("loading")}</p>
@@ -33,9 +52,19 @@ export function FollowUps() {
         </p>
       ) : sections.length === 0 ? (
         <p className="empty">{t("followups.empty")}</p>
+      ) : shown.length === 0 ? (
+        <p className="empty">{t(filter === "send" ? "followups.empty_send" : "followups.empty_waiting")}</p>
       ) : (
         <ol className="queue">
-          {sections.map((s) => (s.is_pm ? <YourSection key={s.person} section={s} /> : <PersonSection key={s.person} section={s} />))}
+          {shown.map((s) =>
+            s.is_pm ? (
+              <YourSection key={s.person} section={s} />
+            ) : filter === "send" ? (
+              <PersonSection key={s.person} section={s} />
+            ) : (
+              <WaitingSection key={s.person} section={s} />
+            ),
+          )}
         </ol>
       )}
     </section>
@@ -153,6 +182,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
 }
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
+type Tn = (key: string, n: number, vars?: Record<string, string | number>) => string;
 
 function actionMeta(a: S["FollowupAction"], t: T): string {
   return [a.project_name, a.due ? t("op.meta.due", { date: day(a.due) }) : ""].filter(Boolean).join(" · ");
@@ -167,44 +197,21 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
   const area = useRef<HTMLTextAreaElement>(null);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
-  const [copied, setCopiedState] = useState<string | null>(() => remembered(s.person));
   const message = draft ?? s.message;
-  // Once this exact message is copied, the row's next step is Mark sent; editing it again goes back to Copy.
-  const isCopied = copied !== null && copied === message && s.to_send > 0;
-  const waitingReplies = s.questions.filter((q) => q.status === "sent").length;
-
-  const setCopied = (text: string | null) => {
-    setCopiedState(text);
-    remember(s.person, text);
-  };
-
-  const markSent = (text: string | null) =>
-    act(
-      () => api.markSent(s.person, text),
-      (counts) => ({
-        message: t("toast.marked_sent", { name: s.name }),
-        undo: () => api.unmarkSent(s.person, { question_ids: counts.question_ids, action_ids: counts.action_ids }),
-      }),
-    ).then((result) => {
-      if (result) {
-        setDraft(null);
-        setCopied(null);
-      }
-    });
+  const questions = toSendQuestions(s);
+  const actions = toSendActions(s);
 
   const edit = () => {
     setOpen(true);
     window.setTimeout(() => area.current?.focus(), 0);
   };
 
+  // Copying is the send: the text goes to the clipboard, then the person's items are marked sent, with Undo. If the
+  // browser blocks the copy, nothing is marked and the text is selected for a manual copy.
   const copy = async () => {
+    if (!message.trim()) return;
     try {
       await navigator.clipboard.writeText(message);
-      setCopied(message);
-      push({
-        message: t("toast.copied", { name: s.name }),
-        action: { label: t("followups.mark_sent"), run: () => markSent(message) },
-      });
     } catch {
       setOpen(true);
       window.setTimeout(() => {
@@ -212,101 +219,123 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
         area.current?.select();
       }, 0);
       push({ message: t("toast.copy_blocked") });
+      return;
     }
+    const result = await act(
+      () => api.markSent(s.person, message),
+      (counts) => ({
+        message: t("toast.marked_sent", { name: s.name }),
+        undo: () => api.unmarkSent(s.person, { question_ids: counts.question_ids, action_ids: counts.action_ids }),
+      }),
+    );
+    if (result) setDraft(null);
   };
 
-  const menu: MenuAction[] = [];
-  if (isCopied) {
-    menu.push({ id: "copyagain", label: t("followups.copy_again"), run: () => void copy() });
-    menu.push({ id: "edit", label: t("followups.edit"), run: edit });
-  } else if (s.to_send > 0) {
-    menu.push({ id: "edit", label: t("followups.edit"), run: edit });
-    menu.push({ id: "marksent", label: t("followups.mark_sent_without_copy"), run: () => void markSent(null) });
-  }
-  const primary = isCopied ? () => void markSent(copied) : () => void copy();
+  const menu: MenuAction[] = [{ id: "edit", label: t("followups.edit"), run: edit }];
   useRowKeys(ref, {
     toggle: () => setOpen((v) => !v),
-    primary: s.to_send > 0 ? primary : undefined,
-    copy: s.to_send > 0 ? () => void copy() : undefined,
-    edit: s.to_send > 0 ? edit : undefined,
+    primary: () => void copy(),
+    copy: () => void copy(),
+    edit,
   });
-
-  const summary = [
-    s.questions.length ? tn("followups.questions", s.questions.length) : "",
-    s.actions.length ? tn("followups.actions", s.actions.length) : "",
-    s.to_send ? tn("followups.to_send", s.to_send) : t("followups.nothing_new"),
-    waitingReplies ? tn("followups.waiting_replies", waitingReplies) : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
 
   return (
     <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={`p-${s.person}`}>
-      <div className="row">
-        <span className={`kind ${isCopied ? "k-wait" : s.to_send ? "k-send" : "k-done"}`}>
-          {t(isCopied ? "followups.copied" : s.to_send ? "followups.ready" : "followups.waiting")}
-        </span>
+      <div className="row pair">
         <button type="button" className="expander text" aria-expanded={open} onClick={() => setOpen(!open)}>
           <strong id={`p-${s.person}`}>{s.name}</strong>
-          <span className="sub">{summary}</span>
+          <span className="sub">{tn("followups.to_send", s.to_send)}</span>
         </button>
         <div className="acts">
-          {s.to_send > 0 && (
-            <button type="button" className="btn primary" onClick={primary}>
-              {isCopied ? t("followups.mark_sent") : tn("followups.copy", s.to_send)}
-            </button>
-          )}
+          <button type="button" className="btn primary" onClick={() => void copy()}>
+            {tn("followups.copy", s.to_send)}
+          </button>
           <RowMenu label={s.name} actions={menu} />
         </div>
       </div>
       {open && (
         <div className="body">
-          {s.questions.length > 0 && (
-            <ul className="children" aria-label={tn("followups.questions", s.questions.length)}>
-              {s.questions.map((q) => (
-                <QuestionRow key={q.id} question={q} person={s.name} />
-              ))}
-            </ul>
-          )}
-          {s.actions.length > 0 && (
-            <ul className="children" aria-label={tn("followups.actions", s.actions.length)}>
-              {s.actions.map((a) => (
-                <TheirActionRow key={a.id} action={a} person={s.name} />
-              ))}
-            </ul>
-          )}
-          {s.to_send > 0 && (
-            <div className="message">
-              <label className="hint" htmlFor={`msg-${s.person}`}>
-                {t("followups.message_label", { name: s.name })}
-              </label>
-              <textarea
-                id={`msg-${s.person}`}
-                className="msg"
-                ref={area}
-                value={message}
-                onChange={(e) => setDraft(e.target.value)}
-              />
-              <div className="row-end">
-                <span className="hint">{t("followups.clean_copy")}</span>
-                {draft !== null && (
-                  <button type="button" className="btn quiet" onClick={() => setDraft(null)}>
-                    {t("followups.reset")}
-                  </button>
-                )}
-                <button type="button" className="btn primary" onClick={() => void copy()}>
-                  {t("followups.copy_message")}
+          <div className="what" id={`in-${s.person}`}>
+            {t("followups.in_message")}
+          </div>
+          <ul className="plain-list" aria-labelledby={`in-${s.person}`}>
+            {questions.map((q) => (
+              <li key={q.id}>
+                <span className="title">{q.title}</span>
+              </li>
+            ))}
+            {actions.map((a) => (
+              <li key={a.id}>
+                <span className="title">{a.text}</span>
+                {actionMeta(a, t) && <span className="meta">{actionMeta(a, t)}</span>}
+              </li>
+            ))}
+          </ul>
+          <div className="message">
+            <label className="hint" htmlFor={`msg-${s.person}`}>
+              {t("followups.message_label", { name: s.name })}
+            </label>
+            <textarea
+              id={`msg-${s.person}`}
+              className="msg"
+              ref={area}
+              value={message}
+              onChange={(e) => setDraft(e.target.value)}
+            />
+            <div className="row-end">
+              <span className="hint">{t("followups.clean_copy")}</span>
+              {draft !== null && (
+                <button type="button" className="btn quiet" onClick={() => setDraft(null)}>
+                  {t("followups.reset")}
                 </button>
-              </div>
+              )}
+              <button type="button" className="btn primary" onClick={() => void copy()}>
+                {t("followups.copy_message")}
+              </button>
             </div>
-          )}
+          </div>
         </div>
       )}
     </li>
   );
 }
 
-function QuestionRow(props: { question: S["FollowupQuestion"]; person: string }) {
+// What each person has already been sent or told, one line each, with the step that closes it.
+function WaitingSection(props: { section: S["FollowupSection"] }) {
+  const { tn } = useWords();
+  const s = props.section;
+  const questions = waitingQuestions(s);
+  const actions = waitingActions(s);
+  return (
+    <li className="line" aria-labelledby={`w-${s.person}`}>
+      <div className="row single">
+        <div className="text">
+          <h3 className="name" id={`w-${s.person}`}>
+            {s.name}
+          </h3>
+          <span className="sub">{tn("followups.waiting_count", questions.length + actions.length)}</span>
+        </div>
+      </div>
+      <div className="body">
+        <ul className="children">
+          {questions.map((q) => (
+            <WaitingQuestion key={q.id} question={q} person={s.name} />
+          ))}
+          {actions.map((a) => (
+            <WaitingAction key={a.id} action={a} person={s.name} />
+          ))}
+        </ul>
+      </div>
+    </li>
+  );
+}
+
+function sentLine(date: string | null, days: number | null, project: string, tn: Tn, t: T): string {
+  const when = !date ? "" : !days ? t("followups.sent_today") : tn("followups.sent_on", days, { date: day(date) });
+  return [project, when].filter(Boolean).join(" · ");
+}
+
+function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: string }) {
   const { t, tn } = useWords();
   const act = useAct();
   const addOwn = useAddOwnRequest();
@@ -325,22 +354,15 @@ function QuestionRow(props: { question: S["FollowupQuestion"]; person: string })
       setReplying(false);
     }
   };
+  const meta = sentLine(q.sent, q.waiting_days, "", tn, t);
   return (
     <li className="child">
       <div>
-        <span className={`pill ${q.status === "open" ? "k-send" : "k-wait"}`}>
-          {q.status === "open" ? t("followups.q.ready") : tn("followups.q.waiting_days", q.waiting_days ?? 0)}
-        </span>
         <div className="title">{q.title}</div>
-        {q.text && <SafeText text={q.text} />}
-        {q.links.map((l) => (
-          <div key={l.url}>
-            <SafeLink label={l.label} url={l.url} />
-          </div>
-        ))}
+        {meta && <div className="meta">{meta}</div>}
       </div>
       <div className="acts">
-        {q.status === "sent" && !replying && (
+        {!replying && (
           <button type="button" className="btn" onClick={() => setReplying(true)}>
             {t("followups.record_reply")}
           </button>
@@ -381,7 +403,7 @@ function QuestionRow(props: { question: S["FollowupQuestion"]; person: string })
   );
 }
 
-function TheirActionRow(props: { action: S["FollowupAction"]; person: string }) {
+function WaitingAction(props: { action: S["FollowupAction"]; person: string }) {
   const { t, tn } = useWords();
   const act = useAct();
   const a = props.action;
@@ -391,14 +413,12 @@ function TheirActionRow(props: { action: S["FollowupAction"]; person: string }) 
       () => api.actionStatus(a.id, "done"),
       () => ({ message: t("toast.they_finished", { name: first }), undo: () => api.actionStatus(a.id, "open") }),
     );
+  const meta = sentLine(a.told, a.told_days, a.project_name, tn, t);
   return (
     <li className="child">
       <div>
-        <span className={`pill ${a.told ? "k-done" : "k-send"}`}>
-          {a.told ? tn("followups.a.told_days", a.told_days ?? 0) : t("followups.a.to_send")}
-        </span>
         <div className="title">{a.text}</div>
-        <div className="meta">{actionMeta(a, t)}</div>
+        {meta && <div className="meta">{meta}</div>}
       </div>
       <div className="acts">
         <button type="button" className="btn quiet" onClick={() => void finished()}>
@@ -407,24 +427,4 @@ function TheirActionRow(props: { action: S["FollowupAction"]; person: string }) 
       </div>
     </li>
   );
-}
-
-const COPIED_KEY = "cockpit.copied.";
-
-/** The message last copied for a person, kept for this browser session so a refresh keeps "Mark sent" as the next step. */
-function remembered(person: string): string | null {
-  try {
-    return window.sessionStorage.getItem(COPIED_KEY + person);
-  } catch {
-    return null;
-  }
-}
-
-function remember(person: string, text: string | null): void {
-  try {
-    if (text === null) window.sessionStorage.removeItem(COPIED_KEY + person);
-    else window.sessionStorage.setItem(COPIED_KEY + person, text);
-  } catch {
-    // storage can be unavailable (private windows); the in-page state still works
-  }
 }

@@ -4,7 +4,7 @@ import pytest
 
 from engine.backup import run_backup, state
 from engine.evaluate import evaluate, load_cases
-from engine.followups import mark_sent, sections
+from engine.followups import mark_sent, sections, unmark_sent
 from engine.storage import Store
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
@@ -61,6 +61,25 @@ def test_mark_sent_records_questions_and_told_dates_and_edits(env):
     assert all(q["status"] == "sent" and q["waiting_days"] == 3 for q in after.questions)
     assert all(a["told_days"] == 3 for a in after.actions)
     assert [s.data["kind"] for s in store.read().list("signal")] == ["draft_edited"]
+
+
+def test_sent_questions_carry_their_sent_date_and_the_message_leaves_sent_items_out(env):
+    _, cfg, store = env
+    editor = by_role("Editor")
+    sec = next(s for s in sections(store, cfg, NOW.date()) if s.person == editor["id"])
+    counts = mark_sent(store, cfg, editor["id"], sent_text=sec.message, now=NOW)
+    later = (NOW + timedelta(days=2)).date()
+    sent = next(s for s in sections(store, cfg, later) if s.person == editor["id"])
+    assert all(q["sent"] == NOW.date().isoformat() and q["waiting_days"] == 2 for q in sent.questions)
+    # Put only the questions back: the told actions stay out of the next message and the count.
+    unmark_sent(store, editor["id"], counts["question_ids"], [])
+    partial = next(s for s in sections(store, cfg, later) if s.person == editor["id"])
+    assert all(q["sent"] is None for q in partial.questions)
+    assert partial.to_send == len(partial.questions)
+    assert partial.questions and partial.message
+    assert all(a["text"] not in partial.message for a in partial.actions)
+    assert all(q["title"] in partial.message for q in partial.questions)
+    assert cfg.language.messages.actions_heading not in partial.message
 
 
 def test_an_unedited_message_records_no_signal(env):

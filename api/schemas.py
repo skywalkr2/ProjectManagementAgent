@@ -194,6 +194,7 @@ class FollowupQuestion(BaseModel):
     links: list[Link]
     kind: str
     status: Literal["open", "sent"]
+    sent: str | None
     waiting_days: int | None
     about: str | None
     options: list[Option]

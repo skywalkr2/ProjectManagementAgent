@@ -776,3 +776,17 @@ or a bundled plugin is written as a patch and an issue for this repository.
 the design was removed; `CLAUDE.md` is the only copy.
 
 **Why:** One copy of each document, at the path the other documents use.
+
+## 2026-10-10: Follow-ups: Copy marks sent, and sent items have their own view
+
+**Decided by:** project owner.
+
+**What:** Copy records the message as sent at once, with an Undo toast; there is no separate Mark sent step. Follow-ups has a
+filter, "To send" (default) and "Waiting on them". A person's card under To send lists only what is still to send, with the
+message and Copy. Items already sent or told appear only under Waiting on them, grouped by person, one line each ("sent
+<date> (N days)") with their own step (They finished it, Record reply). The PM's own decisions stay under To send.
+
+**Why:** Items already sent sat among items still to send and looked unsent; a second click after Copy was easy to forget.
+
+**Impact:** Design 7.5 and the wording sheet. Each question in the follow-ups response carries its sent date. No change to
+scope or to the ops.

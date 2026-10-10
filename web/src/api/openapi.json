@@ -448,6 +448,17 @@
             "title": "Options",
             "type": "array"
           },
+          "sent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent"
+          },
           "status": {
             "enum": [
               "open",
@@ -483,6 +494,7 @@
           "links",
           "kind",
           "status",
+          "sent",
           "waiting_days",
           "about",
           "options"

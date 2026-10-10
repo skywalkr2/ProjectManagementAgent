@@ -678,6 +678,7 @@ def _section(s: Any, people: People) -> FollowupSection:
                 links=q["links"],
                 kind=q["kind"],
                 status=q["status"],
+                sent=q["sent"],
                 waiting_days=q["waiting_days"],
                 about=resolves.get("kind"),
                 options=[Option(id=pid, name=people.name(pid)) for pid in q["options"]],

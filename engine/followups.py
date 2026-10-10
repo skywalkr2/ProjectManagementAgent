@@ -50,7 +50,8 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
             continue
         if (d.get("resolves") or {}).get("kind") in ROUTING:
             continue  # answered where the item waits (What changed), so it isn't shown twice
-        waiting = (today - datetime.fromisoformat(d["sent_at"]).date()).days if d.get("sent_at") else None
+        sent = datetime.fromisoformat(d["sent_at"]).date() if d.get("sent_at") else None
+        waiting = (today - sent).days if sent else None
         section(d["to"]).questions.append(
             {
                 "id": q.id,
@@ -59,6 +60,7 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                 "links": d.get("links", []),
                 "kind": d["kind"],
                 "status": d["status"],
+                "sent": sent.isoformat() if sent else None,
                 "waiting_days": waiting,
                 "options": d.get("options", []),
                 "resolves": d.get("resolves"),

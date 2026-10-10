@@ -129,7 +129,10 @@ def test_followups_put_the_pm_first_and_mark_sent_clears_a_person(api):
     counts = client.post(f"{base}/followups/{editor['id']}/mark-sent", json={"text": sec["message"]}).json()
     assert counts["questions"] + counts["actions"] == sec["to_send"]
     sec = next(s for s in client.get(f"{base}/followups").json() if s["person"] == editor["id"])
-    assert sec["to_send"] == 0
+    assert sec["to_send"] == 0 and sec["message"] == ""
+    sent = [q for q in sec["questions"] if q["status"] == "sent"]
+    assert sent and all(q["sent"] for q in sent)
+    assert all(a["told"] for a in sec["actions"])
 
 
 def test_answering_a_question(api):
