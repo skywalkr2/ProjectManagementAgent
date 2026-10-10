@@ -70,6 +70,7 @@ export const api = {
     call<S["Ok"]>("POST", `followups/${id(person)}/unmark-sent`, body),
   backup: () => call<S["Status"]>("POST", "backup"),
   projects: () => call<S["ProjectView"][]>("GET", "projects"),
+  notes: () => call<S["NoteView"][]>("GET", "notes"),
   addPerson: (body: S["PersonIn"]) => call<S["Created"]>("POST", "people", body),
   editPerson: (p: string, body: S["PersonPatch"]) => call<S["Ok"]>("POST", `people/${id(p)}`, body),
   removePerson: (p: string) => call<S["Ok"]>("POST", `people/${id(p)}/remove`),

@@ -177,3 +177,32 @@ kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); 
   .toast { animation: rise 0.16s ease-out; }
   @keyframes rise { from { transform: translateY(6px); opacity: 0; } }
 }
+
+/* Hand-in: one big box and the choice of whose words are in it */
+textarea.big { min-height: 220px; }
+.choice { gap: 8px; }
+.choice > label, .choice > span:first-child { font-weight: 600; font-size: 13.5px; }
+.radio { display: flex; align-items: center; gap: 10px; min-height: 36px; cursor: pointer; font-size: 14.5px; }
+.radio-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--muted); background: var(--surface); flex: none; display: grid; place-items: center; }
+.radio[data-selected] .radio-dot { border-color: var(--accent); }
+.radio[data-selected] .radio-dot::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.radio[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+
+/* The assistant's state, and the first-run card, on Today */
+.notice { display: flex; gap: 12px; align-items: flex-start; background: var(--warn-soft); color: var(--fg); border: 1px solid var(--warn); border-radius: 12px; padding: 12px 16px; }
+.notice .mark { flex: none; margin-top: 2px; }
+.notice-text { display: grid; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.notice-text .hint { color: var(--fg); }
+.notice code { font-family: var(--mono); font-size: 12.5px; }
+.start .heading h2 { font-size: 22px; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.steps li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--bg); }
+.steps .pill { margin-left: 0; }
+.steps li[data-done="true"] .pill { background: var(--ok-soft); color: var(--ok); }
+[data-narrow] .steps li { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+
+/* Notes under a project */
+.notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.notes li { display: grid; gap: 2px; border-left: 3px solid var(--line); padding-left: 10px; overflow-wrap: anywhere; }
+.loose-notes { display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
+.loose-notes h3 { margin: 0; font-size: 15px; font-family: var(--display); font-weight: 600; }

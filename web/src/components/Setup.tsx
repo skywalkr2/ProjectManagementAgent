@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { day } from "../lib/dates";
+import { day, dayAndTime } from "../lib/dates";
 import { useWords } from "../lib/wording";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { SafeText } from "./SafeText";
 
 const list = (text: string) =>
   text
@@ -177,7 +178,11 @@ function PersonForm(props: { person?: S["PersonView"]; onDone: () => void }) {
 function ProjectsPanel() {
   const { t } = useWords();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const notes = useQuery({ queryKey: ["notes"], queryFn: api.notes });
   const [adding, setAdding] = useState(false);
+  const known = new Set((projects.data ?? []).map((p) => p.id));
+  // A note filed under a project that no longer exists is shown with the ones that were never filed under one.
+  const loose = (notes.data ?? []).filter((n) => !n.project || !known.has(n.project));
   return (
     <section className="panel-section" aria-labelledby="projects-title">
       <div className="heading">
@@ -196,20 +201,32 @@ function ProjectsPanel() {
       ) : (
         <ul className="queue">
           {(projects.data ?? []).map((p) => (
-            <ProjectRow key={p.id} project={p} />
+            <ProjectRow key={p.id} project={p} notes={(notes.data ?? []).filter((n) => n.project === p.id)} />
           ))}
         </ul>
+      )}
+      {loose.length > 0 && (
+        <section className="loose-notes" aria-labelledby="loose-notes-title">
+          <h3 id="loose-notes-title">{t("setup.notes_unfiled")}</h3>
+          <NoteList notes={loose} />
+        </section>
       )}
     </section>
   );
 }
 
-function ProjectRow(props: { project: S["ProjectView"] }) {
+function ProjectRow(props: { project: S["ProjectView"]; notes: S["NoteView"][] }) {
   const { t } = useWords();
   const act = useAct();
   const p = props.project;
   const [editing, setEditing] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const menu: MenuAction[] = [
+    {
+      id: "notes",
+      label: t(showNotes ? "setup.notes_hide" : "setup.notes", { n: props.notes.length }),
+      run: () => setShowNotes((v) => !v),
+    },
     {
       id: "remove",
       label: t("setup.remove"),
@@ -245,12 +262,36 @@ function ProjectRow(props: { project: S["ProjectView"] }) {
           <RowMenu label={p.name} actions={menu} />
         </div>
       </div>
+      {showNotes && (
+        <div className="body">
+          {props.notes.length ? <NoteList notes={props.notes} /> : <p className="hint">{t("setup.notes_none")}</p>}
+        </div>
+      )}
       {editing && (
         <div className="body">
           <ProjectForm project={p} onDone={() => setEditing(false)} />
         </div>
       )}
     </li>
+  );
+}
+
+/** Filed notes, newest first. A note may hold text from outside content, so it is shown as text with real domains. */
+function NoteList(props: { notes: S["NoteView"][] }) {
+  const { t } = useWords();
+  return (
+    <ul className="notes">
+      {props.notes.map((n) => (
+        <li key={n.id}>
+          <SafeText text={n.text} />
+          <span className="hint">
+            {[n.created_at ? t("setup.note_filed", { when: dayAndTime(n.created_at) }) : "", n.trust === "untrusted" ? t("setup.note_outside") : ""]
+              .filter(Boolean)
+              .join(" · ")}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

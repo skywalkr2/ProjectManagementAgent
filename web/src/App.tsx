@@ -5,10 +5,12 @@ import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
 import { useToasts } from "./lib/toasts";
 import { useWords } from "./lib/wording";
+import { AssistantNotice } from "./components/AssistantNotice";
 import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Header } from "./components/Header";
 import { Setup } from "./components/Setup";
+import { StartHere } from "./components/StartHere";
 import { Stages } from "./components/Stages";
 import { ShortcutHelp } from "./components/ShortcutHelp";
 import { WhatChanged } from "./components/WhatChanged";
@@ -47,6 +49,12 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
         {handIn && <HandIn onClose={() => setHandIn(false)} />}
         {view === "home" ? (
           <>
+            <AssistantNotice />
+            <StartHere
+              workspace={props.rc.workspace_name}
+              onHandIn={() => setHandIn(true)}
+              onOpenSetup={() => setView("setup")}
+            />
             <WhatChanged />
             <FollowUps />
           </>

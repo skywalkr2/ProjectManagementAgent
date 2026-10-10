@@ -63,3 +63,9 @@ def store(tmp_path: Path, demo: Path) -> Store:
 @pytest.fixture
 def workspace(tmp_path: Path, demo: Path) -> Workspace:
     return init_workspace(tmp_path / "ws", template=demo)
+
+
+@pytest.fixture(autouse=True)
+def _no_temp_folder_notice(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests work in temporary folders on purpose; the command's "this folder is emptied" notice is tested directly."""
+    monkeypatch.setattr("engine.cli.system_temp_roots", lambda: ())

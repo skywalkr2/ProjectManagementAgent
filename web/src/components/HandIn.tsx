@@ -1,6 +1,9 @@
-// Handing something in (design 7.6): the PM's note (trusted: what to do) above the pasted content (untrusted:
-// material, never instructions), so the assistant always knows which words are the PM's.
+// Handing something in (design 7.6): one box, and a required choice of whose words are in it. "Someone else's" (the
+// default) sends the box as pasted content (untrusted: material, never instructions) with an optional line saying what
+// to do with it, which is the PM's own note (trusted). "Mine" sends the box as the PM's note. Either way the assistant
+// always knows which words are the PM's.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { Label, Radio, RadioGroup, Text } from "react-aria-components";
 import { api } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
@@ -28,12 +31,15 @@ export function useAddOwnRequest(): (id: string) => void {
 
 const TEXT_FILE = /^text\/|\/(json|xml)$|message\/rfc822/;
 
+type Whose = "others" | "mine";
+
 export function HandIn(props: { onClose: () => void }) {
   const { t } = useWords();
   const act = useAct();
   const own = useContext(OwnContext);
-  const [note, setNote] = useState("");
-  const [pasted, setPasted] = useState("");
+  const [text, setText] = useState("");
+  const [whose, setWhose] = useState<Whose>("others");
+  const [todo, setTodo] = useState("");
   const [dropProblem, setDropProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const first = useRef<HTMLTextAreaElement>(null);
@@ -41,8 +47,10 @@ export function HandIn(props: { onClose: () => void }) {
 
   const submit = async () => {
     setBusy(true);
+    // Someone else's words are always material (pasted); only the PM's own words are ever sent as the note.
+    const body = whose === "mine" ? { note: text, pasted: "" } : { note: todo, pasted: text };
     const handed = await act(
-      () => api.handIn({ note, pasted }),
+      () => api.handIn(body),
       () => ({ message: t("toast.handed_in") }),
     );
     setBusy(false);
@@ -59,7 +67,7 @@ export function HandIn(props: { onClose: () => void }) {
     const readable = files.filter((f) => TEXT_FILE.test(f.type) || /\.(txt|md|eml|csv)$/i.test(f.name));
     setDropProblem(readable.length < files.length ? t("handin.drop_text_only") : "");
     const texts = await Promise.all(readable.map((f) => f.text()));
-    if (texts.length) setPasted((prev) => [prev, ...texts].filter(Boolean).join("\n\n"));
+    if (texts.length) setText((prev) => [prev, ...texts].filter(Boolean).join("\n\n"));
   };
 
   return (
@@ -75,30 +83,16 @@ export function HandIn(props: { onClose: () => void }) {
         }}
       >
         <div className="field">
-          <label htmlFor="handin-note">
-            {t("handin.note")} <span className="hint">{t("handin.note_hint")}</span>
-          </label>
+          <label htmlFor="handin-box">{t("handin.box")}</label>
           <textarea
-            id="handin-note"
-            className="short"
+            id="handin-box"
+            className="drop big"
             ref={first}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder={t("handin.note_placeholder")}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="handin-pasted">
-            {t("handin.pasted")} <span className="hint">{t("handin.pasted_hint")}</span>
-          </label>
-          <textarea
-            id="handin-pasted"
-            className="drop"
-            value={pasted}
-            onChange={(e) => setPasted(e.target.value)}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => void onDrop(e)}
-            placeholder={t("handin.pasted_placeholder")}
+            placeholder={t("handin.box_placeholder")}
           />
           {dropProblem && (
             <p className="hint" role="status">
@@ -106,11 +100,43 @@ export function HandIn(props: { onClose: () => void }) {
             </p>
           )}
         </div>
+        <RadioGroup
+          className="field choice"
+          value={whose}
+          onChange={(v) => setWhose(v as Whose)}
+          isRequired
+          orientation="vertical"
+        >
+          <Label>{t("handin.whose")}</Label>
+          <Radio value="others" className="radio">
+            <span className="radio-dot" aria-hidden="true" />
+            <span>{t("handin.whose.others")}</span>
+          </Radio>
+          <Radio value="mine" className="radio">
+            <span className="radio-dot" aria-hidden="true" />
+            <span>{t("handin.whose.mine")}</span>
+          </Radio>
+          <Text slot="description" className="hint">
+            {t(whose === "mine" ? "handin.whose_hint.mine" : "handin.whose_hint.others")}
+          </Text>
+        </RadioGroup>
+        {whose === "others" && (
+          <div className="field">
+            <label htmlFor="handin-todo">{t("handin.todo")}</label>
+            <input
+              id="handin-todo"
+              type="text"
+              value={todo}
+              onChange={(e) => setTodo(e.target.value)}
+              placeholder={t("handin.todo_placeholder")}
+            />
+          </div>
+        )}
         <div className="row-end">
           <button type="button" className="btn quiet" onClick={props.onClose}>
             {t("action.cancel")}
           </button>
-          <button type="submit" className="btn primary" disabled={busy || !(note.trim() || pasted.trim())}>
+          <button type="submit" className="btn primary" disabled={busy || !text.trim()}>
             {t("handin.go")}
           </button>
         </div>

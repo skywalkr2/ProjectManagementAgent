@@ -303,7 +303,7 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
         <div className="what">
-          {t(`op.${op.op}`)}
+          {opLabel(op, t)}
           {pill && <span className={`pill ${pill}`}>{t(`op.status.${pillKey}`)}</span>}
         </div>
         <div className="title">{op.title}</div>
@@ -338,13 +338,19 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
   );
 }
 
+/** What the assistant did, in words; a filed note also says where it went. */
+function opLabel(op: S["OpView"], t: T): string {
+  if (op.op === "note") return op.meta.project ? t("op.note.under", { project: op.meta.project }) : t("op.note.none");
+  return t(`op.${op.op}`);
+}
+
 function metaLine(op: S["OpView"], t: T): string {
   const bits: string[] = [];
   const m = op.meta;
   if (m.owners?.length) bits.push(m.owners.join(", "));
   if (m.to) bits.push(t("op.meta.to", { name: m.to }));
   if (m.due) bits.push(t("op.meta.due", { date: day(m.due) }));
-  if (m.project) bits.push(m.project);
+  if (m.project && op.op !== "note") bits.push(m.project);
   if (m.field) bits.push(t("op.meta.set", { field: m.field, value: String(m.value ?? "") }));
   return bits.join(" · ");
 }

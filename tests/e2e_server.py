@@ -23,7 +23,7 @@ from engine.ai.adapters.stub import set_responder
 from engine.cleaning import normalize
 from engine.evaluate import load_cases
 from engine.workspace import init_workspace
-from tests.conftest import DEMO_B
+from tests.conftest import DEMO_B, fixture_records
 
 TOKEN = "e2e-token"
 
@@ -45,6 +45,7 @@ def main() -> None:
     }
     cfg = ws.config(env={}, flags=flags)
     cases = load_cases(DEMO_B)
+    project = fixture_records(DEMO_B, "project")[0]["id"]
 
     def responder(task):  # the case whose longest pasted line is in the request
         request = normalize(task.request)
@@ -52,7 +53,9 @@ def main() -> None:
             longest = max(case.get("pasted", "").splitlines() or [""], key=len)
             if longest.strip() and normalize(longest) in request:
                 return json.dumps(case["stub_answer"])
-        return json.dumps({"summary": "Filed as a note.", "ops": [{"op": "note", "text": "Noted."}]})
+        # A note that says it belongs to a project is filed under the fixture's first one; any other is filed loose.
+        note = {"op": "note", "text": "Noted.", **({"project": project} if "under the project" in request else {})}
+        return json.dumps({"summary": "Filed as a note.", "ops": [note]})
 
     set_responder(responder)
     app = create_app(ws, cfg, TOKEN, start_worker=True)

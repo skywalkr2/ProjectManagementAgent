@@ -18,6 +18,38 @@
         "title": "ActionState",
         "type": "object"
       },
+      "AiState": {
+        "description": "Whether the assistant can do its work: set up, tested, and answering.",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The provider's own reason when there is one, shortened.",
+            "title": "Detail"
+          },
+          "state": {
+            "enum": [
+              "ok",
+              "untested",
+              "failing",
+              "not_set_up"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "AiState",
+        "type": "object"
+      },
       "Answer": {
         "properties": {
           "person": {
@@ -567,6 +599,69 @@
           "url"
         ],
         "title": "Link",
+        "type": "object"
+      },
+      "NoteView": {
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the note was filed, from the first record of it.",
+            "title": "Created At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "trust": {
+            "enum": [
+              "trusted",
+              "untrusted"
+            ],
+            "title": "Trust",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "project",
+          "project_name",
+          "trust"
+        ],
+        "title": "NoteView",
         "type": "object"
       },
       "Ok": {
@@ -1930,6 +2025,9 @@
       },
       "Status": {
         "properties": {
+          "ai": {
+            "$ref": "#/components/schemas/AiState"
+          },
           "backup": {
             "$ref": "#/components/schemas/BackupStatus"
           },
@@ -1955,6 +2053,7 @@
         },
         "required": [
           "backup",
+          "ai",
           "requests",
           "version"
         ],
@@ -2589,6 +2688,29 @@
           }
         },
         "summary": "Health"
+      }
+    },
+    "/api/notes": {
+      "get": {
+        "description": "Every filed note, newest first, with the project it was filed under (if any).",
+        "operationId": "notes_api_notes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NoteView"
+                  },
+                  "title": "Response Notes Api Notes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Notes"
       }
     },
     "/api/people": {

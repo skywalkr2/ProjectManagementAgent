@@ -32,9 +32,16 @@ async function signIn(page: Page) {
 }
 
 async function handIn(page: Page, c: Case) {
-  await page.getByRole("button", { name: "Hand something in" }).click();
-  if (c.note) await page.getByLabel(/Your note/).fill(c.note);
-  if (c.pasted) await page.getByLabel(/Pasted content/).fill(c.pasted);
+  await page.getByRole("button", { name: "Hand something in" }).first().click();
+  const box = page.getByLabel("Paste or type it here");
+  if (c.pasted) {
+    // Someone else's words are the default; what to do with them is the optional line.
+    await box.fill(c.pasted);
+    if (c.note) await page.getByLabel(/Anything to do with it/).fill(c.note);
+  } else {
+    await page.locator("label.radio", { hasText: "Mine" }).click();
+    await box.fill(c.note ?? "");
+  }
   await page.getByRole("button", { name: "Hand in", exact: true }).click();
   const row = page.locator("li.line", { hasText: firstLine(c.pasted ?? c.note ?? "") });
   await expect(row.locator(".kind").first()).toHaveText(/Review/i, { timeout: 20_000 });
@@ -44,6 +51,8 @@ async function handIn(page: Page, c: Case) {
 }
 
 async function checkAccessibility(page: Page) {
+  // The header sticks to the top, so what it covers depends on the scroll position; check from the top.
+  await page.evaluate(() => window.scrollTo(0, 0));
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   const found = results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
   expect(found).toEqual([]);
@@ -60,6 +69,30 @@ test.describe.serial("acceptance scenario", () => {
     people = await (await page.request.get("api/people")).json();
     await expect(page.locator(".backup")).toContainText("No backup has succeeded yet");
     await checkAccessibility(page);
+  });
+
+  test("a new workspace shows the first-run card and what the assistant needs", async ({ page }) => {
+    await signIn(page);
+    const card = page.getByRole("region", { name: "Start here" });
+    await expect(card).toBeVisible();
+    const steps = card.getByRole("listitem");
+    await expect(steps).toHaveCount(3);
+    await expect(steps.nth(0)).toContainText("Not done yet");
+    await expect(page.getByText("The assistant's connection hasn't been tested")).toBeVisible();
+    await expect(page.getByText("Run the connection test: cockpit ai test")).toBeVisible();
+    await checkAccessibility(page);
+    await card.getByRole("button", { name: "Hand something in" }).click();
+    await expect(page.getByLabel("Paste or type it here")).toBeFocused();
+    await checkAccessibility(page);
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await card.getByRole("button", { name: "Open People & projects" }).click();
+    await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Today" }).click();
+    await card.getByRole("button", { name: "Hide this" }).click();
+    await expect(card).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Start here" })).toHaveCount(0);
   });
 
   test("1. meeting notes become actions with owners, and a shared first name becomes a question", async ({ page }) => {
@@ -103,6 +136,23 @@ test.describe.serial("acceptance scenario", () => {
     await expect(row.locator("li.child", { hasText: "Filed a note" })).toHaveCount(1);
     await expect(row.locator("li.child", { hasText: "Added a person" })).toHaveCount(0);
     expect((await (await page.request.get("api/people")).json()).length).toBe(before);
+  });
+
+  test("a note handed in as the person's own is filed under its project and found there", async ({ page }) => {
+    await signIn(page);
+    const projects: Array<{ id: string; name: string }> = await (await page.request.get("api/projects")).json();
+    const loose = await handIn(page, { id: "loose-note", note: "Keep this one for later" });
+    await expect(loose.locator("li.child", { hasText: "Filed a note (no project)" })).toHaveCount(1);
+    const row = await handIn(page, { id: "own-note", note: "Keep this under the project, for later" });
+    const first = projects[0];
+    await expect(row.locator("li.child", { hasText: `Filed a note under ${first.name}` })).toHaveCount(1);
+    await page.getByRole("button", { name: "People & projects" }).click();
+    const project = page.locator("li.line", { hasText: first.name });
+    await project.getByRole("button", { name: /More actions for/ }).click();
+    await page.getByRole("menuitem", { name: /^Notes \(\d+\)$/ }).click();
+    await expect(project.locator("ul.notes")).toContainText("Noted.");
+    await expect(page.getByRole("heading", { name: "Notes not filed under a project" })).toBeVisible();
+    await checkAccessibility(page);
   });
 
   test("4. Follow-ups: one clean message per person, copied and marked sent", async ({ page }) => {
@@ -150,7 +200,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.keyboard.press("n");
-    await expect(page.getByLabel(/Your note/)).toBeFocused();
+    await expect(page.getByLabel("Paste or type it here")).toBeFocused();
   });
 
   test("a phone-sized screen has one column and no sideways scrolling", async ({ page }) => {

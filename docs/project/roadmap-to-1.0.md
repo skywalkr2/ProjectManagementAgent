@@ -19,6 +19,8 @@ Last updated: 2026-10-10.
 - [ ] What else the publishing pack needs, in order: cost control (with cached-token pricing, cache markers, choosing a
   tier by context window), file channel, dependencies and baselines. Each with its screens.
 - [ ] Today as the real home: plain empty states, a first-run guide.
+- [ ] Plugin API 0.2 (decisions, 2026-10-10): data levels, origin and person-only values, unique fields and `find`,
+  filtered `list`, `Ref` fields, validators that see the changeset, event kind filters, `record.delete`.
 - [ ] Publishing pack (9.6 to 9.9). Stretch goal: usable by about 2026-11-01 for the last weeks of the 2026-12-01 launch,
   alongside the manual process. Testing until then is on fictional data only.
 - Every feature: run on the fictional imprint end to end with desktop and phone screenshots before hand-over; the owner's

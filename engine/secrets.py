@@ -29,3 +29,15 @@ def resolve_secret(ref: str | None, env: Mapping[str, str] | None = None) -> str
     if scheme == "keychain":
         raise SecretError("keychain references aren't supported yet; use env:NAME or file:/path")
     raise SecretError(f"{ref.split(':', 1)[0]!r} isn't a known secret reference; use env:NAME or file:/path")
+
+
+def describe_secret(ref: str | None) -> str:
+    """Where a secret reference reads from, in plain words, never the secret itself."""
+    if ref is None:
+        return "no key is set for this account"
+    scheme, _, name = ref.partition(":")
+    if scheme == "env":
+        return f"key from the environment variable {name}"
+    if scheme == "file":
+        return f"key from the file {Path(name).expanduser()}"
+    return f"key from {scheme}"

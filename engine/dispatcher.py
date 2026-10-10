@@ -11,7 +11,7 @@ from datetime import UTC, datetime
 from pydantic import ValidationError
 
 from engine.ai.router import BudgetReached, NoProvider, Router
-from engine.ai.task import AiError, AiTask
+from engine.ai.task import AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.config import Config
 from engine.names import People
@@ -159,7 +159,9 @@ def _ai_failure(err: AiError) -> str:
         "provider_down": "The AI service is down",
     }.get(err.kind, "The AI call failed")
     when = f"; it can try again in {int(err.retry_after)} seconds" if err.retry_after else ""
-    return f"{plain}{when}. Check the account in ai.yaml, then try again."
+    reason = provider_reason(err.detail)
+    why = f" ({reason})" if reason else ""
+    return f"{plain}{when}{why}. Check the account in ai.yaml, then try again."
 
 
 def _set(store: Store, request_id: str, **changes: object) -> None:

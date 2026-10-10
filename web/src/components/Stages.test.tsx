@@ -147,7 +147,7 @@ test("a task waiting for the go shows under its item, and Go sends the version r
 test("with nothing in stages, it says so", async () => {
   fakeApi({ "GET stages/records": () => [], "GET stages/requests": () => [] });
   renderApp(<Stages />);
-  expect(await screen.findByText("Nothing moves through stages yet.")).toBeInTheDocument();
+  expect(await screen.findByText(/^Nothing moves through stages yet\./)).toBeInTheDocument();
 });
 
 test("Today lists tasks waiting for a go and items ready to move on, never internal names", async () => {

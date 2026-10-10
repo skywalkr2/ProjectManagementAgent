@@ -127,3 +127,78 @@ def test_the_same_answer_after_a_send_back_is_refused(env):
     assert process(ws, store, cfg, Router(cfg, store, env={}), again, now=NOW) is None
     assert any("same as the one the PM sent back" in r for r in asked)
     assert "same answer again" in store.read().get("request", again).data["waiting"]
+
+
+# ---- the provider's own reason, and the assistant's state ----------------------------------------------------
+
+
+def test_a_failure_adds_the_providers_own_message(env):
+    from engine.dispatcher import _ai_failure
+
+    body = 'HTTP 401: {"error": {"message": "User not found.", "code": 401}}'
+    assert _ai_failure(AiError("auth", body)).startswith("The AI account refused the key (User not found).")
+    assert "(Bad request)" in _ai_failure(AiError("other", 'HTTP 400: {"message": "Bad request"}'))
+    plain = _ai_failure(AiError("quota", "no credit left on this account " + "x" * 300))
+    assert "(no credit left on this account x" in plain
+    inside = plain[plain.index("(") + 1 : plain.index(")")]
+    assert len(inside) == 200
+    assert "(" not in _ai_failure(AiError("timeout"))
+
+
+def test_the_assistants_state_follows_the_account_the_test_and_the_last_refusal(env):
+    from engine.ai.smoke import ai_state
+
+    ws, store = env
+    cfg = ws.config(env={})
+    assert ai_state(ws, cfg, store) == ("untested", None)
+    set_responder(lambda task: '{"ok": true}')
+    record(ws, smoke_test(cfg, env={}))
+    assert ai_state(ws, cfg, store) == ("ok", None)
+
+    def refuse(task):
+        raise AiError("other", "x" * 500)
+
+    set_responder(refuse)
+    record(ws, smoke_test(cfg, env={}))
+    state, detail = ai_state(ws, cfg, store)
+    assert state == "failing" and detail and len(detail) == 200
+    # Settings changed since that failure: it no longer says anything about them.
+    path = ws.config_dir / "ai.yaml"
+    path.write_text(path.read_text() + "\n# changed\n")
+    assert ai_state(ws, cfg, store) == ("untested", None)
+
+
+def test_no_account_for_any_tier_is_not_set_up(tmp_path):
+    from engine.ai.smoke import ai_state
+
+    ws = init_workspace(tmp_path / "fresh", git=False)
+    store = Store(ws.db_path)
+    assert ai_state(ws, ws.config(env={}), store) == ("not_set_up", None)
+    store.close()
+
+
+def test_the_smoke_test_says_where_a_refused_or_missing_key_was_read_from(env, tmp_path):
+    ws, _ = env
+    ai = yaml.safe_load((DEMO_B / "config" / "ai.yaml").read_text())
+    real = next(n for n, p in ai["providers"].items() if str(p.get("auth", "")).startswith("env:"))
+    model = next(iter(ai["providers"][real]["models"]))
+    cfg = ws.config(env={}, flags={"ai.tiers.deep.use": f"{real}/{model}"})
+    named = ai["providers"][real]["auth"].removeprefix("env:")
+    sources = [r.key_source for r in smoke_test(cfg, env={}) if r.tier == "deep"]
+    assert sources and sources[0] == f"key from the environment variable {named}"
+
+    key_file = tmp_path / "key.txt"
+    cfg = ws.config(
+        env={}, flags={"ai.tiers.deep.use": f"{real}/{model}", f"ai.providers.{real}.auth": f"file:{key_file}"}
+    )
+    assert [r.key_source for r in smoke_test(cfg, env={}) if r.tier == "deep"][0] == f"key from the file {key_file}"
+
+    class Refusing:
+        def run(self, task, model_id):
+            raise AiError("auth", "HTTP 401: provider text")
+
+    key_file.write_text("the-secret-value\n")
+    results = smoke_test(cfg, env={}, adapter_factory=lambda *_: Refusing())
+    deep = [r for r in results if r.tier == "deep"][0]
+    assert deep.key_source == f"key from the file {key_file}"
+    assert "the-secret-value" not in deep.detail + (deep.key_source or "")

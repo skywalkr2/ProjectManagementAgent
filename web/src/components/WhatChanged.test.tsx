@@ -128,3 +128,22 @@ test("when nothing was recorded, the assistant's summary says why", async () => 
   expect(screen.getByText("Helper says")).toBeInTheDocument();
   expect(screen.getByText(/Nothing recorded/)).toBeInTheDocument();
 });
+
+
+function noteChange(project: string | null): S["ChangeItem"] {
+  const base = change("REQ-9");
+  const op = { ...base.changeset!.ops[0], op: "note", title: "A thought", evidence: null, meta: { owners: [], project } };
+  return { ...base, changeset: { ...base.changeset!, ops: [op] } };
+}
+
+test("a filed note says which project it went under", async () => {
+  fakeApi({ "GET changes": () => [noteChange("A project")] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Filed a note under A project")).toBeInTheDocument();
+});
+
+test("a filed note with no project says so", async () => {
+  fakeApi({ "GET changes": () => [noteChange(null)] });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Filed a note (no project)")).toBeInTheDocument();
+});

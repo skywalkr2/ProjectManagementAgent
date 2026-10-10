@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import tempfile
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,41 @@ from engine.storage import Store, StoreError
 from engine.storage.export import commit_export, export_data, import_data
 from engine.storage.lease import Lease, LeaseHeld
 from engine.workspace import WorkspaceError, init_workspace, resolve
+
+STALE_BUILD = "The web screens are out of date. Run: npm --prefix web run build"
+TEMP_FOLDER = "This folder is emptied when the computer restarts. Keep workspaces in your home folder."
+_TEMP_NAMES = ("/tmp", "/private/tmp")
+
+
+def repo_root() -> Path:
+    """The folder this package was run from, found from the package's own location, not the current directory."""
+    return Path(__file__).resolve().parents[1]
+
+
+def web_build_notice(root: Path) -> str | None:
+    """A notice when the built web screens are missing or older than the newest file under `web/src`."""
+    source = root / "web" / "src"
+    if not source.is_dir():
+        return None
+    built = root / "web" / "dist" / "index.html"
+    if not built.is_file():
+        return STALE_BUILD
+    newest = max((f.stat().st_mtime for f in source.rglob("*") if f.is_file()), default=0.0)
+    return STALE_BUILD if newest > built.stat().st_mtime else None
+
+
+def system_temp_roots() -> tuple[Path, ...]:
+    """Folders the computer empties on its own."""
+    return tuple(Path(p).resolve() for p in (tempfile.gettempdir(), *_TEMP_NAMES))
+
+
+def temp_folder_notice(path: Path, roots: Iterable[Path] | None = None) -> str | None:
+    """A notice when a workspace folder is inside one of the system's temporary folders."""
+    resolved = Path(path).expanduser().resolve()
+    for root in system_temp_roots() if roots is None else roots:
+        if resolved == Path(root).resolve() or Path(root).resolve() in resolved.parents:
+            return TEMP_FOLDER
+    return None
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -109,6 +145,8 @@ def cmd_init(args: argparse.Namespace) -> int:
         store.close()
     if count:
         print(f"Loaded {count} records.")
+    if notice := temp_folder_notice(ws.root, system_temp_roots()):
+        print(notice, file=sys.stderr)
     print(f"Workspace ready at {ws.root}")
     print(f"Start it with: cockpit serve --workspace {ws.root}")
     return 0
@@ -133,6 +171,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
     if untested_since_change(ws):
         print("Note: the AI settings haven't passed `cockpit ai test` since they last changed.", file=sys.stderr)
+    for notice in (web_build_notice(repo_root()), temp_folder_notice(ws.root, system_temp_roots())):
+        if notice:
+            print(notice, file=sys.stderr)
     token = ws.install_token()
     prefix = "" if cfg.server.base_path == "/" else cfg.server.base_path
     url = f"http://{cfg.server.host}:{cfg.server.port}{prefix}/?token={token}"
@@ -230,6 +271,8 @@ def cmd_ai(args: argparse.Namespace) -> int:
     for r in results:
         role = "main" if r.main else "fallback"
         print(f"{'ok  ' if r.ok else 'FAIL'}  {r.tier:<10} {role:<8} {r.account or '-'}: {r.detail}")
+        if r.key_source:
+            print(f"      ({r.key_source})")
     record(ws, results)
     failed = [r for r in results if r.main and not r.ok]
     print("All tiers answered." if not failed else f"{len(failed)} tier(s) can't run; fix ai.yaml and test again.")

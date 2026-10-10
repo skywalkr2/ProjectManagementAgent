@@ -290,3 +290,61 @@ def test_projects_can_be_added_and_edited(api):
     assert client.post(f"{base}/projects/{prj}/remove").status_code == 200
     in_use = fixture_records(DEMO_B, "project")[0]["id"]
     assert client.post(f"{base}/projects/{in_use}/remove").status_code == 409
+
+
+def _file_notes(client, base, worker, ops) -> None:
+    set_responder(lambda task: json.dumps({"summary": "Filed.", "ops": ops}))
+    assert client.post(f"{base}/handin", json={"note": "file these"}).status_code == 200
+    assert worker.run_pending() == 1
+
+
+def test_notes_are_listed_newest_first_with_their_project_and_trust(api):
+    client, base, worker = api
+    project = fixture_records(DEMO_B, "project")[0]
+    assert client.get(f"{base}/notes").json() == []
+    _file_notes(client, base, worker, [{"op": "note", "text": "first one", "project": project["id"]}])
+    _file_notes(client, base, worker, [{"op": "note", "text": "second one"}])
+    notes = client.get(f"{base}/notes").json()
+    assert [n["text"] for n in notes] == ["second one", "first one"]
+    assert notes[1]["project"] == project["id"] and notes[1]["project_name"] == project["name"]
+    assert notes[0]["project"] is None and notes[0]["project_name"] is None
+    assert all(n["created_at"] and n["trust"] == "trusted" for n in notes)
+
+
+def test_a_filed_note_says_which_project_it_went_under(api):
+    client, base, worker = api
+    project = fixture_records(DEMO_B, "project")[0]
+    _file_notes(
+        client,
+        base,
+        worker,
+        [{"op": "note", "text": "under", "project": project["id"]}, {"op": "note", "text": "loose"}],
+    )
+    item = client.get(f"{base}/changes").json()[0]
+    under, loose = item["changeset"]["ops"]
+    assert under["meta"]["project"] == project["name"] and loose["meta"]["project"] is None
+
+
+def test_status_says_when_the_assistant_is_not_ready(api, tmp_path):
+    client, base, worker = api
+    # Never tested: the demo workspace has an account but no passing connection test.
+    assert client.get(f"{base}/status").json()["ai"] == {"state": "untested", "detail": None}
+    from engine.ai.smoke import record, smoke_test
+
+    set_responder(lambda task: '{"ok": true}')
+    record(worker.ws, smoke_test(worker.cfg, env={}))
+    assert client.get(f"{base}/status").json()["ai"] == {"state": "ok", "detail": None}
+    # A request that ends with the account refusing its key makes the assistant "failing", with the provider's reason.
+    from engine.ai.task import AiError
+
+    def refuse(task):
+        raise AiError("auth", 'HTTP 401: {"error": {"message": "User not found.", "code": 401}}')
+
+    set_responder(refuse)
+    client.post(f"{base}/handin", json={"note": "file this"})
+    worker.run_pending()
+    assert client.get(f"{base}/status").json()["ai"] == {"state": "failing", "detail": "User not found"}
+    # A later connection test that passes clears it.
+    set_responder(lambda task: '{"ok": true}')
+    record(worker.ws, smoke_test(worker.cfg, env={}))
+    assert client.get(f"{base}/status").json()["ai"]["state"] == "ok"

@@ -19,7 +19,7 @@ storage are all settings, so you can change an installation without changing cod
 
 ## Status
 
-Design 1.0 is complete and the launch slice is built: hand something in (your note plus pasted content), the assistant
+Design 1.0 is complete and the launch slice is built: hand something in (one box, and whose words they are), the assistant
 files actions, questions, facts and notes with the evidence for each, names become people (or a "who is this?" question),
 undo from the change log, What changed and Follow-ups by person with Copy and Mark sent, off-device backups with a nag, an
 evaluation harness for choosing a model, and a web UI that works at any base path, by keyboard and on a phone. Not yet
@@ -32,20 +32,24 @@ Needs Python 3.12 or newer with [uv](https://docs.astral.sh/uv/), and Node 22.12
 ```
 uv sync
 npm --prefix web ci && npm --prefix web run build            # the web UI
-uv run cockpit init /tmp/lantern --from workspaces/demo-b   # a fictional imprint
-uv run cockpit serve --workspace /tmp/lantern               # prints a link to open
+uv run cockpit init ~/cockpit-try --from workspaces/demo-b  # a fictional imprint
+uv run cockpit serve --workspace ~/cockpit-try              # prints a link to open
 ```
+
+Keep the workspace in your home folder: the system's temporary folders (`/tmp`) are emptied when the computer restarts, and
+the AI setup would go with them. After a `git pull`, rebuild the web screens (`npm --prefix web run build`); the server shows
+whatever was last built, and `cockpit serve` says when that is out of date.
 
 The fictional workspace uses a stand-in AI that files whatever you hand in as a note. To use a real account, add it to the
 workspace's `config/ai.yaml` with its key as a reference (`auth: env:MY_AI_KEY`, never the key itself) and point the
 `routine` and `deep` tiers at it. Then check every tier with one small live call each:
 
 ```
-MY_AI_KEY=... uv run cockpit ai test --workspace /tmp/lantern
+MY_AI_KEY=... uv run cockpit ai test --workspace ~/cockpit-try
 ``` Before relying on a model, score it on the fictional cases:
 
 ```
-MY_AI_KEY=... uv run cockpit evaluate --from workspaces/demo-b --ai-config /tmp/lantern/config/ai.yaml \
+MY_AI_KEY=... uv run cockpit evaluate --from workspaces/demo-b --ai-config ~/cockpit-try/config/ai.yaml \
     --account <provider>/<model> --runs 3
 ```
 
@@ -64,6 +68,17 @@ Checks, run before finishing any change:
 uv run ruff check . && uv run pytest && uv run python -m engine.selfcheck
 npm --prefix web test && npm --prefix web run build && npm --prefix web run e2e
 ```
+
+## Troubleshooting
+
+- **`Failed to spawn: cockpit`**: run the command from the repository folder (where `pyproject.toml` is), or use
+  `uv run --project <the repository folder> cockpit ...` from elsewhere.
+- **`No module named 'engine'`** on a Mac with iCloud Drive's Desktop & Documents folders turned on: iCloud can hide the
+  installed package's link file. Move the repository out of Documents (for example to `~/code`) and run `uv sync` again, or
+  run `uv run python -m engine.cli ...` from the repository folder instead of `uv run cockpit ...`.
+- **"The AI account refused the key"**: the message gives the account's own reason in parentheses. Check the key with the
+  provider, then run `cockpit ai test`; it says which environment variable or file the key was read from (never the key).
+- **The screens look old after `git pull`**: run `npm --prefix web run build`.
 
 ## License
 

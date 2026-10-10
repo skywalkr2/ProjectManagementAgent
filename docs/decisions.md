@@ -3,6 +3,40 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-10: Hand-in is one box with a choice of whose words are in it
+
+**Decided by:** project owner (from trying the app); Claude wrote it up.
+
+**What:** The two-box hand-in becomes one box and a required choice, "Whose words are these?". "Someone else's" (the default)
+sends the box as pasted content, with an optional line saying what to do with it as the note. "Mine" sends the box as the
+note. The API and the trust model are unchanged: other people's words always arrive as pasted (untrusted) content. Alongside:
+filed notes can be found under their project, the assistant's state shows on Today with the provider's own reason, and a new
+workspace shows a "Start here" card.
+
+**Impact:** Design 7.6 (hand-in wording) and 7.8 (first run) only; no change to scope, the API or the trust rules.
+
+**Why:** A pasted email in the first box was read as instructions with no material to work on. One box with an explicit,
+defaulted choice removes the way to get that wrong without weakening it.
+
+## 2026-10-10: Plugin API 0.2 comes before the publishing pack
+
+**Decided by:** Claude (design), from questions raised while building a plugin against 0.1; the owner can override.
+
+**What:** Plugin API 0.2 adds: a data level per record type (up to `restricted`, honored by packets); the change's origin
+passed to validators, and person-only field values that hold an op for the person when anything else sets them; unique
+fields and `find`; filtered `list` by project and field values; `Ref` fields to core and own records (checked, rewritten
+on rename and merge, used for export placement); validators that see the changeset's own transaction; kind filters on
+`record.changed` subscriptions; a core `record.delete` op with undo. `ext` on core records is reserved and may be
+removed; plugins keep their own linked records. Later, with their features: conversational tasks (6.25), per-task packet
+inclusion and reference-only records (prompt bundles), generated read-only files and front-matter layouts (synced
+folder), per-project plugin settings.
+
+**Why:** The bundled publishing pack needs most of these itself (references to projects, filtered reads, person-only
+values), so building them first keeps the pack on the public API instead of special cases.
+
+**Impact:** Roadmap 2a gains "Plugin API 0.2" before the publishing pack. `Project.parent` and `Project.language` (5.1)
+land with long text, also before the pack.
+
 ## 2026-10-10: Plugin host and stages reviewed; the rules they follow
 
 **Decided by:** Claude (design detail, from a review of the plugin host and stages work); the owner can override any of it.

@@ -1,4 +1,5 @@
 import subprocess
+from pathlib import Path
 
 from engine.cli import main
 from engine.storage import Store
@@ -109,3 +110,86 @@ def test_a_fresh_workspace_knows_who_you_are(tmp_path):
     assert me.data["full_name"] == "Pat Example" and cfg.workspace.user.full_name == "Pat Example"
     assert cfg.workspace.name == "My Press" and cfg.workspace.assistant_name == "Ada"
     assert "# " in (target / "config" / "workspace.yaml").read_text()
+
+
+def test_a_workspace_in_a_temporary_folder_gets_a_notice(tmp_path):
+    from engine.cli import TEMP_FOLDER, temp_folder_notice
+
+    roots = [tmp_path / "scratch"]
+    assert temp_folder_notice(roots[0] / "ws", roots) == TEMP_FOLDER
+    assert temp_folder_notice(roots[0], roots) == TEMP_FOLDER
+    assert temp_folder_notice(tmp_path / "home" / "ws", roots) is None
+    assert temp_folder_notice(tmp_path / "scratchy", roots) is None
+    assert temp_folder_notice(tmp_path / "x", []) is None
+
+
+def test_the_real_temporary_folders_are_recognised(tmp_path, monkeypatch):
+    from engine import cli
+
+    monkeypatch.undo()  # the suite blanks the system folders; here they are the point
+    assert cli.temp_folder_notice(tmp_path / "ws") == cli.TEMP_FOLDER  # pytest's folders are inside the system's
+    assert cli.temp_folder_notice(tmp_path / "ws", cli.system_temp_roots()) == cli.TEMP_FOLDER
+    assert cli.temp_folder_notice(Path(tmp_path.anchor) / "no-such-home-xyz" / "ws") is None
+
+
+def test_init_says_when_the_folder_will_be_emptied(tmp_path, capsys, monkeypatch):
+    from engine import cli
+
+    monkeypatch.setattr(cli, "system_temp_roots", lambda: (tmp_path,))
+    assert main(["init", str(tmp_path / "ws"), "--no-git"]) == 0
+    assert cli.TEMP_FOLDER in capsys.readouterr().err
+
+
+def test_the_web_screens_notice_compares_the_build_with_the_sources(tmp_path):
+    import os
+
+    from engine.cli import STALE_BUILD, web_build_notice
+
+    assert web_build_notice(tmp_path) is None  # no web sources here: nothing to compare
+    src = tmp_path / "web" / "src"
+    src.mkdir(parents=True)
+    page = src / "App.tsx"
+    page.write_text("x")
+    assert web_build_notice(tmp_path) == STALE_BUILD  # never built
+    built = tmp_path / "web" / "dist" / "index.html"
+    built.parent.mkdir(parents=True)
+    built.write_text("x")
+    os.utime(page, (1_000, 1_000))
+    os.utime(built, (2_000, 2_000))
+    assert web_build_notice(tmp_path) is None
+    nested = src / "components"
+    nested.mkdir()
+    (nested / "New.tsx").write_text("x")
+    os.utime(nested / "New.tsx", (3_000, 3_000))
+    assert web_build_notice(tmp_path) == STALE_BUILD
+
+
+def test_the_repository_root_comes_from_the_package_not_the_current_folder(tmp_path, monkeypatch):
+    from engine.cli import repo_root
+
+    monkeypatch.chdir(tmp_path)
+    assert (repo_root() / "engine" / "cli.py").is_file()
+
+
+def test_ai_test_says_where_a_failing_key_was_read_from_and_never_shows_it(tmp_path, demo, capsys, monkeypatch):
+    import yaml
+
+    target = tmp_path / "ws"
+    main(["init", str(target), "--from", str(demo), "--no-git"])
+    path = target / "config" / "ai.yaml"
+    ai = yaml.safe_load(path.read_text())
+    real = next(n for n, p in ai["providers"].items() if str(p.get("auth", "")).startswith("env:"))
+    model = next(iter(ai["providers"][real]["models"]))
+    name = ai["providers"][real]["auth"].removeprefix("env:")
+    ai["tiers"]["deep"]["use"] = f"{real}/{model}"
+    path.write_text(yaml.safe_dump(ai))
+    monkeypatch.delenv(name, raising=False)
+    assert main(["ai", "test", "-w", str(target)]) == 1
+    assert f"key from the environment variable {name}" in capsys.readouterr().out
+    key_file = tmp_path / "key.txt"
+    key_file.write_text("a-secret-value")
+    ai["providers"][real]["auth"] = f"file:{tmp_path / 'missing.txt'}"
+    path.write_text(yaml.safe_dump(ai))
+    assert main(["ai", "test", "-w", str(target)]) == 1
+    out = capsys.readouterr().out
+    assert f"key from the file {tmp_path / 'missing.txt'}" in out and "a-secret-value" not in out

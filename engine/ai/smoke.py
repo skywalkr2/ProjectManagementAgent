@@ -11,12 +11,14 @@ import json
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 from typing import Any
 
 from engine.ai.adapters import make_adapter
-from engine.ai.task import AiError, AiTask
+from engine.ai.task import AiError, AiTask, provider_reason
 from engine.config import Config
-from engine.secrets import SecretError, resolve_secret
+from engine.secrets import SecretError, describe_secret, resolve_secret
+from engine.storage import Store
 from engine.workspace import Workspace
 
 STATUS_FILE = "ai-test.json"
@@ -31,6 +33,7 @@ class SmokeResult:
     ok: bool
     detail: str
     seconds: float = 0.0
+    key_source: str | None = None
 
 
 def _params_for_tier(cfg: Config, tier: str) -> list[tuple[str, float, int]]:
@@ -62,19 +65,25 @@ def smoke_test(
             for kind, temperature, max_output in _params_for_tier(cfg, tier_name):
                 task = AiTask(kind, "This is a connection test.", "", _REQUEST, {}, temperature, max_output)
                 start = time.monotonic()
+                key_source = None
                 try:
                     secret = resolve_secret(settings.auth, env)
                     reply = adapter_factory(settings.adapter, settings, secret).run(task, model_id)
                     detail = "answered" if _is_ok(reply.text) else "answered, but not with the requested JSON"
                     ok = True
                 except SecretError as err:
-                    ok, detail = False, f"key not found: {err}"
+                    ok, detail, key_source = False, f"key not found: {err}", describe_secret(settings.auth)
                 except AiError as err:
-                    ok, detail = False, f"{err.kind}: {err.detail}" if err.detail else err.kind
+                    reason = provider_reason(err.detail)
+                    ok, detail = False, f"{err.kind}: {reason}" if reason else err.kind
+                    if err.kind in ("auth", "no_key"):
+                        key_source = describe_secret(settings.auth)
                 except ValueError as err:
                     ok, detail = False, str(err)
                 label = f"{ref} ({kind}, temperature {temperature}, max output {max_output})"
-                results.append(SmokeResult(tier_name, label, position == 0, ok, detail, time.monotonic() - start))
+                results.append(
+                    SmokeResult(tier_name, label, position == 0, ok, detail, time.monotonic() - start, key_source)
+                )
     return results
 
 
@@ -93,7 +102,12 @@ def ai_fingerprint(ws: Workspace) -> str:
 def record(ws: Workspace, results: list[SmokeResult]) -> None:
     ws.private_dir.mkdir(parents=True, exist_ok=True)
     passed = all(r.ok for r in results if r.main)
-    data = {"fingerprint": ai_fingerprint(ws), "passed": passed, "results": [asdict(r) for r in results]}
+    data = {
+        "fingerprint": ai_fingerprint(ws),
+        "passed": passed,
+        "at": datetime.now(UTC).isoformat(),
+        "results": [asdict(r) for r in results],
+    }
     (ws.private_dir / STATUS_FILE).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
@@ -104,3 +118,39 @@ def untested_since_change(ws: Workspace) -> bool:
         return True
     data = json.loads(path.read_text(encoding="utf-8"))
     return not data.get("passed") or data.get("fingerprint") != ai_fingerprint(ws)
+
+
+def last_test(ws: Workspace) -> dict[str, Any] | None:
+    """The last recorded smoke test, or None when there never was one or the file can't be read."""
+    path = ws.private_dir / STATUS_FILE
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+DETAIL_LIMIT = 200
+
+
+def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]:
+    """Whether the assistant can do its work: "not_set_up" (no account for any tier), "failing" (the last connection
+    test failed for the current settings, or the latest request ended with the account refusing its key),
+    "untested" (settings changed since the last passing test), or "ok". The detail is the provider's own reason."""
+    if not any(tier.use for tier in cfg.ai.tiers.values()):
+        return "not_set_up", None
+    test = last_test(ws)
+    current = test is not None and test.get("fingerprint") == ai_fingerprint(ws)
+    if test is not None and current and not test.get("passed"):
+        failed = [r for r in test.get("results", []) if not r.get("ok")]
+        pick = next((r for r in failed if r.get("main")), failed[0] if failed else None)
+        return "failing", (str(pick.get("detail", ""))[:DETAIL_LIMIT] or None) if pick else None
+    runs = sorted(store.read().list("run"), key=lambda run: run.data.get("started_at", ""))
+    if runs and runs[-1].data.get("outcome") == "error" and runs[-1].data.get("error_kind") == "auth":
+        latest = runs[-1].data
+        passed_since = bool(test and test.get("passed") and current and str(test.get("at", "")) >= latest["started_at"])
+        if not passed_since:
+            return "failing", (provider_reason(latest.get("error_detail") or "")[:DETAIL_LIMIT] or None)
+    if untested_since_change(ws):
+        return "untested", None
+    return "ok", None

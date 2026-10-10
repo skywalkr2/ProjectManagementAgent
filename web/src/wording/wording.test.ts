@@ -47,6 +47,9 @@ test("key families built at run time are complete", () => {
     ...["notes", "other"].map((x) => `task.${x}`),
     ...["project", "other"].map((x) => `stages.group.${x}`),
     ...["you", "rule", "undo"].map((x) => `stages.by_${x}`),
+    "op.note.under",
+    "op.note.none",
+    ...(s.AiState.properties.state.enum ?? []).filter((x) => x !== "ok").flatMap((x) => ["title", "todo"].map((y) => `ai.${x}.${y}`)),
     ...["action.add", "action.close", "question.add", "question.done", "fact", "note", "record.set", "record.log", "person.add"].map((x) => `op.${x}`),
   ];
   expect(expected.filter((k) => !(k in words))).toEqual([]);

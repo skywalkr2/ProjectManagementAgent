@@ -78,8 +78,16 @@ class RequestCounts(BaseModel):
     needs_you: int
 
 
+class AiState(BaseModel):
+    """Whether the assistant can do its work: set up, tested, and answering."""
+
+    state: Literal["ok", "untested", "failing", "not_set_up"]
+    detail: str | None = Field(None, description="The provider's own reason when there is one, shortened.")
+
+
 class Status(BaseModel):
     backup: BackupStatus
+    ai: AiState
     requests: RequestCounts
     version: int
     restart_needed: str | None = Field(None, description="Why new work waits until the cockpit restarts, if it does.")
@@ -250,6 +258,15 @@ class ProjectView(BaseModel):
     owner: str | None
     owner_name: str | None
     summary: str | None
+
+
+class NoteView(BaseModel):
+    id: str
+    text: str
+    project: str | None
+    project_name: str | None
+    created_at: str | None = Field(None, description="When the note was filed, from the first record of it.")
+    trust: Literal["trusted", "untrusted"]
 
 
 class ProjectIn(BaseModel):

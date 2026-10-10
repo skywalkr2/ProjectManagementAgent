@@ -14,6 +14,7 @@ from fastapi.responses import StreamingResponse
 
 from api.schemas import (
     ActionState,
+    AiState,
     Answer,
     Ask,
     BackupStatus,
@@ -25,6 +26,7 @@ from api.schemas import (
     FollowupSection,
     Handed,
     HandIn,
+    NoteView,
     Ok,
     Option,
     OpView,
@@ -55,6 +57,7 @@ from api.schemas import (
     UndoReport,
     Unmark,
 )
+from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.backup import run_backup, state
 from engine.config import Config
@@ -173,7 +176,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         reqs = [x.data for x in store.read().list("request")]
         b = state(ws, cfg)
         counts = {s: sum(x["state"] == s for x in reqs) for s in ("queued", "running", "review", "needs_you")}
+        ai, detail = ai_state(ws, cfg, store)
         return Status(
+            ai=AiState(state=ai, detail=detail),
             backup=BackupStatus(
                 configured=b.configured,
                 last_success=b.last_success,
@@ -185,6 +190,26 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             version=events.version,
             restart_needed=worker.restart_needed,
         )
+
+    @r.get("/notes")
+    def notes() -> list[NoteView]:
+        """Every filed note, newest first, with the project it was filed under (if any)."""
+        projects = {p.id: p.data["name"] for p in store.read().list("project")}
+        filed: dict[str, str] = {}
+        for entry in store.read().ledger(kind="note"):
+            filed.setdefault(entry["record_id"], str(entry["at"]))
+        rows = [
+            NoteView(
+                id=n.id,
+                text=n.data["text"],
+                project=n.data.get("project"),
+                project_name=projects.get(n.data.get("project")),
+                created_at=filed.get(n.id),
+                trust=n.data.get("trust", "trusted"),
+            )
+            for n in store.read().list("note")
+        ]
+        return sorted(rows, key=lambda n: (n.created_at or "", n.id), reverse=True)
 
     @r.post("/handin")
     def handin(body: HandIn) -> Handed:
@@ -595,11 +620,15 @@ def _op_view(o: dict[str, Any], store: Store, people: People, projects: dict[str
             meta["action_status"] = d.get("status")
         if kind == "question":
             meta["to"] = people.name(d.get("to"))
+        if kind == "note":
+            meta["project"] = projects.get(d.get("project"))
     elif op["op"] == "action.add":
         meta["owners"] = op.get("owners", [])
         meta["due"] = op.get("due")
     elif op["op"] == "question.add":
         meta["to"] = op.get("to")
+    elif op["op"] == "note":
+        meta["project"] = projects.get(op.get("project"))
     if op["op"] == "record.set":
         meta["field"] = op["field"]
         meta["value"] = op["value"]
