@@ -86,7 +86,11 @@ def load_config(
             files[name] = model.model_validate(raw[name])
         except ValidationError as err:
             raise ConfigError(_describe(name, err)) from None
-    return Config(files=files, sources=sources)
+    cfg = Config(files=files, sources=sources)
+    from engine.config.stages import validate_declared
+
+    validate_declared(cfg, config_dir)
+    return cfg
 
 
 def defaults() -> dict[str, FileModel]:

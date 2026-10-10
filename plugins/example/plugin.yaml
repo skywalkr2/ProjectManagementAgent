@@ -1,0 +1,21 @@
+name: example
+version: 0.1.0
+plugin_api: '>=0.1,<0.2'
+description: A tiny example that files a question when a reminder is recorded.
+depends_on: []
+interfaces: {provides: [], uses: []}
+subscribes: [record.changed]
+provides:
+  stage_checks: [example/has-text]
+  stages: [example/reminder]
+  record_types: [example/reminder]
+  ops: [example/reminder.add]
+  op_validators: [example/reminder.add]
+  ai_task_kinds: [example/capture]
+config_schema: example:Config
+requires:
+  network: []
+  secrets: []
+  data_levels: [open, internal]
+  tools: []
+entry: example:register

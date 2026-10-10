@@ -32,9 +32,12 @@ from api.schemas import (
     PersonIn,
     PersonPatch,
     PersonView,
+    PluginStatusView,
     ProjectIn,
     ProjectPatch,
     ProjectView,
+    ReadVersion,
+    RecordView,
     Reply,
     RequestCounts,
     Requeued,
@@ -42,20 +45,27 @@ from api.schemas import (
     SentCounts,
     SentText,
     SourceView,
+    StageHistoryEntry,
+    StageMove,
+    StageMoved,
+    StageRequestView,
+    StageView,
     Status,
     UndoChoice,
     UndoReport,
     Unmark,
 )
-from engine.applier import pick_owner, release
+from engine.applier import move_stage, pick_owner, release
 from engine.backup import run_backup, state
 from engine.config import Config
 from engine.dispatcher import looks_good, retry, send_back, undo_changeset
 from engine.followups import mark_sent, sections, unmark_sent
 from engine.intake import IntakeError, hand_in, source_text
 from engine.names import People
+from engine.ops import StageMoveOp
 from engine.prompts import render
 from engine.records import referrers
+from engine.stages import approve_stage_request, record_status, stage_history
 from engine.storage import Store, StoreError, WriteContext
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -65,6 +75,13 @@ _PM = WriteContext(actor="pm", trust="trusted", op="ui")
 
 def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
+
+    @r.get("/plugins")
+    def plugin_status() -> list[PluginStatusView]:
+        return [
+            PluginStatusView(name=s.name, state=s.state, version=s.version, reason=s.reason)
+            for s in store.plugins.status.values()
+        ]
 
     def changed() -> None:
         events.changed()
@@ -78,6 +95,61 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             return fn()
         except (StoreError, IntakeError, ValueError, KeyError) as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
+
+    @r.get("/records/{record_id}")
+    def record_view(record_id: str, kind: str) -> RecordView:
+        need(kind, record_id)
+        record = store.read().get(kind, record_id)
+        return RecordView(
+            kind=kind,
+            id=record.id,
+            version=record.version,
+            data=record.data,
+            stages=StageView(**record_status(store, record)),
+            stage_history=[StageHistoryEntry(**row) for row in stage_history(store, kind, record.id)],
+        )
+
+    @r.get("/records/{record_id}/stage-history")
+    def record_stage_history(record_id: str, kind: str) -> list[StageHistoryEntry]:
+        need(kind, record_id)
+        return [StageHistoryEntry(**row) for row in stage_history(store, kind, record_id)]
+
+    @r.get("/stages/ready")
+    def ready_stages() -> list[StageView]:
+        result = []
+        for kind in store.plugins.stages.types:
+            for record in store.read().list(kind):
+                status = record_status(store, record)
+                if status["ready"]:
+                    result.append(StageView(**status))
+        return result
+
+    @r.post("/stages/move")
+    def stage_move(body: StageMove) -> StageMoved:
+        op = StageMoveOp(**body.model_dump())
+        cs = guard(lambda: move_stage(store, op))
+        record = store.read().get(body.record.kind, body.record.id)
+        changed()
+        return StageMoved(changeset=cs, stages=StageView(**record_status(store, record)))
+
+    @r.get("/stages/requests")
+    def stage_requests() -> list[StageRequestView]:
+        return [
+            StageRequestView(
+                id=r.id,
+                version=r.version,
+                **{key: r.data[key] for key in ("task", "state", "approval", "waiting", "stage_start")},
+            )
+            for r in store.read().list("request")
+            if r.data.get("stage_start")
+        ]
+
+    @r.post("/requests/{request_id}/go")
+    def stage_request_go(request_id: str, body: ReadVersion) -> Ok:
+        guard(lambda: approve_stage_request(store, request_id, body.read_version))
+        worker.poke()
+        changed()
+        return Ok(ok="queued")
 
     @r.get("/status")
     def status() -> Status:

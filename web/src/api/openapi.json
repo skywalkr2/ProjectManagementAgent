@@ -950,6 +950,46 @@
         "title": "PersonView",
         "type": "object"
       },
+      "PluginStatusView": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "name",
+          "state"
+        ],
+        "title": "PluginStatusView",
+        "type": "object"
+      },
       "ProjectIn": {
         "properties": {
           "group": {
@@ -1217,6 +1257,20 @@
         "title": "ProjectView",
         "type": "object"
       },
+      "ReadVersion": {
+        "properties": {
+          "read_version": {
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_version"
+        ],
+        "title": "ReadVersion",
+        "type": "object"
+      },
       "RecordRef": {
         "properties": {
           "id": {
@@ -1233,6 +1287,65 @@
           "id"
         ],
         "title": "RecordRef",
+        "type": "object"
+      },
+      "RecordReference": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "RecordReference",
+        "type": "object"
+      },
+      "RecordView": {
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "stage_history": {
+            "items": {
+              "$ref": "#/components/schemas/StageHistoryEntry"
+            },
+            "title": "Stage History",
+            "type": "array"
+          },
+          "stages": {
+            "$ref": "#/components/schemas/StageView"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "version",
+          "data",
+          "stages",
+          "stage_history"
+        ],
+        "title": "RecordView",
         "type": "object"
       },
       "Reply": {
@@ -1478,6 +1591,328 @@
           "text"
         ],
         "title": "SourceView",
+        "type": "object"
+      },
+      "StageCheckView": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "passed",
+          "reason"
+        ],
+        "title": "StageCheckView",
+        "type": "object"
+      },
+      "StageHistoryEntry": {
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changeset"
+          },
+          "from_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Stage"
+          },
+          "op": {
+            "title": "Op",
+            "type": "string"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "to_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Stage"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sequence",
+          "at",
+          "from_stage",
+          "to_stage",
+          "version",
+          "actor",
+          "op",
+          "changeset",
+          "request",
+          "source"
+        ],
+        "title": "StageHistoryEntry",
+        "type": "object"
+      },
+      "StageLabel": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "StageLabel",
+        "type": "object"
+      },
+      "StageMove": {
+        "properties": {
+          "read_version": {
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          },
+          "record": {
+            "$ref": "#/components/schemas/RecordReference"
+          },
+          "to": {
+            "minLength": 1,
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record",
+          "to",
+          "read_version"
+        ],
+        "title": "StageMove",
+        "type": "object"
+      },
+      "StageMoved": {
+        "properties": {
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          },
+          "stages": {
+            "$ref": "#/components/schemas/StageView"
+          }
+        },
+        "required": [
+          "changeset",
+          "stages"
+        ],
+        "title": "StageMoved",
+        "type": "object"
+      },
+      "StageRequestView": {
+        "properties": {
+          "approval": {
+            "enum": [
+              "required",
+              "granted"
+            ],
+            "title": "Approval",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "stage_start": {
+            "$ref": "#/components/schemas/StageTaskOrigin"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "waiting": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "task",
+          "state",
+          "approval",
+          "waiting",
+          "stage_start"
+        ],
+        "title": "StageRequestView",
+        "type": "object"
+      },
+      "StageTaskOrigin": {
+        "properties": {
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "record": {
+            "title": "Record",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "record",
+          "stage",
+          "changeset"
+        ],
+        "title": "StageTaskOrigin",
+        "type": "object"
+      },
+      "StageView": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/StageCheckView"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "current_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Label"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StageLabel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "record": {
+            "$ref": "#/components/schemas/RecordReference"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "record",
+          "version",
+          "current",
+          "current_label",
+          "next",
+          "checks",
+          "ready"
+        ],
+        "title": "StageView",
         "type": "object"
       },
       "Status": {
@@ -2329,6 +2764,28 @@
         "summary": "Restore Person"
       }
     },
+    "/api/plugins": {
+      "get": {
+        "operationId": "plugin_status_api_plugins_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PluginStatusView"
+                  },
+                  "title": "Response Plugin Status Api Plugins Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Plugin Status"
+      }
+    },
     "/api/projects": {
       "get": {
         "operationId": "projects_api_projects_get",
@@ -2663,6 +3120,155 @@
         "summary": "Reply"
       }
     },
+    "/api/records/{record_id}": {
+      "get": {
+        "operationId": "record_view_api_records__record_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record View"
+      }
+    },
+    "/api/records/{record_id}/stage-history": {
+      "get": {
+        "operationId": "record_stage_history_api_records__record_id__stage_history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StageHistoryEntry"
+                  },
+                  "title": "Response Record Stage History Api Records  Record Id  Stage History Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Stage History"
+      }
+    },
+    "/api/requests/{request_id}/go": {
+      "post": {
+        "operationId": "stage_request_go_api_requests__request_id__go_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stage Request Go"
+      }
+    },
     "/api/requests/{request_id}/retry": {
       "post": {
         "operationId": "retry_request_api_requests__request_id__retry_post",
@@ -2758,6 +3364,88 @@
           }
         },
         "summary": "Source"
+      }
+    },
+    "/api/stages/move": {
+      "post": {
+        "operationId": "stage_move_api_stages_move_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StageMove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageMoved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stage Move"
+      }
+    },
+    "/api/stages/ready": {
+      "get": {
+        "operationId": "ready_stages_api_stages_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StageView"
+                  },
+                  "title": "Response Ready Stages Api Stages Ready Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ready Stages"
+      }
+    },
+    "/api/stages/requests": {
+      "get": {
+        "operationId": "stage_requests_api_stages_requests_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StageRequestView"
+                  },
+                  "title": "Response Stage Requests Api Stages Requests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Stage Requests"
       }
     },
     "/api/status": {

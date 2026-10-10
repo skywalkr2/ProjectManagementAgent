@@ -7,6 +7,7 @@ projects. The request part comes last: the date, the PM's note (trusted) and the
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import date
 
@@ -19,7 +20,6 @@ from engine.ops import reference_for, schema_for
 from engine.playbook import guidance
 from engine.prompts import render
 from engine.storage import Store
-from engine.tasks import task_kind
 from engine.workspace import Workspace
 
 
@@ -36,7 +36,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     req = store.read().get("request", request_id)
     if req is None:
         raise KeyError(request_id)
-    kind = task_kind(req.data["task"])
+    kind = store.plugins.task_kind(req.data["task"])
     raw = source_text(ws, store, req.data.get("source"))
     known = _known_texts(ws, store, exclude=req.data.get("source"))
     cleaned = clean(raw, cfg.dispatch.cleaning, known)
@@ -46,7 +46,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     stable = "\n\n".join(
         part
         for part in (
-            "# Op reference\n" + reference_for(list(kind.ops)),
+            "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
             "# Practice\n" + guidance(kind.playbook),
             "# Open actions\n" + _open_actions(store, People(store, cfg)),
             "# Open questions\n" + _open_questions(store, People(store, cfg)),
@@ -56,6 +56,16 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         if part.strip()
     )
     request_parts = [f"Today is {today.isoformat()} ({today.strftime('%A')})."]
+    if req.data.get("stage_start"):
+        origin = req.data["stage_start"]
+        record = store.read().get(origin["kind"], origin["record"])
+        context = {
+            "stage_start": origin,
+            "record": record.data if record else None,
+            "read_version": record.version if record else None,
+        }
+        # Record content is data, not new instructions, even after the person approves a task.
+        request_parts.append("<untrusted>\n" + json.dumps(context, ensure_ascii=False) + "\n</untrusted>")
     if note:
         request_parts.append(f"<note>\n{note}\n</note>")
     if cleaned.text:
@@ -68,7 +78,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         instructions=instructions,
         stable=stable,
         request=request,
-        output_schema=schema_for(list(kind.ops)),
+        output_schema=schema_for(list(kind.ops), store.plugins.ops),
         temperature=task_cfg.temperature if task_cfg else 0.0,
         max_output=task_cfg.max_output if task_cfg else 4000,
     )

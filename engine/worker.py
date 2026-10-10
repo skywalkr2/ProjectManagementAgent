@@ -21,8 +21,8 @@ RESTART_NEEDED = "Settings or code changed since the cockpit started; restart it
 def config_fingerprint(ws: Workspace) -> str:
     """A hash of the workspace's config files, to notice edits made while the process runs."""
     digest = hashlib.sha256()
-    for path in sorted(ws.config_dir.glob("*.yaml")):
-        digest.update(path.name.encode())
+    for path in sorted(ws.config_dir.rglob("*.yaml")):
+        digest.update(str(path.relative_to(ws.config_dir)).encode())
         digest.update(path.read_bytes())
     return digest.hexdigest()
 
@@ -121,6 +121,11 @@ class Worker:
                 needs_you(self.store, queued[0].id, f"Something went wrong processing this: {err}")
             done += 1
             self.events.changed()
+        if not self._stop.is_set() and not self._changed_since_start():
+            from engine.stages import move_ready_records
+
+            if move_ready_records(self.store):
+                self.events.changed()
         return done
 
     def _loop(self) -> None:

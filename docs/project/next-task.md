@@ -1,50 +1,60 @@
-# Next task: the plugin host (plugin API 0.x)
+# Next task: stages (design 6.26, config 4.21)
 
-A brief for whichever coding agent picks this up. Work on a **new branch** made from `claude/tender-tesla-16a8ob`
-(for example `codex/plugin-host`), so the work can be reviewed before it is merged. Follow `CLAUDE.md` / `AGENTS.md`.
-
-## Why this, why now
-
-The owner will use the cockpit for real only once the publishing pack exists (decisions, 2026-10-09, "Real use starts
-with the publishing pack"). Every pack needs the plugin host first. This task builds the host and nothing else.
-
-## Read first
-
-- `docs/design/03-plugins.md`: all of it (3.1 to 3.9). This is the specification.
-- `docs/design/06-engine.md` 6.1 (plugin host) and 6.7 (changesets and the applier).
-- `engine/ops.py`, `engine/applier.py`, `engine/records.py`, `engine/worker.py` (the `Events` counter), `engine/selfcheck/`.
+Read first: design 6.26, 4.21, 3.3 (extension points), 3.9, 6.7 (op tiers,
+who confirms), 4.0 and 4.10, docs/design/README.md. Then engine/ops,
+the applier, records, config/schema.py, plugin_api.py, the worker, and the
+example plugin.
 
 ## Build
+1. Config: `config/stages.yaml` in engine/config/schema.py. Per record type,
+   an ordered list of stages {id, label (wording), entry: [check ids],
+   starts: [task kinds]}; top-level `moves: person|rule` with a per-type
+   override. Schema entries, defaults, descriptions, and demo values in
+   both fictional workspaces. Validate: record type exists (core or
+   plugin-registered), stage ids unique, check ids resolve, task kinds exist.
+   Bad config fails at load with a plain message.
+2. Plugin API: Registrar.stage_check(id, fn) so plugins register entry
+   checks (namespaced <plugin>/<name>); plugins may ship default stages for
+   their own record types. Rules (4.10) can also be entry checks.
+   Checks are code and rules only, never AI.
+3. Stage is data on the record. Op `stage.move` {record, to} with the
+   version read. It refuses when an entry check fails and says which checks
+   and why. It goes through the applier and ledger, and Undo works.
+   The assistant may PROPOSE a move but never make one: a stage.move from
+   an AI changeset is always held for the person to confirm.
+4. `moves: rule`: the worker moves a record when all entry checks pass,
+   recorded in the ledger with a rule as the source.
+5. On entry, each `starts` task kind is queued as a request that waits for
+   the person's go (estimates and budgets come later with cost control;
+   leave a clear hook for them).
+6. Event `stage.moved` on the event bus, after commit only.
+7. API (Pydantic models in api/schemas.py, then `uv run python -m
+   api.openapi`): a record's current stage and each next-stage check
+   (pass/fail + reason); move; list records ready to move on (for a later
+   Today line). No UI in this task; add wording keys only if the API
+   returns user-facing text.
+8. Stage history is a query over the ledger; expose it in the record API.
+9. Example plugin: give its record type stages with one registered check,
+   with demo config in both workspaces.
 
-1. **`engine/plugin_api.py`**: the only module plugins import. A `Registrar` passed to each plugin's `register()` with:
-   `record_type(model)`, `op(model, tier, apply)`, `op_validator(op_name, fn)`, `task_kind(...)`, `subscribe(event, fn)`.
-   Re-export only what plugins need (base classes, `WriteContext`, types). Nothing else from the engine.
-2. **Manifest** (`plugin.yaml`, design 3.2): a Pydantic schema; unknown keys are errors. Check `plugin_api` version range,
-   `depends_on`, and that what the code registers matches `provides` exactly.
-3. **Discovery and enabling**: bundled plugins in `plugins/`, private ones in `<workspace>/plugins/`, installed ones by the
-   entry point group `pm_cockpit.plugins`. Only names in `config/workspace.yaml` `plugins.enabled` load.
-4. **Registries wired into the core**: plugin record types work with the store, export and import (round trip tested);
-   plugin ops go through the applier with their tier and validators; identifiers must be namespaced `<plugin>/<name>`.
-5. **Plugin config**: `config/plugins/<plugin>.yaml`, validated against the schema the manifest names (4.12).
-6. **Events** (3.4): a named event bus (keep the existing change counter for the UI). Publish at least
-   `changeset.applied`, `changeset.undone`, `record.changed` (kind, id, fields, version, op), `request.queued`,
-   `question.answered`. Handlers may read, queue requests and file questions; they never write records directly.
-7. **Failures stay contained**: a plugin that raises on load or in a handler is disabled for that run and reported
-   (a clear log line and a status entry the API can show); the core and other plugins keep running.
-8. **Example plugin** `plugins/example/` (fictional, tiny): one record type, one op, one event handler, its config, and demo
-   config and data in both `workspaces/demo-a` and `workspaces/demo-b`.
-9. **Self-check**: validate every bundled manifest; run the suite with no plugins enabled and with the example enabled.
+## Tests (at least)
+Config validation errors; move passes/refuses with reasons; undo; AI
+proposal is held; rule mode moves automatically; starts are queued and
+wait; event fires only after commit; export/import round trip keeps
+stages and history; core with no plugins enabled still passes; workspace
+override renames or removes a pack's stage.
 
-## Done means
-
-- All checks pass: `uv run ruff check .`, `uv run ruff format --check .`, `uv run pytest`,
-  `uv run python -m engine.selfcheck`, `npm --prefix web test`, `npm --prefix web run build`, `npm --prefix web run e2e`.
-- New tests cover: manifest errors, version and dependency refusal, a namespacing violation refused, a plugin op applied and
-  undone through the ledger, a handler receiving `record.changed`, a crashing plugin contained, export/import round trip
-  with a plugin record type, and the boundary scan refusing a plugin that imports engine internals.
-- `docs/design/CHANGES.md` and the roadmap updated; anything that departs from design Part 3 gets a one-line note in
-  `docs/decisions.md` first.
+## Done
+All checks in CLAUDE.md pass (pytest, ruff, format, selfcheck, web
+test/build/e2e). Commit message lists steps done/unfinished and any check
+you couldn't run and why.
 
 ## Out of scope
+Dependencies and baselines (6.23), cost control, file channel, any UI,
+the publishing pack. Note scope or design questions in your final message
+instead of deciding them.
 
-Stages, long text, the compare view, panels from plugins, the publishing pack, UI changes, hosted mode. Don't start them.
+## Check cadence
+After each step, run only the tests for what changed plus Ruff. Run the
+full checklist (all pytest, selfcheck, web test/build/e2e) once at the end,
+and again only if something fails. Push to codex/stages only.

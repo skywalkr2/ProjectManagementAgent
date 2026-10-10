@@ -21,6 +21,7 @@ class Record(BaseModel):
     prefix: ClassVar[str]
 
     id: str
+    stage: str | None = Field(None, description="Current configured stage id; wording lives in stages.yaml.")
     ext: dict[str, dict[str, Any]] = Field(default_factory=dict, description="Fields added by plugins, by plugin name.")
 
 
@@ -150,6 +151,14 @@ class Source(Record):
     url: str | None = None
 
 
+class StageStart(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: str
+    record: str
+    stage: str
+    changeset: str
+
+
 class Request(Record):
     """A unit of work for the assistant."""
 
@@ -157,6 +166,10 @@ class Request(Record):
     prefix: ClassVar[str] = "REQ"
 
     task: str
+    stage_start: StageStart | None = Field(None, description="The stage entry that requested this task.")
+    approval: Literal["required", "granted"] | None = Field(
+        None, description="Stage tasks require the person's explicit go before dispatch."
+    )
     note: str | None = None
     source: str | None = None
     origin: Literal["pm", "input", "schedule"]

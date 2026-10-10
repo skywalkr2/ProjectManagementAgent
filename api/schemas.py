@@ -293,3 +293,90 @@ class RuntimeConfig(BaseModel):
     toast_seconds: float
     shortcuts: dict[str, str]
     wording: dict[str, str]
+
+
+class PluginStatusView(BaseModel):
+    name: str
+    state: str
+    version: str | None = None
+    reason: str | None = None
+
+
+class RecordReference(BaseModel):
+    kind: str
+    id: str
+
+
+class StageLabel(BaseModel):
+    id: str
+    label: str
+
+
+class StageCheckView(BaseModel):
+    id: str
+    passed: bool
+    reason: str
+
+
+class StageView(BaseModel):
+    record: RecordReference
+    version: int
+    current: str | None
+    current_label: str | None
+    next: StageLabel | None
+    checks: list[StageCheckView]
+    ready: bool
+
+
+class StageHistoryEntry(BaseModel):
+    sequence: int
+    at: str
+    from_stage: str | None
+    to_stage: str | None
+    version: int
+    actor: str
+    op: str
+    changeset: str | None
+    request: str | None
+    source: dict[str, Any] | None
+
+
+class RecordView(BaseModel):
+    kind: str
+    id: str
+    version: int
+    data: dict[str, Any]
+    stages: StageView
+    stage_history: list[StageHistoryEntry]
+
+
+class StageMove(BaseModel):
+    record: RecordReference
+    to: str = Field(min_length=1)
+    read_version: int = Field(ge=1)
+
+
+class StageMoved(BaseModel):
+    changeset: str
+    stages: StageView
+
+
+class ReadVersion(BaseModel):
+    read_version: int = Field(ge=1)
+
+
+class StageTaskOrigin(BaseModel):
+    kind: str
+    record: str
+    stage: str
+    changeset: str
+
+
+class StageRequestView(BaseModel):
+    id: str
+    version: int
+    task: str
+    state: str
+    approval: Literal["required", "granted"]
+    waiting: str | None
+    stage_start: StageTaskOrigin

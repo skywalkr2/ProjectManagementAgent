@@ -22,7 +22,6 @@ from engine.ops import (
     EVIDENCE_FIELDS,
     NEEDS_EVIDENCE,
     SETTABLE,
-    TIERS,
     ActionAddOp,
     ActionCloseOp,
     ChangesetIn,
@@ -34,6 +33,7 @@ from engine.ops import (
     QuestionDoneOp,
     RecordLogOp,
     RecordSetOp,
+    StageMoveOp,
 )
 from engine.records import model_for
 from engine.storage import Store, StoreError, WriteContext
@@ -103,6 +103,18 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         if name not in ctx.allowed_ops:
             refuse(i, "allowed-ops", f"{name} isn't an op this task may use")
             continue
+        for message in ctx.store.plugins.validators(op):
+            refuse(i, "plugin-validator", message)
+        if isinstance(op, StageMoveOp):
+            from engine.stages import validate_move, wording
+
+            # Even a trusted PM note interpreted by AI is a proposal, never consent.
+            messages = [wording(ctx.cfg, "confirm")]
+            try:
+                validate_move(ctx.store, op, view)
+            except StoreError as err:
+                messages.append(str(err))
+            problems.append(Problem("stage-confirm", "hold", i, "; ".join(messages)))
         # evidence
         evidence = getattr(op, "evidence", None)
         needs = name in NEEDS_EVIDENCE or (isinstance(op, RecordSetOp) and op.field in EVIDENCE_FIELDS)
@@ -167,7 +179,9 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "never-shown", "text people will see mentions the AI model or service")
                 break
         # tiers
-        if TIERS.get(name) == "system" and ctx.inputs.trust == "untrusted":
+        request = view.get("request", ctx.inputs.request)
+        from_pm = request is not None and request.data["origin"] == "pm" and ctx.inputs.trust == "trusted"
+        if ctx.store.plugins.tiers.get(name) == "system" and not from_pm and not ctx.confirmed_by_pm:
             problems.append(Problem("tier", "hold", i, "changes how the product behaves; needs your confirmation"))
     return problems
 
@@ -253,6 +267,8 @@ def apply_changeset(
 ) -> str:
     """Apply what passed, hold what needs the PM, record refusals. Returns the changeset id."""
     now = now or datetime.now(UTC)
+    # Recheck at the write boundary: callers cannot bypass plugin validators or tiers.
+    problems = list(dict.fromkeys([*problems, *check(cs, ctx)]))
     today = now.date()
     by_op: dict[int, list[Problem]] = {}
     for p in problems:
@@ -263,7 +279,8 @@ def apply_changeset(
         cs_id = tx.new_id("changeset")
         outcomes: list[OpOutcome] = []
         for i, op in enumerate(cs.ops):
-            mine = by_op.get(i, [])
+            mine = list(by_op.get(i, []))
+            mine += [Problem("plugin-validator", "refuse", i, message) for message in ctx.store.plugins.validators(op)]
             outcome = OpOutcome(
                 i,
                 op.model_dump(mode="json", exclude_none=True),
@@ -284,8 +301,21 @@ def apply_changeset(
                     outcome.reason = hold
             if outcome.status == "applied":
                 wctx = _wctx(ctx, cs_id, i, op)
-                outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
-                outcome.question = question
+                if "/" in op.op:
+                    tx.sql("SAVEPOINT plugin_op")
+                    pending = len(tx.pending)
+                    try:
+                        outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
+                        outcome.question = question
+                    except StoreError as err:
+                        tx.sql("ROLLBACK TO plugin_op")
+                        del tx.pending[pending:]
+                        outcome.status, outcome.reason = "refused", str(err)
+                    finally:
+                        tx.sql("RELEASE plugin_op")
+                else:
+                    outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
+                    outcome.question = question
             elif outcome.status == "held" and outcome.reason and outcome.reason.startswith("who-is"):
                 outcome.question = _routing_question(tx, op, i, cs_id, ctx, outcome.reason)
                 outcome.reason = "Waiting for you to say who this is"
@@ -306,6 +336,7 @@ def apply_changeset(
             WriteContext(actor="engine", trust="trusted", op="changeset.record"),
             record_id=cs_id,
         )
+    ctx.store.plugins.publish("changeset.applied", {"id": cs_id})
     return cs_id
 
 
@@ -350,6 +381,12 @@ def _wctx(ctx: Context, cs_id: str, index: int, op: OpModel) -> WriteContext:
 def _apply_op(
     tx: Tx, op: OpModel, ctx: Context, w: WriteContext, today: date
 ) -> tuple[list[dict[str, Any]], str | None]:
+    if isinstance(op, StageMoveOp):
+        from engine.stages import apply_move
+
+        return apply_move(ctx.store, tx, op, w), None
+    if "/" in op.op:
+        return ctx.store.plugins.apply(tx, op, w), None
     trust = ctx.inputs.trust
     source = ctx.inputs.source
     touched: list[dict[str, Any]] = []
@@ -493,7 +530,7 @@ def release(
         raise StoreError("that item isn't waiting for you")
     from engine.ops import CHANGESET
 
-    op = CHANGESET.validate_python({"ops": [outcome["op"]]}).ops[0]
+    op = CHANGESET.validate_python({"ops": [outcome["op"]]}, context={"op_models": store.plugins.ops}).ops[0]
     name = (outcome.get("question") and _question_name(store, outcome["question"])) or None
     if person is not None and name is not None:
         op = _substitute(op, name, person)
@@ -501,6 +538,9 @@ def release(
     req = store.read().get("request", cs.data["request"])
     inputs = Inputs(cs.data["request"], req.data.get("source") if req else None, "", "", cs.data["trust"])
     ctx = Context(store, cfg, people, tuple(), inputs, confirmed_by_pm=True)
+    refusals = store.plugins.validators(op)
+    if refusals:
+        raise StoreError("; ".join(refusals))
     with store.transaction() as tx:
         if outcome.get("question"):
             q = tx.get("question", outcome["question"])
@@ -545,6 +585,8 @@ def release(
             WriteContext(actor="pm", trust="trusted", op="changeset.release"),
             read_version=cs.version,
         )
+
+    store.plugins.publish("changeset.applied", {"id": changeset_id})
 
 
 def pick_owner(store: Store, question_id: str, person: str) -> None:
@@ -620,6 +662,8 @@ def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> U
             WriteContext(actor="pm", trust="trusted", op="changeset.undo"),
             read_version=cs.version,
         )
+    if report.restored:
+        store.plugins.publish("changeset.undone", {"id": changeset_id, "ops": report.restored})
     return report
 
 
@@ -669,3 +713,40 @@ def _revert(tx: Tx, entries: list[dict[str, Any]], changeset_id: str) -> None:
             if r["field"] and r["field"] not in before:
                 before[r["field"]] = r["before"]
         tx.update(kind, rid, before, w, read_version=current.version)
+
+
+def move_stage(store: Store, op: StageMoveOp, *, actor: Literal["pm", "rule"] = "pm") -> str:
+    """A person's explicit move or a deterministic rule's move, through the same op and ledger."""
+    from engine.stages import apply_move
+
+    with store.transaction() as tx:
+        cs_id = tx.new_id("changeset")
+        request = tx.create(
+            "request",
+            {
+                "task": "notes",
+                "origin": "pm" if actor == "pm" else "schedule",
+                "state": "done",
+                "created_at": store.clock(),
+                "changeset": cs_id,
+            },
+            WriteContext(actor, "trusted", "stage.request"),
+        )
+        source = {"rule": f"stages/{op.record.kind}/{op.to}"} if actor == "rule" else None
+        w = WriteContext(actor, "trusted", "stage.move#0", cs_id, request.id, source)
+        records = apply_move(store, tx, op, w)
+        tx.create(
+            "changeset",
+            {
+                "request": request.id,
+                "ops": [asdict(OpOutcome(0, op.model_dump(mode="json"), "applied", "op0", records=records))],
+                "status": "applied",
+                "trust": "trusted",
+                "reviewed": actor == "pm",
+                "created_at": store.clock(),
+            },
+            WriteContext("engine", "trusted", "changeset.record"),
+            record_id=cs_id,
+        )
+    store.plugins.publish("changeset.applied", {"id": cs_id})
+    return cs_id

@@ -1,0 +1,12 @@
+# Settings format version.
+version: 1
+# File a question for the PM when a reminder is added.
+ask_on_add: true
+# Title of the question filed for the PM.
+question: Review the new reminder?
+# Default wording for reminder stages; stages.yaml can replace the whole list.
+draft_label: Recorded
+ready_label: Ready for review
+# Explanations returned by the deterministic entry check.
+check_pass: The reminder has text.
+check_fail: Add text to the reminder first.
