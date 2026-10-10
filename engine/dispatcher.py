@@ -5,14 +5,15 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import replace
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
-from engine.ai.router import BudgetReached, NoProvider, Router
+from engine.ai.router import BudgetReached, NoProvider, Router, escalation_tier, route
 from engine.ai.task import AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
+from engine.cleaning import quoted_messages
 from engine.config import Config
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
@@ -116,54 +117,96 @@ def process(
     )
 
     previous_ops = _previous_ops(store, req.data.get("previous"))
-    task: AiTask = packet.task
+    tier = route(
+        cfg,
+        packet.task.kind,
+        input_chars=len(packet.cleaned.text),
+        quoted_messages=quoted_messages(packet.cleaned.text),
+        data_level="internal",
+    )
+    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops)
+    outcome = first
+    stronger = escalation_tier(cfg, tier)
+    if first.escalate and stronger and stronger != tier:
+        # One re-run on the stronger tier when checks still fail; it counts toward budgets like any run.
+        second = _rounds(store, cfg, router, packet.task, stronger, request_id, ctx, previous_ops)
+        if second.changeset is not None or first.changeset is None:
+            outcome = second if second.stop is None or first.changeset is None else first
+    if outcome.changeset is None:
+        return needs_you(store, request_id, outcome.stop or "The assistant couldn't finish this.")
+    if outcome.stop is not None:
+        return needs_you(store, request_id, outcome.stop)
+    changeset, problems, run_id = outcome.changeset, outcome.problems, outcome.run_id
+    assert changeset is not None
+    cs_id = apply_changeset(changeset, problems, ctx, run=run_id, now=now)
+    _set(store, request_id, state="review", waiting=None, changeset=cs_id)
+    return cs_id
+
+
+@dataclass
+class _Outcome:
     changeset: ChangesetIn | None = None
-    problems = []
-    run_id = None
+    problems: list = field(default_factory=list)
+    run_id: str | None = None
+    stop: str | None = None  # why the PM is needed instead of a changeset
+    escalate: bool = False  # the answer still fails its checks: a stronger tier may do better
+
+
+def _rounds(
+    store: Store,
+    cfg: Config,
+    router: Router,
+    base: AiTask,
+    tier: str,
+    request_id: str,
+    ctx: Context,
+    previous_ops: list | None,
+) -> _Outcome:
+    """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong."""
+    task = base
+    out = _Outcome()
     for attempt in range(cfg.dispatch.fix_rounds + 1):
+        last = attempt == cfg.dispatch.fix_rounds
         try:
-            result, _choice, run_id = router.call(task, request_id=request_id)
+            result, _choice, out.run_id = router.call(task, request_id=request_id, tier=tier)
         except (BudgetReached, NoProvider) as err:
-            return needs_you(store, request_id, str(err))
+            return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=str(err))
         except AiError as err:
-            return needs_you(store, request_id, _ai_failure(err))
+            return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=_ai_failure(err))
         try:
             changeset = parse(result.text, store.plugins.ops)
         except Unreadable as err:
-            changeset = None
             limit = task.max_output
-            if attempt < cfg.dispatch.fix_rounds:
+            if not last:
                 why = (
                     f"Your previous answer was cut off at the output limit ({limit} tokens). Answer more briefly."
                     if result.truncated
                     else f"Your previous answer couldn't be read: {err}. Answer with only the JSON object."
                 )
-                task = replace(task, request=packet.task.request + "\n\n" + why)
+                task = replace(task, request=base.request + "\n\n" + why)
                 continue
             if result.truncated:
-                return needs_you(
-                    store,
-                    request_id,
+                stop = (
                     f"The assistant's answer was cut off at the output limit ({limit} tokens for this kind of work). "
-                    f"Raise tasks.{task.kind}.max_output in ai.yaml, or hand in a shorter piece.",
+                    f"Raise tasks.{task.kind}.max_output in ai.yaml, or hand in a shorter piece."
                 )
-            return needs_you(store, request_id, f"The assistant's answer couldn't be read: {err}.")
+                return _Outcome(run_id=out.run_id, stop=stop)
+            return _Outcome(run_id=out.run_id, stop=f"The assistant's answer couldn't be read: {err}.", escalate=True)
         if previous_ops is not None and _ops_of(changeset) == previous_ops:
-            if attempt < cfg.dispatch.fix_rounds:
-                task = replace(task, request=packet.task.request + "\n\n" + REPEATED)
+            if not last:
+                task = replace(task, request=base.request + "\n\n" + REPEATED)
                 continue
-            return needs_you(
-                store, request_id, "The assistant gave the same answer again after your note. Look at it with them."
-            )
+            stop = "The assistant gave the same answer again after your note. Look at it with them."
+            return _Outcome(run_id=out.run_id, stop=stop)
         problems = check(changeset, ctx)
-        if needs_another_round(problems) and attempt < cfg.dispatch.fix_rounds:
-            task = replace(task, request=packet.task.request + "\n\n" + feedback(problems))
-            continue
-        break
-    assert changeset is not None
-    cs_id = apply_changeset(changeset, problems, ctx, run=run_id, now=now)
-    _set(store, request_id, state="review", waiting=None, changeset=cs_id)
-    return cs_id
+        out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id)
+        if needs_another_round(problems):
+            if not last:
+                task = replace(task, request=base.request + "\n\n" + feedback(problems))
+                continue
+            out.escalate = True
+        return out
+    return out
 
 
 REPEATED = (

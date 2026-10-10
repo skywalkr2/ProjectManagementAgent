@@ -124,10 +124,22 @@ def test_a_quote_that_isnt_in_the_input_goes_back_once_then_is_refused(env):
     bad = {"ops": [{"op": "fact", "text": "Proof ships Nov 5", "evidence": {"quote": "words nobody wrote"}}]}
     asked = answers(bad, bad)
     _, cs_id = run(env, "The printer says proof copies will ship on November 5.")
-    assert len(asked) == 2 and "isn't in the input" in asked[1].request
+    # One fix round on the routine tier, then the same again on the stronger tier it escalates to.
+    assert len(asked) == 4 and "isn't in the input" in asked[1].request
+    assert [r.data["tier"] for r in store.read().list("run")] == ["routine", "routine", "deep", "deep"]
     (outcome,) = outcomes(store, cs_id)
     assert outcome["status"] == "refused"
     assert store.read().list("fact") == []
+
+
+def test_the_stronger_tier_can_fix_what_the_routine_tier_got_wrong(env):
+    _, _, store = env
+    bad = {"ops": [{"op": "fact", "text": "Proof ships Nov 5", "evidence": {"quote": "words nobody wrote"}}]}
+    good = {"ops": [{"op": "fact", "text": "Proof ships Nov 5", "evidence": {"quote": "will ship on November 5"}}]}
+    answers(bad, bad, good)
+    _, cs_id = run(env, "The printer says proof copies will ship on November 5.")
+    assert outcomes(store, cs_id)[0]["status"] == "applied"
+    assert store.read().get("changeset", cs_id).data["run"] == store.read().list("run")[-1].id
 
 
 def test_the_fix_round_can_correct_the_answer(env):
@@ -283,7 +295,7 @@ def test_blocked_wording_warns_on_internal_items_and_holds_what_goes_to_others(e
     }
     asked = answers(body, body)
     _, cs_id = run(env, "We need to settle the print run and the epigraph permission.")
-    assert len(asked) == 2
+    assert len(asked) == 4  # one return on the routine tier, then the same on the stronger tier
     assert [o["status"] for o in outcomes(store, cs_id)] == ["applied", "held"]
 
 
@@ -407,3 +419,13 @@ def test_unreadable_answers_go_back_then_need_the_pm(env):
     assert cs_id is None
     req = store.read().get("request", handed.request)
     assert req.data["state"] == "needs_you" and "couldn't be read" in req.data["waiting"]
+
+
+def test_a_long_reply_chain_is_counted_message_by_message():
+    from engine.cleaning import QUOTED_MARK, quoted_messages
+
+    chain = "\n".join(
+        [f"{QUOTED_MARK}On Mon, someone {n} wrote:\n{QUOTED_MARK}> line {n}" for n in range(4)] + ["New reply."]
+    )
+    assert quoted_messages(chain) == 4
+    assert quoted_messages("Just a note.") == 0

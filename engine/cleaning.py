@@ -80,3 +80,19 @@ def clean(text: str, settings: CleaningSettings, known_texts: Iterable[str] = ()
         removed_signature=signature,
         removed_paragraphs=len(paragraphs) - len(kept_paragraphs),
     )
+
+
+def quoted_messages(text: str) -> int:
+    """How many earlier messages the cleaned input quotes: each run of quoted lines counts once, and inside a run each
+    "On ... wrote:" or "From:" header marks another message, so a long reply chain counts every message in it."""
+    runs, headers, inside = 0, 0, False
+    for line in text.splitlines():
+        quoted = line.startswith(QUOTED_MARK)
+        if quoted and not inside:
+            runs += 1
+        if quoted:
+            body = line[len(QUOTED_MARK) :].lstrip("> ").strip()
+            if _WROTE.match(body) or body.startswith("From:"):
+                headers += 1
+        inside = quoted or (inside and not line.strip())
+    return max(runs, headers)
