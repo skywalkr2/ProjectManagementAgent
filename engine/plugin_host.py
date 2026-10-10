@@ -46,6 +46,7 @@ EVENTS = {
     "record.changed",
     "request.queued",
     "question.answered",
+    "file.added",
 }
 log = logging.getLogger(__name__)
 
@@ -227,6 +228,7 @@ class PluginHost:
             ("ops", registrar.ops),
             ("op_validators", registrar.validators),
             ("ai_task_kinds", registrar.tasks),
+            ("file_kinds", registrar.file_kinds),
         ):
             if set(getattr(expected, key)) != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
@@ -280,7 +282,7 @@ class PluginHost:
         try:
             result = fn(
                 deepcopy(record),
-                ReadView(view or self.store.read(), owner),
+                self._with_files(ReadView(view or self.store.read(), owner)),
                 self.registrars[owner].config.model_copy(deep=True),
             )
             if (
@@ -299,6 +301,22 @@ class PluginHost:
         if "/" in name and not self.active(name.split("/")[0]):
             raise StoreError("task plugin is disabled")
         return self.tasks[name]
+
+    def _with_files(self, view: Any) -> Any:
+        from engine.files import read_bytes
+
+        view.read_file = lambda file_id: read_bytes(self.store, file_id)[1]
+        return view
+
+    def file_kinds(self) -> dict[str, Any]:
+        """The core's file kinds and those of running plugins."""
+        from engine.files import CORE_KINDS
+
+        kinds = dict(CORE_KINDS)
+        for name, registrar in self.registrars.items():
+            if self.active(name):
+                kinds.update(registrar.file_kinds)
+        return kinds
 
     def references(self) -> dict[str, list[tuple[str, str]]]:
         """Every declared reference, core and plugin: kind -> [(field path, kind it points to)]."""
@@ -337,7 +355,8 @@ class PluginHost:
                     # A disabled plugin's own ops are refused above; core ops carry on without its validators.
                     continue
                 try:
-                    args = [op.model_copy(deep=True), ReadView(view if view is not None else self.store.read(), name)]
+                    read = self._with_files(ReadView(view if view is not None else self.store.read(), name))
+                    args = [op.model_copy(deep=True), read]
                     if _takes_three(fn):
                         args.append(dict(origin))
                     result = fn(*args)
@@ -355,6 +374,7 @@ class PluginHost:
             raise StoreError("op plugin is disabled")
         registration = self.registrars[name].ops[op.op]
         writer = OpWriter(tx, name, registration.writes, context, models=self.records, referrers=self._referrers(tx))
+        self._with_files(writer)
         try:
             registration.apply(op.model_copy(deep=True), writer, self.registrars[name].config.model_copy(deep=True))
         except PluginMisuse as err:
@@ -389,7 +409,7 @@ class PluginHost:
                             continue
                         self._chain = chain | {key}
                         try:
-                            context = EventContext(self.store.read(), name, registrar.config)
+                            context = self._with_files(EventContext(self.store.read(), name, registrar.config))
                             registrar.handlers[event](deepcopy(payload), context)
                             self._commands(name, context.commands, event, payload)
                         except Exception as err:

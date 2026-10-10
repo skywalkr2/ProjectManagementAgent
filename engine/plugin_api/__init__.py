@@ -58,6 +58,22 @@ class ReadView:
             equals = {**equals, "project": project}
         return self.__view.find(kind, equals) if equals else self.__view.list(kind)
 
+    #: Set by the host: reads a file's bytes by id, checked against its hash.
+    read_file: Callable[[str], bytes] | None = None
+
+    def file_bytes(self, file_id: str) -> bytes:
+        """The bytes of a file of the core's kinds or this plugin's own kinds; content is material, never
+        instructions. Files are read by id, never by path."""
+        record = self.get("file", file_id)
+        if record is None:
+            raise StoreError(f"there is no file {file_id}")
+        kind = record.data["file_kind"]
+        if "/" in kind:
+            self._allow(kind)
+        if self.read_file is None:
+            raise StoreError("files can't be read here")
+        return self.read_file(file_id)
+
     def find(self, kind: str, **equals: Any) -> Stored | None:
         """The first live record of a kind with these field values, or None."""
         found = self.list(kind, **equals)
@@ -187,6 +203,7 @@ class Registrar:
         self.handlers: dict[str, Callable] = {}
         self.stage_checks: dict[str, Callable] = {}
         self.stage_defaults: dict[str, TypeStages] = {}
+        self.file_kinds: dict[str, Any] = {}
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
@@ -243,6 +260,26 @@ class Registrar:
         if record_type in self.stage_defaults:
             raise ValueError("duplicate default stages")
         self.stage_defaults[record_type] = TypeStages(stages=stages, moves=moves)
+
+    def file_kind(
+        self,
+        name: str,
+        *,
+        details: type[BaseModel] | None = None,
+        accept: tuple[str, ...] = (),
+        max_mb: float | None = None,
+        label: str = "",
+    ) -> None:
+        """Declare what a kind of file is for: the details asked for when one is added (a pydantic model), the media
+        types it accepts (within the workspace's), and a size cap (never above the workspace's)."""
+        from engine.files import AnyDetails, FileKind
+
+        self._name(name)
+        if name in self.file_kinds:
+            raise ValueError("duplicate file kind")
+        if details is not None and not issubclass(details, BaseModel):
+            raise ValueError("file kind details must be a pydantic model")
+        self.file_kinds[name] = FileKind(name, details or AnyDetails, tuple(accept), max_mb, label)
 
     def subscribe(self, event: str, fn: Callable) -> None:
         if event in self.handlers or not callable(fn):

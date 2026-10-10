@@ -9,8 +9,8 @@ import asyncio
 from datetime import date
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import Response, StreamingResponse
 
 from api.schemas import (
     ActionState,
@@ -21,6 +21,8 @@ from api.schemas import (
     ChangeItem,
     ChangesetView,
     Created,
+    FileKindView,
+    FileView,
     FollowupAction,
     FollowupQuestion,
     FollowupSection,
@@ -101,6 +103,106 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             return fn()
         except (StoreError, IntakeError, ValueError, KeyError) as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
+
+    def file_view(record: Any) -> FileView:
+        kinds = store.plugins.file_kinds()
+        kind = kinds.get(record.data["file_kind"])
+        label = (kind.label if kind else "") or record.data["file_kind"].rsplit("/", 1)[-1].replace(
+            "-", " "
+        ).capitalize()
+        return FileView(
+            id=record.id,
+            version=record.version,
+            kind_label=label,
+            **{
+                k: record.data.get(k)
+                for k in (
+                    "name",
+                    "media_type",
+                    "size",
+                    "file_kind",
+                    "project",
+                    "meta",
+                    "origin",
+                    "replaces",
+                    "added_at",
+                )
+            },
+        )
+
+    @r.get("/file-kinds")
+    def file_kinds() -> list[FileKindView]:
+        limits = cfg.storage.files
+        return [
+            FileKindView(
+                name=k.name,
+                label=k.label or k.name.rsplit("/", 1)[-1].replace("-", " ").capitalize(),
+                accept=list(k.accept or limits.accepted_types),
+                max_mb=min(limits.max_file_mb, k.max_mb or limits.max_file_mb),
+                details_schema=k.details.model_json_schema(),
+            )
+            for k in store.plugins.file_kinds().values()
+        ]
+
+    @r.get("/files")
+    def files(project: str | None = None, kind: str | None = None) -> list[FileView]:
+        out = [f for f in store.read().list("file") if project is None or f.data.get("project") == project]
+        out = [f for f in out if kind is None or f.data["file_kind"] == kind]
+        return [file_view(f) for f in sorted(out, key=lambda f: f.data["added_at"], reverse=True)]
+
+    @r.post("/files")
+    async def add_file_route(
+        request: Request,
+        name: str,
+        kind: str = "attachment",
+        project: str | None = None,
+        meta: str = "{}",
+        replaces: str | None = None,
+    ) -> FileView:
+        """Add a file: the request body is the file's bytes, its Content-Type the media type, details as JSON."""
+        import json
+
+        from engine.files import add_file
+
+        cap = cfg.storage.files.max_file_mb * 1024 * 1024
+        declared = request.headers.get("content-length")
+        if declared and declared.isdigit() and int(declared) > cap:
+            raise HTTPException(status_code=413, detail=f"{name} is larger than {cfg.storage.files.max_file_mb:g} MB")
+        data = await request.body()
+        try:
+            details = json.loads(meta)
+        except ValueError:
+            raise HTTPException(status_code=422, detail="the file's details aren't valid JSON") from None
+        media_type = (request.headers.get("content-type") or "application/octet-stream").split(";")[0].strip()
+        record = guard(
+            lambda: add_file(
+                store,
+                cfg,
+                data,
+                name=name,
+                media_type=media_type,
+                file_kind=kind,
+                project=project,
+                meta=details,
+                replaces=replaces,
+            )
+        )
+        changed()
+        return file_view(record)
+
+    @r.get("/files/{file_id}/content")
+    def file_content(file_id: str) -> Response:
+        """A file's bytes. Images may show in the app; everything else downloads; nothing is rendered as a page."""
+        from engine.files import read_bytes
+
+        need("file", file_id)
+        record, data = guard(lambda: read_bytes(store, file_id))
+        media = record.data["media_type"]
+        inline = media in ("image/png", "image/jpeg", "image/gif", "image/webp")
+        safe = "".join(c for c in record.data["name"] if c.isalnum() or c in " ._-").strip() or "file"
+        disposition = f'{"inline" if inline else "attachment"}; filename="{safe}"'
+        headers = {"Content-Disposition": disposition, "X-Content-Type-Options": "nosniff"}
+        return Response(content=data, media_type=media if inline else "application/octet-stream", headers=headers)
 
     def staged(kind: str) -> None:
         # Only kinds that move through stages are served here; bookkeeping records have their own routes.

@@ -91,10 +91,35 @@ class BackupSettings(ConfigModel):
     keep: int = Field(14, ge=1, description="How many backups to keep in each target.")
 
 
+class FileLimits(ConfigModel):
+    max_file_mb: float = Field(50, gt=0, description="The largest single file that can be added, in megabytes.")
+    max_total_mb: float = Field(2000, gt=0, description="The most all added files may take together, in megabytes.")
+    accepted_types: list[str] = Field(
+        default_factory=lambda: [
+            "image/png",
+            "image/jpeg",
+            "image/gif",
+            "image/webp",
+            "application/pdf",
+            "text/plain",
+            "text/markdown",
+            "text/csv",
+            "application/epub+zip",
+            "font/otf",
+            "font/ttf",
+            "font/woff",
+            "font/woff2",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ],
+        description="Media types a file may have; a file kind can narrow this further.",
+    )
+
+
 class StorageFile(FileModel):
     backend: Literal["sqlite"] = Field("sqlite", description="Where records live. Postgres comes later.")
     export: ExportSettings = Field(default_factory=ExportSettings, description="The readable export and its history.")
     backups: BackupSettings = Field(default_factory=BackupSettings, description="Full backups to somewhere else.")
+    files: FileLimits = Field(default_factory=FileLimits, description="Limits on files people and programs add.")
 
 
 # ---- config/ai.yaml --------------------------------------------------------------------------------------------------

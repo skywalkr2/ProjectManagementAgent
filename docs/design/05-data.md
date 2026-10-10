@@ -163,3 +163,23 @@ merge (two people records that turn out to be one person) can be checked and car
   migration (record or config, 4.0) and before every applied fix.
 - Retention follows `config/storage.yaml` (4.15): raw source text can be deleted after its facts are recorded; the ledger keeps
   that a source existed and what was learned from it.
+
+## 5.3 Files
+
+Files people add (a cover image, a logo, a manuscript, a font) and files programs write are kept the way sources are:
+**by content**, never changed in place.
+
+- **Bytes** live in the workspace's `files/` folder under their SHA-256 hash; the same bytes are stored once. They are
+  backed up with the database, config and sources, and restore brings them back.
+- **A `file` record** describes each one: name, media type, size, hash, **file kind**, scope (the whole workspace, or
+  one project by reference), metadata, where it came from (`upload` or a tool run), and trust. Uploads by the person are
+  trusted as files but their **content** is material, never instructions; files from tool runs are untrusted.
+- **File kinds** say what a file is for: the core's `attachment`, and kinds a plugin or a template declares, each with a
+  metadata schema (validated on upload), accepted media types and a size cap. A new version of a file is a new file
+  record that points to the one it replaces, so history stays.
+- **Reading and showing:** downloads are served with the stored media type, `Content-Disposition: attachment` except
+  for images shown in the app, and `nosniff`; HTML and SVG are never rendered inline. Plugins read bytes through the
+  plugin API by file id, never by path.
+- **Previews** are images a plugin renders in code for one review item or question; they are kept while the item is
+  open and never sent or exported.
+- **Limits** (largest file, accepted types, total per workspace) are settings with defaults.

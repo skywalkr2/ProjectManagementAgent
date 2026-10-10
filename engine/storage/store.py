@@ -171,6 +171,8 @@ class Tx:
                 special.append(("request.queued", {"id": rid}))
             if kind == "question" and field == "status" and after == "answered" and before != after:
                 special.append(("question.answered", {"id": rid}))
+            if kind == "file" and field == "file_kind" and version == 1:
+                special.append(("file.added", {"id": rid, "kind": after}))
         return [("record.changed", data) for data in grouped.values()] + special
 
     def sql(self, query: str, args: tuple[Any, ...] = ()) -> sqlite3.Cursor:

@@ -426,3 +426,30 @@ class StageRequestView(BaseModel):
     waiting: str | None
     stage_start: StageTaskOrigin
     estimate_usd: float | None = Field(None, description="What the run was estimated to cost, once it has an estimate.")
+
+
+class FileView(BaseModel):
+    """A file a person added or a program wrote; its content is fetched separately."""
+
+    id: str
+    version: int
+    name: str
+    media_type: str
+    size: int
+    file_kind: str
+    kind_label: str = Field(description="What to call the file kind on screen.")
+    project: str | None
+    meta: dict[str, Any]
+    origin: Literal["upload", "tool"]
+    replaces: str | None
+    added_at: str
+
+
+class FileKindView(BaseModel):
+    """A kind of file that can be added, with the details it asks for (as a JSON schema) and what it accepts."""
+
+    name: str
+    label: str
+    accept: list[str]
+    max_mb: float
+    details_schema: dict[str, Any]

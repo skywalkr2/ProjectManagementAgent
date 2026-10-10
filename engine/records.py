@@ -175,6 +175,25 @@ class Source(Record):
     url: str | None = None
 
 
+class File(Record):
+    """A file a person added or a program wrote. The bytes live in the workspace's files folder under their hash."""
+
+    record_kind: ClassVar[str] = "file"
+    prefix: ClassVar[str] = "FILE"
+
+    name: str = Field(min_length=1, description="The file's name as added, for showing and downloading.")
+    media_type: str = Field(description="What kind of content it is, such as image/png.")
+    size: int = Field(ge=0, description="Size in bytes.")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$", description="Hash of the bytes; also where they are stored.")
+    file_kind: str = Field("attachment", description="What the file is for: the core's attachment or a declared kind.")
+    project: str | None = Field(None, description="The project it belongs to; none means the whole workspace.")
+    meta: dict[str, Any] = Field(default_factory=dict, description="Details the file kind asks for, validated on add.")
+    origin: Literal["upload", "tool"] = Field("upload", description="Added by the person, or written by a program.")
+    trust: Literal["trusted", "untrusted"] = "trusted"
+    replaces: str | None = Field(None, description="The earlier file this one is a new version of.")
+    added_at: datetime
+
+
 class StageStart(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: str
@@ -290,7 +309,7 @@ class Signal(Record):
 #: Record kind to its model. The order is the export order.
 REGISTRY: dict[str, type[Record]] = {
     model.record_kind: model
-    for model in (Person, Team, Project, Action, Question, Source, Request, Changeset, Fact, Note, Run, Signal)
+    for model in (Person, Team, Project, Action, Question, Source, Request, Changeset, Fact, Note, Run, Signal, File)
 }
 
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.
@@ -306,6 +325,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "fact": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("source", "source")],
     "run": [("request", "request")],
+    "file": [("project", "project"), ("replaces", "file")],
 }
 
 

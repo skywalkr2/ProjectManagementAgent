@@ -49,7 +49,7 @@ def run_backup(ws: Workspace, cfg: Config, now: datetime | None = None) -> dict[
                 src.backup(dst)
             src.close()
             dst.close()
-            for name in ("config", "sources"):
+            for name in ("config", "sources", "files"):
                 if (ws.root / name).is_dir():
                     shutil.copytree(ws.root / name, dest / name)
             _prune(base, ws.root.name, cfg.storage.backups.keep)

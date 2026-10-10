@@ -9,3 +9,6 @@ backups:
       label: cloud folder
   every_hours: 12
   keep: 30
+files:
+  max_file_mb: 50
+  max_total_mb: 2000
