@@ -81,6 +81,19 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-10: run_tool returns files the program wrote
+
+**Decided by:** Claude (design), from a plugin question; the owner can override.
+
+**What:** `run_tool` (plugin API 0.3) takes `collect` patterns and returns matching files from the program's working
+folder as bytes, with per-file and total size caps (config defaults a call may lower, never raise); files over a cap are
+listed as omitted, never cut short silently. Only regular files inside the folder match (no `..`, absolute paths or links
+out); the folder is deleted afterwards; returned files are untrusted material; each run is recorded.
+
+**Why:** Some programs report through files they write (a converter's log, a rendered page), not their output stream.
+
+**Impact:** Part of `run_tool` in plugin API 0.3.
+
 ## 2026-10-10: Plugin API 0.3 comes with the file channel
 
 **Decided by:** Claude (design), from a second round of plugin questions; the owner can override.
