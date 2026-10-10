@@ -299,6 +299,12 @@ def cmd_backup(args: argparse.Namespace) -> int:
     return 1 if any(r["last_error"] for r in status.values()) else 0
 
 
+def _eval_progress(result, done: int, total: int) -> None:
+    """One line per finished case on stderr, so a long run shows it is moving; the report itself goes to stdout."""
+    outcome = "not run" if result.not_run else "passed" if result.passed else "failed"
+    print(f"[{done}/{total}] {result.case}: {outcome} ({result.seconds:.0f}s)", file=sys.stderr, flush=True)
+
+
 def cmd_evaluate(args: argparse.Namespace) -> int:
     from engine.config import load_config
     from engine.evaluate import evaluate
@@ -330,6 +336,7 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
         stub=args.stub,
         only=args.only,
         ai_config=args.ai_config,
+        progress=_eval_progress,
     )
     print(report.as_json() if args.json else report.text())
     return 0 if report.pass_rate() >= settings.min_score else 1

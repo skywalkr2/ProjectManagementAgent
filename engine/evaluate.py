@@ -11,7 +11,7 @@ import json
 import os
 import shutil
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -98,17 +98,20 @@ def evaluate(
     env: Mapping[str, str] | None = None,
     only: list[str] | None = None,
     ai_config: Path | None = None,
+    progress: Callable[[RunResult, int, int], None] | None = None,
 ) -> Report:
     """Run every case (or `only` these) `runs` times. With `stub`, the stand-in AI gives each case's ideal answer, which
     checks the cases and the pipeline rather than a model. `ai_config` replaces the fixture's AI setup with another
     workspace's `ai.yaml`, so the PM's own accounts run against the fictional cases."""
     env = os.environ if env is None else env
     results: list[RunResult] = []
-    for case in load_cases(template):
-        if only and case["id"] not in only:
-            continue
+    cases = [c for c in load_cases(template) if not only or c["id"] in only]
+    total = len(cases) * runs
+    for case in cases:
         for n in range(1, runs + 1):
             results.append(_run_case(template, case, n, account=account, stub=stub, env=env, ai_config=ai_config))
+            if progress is not None:
+                progress(results[-1], len(results), total)
     return Report(account or ("stub" if stub else "configured"), runs, results)
 
 
