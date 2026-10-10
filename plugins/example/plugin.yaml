@@ -6,6 +6,8 @@ depends_on: []
 interfaces: {provides: [], uses: []}
 subscribes: [record.changed]
 provides:
+  stage_checks: [example/has-text]
+  stages: [example/reminder]
   record_types: [example/reminder]
   ops: [example/reminder.add]
   op_validators: [example/reminder.add]

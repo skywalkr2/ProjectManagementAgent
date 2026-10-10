@@ -4,7 +4,29 @@ types:
   project:
     moves: person
     stages:
-      - {id: planned, label: Planned, entry: [], starts: []}
-      - {id: active, label: In progress, entry: [], starts: [notes]}
-      - {id: complete, label: Complete, entry: [], starts: []}
+    - id: planned
+      label: Planned
+      entry: []
+      starts: []
+    - id: active
+      label: In progress
+      entry: []
+      starts:
+      - notes
+    - id: complete
+      label: Complete
+      entry: []
+      starts: []
+  example/reminder:
+    moves: person
+    stages:
+    - id: recorded
+      label: Captured
+      entry: []
+      starts: []
+    - id: ready
+      label: Ready for review
+      entry:
+      - example/has-text
+      starts: []
 wording: {}

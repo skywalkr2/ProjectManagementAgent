@@ -32,6 +32,7 @@ def check_workspace_fixture(ws_root: Path, *, plugins: bool = True) -> list[Find
         cfg = load_config(ws_root / "config", env={})
         if not plugins:
             cfg.workspace.plugins.enabled = []
+            cfg.stages.types = {kind: value for kind, value in cfg.stages.types.items() if "/" not in kind}
     except ConfigError as err:
         return [Finding("fixture", f"workspaces/{name}/config", 0, str(err))]
     with tempfile.TemporaryDirectory() as tmp:

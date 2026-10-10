@@ -45,6 +45,9 @@ def make_plugin(tmp_path, *, name="scratch", edits=None, source=None):
 def config(root, names):
     cfg = load_config(root / "config", env={})
     cfg.workspace.plugins.enabled = names
+    cfg.stages.types = {
+        kind: value for kind, value in cfg.stages.types.items() if "/" not in kind or kind.split("/")[0] in names
+    }
     return cfg
 
 
@@ -334,6 +337,10 @@ def test_core_pipeline_runs_with_and_without_plugins(tmp_path, demo, enabled):
         raw = yaml.safe_load(p.read_text())
         raw["plugins"]["enabled"] = []
         p.write_text(yaml.safe_dump(raw))
+        p = template / "config/stages.yaml"
+        stages = yaml.safe_load(p.read_text())
+        stages["types"] = {kind: value for kind, value in stages["types"].items() if "/" not in kind}
+        p.write_text(yaml.safe_dump(stages))
         for directory in (template / "data").iterdir():
             if directory.is_dir():
                 shutil.rmtree(directory)
@@ -441,6 +448,7 @@ def test_disabled_records_survive_and_reenable(workspace, tmp_path):
     first.close()
     cfg = workspace.config(env={})
     cfg.workspace.plugins.enabled = []
+    cfg.stages.types = {kind: value for kind, value in cfg.stages.types.items() if "/" not in kind}
     disabled = Store(workspace.db_path, cfg=cfg)
     assert disabled.read().list(KIND) == records
     export_data(disabled, tmp_path / "export")

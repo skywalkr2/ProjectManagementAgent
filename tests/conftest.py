@@ -30,6 +30,10 @@ if os.environ.get("COCKPIT_TEST_CORE_ONLY") == "1":
         raw = yaml.safe_load(settings.read_text())
         raw["plugins"]["enabled"] = []
         settings.write_text(yaml.safe_dump(raw))
+        stages_path = target / "config" / "stages.yaml"
+        stages = yaml.safe_load(stages_path.read_text())
+        stages["types"] = {kind: value for kind, value in stages["types"].items() if "/" not in kind}
+        stages_path.write_text(yaml.safe_dump(stages))
         for child in (target / "data").iterdir():
             if child.is_dir():
                 shutil.rmtree(child)

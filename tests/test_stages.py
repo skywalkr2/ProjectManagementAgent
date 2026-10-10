@@ -442,3 +442,25 @@ def test_stages_and_ledger_history_round_trip(stage_workspace, tmp_path):
         assert files(tmp_path / "export1") == files(tmp_path / "export2")
     finally:
         other.close()
+
+
+def test_example_stage_check_and_workspace_wording(workspace):
+    from engine.applier import move_stage
+    from engine.stages import record_status
+    from engine.storage import Store
+
+    cfg = workspace.config(env={})
+    store = Store(workspace.db_path, cfg=cfg)
+    try:
+        kinds = [kind for kind in store.plugins.stages.types if "/" in kind]
+        if not kinds:
+            # The separate core-only fixture run intentionally removes plugin config and data.
+            return
+        record = store.read().list(kinds[0])[0]
+        stages = cfg.stages.types[record.kind].stages
+        move_stage(store, move_op(record, stages[0].id))
+        status = record_status(store, store.read().get(record.kind, record.id))
+        assert status["current_label"] == stages[0].label
+        assert status["checks"][0]["passed"] and status["checks"][0]["reason"]
+    finally:
+        store.close()
