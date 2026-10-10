@@ -165,3 +165,23 @@ def approve_stage_request(store, request_id, read_version):
             WriteContext("pm", "trusted", "stage.task.approve"),
             read_version=read_version,
         )
+
+
+def stage_history(store, kind, record_id):
+    """History is a ledger query, including undo; no second history store can drift."""
+    return [
+        {
+            "sequence": row["seq"],
+            "at": row["at"],
+            "from_stage": row["before"],
+            "to_stage": row["after"],
+            "version": row["version"],
+            "actor": row["actor"],
+            "op": row["op"],
+            "changeset": row["changeset"],
+            "request": row["request"],
+            "source": row["evidence"],
+        }
+        for row in store.read().ledger(kind=kind, record_id=record_id)
+        if row["field"] == "stage" and row["before"] != row["after"]
+    ]

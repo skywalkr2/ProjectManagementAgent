@@ -390,6 +390,9 @@ def test_record_stage_api_and_explicit_go(stage_workspace, prefix):
         moved = client.post(f"{base}/stages/move", json=body)
         assert moved.status_code == 200
         assert moved.json()["stages"]["current"] == "draft"
+        history = client.get(f"{path}/stage-history", params={"kind": record.kind}).json()
+        assert len(history) == 1 and history[0]["to_stage"] == "draft"
+        assert client.get(path, params={"kind": record.kind}).json()["stage_history"] == history
         checks = moved.json()["stages"]["checks"]
         assert checks == [{"id": "stage-test/ready", "passed": False, "reason": "not ready"}]
         assert client.post(f"{base}/stages/move", json=body).status_code == 409
@@ -409,3 +412,33 @@ def test_record_stage_api_and_explicit_go(stage_workspace, prefix):
                 read_version=latest.version,
             )
         assert client.get(f"{base}/stages/ready").json()[0]["checks"][0]["passed"]
+
+
+def test_stages_and_ledger_history_round_trip(stage_workspace, tmp_path):
+    from engine.applier import move_stage, undo
+    from engine.stages import stage_history
+    from engine.storage import Store
+    from engine.storage.export import export_data, import_data
+
+    store, cfg, record = stage_workspace
+    cs = move_stage(store, move_op(record, "draft"))
+    undo(store, cs)
+    current = store.read().get(record.kind, record.id)
+    move_stage(store, move_op(current, "draft"))
+    history = stage_history(store, record.kind, record.id)
+    assert [row["to_stage"] for row in history] == ["draft", None, "draft"]
+    assert history[1]["op"] == "undo"
+    export_data(store, tmp_path / "export1")
+    other = Store(store.path.parent / "restored.db", cfg=cfg)
+    try:
+        import_data(other, tmp_path / "export1")
+        assert stage_history(other, record.kind, record.id) == history
+        assert other.read().get(record.kind, record.id).data["stage"] == "draft"
+        export_data(other, tmp_path / "export2")
+
+        def files(path):
+            return {str(p.relative_to(path)): p.read_bytes() for p in path.rglob("*") if p.is_file()}
+
+        assert files(tmp_path / "export1") == files(tmp_path / "export2")
+    finally:
+        other.close()

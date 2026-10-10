@@ -45,6 +45,7 @@ from api.schemas import (
     SentCounts,
     SentText,
     SourceView,
+    StageHistoryEntry,
     StageMove,
     StageMoved,
     StageRequestView,
@@ -64,7 +65,7 @@ from engine.names import People
 from engine.ops import StageMoveOp
 from engine.prompts import render
 from engine.records import referrers
-from engine.stages import approve_stage_request, record_status
+from engine.stages import approve_stage_request, record_status, stage_history
 from engine.storage import Store, StoreError, WriteContext
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -105,7 +106,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             version=record.version,
             data=record.data,
             stages=StageView(**record_status(store, record)),
+            stage_history=[StageHistoryEntry(**row) for row in stage_history(store, kind, record.id)],
         )
+
+    @r.get("/records/{record_id}/stage-history")
+    def record_stage_history(record_id: str, kind: str) -> list[StageHistoryEntry]:
+        need(kind, record_id)
+        return [StageHistoryEntry(**row) for row in stage_history(store, kind, record_id)]
 
     @r.get("/stages/ready")
     def ready_stages() -> list[StageView]:

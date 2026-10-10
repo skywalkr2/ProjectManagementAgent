@@ -328,12 +328,26 @@ class StageView(BaseModel):
     ready: bool
 
 
+class StageHistoryEntry(BaseModel):
+    sequence: int
+    at: str
+    from_stage: str | None
+    to_stage: str | None
+    version: int
+    actor: str
+    op: str
+    changeset: str | None
+    request: str | None
+    source: dict[str, Any] | None
+
+
 class RecordView(BaseModel):
     kind: str
     id: str
     version: int
     data: dict[str, Any]
     stages: StageView
+    stage_history: list[StageHistoryEntry]
 
 
 class StageMove(BaseModel):
