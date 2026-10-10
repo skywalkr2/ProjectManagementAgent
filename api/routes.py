@@ -41,6 +41,7 @@ from api.schemas import (
     ReadVersion,
     RecordView,
     Reply,
+    RequestChanged,
     RequestCounts,
     Requeued,
     SendBack,
@@ -61,7 +62,7 @@ from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.backup import run_backup, state
 from engine.config import Config
-from engine.dispatcher import looks_good, retry, send_back, undo_changeset
+from engine.dispatcher import dismiss, looks_good, retry, send_back, undismiss, undo_changeset
 from engine.followups import mark_sent, sections, unmark_sent
 from engine.intake import IntakeError, hand_in, source_text
 from engine.names import People
@@ -130,7 +131,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         for kind in store.plugins.stages.types:
             for record in store.read().list(kind):
                 status = record_status(store, record)
-                if status["ready"]:
+                # Only an item already in a stage is suggested a move; starting one is the Stages view's job.
+                if status["ready"] and status["current"] is not None:
                     result.append(StageView(**status))
         return result
 
@@ -240,7 +242,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             out.append(
                 ChangeItem(
                     id=req.id,
+                    version=req.version,
                     state=d["state"],
+                    dismissed=bool(d.get("dismissed")),
                     waiting=d.get("waiting"),
                     created_at=str(d["created_at"]),
                     note=d.get("note"),
@@ -370,6 +374,21 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         worker.poke()
         return Ok(ok=request_id)
+
+    @r.post("/requests/{request_id}/dismiss")
+    def dismiss_request(request_id: str, body: ReadVersion) -> RequestChanged:
+        need("request", request_id)
+        guard(lambda: dismiss(store, request_id, body.read_version))
+        changed()
+        return RequestChanged(ok=request_id, version=store.read().get("request", request_id).version)
+
+    @r.post("/requests/{request_id}/undismiss")
+    def undismiss_request(request_id: str, body: ReadVersion) -> RequestChanged:
+        need("request", request_id)
+        guard(lambda: undismiss(store, request_id, body.read_version))
+        changed()
+        worker.poke()
+        return RequestChanged(ok=request_id, version=store.read().get("request", request_id).version)
 
     @r.get("/sources/{src_id}")
     def source(src_id: str) -> SourceView:

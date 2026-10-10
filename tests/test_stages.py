@@ -385,7 +385,8 @@ def test_record_stage_api_and_explicit_go(stage_workspace, prefix):
         assert response.status_code == 200
         stage = response.json()["stages"]
         assert stage["current"] is None and stage["next"]["id"] == "draft" and stage["ready"]
-        assert any(s["record"]["id"] == record.id for s in client.get(f"{base}/stages/ready").json())
+        # An item that is not in a stage yet can start one from Stages, but Today doesn't suggest it.
+        assert not any(s["record"]["id"] == record.id for s in client.get(f"{base}/stages/ready").json())
         body = {"record": stage["record"], "to": "draft", "read_version": stage["version"]}
         moved = client.post(f"{base}/stages/move", json=body)
         assert moved.status_code == 200
@@ -682,3 +683,53 @@ def test_stage_records_list_titles_and_every_stage(stage_workspace, prefix):
         assert row["current"] is None and row["next"]["id"] == "draft" and row["ready"]
         store.plugins.disable("stage-test", "test failure")
         assert client.get(f"{prefix}/api/stages/records").json() == []
+
+
+def test_today_suggests_moves_only_for_items_already_in_a_stage(stage_workspace):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.routes import build_router
+    from engine.applier import move_stage
+    from engine.storage import WriteContext
+    from engine.worker import Events, Worker
+    from engine.workspace import Workspace
+
+    store, cfg, record = stage_workspace
+    ws = Workspace(store.path.parent)
+    worker = Worker(ws, store, cfg, Events())
+    app = FastAPI()
+    app.include_router(build_router(ws, cfg, store, worker.events, worker))
+    with TestClient(app) as client:
+        everywhere = {v["record"]["id"]: v for v in client.get("/api/stages/records").json()}
+        assert everywhere[record.id]["current"] is None and everywhere[record.id]["ready"]
+        assert client.get("/api/stages/ready").json() == []
+        move_stage(store, move_op(record, "draft"))
+        with store.transaction() as tx:
+            current = tx.get(record.kind, record.id)
+            tx.update(
+                record.kind,
+                record.id,
+                {"ready": True},
+                WriteContext("pm", "trusted", "test"),
+                read_version=current.version,
+            )
+        ready = client.get("/api/stages/ready").json()
+        assert [v["record"]["id"] for v in ready] == [record.id] and ready[0]["current"] == "draft"
+
+
+def test_a_stage_task_waiting_for_a_go_cannot_be_dismissed(stage_workspace):
+    from engine.applier import move_stage
+    from engine.dispatcher import dismiss
+    from engine.storage import StoreError
+
+    store, _, record = stage_workspace
+    store.plugins.stages.types[record.kind].stages[0].starts = ["notes"]
+    move_stage(store, move_op(record, "draft"))
+    request = next(r for r in store.read().list("request") if r.data.get("stage_start"))
+    assert request.data["state"] == "needs_you" and request.data["approval"] == "required"
+    with pytest.raises(ValueError, match="can't be dismissed"):
+        dismiss(store, request.id, request.version)
+    with pytest.raises(StoreError, match="changed"):
+        dismiss(store, request.id, request.version + 1)
+    assert store.read().get("request", request.id).data["state"] == "needs_you"

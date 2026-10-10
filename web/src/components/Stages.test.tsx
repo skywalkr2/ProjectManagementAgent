@@ -154,7 +154,7 @@ test("Today lists tasks waiting for a go and items ready to move on, never inter
   const user = userEvent.setup();
   const calls = fakeApi({
     "GET changes": () => [
-      { id: "R-1", state: "needs_you", waiting: "Waiting for your go.", created_at: "2026-10-09T14:00:00Z", note: null, source: null, source_title: null, changeset: null },
+      { id: "R-1", version: 2, dismissed: false, state: "needs_you", waiting: "Waiting for your go.", created_at: "2026-10-09T14:00:00Z", note: null, source: null, source_title: null, changeset: null },
     ],
     "GET stages/records": () => [ready, blocked],
     "GET stages/ready": () => [ready],

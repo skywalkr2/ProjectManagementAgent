@@ -27,7 +27,7 @@ function api(opts: { ai?: S["AiState"]["state"]; people?: number; handed?: boole
     "GET people": () => Array.from({ length: opts.people ?? 1 }, (_, i) => person(String(i + 1))),
     "GET changes": () =>
       opts.handed
-        ? [{ id: "REQ-1", state: "done", waiting: null, created_at: "2026-10-09T14:00:00Z", note: "hello", source: null, source_title: null, changeset: null }]
+        ? [{ id: "REQ-1", version: 1, dismissed: false, state: "done", waiting: null, created_at: "2026-10-09T14:00:00Z", note: "hello", source: null, source_title: null, changeset: null }]
         : [],
   });
 }

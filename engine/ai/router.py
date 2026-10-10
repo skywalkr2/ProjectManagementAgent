@@ -9,7 +9,8 @@ from datetime import UTC, datetime
 from typing import Any
 
 from engine.ai.adapters import Adapter, make_adapter
-from engine.ai.task import AiError, AiResult, AiTask
+from engine.ai.catalog import Catalogs
+from engine.ai.task import AiError, AiResult, AiTask, ModelInfo
 from engine.config import Config
 from engine.secrets import SecretError, resolve_secret
 from engine.storage import Store, WriteContext
@@ -64,6 +65,29 @@ def choices(cfg: Config, task_kind: str, data_level: str, *, tier: str | None = 
     return picked
 
 
+def estimate_tokens(chars: int) -> int:
+    """A rough token count from characters: about four characters per token in English text, rounded up."""
+    return -(-chars // 4)
+
+
+def route(cfg: Config, task_kind: str, *, input_chars: int, quoted_messages: int, data_level: str) -> str:
+    """The tier for one request: the first routing rule that matches, otherwise the task's own tier.
+    Decided from measurable facts about the request, before any call."""
+    for rule in cfg.ai.routing:
+        when = rule.when
+        if when.task is not None and when.task != task_kind:
+            continue
+        if when.input_chars_over is not None and input_chars <= when.input_chars_over:
+            continue
+        if when.quoted_messages_over is not None and quoted_messages <= when.quoted_messages_over:
+            continue
+        if when.data_level is not None and when.data_level != data_level:
+            continue
+        return rule.tier
+    task = cfg.ai.tasks.get(task_kind)
+    return task.tier if task else "routine"
+
+
 def escalation_tier(cfg: Config, tier: str) -> str | None:
     tier_cfg = cfg.ai.tiers.get(tier)
     return tier_cfg.escalate_to if tier_cfg else None
@@ -80,9 +104,13 @@ class Router:
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         sleep: Callable[[float], None] = time.sleep,
         on_wait: Callable[[float], None] | None = None,
+        catalogs: Catalogs | None = None,
     ):
         self.sleep = sleep
         self.on_wait = on_wait
+        self.catalogs = catalogs or Catalogs(
+            store.path.parent / ".cockpit" / "ai-catalog.json", cfg.ai.catalog_refresh_hours
+        )
         self.cfg = cfg
         self.store = store
         self.env = env
@@ -95,7 +123,7 @@ class Router:
         """Run the task on the first account that can serve it. Returns the result, the choice and the Run id."""
         self._check_budget()
         last: AiError | None = None
-        options = list(choices(self.cfg, task.kind, data_level, tier=tier))
+        options = self._that_fit(task, list(choices(self.cfg, task.kind, data_level, tier=tier)))
         for position, choice in enumerate(options):
             settings = self.cfg.ai.providers[choice.provider]
             started = self.now()
@@ -166,11 +194,53 @@ class Router:
         if day >= budgets.per_day_usd:
             raise BudgetReached(f"Paused until tomorrow: today's AI budget (${budgets.per_day_usd:.2f}) is used up.")
 
-    def _cost(self, choice: Choice, result: AiResult | None) -> float | None:
+    def _that_fit(self, task: AiTask, options: list[Choice]) -> list[Choice]:
+        """Drop accounts whose model can't hold this request plus its answer, by the catalog's context size.
+        A model with no known context size is kept."""
+        needed = estimate_tokens(task.size) + task.max_output
+        fitting = []
+        for choice in options:
+            context = self.model_info(choice, need_limits=True).context_tokens
+            if context is None or context >= needed:
+                fitting.append(choice)
+        if not fitting:
+            raise NoProvider(
+                f"this is too long for every account on this tier (about {needed:,} tokens with the answer)"
+            )
+        return fitting
+
+    def model_info(self, choice: Choice, *, need_limits: bool = False) -> ModelInfo:
+        """What is known about the chosen model: the provider's catalog, with prices in config taking precedence.
+        With prices in config and no need for the model's limits, the catalog isn't fetched."""
+        settings = self.cfg.ai.providers[choice.provider]
+
+        def fetch() -> dict[str, ModelInfo]:
+            adapter = self.adapter_factory(settings.adapter, settings, resolve_secret(settings.auth, self.env))
+            return adapter.catalog() if hasattr(adapter, "catalog") else {}
+
         price = self.cfg.ai.prices.get(f"{choice.provider}/{choice.model_key}")
-        if price is None or result is None or result.input_tokens is None or result.output_tokens is None:
+        if price is not None and not need_limits:
+            info = ModelInfo()
+        else:
+            info = self.catalogs.model(choice.provider, choice.model_id, fetch) or ModelInfo()
+        if price is not None:
+            info.input_per_million = price.input_per_million
+            info.output_per_million = price.output_per_million
+            info.cached_input_per_million = price.cached_input_per_million
+        return info
+
+    def _cost(self, choice: Choice, result: AiResult | None) -> float | None:
+        if result is None or result.input_tokens is None or result.output_tokens is None:
             return None
-        return (result.input_tokens * price.input_per_million + result.output_tokens * price.output_per_million) / 1e6
+        info = self.model_info(choice)
+        if info.input_per_million is None or info.output_per_million is None:
+            return None
+        cached = min(result.cached_input_tokens or 0, result.input_tokens)
+        cached_price = info.cached_input_per_million
+        cached_price = info.input_per_million if cached_price is None else cached_price
+        fresh = result.input_tokens - cached
+        total = fresh * info.input_per_million + cached * cached_price + result.output_tokens * info.output_per_million
+        return total / 1e6
 
     def _record(
         self,
@@ -192,6 +262,7 @@ class Router:
             "output_chars": len(result.text) if result else 0,
             "input_tokens": result.input_tokens if result else None,
             "output_tokens": result.output_tokens if result else None,
+            "cached_input_tokens": result.cached_input_tokens if result else None,
             "cost_usd": self._cost(choice, result),
             "seconds": round(seconds, 3),
             "outcome": "ok" if error is None else "error",

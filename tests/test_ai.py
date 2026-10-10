@@ -61,7 +61,14 @@ def router_with(cfg, store, handlers, env=KEYS):
 
         return ADAPTERS[name](settings, secret, transport=httpx.MockTransport(handle))
 
-    return Router(cfg, store, env=env, adapter_factory=factory, now=lambda: NOW), seen
+    return Router(cfg, store, env=env, adapter_factory=factory, now=lambda: NOW, catalogs=NoCatalog()), seen
+
+
+class NoCatalog:
+    """Tests that count requests don't want a catalog fetch among them."""
+
+    def model(self, provider, model_id, fetch):
+        return None
 
 
 def test_a_call_sends_the_packet_and_reads_text_usage_and_cost(cfg, store):
@@ -188,3 +195,96 @@ def test_an_answer_stopped_at_the_output_limit_is_marked_cut_off(cfg, store):
     router, _ = router_with(cfg, store, {"main": lambda r: httpx.Response(200, json=body)})
     result, _, _ = router.call(TASK, request_id="REQ-1")
     assert result.truncated
+
+
+MODELS_BODY = {
+    "data": [
+        {
+            "id": "vendor/listed-model",
+            "context_length": 200000,
+            "top_provider": {"max_completion_tokens": 8000},
+            "pricing": {"prompt": "0.000001", "completion": "0.000005", "input_cache_read": "0.0000001"},
+        },
+        {"id": "vendor/no-prices"},
+    ]
+}
+
+
+def test_the_model_list_gives_context_and_prices_per_million(cfg):
+    catalog = adapter(cfg, "main", lambda r: httpx.Response(200, json=MODELS_BODY)).catalog()
+    listed = catalog["vendor/listed-model"]
+    assert (listed.context_tokens, listed.max_output_tokens) == (200000, 8000)
+    assert (listed.input_per_million, listed.output_per_million, listed.cached_input_per_million) == (1.0, 5.0, 0.1)
+    assert catalog["vendor/no-prices"].input_per_million is None
+
+
+def test_a_catalog_is_kept_refreshed_when_old_and_kept_when_a_fetch_fails(tmp_path):
+    from engine.ai.catalog import Catalogs
+    from engine.ai.task import ModelInfo
+
+    now = [1000.0]
+    catalogs = Catalogs(tmp_path / "catalog.json", refresh_hours=1, clock=lambda: now[0])
+    fetches = []
+
+    def fetch():
+        fetches.append(1)
+        return {"m": ModelInfo(input_per_million=1.0)}
+
+    assert catalogs.model("acct", "m", fetch).input_per_million == 1.0
+    assert catalogs.model("acct", "m", fetch).input_per_million == 1.0 and len(fetches) == 1
+    now[0] += 7200
+    assert (
+        Catalogs(tmp_path / "catalog.json", 1, clock=lambda: now[0]).model("acct", "m", lambda: {}).input_per_million
+        == 1.0
+    )
+
+
+def test_cached_input_is_priced_at_the_cached_rate(cfg, store):
+    body = ok_body()
+    body["usage"]["prompt_tokens_details"] = {"cached_tokens": 800}
+    router, _ = router_with(cfg, store, {"main": lambda r: httpx.Response(200, json=body)})
+    from engine.config.schema import Price
+
+    model_key = cfg.ai.tiers["routine"].use.partition("/")[2]
+    cfg.ai.prices[f"main/{model_key}"] = Price(
+        input_per_million=1.0, output_per_million=2.0, cached_input_per_million=0.1
+    )
+    _, _, run_id = router.call(TASK, request_id="REQ-1")
+    run = store.read().get("run", run_id).data
+    # 200 fresh input at $1/M + 800 cached at $0.10/M + 500 output at $2/M
+    assert run["cached_input_tokens"] == 800
+    assert run["cost_usd"] == pytest.approx((200 * 1.0 + 800 * 0.1 + 500 * 2.0) / 1e6)
+
+
+def test_an_account_whose_model_cant_hold_the_request_is_skipped(cfg, store):
+    from engine.ai.task import ModelInfo
+
+    router, seen = router_with(
+        cfg,
+        store,
+        {
+            "main": lambda r: httpx.Response(200, json=ok_body()),
+            "backup": lambda r: httpx.Response(200, json=ok_body()),
+        },
+    )
+    main_model = cfg.ai.providers["main"].models[cfg.ai.tiers["routine"].use.partition("/")[2]]
+
+    class Small:
+        def model(self, provider, model_id, fetch):
+            return ModelInfo(context_tokens=100) if model_id == main_model else None
+
+    router.catalogs = Small()
+    router.call(TASK, request_id="REQ-1")
+    assert [h for h, _ in seen] == [host(cfg, "backup")]
+
+
+def test_route_sends_matching_requests_to_another_tier():
+    from engine.ai.router import route
+    from engine.config.schema import AiFile
+
+    cfg = type("Cfg", (), {})()
+    cfg.ai = AiFile.model_validate(
+        {"routing": [{"when": {"task": "notes", "quoted_messages_over": 3}, "tier": "deep"}]}
+    )
+    assert route(cfg, "notes", input_chars=100, quoted_messages=5, data_level="internal") == "deep"
+    assert route(cfg, "notes", input_chars=100, quoted_messages=1, data_level="internal") == "routine"

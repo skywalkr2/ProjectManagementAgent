@@ -7,6 +7,8 @@ import { WhatChanged } from "./WhatChanged";
 function change(id: string, extra: Partial<S["ChangeItem"]> = {}): S["ChangeItem"] {
   return {
     id,
+    version: 4,
+    dismissed: false,
     state: "review",
     waiting: null,
     created_at: "2026-10-09T14:00:00Z",
@@ -146,4 +148,59 @@ test("a filed note with no project says so", async () => {
   fakeApi({ "GET changes": () => [noteChange(null)] });
   renderApp(<WhatChanged />);
   expect(await screen.findByText("Filed a note (no project)")).toBeInTheDocument();
+});
+
+const stopped = (extra: Partial<S["ChangeItem"]> = {}) =>
+  change("REQ-9", {
+    state: "needs_you",
+    waiting: "Something went wrong processing this: the account is out of credit.",
+    note: "File the printer's dates",
+    source: null,
+    source_title: null,
+    changeset: null,
+    ...extra,
+  });
+
+test("a stopped hand-in keeps Try again as its action and offers Dismiss in its menu, with Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [stopped()],
+    "POST requests/REQ-9/dismiss": () => ({ ok: "REQ-9", version: 5 }),
+    "POST requests/REQ-9/undismiss": () => ({ ok: "REQ-9", version: 6 }),
+  });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByRole("button", { name: "Try again" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: /More actions for/ }));
+  await user.click(await screen.findByRole("menuitem", { name: "Dismiss" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST requests/REQ-9/dismiss")?.body).toEqual({ read_version: 4 }),
+  );
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST requests/REQ-9/undismiss")?.body).toEqual({ read_version: 5 }),
+  );
+});
+
+test("a review row has no Dismiss, and a dismissed hand-in leaves Needs attention and is labeled in Done", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    "GET changes": () => [
+      change("REQ-1"),
+      stopped({ state: "done", dismissed: true }),
+    ],
+  });
+  renderApp(<WhatChanged />);
+  await screen.findByText("Email from the printer");
+  expect(screen.queryByText("Dismissed")).toBeNull();
+  await user.click(screen.getAllByRole("button", { name: /More actions for/ })[0]);
+  expect(await screen.findByRole("menuitem", { name: "Send back with a note" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Dismiss" })).toBeNull();
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "Done" }));
+  expect(await screen.findByText("Dismissed")).toBeInTheDocument();
+  expect(screen.getByText(/you dismissed it/)).toBeInTheDocument();
+  expect(screen.queryByText("Email from the printer")).toBeNull();
+  await user.click(screen.getByRole("button", { name: "All" }));
+  expect(screen.getByText("Dismissed")).toBeInTheDocument();
+  expect(screen.getByText("Email from the printer")).toBeInTheDocument();
 });

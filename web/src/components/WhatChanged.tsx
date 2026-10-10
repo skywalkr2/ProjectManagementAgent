@@ -160,6 +160,12 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
     setSendingBack(true);
   };
 
+  const dismiss = () =>
+    void act(
+      () => api.dismiss(item.id, item.version),
+      (result) => ({ message: t("toast.dismissed"), undo: () => api.undismiss(item.id, result.version) }),
+    );
+
   let primary: { label: string; run: () => void } | null = null;
   if (item.state === "review" && cs) primary = { label: t("changes.looks_good"), run: () => void looksGood() };
   if (item.state === "needs_you" || item.state === "failed")
@@ -170,6 +176,7 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
 
   const menu: MenuAction[] = [];
   if (cs && item.state === "review") menu.push({ id: "sendback", label: t("changes.send_back"), run: startSendBack });
+  if (item.state === "needs_you" || item.state === "failed") menu.push({ id: "dismiss", label: t("changes.dismiss"), run: dismiss });
   if (cs && item.state === "done") {
     menu.push({
       id: "reopen",
@@ -188,7 +195,9 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
   return (
     <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={`t-${item.id}`}>
       <div className="row">
-        <span className={`kind ${PILL[item.state]}`}>{t(`changes.state.${item.state}`)}</span>
+        <span className={`kind ${PILL[item.state]}`}>
+          {t(item.dismissed ? "changes.state.dismissed" : `changes.state.${item.state}`)}
+        </span>
         <button
           type="button"
           className="expander text"
@@ -248,6 +257,7 @@ type TN = (key: string, n: number, vars?: Record<string, string | number>) => st
 function subLine(item: S["ChangeItem"], t: T, tn: TN): string {
   const when = dayAndTime(item.created_at);
   if (item.state === "queued" || item.state === "running") return t("changes.sub.waiting", { when });
+  if (item.dismissed) return t("changes.sub.dismissed", { when });
   if (item.state === "needs_you" || item.state === "failed") return t("changes.sub.stopped", { when });
   const ops = item.changeset?.ops ?? [];
   const held = ops.filter((o) => o.status === "held" || o.ask?.status === "open").length;

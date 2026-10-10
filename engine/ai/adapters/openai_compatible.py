@@ -11,7 +11,7 @@ from typing import Any
 
 import httpx
 
-from engine.ai.task import AiError, AiResult, AiTask
+from engine.ai.task import AiError, AiResult, AiTask, ModelInfo
 
 
 class OpenAICompatibleAdapter:
@@ -60,6 +60,7 @@ class OpenAICompatibleAdapter:
         except (ValueError, KeyError, IndexError, TypeError):
             raise AiError("invalid_output", "the response wasn't in the expected format") from None
         usage = data.get("usage") or {}
+        details = usage.get("prompt_tokens_details") or {}
         return AiResult(
             text=text,
             model_served=str(data.get("model") or model),
@@ -68,7 +69,53 @@ class OpenAICompatibleAdapter:
             output_tokens=usage.get("completion_tokens"),
             upstream=data.get("provider"),
             truncated=truncated,
+            cached_input_tokens=details.get("cached_tokens") if isinstance(details, dict) else None,
         )
+
+    def catalog(self) -> dict[str, ModelInfo]:
+        """The account's model list, with context size and prices where the endpoint publishes them.
+
+        Endpoints that list models without prices still give their ids; prices then come from config. Per-token prices
+        in the listing are turned into prices per million tokens."""
+        try:
+            response = self._client.get("/models")
+        except httpx.HTTPError:
+            return {}
+        if response.status_code >= 400:
+            return {}
+        try:
+            items = response.json().get("data") or []
+        except ValueError:
+            return {}
+        out: dict[str, ModelInfo] = {}
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict) or not isinstance(item.get("id"), str):
+                continue
+            pricing = item.get("pricing") if isinstance(item.get("pricing"), dict) else {}
+            top = item.get("top_provider") if isinstance(item.get("top_provider"), dict) else {}
+            out[item["id"]] = ModelInfo(
+                context_tokens=_int(item.get("context_length")),
+                max_output_tokens=_int(top.get("max_completion_tokens")),
+                input_per_million=_per_million(pricing.get("prompt")),
+                output_per_million=_per_million(pricing.get("completion")),
+                cached_input_per_million=_per_million(pricing.get("input_cache_read")),
+            )
+        return out
+
+
+def _int(value: Any) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _per_million(value: Any) -> float | None:
+    try:
+        per_token = float(value)
+    except (TypeError, ValueError):
+        return None
+    return round(per_token * 1_000_000, 6) if per_token >= 0 else None
 
 
 def classify_http_error(response: httpx.Response) -> AiError:

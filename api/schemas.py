@@ -54,6 +54,11 @@ class Ok(BaseModel):
     ok: str
 
 
+class RequestChanged(BaseModel):
+    ok: str
+    version: int = Field(description="The request's version after the change, for undoing it.")
+
+
 class Handed(BaseModel):
     request: str
     source: str | None
@@ -151,6 +156,8 @@ class ChangesetView(BaseModel):
 
 class ChangeItem(BaseModel):
     id: str
+    version: int
+    dismissed: bool
     state: Literal["queued", "running", "review", "done", "needs_you", "failed"]
     waiting: str | None
     created_at: str

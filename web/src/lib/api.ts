@@ -64,6 +64,10 @@ export const api = {
     call<S["Ok"]>("POST", `actions/${id(a)}/status`, { status }),
   reply: (q: string, text: string) => call<S["Handed"]>("POST", `questions/${id(q)}/reply`, { text }),
   retry: (req: string) => call<S["Ok"]>("POST", `requests/${id(req)}/retry`),
+  dismiss: (req: string, readVersion: number) =>
+    call<S["RequestChanged"]>("POST", `requests/${id(req)}/dismiss`, { read_version: readVersion }),
+  undismiss: (req: string, readVersion: number) =>
+    call<S["RequestChanged"]>("POST", `requests/${id(req)}/undismiss`, { read_version: readVersion }),
   markSent: (person: string, text: string | null) =>
     call<S["SentCounts"]>("POST", `followups/${id(person)}/mark-sent`, { text }),
   unmarkSent: (person: string, body: S["Unmark"]) =>

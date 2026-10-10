@@ -17,7 +17,8 @@ Last updated: 2026-10-10.
 - [x] Stages: reviewed, fixed and merged; API only so far (2026-10-10).
 - [x] Stage screens: Stages view; ready and waiting-for-go rows on Today (2026-10-10).
 - [ ] What else the publishing pack needs, in order: cost control (with cached-token pricing, cache markers, choosing a
-  tier by context window), file channel, dependencies and baselines. Each with its screens.
+  tier by context window), plugin API 0.3 with the file channel (uploads, previews, person actions),
+  dependencies and baselines. Each with its screens.
 - [ ] Today as the real home: plain empty states, a first-run guide.
 - [ ] Plugin API 0.2 (decisions, 2026-10-10): data levels, origin and person-only values, unique fields and `find`,
   filtered `list`, `Ref` fields, validators that see the changeset, event kind filters, `record.delete`.

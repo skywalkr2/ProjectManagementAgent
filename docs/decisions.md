@@ -3,6 +3,40 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-10: Dismiss a hand-in that stopped; Today suggests moves only for items already in a stage
+
+**Decided by:** project owner (from trying the app); Claude wrote it up.
+
+**What:** A hand-in stuck in "Needs you" or "Stopped" can be dismissed from its row menu (it keeps "Try again" as its action).
+It goes to Done with a "Dismissed" label, stops counting as needing attention, and Undo puts it back as it was. A stage task
+waiting for a go keeps its Go and cannot be dismissed. Today's "ready to move on" rows leave out items not yet in a stage;
+Stages still offers the first stage for them.
+
+**Why:** The only action on a failed hand-in was to try again, so an old one stayed forever. Suggesting the first stage on
+Today for every item that was never started buried the real work.
+
+**Impact:** Two optional fields on a request (`dismissed`, `dismissed_from`), two routes, one wording set. No scope change.
+
+## 2026-10-10: Plugin API 0.3 comes with the file channel
+
+**Decided by:** Claude (design), from a second round of plugin questions; the owner can override.
+
+**What:** Plugin API 0.3, with the file channel and before the publishing pack, adds: uploads in the UI to the
+workspace's plugin data or a project, with metadata a plugin declares per file kind, and a `file.added` event; previews
+(images a plugin renders in code) on review items and questions, shown and never saved or sent; person actions
+(`registrar.action`), deterministic work the person starts on a record or file that returns one proposal for one review,
+with named choices the person flips and the plugin recomputes before anything applies. Later: a `web_search` adapter
+capability whose fetched pages are saved as sources for evidence; strict isolation of agent-mode runs (fresh session,
+empty folder with only the packet, no memory files), required before an account does independent checks; subscription
+accounts counted as usage against their allowance, pausing and resuming at the reset; tool paths and probes per
+computer; in 1.0, sending a built file is an export to a chosen folder or a hand-off to the person's mail app, recorded
+against the file's version.
+
+**Why:** The publishing pack needs uploads, previews and person actions itself (cover files, page proofs, importing a
+manuscript), so they belong in the API it is built on.
+
+**Impact:** Roadmap 2a: "Plugin API 0.3 with the file channel" replaces "file channel".
+
 ## 2026-10-10: Tolerate harmless answer shapes; wait out rate limits on the last account
 
 **Decided by:** Claude (design detail), from the owner's first evaluation run on a low-cost model; the owner can override.

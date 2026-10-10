@@ -179,6 +179,12 @@ class Request(Record):
     created_at: datetime
     changeset: str | None = None
     previous: str | None = Field(None, description="The request this one redoes after the PM sent it back.")
+    dismissed: bool = Field(
+        False, description="The PM set this aside without trying again; it no longer counts as needing attention."
+    )
+    dismissed_from: Literal["queued", "running", "review", "done", "needs_you", "failed"] | None = Field(
+        None, description="The state the request was in when it was dismissed, put back by undoing the dismissal."
+    )
 
 
 class Changeset(Record):
@@ -234,6 +240,7 @@ class Run(Record):
     output_chars: int = 0
     input_tokens: int | None = None
     output_tokens: int | None = None
+    cached_input_tokens: int | None = None
     cost_usd: float | None = None
     seconds: float = 0.0
     outcome: Literal["ok", "invalid_output", "error"]

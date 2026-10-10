@@ -188,8 +188,6 @@ test.describe.serial("acceptance scenario", () => {
 
   test("the keyboard drives the review loop", async ({ page }) => {
     await signIn(page);
-    // Let the stage rows arrive first, so no row appears above the one under test.
-    await expect(page.locator(".kind", { hasText: "Ready to move on" }).first()).toBeVisible();
     const first = page.locator("[data-row]").first();
     await expect(first).toBeVisible();
     await page.keyboard.press("j");
@@ -237,9 +235,16 @@ test.describe.serial("acceptance scenario", () => {
 
   test("items move through stages from Stages and Today, with undo", async ({ page }) => {
     await signIn(page);
-    const before: Array<{ title: string; ready: boolean; current_label: string | null; next: { label: string } | null }> =
-      await (await page.request.get("api/stages/records")).json();
-    const item = before.find((v) => v.ready && v.next)!;
+    const before: Array<{
+      title: string;
+      ready: boolean;
+      current_label: string | null;
+      next: { id: string; label: string } | null;
+      stages: Array<{ id: string; label: string }>;
+    }> = await (await page.request.get("api/stages/records")).json();
+    const item = before.find((v) => v.ready && v.next && !v.current_label)!;
+    // Today only suggests moving on for an item already in a stage: the one after the first.
+    const following = item.stages[item.stages.findIndex((s) => s.id === item.next!.id) + 1];
     await page.getByRole("button", { name: "Stages" }).click();
     await expect(page.locator("li.line", { hasText: item.title }).first()).toBeVisible();
     await checkAccessibility(page);
@@ -255,10 +260,18 @@ test.describe.serial("acceptance scenario", () => {
     await expect(row.getByRole("list", { name: "Where it has been" })).toContainText("by undo");
     await checkAccessibility(page);
 
+    // Not started yet: Stages offers the first stage, Today stays quiet about it.
     await page.getByRole("button", { name: "Today" }).click();
-    const ready = page.locator("li.line", { hasText: `${item.title} is ready for ${item.next!.label}` });
+    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    await expect(page.locator("li.line", { hasText: `${item.title} is ready for` })).toHaveCount(0);
+    await page.getByRole("button", { name: "Stages" }).click();
+    await row.getByRole("button", { name: `Move to ${item.next!.label}` }).click();
+    await expect(row.locator(".kind")).toHaveText(item.next!.label);
+
+    await page.getByRole("button", { name: "Today" }).click();
+    const ready = page.locator("li.line", { hasText: `${item.title} is ready for ${following.label}` });
     await expect(ready).toBeVisible();
-    await ready.getByRole("button", { name: `Move to ${item.next!.label}` }).click();
+    await ready.getByRole("button", { name: `Move to ${following.label}` }).click();
     await expect(ready).toHaveCount(0);
     await checkAccessibility(page);
   });

@@ -199,6 +199,10 @@
             "title": "Created At",
             "type": "string"
           },
+          "dismissed": {
+            "title": "Dismissed",
+            "type": "boolean"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -248,6 +252,10 @@
             "title": "State",
             "type": "string"
           },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
           "waiting": {
             "anyOf": [
               {
@@ -262,6 +270,8 @@
         },
         "required": [
           "id",
+          "version",
+          "dismissed",
           "state",
           "waiting",
           "created_at",
@@ -1455,6 +1465,25 @@
           "text"
         ],
         "title": "Reply",
+        "type": "object"
+      },
+      "RequestChanged": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "string"
+          },
+          "version": {
+            "description": "The request's version after the change, for undoing it.",
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "version"
+        ],
+        "title": "RequestChanged",
         "type": "object"
       },
       "RequestCounts": {
@@ -3355,6 +3384,55 @@
         "summary": "Record Stage History"
       }
     },
+    "/api/requests/{request_id}/dismiss": {
+      "post": {
+        "operationId": "dismiss_request_api_requests__request_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Request"
+      }
+    },
     "/api/requests/{request_id}/go": {
       "post": {
         "operationId": "stage_request_go_api_requests__request_id__go_post",
@@ -3441,6 +3519,55 @@
           }
         },
         "summary": "Retry Request"
+      }
+    },
+    "/api/requests/{request_id}/undismiss": {
+      "post": {
+        "operationId": "undismiss_request_api_requests__request_id__undismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Undismiss Request"
       }
     },
     "/api/runtime-config": {

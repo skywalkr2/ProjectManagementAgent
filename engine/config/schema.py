@@ -152,6 +152,11 @@ class Budgets(ConfigModel):
 class Price(ConfigModel):
     input_per_million: float = Field(0.0, ge=0, description="Price in USD per million input tokens.")
     output_per_million: float = Field(0.0, ge=0, description="Price in USD per million output tokens.")
+    cached_input_per_million: float | None = Field(
+        None,
+        ge=0,
+        description="Price per million input tokens served from the provider's cache; empty means the input price.",
+    )
 
 
 class EvaluationSettings(ConfigModel):
@@ -174,6 +179,22 @@ class RateLimitSettings(ConfigModel):
     )
 
 
+class RouteWhen(ConfigModel):
+    task: str | None = Field(None, description="Only for this kind of work.")
+    input_chars_over: int | None = Field(None, ge=0, description="Only when the input is longer than this.")
+    quoted_messages_over: int | None = Field(
+        None, ge=0, description="Only when the input quotes more earlier messages than this (long reply chains)."
+    )
+    data_level: Literal["open", "internal", "restricted"] | None = Field(
+        None, description="Only for material at this data level."
+    )
+
+
+class RouteRule(ConfigModel):
+    when: RouteWhen = Field(default_factory=RouteWhen, description="What the request must match; all given parts.")
+    tier: str = Field("deep", description="The tier that does the work when the rule matches.")
+
+
 class AiFile(FileModel):
     providers: dict[str, ProviderSettings] = Field(
         default_factory=dict, description="Every AI account this workspace may use (none until one is added)."
@@ -185,8 +206,15 @@ class AiFile(FileModel):
         default_factory=dict, description="Prices by provider/model, for models whose provider doesn't publish them."
     )
     evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings, description="How models are compared.")
+    catalog_refresh_hours: float = Field(
+        24, ge=0, description="How often each account's model list and prices are fetched again from the provider."
+    )
     rate_limits: RateLimitSettings = Field(
         default_factory=RateLimitSettings, description="Waiting and trying again when an account says to slow down."
+    )
+    routing: list[RouteRule] = Field(
+        default_factory=list,
+        description="Rules checked in order before a call that send some requests to another tier; first match wins.",
     )
 
     @model_validator(mode="after")
@@ -200,6 +228,9 @@ class AiFile(FileModel):
                     problems.append(f"tiers.{name} names {ref!r}, but there is no account {provider!r} in providers")
             if tier.escalate_to and tier.escalate_to not in self.tiers:
                 problems.append(f"tiers.{name}.escalate_to names {tier.escalate_to!r}, which isn't a tier")
+        for index, rule in enumerate(self.routing):
+            if rule.tier not in self.tiers:
+                problems.append(f"routing[{index}] names the tier {rule.tier!r}, which isn't a tier")
         for kind, task in self.tasks.items():
             if task.tier not in self.tiers:
                 problems.append(f"tasks.{kind}.tier names {task.tier!r}, which isn't a tier")

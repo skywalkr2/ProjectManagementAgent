@@ -1,0 +1,29 @@
+id: relative-due-date
+title: 'A deadline given as a weekday becomes a date'
+pasted: 'From: Theo Brandt
+
+  Subject: Spine
+
+
+  I''ll send the corrected spine file to Sam by Tuesday.
+
+
+  Theo'
+expect:
+- op: action.add
+  owners:
+  - PER-3
+  text_has:
+  - spine
+  due: '2026-10-13'
+stub_answer:
+  summary: Theo will send the corrected spine file by Tuesday.
+  ops:
+  - op: action.add
+    text: Send the corrected spine file to Sam Rivera
+    owners:
+    - Theo Brandt
+    due: '2026-10-13'
+    project: PRJ-1
+    evidence:
+      quote: I'll send the corrected spine file to Sam by Tuesday

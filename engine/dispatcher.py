@@ -17,7 +17,7 @@ from engine.config import Config
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
 from engine.packet import build
-from engine.storage import Store, WriteContext
+from engine.storage import Store, StoreError, WriteContext
 from engine.workspace import Workspace
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="request.state")
@@ -226,6 +226,51 @@ def retry(store: Store, request_id: str) -> None:
             request_id,
             {"state": "queued", "waiting": "With the assistant, next in line"},
             _ENGINE,
+            read_version=cur.version,
+        )
+
+
+_PM_DISMISS = WriteContext(actor="pm", trust="trusted", op="request.dismiss")
+
+
+def dismiss(store: Store, request_id: str, read_version: int) -> None:
+    """Set aside a request that stopped, so it no longer needs attention. A stage task waiting for a go keeps its Go."""
+    from engine.stages import wording
+
+    with store.transaction() as tx:
+        cur = tx.get("request", request_id)
+        if cur is None:
+            raise ValueError("this request doesn't exist")
+        if cur.version != read_version:
+            raise StoreError(wording(store.plugins.cfg, "request_changed"))
+        if cur.data.get("approval") == "required" or cur.data["state"] not in ("needs_you", "failed"):
+            raise ValueError("this can't be dismissed")
+        tx.update(
+            "request",
+            request_id,
+            {"state": "done", "dismissed": True, "dismissed_from": cur.data["state"]},
+            _PM_DISMISS,
+            read_version=cur.version,
+        )
+
+
+def undismiss(store: Store, request_id: str, read_version: int) -> None:
+    """Put a dismissed request back in the state it had."""
+    from engine.stages import wording
+
+    with store.transaction() as tx:
+        cur = tx.get("request", request_id)
+        if cur is None:
+            raise ValueError("this request doesn't exist")
+        if cur.version != read_version:
+            raise StoreError(wording(store.plugins.cfg, "request_changed"))
+        if not cur.data.get("dismissed"):
+            raise ValueError("this wasn't dismissed")
+        tx.update(
+            "request",
+            request_id,
+            {"state": cur.data.get("dismissed_from") or "needs_you", "dismissed": False, "dismissed_from": None},
+            _PM_DISMISS,
             read_version=cur.version,
         )
 

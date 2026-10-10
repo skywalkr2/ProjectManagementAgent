@@ -36,6 +36,18 @@ class AiResult:
     upstream: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
     truncated: bool = False  # the provider stopped at the output limit, so the text is incomplete
+    cached_input_tokens: int | None = None  # input tokens the provider served from its prompt cache
+
+
+@dataclass
+class ModelInfo:
+    """What a provider's catalog says about one model; any field may be unknown."""
+
+    context_tokens: int | None = None
+    max_output_tokens: int | None = None
+    input_per_million: float | None = None
+    output_per_million: float | None = None
+    cached_input_per_million: float | None = None
 
 
 class AiError(Exception):

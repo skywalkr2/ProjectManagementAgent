@@ -238,6 +238,62 @@ def test_a_stopped_request_can_be_tried_again(api):
     assert client.post(f"{base}/requests/{req}/retry").status_code == 409
 
 
+def _stopped_request(client, base, worker):
+    from engine.ai.task import AiError
+
+    def fail(task):
+        raise AiError("quota", "out of credit")
+
+    set_responder(fail)
+    req = client.post(f"{base}/handin", json={"note": "file this"}).json()["request"]
+    worker.run_pending()
+    set_responder(None)
+    return req
+
+
+def _item(client, base, req):
+    return next(i for i in client.get(f"{base}/changes").json() if i["id"] == req)
+
+
+def test_a_stopped_request_can_be_dismissed_and_put_back(api):
+    client, base, worker = api
+    req = _stopped_request(client, base, worker)
+    item = _item(client, base, req)
+    assert item["state"] == "needs_you" and not item["dismissed"]
+    assert client.get(f"{base}/status").json()["requests"]["needs_you"] == 1
+    gone = client.post(f"{base}/requests/{req}/dismiss", json={"read_version": item["version"]})
+    assert gone.status_code == 200
+    after = _item(client, base, req)
+    assert after["state"] == "done" and after["dismissed"] and after["waiting"] == item["waiting"]
+    assert client.get(f"{base}/status").json()["requests"]["needs_you"] == 0
+    assert client.post(f"{base}/requests/{req}/dismiss", json={"read_version": after["version"]}).status_code == 409
+    assert client.post(f"{base}/requests/{req}/retry").status_code == 409
+    ledger = [
+        e for e in client.app.state.store.read().ledger() if e["record_id"] == req and e["op"] == "request.dismiss"
+    ]
+    assert {e["field"] for e in ledger} >= {"state", "dismissed"}
+    # An undo with a stale version is refused; with the version the dismissal returned, the old state comes back.
+    assert client.post(f"{base}/requests/{req}/undismiss", json={"read_version": item["version"]}).status_code == 409
+    back = client.post(f"{base}/requests/{req}/undismiss", json={"read_version": gone.json()["version"]})
+    assert back.status_code == 200
+    restored = _item(client, base, req)
+    assert restored["state"] == "needs_you" and not restored["dismissed"]
+    assert (
+        client.post(f"{base}/requests/{req}/undismiss", json={"read_version": back.json()["version"]}).status_code
+        == 409
+    )
+    assert client.post(f"{base}/requests/{req}/retry").status_code == 200
+
+
+def test_a_request_that_is_not_stopped_cannot_be_dismissed(api):
+    client, base, _ = api
+    req = client.post(f"{base}/handin", json={"note": "file this"}).json()["request"]
+    item = _item(client, base, req)
+    assert item["state"] == "queued"
+    assert client.post(f"{base}/requests/{req}/dismiss", json={"read_version": item["version"]}).status_code == 409
+    assert client.post(f"{base}/requests/NOPE-1/dismiss", json={"read_version": 1}).status_code == 404
+
+
 def test_a_reply_is_handed_in_against_its_question_and_closes_it(api):
     client, base, worker = api
     c = case("answer-question")

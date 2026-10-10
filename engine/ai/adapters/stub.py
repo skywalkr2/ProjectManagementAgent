@@ -34,6 +34,9 @@ class StubAdapter:
         body = {"summary": "Filed the input as a note.", "ops": [{"op": "note", "text": first or "(empty input)"}]}
         return AiResult(text=json.dumps(body), model_served="stub", seconds=0.0)
 
+    def catalog(self) -> dict:
+        return {}
+
 
 def _first_line(request: str) -> str:
     match = re.search(r"<untrusted[^>]*>\s*(.+?)\s*</untrusted>", request, re.S) or re.search(

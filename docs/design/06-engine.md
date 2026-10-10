@@ -726,6 +726,6 @@ pack's defaults, editable in `config/stages.yaml`, 4.21), each with:
   budgeted (6.16).
 
 Moving a record is an op (`stage.move`), so it is in the ledger and can be undone. When a record's entry checks pass, Today
-shows "ready to move on" for it (6.15); when they fail, the record shows which ones and why. Stages are data on the record,
+shows "ready to move on" for it (6.15), once it is in a stage (starting one is done from Stages); when they fail, the record shows which ones and why. Stages are data on the record,
 so a title's or a deal's history of stages is a query, and dependencies and baselines (6.23) can refer to them.
 
