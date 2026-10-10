@@ -7,7 +7,7 @@ written into new config files, the settings forms and `cockpit config show`.
 from __future__ import annotations
 
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -107,6 +107,18 @@ class ProviderSettings(ConfigModel):
     base_url: str | None = Field(None, description="The API address, for adapters that need one.")
     auth: str | None = Field(None, description="A secret reference (env:NAME or file:/path), never the secret itself.")
     models: dict[str, str] = Field(default_factory=dict, description="Short names for this account's models.")
+
+    @field_validator("models", mode="before")
+    @classmethod
+    def _space_after_colon(cls, value: Any) -> Any:
+        """`name:model-id` without a space reads as one name with no model; say so instead of a type error."""
+        if isinstance(value, dict):
+            for key, model in value.items():
+                if model is None and ":" in str(key):
+                    name, _, rest = str(key).partition(":")
+                    raise ValueError(f"put a space after the colon: write '{name}: {rest}', not '{key}'")
+        return value
+
     allowed_data: list[DataLevel] = Field(
         default_factory=lambda: ["open"], description="The most sensitive material this account may see."
     )

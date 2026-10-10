@@ -202,3 +202,13 @@ def test_the_smoke_test_says_where_a_refused_or_missing_key_was_read_from(env, t
     deep = [r for r in results if r.tier == "deep"][0]
     assert deep.key_source == f"key from the file {key_file}"
     assert "the-secret-value" not in deep.detail + (deep.key_source or "")
+
+
+def test_a_model_name_without_a_space_after_the_colon_is_explained(tmp_path):
+    from engine.config import load_config
+
+    (tmp_path / "ai.yaml").write_text(
+        "providers:\n  acct:\n    adapter: stub\n    models: {small:vendor/model-id}\n", encoding="utf-8"
+    )
+    with pytest.raises(ConfigError, match="put a space after the colon: write 'small: vendor/model-id'"):
+        load_config(tmp_path, env={})
