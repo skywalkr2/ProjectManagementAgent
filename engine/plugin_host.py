@@ -37,7 +37,14 @@ from engine.storage import StoreError, WriteContext
 from engine.tasks import TASKS
 
 BUNDLED = Path(__file__).resolve().parents[1] / "plugins"
-EVENTS = {"changeset.applied", "changeset.undone", "record.changed", "request.queued", "question.answered"}
+EVENTS = {
+    "stage.moved",
+    "changeset.applied",
+    "changeset.undone",
+    "record.changed",
+    "request.queued",
+    "question.answered",
+}
 log = logging.getLogger(__name__)
 
 

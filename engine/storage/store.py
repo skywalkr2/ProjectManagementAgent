@@ -153,6 +153,13 @@ class Tx:
             key = kind, rid, version, op
             data = grouped.setdefault(key, {"kind": kind, "id": rid, "version": version, "op": op, "fields": []})
             data["fields"].append(field or "_deleted")
+            if field == "stage" and before != after:
+                special.append(
+                    (
+                        "stage.moved",
+                        {"kind": kind, "id": rid, "version": version, "from": before, "to": after, "op": op},
+                    )
+                )
             if kind == "request" and field == "state" and after == "queued" and before != after:
                 special.append(("request.queued", {"id": rid}))
             if kind == "question" and field == "status" and after == "answered" and before != after:

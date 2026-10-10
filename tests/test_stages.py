@@ -317,3 +317,46 @@ def test_undo_wont_remove_an_approved_task(stage_workspace):
     report = undo(store, cs)
     assert not report.restored and report.skipped
     assert store.read().get(record.kind, record.id).data["stage"] == "draft"
+
+
+def test_stage_event_only_after_commit_including_undo(stage_workspace, monkeypatch):
+    import json
+    import sqlite3
+
+    from engine.applier import move_stage, undo
+
+    store, cfg, record = stage_workspace
+    events = []
+
+    def publish(event, payload):
+        if event != "stage.moved":
+            return
+        with sqlite3.connect(store.path) as conn:
+            data = conn.execute("SELECT data FROM records WHERE kind=? AND id=?", (record.kind, record.id)).fetchone()
+        assert json.loads(data[0])["stage"] == payload["to"]
+        events.append(payload)
+
+    monkeypatch.setattr(store.plugins, "publish", publish)
+    cs = move_stage(store, move_op(record, "draft"))
+    assert len(events) == 1 and events[0]["from"] is None and events[0]["to"] == "draft"
+    undo(store, cs)
+    assert len(events) == 2 and events[1]["to"] is None and events[1]["op"] == "undo"
+
+
+def test_stage_event_and_starts_rollback_together(stage_workspace, monkeypatch):
+    from engine.stages import apply_move
+    from engine.storage import WriteContext
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.types[record.kind].stages[0].starts = ["notes"]
+    events = []
+    monkeypatch.setattr(store.plugins, "publish", lambda *args: events.append(args))
+    before = store.read().ledger()
+    with pytest.raises(RuntimeError), store.transaction() as tx:
+        apply_move(store, tx, move_op(record, "draft"), WriteContext("pm", "trusted", "stage.move#0", "CS-1"))
+        assert not events
+        raise RuntimeError("force rollback")
+    assert not events
+    assert not store.read().list("request")
+    assert store.read().ledger() == before
+    assert store.read().get(record.kind, record.id).data["stage"] is None
