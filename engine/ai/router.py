@@ -78,7 +78,9 @@ class Router:
         env: Mapping[str, str] | None = None,
         adapter_factory: Callable[[str, Any, str | None], Adapter] = make_adapter,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
+        sleep: Callable[[float], None] = time.sleep,
     ):
+        self.sleep = sleep
         self.cfg = cfg
         self.store = store
         self.env = env
@@ -91,14 +93,17 @@ class Router:
         """Run the task on the first account that can serve it. Returns the result, the choice and the Run id."""
         self._check_budget()
         last: AiError | None = None
-        for choice in choices(self.cfg, task.kind, data_level, tier=tier):
+        options = list(choices(self.cfg, task.kind, data_level, tier=tier))
+        for position, choice in enumerate(options):
             settings = self.cfg.ai.providers[choice.provider]
             started = self.now()
             clock = time.monotonic()
             try:
                 secret = resolve_secret(settings.auth, self.env)
                 adapter = self.adapter_factory(settings.adapter, settings, secret)
-                result = adapter.run(task, choice.model_id)
+                # Wait out a rate limit only on the last account in line; otherwise the next one is faster.
+                last_in_line = position == len(options) - 1
+                result = self._run_paced(adapter, task, choice, request_id, last_in_line)
             except SecretError as err:
                 last = AiError("no_key", str(err))
                 self._record(task, request_id, choice, started, time.monotonic() - clock, None, last)
@@ -113,6 +118,26 @@ class Router:
             return result, choice, run_id
         assert last is not None
         raise last
+
+    def _run_paced(self, adapter: Adapter, task: AiTask, choice: Choice, request_id: str, wait: bool) -> AiResult:
+        """Run on one account, waiting and trying again while it says to slow down, within the configured limits."""
+        limits = self.cfg.ai.rate_limits
+        for attempt in range(limits.tries if wait else 1):
+            started, clock = self.now(), time.monotonic()
+            try:
+                return adapter.run(task, choice.model_id)
+            except AiError as err:
+                pause = err.retry_after if err.retry_after is not None else 2.0 * 2**attempt
+                if (
+                    not wait
+                    or err.kind != "rate_limited"
+                    or attempt + 1 >= limits.tries
+                    or pause > limits.max_wait_seconds
+                ):
+                    raise
+                self._record(task, request_id, choice, started, time.monotonic() - clock, None, err)
+                self.sleep(pause)
+        raise AssertionError("unreachable")
 
     # ---- budgets and runs --------------------------------------------------------------------------------------------
 

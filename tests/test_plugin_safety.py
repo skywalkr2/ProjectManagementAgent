@@ -123,3 +123,13 @@ def test_a_scheduled_request_note_is_never_trusted(workspace):
     assert f'<untrusted source="note">\n{words}' in packet.task.request
     assert f"<note>\n{words}" not in packet.task.request
     store.close()
+
+
+@pytest.mark.parametrize(
+    "evidence",
+    ["the exact words", {"quote": "the exact words", "source": "input"}, {"text": "the exact words"}],
+)
+def test_common_evidence_shapes_are_read_as_the_quote(evidence):
+    from engine.ops import EvidenceIn
+
+    assert EvidenceIn.model_validate(evidence).quote == "the exact words"

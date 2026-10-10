@@ -46,12 +46,16 @@ workspace's `config/ai.yaml` with its key as a reference (`auth: env:MY_AI_KEY`,
 
 ```
 MY_AI_KEY=... uv run cockpit ai test --workspace ~/cockpit-try
-``` Before relying on a model, score it on the fictional cases:
+```
+
+Before relying on a model, score it on the fictional cases (a workspace made with `--from` has a copy of them in `evals/`):
 
 ```
-MY_AI_KEY=... uv run cockpit evaluate --from workspaces/demo-b --ai-config ~/cockpit-try/config/ai.yaml \
-    --account <provider>/<model> --runs 3
+MY_AI_KEY=... uv run cockpit evaluate -w ~/cockpit-try --runs 3
 ```
+
+Add `--account <provider>/<model>` to score another account, or `--from workspaces/demo-b` for a workspace without
+`evals/`.
 
 Your own workspace lives outside this repository (keep it on local disk, not in a synced folder):
 

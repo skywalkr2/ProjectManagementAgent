@@ -159,3 +159,23 @@ def test_the_daily_budget_stops_new_runs(cfg, store):
     router, _ = router_with(cfg, store, {})
     with pytest.raises(BudgetReached, match="today"):
         router.call(TASK, request_id="REQ-2")
+
+
+def test_the_last_account_in_line_is_tried_again_after_waiting(cfg, store):
+    replies = iter([httpx.Response(429, headers={"retry-after": "2"}), httpx.Response(200, json=ok_body())])
+    cfg.ai.tiers["routine"].fallback = []
+    router, seen = router_with(cfg, store, {"main": lambda r: next(replies)})
+    waits = []
+    router.sleep = waits.append
+    router.call(TASK, request_id="REQ-1")
+    assert waits == [2.0]
+    assert [h for h, _ in seen] == [host(cfg, "main")] * 2
+
+
+def test_a_wait_longer_than_the_limit_gives_up_without_sleeping(cfg, store):
+    cfg.ai.tiers["routine"].fallback = []
+    router, seen = router_with(cfg, store, {"main": lambda r: httpx.Response(429, headers={"retry-after": "3600"})})
+    router.sleep = lambda s: pytest.fail("must not wait an hour")
+    with pytest.raises(AiError, match="rate_limited"):
+        router.call(TASK, request_id="REQ-1")
+    assert len(seen) == 1

@@ -155,6 +155,13 @@ def _default_tasks() -> dict[str, TaskSettings]:
     return {"notes": TaskSettings()}
 
 
+class RateLimitSettings(ConfigModel):
+    tries: int = Field(3, ge=1, le=6, description="How many times one account is tried when it says to slow down.")
+    max_wait_seconds: float = Field(
+        30, ge=0, le=300, description="The longest wait before trying again; a longer requested wait moves on."
+    )
+
+
 class AiFile(FileModel):
     providers: dict[str, ProviderSettings] = Field(
         default_factory=dict, description="Every AI account this workspace may use (none until one is added)."
@@ -166,6 +173,9 @@ class AiFile(FileModel):
         default_factory=dict, description="Prices by provider/model, for models whose provider doesn't publish them."
     )
     evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings, description="How models are compared.")
+    rate_limits: RateLimitSettings = Field(
+        default_factory=RateLimitSettings, description="Waiting and trying again when an account says to slow down."
+    )
 
     @model_validator(mode="after")
     def _tiers_name_real_accounts(self) -> AiFile:

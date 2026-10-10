@@ -139,3 +139,16 @@ def test_a_wrong_answer_fails_the_case(monkeypatch):
     assert report.pass_rate("production-checkin") == 0.0
     assert report.pass_rate("nothing-to-record") == 1.0
     assert "production-checkin" in report.text()
+
+
+def test_calls_the_account_refused_are_not_run_and_left_out_of_the_score():
+    from engine.evaluate import Report, RunResult
+
+    report = Report(
+        "acct",
+        1,
+        [RunResult("a", 0, True), RunResult("b", 0, False, not_run=True, error="rate limited")],
+    )
+    assert report.pass_rate() == 1.0
+    text = report.text()
+    assert "n/a  b" in text and "not run: 1" in text

@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator, model_validator
 
 Tier = Literal["data", "outbound", "system"]
 
@@ -24,6 +24,21 @@ class EvidenceIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     quote: str = Field(min_length=3, description="The exact words from the input that justify this op.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _plain_quote(cls, value: Any) -> Any:
+        """Accept the shapes models commonly write for the same thing: a bare string, or extra keys beside the quote.
+        Only the quote is kept, and it is still checked word for word against the input."""
+        if isinstance(value, str):
+            return {"quote": value}
+        if isinstance(value, dict) and set(value) - {"quote"}:
+            if "quote" in value:
+                return {"quote": value["quote"]}
+            texts = [v for v in value.values() if isinstance(v, str)]
+            if len(texts) == 1:
+                return {"quote": texts[0]}
+        return value
 
 
 class LinkIn(BaseModel):

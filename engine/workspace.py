@@ -97,7 +97,7 @@ def init_workspace(
     root.mkdir(parents=True, exist_ok=True)
     ws = Workspace(root)
     if template is not None:
-        for folder in ("config", "data", "prompts", "docs", "plugins"):
+        for folder in ("config", "data", "prompts", "docs", "plugins", "evals"):
             src = template / folder
             if src.is_dir():
                 shutil.copytree(src, root / folder)

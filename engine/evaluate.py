@@ -41,6 +41,7 @@ class RunResult:
     cost_usd: float = 0.0
     seconds: float = 0.0
     error: str | None = None
+    not_run: bool = False  # the account wouldn't take the call (rate limit, quota); says nothing about the model
 
 
 @dataclass
@@ -50,8 +51,11 @@ class Report:
     results: list[RunResult]
 
     def pass_rate(self, case: str | None = None) -> float:
-        rows = [r for r in self.results if case is None or r.case == case]
+        rows = [r for r in self.results if (case is None or r.case == case) and not r.not_run]
         return sum(r.passed for r in rows) / len(rows) if rows else 0.0
+
+    def not_run(self) -> int:
+        return sum(r.not_run for r in self.results)
 
     def cases(self) -> list[str]:
         return list(dict.fromkeys(r.case for r in self.results))
@@ -61,9 +65,12 @@ class Report:
         for case in self.cases():
             rows = [r for r in self.results if r.case == case]
             notes = sorted({m for r in rows for m in r.missing + r.forbidden + ([r.error] if r.error else [])})
-            lines.append(f"{self.pass_rate(case):>5.0%}  {case}" + (f"   ({'; '.join(notes)})" if notes else ""))
+            score = "  n/a" if all(r.not_run for r in rows) else f"{self.pass_rate(case):>5.0%}"
+            lines.append(f"{score}  {case}" + (f"   ({'; '.join(notes)})" if notes else ""))
         cost = sum(r.cost_usd for r in self.results)
-        lines += ["", f"Overall pass rate: {self.pass_rate():.0%}   cost: ${cost:.4f}"]
+        skipped = self.not_run()
+        tail = f"   not run: {skipped} (the account refused the calls; run again later)" if skipped else ""
+        lines += ["", f"Overall pass rate: {self.pass_rate():.0%}   cost: ${cost:.4f}{tail}"]
         return "\n".join(lines)
 
     def as_json(self) -> str:
@@ -144,7 +151,9 @@ def _run_case(
             seconds = sum(r.get("seconds") or 0.0 for r in runs)
             if cs_id is None:
                 why = store.read().get("request", handed.request).data.get("waiting")
-                return RunResult(case["id"], n, False, error=why, cost_usd=cost, seconds=seconds)
+                last = runs[-1] if runs else {}
+                refused = last.get("error_kind") in ("rate_limited", "quota")
+                return RunResult(case["id"], n, False, error=why, cost_usd=cost, seconds=seconds, not_run=refused)
             outcomes = store.read().get("changeset", cs_id).data["ops"]
             missing = [_describe(e) for e in case.get("expect", []) if not _matches(e, outcomes, store)]
             forbidden = [_describe(f) for f in case.get("forbid", []) if _forbidden(f, outcomes, store, people_before)]

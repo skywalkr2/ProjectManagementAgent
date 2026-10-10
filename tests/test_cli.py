@@ -4,7 +4,7 @@ from pathlib import Path
 from engine.cli import main
 from engine.storage import Store
 from engine.storage.lease import Lease
-from tests.conftest import fixture_records
+from tests.conftest import DEMO_B, fixture_records
 
 
 def test_init_from_a_fixture_loads_records_and_commits(tmp_path, demo, capsys):
@@ -193,3 +193,18 @@ def test_ai_test_says_where_a_failing_key_was_read_from_and_never_shows_it(tmp_p
     assert main(["ai", "test", "-w", str(target)]) == 1
     out = capsys.readouterr().out
     assert f"key from the file {tmp_path / 'missing.txt'}" in out and "a-secret-value" not in out
+
+
+def test_evaluate_runs_a_workspaces_own_cases_with_its_own_ai_setup(tmp_path, capsys):
+    from engine.workspace import init_workspace
+
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    assert (ws.root / "evals").is_dir()
+    assert main(["evaluate", "-w", str(ws.root), "--stub", "--runs", "1"]) == 0
+    assert "Overall pass rate: 100%" in capsys.readouterr().out
+
+
+def test_evaluate_without_cases_says_where_to_find_some(tmp_path, capsys):
+    (tmp_path / "ws" / "config").mkdir(parents=True)
+    assert main(["evaluate", "-w", str(tmp_path / "ws")]) == 1
+    assert "--from" in capsys.readouterr().err

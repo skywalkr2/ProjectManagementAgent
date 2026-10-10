@@ -3,6 +3,21 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-10: Tolerate harmless answer shapes; wait out rate limits on the last account
+
+**Decided by:** Claude (design detail), from the owner's first evaluation run on a low-cost model; the owner can override.
+
+**What:** Evidence written as a bare string, or with extra keys beside the quote, is read as the quote; the quote is still
+checked word for word against the input. When the last account in line says to slow down, the call waits and tries
+again (`ai.rate_limits`: tries, longest wait); with another account available, it moves on at once. Evaluation reports
+calls the account refused as "not run" and leaves them out of the score. `cockpit evaluate -w <workspace>` uses that
+workspace's cases and AI setup, and `init` copies a template's cases.
+
+**Why:** The run threw away two nearly right answers over their shape and scored four rate-limited calls as failures,
+which said nothing about the model.
+
+**Impact:** New config key `ai.rate_limits` (schema, default, description, demo values). No change to what is checked.
+
 ## 2026-10-10: Hand-in is one box with a choice of whose words are in it
 
 **Decided by:** project owner (from trying the app); Claude wrote it up.

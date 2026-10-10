@@ -119,7 +119,10 @@ def _parser() -> argparse.ArgumentParser:
     sp.set_defaults(func=cmd_backup)
 
     sp = sub.add_parser("evaluate", help="score an AI account on a fictional workspace's cases")
-    sp.add_argument("--from", dest="template", type=Path, required=True, help="workspace whose evals/ to run")
+    sp.add_argument("--from", dest="template", type=Path, help="workspace whose evals/ to run (default: --workspace)")
+    sp.add_argument(
+        "--workspace", "-w", type=Path, help="use this workspace's AI setup, and its evals/ unless --from is given"
+    )
     sp.add_argument("--account", help="provider/model to test (default: the configured routine tier)")
     sp.add_argument("--ai-config", type=Path, help="use this ai.yaml instead of the cases' own AI setup")
     sp.add_argument("--runs", type=int, help="runs per case (default: ai.evaluation.runs)")
@@ -300,10 +303,20 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
     from engine.config import load_config
     from engine.evaluate import evaluate
 
-    template = args.template
-    if not (template / "evals").is_dir():
-        print(f"cockpit: {template} has no evals/ folder.", file=sys.stderr)
+    workspace = args.workspace.expanduser() if args.workspace else None
+    template = args.template or workspace
+    if template is None:
+        print("cockpit: say which cases to run: --workspace <your workspace> or --from <a workspace>.", file=sys.stderr)
         return 1
+    if not (template / "evals").is_dir():
+        print(
+            f"cockpit: {template} has no evals/ folder. Add --from with a workspace that has one, "
+            "for example the fictional workspaces/demo-b in the repository.",
+            file=sys.stderr,
+        )
+        return 1
+    if workspace is not None and not args.ai_config:
+        args.ai_config = workspace / "config" / "ai.yaml"
     with tempfile.TemporaryDirectory() as tmp:
         config_dir = template / "config"
         if args.ai_config:
