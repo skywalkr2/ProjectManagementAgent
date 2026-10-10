@@ -152,3 +152,10 @@ def test_calls_the_account_refused_are_not_run_and_left_out_of_the_score():
     assert report.pass_rate() == 1.0
     text = report.text()
     assert "n/a  b" in text and "not run: 1" in text
+
+
+def test_a_failed_case_shows_what_the_model_produced():
+    from engine.evaluate import Report, RunResult
+
+    report = Report("acct", 1, [RunResult("a", 0, False, missing=["op=question.add"], got=["note() applied"])])
+    assert "got: note() applied" in report.text()

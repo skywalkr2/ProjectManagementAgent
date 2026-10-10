@@ -56,6 +56,7 @@ class OpenAICompatibleAdapter:
         try:
             data = response.json()
             text = data["choices"][0]["message"]["content"] or ""
+            truncated = data["choices"][0].get("finish_reason") == "length"
         except (ValueError, KeyError, IndexError, TypeError):
             raise AiError("invalid_output", "the response wasn't in the expected format") from None
         usage = data.get("usage") or {}
@@ -66,6 +67,7 @@ class OpenAICompatibleAdapter:
             input_tokens=usage.get("prompt_tokens"),
             output_tokens=usage.get("completion_tokens"),
             upstream=data.get("provider"),
+            truncated=truncated,
         )
 
 

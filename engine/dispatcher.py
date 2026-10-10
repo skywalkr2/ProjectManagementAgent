@@ -131,14 +131,22 @@ def process(
             changeset = parse(result.text, store.plugins.ops)
         except Unreadable as err:
             changeset = None
+            limit = task.max_output
             if attempt < cfg.dispatch.fix_rounds:
-                task = replace(
-                    task,
-                    request=packet.task.request
-                    + "\n\n"
-                    + (f"Your previous answer couldn't be read: {err}. Answer with only the JSON object."),
+                why = (
+                    f"Your previous answer was cut off at the output limit ({limit} tokens). Answer more briefly."
+                    if result.truncated
+                    else f"Your previous answer couldn't be read: {err}. Answer with only the JSON object."
                 )
+                task = replace(task, request=packet.task.request + "\n\n" + why)
                 continue
+            if result.truncated:
+                return needs_you(
+                    store,
+                    request_id,
+                    f"The assistant's answer was cut off at the output limit ({limit} tokens for this kind of work). "
+                    f"Raise tasks.{task.kind}.max_output in ai.yaml, or hand in a shorter piece.",
+                )
             return needs_you(store, request_id, f"The assistant's answer couldn't be read: {err}.")
         if previous_ops is not None and _ops_of(changeset) == previous_ops:
             if attempt < cfg.dispatch.fix_rounds:

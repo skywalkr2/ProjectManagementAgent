@@ -41,6 +41,7 @@ class RunResult:
     cost_usd: float = 0.0
     seconds: float = 0.0
     error: str | None = None
+    got: list[str] = field(default_factory=list)  # what the model produced, shown when the case fails
     not_run: bool = False  # the account wouldn't take the call (rate limit, quota); says nothing about the model
 
 
@@ -67,6 +68,9 @@ class Report:
             notes = sorted({m for r in rows for m in r.missing + r.forbidden + ([r.error] if r.error else [])})
             score = "  n/a" if all(r.not_run for r in rows) else f"{self.pass_rate(case):>5.0%}"
             lines.append(f"{score}  {case}" + (f"   ({'; '.join(notes)})" if notes else ""))
+            got = next((r.got for r in rows if not r.passed and r.got), None)
+            if got:
+                lines.append("        got: " + "; ".join(got))
         cost = sum(r.cost_usd for r in self.results)
         skipped = self.not_run()
         tail = f"   not run: {skipped} (the account refused the calls; run again later)" if skipped else ""
@@ -172,12 +176,14 @@ def _run_case(
             outcomes = store.read().get("changeset", cs_id).data["ops"]
             missing = [_describe(e) for e in case.get("expect", []) if not _matches(e, outcomes, store)]
             forbidden = [_describe(f) for f in case.get("forbid", []) if _forbidden(f, outcomes, store, people_before)]
+            passed = not missing and not forbidden
             return RunResult(
                 case["id"],
                 n,
-                not missing and not forbidden,
+                passed,
                 missing,
                 forbidden,
+                got=[] if passed else [_summarize(o) for o in outcomes],
                 refused=sum(o["status"] == "refused" for o in outcomes),
                 held=sum(o["status"] == "held" for o in outcomes),
                 cost_usd=cost,
@@ -264,6 +270,14 @@ def _forbidden(f: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, 
                 continue
         return True
     return False
+
+
+def _summarize(outcome: dict[str, Any]) -> str:
+    """One produced op in a few words: its name, the fields that decide a match, and what happened to it."""
+    op = outcome["op"]
+    keys = ("to", "kind", "owners", "id", "due", "field")
+    fields = ", ".join(f"{k}={op[k]}" for k in keys if op.get(k) not in (None, [], ""))
+    return f"{op['op']}({fields}) {outcome['status']}"
 
 
 def _describe(item: dict[str, Any]) -> str:

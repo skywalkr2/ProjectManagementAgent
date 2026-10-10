@@ -35,6 +35,7 @@ class AiResult:
     output_tokens: int | None = None
     upstream: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
+    truncated: bool = False  # the provider stopped at the output limit, so the text is incomplete
 
 
 class AiError(Exception):

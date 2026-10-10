@@ -180,3 +180,11 @@ def test_a_wait_longer_than_the_limit_gives_up_without_sleeping(cfg, store):
     with pytest.raises(AiError, match="rate_limited"):
         router.call(TASK, request_id="REQ-1")
     assert len(seen) == 1
+
+
+def test_an_answer_stopped_at_the_output_limit_is_marked_cut_off(cfg, store):
+    body = ok_body('{"summary": "s", "ops": [')
+    body["choices"][0]["finish_reason"] = "length"
+    router, _ = router_with(cfg, store, {"main": lambda r: httpx.Response(200, json=body)})
+    result, _, _ = router.call(TASK, request_id="REQ-1")
+    assert result.truncated
