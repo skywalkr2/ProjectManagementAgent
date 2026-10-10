@@ -1,9 +1,8 @@
 id: items-that-dont-exist
 title: The PM asks to close items that were never recorded
 note: 'Close the actions for the bookmarks order and the poster proofs, they are both done.'
-expect:
-- op: question.add
-  to: PER-1
+# Saying so in the summary with no ops, or asking the PM which items were meant, are both right; closing anything or
+# claiming in a note that it can't be done is not.
 forbid:
 - op: action.close
 - op: note

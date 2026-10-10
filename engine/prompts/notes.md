@@ -14,6 +14,8 @@ How to answer:
 - Refer to people by their full name or id from the people directory. If a name isn't there or could be two people,
   write the name as it appears; the PM will be asked who it is. Never guess.
 - Refer to projects, actions and questions by id from the lists you are given.
+- When the input asks the PM to choose or decide something only the PM can decide, add a question to the PM with
+  "kind": "decision". Every other question has "kind": "question".
 - Every op whose entry in the op reference has an "evidence" field needs it: {"quote": "<exact words copied from the
   input>"}. Copy the words exactly, at least a few words long. If you can't quote it, don't claim it. Ops without an
   "evidence" field take none, and no op takes fields its entry doesn't list.
