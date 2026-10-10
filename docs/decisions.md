@@ -628,3 +628,5 @@ the design was removed; `CLAUDE.md` is the only copy.
 ## 2026-10-09: Plugin API 0.x host boundary
 
 Implementation of the owner-requested host uses per-store registries and post-commit events; unsupported 1.0 manifest contributions (including interfaces and reach capabilities) are refused explicitly until their extension points exist, with no scope added beyond the next-task brief.
+
+- 2026-10-10: Stages use deterministic plugin checks. Standing rules retain their 4.10 metadata and may reference a code check via `check`; prose without an executable check stays blocked, never interpreted by AI. A general executable rule language remains an open design question. Workspace stage lists replace pack lists by record type, including an empty list to remove them.

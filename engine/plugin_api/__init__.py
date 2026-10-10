@@ -14,6 +14,7 @@ from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from engine.config.schema import StageDefinition, TypeStages
 from engine.ops import EvidenceIn, OpModel, Tier
 from engine.records import Record
 from engine.storage import Stored, StoreError, WriteContext
@@ -97,6 +98,12 @@ class OpRegistration:
     writes: dict[str, tuple[str, ...]]
 
 
+@dataclass(frozen=True)
+class StageCheckResult:
+    passed: bool
+    reason: str
+
+
 class Registrar:
     """A staging registry: the host installs it only after checking the manifest."""
 
@@ -107,6 +114,8 @@ class Registrar:
         self.validators: dict[str, list[Callable]] = {}
         self.tasks: dict[str, TaskKind] = {}
         self.handlers: dict[str, Callable] = {}
+        self.stage_checks: dict[str, Callable] = {}
+        self.stage_defaults: dict[str, TypeStages] = {}
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
@@ -148,6 +157,20 @@ class Registrar:
             raise ValueError("duplicate task kind or empty op list")
         self.tasks[name] = TaskKind(name, ops, prompt, playbook)
 
+    def stage_check(self, id: str, fn: Callable) -> None:
+        """Register a pure check: (record, read_view, settings) -> StageCheckResult. Never call AI."""
+        self._name(id)
+        if id in self.stage_checks or not callable(fn):
+            raise ValueError("duplicate stage check or invalid callback")
+        self.stage_checks[id] = fn
+
+    def stages(self, record_type: str, stages: list[StageDefinition | dict], *, moves=None) -> None:
+        """Supply replaceable defaults for one of this plugin's record types."""
+        self._name(record_type)
+        if record_type in self.stage_defaults:
+            raise ValueError("duplicate default stages")
+        self.stage_defaults[record_type] = TypeStages(stages=stages, moves=moves)
+
     def subscribe(self, event: str, fn: Callable) -> None:
         if event in self.handlers or not callable(fn):
             raise ValueError("duplicate subscription or invalid handler")
@@ -168,4 +191,6 @@ __all__ = [
     "OpWriter",
     "EventContext",
     "Registrar",
+    "StageDefinition",
+    "StageCheckResult",
 ]

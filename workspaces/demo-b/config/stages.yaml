@@ -7,3 +7,4 @@ types:
       - {id: planned, label: Planned, entry: [], starts: []}
       - {id: active, label: In progress, entry: [], starts: [notes]}
       - {id: complete, label: Complete, entry: [], starts: []}
+wording: {}

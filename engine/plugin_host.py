@@ -20,8 +20,17 @@ import yaml
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 
+from engine.config.stages import validate_rules, validate_stages
 from engine.ops import OP_MODELS, TIERS
-from engine.plugin_api import PLUGIN_API_VERSION, EventContext, OpWriter, ReadView, Registrar, Settings
+from engine.plugin_api import (
+    PLUGIN_API_VERSION,
+    EventContext,
+    OpWriter,
+    ReadView,
+    Registrar,
+    Settings,
+    StageCheckResult,
+)
 from engine.plugin_manifest import Manifest, read_manifest
 from engine.records import REGISTRY
 from engine.storage import StoreError, WriteContext
@@ -47,6 +56,8 @@ class PluginHost:
         self.ops = dict(OP_MODELS)
         self.tiers = dict(TIERS)
         self.tasks = dict(TASKS)
+        self.stage_checks = {}
+        self.stages = cfg.stages.model_copy(deep=True)
         self.status: dict[str, PluginStatus] = {}
         self.manifests: dict[str, Manifest] = {}
         self.registrars: dict[str, Registrar] = {}
@@ -59,6 +70,10 @@ class PluginHost:
         self._discover(bundled)
         for name in cfg.workspace.plugins.enabled:
             self._load(name, set())
+        defaults = {kind: value for reg in self.registrars.values() for kind, value in reg.stage_defaults.items()}
+        self.stages.types = {**defaults, **self.stages.types}
+        validate_rules(cfg.rules, self.stage_checks)
+        validate_stages(self.stages, self.records, set(self.stage_checks) | {r.id for r in cfg.rules.rules}, self.tasks)
 
     def _discover(self, bundled: Path) -> None:
         for root in (bundled, self.store.path.parent / "plugins"):
@@ -140,6 +155,7 @@ class PluginHost:
             self.ops.update({key: value.model for key, value in registrar.ops.items()})
             self.tiers.update({key: value.tier for key, value in registrar.ops.items()})
             self.tasks.update(registrar.tasks)
+            self.stage_checks.update({key: (name, fn) for key, fn in registrar.stage_checks.items()})
             self.status[name].state = "enabled"
         except Exception as err:
             self.disable(name, str(err))
@@ -178,6 +194,8 @@ class PluginHost:
         expected = manifest.provides
         for key, actual in (
             ("record_types", registrar.records),
+            ("stage_checks", registrar.stage_checks),
+            ("stages", registrar.stage_defaults),
             ("ops", registrar.ops),
             ("op_validators", registrar.validators),
             ("ai_task_kinds", registrar.tasks),
@@ -191,6 +209,8 @@ class PluginHost:
             if model.prefix in prefixes:
                 raise ValueError("record id prefix collides with an existing record type")
             prefixes.add(model.prefix)
+        if not set(registrar.stage_defaults) <= set(registrar.records):
+            raise ValueError("default stages may target only the plugin's own record types")
         allowed_ops = set(OP_MODELS) | set(registrar.ops)
         if not set(registrar.validators) <= allowed_ops:
             raise ValueError("validators may target only core or own ops")
@@ -202,6 +222,33 @@ class PluginHost:
                 model = registrar.records.get(kind) or REGISTRY.get(kind)
                 if model is None or not fields or ("*" not in fields and not set(fields) <= set(model.model_fields)):
                     raise ValueError("op declares unknown record fields")
+
+    def stage_check(self, check_id, record, view=None):
+        """Guard callbacks and fail closed on missing, disabled or malformed checks."""
+        from engine.stages import wording
+
+        owner, fn = self.stage_checks.get(check_id, (None, None))
+        if owner is None or not self.active(owner):
+            return StageCheckResult(False, wording(self.cfg, "check_unavailable"))
+        if "/" in record.kind and not record.kind.startswith(owner + "/"):
+            return StageCheckResult(False, wording(self.cfg, "check_access"))
+        try:
+            result = fn(
+                deepcopy(record),
+                ReadView(view or self.store.read(), owner),
+                self.registrars[owner].config.model_copy(deep=True),
+            )
+            if (
+                not isinstance(result, StageCheckResult)
+                or type(result.passed) is not bool
+                or not isinstance(result.reason, str)
+                or not result.reason
+            ):
+                raise ValueError("stage check must return StageCheckResult with a reason")
+            return result
+        except Exception as err:
+            self.disable(owner, f"stage check failed: {err}")
+            return StageCheckResult(False, wording(self.cfg, "check_failed"))
 
     def task_kind(self, name: str):
         if "/" in name and not self.active(name.split("/")[0]):

@@ -26,4 +26,13 @@ def validate_declared(cfg, config_dir):
         records.update(manifest.provides.record_types)
         tasks.update(manifest.provides.ai_task_kinds)
         checks.update(manifest.provides.stage_checks)
-    validate_stages(cfg.stages, records, checks, tasks)
+    validate_rules(cfg.rules, checks)
+    validate_stages(cfg.stages, records, checks | {r.id for r in cfg.rules.rules}, tasks)
+
+
+def validate_rules(config, checks):
+    for rule in config.rules:
+        if rule.id in checks:
+            raise ConfigError(f"rules.yaml: rule id collides with code check {rule.id}")
+        if rule.check is not None and rule.check not in checks:
+            raise ConfigError(f"rules.yaml: {rule.id}: unknown code check {rule.check}")

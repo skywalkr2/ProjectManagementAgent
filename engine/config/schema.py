@@ -320,7 +320,23 @@ class TypeStages(ConfigModel):
         return self
 
 
+STAGE_WORDING = {
+    "check_unavailable": "The entry check is unavailable.",
+    "check_access": "The entry check cannot read this record type.",
+    "check_failed": "The entry check failed to run.",
+    "rule_inactive": "The standing rule is not active.",
+    "rule_scope": "The record is outside this rule's scope.",
+    "rule_prose": "This rule needs a deterministic code check before it can allow a move.",
+    "confirm": "This stage move waits for you to confirm it.",
+    "waiting": "Waiting for your go before starting this task.",
+}
+
+
 class StagesFile(FileModel):
+    wording: dict[str, str] = Field(
+        default_factory=lambda: dict(STAGE_WORDING),
+        description="Stage explanations by key; workspace values override the default wording.",
+    )
     moves: Literal["person", "rule"] = Field(
         "person", description="Who advances records: the person, or deterministic rules."
     )
@@ -335,12 +351,55 @@ class StagesFile(FileModel):
             return value
         value = dict(value)
         types = dict(value.get("types", {}))
-        for key in set(value) - {"version", "moves", "types"}:
+        for key in set(value) - {"version", "moves", "types", "wording"}:
             if key in types:
                 raise ValueError(f"record type {key} is configured twice")
             types[key] = value.pop(key)
         value["types"] = types
         return value
+
+
+# ---- config/rules.yaml ----------------------------------------------------------------------------------------------
+
+
+class RuleScope(ConfigModel):
+    task_kinds: list[str] = Field(
+        default_factory=list, description="Task kinds this standing rule applies to; empty means all."
+    )
+    records: list[str] = Field(
+        default_factory=list, description="Record types or type.field targets of this standing rule."
+    )
+    filter: dict[str, object] = Field(
+        default_factory=dict, description="Exact field values narrowing the rule's record targets."
+    )
+
+
+class StandingRule(ConfigModel):
+    id: str = Field("", min_length=1, description="Stable standing rule identifier.")
+    text: str = Field("", description="The person's wording of the rule, used as its explanation.")
+    applies_to: RuleScope = Field(default_factory=RuleScope, description="The structured target of this rule.")
+    source: str | None = Field(None, description="Request or other provenance for this rule.")
+    added: str | None = Field(None, description="Date this rule was added, in ISO form.")
+    status: Literal["active", "retired", "promoted"] = Field(
+        "active", description="Whether the standing rule is active."
+    )
+    check: str | None = Field(
+        None,
+        description="Optional deterministic code check implementing this rule; prose alone cannot pass a stage gate.",
+    )
+
+
+class RulesFile(FileModel):
+    rules: list[StandingRule] = Field(
+        default_factory=list, description="Standing instructions, identified separately for overrides and retirement."
+    )
+
+    @model_validator(mode="after")
+    def unique_ids(self):
+        ids = [rule.id for rule in self.rules]
+        if len(ids) != len(set(ids)):
+            raise ValueError("rule ids must be unique")
+        return self
 
 
 # ---- registry --------------------------------------------------------------------------------------------------------
@@ -356,6 +415,7 @@ FILES: dict[str, type[FileModel]] = {
     "language": LanguageFile,
     "ui": UiFile,
     "stages": StagesFile,
+    "rules": RulesFile,
 }
 
 #: The newest version each file format has reached.

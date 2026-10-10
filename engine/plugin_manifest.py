@@ -53,6 +53,7 @@ class Requires(Strict):
 
 class Provides(Strict):
     record_types: list[str] = Field(default_factory=list)
+    stages: list[str] = Field(default_factory=list)
     stage_checks: list[str] = Field(default_factory=list)
     ops: list[str] = Field(default_factory=list)
     op_validators: list[str] = Field(default_factory=list)
@@ -101,7 +102,7 @@ class Manifest(Strict):
     def identifiers(self) -> Manifest:
         import re
 
-        for category in ("record_types", "stage_checks", "ops", "ai_task_kinds", "panels", "today", "jobs"):
+        for category in ("record_types", "stages", "stage_checks", "ops", "ai_task_kinds", "panels", "today", "jobs"):
             names = getattr(self.provides, category)
             if len(set(names)) != len(names):
                 raise ValueError(f"duplicate {category}")
