@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
@@ -9,6 +9,7 @@ function change(id: string, extra: Partial<S["ChangeItem"]> = {}): S["ChangeItem
     id,
     version: 4,
     dismissed: false,
+    stage_task: false,
     state: "review",
     waiting: null,
     created_at: "2026-10-09T14:00:00Z",
@@ -203,4 +204,46 @@ test("a review row has no Dismiss, and a dismissed hand-in leaves Needs attentio
   await user.click(screen.getByRole("button", { name: "All" }));
   expect(screen.getByText("Dismissed")).toBeInTheDocument();
   expect(screen.getByText("Email from the printer")).toBeInTheDocument();
+});
+
+const gated = (extra: Partial<S["ChangeItem"]> = {}) =>
+  stopped({ approval: "required", estimate_usd: 0.8, waiting: "About $0.80. Waiting for your go.", ...extra });
+
+test("a run held for its cost is its own row: the estimate, Go with the version read, and no Try again", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [gated()],
+    "GET stages/records": () => [],
+    "GET stages/ready": () => [],
+    "GET stages/requests": () => [],
+    "POST requests/REQ-9/go": () => ({ ok: "queued" }),
+  });
+  renderApp(<WhatChanged />);
+  const row = await screen.findByRole("listitem", { name: "File the printer's dates" });
+  expect(within(row).getByText("Needs your go")).toBeInTheDocument();
+  expect(within(row).getByText("About $0.80")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  await user.click(within(row).getByRole("button", { name: "Go" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST requests/REQ-9/go")?.body).toEqual({ read_version: 4 }));
+  expect(await screen.findByText("Approved. Helper is on it.")).toBeInTheDocument();
+});
+
+test("a cost-held row can be dismissed from its menu, which has nothing else", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [gated({ estimate_usd: 0.004 })],
+    "GET stages/records": () => [],
+    "GET stages/ready": () => [],
+    "GET stages/requests": () => [],
+    "POST requests/REQ-9/dismiss": () => ({ ok: "REQ-9", version: 5 }),
+  });
+  renderApp(<WhatChanged />);
+  const row = await screen.findByRole("listitem", { name: "File the printer's dates" });
+  expect(within(row).getByText("Less than a cent")).toBeInTheDocument();
+  await user.click(within(row).getByRole("button", { name: /More actions for/ }));
+  expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toEqual(["Dismiss"]);
+  await user.click(screen.getByRole("menuitem", { name: "Dismiss" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST requests/REQ-9/dismiss")?.body).toEqual({ read_version: 4 }),
+  );
 });

@@ -64,6 +64,11 @@ class Provides(Strict):
     playbook: str | None = None
 
 
+class Subscription(Strict):
+    event: str
+    kinds: list[str] = Field(default_factory=list, description="Only records of these kinds; empty means every kind.")
+
+
 class Manifest(Strict):
     name: str = Field(pattern=r"^[a-z][a-z0-9-]*$")
     version: str
@@ -71,7 +76,7 @@ class Manifest(Strict):
     description: str
     depends_on: list[Dependency] = Field(default_factory=list)
     interfaces: Interfaces = Field(default_factory=Interfaces)
-    subscribes: list[str] = Field(default_factory=list)
+    subscribes: list[str | Subscription] = Field(default_factory=list)
     provides: Provides = Field(default_factory=Provides)
     config_schema: str
     requires: Requires = Field(default_factory=Requires)
@@ -108,9 +113,19 @@ class Manifest(Strict):
                 raise ValueError(f"duplicate {category}")
             if any(not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", n) for n in names):
                 raise ValueError(f"{category} identifiers must be namespaced {self.name}/<name>")
-        if len(set(self.subscribes)) != len(self.subscribes):
+        if len(set(self.events())) != len(self.subscribes):
             raise ValueError("duplicate event subscription")
         return self
+
+    def events(self) -> list[str]:
+        return [s if isinstance(s, str) else s.event for s in self.subscribes]
+
+    def kinds_for(self, event: str) -> list[str]:
+        """The record kinds a subscription is limited to; empty means every kind."""
+        for s in self.subscribes:
+            if not isinstance(s, str) and s.event == event:
+                return list(s.kinds)
+        return []
 
 
 def read_manifest(path: Path) -> Manifest:

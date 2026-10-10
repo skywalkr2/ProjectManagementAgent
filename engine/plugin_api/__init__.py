@@ -16,11 +16,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from engine.config.schema import StageDefinition, TypeStages
 from engine.ops import EvidenceIn, OpModel, Tier
-from engine.records import Record
+from engine.records import Record, RefTo, ref_fields
 from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
 
-PLUGIN_API_VERSION = "0.1.0"
+PLUGIN_API_VERSION = "0.2.0"
 
 
 class Settings(BaseModel):
@@ -30,6 +30,10 @@ class Settings(BaseModel):
 
 class PluginMisuse(StoreError):
     """The plugin broke its contract (reached outside its scope); the host disables it for the run."""
+
+
+class NeedsPerson(StoreError):
+    """An op set a value only the person may set; the host holds it for the person instead of applying it."""
 
 
 class ReadView:
@@ -46,18 +50,61 @@ class ReadView:
         self._allow(kind)
         return self.__view.get(kind, record_id)
 
-    def list(self, kind: str) -> list[Stored]:
+    def list(self, kind: str, *, project: str | None = None, **equals: Any) -> list[Stored]:
+        """Live records of a kind, optionally only those in one project or with given field values (matched in the
+        database, not by reading every record)."""
         self._allow(kind)
-        return self.__view.list(kind)
+        if project is not None:
+            equals = {**equals, "project": project}
+        return self.__view.find(kind, equals) if equals else self.__view.list(kind)
+
+    def find(self, kind: str, **equals: Any) -> Stored | None:
+        """The first live record of a kind with these field values, or None."""
+        found = self.list(kind, **equals)
+        return found[0] if found else None
 
 
 class OpWriter(ReadView):
     """An op's only write surface; context and declared fields cannot be replaced."""
 
-    def __init__(self, tx: Any, plugin: str, writes: dict[str, tuple[str, ...]], context: WriteContext):
+    def __init__(
+        self,
+        tx: Any,
+        plugin: str,
+        writes: dict[str, tuple[str, ...]],
+        context: WriteContext,
+        models: dict[str, type[Record]] | None = None,
+        referrers: Callable[[str, str], list[tuple[str, str]]] | None = None,
+    ):
         super().__init__(tx, plugin)
         self.__tx, self.__writes, self.__context = tx, writes, context
+        self.__models = models or {}
+        self.__referrers = referrers or (lambda kind, record_id: [])
         self.touched: list[dict[str, str]] = []
+
+    def _declared(self, kind: str, record_id: str | None, data: dict[str, Any]) -> None:
+        """Enforce what the record type declares: person-only values, unique fields and references."""
+        model = self.__models.get(kind)
+        if model is None:
+            return
+        if self.__context.actor != "pm":
+            for field, values in model.person_only.items():
+                if field in data and data[field] in values:
+                    raise NeedsPerson(f"only you can set {field} to {data[field]}")
+        current = self.__tx.get(kind, record_id).data if record_id else {}
+        merged = {**current, **data}
+        for group in model.unique:
+            if not set(group) & set(data):
+                continue
+            equals = {f: merged.get(f) for f in group}
+            clash = [s for s in self.__tx.find(kind, equals) if s.id != record_id]
+            if clash:
+                shown = ", ".join(f"{f}={v}" for f, v in equals.items())
+                raise StoreError(f"there is already a {kind} with {shown}")
+        for field, target in ref_fields(model):
+            value = data.get(field)
+            if value is not None and self.__tx.get(target, value) is None:
+                raise StoreError(f"{field} refers to {target} {value}, which doesn't exist")
 
     def _write(self, kind: str, fields: set[str]) -> None:
         self._allow(kind)
@@ -71,6 +118,7 @@ class OpWriter(ReadView):
         if data.get("stage") is not None:
             raise PluginMisuse("stage changes require stage.move")
         self._write(kind, {"*"})
+        self._declared(kind, None, data)
         result = self.__tx.create(kind, data, self.__context)
         self.touched.append({"kind": kind, "id": result.id})
         return result
@@ -81,9 +129,20 @@ class OpWriter(ReadView):
         if "stage" in changes:
             raise PluginMisuse("stage changes require stage.move")
         self._write(kind, set(changes))
+        self._declared(kind, record_id, changes)
         result = self.__tx.update(kind, record_id, changes, self.__context, read_version=read_version)
         self.touched.append({"kind": kind, "id": result.id})
         return result
+
+    def delete(self, kind: str, record_id: str, *, read_version: int) -> None:
+        """Delete one of this plugin's records (the op must declare `("*",)` for the kind). Refused while another
+        live record refers to it; Undo brings it back."""
+        self._write(kind, {"*"})
+        users = self.__referrers(kind, record_id)
+        if users:
+            raise StoreError(f"{kind} {record_id} is still referred to by {users[0][0]} {users[0][1]}")
+        self.__tx.delete(kind, record_id, self.__context, read_version=read_version)
+        self.touched.append({"kind": kind, "id": record_id})
 
 
 class EventContext(ReadView):
@@ -197,7 +256,9 @@ __all__ = [
     "Record",
     "OpModel",
     "EvidenceIn",
+    "NeedsPerson",
     "PluginMisuse",
+    "RefTo",
     "Tier",
     "WriteContext",
     "Stored",

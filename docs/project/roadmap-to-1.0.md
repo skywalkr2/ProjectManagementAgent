@@ -20,8 +20,8 @@ Last updated: 2026-10-10.
   the configured amount, per-run limit, budgets per kind of work (2026-10-10).
 - [x] Today: first-run card, assistant state (including the stand-in), Dismiss; one-box hand-in; notes under projects;
   Chasers "To send" / "Waiting on them" with Copy then Mark sent (2026-10-10).
-- [ ] Cost screens: the go showing the estimate; a small spend line.
-- [ ] Plugin API 0.2 (decisions, 2026-10-10): data levels, origin and person-only values, unique fields and `find`,
+- [x] Cost screens: the go showing the estimate; a spend line in the header (2026-10-10).
+- [x] Plugin API 0.2 (decisions, 2026-10-10), see `docs/plugin-api-0.x.md`: data levels, origin and person-only values, unique fields and `find`,
   filtered `list`, `Ref` fields, validators that see the changeset, event kind filters, `record.delete`.
 - [ ] The define-your-own kit with starting templates; the demo runs on a template (decisions, 2026-10-10).
 - [ ] Guided install and setup: built screens in the package, one-step install and update, first-run wizard, settings

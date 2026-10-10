@@ -8,6 +8,7 @@ function status(ai: S["AiState"]): S["Status"] {
   return {
     backup: { configured: false, last_success: null, age_hours: null, needs_attention: false, last_error: null },
     ai,
+    spend: { today_usd: 0, month_usd: 0, per_day_usd: 2, per_month_usd: 30, warn: false, warn_today: false, warn_month: false },
     requests: { queued: 0, running: 0, review: 0, needs_you: 0 },
     version: 1,
     restart_needed: null,

@@ -6,6 +6,7 @@ Each type has a kind (its table name in exports) and an id prefix. Plugins add r
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Any, ClassVar, Literal
 
@@ -19,10 +20,33 @@ class Record(BaseModel):
 
     record_kind: ClassVar[str]
     prefix: ClassVar[str]
+    #: Field values only the person may set; an op from anyone else that sets one is held for the person.
+    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {}
+    #: Field groups whose values must be unique among live records of this kind.
+    unique: ClassVar[tuple[tuple[str, ...], ...]] = ()
+    #: How sensitive these records are: packets that include them go only to accounts allowed this level.
+    data_level: ClassVar[str] = "internal"
 
     id: str
     stage: str | None = Field(None, description="Current configured stage id; wording lives in stages.yaml.")
     ext: dict[str, dict[str, Any]] = Field(default_factory=dict, description="Fields added by plugins, by plugin name.")
+
+
+@dataclass(frozen=True)
+class RefTo:
+    """Marks a field as holding the id of another record: `Annotated[str | None, RefTo("project")]`."""
+
+    kind: str
+
+
+def ref_fields(model: type[BaseModel]) -> list[tuple[str, str]]:
+    """(field, kind it points to) for every field marked with RefTo."""
+    found = []
+    for name, info in model.model_fields.items():
+        for meta in info.metadata:
+            if isinstance(meta, RefTo):
+                found.append((name, meta.kind))
+    return found
 
 
 class Link(BaseModel):

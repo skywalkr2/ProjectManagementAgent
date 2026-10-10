@@ -90,9 +90,22 @@ class AiState(BaseModel):
     detail: str | None = Field(None, description="The provider's own reason when there is one, shortened.")
 
 
+class SpendStatus(BaseModel):
+    """What the assistant's work has cost today and this month (UTC), against the configured limits."""
+
+    today_usd: float
+    month_usd: float
+    per_day_usd: float
+    per_month_usd: float
+    warn: bool = Field(description="Either total has reached the configured share of its limit.")
+    warn_today: bool = Field(description="Today's total has reached that share of the daily limit.")
+    warn_month: bool = Field(description="This month's total has reached that share of the monthly limit.")
+
+
 class Status(BaseModel):
     backup: BackupStatus
     ai: AiState
+    spend: SpendStatus
     requests: RequestCounts
     version: int
     restart_needed: str | None = Field(None, description="Why new work waits until the cockpit restarts, if it does.")
@@ -164,6 +177,11 @@ class ChangeItem(BaseModel):
     note: str | None
     source: str | None
     source_title: str | None
+    approval: Literal["required", "granted"] | None = Field(
+        None, description="Whether the request waits for the person's go or has had it."
+    )
+    stage_task: bool = Field(False, description="The request was started by a stage, so the stage views show its go.")
+    estimate_usd: float | None = Field(None, description="What the run was estimated to cost when it asked for a go.")
     changeset: ChangesetView | None
 
 
@@ -407,3 +425,4 @@ class StageRequestView(BaseModel):
     approval: Literal["required", "granted"]
     waiting: str | None
     stage_start: StageTaskOrigin
+    estimate_usd: float | None = Field(None, description="What the run was estimated to cost, once it has an estimate.")

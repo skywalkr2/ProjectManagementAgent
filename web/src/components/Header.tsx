@@ -5,6 +5,7 @@ import { useAct } from "../lib/act";
 import { time } from "../lib/dates";
 import type { LiveState } from "../lib/live";
 import type { View } from "../App";
+import { useTotal } from "../lib/money";
 import { useWords } from "../lib/wording";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -15,6 +16,15 @@ function backupText(b: S["BackupStatus"], t: T): string {
   const h = b.age_hours;
   const age = h < 1 ? t("age.under_hour") : h < 48 ? t("age.hours", { n: Math.floor(h) }) : t("age.days", { n: Math.floor(h / 24) });
   return b.needs_attention ? t("backup.overdue", { age }) : t("backup.ok", { age });
+}
+
+/** The assistant's cost so far, with the limit it is near said in words; nothing until a run has cost something. */
+function spendText(sp: S["SpendStatus"], t: T, total: (usd: number) => string): { text: string; near: string | null } | null {
+  if (sp.today_usd <= 0 && sp.month_usd <= 0) return null;
+  const line = t("spend.line", { today: total(sp.today_usd), month: total(sp.month_usd) });
+  if (!sp.warn) return { text: line, near: null };
+  const both = sp.warn_today && sp.warn_month;
+  return { text: line, near: t(both ? "spend.near_both" : sp.warn_today ? "spend.near_day" : "spend.near_month") };
 }
 
 export function Header(props: {
@@ -29,6 +39,8 @@ export function Header(props: {
   const act = useAct();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const b = status.data?.backup;
+  const total = useTotal();
+  const spend = status.data ? spendText(status.data.spend, t, total) : null;
   const backupNow = () => void act(() => api.backup(), () => ({ message: t("toast.backup_ran") }));
   return (
     <header className="top">
@@ -61,6 +73,16 @@ export function Header(props: {
                 !
               </span>
               {t("restart.needed")}
+            </span>
+          )}
+          {spend && (
+            <span className={spend.near ? "backup attention" : "backup"} data-spend>
+              {spend.near && (
+                <span className="mark" aria-hidden="true">
+                  !
+                </span>
+              )}
+              {spend.near ? t("spend.with_near", { line: spend.text, near: spend.near }) : spend.text}
             </span>
           )}
           {b && (

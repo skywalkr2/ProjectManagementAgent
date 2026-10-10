@@ -186,6 +186,22 @@
       },
       "ChangeItem": {
         "properties": {
+          "approval": {
+            "anyOf": [
+              {
+                "enum": [
+                  "required",
+                  "granted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether the request waits for the person's go or has had it.",
+            "title": "Approval"
+          },
           "changeset": {
             "anyOf": [
               {
@@ -203,6 +219,18 @@
           "dismissed": {
             "title": "Dismissed",
             "type": "boolean"
+          },
+          "estimate_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the run was estimated to cost when it asked for a go.",
+            "title": "Estimate Usd"
           },
           "id": {
             "title": "Id",
@@ -240,6 +268,12 @@
               }
             ],
             "title": "Source Title"
+          },
+          "stage_task": {
+            "default": false,
+            "description": "The request was started by a stage, so the stage views show its go.",
+            "title": "Stage Task",
+            "type": "boolean"
           },
           "state": {
             "enum": [
@@ -1730,6 +1764,53 @@
         "title": "SourceView",
         "type": "object"
       },
+      "SpendStatus": {
+        "description": "What the assistant's work has cost today and this month (UTC), against the configured limits.",
+        "properties": {
+          "month_usd": {
+            "title": "Month Usd",
+            "type": "number"
+          },
+          "per_day_usd": {
+            "title": "Per Day Usd",
+            "type": "number"
+          },
+          "per_month_usd": {
+            "title": "Per Month Usd",
+            "type": "number"
+          },
+          "today_usd": {
+            "title": "Today Usd",
+            "type": "number"
+          },
+          "warn": {
+            "description": "Either total has reached the configured share of its limit.",
+            "title": "Warn",
+            "type": "boolean"
+          },
+          "warn_month": {
+            "description": "This month's total has reached that share of the monthly limit.",
+            "title": "Warn Month",
+            "type": "boolean"
+          },
+          "warn_today": {
+            "description": "Today's total has reached that share of the daily limit.",
+            "title": "Warn Today",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "today_usd",
+          "month_usd",
+          "per_day_usd",
+          "per_month_usd",
+          "warn",
+          "warn_today",
+          "warn_month"
+        ],
+        "title": "SpendStatus",
+        "type": "object"
+      },
       "StageCheckView": {
         "properties": {
           "id": {
@@ -1916,6 +1997,18 @@
             "title": "Approval",
             "type": "string"
           },
+          "estimate_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the run was estimated to cost, once it has an estimate.",
+            "title": "Estimate Usd"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -2088,6 +2181,9 @@
             "description": "Why new work waits until the cockpit restarts, if it does.",
             "title": "Restart Needed"
           },
+          "spend": {
+            "$ref": "#/components/schemas/SpendStatus"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -2096,6 +2192,7 @@
         "required": [
           "backup",
           "ai",
+          "spend",
           "requests",
           "version"
         ],

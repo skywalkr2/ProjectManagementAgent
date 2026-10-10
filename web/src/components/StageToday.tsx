@@ -13,6 +13,7 @@ import {
   type StageRequest,
   type StageView,
 } from "../lib/stages";
+import { useEstimate } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { SafeText } from "./SafeText";
 
@@ -45,6 +46,7 @@ export function StageTodayRows(props: { today: ReturnType<typeof useStageToday> 
 function GoRow(props: { request: StageRequest; item: StageView | null }) {
   const { t } = useWords();
   const task = useTaskWords();
+  const estimate = useEstimate()(props.request.estimate_usd);
   const { error, busy, go } = useGo();
   const ref = useRef<HTMLLIElement>(null);
   const run = () => void go(props.request);
@@ -59,6 +61,7 @@ function GoRow(props: { request: StageRequest; item: StageView | null }) {
           <div id={titleId} className="name">
             <SafeText text={t("stages.go_waiting", { title, task: task(props.request.task) })} />
           </div>
+          {estimate && <span className="sub">{estimate}</span>}
         </div>
         <div className="acts">
           <button type="button" className="btn primary" disabled={busy} onClick={run}>

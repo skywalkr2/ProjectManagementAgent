@@ -1,7 +1,36 @@
-# Plugin API 0.1
+# Plugin API 0.2
 
-This is the minimal host requested in `project/next-task.md`, not plugin API 1.0. The complete runnable example is
+Plugin API 0.x, not 1.0: expect small changes until both of the host's own add-on packs run on it unchanged. Manifests
+declare `plugin_api: '>=0.2,<0.3'`; a manifest for 0.1 is refused (0.x minor versions may break). The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
+
+## What 0.2 adds
+
+- **Record types declare rules the core enforces** (class variables on the `Record` subclass):
+  - `person_only = {"status": ("decided", "locked")}`: an op that sets one of these values from anything but the
+    person (the assistant, a rule, a schedule) is **held for the person**, not refused or applied. When the person
+    releases it, it applies.
+  - `unique = (("project", "slug"),)`: these field groups must be unique among live records of the kind; a duplicate
+    is refused.
+  - `data_level = "internal"` (`open`, `internal` or `restricted`): must be listed in the manifest's
+    `requires.data_levels`. Work whose packet carries such a record (a stage task today; prompt bundles later) goes only
+    to AI accounts allowed that level.
+  - `project: Annotated[str | None, RefTo("project")] = None`: a reference to a core or own record kind. The core
+    checks the target exists on every write and refuses deleting a record still referred to. (Ids never change on
+    rename. Placing records under their project in exports and the synced folder comes with the synced folder.)
+- **Lookups:** `view.list(kind, project=None, **equals)` filters in the database; `view.find(kind, **equals)` returns
+  the first match or `None`. Both are on validators' views, event contexts and op writers.
+- **Validators see the changeset so far:** a validator's view is the changeset's own transaction, so op 2 can refer to
+  a record op 1 created. Before applying (for the fix round), validators run against a dry run of the changeset that is
+  rolled back. A validator may take a third argument, `origin`: `{"actor": "pm" | "assistant" | "rule", "trust":
+  "trusted" | "untrusted", "via": "screen" | "note" | "input" | "task" | "rule"}`. Two-argument validators keep working.
+- **Delete:** `writer.delete(kind, id, read_version=...)` deletes one of the plugin's own records (the op's `writes`
+  must give `("*",)` for the kind); refused while referred to; Undo brings it back. The core op `record.delete` does
+  the same for any record; it is a system op (from the assistant it waits for the person) and reading notes never
+  offers it.
+- **Event filters:** a `subscribes` entry may be `{event: record.changed, kinds: [<kind>, ...]}`; a plain event name
+  still means every kind.
+- **`ext` on core records** is reserved and may be removed before 1.0; keep your own record linked by `RefTo`.
 
 ## Discovery and configuration
 

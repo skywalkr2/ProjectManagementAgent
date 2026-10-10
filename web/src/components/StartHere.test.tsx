@@ -20,6 +20,7 @@ function api(opts: { ai?: S["AiState"]["state"]; people?: number; handed?: boole
     "GET status": () => ({
       backup: { configured: false, last_success: null, age_hours: null, needs_attention: false, last_error: null },
       ai: { state: opts.ai ?? "untested", detail: null },
+      spend: { today_usd: 0, month_usd: 0, per_day_usd: 2, per_month_usd: 30, warn: false, warn_today: false, warn_month: false },
       requests: { queued: 0, running: 0, review: 0, needs_you: 0 },
       version: 1,
       restart_needed: null,

@@ -52,7 +52,7 @@ def stage_workspace(tmp_path):
             {
                 "name": "stage-test",
                 "version": "0.1.0",
-                "plugin_api": ">=0.1,<0.2",
+                "plugin_api": ">=0.2,<0.3",
                 "description": "Stage contract fixture",
                 "entry": "fixture:register",
                 "config_schema": "fixture:Config",
@@ -399,7 +399,7 @@ def test_record_stage_api_and_explicit_go(stage_workspace, prefix):
         assert client.post(f"{base}/stages/move", json=body).status_code == 409
         assert not client.get(f"{base}/stages/ready").json()
         request = client.get(f"{base}/stages/requests").json()[0]
-        assert request["approval"] == "required"
+        assert request["approval"] == "required" and request["estimate_usd"] is None
         assert client.post(f"{base}/requests/{request['id']}/retry").status_code == 409
         go = client.post(f"{base}/requests/{request['id']}/go", json={"read_version": request["version"]})
         assert go.status_code == 200

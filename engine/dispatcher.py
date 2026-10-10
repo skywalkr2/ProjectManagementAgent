@@ -117,14 +117,15 @@ def process(
     )
 
     previous_ops = _previous_ops(store, req.data.get("previous"))
+    level = _data_level(store, req.data)
     tier = route(
         cfg,
         packet.task.kind,
         input_chars=len(packet.cleaned.text),
         quoted_messages=quoted_messages(packet.cleaned.text),
-        data_level="internal",
+        data_level=level,
     )
-    estimate = router.estimate(packet.task, tier=tier)
+    estimate = router.estimate(packet.task, tier=tier, data_level=level)
     budgets = cfg.ai.budgets
     if estimate is not None and estimate > budgets.per_run_usd:
         return needs_you(
@@ -144,14 +145,16 @@ def process(
             waiting=f"About ${estimate:.2f}. Waiting for your go.",
         )
         return None
-    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops)
+    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level)
     outcome = first
     stronger = escalation_tier(cfg, tier)
-    second_estimate = router.estimate(packet.task, tier=stronger) if first.escalate and stronger else None
+    second_estimate = (
+        router.estimate(packet.task, tier=stronger, data_level=level) if first.escalate and stronger else None
+    )
     within = second_estimate is None or second_estimate <= min(budgets.per_run_usd, budgets.confirm_above_usd)
     if first.escalate and stronger and stronger != tier and within:
         # One re-run on the stronger tier when checks still fail; it counts toward budgets like any run.
-        second = _rounds(store, cfg, router, packet.task, stronger, request_id, ctx, previous_ops)
+        second = _rounds(store, cfg, router, packet.task, stronger, request_id, ctx, previous_ops, level)
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
     if outcome.changeset is None:
@@ -163,6 +166,13 @@ def process(
     cs_id = apply_changeset(changeset, problems, ctx, run=run_id, now=now)
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
     return cs_id
+
+
+def _data_level(store: Store, request: dict) -> str:
+    """How sensitive the material in a request is: a stage task carries its record, at that record type's level."""
+    origin = request.get("stage_start")
+    model = store.plugins.records.get(origin["kind"]) if origin else None
+    return model.data_level if model is not None else "internal"
 
 
 @dataclass
@@ -183,6 +193,7 @@ def _rounds(
     request_id: str,
     ctx: Context,
     previous_ops: list | None,
+    data_level: str = "internal",
 ) -> _Outcome:
     """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong."""
     task = base
@@ -190,7 +201,7 @@ def _rounds(
     for attempt in range(cfg.dispatch.fix_rounds + 1):
         last = attempt == cfg.dispatch.fix_rounds
         try:
-            result, _choice, out.run_id = router.call(task, request_id=request_id, tier=tier)
+            result, _choice, out.run_id = router.call(task, request_id=request_id, tier=tier, data_level=data_level)
         except (BudgetReached, NoProvider) as err:
             return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=str(err))
         except AiError as err:
@@ -299,7 +310,8 @@ _PM_DISMISS = WriteContext(actor="pm", trust="trusted", op="request.dismiss")
 
 
 def dismiss(store: Store, request_id: str, read_version: int) -> None:
-    """Set aside a request that stopped, so it no longer needs attention. A stage task waiting for a go keeps its Go."""
+    """Set aside a request that stopped or waits for a go on its cost, so it no longer needs attention.
+    A stage task waiting for a go keeps its Go."""
     from engine.stages import wording
 
     with store.transaction() as tx:
@@ -308,7 +320,9 @@ def dismiss(store: Store, request_id: str, read_version: int) -> None:
             raise ValueError("this request doesn't exist")
         if cur.version != read_version:
             raise StoreError(wording(store.plugins.cfg, "request_changed"))
-        if cur.data.get("approval") == "required" or cur.data["state"] not in ("needs_you", "failed"):
+        if cur.data.get("stage_start") and cur.data.get("approval") == "required":
+            raise ValueError("this can't be dismissed")
+        if cur.data["state"] not in ("needs_you", "failed"):
             raise ValueError("this can't be dismissed")
         tx.update(
             "request",

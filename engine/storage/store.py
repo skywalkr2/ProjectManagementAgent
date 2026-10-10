@@ -190,6 +190,20 @@ class Tx:
         items = [_stored(r) for r in rows if include_deleted or not r["deleted"]]
         return sorted(items, key=lambda s: (id_number(s.id) or 0, s.id))
 
+    def find(self, kind: str, equals: dict[str, Any]) -> list[Stored]:
+        """Live records of a kind whose top-level fields equal the given values, matched in the database."""
+        sql, args = "SELECT * FROM records WHERE kind=? AND deleted=0", [kind]
+        for field, value in equals.items():
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", field):
+                raise StoreError(f"can't look up by {field!r}")
+            if value is None:
+                sql += f" AND json_extract(data, '$.{field}') IS NULL"
+            else:
+                sql += f" AND json_extract(data, '$.{field}') = ?"
+                args.append(int(value) if isinstance(value, bool) else value)
+        rows = self._c.execute(sql, args).fetchall()
+        return sorted((_stored(r) for r in rows), key=lambda s: (id_number(s.id) or 0, s.id))
+
     def kinds(self) -> list[str]:
         return [r[0] for r in self._c.execute("SELECT DISTINCT kind FROM records ORDER BY kind")]
 

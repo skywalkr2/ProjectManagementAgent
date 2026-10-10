@@ -5,6 +5,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { dayAndTime, day } from "../lib/dates";
 import { useRowKeys } from "../lib/keys";
+import { useEstimate } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -132,12 +133,19 @@ const PILL: Record<S["ChangeItem"]["state"], string> = {
   failed: "k-risk",
 };
 
+/** A run held back because its estimate is above the amount to confirm (stage tasks have their own go row). */
+function waitsForGo(c: S["ChangeItem"]): boolean {
+  return c.approval === "required" && !c.stage_task && c.state === "needs_you" && !c.dismissed;
+}
+
 function ChangeRow(props: { item: S["ChangeItem"] }) {
   const { t, tn } = useWords();
   const act = useAct();
+  const estimate = useEstimate();
   const { item } = props;
+  const gated = waitsForGo(item);
   const cs = item.changeset;
-  const [open, setOpen] = useState(item.state === "review" || item.state === "needs_you");
+  const [open, setOpen] = useState(item.state === "review" || (item.state === "needs_you" && !gated));
   const [sendingBack, setSendingBack] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
   const title = item.source_title || firstLine(item.note) || t("changes.untitled");
@@ -168,7 +176,12 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
 
   let primary: { label: string; run: () => void } | null = null;
   if (item.state === "review" && cs) primary = { label: t("changes.looks_good"), run: () => void looksGood() };
-  if (item.state === "needs_you" || item.state === "failed")
+  if (gated)
+    primary = {
+      label: t("changes.go"),
+      run: () => void act(() => api.stageGo(item.id, item.version), () => ({ message: t("toast.go") })),
+    };
+  else if (item.state === "needs_you" || item.state === "failed")
     primary = {
       label: t("action.try_again"),
       run: () => void act(() => api.retry(item.id), () => ({ message: t("toast.retrying") })),
@@ -196,7 +209,7 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
     <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={`t-${item.id}`}>
       <div className="row">
         <span className={`kind ${PILL[item.state]}`}>
-          {t(item.dismissed ? "changes.state.dismissed" : `changes.state.${item.state}`)}
+          {t(item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}
         </span>
         <button
           type="button"
@@ -206,7 +219,7 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
           onClick={() => setOpen(!open)}
         >
           <strong id={`t-${item.id}`}>{title}</strong>
-          <span className="sub">{subLine(item, t, tn)}</span>
+          <span className="sub">{gated ? (estimate(item.estimate_usd) ?? t("changes.sub.go_waiting", { when: dayAndTime(item.created_at) })) : subLine(item, t, tn)}</span>
         </button>
         <div className="acts">
           {primary && (

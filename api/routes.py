@@ -48,6 +48,7 @@ from api.schemas import (
     SentCounts,
     SentText,
     SourceView,
+    SpendStatus,
     StageHistoryEntry,
     StageMove,
     StageMoved,
@@ -71,6 +72,7 @@ from engine.prompts import render
 from engine.records import referrers
 from engine.stages import approve_stage_request, record_status, stage_history
 from engine.storage import Store, StoreError, WriteContext
+from engine.usage import spend
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
@@ -160,6 +162,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             StageRequestView(
                 id=r.id,
                 version=r.version,
+                estimate_usd=r.data.get("estimate_usd"),
                 **{key: r.data[key] for key in ("task", "state", "approval", "waiting", "stage_start")},
             )
             for r in store.read().list("request")
@@ -179,8 +182,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         b = state(ws, cfg)
         counts = {s: sum(x["state"] == s for x in reqs) for s in ("queued", "running", "review", "needs_you")}
         ai, detail = ai_state(ws, cfg, store)
+        spent = spend(store, cfg)
         return Status(
             ai=AiState(state=ai, detail=detail),
+            spend=SpendStatus(
+                today_usd=spent.today_usd,
+                month_usd=spent.month_usd,
+                per_day_usd=spent.per_day_usd,
+                per_month_usd=spent.per_month_usd,
+                warn=spent.warn,
+                warn_today=spent.warn_today,
+                warn_month=spent.warn_month,
+            ),
             backup=BackupStatus(
                 configured=b.configured,
                 last_success=b.last_success,
@@ -250,6 +263,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     note=d.get("note"),
                     source=d.get("source"),
                     source_title=sources.get(d.get("source"), {}).get("title"),
+                    approval=d.get("approval"),
+                    stage_task=bool(d.get("stage_start")),
+                    estimate_usd=d.get("estimate_usd"),
                     changeset=view,
                 )
             )

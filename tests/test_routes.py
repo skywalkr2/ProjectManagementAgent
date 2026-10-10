@@ -410,3 +410,93 @@ def test_status_says_when_the_assistant_is_not_ready(api, tmp_path, monkeypatch)
     set_responder(lambda task: '{"ok": true}')
     record(worker.ws, smoke_test(worker.cfg, env={}))
     assert client.get(f"{base}/status").json()["ai"]["state"] == "ok"
+
+
+def _record_run(store, cost: float, when) -> None:
+    from engine.storage import WriteContext
+
+    with store.transaction() as tx:
+        tx.create(
+            "run",
+            {
+                "request": "REQ-1",
+                "task": "notes",
+                "provider": "stub",
+                "model": "stub",
+                "tier": "routine",
+                "cost_usd": cost,
+                "outcome": "ok",
+                "started_at": when.isoformat(),
+            },
+            WriteContext("engine", "trusted", "test"),
+        )
+
+
+def test_status_reports_what_the_assistant_has_cost_and_when_a_limit_is_near(api):
+    from datetime import UTC, datetime, timedelta
+
+    client, base, _ = api
+    store = client.app.state.store
+    quiet = client.get(f"{base}/status").json()["spend"]
+    assert quiet["today_usd"] == 0 and quiet["month_usd"] == 0 and not quiet["warn"]
+    assert quiet["per_day_usd"] > 0 and quiet["per_month_usd"] > 0
+    now = datetime.now(UTC)
+    _record_run(store, 0.1, now)
+    _record_run(store, 0.2, now - timedelta(days=40))  # last month or earlier: counts toward neither total
+    spend = client.get(f"{base}/status").json()["spend"]
+    assert spend["today_usd"] == pytest.approx(0.1) and spend["month_usd"] == pytest.approx(0.1)
+    assert not spend["warn"] and not spend["warn_today"] and not spend["warn_month"]
+    # A run that brings the day to its warning share warns for the day only.
+    _record_run(store, spend["per_day_usd"] * 0.8, now)
+    near = client.get(f"{base}/status").json()["spend"]
+    assert near["warn"] and near["warn_today"] and not near["warn_month"]
+
+
+@pytest.fixture
+def gated(tmp_path):
+    """A workspace where every run is priced above the amount to confirm, so each waits for the PM's go."""
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    flags = {
+        "server.base_path": "/",
+        "storage.backups.targets": [{"path": str(tmp_path / "offsite")}],
+        "ai.prices.stub/default": {"input_per_million": 50.0, "output_per_million": 50.0},
+        "ai.budgets.confirm_above_usd": 0.001,
+        "ai.budgets.per_run_usd": 10.0,
+    }
+    cfg = ws.config(env={}, flags=flags)
+    app = create_app(ws, cfg, TOKEN, ui_dist=tmp_path / "no-ui")
+    with TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}) as client:
+        yield client, "/api", app.state.worker
+    set_responder(None)
+
+
+def _held_for_cost(client, base, worker):
+    set_responder(lambda task: json.dumps({"summary": "Filed as a note.", "ops": [{"op": "note", "text": "Noted."}]}))
+    req = client.post(f"{base}/handin", json={"note": "file this"}).json()["request"]
+    worker.run_pending()
+    return _item(client, base, req)
+
+
+def test_a_run_held_for_its_cost_shows_its_estimate_and_goes_on_the_go(gated):
+    client, base, worker = gated
+    item = _held_for_cost(client, base, worker)
+    assert item["state"] == "needs_you" and item["approval"] == "required" and not item["stage_task"]
+    assert item["estimate_usd"] > 0.001 and f"{item['estimate_usd']:.2f}" in item["waiting"]
+    assert client.post(f"{base}/requests/{item['id']}/retry").status_code == 409
+    assert client.post(f"{base}/requests/{item['id']}/go", json={"read_version": item["version"]}).status_code == 200
+    assert _item(client, base, item["id"])["approval"] == "granted"
+    assert worker.run_pending() == 1
+    assert _item(client, base, item["id"])["state"] == "review"
+
+
+def test_a_run_held_for_its_cost_can_be_dismissed_and_put_back(gated):
+    client, base, worker = gated
+    item = _held_for_cost(client, base, worker)
+    gone = client.post(f"{base}/requests/{item['id']}/dismiss", json={"read_version": item["version"]})
+    assert gone.status_code == 200
+    after = _item(client, base, item["id"])
+    assert after["state"] == "done" and after["dismissed"] and after["approval"] == "required"
+    back = client.post(f"{base}/requests/{item['id']}/undismiss", json={"read_version": gone.json()["version"]})
+    assert back.status_code == 200
+    restored = _item(client, base, item["id"])
+    assert restored["state"] == "needs_you" and not restored["dismissed"] and restored["approval"] == "required"

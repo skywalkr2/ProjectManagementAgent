@@ -151,6 +151,15 @@ class StageMoveOp(OpModel):
     read_version: int = Field(ge=1)
 
 
+class RecordDeleteOp(OpModel):
+    """Delete a record. Refused while another live record refers to it; Undo brings it back. A system op: from the
+    assistant it waits for the person; never part of extracting notes."""
+
+    op: Literal["record.delete"] = "record.delete"
+    record: RecordRef
+    read_version: int = Field(ge=1)
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -161,7 +170,8 @@ Op = Annotated[
     | QuestionAddOp
     | QuestionDoneOp
     | PersonAddOp
-    | StageMoveOp,
+    | StageMoveOp
+    | RecordDeleteOp,
     Field(discriminator="op"),
 ]
 
@@ -176,9 +186,10 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "question.done": QuestionDoneOp,
     "person.add": PersonAddOp,
     "stage.move": StageMoveOp,
+    "record.delete": RecordDeleteOp,
 }
 
-TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS}
+TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {"record.delete": "system"}
 
 #: Ops whose evidence is required (record.set requires it for the fields in EVIDENCE_FIELDS).
 NEEDS_EVIDENCE = {"fact", "action.add", "action.close", "question.done"}

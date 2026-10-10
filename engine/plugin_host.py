@@ -25,6 +25,7 @@ from engine.ops import OP_MODELS, TIERS
 from engine.plugin_api import (
     PLUGIN_API_VERSION,
     EventContext,
+    NeedsPerson,
     OpWriter,
     PluginMisuse,
     ReadView,
@@ -33,7 +34,7 @@ from engine.plugin_api import (
     StageCheckResult,
 )
 from engine.plugin_manifest import Manifest, read_manifest
-from engine.records import REGISTRY
+from engine.records import REFERENCES, REGISTRY, ref_fields, values_at
 from engine.storage import StoreError, WriteContext
 from engine.tasks import TASKS
 
@@ -152,9 +153,9 @@ class PluginHost:
             p, reach = manifest.provides, manifest.requires
             if p.panels or p.today or p.jobs or p.playbook or manifest.interfaces.provides or manifest.interfaces.uses:
                 raise ValueError("manifest requests an extension point not implemented in plugin API 0.x")
-            if reach.network or reach.secrets or reach.tools or "restricted" in reach.data_levels:
+            if reach.network or reach.secrets or reach.tools:
                 raise ValueError("declared reach is not supported by plugin API 0.x")
-            if not set(manifest.subscribes) <= EVENTS:
+            if not set(manifest.events()) <= EVENTS:
                 raise ValueError("unsupported event subscription")
             for dep in manifest.depends_on:
                 if dep.name not in self.cfg.workspace.plugins.enabled:
@@ -229,13 +230,24 @@ class PluginHost:
         ):
             if set(getattr(expected, key)) != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
-        if set(manifest.subscribes) != set(registrar.handlers):
+        if set(manifest.events()) != set(registrar.handlers):
             raise ValueError("registered handlers do not match subscribes exactly")
         prefixes = {model.prefix for model in self.records.values()}
         for model in registrar.records.values():
             if model.prefix in prefixes:
                 raise ValueError("record id prefix collides with an existing record type")
             prefixes.add(model.prefix)
+        for model in registrar.records.values():
+            fields = set(model.model_fields)
+            if not set(model.person_only) <= fields or any(not set(group) <= fields for group in model.unique):
+                raise ValueError("person_only and unique may name only the record type's own fields")
+            if model.data_level not in ("open", "internal", "restricted"):
+                raise ValueError("data_level must be open, internal or restricted")
+            if model.data_level not in manifest.requires.data_levels:
+                raise ValueError("a record type's data_level must be listed in requires.data_levels")
+            for field, target in ref_fields(model):
+                if target not in REGISTRY and target not in registrar.records:
+                    raise ValueError(f"{field} refers to an unknown record kind {target}")
         if not set(registrar.stage_defaults) <= set(registrar.records):
             raise ValueError("default stages may target only the plugin's own record types")
         allowed_ops = set(OP_MODELS) | set(registrar.ops)
@@ -288,8 +300,34 @@ class PluginHost:
             raise StoreError("task plugin is disabled")
         return self.tasks[name]
 
-    def validators(self, op: Any) -> list[str]:
+    def references(self) -> dict[str, list[tuple[str, str]]]:
+        """Every declared reference, core and plugin: kind -> [(field path, kind it points to)]."""
+        refs = {kind: list(paths) for kind, paths in REFERENCES.items()}
+        for kind, model in self.records.items():
+            if "/" in kind:
+                refs.setdefault(kind, []).extend(ref_fields(model))
+        return refs
+
+    def _referrers(self, view: Any) -> Any:
+        def find(kind: str, record_id: str) -> list[tuple[str, str]]:
+            found = []
+            for other, paths in self.references().items():
+                for path, target in paths:
+                    if target != kind or other not in self.records:
+                        continue
+                    for stored in view.list(other):
+                        if record_id in values_at(stored.data, path):
+                            found.append((other, stored.id))
+            return found
+
+        return find
+
+    def validators(self, op: Any, view: Any = None, origin: dict[str, str] | None = None) -> list[str]:
+        """Plugin validators for one op. `view` is the changeset's own transaction when there is one, so a validator
+        sees records earlier ops in the same changeset created; `origin` says who asked (passed to validators that
+        take a third argument)."""
         problems = []
+        origin = dict(origin or {"actor": "pm", "trust": "trusted", "via": "screen"})
         owner = op.op.split("/")[0] if "/" in op.op else None
         if owner and not self.active(owner):
             problems.append("op plugin is disabled")
@@ -299,7 +337,10 @@ class PluginHost:
                     # A disabled plugin's own ops are refused above; core ops carry on without its validators.
                     continue
                 try:
-                    result = fn(op.model_copy(deep=True), ReadView(self.store.read(), name))
+                    args = [op.model_copy(deep=True), ReadView(view if view is not None else self.store.read(), name)]
+                    if _takes_three(fn):
+                        args.append(dict(origin))
+                    result = fn(*args)
                     if not isinstance(result, (list, tuple)) or any(not isinstance(p, str) for p in result):
                         raise ValueError("validators return a list of refusal messages")
                     problems.extend(result)
@@ -313,11 +354,14 @@ class PluginHost:
         if not self.active(name):
             raise StoreError("op plugin is disabled")
         registration = self.registrars[name].ops[op.op]
-        writer = OpWriter(tx, name, registration.writes, context)
+        writer = OpWriter(tx, name, registration.writes, context, models=self.records, referrers=self._referrers(tx))
         try:
             registration.apply(op.model_copy(deep=True), writer, self.registrars[name].config.model_copy(deep=True))
         except PluginMisuse as err:
             self.disable(name, f"op broke its contract: {err}")
+            raise
+        except NeedsPerson:
+            # Held for the person by the applier; nothing is wrong with the plugin.
             raise
         except StoreError:
             # An ordinary refusal (stale version, invalid value) refuses this op only.
@@ -339,6 +383,9 @@ class PluginHost:
                     for name, registrar in list(self.registrars.items()):
                         key = (name, event)
                         if not self.active(name) or event not in registrar.handlers or key in chain:
+                            continue
+                        kinds = self.manifests[name].kinds_for(event)
+                        if kinds and payload.get("kind") not in kinds:
                             continue
                         self._chain = chain | {key}
                         try:
@@ -392,3 +439,15 @@ class PluginHost:
         for key in list(sys.modules):
             if any(key == name or key.startswith(name + ".") for name in self._modules):
                 del sys.modules[key]
+
+
+def _takes_three(fn: Any) -> bool:
+    """Validators written for plugin API 0.1 take (op, view); 0.2 adds an optional third argument, the origin."""
+    import inspect
+
+    try:
+        params = inspect.signature(fn).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    positional = [p for p in params if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
+    return len(positional) >= 3 or any(p.kind == p.VAR_POSITIONAL for p in params)

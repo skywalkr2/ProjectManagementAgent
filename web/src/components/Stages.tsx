@@ -18,6 +18,7 @@ import {
   type StageRequest,
   type StageView,
 } from "../lib/stages";
+import { useEstimate } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
@@ -169,13 +170,17 @@ function StageRow(props: { view: StageView; waiting: StageRequest[] }) {
 function WaitingLine(props: { request: StageRequest }) {
   const { t } = useWords();
   const task = useTaskWords();
+  const estimate = useEstimate()(props.request.estimate_usd);
   const { error, busy, go } = useGo();
   const ref = useRef<HTMLLIElement>(null);
   const run = () => void go(props.request);
   useRowKeys(ref, { primary: run });
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
-      <div className="title">{upperFirst(t("stages.go_here", { task: task(props.request.task) }))}</div>
+      <div>
+        <div className="title">{upperFirst(t("stages.go_here", { task: task(props.request.task) }))}</div>
+        {estimate && <div className="meta">{estimate}</div>}
+      </div>
       <div className="acts">
         <button type="button" className="btn primary" disabled={busy} onClick={run}>
           {t("stages.go")}

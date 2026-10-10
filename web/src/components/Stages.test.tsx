@@ -154,16 +154,17 @@ test("Today lists tasks waiting for a go and items ready to move on, never inter
   const user = userEvent.setup();
   const calls = fakeApi({
     "GET changes": () => [
-      { id: "R-1", version: 2, dismissed: false, state: "needs_you", waiting: "Waiting for your go.", created_at: "2026-10-09T14:00:00Z", note: null, source: null, source_title: null, changeset: null },
+      { id: "R-1", version: 2, dismissed: false, state: "needs_you", waiting: "Waiting for your go.", created_at: "2026-10-09T14:00:00Z", note: null, source: null, source_title: null, approval: "required", stage_task: true, estimate_usd: 0.4, changeset: null },
     ],
     "GET stages/records": () => [ready, blocked],
     "GET stages/ready": () => [ready],
-    "GET stages/requests": () => [request({ task: "some/unnamed-kind" })],
+    "GET stages/requests": () => [request({ task: "some/unnamed-kind", estimate_usd: 0.4 })],
     "POST requests/R-1/go": () => ({ ok: "queued" }),
     "POST stages/move": () => ({ changeset: "CS-7", stages: ready }),
   });
   renderApp(<WhatChanged />);
   const go = await screen.findByRole("listitem", { name: "Alpha item: Helper's work is waiting for your go" });
+  expect(within(go).getByText("About $0.40")).toBeInTheDocument();
   expect(screen.queryByText(/unnamed-kind/)).toBeNull();
   expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   const moveRow = screen.getByRole("listitem", { name: "Alpha item is ready for Third step" });
@@ -172,4 +173,18 @@ test("Today lists tasks waiting for a go and items ready to move on, never inter
   await waitFor(() => expect(calls.find((c) => c.route === "POST requests/R-1/go")?.body).toEqual({ read_version: 2 }));
   await user.click(within(moveRow).getByRole("button", { name: "Move to Third step" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST stages/move")?.body).toMatchObject({ to: "third" }));
+});
+
+test("a task waiting for the go shows its estimate under the item once it has one, and nothing before", async () => {
+  fakeApi({
+    "GET stages/records": () => [ready],
+    "GET stages/requests": () => [request({ estimate_usd: 0.4 }), request({ id: "R-3", estimate_usd: null })],
+  });
+  renderApp(<Stages />);
+  const alpha = await screen.findByRole("listitem", { name: "Alpha item" });
+  const waiting = await within(alpha).findByRole("list", { name: "Waiting for your go" });
+  const lines = within(waiting).getAllByRole("listitem");
+  expect(lines).toHaveLength(2);
+  expect(within(lines[0]).getByText("About $0.40")).toBeInTheDocument();
+  expect(within(lines[1]).queryByText(/\$|cent/)).toBeNull();
 });

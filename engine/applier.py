@@ -31,10 +31,12 @@ from engine.ops import (
     PersonAddOp,
     QuestionAddOp,
     QuestionDoneOp,
+    RecordDeleteOp,
     RecordLogOp,
     RecordSetOp,
     StageMoveOp,
 )
+from engine.plugin_api import NeedsPerson
 from engine.records import model_for
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
@@ -85,7 +87,9 @@ class Context:
 
 
 def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
-    problems: list[Problem] = []
+    problems: list[Problem] = [
+        Problem("plugin-validator", "refuse", i, message) for i, message in _validate_in_order(cs, ctx)
+    ]
     view = ctx.store.read()
     lints = ctx.cfg.checks.lints
     open_actions = [a for a in view.list("action") if a.data["status"] != "done"]
@@ -103,8 +107,15 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         if name not in ctx.allowed_ops:
             refuse(i, "allowed-ops", f"{name} isn't an op this task may use")
             continue
-        for message in ctx.store.plugins.validators(op):
-            refuse(i, "plugin-validator", message)
+        if isinstance(op, RecordDeleteOp):
+            users = ctx.store.plugins._referrers(view)(op.record.kind, op.record.id)
+            if users:
+                refuse(
+                    i,
+                    "still-referred-to",
+                    f"{op.record.kind} {op.record.id} is still referred to by {users[0][0]} {users[0][1]}",
+                )
+                continue
         if isinstance(op, StageMoveOp):
             from engine.stages import validate_move, wording
 
@@ -280,7 +291,12 @@ def apply_changeset(
         outcomes: list[OpOutcome] = []
         for i, op in enumerate(cs.ops):
             mine = list(by_op.get(i, []))
-            mine += [Problem("plugin-validator", "refuse", i, message) for message in ctx.store.plugins.validators(op)]
+            known = {p.message for p in mine if p.check == "plugin-validator"}
+            mine += [
+                Problem("plugin-validator", "refuse", i, message)
+                for message in ctx.store.plugins.validators(op, view=tx, origin=origin_of(ctx))
+                if message not in known
+            ]
             outcome = OpOutcome(
                 i,
                 op.model_dump(mode="json", exclude_none=True),
@@ -307,6 +323,10 @@ def apply_changeset(
                     try:
                         outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
                         outcome.question = question
+                    except NeedsPerson as err:
+                        tx.sql("ROLLBACK TO plugin_op")
+                        del tx.pending[pending:]
+                        outcome.status, outcome.reason = "held", str(err)
                     except StoreError as err:
                         tx.sql("ROLLBACK TO plugin_op")
                         del tx.pending[pending:]
@@ -363,6 +383,42 @@ def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
     return None
 
 
+def origin_of(ctx: Context) -> dict[str, str]:
+    """Who asked for a change, as plugin validators see it."""
+    if ctx.confirmed_by_pm:
+        return {"actor": "pm", "trust": "trusted", "via": "screen"}
+    via = "input" if ctx.inputs.source else "task" if ctx.inputs.trust == "untrusted" else "note"
+    return {"actor": "assistant", "trust": ctx.inputs.trust, "via": via}
+
+
+class _DryRun(Exception):
+    pass
+
+
+def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[tuple[int, str]]:
+    """Run plugin validators op by op against a transaction where the earlier ops are applied, then roll it all back,
+    so a validator sees what earlier ops in the same changeset created. Nothing is kept and no event is published."""
+    found: list[tuple[int, str]] = []
+    try:
+        with ctx.store.transaction(notify=False) as tx:
+            for i, op in enumerate(cs.ops):
+                messages = ctx.store.plugins.validators(op, view=tx, origin=origin_of(ctx))
+                found += [(i, m) for m in messages]
+                if messages or op.op not in ctx.allowed_ops:
+                    continue
+                tx.sql("SAVEPOINT dry_op")
+                try:
+                    _apply_op(tx, op, ctx, _wctx(ctx, "dry-run", i, op), datetime.now(UTC).date())
+                except Exception:
+                    tx.sql("ROLLBACK TO dry_op")
+                finally:
+                    tx.sql("RELEASE dry_op")
+            raise _DryRun
+    except _DryRun:
+        pass
+    return found
+
+
 def _wctx(ctx: Context, cs_id: str, index: int, op: OpModel) -> WriteContext:
     evidence = getattr(op, "evidence", None)
     ev = None
@@ -387,6 +443,13 @@ def _apply_op(
         return apply_move(ctx.store, tx, op, w), None
     if "/" in op.op:
         return ctx.store.plugins.apply(tx, op, w), None
+    if isinstance(op, RecordDeleteOp):
+        kind, rid = op.record.kind, op.record.id
+        users = ctx.store.plugins._referrers(tx)(kind, rid)
+        if users:
+            raise StoreError(f"{kind} {rid} is still referred to by {users[0][0]} {users[0][1]}")
+        tx.delete(kind, rid, w, read_version=op.read_version)
+        return [{"kind": kind, "id": rid}], None
     trust = ctx.inputs.trust
     source = ctx.inputs.source
     touched: list[dict[str, Any]] = []
@@ -705,8 +768,13 @@ def _revert(tx: Tx, entries: list[dict[str, Any]], changeset_id: str) -> None:
     for e in entries:
         by_record.setdefault((e["kind"], e["record_id"]), []).append(e)
     for (kind, rid), rows in by_record.items():
-        current = tx.get(kind, rid)
+        current = tx.get(kind, rid, include_deleted=True)
         if current is None:
+            continue
+        if current.deleted:
+            # This changeset deleted it (its last row is the delete): bring it back under its own id.
+            if any(r["field"] is None and r["version"] == current.version for r in rows):
+                tx.undelete(kind, rid, w, read_version=current.version)
             continue
         created = any(r["version"] == 1 for r in rows)
         if created:

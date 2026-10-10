@@ -16,7 +16,10 @@ class TaskKind:
 
 
 TASKS: dict[str, TaskKind] = {
-    "notes": TaskKind(name="notes", ops=tuple(OP_MODELS), prompt="notes", playbook="notes"),
+    # Reading notes never deletes anything; deletion is the person's own act (or a plugin task that declares it).
+    "notes": TaskKind(
+        name="notes", ops=tuple(n for n in OP_MODELS if n != "record.delete"), prompt="notes", playbook="notes"
+    ),
 }
 
 
