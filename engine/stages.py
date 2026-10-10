@@ -81,5 +81,37 @@ def apply_move(store, tx, op, context):
     if context.actor not in ("pm", "rule"):
         raise StoreError(wording(store.plugins.cfg, "confirm"))
     record, target = validate_move(store, op, tx)
+    if context.actor == "rule":
+        settings = store.plugins.stages.types[record.kind]
+        status = record_status(store, record, tx)
+        if (
+            (settings.moves or store.plugins.stages.moves) != "rule"
+            or not status["ready"]
+            or status["next"]["id"] != target.id
+        ):
+            raise StoreError("stage.move: this move requires the person")
     tx.update(record.kind, record.id, {"stage": target.id}, context, read_version=op.read_version)
     return [{"kind": record.kind, "id": record.id}]
+
+
+def move_ready_records(store):
+    """One next-stage move per record per worker pass, without dispatching AI."""
+    from engine.applier import move_stage
+    from engine.ops import StageMoveOp
+    from engine.storage import StoreError
+
+    moved = []
+    for kind, settings in store.plugins.stages.types.items():
+        if (settings.moves or store.plugins.stages.moves) != "rule":
+            continue
+        for record in store.read().list(kind):
+            status = record_status(store, record)
+            if not status["ready"]:
+                continue
+            op = StageMoveOp(record=status["record"], to=status["next"]["id"], read_version=record.version)
+            try:
+                moved.append(move_stage(store, op, actor="rule"))
+            except StoreError:
+                # Another writer or changed entry check leaves the record for a later pass.
+                continue
+    return moved

@@ -219,3 +219,50 @@ def test_release_rechecks_entry_conditions_and_version(stage_workspace):
     with pytest.raises(StoreError, match="changed since"):
         release(store, cfg, cs, 0)
     assert store.read().get(record.kind, record.id).data["stage"] is None
+
+
+def test_worker_rule_moves_without_ai_and_records_rule_source(stage_workspace):
+    from engine.storage import WriteContext
+    from engine.worker import Events, Worker
+    from engine.workspace import Workspace
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.moves = "rule"
+
+    def no_ai():
+        pytest.fail("stage checks must not use AI")
+
+    worker = Worker(Workspace(store.path.parent), store, cfg, Events(), router_factory=no_ai)
+    worker.run_pending()
+    current = store.read().get(record.kind, record.id)
+    assert current.data["stage"] == "draft"
+    worker.run_pending()
+    assert store.read().get(record.kind, record.id).data["stage"] == "draft"
+    with store.transaction() as tx:
+        tx.update(
+            record.kind, record.id, {"ready": True}, WriteContext("pm", "trusted", "test"), read_version=current.version
+        )
+    worker.run_pending()
+    assert store.read().get(record.kind, record.id).data["stage"] == "ready"
+    ledger = [e for e in store.read().ledger() if e["field"] == "stage" and e["after"] == "ready"]
+    assert ledger[-1]["actor"] == "rule"
+    assert ledger[-1]["evidence"]["rule"].endswith("/ready")
+    assert ledger[-1]["changeset"]
+
+
+def test_person_override_and_restart_stop_rule_moves(stage_workspace):
+    from engine.worker import Events, Worker
+    from engine.workspace import Workspace
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.moves = "rule"
+    settings = store.plugins.stages.types[record.kind]
+    settings.moves = "person"
+    worker = Worker(Workspace(store.path.parent), store, cfg, Events())
+    worker.run_pending()
+    assert store.read().get(record.kind, record.id).data["stage"] is None
+    settings.moves = "rule"
+    (store.path.parent / "config" / "stages.yaml").write_text("moves: person\n")
+    worker.run_pending()
+    assert worker.restart_needed
+    assert store.read().get(record.kind, record.id).data["stage"] is None

@@ -121,6 +121,11 @@ class Worker:
                 needs_you(self.store, queued[0].id, f"Something went wrong processing this: {err}")
             done += 1
             self.events.changed()
+        if not self._stop.is_set() and not self._changed_since_start():
+            from engine.stages import move_ready_records
+
+            if move_ready_records(self.store):
+                self.events.changed()
         return done
 
     def _loop(self) -> None:
