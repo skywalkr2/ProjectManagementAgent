@@ -31,7 +31,8 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
   Every pack works alone; optional interfaces add features when both sides are enabled.
 - Plugins change knowledge only through ops and the applier, and send only through the publisher after the PM approves the
   exact content.
-- Bundled plugins ship config and data for both fictional workspaces.
+- Bundled plugins ship config and data for both fictional workspaces. Industry packs live in their own repositories;
+  this one holds the core, the define-your-own kit, its templates and the example plugin. The core is complete on its own.
 
 ## AI providers
 - The product supports any AI vendor through `engine/ai/` (design 6.16). Vendor and model names appear only in adapters,

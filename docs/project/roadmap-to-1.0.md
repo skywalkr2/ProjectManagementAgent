@@ -16,17 +16,23 @@ Last updated: 2026-10-10.
 - [x] Plugin host, plugin API 0.1: reviewed, fixed and merged (2026-10-10).
 - [x] Stages: reviewed, fixed and merged; API only so far (2026-10-10).
 - [x] Stage screens: Stages view; ready and waiting-for-go rows on Today (2026-10-10).
-- [ ] What else the publishing pack needs, in order: cost control (with cached-token pricing, cache markers, choosing a
-  tier by context window), plugin API 0.3 with the file channel (uploads, previews, person actions),
-  dependencies and baselines. Each with its screens.
-- [ ] Today as the real home: plain empty states, a first-run guide.
+- [x] Cost control, engine: catalog prices, cached input, routing rules, context fit, escalation, estimates, a go above
+  the configured amount, per-run limit, budgets per kind of work (2026-10-10).
+- [x] Today: first-run card, assistant state (including the stand-in), Dismiss; one-box hand-in; notes under projects;
+  Chasers "To send" / "Waiting on them" with Copy then Mark sent (2026-10-10).
+- [ ] Cost screens: the go showing the estimate; a small spend line.
 - [ ] Plugin API 0.2 (decisions, 2026-10-10): data levels, origin and person-only values, unique fields and `find`,
   filtered `list`, `Ref` fields, validators that see the changeset, event kind filters, `record.delete`.
-- [ ] Publishing pack (9.6 to 9.9). Stretch goal: usable by about 2026-11-01 for the last weeks of the 2026-12-01 launch,
-  alongside the manual process. Testing until then is on fictional data only.
+- [ ] The define-your-own kit with starting templates; the demo runs on a template (decisions, 2026-10-10).
+- [ ] Guided install and setup: built screens in the package, one-step install and update, first-run wizard, settings
+  screens; agent accounts; ask the assistant about the app; a user guide.
+- [ ] **Friends' preview**: packaged install, guided setup, labeled demo, bring-your-own AI, feedback button, download.
+- [ ] Plugin API 0.3 with the file channel (uploads, previews, person actions); dependencies and baselines.
+- [ ] Watchers and lookups (engine and general sources in the core; product connectors as plugins).
+- [ ] Publishing pack in its own private repository. For the 2026-12-01 launch, a publishing template built with the
+  kit is the stretch goal, alongside the manual process.
 - Every feature: run on the fictional imprint end to end with desktop and phone screenshots before hand-over; the owner's
   weekly 15-minute try; friction in `ux-notes.md`.
-- [ ] Then Ask the assistant (6.25) and the rest of 3a. The go/no-go and freeze below no longer apply.
 
 ## 2. Owner validation (now to 2026-10-30)
 

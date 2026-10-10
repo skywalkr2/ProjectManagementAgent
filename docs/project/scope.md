@@ -7,7 +7,7 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Horizon | What it is | When |
 |---|---|---|
 | **Launch slice** | The smallest useful part of milestones 1 and 2 (`schedule.md`) | by the 2026-10-30 go/no-go |
-| **Version 1** | The rest of milestones 1 to 9: the core, the plugin API, the publishing pack in daily use, the workplace pack on fictional data | after the launch |
+| **Version 1** | The core complete on its own: the define-your-own kit with templates, guided install and setup, settings screens, agent accounts, ask the assistant, watchers and lookups, the plugin API (decisions, 2026-10-10). Industry packs are add-ons in their own repositories | after the launch |
 | **Later** | Milestones 10 onward and everything in "After the base" (design 13.2) | once the publishing pack is in steady daily use |
 
 ## Must, should, could, won't
@@ -32,13 +32,13 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Waiting states that say why and until when | should | must | 7.6 |
 | Scope resolver and fact lookups | could | must | 6.18, 6.19 |
 | Dependencies and baselines | won't | must | 6.23 |
-| Publishing pack | won't | must | 9.6 to 9.9 |
+| Publishing pack (own private repository, decisions 2026-10-10) | won't | add-on | 9.6 to 9.9 |
 | Plugin host and plugin API 0.x | won't | must | Part 3 |
 | Read-backs, standing rules review | won't | should | 6.7, 6.21 |
 | Glossary, lessons, search lookups | won't | should | 6.22 |
 | Quality panel and private evaluation cases | won't (signals recorded only) | should | 6.20 |
 | Settings panel generated from schemas | won't | should | 4.0 |
-| Workplace pack on fictional data | won't | should | 9.1 to 9.5 |
+| Workplace pack and its connectors (private add-on, decisions 2026-10-10) | won't | add-on | 9.1 to 9.5 |
 | Core playbook, first version (the guidance the notes task needs) | must | must | 3.8 |
 | Publishing playbook | won't | must | 3.8, 9.7 |
 | Ask the assistant | won't | should | 6.25 |

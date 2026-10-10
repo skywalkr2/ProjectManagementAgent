@@ -3,6 +3,44 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-10: The core is complete on its own; the free version is "define your own"; industry packs are add-ons
+
+**Decided by:** project owner.
+
+**What:**
+- **The core alone is a complete product.** A person installs it, is guided through setup, and runs their work with it.
+  No screen ever depends on a pack.
+- **The free version is the core plus a "define your own" kit**, not an industry pack: item types with fields (text,
+  date, person, choice, link, number), stages with plain descriptions and entry checks, checklists, which fields the
+  assistant may fill from inputs (with evidence), and what Today shows. All of it is set on screens, kept in workspace
+  settings, and saved and shared as one template file. Starting templates ship with the core; the fictional demo
+  workspace runs on one.
+- **Industry packs are add-ons on the plugin API**, in their own repositories. The publishing pack moves to a private
+  repository (to be sold later if the owner chooses); the workplace pack and its product connectors become a private
+  add-on too. This repository keeps the core, the kit, templates and the example plugin.
+- **Guided install and setup:** the web screens ship built inside the package (no Node needed to run it); install and
+  update are one step; a first run in the browser walks through where the workspace lives, who you are, the AI account
+  (with a connection test and plain errors), a starting template, backups and a first hand-in. Settings screens cover
+  everything the files hold.
+- **Agent accounts** (a vendor's command-line agent run with the person's own login, as corporate installs need) come
+  before the friends' preview, so people can use subscriptions they already have.
+- **Watchers and lookups** (6.19, milestone 5): the watcher engine, scheduling and general sources (a folder, a feed) are
+  core; connectors for particular products are plugins.
+- **Ask the assistant about the app** (extends 6.25): answers come only from the user guide, the workspace's settings
+  (never secrets), what the install can do, and the person's records, with the passage shown. A question that needs a
+  settings change becomes a proposed change the person confirms, with Undo; one the product can't do becomes a report
+  to the maintainers (6.13).
+- **A friends' preview** is a milestone: packaged install, guided setup, a clearly labeled demo with the stand-in,
+  bring-your-own AI, a feedback button that drafts an email, and a download rather than repository access.
+
+**Why:** The owner wants a free product anyone can set up and use for their own kind of work, with industry depth sold
+separately, and to put it in friends' hands for feedback.
+
+**Impact:** Supersedes "two reference packs bundled in version 1" in `scope.md` and design Part 9 / 13 (the packs still
+prove the plugin API, from their own repositories). Order: plugin API 0.2, the kit, guided install and setup with agent
+accounts and Ask the assistant, the friends' preview, watchers and connectors, then the publishing pack. The
+publishing pack is no longer the path for the 2026-12-01 launch; a publishing template built with the kit is.
+
 ## 2026-10-10: Follow-ups: two steps, copy then Mark sent
 
 **Decided by:** project owner.
