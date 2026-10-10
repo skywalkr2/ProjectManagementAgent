@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-10: Follow-ups: two steps, copy then Mark sent
+
+**Decided by:** project owner.
+
+**What:** Copy only puts the message on the clipboard. After a copy, the card's primary action becomes Mark sent, which
+records the box's text as sent with an Undo toast; the card's menu always offers Mark sent too. This supersedes the part of
+the earlier entry "Follow-ups: Copy marks sent" that made Copy record the message as sent.
+
+**Why:** Copying is not sending; the person sends from their own email or chat and marks it sent when it has gone.
+
+**Impact:** Design 7.5 and the wording sheet; no API, op or scope change. The sent view is unchanged.
+
 ## 2026-10-10: Dismiss a hand-in that stopped; Today suggests moves only for items already in a stage
 
 **Decided by:** project owner (from trying the app); Claude wrote it up.

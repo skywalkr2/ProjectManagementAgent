@@ -78,8 +78,8 @@ test.describe.serial("acceptance scenario", () => {
     const steps = card.getByRole("listitem");
     await expect(steps).toHaveCount(3);
     await expect(steps.nth(0)).toContainText("Not done yet");
-    await expect(page.getByText("The assistant's connection hasn't been tested")).toBeVisible();
-    await expect(page.getByText("Run the connection test: cockpit ai test")).toBeVisible();
+    await expect(page.getByText("The assistant is a stand-in for trying the app")).toBeVisible();
+    await expect(page.getByText("Add an account in your AI settings, then run the connection test: cockpit ai test")).toBeVisible();
     await checkAccessibility(page);
     await card.getByRole("button", { name: "Hand something in" }).click();
     await expect(page.getByLabel("Paste or type it here")).toBeFocused();
@@ -155,7 +155,7 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
-  test("4. Follow-ups: copying marks one clean message sent, with Undo; sent items wait under their own filter", async ({ page }) => {
+  test("4. Follow-ups: copy one clean message, then Mark sent, with Undo; sent items wait under their own filter", async ({ page }) => {
     await signIn(page);
     const ownerId = (byId("production-checkin").expect![0].owners as string[])[0];
     const owner = people.find((p) => p.id === ownerId)!;
@@ -165,6 +165,10 @@ test.describe.serial("acceptance scenario", () => {
     expect(copied.startsWith(copied.split("\n")[0])).toBe(true);
     expect(copied).toContain(owner.name.split(" ")[0]);
     expect(copied).not.toMatch(/ACT-|Q-\d|PER-/);
+    // Copying changes nothing on the server: the card stays under To send and now offers Mark sent.
+    await expect(section.getByRole("button", { name: "Mark sent" }).first()).toBeVisible();
+    await expect(page.getByText(`Marked as sent to ${owner.name}`)).toHaveCount(0);
+    await section.getByRole("button", { name: "Mark sent" }).first().click();
     await expect(page.getByText(`Marked as sent to ${owner.name}`)).toBeVisible();
     // Sent items leave "To send" and wait under "Waiting on them", one line each.
     await expect(section).toHaveCount(0);

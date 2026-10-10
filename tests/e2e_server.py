@@ -42,6 +42,12 @@ def main() -> None:
         "ai.tiers.routine.use": "stub/default",
         "ai.tiers.routine.fallback": [],
         "storage.backups.targets": [{"path": str(tmp / "offsite"), "label": "test folder"}],
+        # A stage that starts work when entered, so the browser tests can exercise waiting for the go.
+        "stages.types.project.stages": [
+            {"id": "planned", "label": "Planned"},
+            {"id": "active", "label": "In progress", "starts": ["notes"]},
+            {"id": "complete", "label": "Complete"},
+        ],
     }
     cfg = ws.config(env={}, flags=flags)
     cases = load_cases(DEMO_B)

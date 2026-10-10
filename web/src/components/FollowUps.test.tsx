@@ -35,25 +35,50 @@ test("the PM comes first, then each person with Copy", async () => {
   expect(screen.getByRole("button", { name: "Copy 2" })).toBeInTheDocument();
 });
 
-test("Copy puts the edited message on the clipboard, marks it sent and offers Undo", async () => {
+const markSentRoutes = {
+  "GET followups": () => sections,
+  "GET people": () => [],
+  "POST followups/PER-2/mark-sent": () => ({ questions: 1, actions: 1, question_ids: ["Q-1"], action_ids: ["ACT-1"] }),
+  "POST followups/PER-2/unmark-sent": () => ({ ok: "PER-2" }),
+};
+const posts = (calls: { route: string }[]) => calls.filter((c) => c.route.startsWith("POST"));
+
+test("Copy puts the edited message on the clipboard and changes nothing on the server", async () => {
   const user = userEvent.setup();
-  const calls = fakeApi({
-    "GET followups": () => sections,
-    "GET people": () => [],
-    "POST followups/PER-2/mark-sent": () => ({ questions: 1, actions: 1, question_ids: ["Q-1"], action_ids: ["ACT-1"] }),
-    "POST followups/PER-2/unmark-sent": () => ({ ok: "PER-2" }),
-  });
+  const calls = fakeApi(markSentRoutes);
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
   const box = screen.getByRole("textbox", { name: /Message to Robin Sample/ });
   await user.type(box, " PS");
   await user.click(screen.getByRole("button", { name: "Copy message" }));
   expect(await navigator.clipboard.readText()).toBe(sections[1].message + " PS");
+  expect(await screen.findByText("Copied")).toBeInTheDocument();
+  expect(posts(calls)).toHaveLength(0);
+  expect(screen.queryByText(/Marked as sent/)).toBeNull();
+});
+
+test("after copying, the card's primary and the button under the box become Mark sent", async () => {
+  const user = userEvent.setup();
+  fakeApi(markSentRoutes);
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  await user.click(screen.getByRole("button", { name: "Copy 2" }));
+  expect(await screen.findAllByRole("button", { name: "Mark sent" })).toHaveLength(2);
+  expect(screen.queryByRole("button", { name: "Copy 2" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Copy message" })).toBeNull();
+});
+
+test("Mark sent records the box's text and offers Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi(markSentRoutes);
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: /^Robin Sample/ }));
+  await user.type(screen.getByRole("textbox", { name: /Message to Robin Sample/ }), " PS");
+  await user.click(screen.getByRole("button", { name: "Copy message" }));
+  await user.click((await screen.findAllByRole("button", { name: "Mark sent" }))[0]);
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/mark-sent")).toBe(true));
   expect(calls.find((c) => c.route === "POST followups/PER-2/mark-sent")!.body).toEqual({ text: sections[1].message + " PS" });
   expect(await screen.findByText("Marked as sent to Robin Sample")).toBeInTheDocument();
-  // There is no separate Mark sent step.
-  expect(screen.queryByRole("button", { name: "Mark sent" })).toBeNull();
   await user.click(await screen.findByRole("button", { name: "Undo" }));
   await waitFor(() =>
     expect(calls.find((c) => c.route === "POST followups/PER-2/unmark-sent")?.body).toEqual({
@@ -63,23 +88,19 @@ test("Copy puts the edited message on the clipboard, marks it sent and offers Un
   );
 });
 
-test("the card's own Copy button does the same", async () => {
+test("the row menu's Mark sent works without copying", async () => {
   const user = userEvent.setup();
-  const calls = fakeApi({
-    "GET followups": () => sections,
-    "GET people": () => [],
-    "POST followups/PER-2/mark-sent": () => ({ questions: 1, actions: 1, question_ids: ["Q-1"], action_ids: ["ACT-1"] }),
-  });
+  const calls = fakeApi(markSentRoutes);
   renderApp(<FollowUps />);
-  await user.click(await screen.findByRole("button", { name: "Copy 2" }));
-  expect(await navigator.clipboard.readText()).toBe(sections[1].message);
+  await user.click(await screen.findByRole("button", { name: "More actions for Robin Sample" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Mark sent" }));
   await waitFor(() =>
     expect(calls.find((c) => c.route === "POST followups/PER-2/mark-sent")?.body).toEqual({ text: sections[1].message }),
   );
   expect(await screen.findByText("Marked as sent to Robin Sample")).toBeInTheDocument();
 });
 
-test("when the clipboard is blocked nothing is marked sent", async () => {
+test("when the clipboard is blocked nothing is marked and the card keeps Copy", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({ "GET followups": () => sections, "GET people": () => [] });
   renderApp(<FollowUps />);
@@ -89,6 +110,9 @@ test("when the clipboard is blocked nothing is marked sent", async () => {
   expect(await screen.findByText(/blocked copying/)).toBeInTheDocument();
   expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
   expect(screen.queryByText(/Marked as sent/)).toBeNull();
+  expect(screen.queryByText("Copied")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Mark sent" })).toBeNull();
+  expect(screen.getAllByRole("button", { name: /^Copy/ }).length).toBeGreaterThan(0);
 });
 
 test("a card lists only what is still to send, with no buttons or pills on the items", async () => {

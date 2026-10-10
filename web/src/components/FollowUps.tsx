@@ -1,5 +1,5 @@
 // Follow-ups by person (design 7.5): the PM first (decisions and their own actions), then everyone A to Z, each with
-// one clean message to copy. The message can be edited where it is shown; what is copied is what gets recorded.
+// one clean message to copy, then mark sent. The message can be edited where it is shown; what is marked sent is the box's text.
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, type S } from "../lib/api";
@@ -197,6 +197,7 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
   const area = useRef<HTMLTextAreaElement>(null);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const message = draft ?? s.message;
   const questions = toSendQuestions(s);
   const actions = toSendActions(s);
@@ -206,13 +207,15 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
     window.setTimeout(() => area.current?.focus(), 0);
   };
 
-  // Copying is the send: the text goes to the clipboard, then the person's items are marked sent, with Undo. If the
-  // browser blocks the copy, nothing is marked and the text is selected for a manual copy.
+  // Two deliberate steps. Copy only puts the text on the clipboard; nothing changes on the server. Once it has copied, the
+  // card offers Mark sent, which records the box's text as sent (with Undo). The row menu always offers Mark sent, for
+  // after a reload or a message sent some other way. If the browser blocks the copy, the text is selected for a manual copy.
   const copy = async () => {
     if (!message.trim()) return;
     try {
       await navigator.clipboard.writeText(message);
     } catch {
+      setCopied(false);
       setOpen(true);
       window.setTimeout(() => {
         area.current?.focus();
@@ -221,6 +224,12 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
       push({ message: t("toast.copy_blocked") });
       return;
     }
+    setCopied(true);
+    push({ message: t("toast.copied") });
+  };
+
+  const markSent = async () => {
+    if (!message.trim()) return;
     const result = await act(
       () => api.markSent(s.person, message),
       (counts) => ({
@@ -228,13 +237,20 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
         undo: () => api.unmarkSent(s.person, { question_ids: counts.question_ids, action_ids: counts.action_ids }),
       }),
     );
-    if (result) setDraft(null);
+    if (result) {
+      setDraft(null);
+      setCopied(false);
+    }
   };
 
-  const menu: MenuAction[] = [{ id: "edit", label: t("followups.edit"), run: edit }];
+  const primary = () => void (copied ? markSent() : copy());
+  const menu: MenuAction[] = [
+    { id: "edit", label: t("followups.edit"), run: edit },
+    { id: "mark-sent", label: t("followups.mark_sent"), run: () => void markSent() },
+  ];
   useRowKeys(ref, {
     toggle: () => setOpen((v) => !v),
-    primary: () => void copy(),
+    primary,
     copy: () => void copy(),
     edit,
   });
@@ -247,8 +263,8 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
           <span className="sub">{tn("followups.to_send", s.to_send)}</span>
         </button>
         <div className="acts">
-          <button type="button" className="btn primary" onClick={() => void copy()}>
-            {tn("followups.copy", s.to_send)}
+          <button type="button" className="btn primary" onClick={primary}>
+            {copied ? t("followups.mark_sent") : tn("followups.copy", s.to_send)}
           </button>
           <RowMenu label={s.name} actions={menu} />
         </div>
@@ -289,8 +305,8 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
                   {t("followups.reset")}
                 </button>
               )}
-              <button type="button" className="btn primary" onClick={() => void copy()}>
-                {t("followups.copy_message")}
+              <button type="button" className="btn primary" onClick={primary}>
+                {copied ? t("followups.mark_sent") : t("followups.copy_message")}
               </button>
             </div>
           </div>

@@ -14,7 +14,7 @@ export function AssistantNotice() {
       ? ai.detail
         ? t("ai.failing.what", { reason: ai.detail })
         : t("ai.failing.what_unknown")
-      : t(ai.state === "untested" ? "ai.untested.what" : "ai.not_set_up.what");
+      : t(`ai.${ai.state}.what`);
   return (
     <section className="notice" aria-labelledby="ai-notice-title" data-ai-state={ai.state}>
       <span className="mark" aria-hidden="true">
@@ -24,12 +24,12 @@ export function AssistantNotice() {
         <p>
           <strong id="ai-notice-title">
             <span className="sr">{t("ai.needs_attention")}: </span>
-            {t(ai.state === "failing" ? "ai.failing.title" : ai.state === "untested" ? "ai.untested.title" : "ai.not_set_up.title")}
+            {t(`ai.${ai.state}.title`)}
           </strong>
         </p>
         <p>{what}</p>
         <p className="hint">
-          {t(ai.state === "failing" ? "ai.failing.todo" : ai.state === "untested" ? "ai.untested.todo" : "ai.not_set_up.todo")}
+          {t(`ai.${ai.state}.todo`)}
         </p>
       </div>
     </section>
