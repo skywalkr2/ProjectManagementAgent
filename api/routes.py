@@ -32,6 +32,7 @@ from api.schemas import (
     PersonIn,
     PersonPatch,
     PersonView,
+    PluginStatusView,
     ProjectIn,
     ProjectPatch,
     ProjectView,
@@ -65,6 +66,13 @@ _PM = WriteContext(actor="pm", trust="trusted", op="ui")
 
 def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
+
+    @r.get("/plugins")
+    def plugin_status() -> list[PluginStatusView]:
+        return [
+            PluginStatusView(name=s.name, state=s.state, version=s.version, reason=s.reason)
+            for s in store.plugins.status.values()
+        ]
 
     def changed() -> None:
         events.changed()

@@ -18,7 +18,6 @@ from engine.names import People
 from engine.ops import CHANGESET, ChangesetIn
 from engine.packet import build
 from engine.storage import Store, WriteContext
-from engine.tasks import task_kind
 from engine.workspace import Workspace
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="request.state")
@@ -28,7 +27,7 @@ class Unreadable(Exception):
     pass
 
 
-def parse(text: str) -> ChangesetIn:
+def parse(text: str, op_models: dict | None = None) -> ChangesetIn:
     """Read a changeset from model output, repairing the usual damage first: fences, prose, trailing commas."""
     body = text.strip()
     fence = re.search(r"```(?:json)?\s*(.*?)```", body, re.S)
@@ -43,7 +42,7 @@ def parse(text: str) -> ChangesetIn:
     except json.JSONDecodeError as err:
         raise Unreadable(f"the JSON is broken ({err.msg} at character {err.pos})") from None
     try:
-        return CHANGESET.validate_python(data)
+        return CHANGESET.validate_python(data, context={"op_models": op_models} if op_models is not None else None)
     except ValidationError as err:
         first = err.errors()[:5]
         detail = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in first)
@@ -79,7 +78,9 @@ def process(
         )
     trust = "untrusted" if req.data.get("source") else "trusted"
     inputs = Inputs(request_id, req.data.get("source"), packet.raw_input, packet.note, trust)
-    ctx = Context(store, cfg, People(store, cfg), task_kind(req.data["task"]).ops, inputs, hidden_words(cfg))
+    ctx = Context(
+        store, cfg, People(store, cfg), store.plugins.task_kind(req.data["task"]).ops, inputs, hidden_words(cfg)
+    )
 
     previous_ops = _previous_ops(store, req.data.get("previous"))
     task: AiTask = packet.task
@@ -94,7 +95,7 @@ def process(
         except AiError as err:
             return needs_you(store, request_id, _ai_failure(err))
         try:
-            changeset = parse(result.text)
+            changeset = parse(result.text, store.plugins.ops)
         except Unreadable as err:
             changeset = None
             if attempt < cfg.dispatch.fix_rounds:

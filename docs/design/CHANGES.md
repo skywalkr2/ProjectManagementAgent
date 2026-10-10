@@ -227,3 +227,23 @@ For your information; nothing here needs an answer.
   tier with exact parameters, vendor error text read only in the adapter, no new work on old code after settings change,
   canonical form and a re-pull after publishing, premise checks before "can't do", `project.add` and person-owned fields,
   office-file extractors, and probation for a new account.
+
+## Plugin host, API 0.1 (2026-10-09)
+
+The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
+bundled/private/installed discovery, schema-validated plugin settings, record and op registration, deterministic validators,
+task kinds, and named events after commit. The existing UI change counter remains separate.
+
+Plugins import `engine.plugin_api` (the existing package), and register exactly what their manifest declares. Op callbacks
+receive a writer limited to their model's declared record kinds/fields; writes retain versions, provenance and the ledger.
+Handlers receive read-only core/own-record access and staged commands for requests or questions to the PM. A failing callback
+is disabled for the run; an op failure rolls back its writes through a savepoint. Runtime dependency failures disable their
+consumers. Status is exposed by the authenticated `/api/plugins` endpoint; no UI panels were added.
+
+Exports use `data/<plugin>/<kind>.json` for plugin records. Import refuses unknown record kinds instead of dropping data,
+and emits no events while restoring history. Disabling a plugin retains its data; enabling it again restores typed access.
+Both fictional workspaces include the example plugin's settings and records. Self-check verifies both with and without
+plugins, validates every bundled manifest against registration, and compares nested exports byte for byte.
+
+The later 1.0 extension points and reach capabilities (interfaces, panels, jobs, network, secrets and tools) are explicitly
+refused by this host, not silently ignored. The contract and current limitations are in `docs/plugin-api-0.x.md`.

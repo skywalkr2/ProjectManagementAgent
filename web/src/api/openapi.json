@@ -950,6 +950,46 @@
         "title": "PersonView",
         "type": "object"
       },
+      "PluginStatusView": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "name",
+          "state"
+        ],
+        "title": "PluginStatusView",
+        "type": "object"
+      },
       "ProjectIn": {
         "properties": {
           "group": {
@@ -2327,6 +2367,28 @@
           }
         },
         "summary": "Restore Person"
+      }
+    },
+    "/api/plugins": {
+      "get": {
+        "operationId": "plugin_status_api_plugins_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PluginStatusView"
+                  },
+                  "title": "Response Plugin Status Api Plugins Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Plugin Status"
       }
     },
     "/api/projects": {

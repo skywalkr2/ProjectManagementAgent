@@ -32,7 +32,7 @@ def export_data(store: Store, data_dir: Path) -> list[Path]:
     data_dir.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     view = store.read()
-    kinds = sorted(set(view.kinds()) | set(REGISTRY), key=_kind_order)
+    kinds = sorted(set(view.kinds()) | set(store.plugins.records), key=_kind_order)
     for kind in kinds:
         rows = view.list(kind, include_deleted=True)
         path = data_dir / f"{kind}.json"
@@ -41,6 +41,7 @@ def export_data(store: Store, data_dir: Path) -> list[Path]:
                 path.unlink()
             continue
         items = [_record_out(s) for s in rows]
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(_json(items), encoding="utf-8")
         written.append(path)
     seq = data_dir / SEQUENCES_FILE
@@ -62,8 +63,16 @@ def import_data(store: Store, data_dir: Path) -> int:
     ledger_path = data_dir / LEDGER_FILE
     has_ledger = ledger_path.exists()
     count = 0
-    with store.transaction() as tx:
-        for kind in sorted(REGISTRY, key=_kind_order):
+    known = store.plugins.records
+    unknown = [
+        p.relative_to(data_dir).as_posix()[:-5]
+        for p in data_dir.rglob("*.json")
+        if p.name != SEQUENCES_FILE and p.relative_to(data_dir).as_posix()[:-5] not in known
+    ]
+    if unknown:
+        raise StoreError("enable the record plugins before importing: " + ", ".join(unknown))
+    with store.transaction(notify=False) as tx:
+        for kind in sorted(known, key=_kind_order):
             path = data_dir / f"{kind}.json"
             if not path.exists():
                 continue

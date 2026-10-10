@@ -1,0 +1,6 @@
+# Settings format version.
+version: 1
+# File a question for the PM when a reminder is added.
+ask_on_add: true
+# Title of the question filed for the PM.
+question: Review the new reminder?

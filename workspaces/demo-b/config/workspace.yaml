@@ -9,4 +9,4 @@ user:
   timezone: America/New_York
 owner_format: "{full_name}"
 plugins:
-  enabled: []
+  enabled: [example]

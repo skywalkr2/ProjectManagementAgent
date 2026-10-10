@@ -9,7 +9,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator
 
 Tier = Literal["data", "outbound", "system"]
 
@@ -165,15 +165,30 @@ class ChangesetIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     summary: str = ""
-    ops: list[Op] = Field(default_factory=list)
+    ops: list[Any] = Field(default_factory=list)
+
+    @field_validator("ops", mode="before")
+    @classmethod
+    def parse_ops(cls, values: Any, info: ValidationInfo) -> list[OpModel]:
+        models = (info.context or {}).get("op_models", OP_MODELS)
+        if not isinstance(values, list):
+            raise ValueError("ops must be a list")
+        parsed = []
+        for value in values:
+            data = value.model_dump() if isinstance(value, OpModel) else value
+            name = data.get("op") if isinstance(data, dict) else None
+            if name not in models:
+                raise ValueError(f"unknown op {name!r}")
+            parsed.append(models[name].model_validate(data))
+        return parsed
 
 
 CHANGESET = TypeAdapter(ChangesetIn)
 
 
-def schema_for(op_names: list[str]) -> dict[str, Any]:
+def schema_for(op_names: list[str], registry: dict | None = None) -> dict[str, Any]:
     """The JSON schema of a changeset limited to these ops, so a task is asked for exactly what it may return."""
-    models = [OP_MODELS[n] for n in op_names]
+    models = [(registry or OP_MODELS)[n] for n in op_names]
     return {
         "type": "object",
         "required": ["summary", "ops"],
@@ -184,11 +199,11 @@ def schema_for(op_names: list[str]) -> dict[str, Any]:
     }
 
 
-def reference_for(op_names: list[str]) -> str:
+def reference_for(op_names: list[str], registry: dict | None = None) -> str:
     """A readable op reference for the prompt: each op, what it's for and its fields."""
     lines = []
     for name in op_names:
-        model = OP_MODELS[name]
+        model = (registry or OP_MODELS)[name]
         fields = []
         for key, info in model.model_fields.items():
             if key in ("op", "group"):

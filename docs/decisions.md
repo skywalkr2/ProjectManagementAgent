@@ -624,3 +624,7 @@ or a bundled plugin is written as a patch and an issue for this repository.
 the design was removed; `CLAUDE.md` is the only copy.
 
 **Why:** One copy of each document, at the path the other documents use.
+
+## 2026-10-09: Plugin API 0.x host boundary
+
+Implementation of the owner-requested host uses per-store registries and post-commit events; unsupported 1.0 manifest contributions (including interfaces and reach capabilities) are refused explicitly until their extension points exist, with no scope added beyond the next-task brief.

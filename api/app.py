@@ -69,7 +69,7 @@ def create_app(
     releasing the instance lease always happens. With `start_worker`, queued requests are processed in the background;
     otherwise they wait until `app.state.worker.run_pending()` is called (tests)."""
     base_path = cfg.server.base_path
-    store = Store(ws.db_path)
+    store = Store(ws.db_path, cfg=cfg)
     events = Events()
     worker = Worker(ws, store, cfg, events, router_factory)
     dist = ui_dist if ui_dist is not None else UI_DIST

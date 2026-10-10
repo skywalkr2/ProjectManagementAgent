@@ -9,4 +9,4 @@ user:
   timezone: America/Chicago
 owner_format: "{team} ({full_name})"
 plugins:
-  enabled: []
+  enabled: [example]

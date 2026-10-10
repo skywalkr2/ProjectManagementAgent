@@ -293,3 +293,10 @@ class RuntimeConfig(BaseModel):
     toast_seconds: float
     shortcuts: dict[str, str]
     wording: dict[str, str]
+
+
+class PluginStatusView(BaseModel):
+    name: str
+    state: str
+    version: str | None = None
+    reason: str | None = None

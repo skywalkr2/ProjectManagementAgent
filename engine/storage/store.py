@@ -20,7 +20,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine.records import model_for
+from engine.records import REGISTRY
 from engine.storage.db import connect
 
 Trust = Literal["trusted", "untrusted"]
@@ -83,7 +83,7 @@ class Store:
     Each thread gets its own connection, so a reader sees committed data only, never another thread's open
     transaction. Writes from one Store are serialized; SQLite serializes writes between processes."""
 
-    def __init__(self, path: Path, *, clock: Callable[[], str] = utc_now):
+    def __init__(self, path: Path, *, clock: Callable[[], str] = utc_now, cfg: Any = None):
         self.path = path
         self.clock = clock
         self._lock = threading.RLock()
@@ -91,6 +91,10 @@ class Store:
         self._all: list[sqlite3.Connection] = []
         self._closed = False
         _ = self._conn  # open the first connection now so a bad path fails here
+        from engine.config import load_config
+        from engine.plugin_host import PluginHost
+
+        self.plugins = PluginHost(self, cfg or load_config(path.parent / "config"))
 
     @property
     def _conn(self) -> sqlite3.Connection:
@@ -106,34 +110,54 @@ class Store:
 
     def close(self) -> None:
         with self._lock:
+            self.plugins.close()
             self._closed = True
             for conn in self._all:
                 conn.close()
             self._all.clear()
 
     @contextmanager
-    def transaction(self) -> Iterator[Tx]:
+    def transaction(self, *, notify: bool = True) -> Iterator[Tx]:
         with self._lock:
             self._conn.execute("BEGIN IMMEDIATE")
+            tx = Tx(self._conn, self.clock, self.plugins.records)
             try:
-                yield Tx(self._conn, self.clock)
+                yield tx
             except BaseException:
                 self._conn.execute("ROLLBACK")
                 raise
             else:
                 self._conn.execute("COMMIT")
+        if notify:
+            for event, payload in tx.events():
+                self.plugins.publish(event, payload)
 
     def read(self) -> Tx:
         """A read-only view outside a transaction, for simple lookups."""
-        return Tx(self._conn, self.clock)
+        return Tx(self._conn, self.clock, self.plugins.records)
 
 
 class Tx:
     """Operations inside one transaction."""
 
-    def __init__(self, conn: sqlite3.Connection, clock: Callable[[], str]):
+    def __init__(self, conn: sqlite3.Connection, clock: Callable[[], str], models: dict | None = None):
         self._c = conn
         self._clock = clock
+        self.models = REGISTRY if models is None else models
+        self.pending: list[tuple] = []
+
+    def events(self) -> list[tuple[str, dict[str, Any]]]:
+        grouped = {}
+        special = []
+        for kind, rid, version, field, before, after, op in self.pending:
+            key = kind, rid, version, op
+            data = grouped.setdefault(key, {"kind": kind, "id": rid, "version": version, "op": op, "fields": []})
+            data["fields"].append(field or "_deleted")
+            if kind == "request" and field == "state" and after == "queued" and before != after:
+                special.append(("request.queued", {"id": rid}))
+            if kind == "question" and field == "status" and after == "answered" and before != after:
+                special.append(("question.answered", {"id": rid}))
+        return [("record.changed", data) for data in grouped.values()] + special
 
     def sql(self, query: str, args: tuple[Any, ...] = ()) -> sqlite3.Cursor:
         """Run a statement in this transaction, for storage modules that own their own tables (leases)."""
@@ -169,7 +193,7 @@ class Tx:
     # ---- ids ---------------------------------------------------------------------------------------------------------
 
     def new_id(self, kind: str) -> str:
-        prefix = model_for(kind).prefix
+        prefix = self.models[kind].prefix
         row = self._c.execute("SELECT next FROM sequences WHERE kind=?", (kind,)).fetchone()
         n = row["next"] if row else 1
         self._c.execute(
@@ -180,7 +204,7 @@ class Tx:
 
     def _reserve(self, kind: str, record_id: str) -> None:
         """Make sure a given id is never handed out again."""
-        prefix = model_for(kind).prefix
+        prefix = self.models[kind].prefix
         match = _ID.match(record_id)
         if not match or match["prefix"] != prefix:
             raise InvalidRecord(f"{record_id!r} is not a {kind} id (expected {prefix}-<number>)")
@@ -208,7 +232,7 @@ class Tx:
             if self._c.execute("SELECT 1 FROM records WHERE kind=? AND id=?", (kind, record_id)).fetchone():
                 raise StoreError(f"{kind} {record_id} already exists (ids are never reused)")
             self._reserve(kind, record_id)
-        clean = _validate(kind, {**data, "id": record_id})
+        clean = _validate(self.models[kind], {**data, "id": record_id})
         self._c.execute(
             "INSERT INTO records(kind, id, version, deleted, data) VALUES(?, ?, 1, 0, ?)",
             (kind, record_id, dumps(clean)),
@@ -234,7 +258,7 @@ class Tx:
             clash = sorted(changed_since & set(changes))
             if clash:
                 raise ConflictError(kind, record_id, clash)
-        merged = _validate(kind, {**current.data, **changes})
+        merged = _validate(self.models[kind], {**current.data, **changes})
         diff = {k: merged.get(k) for k in set(merged) | set(current.data) if merged.get(k) != current.data.get(k)}
         if not diff:
             return current
@@ -273,7 +297,7 @@ class Tx:
 
     def restore_record(self, stored: Stored) -> None:
         """Put a record back exactly as exported (used by import only; writes no ledger entries)."""
-        clean = _validate(stored.kind, {**stored.data, "id": stored.id})
+        clean = _validate(self.models[stored.kind], {**stored.data, "id": stored.id})
         self._reserve(stored.kind, stored.id)
         self._c.execute(
             "INSERT INTO records(kind, id, version, deleted, data) VALUES(?, ?, ?, ?, ?)",
@@ -323,6 +347,7 @@ class Tx:
         before: Any,
         after: Any,
     ) -> None:
+        self.pending.append((kind, record_id, version, field, before, after, ctx.op))
         self._c.execute(
             "INSERT INTO ledger(at, changeset, request, op, kind, record_id, version, field, before, after, actor, "
             "trust, evidence) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -344,8 +369,8 @@ class Tx:
         )
 
 
-def _validate(kind: str, data: dict[str, Any]) -> dict[str, Any]:
-    model = model_for(kind)
+def _validate(model: type, data: dict[str, Any]) -> dict[str, Any]:
+    kind = model.record_kind
     try:
         return model.model_validate(data).model_dump(mode="json", exclude_defaults=False)
     except ValidationError as err:

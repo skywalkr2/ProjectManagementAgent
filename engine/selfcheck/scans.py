@@ -199,7 +199,13 @@ def scan_boundary(root: Path = REPO) -> list[Finding]:
                 if top in ("engine", "api") and head == "plugins":
                     findings.append(Finding("boundary", rel, node.lineno, "core code imports from plugins/"))
                 if top == "plugins":
-                    if head == "engine" and not module.startswith("engine.plugin_api"):
+                    own = Path(rel).parts[1]
+                    others = {p.name for p in (root / "plugins").iterdir() if p.is_dir() and p.name != own}
+                    if head == "plugins" or head in others:
+                        findings.append(Finding("boundary", rel, node.lineno, "plugins meet only through the core"))
+                    if head == "engine" and not (
+                        module == "engine.plugin_api" or module.startswith("engine.plugin_api.")
+                    ):
                         findings.append(
                             Finding(
                                 "boundary",
