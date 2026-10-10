@@ -300,3 +300,69 @@ class PluginStatusView(BaseModel):
     state: str
     version: str | None = None
     reason: str | None = None
+
+
+class RecordReference(BaseModel):
+    kind: str
+    id: str
+
+
+class StageLabel(BaseModel):
+    id: str
+    label: str
+
+
+class StageCheckView(BaseModel):
+    id: str
+    passed: bool
+    reason: str
+
+
+class StageView(BaseModel):
+    record: RecordReference
+    version: int
+    current: str | None
+    current_label: str | None
+    next: StageLabel | None
+    checks: list[StageCheckView]
+    ready: bool
+
+
+class RecordView(BaseModel):
+    kind: str
+    id: str
+    version: int
+    data: dict[str, Any]
+    stages: StageView
+
+
+class StageMove(BaseModel):
+    record: RecordReference
+    to: str = Field(min_length=1)
+    read_version: int = Field(ge=1)
+
+
+class StageMoved(BaseModel):
+    changeset: str
+    stages: StageView
+
+
+class ReadVersion(BaseModel):
+    read_version: int = Field(ge=1)
+
+
+class StageTaskOrigin(BaseModel):
+    kind: str
+    record: str
+    stage: str
+    changeset: str
+
+
+class StageRequestView(BaseModel):
+    id: str
+    version: int
+    task: str
+    state: str
+    approval: Literal["required", "granted"]
+    waiting: str | None
+    stage_start: StageTaskOrigin

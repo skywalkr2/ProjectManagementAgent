@@ -360,3 +360,52 @@ def test_stage_event_and_starts_rollback_together(stage_workspace, monkeypatch):
     assert not store.read().list("request")
     assert store.read().ledger() == before
     assert store.read().get(record.kind, record.id).data["stage"] is None
+
+
+@pytest.mark.parametrize("prefix", ["", "/admin"])
+def test_record_stage_api_and_explicit_go(stage_workspace, prefix):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.routes import build_router
+    from engine.storage import WriteContext
+    from engine.worker import Events, Worker
+    from engine.workspace import Workspace
+
+    store, cfg, record = stage_workspace
+    ws = Workspace(store.path.parent)
+    worker = Worker(ws, store, cfg, Events())
+    app = FastAPI()
+    app.include_router(build_router(ws, cfg, store, worker.events, worker), prefix=prefix)
+    base = prefix + "/api"
+    store.plugins.stages.types[record.kind].stages[0].starts = ["notes"]
+    with TestClient(app) as client:
+        path = f"{base}/records/{record.id}"
+        response = client.get(path, params={"kind": record.kind})
+        assert response.status_code == 200
+        stage = response.json()["stages"]
+        assert stage["current"] is None and stage["next"]["id"] == "draft" and stage["ready"]
+        assert any(s["record"]["id"] == record.id for s in client.get(f"{base}/stages/ready").json())
+        body = {"record": stage["record"], "to": "draft", "read_version": stage["version"]}
+        moved = client.post(f"{base}/stages/move", json=body)
+        assert moved.status_code == 200
+        assert moved.json()["stages"]["current"] == "draft"
+        checks = moved.json()["stages"]["checks"]
+        assert checks == [{"id": "stage-test/ready", "passed": False, "reason": "not ready"}]
+        assert client.post(f"{base}/stages/move", json=body).status_code == 409
+        assert not client.get(f"{base}/stages/ready").json()
+        request = client.get(f"{base}/stages/requests").json()[0]
+        assert request["approval"] == "required"
+        assert client.post(f"{base}/requests/{request['id']}/retry").status_code == 409
+        go = client.post(f"{base}/requests/{request['id']}/go", json={"read_version": request["version"]})
+        assert go.status_code == 200
+        with store.transaction() as tx:
+            latest = tx.get(record.kind, record.id)
+            tx.update(
+                record.kind,
+                record.id,
+                {"ready": True},
+                WriteContext("pm", "trusted", "test"),
+                read_version=latest.version,
+            )
+        assert client.get(f"{base}/stages/ready").json()[0]["checks"][0]["passed"]

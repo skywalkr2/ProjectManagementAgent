@@ -177,7 +177,9 @@ def retry(store: Store, request_id: str) -> None:
     with store.transaction() as tx:
         cur = tx.get("request", request_id)
         if cur.data.get("approval") == "required":
-            raise ValueError("stage tasks need an explicit go before they can run")
+            from engine.stages import wording
+
+            raise ValueError(wording(store.plugins.cfg, "retry_blocked"))
         if cur.data["state"] not in ("needs_you", "failed"):
             raise ValueError("this isn't waiting on you")
         tx.update(

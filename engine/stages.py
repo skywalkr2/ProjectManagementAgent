@@ -58,15 +58,15 @@ def validate_move(store, op, view):
 
     record = view.get(op.record.kind, op.record.id)
     if record is None:
-        raise StoreError("stage.move: record does not exist")
+        raise StoreError(wording(store.plugins.cfg, "record_missing"))
     if record.version != op.read_version:
-        raise StoreError("stage.move: record changed since it was read")
+        raise StoreError(wording(store.plugins.cfg, "record_changed"))
     settings = store.plugins.stages.types.get(record.kind)
     target = next((s for s in settings.stages if s.id == op.to), None) if settings else None
     if target is None:
-        raise StoreError(f"stage.move: unknown stage {op.to}")
+        raise StoreError(wording(store.plugins.cfg, "stage_unknown").format(stage=op.to))
     if record.data.get("stage") == op.to:
-        raise StoreError("stage.move: record is already in that stage")
+        raise StoreError(wording(store.plugins.cfg, "stage_same"))
     checks = [(check, entry_check(store, check, record, view)) for check in target.entry]
     failed = [f"{check}: {result.reason}" for check, result in checks if not result.passed]
     if failed:
@@ -89,7 +89,7 @@ def apply_move(store, tx, op, context):
             or not status["ready"]
             or status["next"]["id"] != target.id
         ):
-            raise StoreError("stage.move: this move requires the person")
+            raise StoreError(wording(store.plugins.cfg, "person_required"))
     tx.update(record.kind, record.id, {"stage": target.id}, context, read_version=op.read_version)
     touched = [{"kind": record.kind, "id": record.id}]
     for task in dict.fromkeys(target.starts):
@@ -150,13 +150,13 @@ def approve_stage_request(store, request_id, read_version):
     with store.transaction() as tx:
         request = tx.get("request", request_id)
         if request is None or not request.data.get("stage_start") or request.data.get("approval") != "required":
-            raise StoreError("this stage task is not waiting for approval")
+            raise StoreError(wording(store.plugins.cfg, "not_waiting"))
         if request.version != read_version or request.data["state"] != "needs_you":
-            raise StoreError("the request changed since it was read")
+            raise StoreError(wording(store.plugins.cfg, "request_changed"))
         origin = request.data["stage_start"]
         record = tx.get(origin["kind"], origin["record"])
         if record is None or record.data.get("stage") != origin["stage"]:
-            raise StoreError("the record is no longer in the stage that requested this task")
+            raise StoreError(wording(store.plugins.cfg, "stage_left"))
         store.plugins.task_kind(request.data["task"])
         tx.update(
             "request",

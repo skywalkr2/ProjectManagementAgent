@@ -321,6 +321,15 @@ class TypeStages(ConfigModel):
 
 
 STAGE_WORDING = {
+    "record_missing": "stage.move: record does not exist",
+    "record_changed": "stage.move: record changed since it was read",
+    "stage_unknown": "stage.move: unknown stage {stage}",
+    "stage_same": "stage.move: record is already in that stage",
+    "person_required": "stage.move: this move requires the person",
+    "not_waiting": "this stage task is not waiting for approval",
+    "request_changed": "the request changed since it was read",
+    "stage_left": "the record is no longer in the stage that requested this task",
+    "retry_blocked": "stage tasks need an explicit go before they can run",
     "check_unavailable": "The entry check is unavailable.",
     "check_access": "The entry check cannot read this record type.",
     "check_failed": "The entry check failed to run.",
