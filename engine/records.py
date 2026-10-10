@@ -168,8 +168,10 @@ class Request(Record):
     task: str
     stage_start: StageStart | None = Field(None, description="The stage entry that requested this task.")
     approval: Literal["required", "granted"] | None = Field(
-        None, description="Stage tasks require the person's explicit go before dispatch."
+        None,
+        description="Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm.",
     )
+    estimate_usd: float | None = Field(None, description="What the run was estimated to cost when it asked for a go.")
     note: str | None = None
     source: str | None = None
     origin: Literal["pm", "input", "schedule"]

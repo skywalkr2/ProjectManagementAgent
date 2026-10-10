@@ -38,7 +38,8 @@
               "ok",
               "untested",
               "failing",
-              "not_set_up"
+              "not_set_up",
+              "stand_in"
             ],
             "title": "State",
             "type": "string"

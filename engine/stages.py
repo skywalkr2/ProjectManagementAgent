@@ -232,14 +232,15 @@ def approve_stage_request(store, request_id, read_version):
 
     with store.transaction() as tx:
         request = tx.get("request", request_id)
-        if request is None or not request.data.get("stage_start") or request.data.get("approval") != "required":
+        if request is None or request.data.get("approval") != "required":
             raise StoreError(wording(store.plugins.cfg, "not_waiting"))
         if request.version != read_version or request.data["state"] != "needs_you":
             raise StoreError(wording(store.plugins.cfg, "request_changed"))
-        origin = request.data["stage_start"]
-        record = tx.get(origin["kind"], origin["record"])
-        if record is None or record.data.get("stage") != origin["stage"]:
-            raise StoreError(wording(store.plugins.cfg, "stage_left"))
+        origin = request.data.get("stage_start")
+        if origin:
+            record = tx.get(origin["kind"], origin["record"])
+            if record is None or record.data.get("stage") != origin["stage"]:
+                raise StoreError(wording(store.plugins.cfg, "stage_left"))
         store.plugins.task_kind(request.data["task"])
         tx.update(
             "request",

@@ -121,7 +121,7 @@ class Router:
         self, task: AiTask, *, request_id: str, data_level: str = "internal", tier: str | None = None
     ) -> tuple[AiResult, Choice, str]:
         """Run the task on the first account that can serve it. Returns the result, the choice and the Run id."""
-        self._check_budget()
+        self._check_budget(task.kind)
         last: AiError | None = None
         options = self._that_fit(task, list(choices(self.cfg, task.kind, data_level, tier=tier)))
         for position, choice in enumerate(options):
@@ -186,8 +186,60 @@ class Router:
                     day += cost
         return day, month
 
-    def _check_budget(self) -> None:
+    def estimate(self, task: AiTask, *, tier: str | None = None, data_level: str = "internal") -> float | None:
+        """What a run would cost in USD on the account it would use, or None when the price isn't known.
+        Input from the packet's size; output from past runs of this kind, or its configured typical size."""
+        try:
+            choice = self._that_fit(task, list(choices(self.cfg, task.kind, data_level, tier=tier)))[0]
+        except NoProvider:
+            return None
+        info = self.model_info(choice)
+        if info.input_per_million is None or info.output_per_million is None:
+            return None
+        output = self.typical_output(task.kind)
+        return (estimate_tokens(task.size) * info.input_per_million + output * info.output_per_million) / 1e6
+
+    def typical_output(self, kind: str) -> int:
+        """The average answer size of the last runs of this kind, or the kind's configured typical size."""
+        sizes = [
+            r.data["output_tokens"]
+            for r in self.store.read().list("run")
+            if r.data.get("task") == kind and r.data.get("outcome") == "ok" and r.data.get("output_tokens")
+        ][-20:]
+        if sizes:
+            return round(sum(sizes) / len(sizes))
+        settings = self.cfg.ai.tasks.get(kind)
+        return settings.expected_output if settings else 800
+
+    def spent_on(self, kind: str) -> tuple[float, float]:
+        """USD spent today and this month (UTC) on one kind of work."""
+        now = self.now()
+        day = month = 0.0
+        for run in self.store.read().list("run"):
+            if run.data.get("task") != kind:
+                continue
+            cost = run.data.get("cost_usd") or 0.0
+            at = datetime.fromisoformat(run.data["started_at"])
+            if (at.year, at.month) == (now.year, now.month):
+                month += cost
+                if at.date() == now.date():
+                    day += cost
+        return day, month
+
+    def _check_budget(self, kind: str | None = None) -> None:
         budgets = self.cfg.ai.budgets
+        limits = budgets.per_task.get(kind) if kind else None
+        if limits is not None:
+            day, month = self.spent_on(kind)
+            if limits.per_month_usd is not None and month >= limits.per_month_usd:
+                raise BudgetReached(
+                    f"Paused: this month's budget for this kind of work (${limits.per_month_usd:.2f}) is used up."
+                )
+            if limits.per_day_usd is not None and day >= limits.per_day_usd:
+                raise BudgetReached(
+                    f"Paused until tomorrow: today's budget for this kind of work (${limits.per_day_usd:.2f}) "
+                    "is used up."
+                )
         day, month = self.spent()
         if month >= budgets.per_month_usd:
             raise BudgetReached(f"Paused: this month's AI budget (${budgets.per_month_usd:.2f}) is used up.")

@@ -124,10 +124,32 @@ def process(
         quoted_messages=quoted_messages(packet.cleaned.text),
         data_level="internal",
     )
+    estimate = router.estimate(packet.task, tier=tier)
+    budgets = cfg.ai.budgets
+    if estimate is not None and estimate > budgets.per_run_usd:
+        return needs_you(
+            store,
+            request_id,
+            f"This would cost about ${estimate:.2f}, above the per-run limit of ${budgets.per_run_usd:.2f}. "
+            "Hand in less, or raise budgets.per_run_usd in ai.yaml.",
+        )
+    if estimate is not None and estimate > budgets.confirm_above_usd and req.data.get("approval") != "granted":
+        # Spending above the configured amount is the person's choice: wait for their go with the estimate shown.
+        _set(
+            store,
+            request_id,
+            state="needs_you",
+            approval="required",
+            estimate_usd=round(estimate, 4),
+            waiting=f"About ${estimate:.2f}. Waiting for your go.",
+        )
+        return None
     first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops)
     outcome = first
     stronger = escalation_tier(cfg, tier)
-    if first.escalate and stronger and stronger != tier:
+    second_estimate = router.estimate(packet.task, tier=stronger) if first.escalate and stronger else None
+    within = second_estimate is None or second_estimate <= min(budgets.per_run_usd, budgets.confirm_above_usd)
+    if first.escalate and stronger and stronger != tier and within:
         # One re-run on the stronger tier when checks still fail; it counts toward budgets like any run.
         second = _rounds(store, cfg, router, packet.task, stronger, request_id, ctx, previous_ops)
         if second.changeset is not None or first.changeset is None:

@@ -132,7 +132,7 @@ def test_workspace_replaces_or_removes_plugin_stages(stage_workspace):
         loaded = load_config(config_dir, env={})
         other = Store(store.path.parent / "other.db", cfg=loaded)
         actual = other.plugins.stages.types[record.kind].stages
-        assert [s.model_dump() for s in actual] == [dict(entry=[], starts=[], **s) for s in override]
+        assert [s.model_dump() for s in actual] == [dict(entry=[], starts=[], description="", **s) for s in override]
         other.close()
 
 

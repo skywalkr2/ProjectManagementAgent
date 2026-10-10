@@ -140,10 +140,30 @@ class TaskSettings(ConfigModel):
         0.0, ge=0, le=2, description="Randomness: near zero for extraction, a little for drafting."
     )
     max_output: int = Field(4000, ge=256, description="The most tokens an answer may use.")
+    expected_output: int = Field(
+        800, ge=1, description="Typical answer size in tokens, for estimates until there are past runs to go by."
+    )
+
+
+class TaskBudget(ConfigModel):
+    per_day_usd: float | None = Field(
+        None, ge=0, description="Stop new runs of this kind for the day above this total."
+    )
+    per_month_usd: float | None = Field(
+        None, ge=0, description="Stop new runs of this kind for the month above this total."
+    )
 
 
 class Budgets(ConfigModel):
-    per_run_usd: float = Field(0.25, ge=0, description="Stop a single run above this cost.")
+    per_run_usd: float = Field(0.25, ge=0, description="Never start a single run estimated above this cost.")
+    confirm_above_usd: float = Field(
+        0.10,
+        ge=0,
+        description="Ask for a go before a run estimated above this cost; below it, runs start on their own.",
+    )
+    per_task: dict[str, TaskBudget] = Field(
+        default_factory=dict, description="Limits for one kind of work, on top of the overall ones."
+    )
     per_day_usd: float = Field(2.0, ge=0, description="Stop new runs for the day above this total.")
     per_month_usd: float = Field(30.0, ge=0, description="Stop new runs for the month above this total.")
     warn_at: float = Field(0.8, gt=0, le=1, description="Warn when this share of a budget is used.")
@@ -348,6 +368,9 @@ class StageDefinition(ConfigModel):
     id: str = Field("", min_length=1, description="Stable stage identifier, unique within this record type.")
     label: str = Field(
         "", min_length=1, description="Editable wording for this stage; changing it does not change stored data."
+    )
+    description: str = Field(
+        "", description="What being in this stage means, in plain words, shown beside the stage on screen."
     )
     entry: list[str] = Field(
         default_factory=list, description="Deterministic check or standing rule ids required on entry."

@@ -6,15 +6,17 @@ types:
     stages:
     - id: planned
       label: Planned
+      description: Agreed, with a target date, but work hasn't started.
       entry: []
       starts: []
     - id: active
       label: In progress
+      description: Work is under way; actions and questions are being tracked.
       entry: []
-      starts:
-      - notes
+      starts: []
     - id: complete
       label: Complete
+      description: Delivered; nothing more is expected.
       entry: []
       starts: []
   example/reminder:
@@ -22,10 +24,12 @@ types:
     stages:
     - id: recorded
       label: Captured
+      description: Written down, not yet checked.
       entry: []
       starts: []
     - id: ready
       label: Ready for review
+      description: Has its text and can be looked at.
       entry:
       - example/has-text
       starts: []

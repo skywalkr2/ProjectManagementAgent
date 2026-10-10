@@ -20,8 +20,15 @@ tiers:
   routine: {use: stub/default, fallback: [], escalate_to: deep}
   deep: {use: stub/default}
 tasks:
-  notes: {tier: routine, temperature: 0, max_output: 4000}
-budgets: {per_run_usd: 0.5, per_day_usd: 5, per_month_usd: 60, warn_at: 0.8}
+  notes: {tier: routine, temperature: 0, max_output: 4000, expected_output: 800}
+budgets:
+  per_run_usd: 0.5
+  confirm_above_usd: 0.10
+  per_day_usd: 5
+  per_month_usd: 60
+  warn_at: 0.8
+  per_task:
+    notes: {per_day_usd: 1.5}
 prices:
   company-gateway/large: {input_per_million: 2.5, output_per_million: 10}
 evaluation: {runs: 3, min_score: 0.9}

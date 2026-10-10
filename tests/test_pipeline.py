@@ -429,3 +429,64 @@ def test_a_long_reply_chain_is_counted_message_by_message():
     )
     assert quoted_messages(chain) == 4
     assert quoted_messages("Just a note.") == 0
+
+
+def _priced(cfg, *, input_per_million: float, output_per_million: float) -> None:
+    from engine.config.schema import Price
+
+    use = cfg.ai.tiers["routine"].use
+    cfg.ai.prices[use] = Price(input_per_million=input_per_million, output_per_million=output_per_million)
+
+
+def test_a_run_estimated_above_the_amount_to_confirm_waits_for_the_go(env):
+    from engine.stages import approve_stage_request
+
+    ws, cfg, store = env
+    _priced(cfg, input_per_million=50.0, output_per_million=50.0)
+    cfg.ai.budgets.confirm_above_usd, cfg.ai.budgets.per_run_usd = 0.01, 10.0
+    asked = answers({"summary": "Nothing.", "ops": []})
+    handed, cs_id = run(env, "The printer says proof copies will ship on November 5.")
+    request = store.read().get("request", handed.request)
+    assert cs_id is None and asked == []
+    assert request.data["approval"] == "required" and request.data["estimate_usd"] > 0.01
+    assert "Waiting for your go" in request.data["waiting"]
+    approve_stage_request(store, handed.request, request.version)
+    assert process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW) is not None
+    assert len(asked) == 1
+
+
+def test_a_run_estimated_above_the_per_run_limit_never_starts(env):
+    _, cfg, store = env
+    _priced(cfg, input_per_million=5000.0, output_per_million=5000.0)
+    asked = answers({"summary": "Nothing.", "ops": []})
+    handed, cs_id = run(env, "The printer says proof copies will ship on November 5.")
+    assert cs_id is None and asked == []
+    assert "per-run limit" in store.read().get("request", handed.request).data["waiting"]
+
+
+def test_a_kind_of_work_stops_at_its_own_daily_budget(env):
+    from engine.ai.router import BudgetReached
+    from engine.config.schema import TaskBudget
+    from engine.storage import WriteContext
+
+    _, cfg, store = env
+    cfg.ai.budgets.per_task["notes"] = TaskBudget(per_day_usd=0.05)
+    router = Router(cfg, store, env={}, now=lambda: NOW)
+    with store.transaction() as tx:
+        tx.create(
+            "run",
+            {
+                "request": "REQ-1",
+                "task": "notes",
+                "provider": "stub",
+                "model": "stub",
+                "tier": "routine",
+                "cost_usd": 0.06,
+                "outcome": "ok",
+                "started_at": NOW.isoformat(),
+            },
+            WriteContext("engine", "trusted", "test"),
+        )
+    with pytest.raises(BudgetReached, match="this kind of work"):
+        router._check_budget("notes")
+    router._check_budget("other-kind")

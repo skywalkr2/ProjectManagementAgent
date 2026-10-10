@@ -384,9 +384,12 @@ def test_a_filed_note_says_which_project_it_went_under(api):
     assert under["meta"]["project"] == project["name"] and loose["meta"]["project"] is None
 
 
-def test_status_says_when_the_assistant_is_not_ready(api, tmp_path):
+def test_status_says_when_the_assistant_is_not_ready(api, tmp_path, monkeypatch):
     client, base, worker = api
-    # Never tested: the demo workspace has an account but no passing connection test.
+    # The demo workspace runs on the built-in stand-in, and says so.
+    assert client.get(f"{base}/status").json()["ai"] == {"state": "stand_in", "detail": None}
+    # From here the stand-in plays a real account. Never tested: no passing connection test yet.
+    monkeypatch.setattr("engine.ai.smoke.stand_in", lambda cfg: False)
     assert client.get(f"{base}/status").json()["ai"] == {"state": "untested", "detail": None}
     from engine.ai.smoke import record, smoke_test
 

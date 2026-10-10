@@ -136,9 +136,12 @@ DETAIL_LIMIT = 200
 def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]:
     """Whether the assistant can do its work: "not_set_up" (no account for any tier), "failing" (the last connection
     test failed for the current settings, or the latest request ended with the account refusing its key),
-    "untested" (settings changed since the last passing test), or "ok". The detail is the provider's own reason."""
+    "stand_in" (every tier uses the built-in stand-in, which only files notes), "untested" (settings changed since the
+    last passing test), or "ok". The detail is the provider's own reason."""
     if not any(tier.use for tier in cfg.ai.tiers.values()):
         return "not_set_up", None
+    if stand_in(cfg):
+        return "stand_in", None
     test = last_test(ws)
     current = test is not None and test.get("fingerprint") == ai_fingerprint(ws)
     if test is not None and current and not test.get("passed"):
@@ -154,3 +157,13 @@ def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]
     if untested_since_change(ws):
         return "untested", None
     return "ok", None
+
+
+def stand_in(cfg: Config) -> bool:
+    """True when every account the tiers use is the built-in stand-in, which only files notes."""
+    return all(cfg.ai.providers[ref.partition("/")[0]].adapter == "stub" for ref in _accounts_in_use(cfg))
+
+
+def _accounts_in_use(cfg: Config) -> list[str]:
+    """Every provider/model a tier uses or falls back to."""
+    return [ref for tier in cfg.ai.tiers.values() for ref in ([tier.use] if tier.use else []) + list(tier.fallback)]

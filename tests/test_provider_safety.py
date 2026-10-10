@@ -145,11 +145,14 @@ def test_a_failure_adds_the_providers_own_message(env):
     assert "(" not in _ai_failure(AiError("timeout"))
 
 
-def test_the_assistants_state_follows_the_account_the_test_and_the_last_refusal(env):
+def test_the_assistants_state_follows_the_account_the_test_and_the_last_refusal(env, monkeypatch):
     from engine.ai.smoke import ai_state
 
     ws, store = env
     cfg = ws.config(env={})
+    assert ai_state(ws, cfg, store) == ("stand_in", None)
+    # From here the stand-in plays a real account, answering through the test responder.
+    monkeypatch.setattr("engine.ai.smoke.stand_in", lambda cfg: False)
     assert ai_state(ws, cfg, store) == ("untested", None)
     set_responder(lambda task: '{"ok": true}')
     record(ws, smoke_test(cfg, env={}))

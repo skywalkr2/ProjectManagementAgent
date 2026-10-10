@@ -86,7 +86,7 @@ class RequestCounts(BaseModel):
 class AiState(BaseModel):
     """Whether the assistant can do its work: set up, tested, and answering."""
 
-    state: Literal["ok", "untested", "failing", "not_set_up"]
+    state: Literal["ok", "untested", "failing", "not_set_up", "stand_in"]
     detail: str | None = Field(None, description="The provider's own reason when there is one, shortened.")
 
 
