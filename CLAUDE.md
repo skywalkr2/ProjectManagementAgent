@@ -69,6 +69,13 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 - Hosting platform names appear only in `deploy/` and docs. No user's domain, account or secret anywhere in the repository;
   examples use `example.com`.
 
+## How the work is split
+- The main session plans, designs, writes briefs and reviews. Well-specified implementation (screens, tests, docs, config,
+  features with a clear brief) goes to a lower-cost subagent; the main session reviews its diff and runs the checks before
+  anything is committed.
+- The main session keeps work that needs judgment: design changes, the applier, ledger, undo, trust and plugin boundaries,
+  and fixing what a review finds there.
+
 ## Before finishing any change
 - Run the tests and the self-check: specificity, provider, pattern and boundary scans, config coverage, manifests, both
   fictional workspaces, the core with no packs enabled, root and nested base paths, deploy checks, web build.
