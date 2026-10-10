@@ -165,10 +165,11 @@ def test_the_last_account_in_line_is_tried_again_after_waiting(cfg, store):
     replies = iter([httpx.Response(429, headers={"retry-after": "2"}), httpx.Response(200, json=ok_body())])
     cfg.ai.tiers["routine"].fallback = []
     router, seen = router_with(cfg, store, {"main": lambda r: next(replies)})
-    waits = []
+    waits, told = [], []
     router.sleep = waits.append
+    router.on_wait = told.append
     router.call(TASK, request_id="REQ-1")
-    assert waits == [2.0]
+    assert waits == [2.0] and told == [2.0]
     assert [h for h, _ in seen] == [host(cfg, "main")] * 2
 
 

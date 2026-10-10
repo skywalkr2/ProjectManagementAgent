@@ -79,8 +79,10 @@ class Router:
         adapter_factory: Callable[[str, Any, str | None], Adapter] = make_adapter,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
         sleep: Callable[[float], None] = time.sleep,
+        on_wait: Callable[[float], None] | None = None,
     ):
         self.sleep = sleep
+        self.on_wait = on_wait
         self.cfg = cfg
         self.store = store
         self.env = env
@@ -136,6 +138,8 @@ class Router:
                 ):
                     raise
                 self._record(task, request_id, choice, started, time.monotonic() - clock, None, err)
+                if self.on_wait is not None:
+                    self.on_wait(pause)
                 self.sleep(pause)
         raise AssertionError("unreachable")
 

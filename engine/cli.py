@@ -337,6 +337,7 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
         only=args.only,
         ai_config=args.ai_config,
         progress=_eval_progress,
+        notice=lambda line: print(line, file=sys.stderr, flush=True),
     )
     print(report.as_json() if args.json else report.text())
     return 0 if report.pass_rate() >= settings.min_score else 1

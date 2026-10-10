@@ -99,6 +99,7 @@ def evaluate(
     only: list[str] | None = None,
     ai_config: Path | None = None,
     progress: Callable[[RunResult, int, int], None] | None = None,
+    notice: Callable[[str], None] | None = None,
 ) -> Report:
     """Run every case (or `only` these) `runs` times. With `stub`, the stand-in AI gives each case's ideal answer, which
     checks the cases and the pipeline rather than a model. `ai_config` replaces the fixture's AI setup with another
@@ -109,7 +110,17 @@ def evaluate(
     total = len(cases) * runs
     for case in cases:
         for n in range(1, runs + 1):
-            results.append(_run_case(template, case, n, account=account, stub=stub, env=env, ai_config=ai_config))
+            step = f"[{len(results) + 1}/{total}] {case['id']}"
+            if notice is not None:
+                notice(f"{step}: started")
+            waited = (
+                (lambda s, step=step: notice(f"{step}: the account asked to slow down; trying again in {s:.0f}s"))
+                if notice
+                else None
+            )
+            results.append(
+                _run_case(template, case, n, account=account, stub=stub, env=env, ai_config=ai_config, on_wait=waited)
+            )
             if progress is not None:
                 progress(results[-1], len(results), total)
     return Report(account or ("stub" if stub else "configured"), runs, results)
@@ -124,6 +135,7 @@ def _run_case(
     stub: bool,
     env: Mapping[str, str],
     ai_config: Path | None = None,
+    on_wait: Callable[[float], None] | None = None,
 ) -> RunResult:
     with tempfile.TemporaryDirectory() as tmp:
         ws = init_workspace(Path(tmp) / "ws", template=template, git=False)
@@ -148,7 +160,7 @@ def _run_case(
         try:
             people_before = len(store.read().list("person"))
             handed = hand_in(ws, store, note=case.get("note", ""), pasted=case.get("pasted", ""), now=NOW)
-            cs_id = process(ws, store, cfg, Router(cfg, store, env=env), handed.request, now=NOW)
+            cs_id = process(ws, store, cfg, Router(cfg, store, env=env, on_wait=on_wait), handed.request, now=NOW)
             runs = [r.data for r in store.read().list("run")]
             cost = sum(r.get("cost_usd") or 0.0 for r in runs)
             seconds = sum(r.get("seconds") or 0.0 for r in runs)
