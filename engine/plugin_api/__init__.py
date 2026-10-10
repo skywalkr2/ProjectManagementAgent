@@ -62,12 +62,16 @@ class OpWriter(ReadView):
             raise StoreError("op attempted to write outside its declared fields")
 
     def create(self, kind: str, data: dict[str, Any]) -> Stored:
+        if data.get("stage") is not None:
+            raise StoreError("stage changes require stage.move")
         self._write(kind, {"*"})
         result = self.__tx.create(kind, data, self.__context)
         self.touched.append({"kind": kind, "id": result.id})
         return result
 
     def update(self, kind: str, record_id: str, changes: dict[str, Any], *, read_version: int) -> Stored:
+        if "stage" in changes:
+            raise StoreError("stage changes require stage.move")
         self._write(kind, set(changes))
         result = self.__tx.update(kind, record_id, changes, self.__context, read_version=read_version)
         self.touched.append({"kind": kind, "id": result.id})

@@ -158,3 +158,64 @@ def test_check_crash_disables_plugin_and_fails_closed(stage_workspace):
     store.plugins.stage_checks["stage-test/ready"] = ("stage-test", broken)
     assert not entry_check(store, "stage-test/ready", record).passed
     assert not store.plugins.active("stage-test")
+
+
+def move_op(record, to):
+    from engine.ops import StageMoveOp
+
+    return StageMoveOp(record={"kind": record.kind, "id": record.id}, to=to, read_version=record.version)
+
+
+def test_move_refuses_with_reasons_then_applies_and_undoes(stage_workspace):
+    from engine.applier import move_stage, undo
+    from engine.storage import StoreError, WriteContext
+
+    store, cfg, record = stage_workspace
+    with pytest.raises(StoreError, match="stage-test/ready: not ready"):
+        move_stage(store, move_op(record, "ready"))
+    assert store.read().list("changeset") == []
+    with store.transaction() as tx:
+        record = tx.update(
+            record.kind, record.id, {"ready": True}, WriteContext("pm", "trusted", "test"), read_version=record.version
+        )
+    cs = move_stage(store, move_op(record, "ready"))
+    assert store.read().get(record.kind, record.id).data["stage"] == "ready"
+    assert undo(store, cs).restored == [0]
+    assert store.read().get(record.kind, record.id).data["stage"] is None
+
+
+@pytest.mark.parametrize("trust", ["trusted", "untrusted"])
+def test_ai_stage_proposal_is_always_held(stage_workspace, trust):
+    from engine.applier import Context, Inputs, apply_changeset, release
+    from engine.names import People
+    from engine.ops import ChangesetIn
+
+    store, cfg, record = stage_workspace
+    ctx = Context(store, cfg, People(store, cfg), ("stage.move",), Inputs("request", None, "", "", trust))
+    cs = apply_changeset(ChangesetIn(ops=[move_op(record, "draft")]), [], ctx, run=None)
+    assert store.read().get("changeset", cs).data["ops"][0]["status"] == "held"
+    assert store.read().get(record.kind, record.id).data["stage"] is None
+    release(store, cfg, cs, 0)
+    assert store.read().get(record.kind, record.id).data["stage"] == "draft"
+    entry = [e for e in store.read().ledger() if e["field"] == "stage" and e["after"] == "draft"][-1]
+    assert entry["actor"] == "pm"
+
+
+def test_release_rechecks_entry_conditions_and_version(stage_workspace):
+    from engine.applier import Context, Inputs, apply_changeset, release
+    from engine.names import People
+    from engine.ops import ChangesetIn
+    from engine.storage import StoreError, WriteContext
+
+    store, cfg, record = stage_workspace
+    ctx = Context(store, cfg, People(store, cfg), ("stage.move",), Inputs("request", None, "", "", "trusted"))
+    cs = apply_changeset(ChangesetIn(ops=[move_op(record, "ready")]), [], ctx, run=None)
+    with pytest.raises(StoreError, match="not ready"):
+        release(store, cfg, cs, 0)
+    with store.transaction() as tx:
+        tx.update(
+            record.kind, record.id, {"ready": True}, WriteContext("pm", "trusted", "test"), read_version=record.version
+        )
+    with pytest.raises(StoreError, match="changed since"):
+        release(store, cfg, cs, 0)
+    assert store.read().get(record.kind, record.id).data["stage"] is None

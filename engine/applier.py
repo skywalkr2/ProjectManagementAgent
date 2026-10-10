@@ -33,6 +33,7 @@ from engine.ops import (
     QuestionDoneOp,
     RecordLogOp,
     RecordSetOp,
+    StageMoveOp,
 )
 from engine.records import model_for
 from engine.storage import Store, StoreError, WriteContext
@@ -104,6 +105,16 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             continue
         for message in ctx.store.plugins.validators(op):
             refuse(i, "plugin-validator", message)
+        if isinstance(op, StageMoveOp):
+            from engine.stages import validate_move, wording
+
+            # Even a trusted PM note interpreted by AI is a proposal, never consent.
+            messages = [wording(ctx.cfg, "confirm")]
+            try:
+                validate_move(ctx.store, op, view)
+            except StoreError as err:
+                messages.append(str(err))
+            problems.append(Problem("stage-confirm", "hold", i, "; ".join(messages)))
         # evidence
         evidence = getattr(op, "evidence", None)
         needs = name in NEEDS_EVIDENCE or (isinstance(op, RecordSetOp) and op.field in EVIDENCE_FIELDS)
@@ -370,6 +381,10 @@ def _wctx(ctx: Context, cs_id: str, index: int, op: OpModel) -> WriteContext:
 def _apply_op(
     tx: Tx, op: OpModel, ctx: Context, w: WriteContext, today: date
 ) -> tuple[list[dict[str, Any]], str | None]:
+    if isinstance(op, StageMoveOp):
+        from engine.stages import apply_move
+
+        return apply_move(ctx.store, tx, op, w), None
     if "/" in op.op:
         return ctx.store.plugins.apply(tx, op, w), None
     trust = ctx.inputs.trust
@@ -698,3 +713,40 @@ def _revert(tx: Tx, entries: list[dict[str, Any]], changeset_id: str) -> None:
             if r["field"] and r["field"] not in before:
                 before[r["field"]] = r["before"]
         tx.update(kind, rid, before, w, read_version=current.version)
+
+
+def move_stage(store: Store, op: StageMoveOp, *, actor: Literal["pm", "rule"] = "pm") -> str:
+    """A person's explicit move or a deterministic rule's move, through the same op and ledger."""
+    from engine.stages import apply_move
+
+    with store.transaction() as tx:
+        cs_id = tx.new_id("changeset")
+        request = tx.create(
+            "request",
+            {
+                "task": "notes",
+                "origin": "pm" if actor == "pm" else "schedule",
+                "state": "done",
+                "created_at": store.clock(),
+                "changeset": cs_id,
+            },
+            WriteContext(actor, "trusted", "stage.request"),
+        )
+        source = {"rule": f"stages/{op.record.kind}/{op.to}"} if actor == "rule" else None
+        w = WriteContext(actor, "trusted", "stage.move#0", cs_id, request.id, source)
+        records = apply_move(store, tx, op, w)
+        tx.create(
+            "changeset",
+            {
+                "request": request.id,
+                "ops": [asdict(OpOutcome(0, op.model_dump(mode="json"), "applied", "op0", records=records))],
+                "status": "applied",
+                "trust": "trusted",
+                "reviewed": actor == "pm",
+                "created_at": store.clock(),
+            },
+            WriteContext("engine", "trusted", "changeset.record"),
+            record_id=cs_id,
+        )
+    store.plugins.publish("changeset.applied", {"id": cs_id})
+    return cs_id

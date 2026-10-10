@@ -21,6 +21,7 @@ class Record(BaseModel):
     prefix: ClassVar[str]
 
     id: str
+    stage: str | None = Field(None, description="Current configured stage id; wording lives in stages.yaml.")
     ext: dict[str, dict[str, Any]] = Field(default_factory=dict, description="Fields added by plugins, by plugin name.")
 
 

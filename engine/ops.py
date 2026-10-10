@@ -121,6 +121,21 @@ class PersonAddOp(OpModel):
     aliases: list[str] = Field(default_factory=list)
 
 
+class RecordRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: str
+    id: str
+
+
+class StageMoveOp(OpModel):
+    """Propose entering a configured stage. Always waits for the person's confirmation."""
+
+    op: Literal["stage.move"] = "stage.move"
+    record: RecordRef
+    to: str = Field(min_length=1)
+    read_version: int = Field(ge=1)
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -130,7 +145,8 @@ Op = Annotated[
     | ActionCloseOp
     | QuestionAddOp
     | QuestionDoneOp
-    | PersonAddOp,
+    | PersonAddOp
+    | StageMoveOp,
     Field(discriminator="op"),
 ]
 
@@ -144,6 +160,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "question.add": QuestionAddOp,
     "question.done": QuestionDoneOp,
     "person.add": PersonAddOp,
+    "stage.move": StageMoveOp,
 }
 
 TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS}
