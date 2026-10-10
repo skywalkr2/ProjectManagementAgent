@@ -4,7 +4,7 @@ The working checklist from today to the first public release. Tick items as they
 time come from `schedule.md`; what is in each horizon comes from `scope.md`; the milestones are in `docs/design/13-build-plan.md`.
 "1.0" is the first public release, which is version 1 in the plan.
 
-Last updated: 2026-10-09.
+Last updated: 2026-10-10.
 
 ## 1. Launch slice (done)
 
@@ -13,7 +13,7 @@ Last updated: 2026-10-09.
 ## 2a. Build on now (decided 2026-10-09; launch-slice copy is commit `49e95e7`)
 
 - [x] People and projects screens: add, edit, rename; remove when nothing refers to them; `cockpit init --you` (2026-10-09).
-- [ ] Plugin host, plugin API 0.x (brief: `next-task.md`): implemented on `codex/plugin-host`; final browser verification and push pending because the development sandbox aborts Chrome before tests start; all other checks pass (2026-10-10).
+- [x] Plugin host, plugin API 0.x (brief: `next-task.md`): implemented and all required checks passed, including 22 browser tests at root and nested base paths (2026-10-10).
 - [ ] What the publishing pack needs: stages, dependencies and baselines, file channel, cost control.
 - [ ] Publishing pack (9.6 to 9.9); real use starts here. Testing until then is on fictional data only.
 - [ ] Then Ask the assistant (6.25) and the rest of 3a. The go/no-go and freeze below no longer apply.
