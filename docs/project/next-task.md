@@ -1,3 +1,5 @@
+**Status: done and merged (2026-10-10).** Kept as a record of the brief. No task is handed out now.
+
 # Next task: stages (design 6.26, config 4.21)
 
 Read first: design 6.26, 4.21, 3.3 (extension points), 3.9, 6.7 (op tiers,

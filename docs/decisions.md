@@ -3,6 +3,61 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-10: Plugin host and stages reviewed; the rules they follow
+
+**Decided by:** Claude (design detail, from a review of the plugin host and stages work); the owner can override any of it.
+
+**What:** The plugin host (plugin API 0.1) and stages are merged after review, with these rules:
+- A plugin op writes only the plugin's own record types. Core records change only through core ops, so evidence, owner and
+  tier rules always apply. `outbound` plugin ops are refused until the publisher is part of the API.
+- An ordinary refusal inside a plugin op (a stale version, an invalid value) refuses that op; reaching outside the
+  plugin's declared scope disables it. A disabled plugin's validators no longer block core ops.
+- Notes on scheduled work (plugin requests, stage tasks) reach the assistant as untrusted data, never as the PM's words.
+- Stage config naming a plugin that is turned off or failed to load stays in place and shows as unavailable; the workspace
+  still starts.
+- A stage move goes one stage forward, after that stage's entry checks pass, or back to any earlier stage without checks.
+  An item not yet in a stage may start at any stage whose checks pass, so work under way can be brought in where it is.
+- Rule-driven moves need an entry check on every stage after the first, and leave an item alone after the person moved it
+  back or undid a move.
+- A stage task is never queued twice for the same item and stage; moving on before the go closes it, and Undo reopens it.
+  Requests that plugins queue in response to a stage move also wait for the go.
+- A workspace stage entry without `stages` keeps the pack's list; every stage has a label; record types may not define
+  their own `stage` field.
+
+**Also recorded here (from the host work):** registries are per store; events publish after commit only; manifest
+contributions without an extension point yet are refused; standing rules may name a deterministic `check`, and prose
+rules never allow a move (a general executable rule language stays an open question).
+
+**Why:** The review found paths where a plugin could bypass core checks, where one failing plugin stopped the workspace or
+blocked core work, where rules undid the person's Undo, and where skipped stages skipped their checks.
+
+**Impact:** `docs/plugin-api-0.x.md` describes the contract. Plugin settings layered from environment, flags and profiles
+are a later change.
+
+## 2026-10-10: The publishing pack is a stretch goal for the 2026-12-01 launch; UX is checked as we go
+
+**Decided by:** project owner.
+
+**What:**
+- The owner's manual launch process continues. If the publishing pack is usable by about 2026-11-01, the last weeks of
+  the launch can run through it alongside the manual process; if not, nothing is lost. Supersedes "the launch goes ahead
+  without the tool" in the entry below.
+- Build order: cost control, then the file channel, then dependencies and baselines, then the publishing pack.
+- No feature is done without its screen. Before handing a feature over, Claude runs it on the fictional imprint, end to end,
+  with desktop and phone screenshots checked against Part 7. The owner tries it weekly for about 15 minutes; friction goes in
+  `docs/project/ux-notes.md`. Before November, Today becomes the real home, with plain empty states and a first-run guide.
+- From outside reviews, adopted: a one-tap reason on Send back and Undo (wrong fact, wrong person, wrong tone, missing
+  context, duplicate), feeding evaluation cases; a permission diff before a plugin is enabled or upgraded; a read-only "why
+  did this happen?" trace per run (after the publishing pack). Into cost control: cached input tokens recorded and priced
+  separately, cache markers as an adapter capability, and choosing a tier whose context window fits before sending.
+- Not adopted: ranking Today with an AI model (Today's order stays rules), showing model names, keeping workflow state or
+  keys in the browser.
+
+**Why:** The owner's main concern once the core holds is the experience of using it; the earlier UX fixes came from a few
+minutes of real use.
+
+**Impact:** Roadmap section 2a; design 6.16 and 7 get the adopted items when each is built.
+
 ## 2026-10-09: Real use starts with the publishing pack
 
 **Decided by:** project owner.
@@ -624,9 +679,3 @@ or a bundled plugin is written as a patch and an issue for this repository.
 the design was removed; `CLAUDE.md` is the only copy.
 
 **Why:** One copy of each document, at the path the other documents use.
-
-## 2026-10-09: Plugin API 0.x host boundary
-
-Implementation of the owner-requested host uses per-store registries and post-commit events; unsupported 1.0 manifest contributions (including interfaces and reach capabilities) are refused explicitly until their extension points exist, with no scope added beyond the next-task brief.
-
-- 2026-10-10: Stages use deterministic plugin checks. Standing rules retain their 4.10 metadata and may reference a code check via `check`; prose without an executable check stays blocked, never interpreted by AI. A general executable rule language remains an open design question. Workspace stage lists replace pack lists by record type, including an empty list to remove them.

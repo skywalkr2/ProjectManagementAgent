@@ -530,7 +530,11 @@ def release(
         raise StoreError("that item isn't waiting for you")
     from engine.ops import CHANGESET
 
-    op = CHANGESET.validate_python({"ops": [outcome["op"]]}, context={"op_models": store.plugins.ops}).ops[0]
+    try:
+        op = CHANGESET.validate_python({"ops": [outcome["op"]]}, context={"op_models": store.plugins.ops}).ops[0]
+    except ValidationError:
+        # The op belongs to a plugin that isn't running now; it stays held until the plugin is back.
+        raise StoreError("the plugin this belongs to is turned off or failed to start") from None
     name = (outcome.get("question") and _question_name(store, outcome["question"])) or None
     if person is not None and name is not None:
         op = _substitute(op, name, person)

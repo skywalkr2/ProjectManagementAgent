@@ -26,6 +26,7 @@ from engine.plugin_api import (
     PLUGIN_API_VERSION,
     EventContext,
     OpWriter,
+    PluginMisuse,
     ReadView,
     Registrar,
     Settings,
@@ -78,11 +79,24 @@ class PluginHost:
         for name in cfg.workspace.plugins.enabled:
             self._load(name, set())
         defaults = {kind: value for reg in self.registrars.values() for kind, value in reg.stage_defaults.items()}
-        self.stages.types = {**defaults, **self.stages.types}
+        merged = dict(defaults)
+        for kind, override in self.stages.types.items():
+            pack = defaults.get(kind)
+            # A workspace entry that leaves out `stages` keeps the pack's list and changes only what it sets.
+            stages = override.stages if override.stages is not None else (pack.stages if pack else None)
+            merged[kind] = override.model_copy(
+                update={"stages": stages, "moves": override.moves or (pack and pack.moves)}
+            )
+        self.stages.types = merged
+        running = {name for name in self.status if self.active(name)}
         try:
-            validate_rules(cfg.rules, self.stage_checks)
+            validate_rules(cfg.rules, self.stage_checks, running)
             validate_stages(
-                self.stages, self.records, set(self.stage_checks) | {r.id for r in cfg.rules.rules}, self.tasks
+                self.stages,
+                self.records,
+                set(self.stage_checks) | {r.id for r in cfg.rules.rules},
+                self.tasks,
+                running,
             )
         except Exception:
             self.close()
@@ -230,10 +244,16 @@ class PluginHost:
         for task in registrar.tasks.values():
             if not set(task.ops) <= allowed_ops:
                 raise ValueError("task may use only core or own ops")
+        for model in registrar.records.values():
+            if "stage" in vars(model).get("__annotations__", {}):
+                raise ValueError("the stage field belongs to the core; record types may not redefine it")
         for op in registrar.ops.values():
             for kind, fields in op.writes.items():
-                model = registrar.records.get(kind) or REGISTRY.get(kind)
-                if model is None or not fields or ("*" not in fields and not set(fields) <= set(model.model_fields)):
+                # Core records change only through core ops, so their evidence, owner and tier rules always apply.
+                model = registrar.records.get(kind)
+                if model is None:
+                    raise ValueError("ops may write only the plugin's own record types; use core ops for core records")
+                if not fields or ("*" not in fields and not set(fields) <= set(model.model_fields)):
                     raise ValueError("op declares unknown record fields")
 
     def stage_check(self, check_id, record, view=None):
@@ -276,7 +296,7 @@ class PluginHost:
         for name, registrar in self.registrars.items():
             for fn in registrar.validators.get(op.op, []):
                 if not self.active(name):
-                    problems.append(f"validator plugin {name} is disabled")
+                    # A disabled plugin's own ops are refused above; core ops carry on without its validators.
                     continue
                 try:
                     result = fn(op.model_copy(deep=True), ReadView(self.store.read(), name))
@@ -296,6 +316,12 @@ class PluginHost:
         writer = OpWriter(tx, name, registration.writes, context)
         try:
             registration.apply(op.model_copy(deep=True), writer, self.registrars[name].config.model_copy(deep=True))
+        except PluginMisuse as err:
+            self.disable(name, f"op broke its contract: {err}")
+            raise
+        except StoreError:
+            # An ordinary refusal (stale version, invalid value) refuses this op only.
+            raise
         except Exception as err:
             self.disable(name, f"op callback failed: {err}")
             raise StoreError(f"plugin {name} op failed") from err
@@ -318,14 +344,14 @@ class PluginHost:
                         try:
                             context = EventContext(self.store.read(), name, registrar.config)
                             registrar.handlers[event](deepcopy(payload), context)
-                            self._commands(name, context.commands)
+                            self._commands(name, context.commands, event, payload)
                         except Exception as err:
                             self.disable(name, f"event {event} failed: {err}")
             finally:
                 self._chain = frozenset()
                 self._dispatching = False
 
-    def _commands(self, name: str, commands: list) -> None:
+    def _commands(self, name: str, commands: list, event: str = "", payload: dict | None = None) -> None:
         if not commands:
             return
         context = WriteContext(actor="plugin", trust="untrusted", op=f"{name}/event")
@@ -340,6 +366,21 @@ class PluginHost:
                         raise StoreError("requesting another plugin requires an interface")
                     self.task_kind(task)
                     data = {**data, "origin": "schedule", "created_at": datetime.now(UTC).isoformat()}
+                    if event == "stage.moved" and payload and payload.get("to"):
+                        from engine.stages import wording
+
+                        # Work a stage move starts waits for the person's go, however it was requested.
+                        data |= {
+                            "state": "needs_you",
+                            "approval": "required",
+                            "waiting": wording(self.cfg, "waiting"),
+                            "stage_start": {
+                                "kind": payload["kind"],
+                                "record": payload["id"],
+                                "stage": payload["to"],
+                                "changeset": None,
+                            },
+                        }
                 else:
                     pm = self.cfg.workspace.user.person
                     if not pm or tx.get("person", pm) is None:

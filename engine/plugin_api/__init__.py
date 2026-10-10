@@ -28,6 +28,10 @@ class Settings(BaseModel):
     version: Literal[1] = Field(1, description="Settings format version.")
 
 
+class PluginMisuse(StoreError):
+    """The plugin broke its contract (reached outside its scope); the host disables it for the run."""
+
+
 class ReadView:
     """Read core records and this plugin's records, never another plugin's tables."""
 
@@ -36,7 +40,7 @@ class ReadView:
 
     def _allow(self, kind: str) -> None:
         if "/" in kind and not kind.startswith(self.__plugin + "/"):
-            raise StoreError("another plugin's records require a declared interface")
+            raise PluginMisuse("another plugin's records require a declared interface")
 
     def get(self, kind: str, record_id: str) -> Stored | None:
         self._allow(kind)
@@ -59,13 +63,13 @@ class OpWriter(ReadView):
         self._allow(kind)
         allowed = self.__writes.get(kind, ())
         if not allowed or ("*" not in allowed and not fields <= set(allowed)):
-            raise StoreError("op attempted to write outside its declared fields")
+            raise PluginMisuse("op attempted to write outside its declared fields")
 
     def create(self, kind: str, data: dict[str, Any]) -> Stored:
         if kind == "request" and (data.get("stage_start") is not None or data.get("approval") is not None):
-            raise StoreError("stage task approval belongs to the core")
+            raise PluginMisuse("stage task approval belongs to the core")
         if data.get("stage") is not None:
-            raise StoreError("stage changes require stage.move")
+            raise PluginMisuse("stage changes require stage.move")
         self._write(kind, {"*"})
         result = self.__tx.create(kind, data, self.__context)
         self.touched.append({"kind": kind, "id": result.id})
@@ -73,9 +77,9 @@ class OpWriter(ReadView):
 
     def update(self, kind: str, record_id: str, changes: dict[str, Any], *, read_version: int) -> Stored:
         if kind == "request" and {"approval", "stage_start"} & set(changes):
-            raise StoreError("stage task approval belongs to the core")
+            raise PluginMisuse("stage task approval belongs to the core")
         if "stage" in changes:
-            raise StoreError("stage changes require stage.move")
+            raise PluginMisuse("stage changes require stage.move")
         self._write(kind, set(changes))
         result = self.__tx.update(kind, record_id, changes, self.__context, read_version=read_version)
         self.touched.append({"kind": kind, "id": result.id})
@@ -147,8 +151,10 @@ class Registrar:
         name = names[0]
         self._name(name)
         writes = getattr(model, "writes", None)
-        if name in self.ops or tier not in ("data", "outbound", "system") or not callable(apply) or not writes:
-            raise ValueError("duplicate op, invalid tier/callback, or missing model.writes")
+        if name in self.ops or tier not in ("data", "system") or not callable(apply) or not writes:
+            raise ValueError(
+                "duplicate op, invalid tier (outbound ops wait for the publisher), callback, or missing model.writes"
+            )
         for kind in writes:
             if "/" in kind:
                 self._name(kind)
@@ -191,6 +197,7 @@ __all__ = [
     "Record",
     "OpModel",
     "EvidenceIn",
+    "PluginMisuse",
     "Tier",
     "WriteContext",
     "Stored",

@@ -13,9 +13,16 @@ Last updated: 2026-10-10.
 ## 2a. Build on now (decided 2026-10-09; launch-slice copy is commit `49e95e7`)
 
 - [x] People and projects screens: add, edit, rename; remove when nothing refers to them; `cockpit init --you` (2026-10-09).
-- [x] Plugin host, plugin API 0.x (brief: `next-task.md`): implemented and all required checks passed, including 22 browser tests at root and nested base paths (2026-10-10).
-- [ ] What the publishing pack needs: stages, dependencies and baselines, file channel, cost control.
-- [ ] Publishing pack (9.6 to 9.9); real use starts here. Testing until then is on fictional data only.
+- [x] Plugin host, plugin API 0.1: reviewed, fixed and merged (2026-10-10).
+- [x] Stages: reviewed, fixed and merged; API only so far (2026-10-10).
+- [ ] Stage screens.
+- [ ] What else the publishing pack needs, in order: cost control (with cached-token pricing, cache markers, choosing a
+  tier by context window), file channel, dependencies and baselines. Each with its screens.
+- [ ] Today as the real home: plain empty states, a first-run guide.
+- [ ] Publishing pack (9.6 to 9.9). Stretch goal: usable by about 2026-11-01 for the last weeks of the 2026-12-01 launch,
+  alongside the manual process. Testing until then is on fictional data only.
+- Every feature: run on the fictional imprint end to end with desktop and phone screenshots before hand-over; the owner's
+  weekly 15-minute try; friction in `ux-notes.md`.
 - [ ] Then Ask the assistant (6.25) and the rest of 3a. The go/no-go and freeze below no longer apply.
 
 ## 2. Owner validation (now to 2026-10-30)

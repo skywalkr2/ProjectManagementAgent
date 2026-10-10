@@ -1,7 +1,11 @@
 """Deterministic stage entry checks; neither code checks nor rules dispatch AI."""
 
+import logging
+
 from engine.config.schema import STAGE_WORDING
 from engine.plugin_api import StageCheckResult
+
+log = logging.getLogger(__name__)
 
 
 def wording(cfg, key):
@@ -31,7 +35,7 @@ def entry_check(store, check_id, record, view=None):
 def record_status(store, record, view=None):
     """The next configured stage and every deterministic entry-check result."""
     settings = store.plugins.stages.types.get(record.kind)
-    stages = settings.stages if settings else []
+    stages = (settings.stages or []) if settings else []
     current = record.data.get("stage")
     ids = [stage.id for stage in stages]
     # Removed stages remain data and history. Never guess a successor for them.
@@ -68,13 +72,25 @@ def validate_move(store, op, view):
     if record.version != op.read_version:
         raise StoreError(wording(store.plugins.cfg, "record_changed"))
     settings = store.plugins.stages.types.get(record.kind)
-    target = next((s for s in settings.stages if s.id == op.to), None) if settings else None
-    if target is None:
+    stages = (settings.stages or []) if settings else []
+    ids = [stage.id for stage in stages]
+    if op.to not in ids:
         raise StoreError(wording(store.plugins.cfg, "stage_unknown").format(stage=op.to))
-    if record.data.get("stage") == op.to:
+    target = stages[ids.index(op.to)]
+    current = record.data.get("stage")
+    if current == op.to:
         raise StoreError(wording(store.plugins.cfg, "stage_same"))
-    checks = [(check, entry_check(store, check, record, view)) for check in target.entry]
-    failed = [f"{check}: {result.reason}" for check, result in checks if not result.passed]
+    # An item not yet in a stage (or in one config removed) may start at any stage whose entry checks pass,
+    # so work already under way can be brought in where it is.
+    here = ids.index(current) if current in ids else None
+    if here is not None and ids.index(op.to) < here:
+        # Moving back needs no entry checks: the record already passed them on the way forward.
+        return record, target
+    if here is not None and ids.index(op.to) != here + 1:
+        raise StoreError(wording(store.plugins.cfg, "stage_skip"))
+    failed = [
+        result.reason for result in (entry_check(store, c, record, view) for c in target.entry) if not result.passed
+    ]
     if failed:
         raise StoreError("; ".join(failed))
     return record, target
@@ -101,7 +117,28 @@ def apply_move(store, tx, op, context):
             raise StoreError(wording(store.plugins.cfg, "person_required"))
     tx.update(record.kind, record.id, {"stage": target.id}, context, read_version=op.read_version)
     touched = [{"kind": record.kind, "id": record.id}]
+    pending = {}
+    for request in tx.list("request"):
+        origin = request.data.get("stage_start")
+        if not origin or origin["record"] != record.id or origin["kind"] != record.kind:
+            continue
+        if request.data["state"] != "needs_you" or request.data.get("approval") != "required":
+            continue
+        if origin["stage"] == target.id:
+            pending[request.data["task"]] = request
+        else:
+            # Left before the go: close it in this changeset, so Undo of the move reopens it.
+            tx.update(
+                "request",
+                request.id,
+                {"state": "done", "waiting": wording(store.plugins.cfg, "stage_left_before_go")},
+                context,
+                read_version=request.version,
+            )
+            touched.append({"kind": "request", "id": request.id})
     for task in dict.fromkeys(target.starts):
+        if task in pending:
+            continue
         store.plugins.task_kind(task)
         request = tx.create(
             "request",
@@ -135,17 +172,41 @@ def move_ready_records(store):
     for kind, settings in store.plugins.stages.types.items():
         if (settings.moves or store.plugins.stages.moves) != "rule":
             continue
+        if kind not in store.plugins.records or ("/" in kind and not store.plugins.active(kind.split("/")[0])):
+            continue
         for record in store.read().list(kind):
-            status = record_status(store, record)
-            if not status["ready"]:
-                continue
-            op = StageMoveOp(record=status["record"], to=status["next"]["id"], read_version=record.version)
             try:
+                if held_back(store, record, settings.stages or []):
+                    continue
+                status = record_status(store, record)
+                if not status["ready"]:
+                    continue
+                op = StageMoveOp(record=status["record"], to=status["next"]["id"], read_version=record.version)
                 moved.append(move_stage(store, op, actor="rule"))
             except StoreError:
                 # Another writer or changed entry check leaves the record for a later pass.
                 continue
+            except Exception:
+                # One bad record must not stop the worker; it stays where it is and the next pass tries again.
+                log.exception("Automatic stage move failed for %s %s", kind, record.id)
+                continue
     return moved
+
+
+def held_back(store, record, stages):
+    """True when the person moved the record back (or undid a move): rules leave it until the person moves it on."""
+    ids = [stage.id for stage in stages]
+    for row in reversed(store.read().ledger(kind=record.kind, record_id=record.id)):
+        if row["field"] != "stage" or row["before"] == row["after"]:
+            continue
+        if row["actor"] == "rule":
+            return False
+
+        def position(stage):
+            return -1 if stage is None else ids.index(stage) if stage in ids else len(ids)
+
+        return position(row["after"]) < position(row["before"])
+    return False
 
 
 def approve_stage_request(store, request_id, read_version):

@@ -293,7 +293,9 @@ class UiFile(FileModel):
 
 class StageDefinition(ConfigModel):
     id: str = Field("", min_length=1, description="Stable stage identifier, unique within this record type.")
-    label: str = Field("", description="Editable wording for this stage; changing it does not change stored data.")
+    label: str = Field(
+        "", min_length=1, description="Editable wording for this stage; changing it does not change stored data."
+    )
     entry: list[str] = Field(
         default_factory=list, description="Deterministic check or standing rule ids required on entry."
     )
@@ -304,8 +306,8 @@ class StageDefinition(ConfigModel):
 
 class TypeStages(ConfigModel):
     moves: Literal["person", "rule"] | None = Field(None, description="Override the workspace move mode for this type.")
-    stages: list[StageDefinition] = Field(
-        default_factory=list, description="Ordered stages; an empty list removes pack stages."
+    stages: list[StageDefinition] | None = Field(
+        None, description="Ordered stages; leave out to keep the pack's stages, or give an empty list to remove them."
     )
 
     @model_validator(mode="before")
@@ -315,21 +317,24 @@ class TypeStages(ConfigModel):
 
     @model_validator(mode="after")
     def unique_ids(self):
-        ids = [stage.id for stage in self.stages]
+        ids = [stage.id for stage in self.stages or []]
         if len(ids) != len(set(ids)):
             raise ValueError("stage ids must be unique within a record type")
         return self
 
 
 STAGE_WORDING = {
-    "record_missing": "stage.move: record does not exist",
-    "record_changed": "stage.move: record changed since it was read",
-    "stage_unknown": "stage.move: unknown stage {stage}",
-    "stage_same": "stage.move: record is already in that stage",
-    "person_required": "stage.move: this move requires the person",
+    "record_missing": "That item no longer exists.",
+    "record_changed": "That item changed since you opened it. Look again, then move it.",
+    "stage_unknown": "There is no stage called {stage} for this item.",
+    "stage_same": "It is already in that stage.",
+    "stage_skip": "Move it one stage at a time, so each stage's checks run.",
+    "person_required": "This move needs you.",
+    "check_unavailable_rule": "Every stage after the first needs an entry check when rules move items.",
     "not_waiting": "this stage task is not waiting for approval",
     "request_changed": "the request changed since it was read",
     "stage_left": "the record is no longer in the stage that requested this task",
+    "stage_left_before_go": "Not started: it left this stage before you gave the go.",
     "retry_blocked": "stage tasks need an explicit go before they can run",
     "type_unavailable": "The record type plugin is disabled.",
     "check_unavailable": "The entry check is unavailable.",

@@ -80,7 +80,8 @@ def process(
                 f"{cfg.dispatch.max_input_chars:,}). Split it, or raise dispatch.max_input_chars."
             ),
         )
-    trust = "untrusted" if req.data.get("source") else "trusted"
+    # Scheduled work (stage tasks, plugin requests) carries no words from the PM, so nothing in it is trusted.
+    trust = "untrusted" if req.data.get("source") or req.data["origin"] == "schedule" else "trusted"
     inputs = Inputs(request_id, req.data.get("source"), packet.raw_input, packet.note, trust)
     ctx = Context(
         store, cfg, People(store, cfg), store.plugins.task_kind(req.data["task"]).ops, inputs, hidden_words(cfg)

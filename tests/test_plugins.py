@@ -438,7 +438,8 @@ def test_write_scope_is_enforced_and_validator_crash_fails_closed(workspace):
     result = apply_changeset(cs, [], ctx, run=None)
     assert store.read().get("changeset", result).data["ops"][0]["status"] == "refused"
     assert not store.plugins.active(EXAMPLE.name)
-    assert check(cs, ctx)[0].severity == "refuse"
+    # The crash refused the op it was checking; later core ops carry on without the disabled plugin.
+    assert check(cs, ctx) == []
     store.close()
 
 

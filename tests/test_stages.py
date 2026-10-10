@@ -13,9 +13,9 @@ def config(tmp_path, stages):
     "stages, message",
     [
         ({"missing": []}, "unknown record type missing"),
-        ({"project": [{"id": "x"}, {"id": "x"}]}, "unique"),
-        ({"project": [{"id": "x", "entry": ["missing"]}]}, "unknown entry check missing"),
-        ({"project": [{"id": "x", "starts": ["missing"]}]}, "unknown task kind missing"),
+        ({"project": [{"id": "x", "label": "X"}, {"id": "x", "label": "X"}]}, "unique"),
+        ({"project": [{"id": "x", "label": "X", "entry": ["missing"]}]}, "unknown entry check missing"),
+        ({"project": [{"id": "x", "label": "X", "starts": ["missing"]}]}, "unknown task kind missing"),
         ({"moves": "assistant"}, "person"),
     ],
 )
@@ -171,7 +171,7 @@ def test_move_refuses_with_reasons_then_applies_and_undoes(stage_workspace):
     from engine.storage import StoreError, WriteContext
 
     store, cfg, record = stage_workspace
-    with pytest.raises(StoreError, match="stage-test/ready: not ready"):
+    with pytest.raises(StoreError, match="not ready"):
         move_stage(store, move_op(record, "ready"))
     assert store.read().list("changeset") == []
     with store.transaction() as tx:
@@ -515,3 +515,127 @@ def test_rule_yaml_date_and_binding_validate_at_load(stage_workspace):
     path.write_text("rules:\n  - id: R-1\n    check: missing\n")
     with pytest.raises(ConfigError, match="unknown code check missing"):
         load_config(path.parent, env={})
+
+
+def _set_ready(store, record, value=True):
+    from engine.storage import WriteContext
+
+    current = store.read().get(record.kind, record.id)
+    with store.transaction() as tx:
+        return tx.update(
+            record.kind,
+            record.id,
+            {"ready": value},
+            WriteContext("pm", "trusted", "test"),
+            read_version=current.version,
+        )
+
+
+def test_disabled_or_failing_plugin_never_stops_the_workspace(stage_workspace):
+    from engine.storage import Store
+
+    store, cfg, record = stage_workspace
+    root = store.path.parent
+    (root / "config" / "stages.yaml").write_text(yaml.safe_dump({record.kind: {"moves": "person"}}))
+    # Turned off: its stages stay in config and the workspace still opens.
+    (root / "config" / "workspace.yaml").write_text("plugins:\n  enabled: []\n")
+    off = Store(root / "off.db", cfg=load_config(root / "config", env={}))
+    off.close()
+    # Enabled but failing to load: disabled for the run, workspace still opens.
+    (root / "config" / "workspace.yaml").write_text("plugins:\n  enabled: [stage-test]\n")
+    fixture = root / "plugins" / "stage-test" / "fixture.py"
+    fixture.write_text(fixture.read_text() + "\ndef register(registrar):\n    raise RuntimeError('broken')\n")
+    failing = Store(root / "failing.db", cfg=load_config(root / "config", env={}))
+    assert not failing.plugins.active("stage-test")
+    failing.close()
+
+
+def test_override_without_stages_keeps_the_pack_stages(stage_workspace):
+    from engine.storage import Store
+
+    store, cfg, record = stage_workspace
+    config_dir = store.path.parent / "config"
+    (config_dir / "stages.yaml").write_text(yaml.safe_dump({record.kind: {"moves": "rule"}}))
+    other = Store(store.path.parent / "other.db", cfg=load_config(config_dir, env={}))
+    settings = other.plugins.stages.types[record.kind]
+    assert settings.moves == "rule" and [s.id for s in settings.stages] == ["draft", "ready"]
+    other.close()
+
+
+def test_rule_mode_refuses_stages_without_entry_checks(tmp_path):
+    stages = {"moves": "rule", "project": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}]}
+    with pytest.raises(ConfigError, match="needs an entry check"):
+        config(tmp_path, stages)
+
+
+def test_moves_go_one_stage_forward_or_back(stage_workspace):
+    from engine.applier import move_stage
+    from engine.config.schema import StageDefinition
+    from engine.storage import StoreError
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.types[record.kind].stages.append(StageDefinition(id="done", label="Done"))
+    move_stage(store, move_op(store.read().get(record.kind, record.id), "draft"))
+    with pytest.raises(StoreError, match="one stage at a time"):
+        move_stage(store, move_op(store.read().get(record.kind, record.id), "done"))
+    _set_ready(store, record)
+    move_stage(store, move_op(store.read().get(record.kind, record.id), "ready"))
+    _set_ready(store, record, False)
+    # Back needs no entry checks; forward again does.
+    move_stage(store, move_op(store.read().get(record.kind, record.id), "draft"))
+    with pytest.raises(StoreError, match="not ready"):
+        move_stage(store, move_op(store.read().get(record.kind, record.id), "ready"))
+
+
+def test_rules_leave_an_item_the_person_moved_back(stage_workspace):
+    from engine.applier import undo
+    from engine.worker import Events, Worker
+    from engine.workspace import Workspace
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.moves = "rule"
+    _set_ready(store, record)
+    worker = Worker(Workspace(store.path.parent), store, cfg, Events())
+    worker.run_pending()
+    worker.run_pending()
+    assert store.read().get(record.kind, record.id).data["stage"] == "ready"
+    last = [e for e in store.read().ledger(kind=record.kind, record_id=record.id) if e["field"] == "stage"][-1]
+    undo(store, last["changeset"])
+    assert store.read().get(record.kind, record.id).data["stage"] == "draft"
+    worker.run_pending()
+    assert store.read().get(record.kind, record.id).data["stage"] == "draft"
+
+
+def test_starts_are_not_duplicated_and_close_when_the_item_moves_on(stage_workspace):
+    from engine.applier import move_stage, undo
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.types[record.kind].stages[0].starts = ["notes"]
+
+    def waiting():
+        return [r for r in store.read().list("request") if r.data.get("stage_start") and r.data["state"] == "needs_you"]
+
+    move_stage(store, move_op(store.read().get(record.kind, record.id), "draft"))
+    assert len(waiting()) == 1
+    _set_ready(store, record)
+    cs = move_stage(store, move_op(store.read().get(record.kind, record.id), "ready"))
+    assert waiting() == []
+    undo(store, cs)
+    assert len(waiting()) == 1
+    move_stage(store, move_op(store.read().get(record.kind, record.id), "ready"))
+    move_stage(store, move_op(store.read().get(record.kind, record.id), "draft"))
+    assert len(waiting()) == 1
+
+
+def test_record_types_may_not_redefine_the_stage_field(stage_workspace):
+    from engine.storage import Store
+
+    store, cfg, record = stage_workspace
+    fixture = store.path.parent / "plugins" / "stage-test" / "fixture.py"
+    fixture.write_text(
+        fixture.read_text().replace("    ready: bool = False", "    ready: bool = False\n    stage: int = 0")
+    )
+    other = Store(store.path.parent / "other.db", cfg=cfg)
+    assert not other.plugins.active("stage-test")
+    assert "stage field" in other.plugins.status["stage-test"].reason
+    other.close()

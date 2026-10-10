@@ -66,7 +66,10 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         }
         # Record content is data, not new instructions, even after the person approves a task.
         request_parts.append("<untrusted>\n" + json.dumps(context, ensure_ascii=False) + "\n</untrusted>")
-    if note:
+    if note and req.data["origin"] == "schedule":
+        # A note on scheduled work was written by a plugin or a job, not the PM: data, not instructions.
+        request_parts.append(f'<untrusted source="note">\n{note}\n</untrusted>')
+    elif note:
         request_parts.append(f"<note>\n{note}\n</note>")
     if cleaned.text:
         src = req.data.get("source") or ""

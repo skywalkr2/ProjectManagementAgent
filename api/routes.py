@@ -96,8 +96,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         except (StoreError, IntakeError, ValueError, KeyError) as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
 
+    def staged(kind: str) -> None:
+        # Only kinds that move through stages are served here; bookkeeping records have their own routes.
+        if kind not in store.plugins.stages.types:
+            raise HTTPException(status_code=404, detail="not found")
+
     @r.get("/records/{record_id}")
     def record_view(record_id: str, kind: str) -> RecordView:
+        staged(kind)
         need(kind, record_id)
         record = store.read().get(kind, record_id)
         return RecordView(
@@ -111,6 +117,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/records/{record_id}/stage-history")
     def record_stage_history(record_id: str, kind: str) -> list[StageHistoryEntry]:
+        staged(kind)
         need(kind, record_id)
         return [StageHistoryEntry(**row) for row in stage_history(store, kind, record_id)]
 

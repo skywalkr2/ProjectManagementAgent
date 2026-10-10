@@ -156,7 +156,7 @@ class StageStart(BaseModel):
     kind: str
     record: str
     stage: str
-    changeset: str
+    changeset: str | None = None
 
 
 class Request(Record):
