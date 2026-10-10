@@ -91,7 +91,29 @@ def apply_move(store, tx, op, context):
         ):
             raise StoreError("stage.move: this move requires the person")
     tx.update(record.kind, record.id, {"stage": target.id}, context, read_version=op.read_version)
-    return [{"kind": record.kind, "id": record.id}]
+    touched = [{"kind": record.kind, "id": record.id}]
+    for task in dict.fromkeys(target.starts):
+        store.plugins.task_kind(task)
+        request = tx.create(
+            "request",
+            {
+                "task": task,
+                "origin": "schedule",
+                "state": "needs_you",
+                "approval": "required",
+                "stage_start": {
+                    "kind": record.kind,
+                    "record": record.id,
+                    "stage": target.id,
+                    "changeset": context.changeset,
+                },
+                "waiting": wording(store.plugins.cfg, "waiting"),
+                "created_at": store.clock(),
+            },
+            context,
+        )
+        touched.append({"kind": "request", "id": request.id})
+    return touched
 
 
 def move_ready_records(store):
@@ -115,3 +137,31 @@ def move_ready_records(store):
                 # Another writer or changed entry check leaves the record for a later pass.
                 continue
     return moved
+
+
+def approve_stage_request(store, request_id, read_version):
+    """The person's go. Cost control must insert estimates and budget authorization here before granting approval.
+
+    Keep the stage provenance on the request so future cost limits can charge both
+    its task kind and its originating record. No AI work runs before this gate.
+    """
+    from engine.storage import StoreError, WriteContext
+
+    with store.transaction() as tx:
+        request = tx.get("request", request_id)
+        if request is None or not request.data.get("stage_start") or request.data.get("approval") != "required":
+            raise StoreError("this stage task is not waiting for approval")
+        if request.version != read_version or request.data["state"] != "needs_you":
+            raise StoreError("the request changed since it was read")
+        origin = request.data["stage_start"]
+        record = tx.get(origin["kind"], origin["record"])
+        if record is None or record.data.get("stage") != origin["stage"]:
+            raise StoreError("the record is no longer in the stage that requested this task")
+        store.plugins.task_kind(request.data["task"])
+        tx.update(
+            "request",
+            request_id,
+            {"approval": "granted", "state": "queued", "waiting": None},
+            WriteContext("pm", "trusted", "stage.task.approve"),
+            read_version=read_version,
+        )

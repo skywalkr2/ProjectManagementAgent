@@ -64,6 +64,10 @@ def process(
     req = store.read().get("request", request_id)
     if req is None:
         raise KeyError(request_id)
+    if req.data.get("approval") == "required":
+        from engine.stages import wording
+
+        return needs_you(store, request_id, wording(cfg, "waiting"))
     _set(store, request_id, state="running", waiting="With the assistant now", attempts=req.data["attempts"] + 1)
 
     packet = build(ws, store, cfg, request_id, now.date())
@@ -172,6 +176,8 @@ def retry(store: Store, request_id: str) -> None:
     """Queue a request that stopped (an AI account problem, an unreadable answer) to be processed again."""
     with store.transaction() as tx:
         cur = tx.get("request", request_id)
+        if cur.data.get("approval") == "required":
+            raise ValueError("stage tasks need an explicit go before they can run")
         if cur.data["state"] not in ("needs_you", "failed"):
             raise ValueError("this isn't waiting on you")
         tx.update(

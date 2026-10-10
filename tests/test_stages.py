@@ -266,3 +266,54 @@ def test_person_override_and_restart_stop_rule_moves(stage_workspace):
     worker.run_pending()
     assert worker.restart_needed
     assert store.read().get(record.kind, record.id).data["stage"] is None
+
+
+def test_starts_wait_until_go_and_retry_cannot_bypass(stage_workspace):
+    from engine.applier import move_stage
+    from engine.dispatcher import process, retry
+    from engine.stages import approve_stage_request
+    from engine.worker import Events, Worker
+    from engine.workspace import Workspace
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.types[record.kind].stages[0].starts = ["notes"]
+    cs = move_stage(store, move_op(record, "draft"))
+    request = next(r for r in store.read().list("request") if r.data.get("stage_start"))
+    assert request.data["state"] == "needs_you"
+    assert request.data["stage_start"]["changeset"] == cs
+    ws = Workspace(store.path.parent)
+    worker = Worker(ws, store, cfg, Events(), router_factory=lambda: pytest.fail("no AI before go"))
+    assert worker.run_pending() == 0
+    with pytest.raises(ValueError, match="explicit go"):
+        retry(store, request.id)
+    assert process(ws, store, cfg, None, request.id) is None
+    request = store.read().get("request", request.id)
+    approve_stage_request(store, request.id, request.version)
+    granted = store.read().get("request", request.id)
+    assert granted.data["state"] == "queued" and granted.data["approval"] == "granted"
+
+
+def test_undo_cancels_unapproved_starts_atomically(stage_workspace):
+    from engine.applier import move_stage, undo
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.types[record.kind].stages[0].starts = ["notes"]
+    cs = move_stage(store, move_op(record, "draft"))
+    request = next(r for r in store.read().list("request") if r.data.get("stage_start"))
+    assert undo(store, cs).restored == [0]
+    assert store.read().get("request", request.id) is None
+    assert store.read().get(record.kind, record.id).data["stage"] is None
+
+
+def test_undo_wont_remove_an_approved_task(stage_workspace):
+    from engine.applier import move_stage, undo
+    from engine.stages import approve_stage_request
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.types[record.kind].stages[0].starts = ["notes"]
+    cs = move_stage(store, move_op(record, "draft"))
+    request = next(r for r in store.read().list("request") if r.data.get("stage_start"))
+    approve_stage_request(store, request.id, request.version)
+    report = undo(store, cs)
+    assert not report.restored and report.skipped
+    assert store.read().get(record.kind, record.id).data["stage"] == "draft"
