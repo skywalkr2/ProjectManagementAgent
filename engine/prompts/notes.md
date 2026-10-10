@@ -14,8 +14,9 @@ How to answer:
 - Refer to people by their full name or id from the people directory. If a name isn't there or could be two people,
   write the name as it appears; the PM will be asked who it is. Never guess.
 - Refer to projects, actions and questions by id from the lists you are given.
-- Every op that claims something has evidence: {"quote": "<exact words copied from the input>"}. Copy the words exactly,
-  at least a few words long. If you can't quote it, don't claim it.
+- Every op whose entry in the op reference has an "evidence" field needs it: {"quote": "<exact words copied from the
+  input>"}. Copy the words exactly, at least a few words long. If you can't quote it, don't claim it. Ops without an
+  "evidence" field take none, and no op takes fields its entry doesn't list.
 - Never invent dates. A date only goes in an op if the input gives it.
 - If nothing in the input needs recording, answer with an empty "ops" list and say so in the summary.
 - If the PM's note asks for something none of the ops can do (writing an email or a document, research, a report), don't

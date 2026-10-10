@@ -15,7 +15,7 @@ from engine.ai.task import AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.config import Config
 from engine.names import People
-from engine.ops import CHANGESET, ChangesetIn
+from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
 from engine.packet import build
 from engine.storage import Store, WriteContext
 from engine.workspace import Workspace
@@ -41,12 +41,37 @@ def parse(text: str, op_models: dict | None = None) -> ChangesetIn:
         data = json.loads(body)
     except json.JSONDecodeError as err:
         raise Unreadable(f"the JSON is broken ({err.msg} at character {err.pos})") from None
+    models = op_models if op_models is not None else OP_MODELS
+    _drop_unused_evidence(data, models)
     try:
         return CHANGESET.validate_python(data, context={"op_models": op_models} if op_models is not None else None)
     except ValidationError as err:
         first = err.errors()[:5]
-        detail = "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in first)
+        detail = "; ".join(_describe_error(e, data, models) for e in first)
         raise Unreadable(f"the JSON doesn't match the op reference ({detail})") from None
+
+
+def _drop_unused_evidence(data: object, models: dict) -> None:
+    """Models often attach evidence to every op. On an op that takes none it carries no claim, so it is left out."""
+    ops = data.get("ops") if isinstance(data, dict) else None
+    for op in ops if isinstance(ops, list) else []:
+        model = models.get(op.get("op")) if isinstance(op, dict) else None
+        if model is not None and "evidence" in op and "evidence" not in model.model_fields:
+            del op["evidence"]
+
+
+def _describe_error(error: dict, data: object, models: dict) -> str:
+    """One validation error in words the assistant can act on: for an unknown field, name the fields the op takes."""
+    where = ".".join(map(str, error["loc"]))
+    if error["type"] == "extra_forbidden" and error["loc"] and error["loc"][0] == "ops":
+        key = error["loc"][-1]
+        ops = data.get("ops", []) if isinstance(data, dict) else []
+        for index, op in enumerate(ops):
+            model = models.get(op.get("op")) if isinstance(op, dict) else None
+            if model is not None and key in op and key not in model.model_fields:
+                fields = ", ".join(name for name in model.model_fields if name != "group")
+                return f"op {index} ({op['op']}) has a field {key!r} it doesn't take; it takes: {fields}"
+    return f"{where}: {error['msg']}"
 
 
 def hidden_words(cfg: Config) -> list[str]:

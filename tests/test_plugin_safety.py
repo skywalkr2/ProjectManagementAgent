@@ -133,3 +133,17 @@ def test_common_evidence_shapes_are_read_as_the_quote(evidence):
     from engine.ops import EvidenceIn
 
     assert EvidenceIn.model_validate(evidence).quote == "the exact words"
+
+
+def test_evidence_on_an_op_that_takes_none_is_left_out():
+    from engine.dispatcher import parse
+
+    changeset = parse('{"summary": "s", "ops": [{"op": "note", "text": "Noted.", "evidence": {"quote": "Noted."}}]}')
+    assert changeset.ops[0].op == "note"
+
+
+def test_an_unknown_field_is_explained_with_the_fields_the_op_takes():
+    from engine.dispatcher import Unreadable, parse
+
+    with pytest.raises(Unreadable, match=r"op 0 \(note\) has a field 'colour' it doesn't take; it takes: .*text"):
+        parse('{"summary": "s", "ops": [{"op": "note", "text": "Noted.", "colour": "blue"}]}')
