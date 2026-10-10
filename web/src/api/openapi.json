@@ -1898,6 +1898,17 @@
           "record": {
             "$ref": "#/components/schemas/RecordReference"
           },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/StageLabel"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -1905,10 +1916,12 @@
         },
         "required": [
           "record",
+          "title",
           "version",
           "current",
           "current_label",
           "next",
+          "stages",
           "checks",
           "ready"
         ],
@@ -3424,6 +3437,28 @@
           }
         },
         "summary": "Ready Stages"
+      }
+    },
+    "/api/stages/records": {
+      "get": {
+        "operationId": "stage_records_api_stages_records_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StageView"
+                  },
+                  "title": "Response Stage Records Api Stages Records Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Stage Records"
       }
     },
     "/api/stages/requests": {

@@ -15,7 +15,7 @@ Last updated: 2026-10-10.
 - [x] People and projects screens: add, edit, rename; remove when nothing refers to them; `cockpit init --you` (2026-10-09).
 - [x] Plugin host, plugin API 0.1: reviewed, fixed and merged (2026-10-10).
 - [x] Stages: reviewed, fixed and merged; API only so far (2026-10-10).
-- [ ] Stage screens.
+- [x] Stage screens: Stages view; ready and waiting-for-go rows on Today (2026-10-10).
 - [ ] What else the publishing pack needs, in order: cost control (with cached-token pricing, cache markers, choosing a
   tier by context window), file channel, dependencies and baselines. Each with its screens.
 - [ ] Today as the real home: plain empty states, a first-run guide.
@@ -94,3 +94,6 @@ Hosted mode and sign-in (Part 11), social, email and newsletter channels, the sa
 - [ ] **Milestone 10 overlap.** `scope.md` puts version 1 at milestones 1 to 9, but lists some milestone 10 items as version 1
   musts: escalation on failure, budgets, native adapters. Cost control (M6) needs budgets. Decide which milestone 10 items
   move into version 1 and update `scope.md` and the build plan to match.
+
+- [ ] **Plugin-supplied labels.** Plugin task kinds and record kinds get their on-screen names from each workspace's
+  `ui.yaml` today (`task.<kind>`, `stages.group.<kind>`). A pack should ship its own wording for its kinds.

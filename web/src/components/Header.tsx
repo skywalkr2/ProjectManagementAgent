@@ -37,7 +37,7 @@ export function Header(props: {
           <b>{props.workspace}</b>
         </div>
         <nav className="tabs" aria-label={t("nav.label")}>
-          {(["home", "setup"] as const).map((v) => (
+          {(["home", "stages", "setup"] as const).map((v) => (
             <button
               key={v}
               type="button"

@@ -131,6 +131,16 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     result.append(StageView(**status))
         return result
 
+    @r.get("/stages/records")
+    def stage_records() -> list[StageView]:
+        result = []
+        for kind in store.plugins.stages.types:
+            if "/" in kind and not store.plugins.active(kind.split("/")[0]):
+                continue
+            for record in store.read().list(kind):
+                result.append(StageView(**record_status(store, record)))
+        return sorted(result, key=lambda view: (view.record.kind, view.title.casefold(), view.record.id))
+
     @r.post("/stages/move")
     def stage_move(body: StageMove) -> StageMoved:
         op = StageMoveOp(**body.model_dump())

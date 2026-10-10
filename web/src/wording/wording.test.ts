@@ -44,6 +44,9 @@ test("key families built at run time are complete", () => {
     ...["attention", "done", "all"].map((x) => `changes.filter.${x}`),
     ...["connecting", "live", "offline"].filter((x) => x !== "live").map((x) => `live.${x}`),
     ...["next", "previous", "primary", "send_back", "copy", "edit", "undo", "hand_in", "help"].map((x) => `help.${x}`),
+    ...["notes", "other"].map((x) => `task.${x}`),
+    ...["project", "other"].map((x) => `stages.group.${x}`),
+    ...["you", "rule", "undo"].map((x) => `stages.by_${x}`),
     ...["action.add", "action.close", "question.add", "question.done", "fact", "note", "record.set", "record.log", "person.add"].map((x) => `op.${x}`),
   ];
   expect(expected.filter((k) => !(k in words))).toEqual([]);

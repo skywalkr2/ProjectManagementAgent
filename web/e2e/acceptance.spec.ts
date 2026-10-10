@@ -138,6 +138,8 @@ test.describe.serial("acceptance scenario", () => {
 
   test("the keyboard drives the review loop", async ({ page }) => {
     await signIn(page);
+    // Let the stage rows arrive first, so no row appears above the one under test.
+    await expect(page.locator(".kind", { hasText: "Ready to move on" }).first()).toBeVisible();
     const first = page.locator("[data-row]").first();
     await expect(first).toBeVisible();
     await page.keyboard.press("j");
@@ -181,6 +183,79 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
     await page.getByRole("button", { name: "Today" }).click();
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+  });
+
+  test("items move through stages from Stages and Today, with undo", async ({ page }) => {
+    await signIn(page);
+    const before: Array<{ title: string; ready: boolean; current_label: string | null; next: { label: string } | null }> =
+      await (await page.request.get("api/stages/records")).json();
+    const item = before.find((v) => v.ready && v.next)!;
+    await page.getByRole("button", { name: "Stages" }).click();
+    await expect(page.locator("li.line", { hasText: item.title }).first()).toBeVisible();
+    await checkAccessibility(page);
+    const row = page.locator("li.line", { hasText: item.title }).first();
+    await expect(row.locator(".kind")).toHaveText(item.current_label ?? "Not started");
+    await row.getByRole("button", { name: `Move to ${item.next!.label}` }).click();
+    await expect(page.getByText(`Moved ${item.title} to ${item.next!.label}.`)).toBeVisible();
+    await expect(row.locator(".kind")).toHaveText(item.next!.label);
+    await page.getByRole("button", { name: "Undo" }).last().click();
+    await expect(row.locator(".kind")).toHaveText(item.current_label ?? "Not started");
+    await row.getByRole("button", { name: /More actions for/ }).click();
+    await page.getByRole("menuitem", { name: "History" }).click();
+    await expect(row.getByRole("list", { name: "Where it has been" })).toContainText("by undo");
+    await checkAccessibility(page);
+
+    await page.getByRole("button", { name: "Today" }).click();
+    const ready = page.locator("li.line", { hasText: `${item.title} is ready for ${item.next!.label}` });
+    await expect(ready).toBeVisible();
+    await ready.getByRole("button", { name: `Move to ${item.next!.label}` }).click();
+    await expect(ready).toHaveCount(0);
+    await checkAccessibility(page);
+  });
+
+  test("a stage task waits for the person's go on Stages and Today, and Go approves it", async ({ page }) => {
+    await signIn(page);
+    // Walk items forward through the API until a stage task is waiting for the go.
+    const waitingTasks = async () =>
+      ((await (await page.request.get("api/stages/requests")).json()) as Array<Record<string, any>>).filter(
+        (r) => r.approval === "required" && r.state === "needs_you",
+      );
+    for (let pass = 0; pass < 6 && (await waitingTasks()).length === 0; pass++) {
+      const views: Array<Record<string, any>> = await (await page.request.get("api/stages/records")).json();
+      for (const v of views.filter((x) => x.ready && x.next)) {
+        await page.request.post("api/stages/move", { data: { record: v.record, to: v.next.id, read_version: v.version } });
+        if ((await waitingTasks()).length) break;
+      }
+    }
+    const task = (await waitingTasks())[0];
+    const item = (
+      (await (await page.request.get("api/stages/records")).json()) as Array<{ record: { kind: string; id: string }; title: string }>
+    ).find((v) => v.record.kind === task.stage_start.kind && v.record.id === task.stage_start.record)!;
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    const today = page.locator("li.line", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for your go" });
+    await expect(today).toBeVisible();
+    await expect(today).not.toContainText(task.id);
+    await checkAccessibility(page);
+    await page.getByRole("button", { name: "Stages" }).click();
+    const here = page.locator("li.line", { hasText: item.title }).first();
+    await expect(here.getByRole("list", { name: "Waiting for your go" })).toContainText("is waiting for your go");
+    await checkAccessibility(page);
+    await here.getByRole("button", { name: "Go", exact: true }).click();
+    await expect(page.getByText(/Approved\./)).toBeVisible();
+    await expect(here.getByRole("list", { name: "Waiting for your go" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Today" }).click();
+    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    await expect(page.locator("li.line", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for your go" })).toHaveCount(0);
+  });
+
+  test("a phone-sized screen shows stages in one column", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await signIn(page);
+    await page.getByRole("button", { name: "Stages" }).click();
+    await expect(page.locator("li.line").first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await checkAccessibility(page);
   });
 
   test("nothing broke the content security policy or threw", async () => {

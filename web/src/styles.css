@@ -103,6 +103,10 @@ main:focus { outline: none; }
 .child .title { font-weight: 600; overflow-wrap: anywhere; }
 .child .meta { color: var(--muted); font-size: 13px; }
 .child .reason { color: var(--warn); font-size: 13px; }
+.child.single { grid-template-columns: minmax(0, 1fr); }
+.name { font-weight: 650; overflow-wrap: anywhere; }
+.name p { margin: 0; }
+.problem-note { border-left: 3px solid var(--risk); padding-left: 10px; color: var(--risk); font-size: 13.5px; }
 .full { grid-column: 1 / -1; }
 .because { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
 .because button { border: 0; background: none; padding: 0; color: var(--accent); cursor: pointer; font-size: 13px; text-decoration: underline; text-underline-offset: 2px; }

@@ -43,6 +43,15 @@ export const api = {
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
   people: () => call<S["PersonView"][]>("GET", "people"),
 
+  stageRecords: () => call<S["StageView"][]>("GET", "stages/records"),
+  stageReady: () => call<S["StageView"][]>("GET", "stages/ready"),
+  stageRequests: () => call<S["StageRequestView"][]>("GET", "stages/requests"),
+  stageHistory: (kind: string, record: string) =>
+    call<S["StageHistoryEntry"][]>("GET", `records/${id(record)}/stage-history?kind=${id(kind)}`),
+  stageMove: (body: S["StageMove"]) => call<S["StageMoved"]>("POST", "stages/move", body),
+  stageGo: (request: string, readVersion: number) =>
+    call<S["Ok"]>("POST", `requests/${id(request)}/go`, { read_version: readVersion }),
+
   handIn: (body: S["HandIn"]) => call<S["Handed"]>("POST", "handin", body),
   looksGood: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/looks-good`),
   reopen: (cs: string) => call<S["Ok"]>("POST", `changesets/${id(cs)}/reopen`),

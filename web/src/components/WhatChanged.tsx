@@ -9,6 +9,7 @@ import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Highlighted } from "./SafeText";
+import { StageTodayRows, useStageToday } from "./StageToday";
 import { useOwnRequests } from "./HandIn";
 
 type Filter = "attention" | "done" | "all";
@@ -23,6 +24,7 @@ export function WhatChanged() {
   const { t, tn } = useWords();
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
   const own = useOwnRequests();
+  const stageToday = useStageToday();
   const [filter, setFilter] = useState<Filter>("attention");
   const [shown, setShown] = useState<Set<string> | null>(null);
   const [announce, setAnnounce] = useState("");
@@ -47,11 +49,15 @@ export function WhatChanged() {
     if (waiting.length) setAnnounce(tn("changes.new_arrived", waiting.length));
   }, [waiting.length, tn]);
 
+  // A stage task waiting for the go has its own row below; its plain request row would only offer a retry.
+  const waitingGo = new Set(stageToday.waiting.map((w) => w.request.id));
   const rows = (changes.data ?? []).filter(
     (c) =>
       shown?.has(c.id) &&
+      !waitingGo.has(c.id) &&
       (filter === "all" || (filter === "attention") === needsAttention(c)),
   );
+  const stageRows = filter === "attention" ? stageToday.count : 0;
   const filters: Filter[] = ["attention", "done", "all"];
 
   return (
@@ -87,10 +93,11 @@ export function WhatChanged() {
             {t("action.try_again")}
           </button>
         </p>
-      ) : rows.length === 0 ? (
+      ) : rows.length === 0 && stageRows === 0 ? (
         <p className="empty">{t(filter === "attention" ? "changes.empty_attention" : "changes.empty")}</p>
       ) : (
         <ol className="queue">
+          {filter === "attention" && <StageTodayRows today={stageToday} />}
           {rows.map((item) => (
             <ChangeRow key={item.id} item={item} />
           ))}

@@ -32,6 +32,17 @@ def entry_check(store, check_id, record, view=None):
     return StageCheckResult(result.passed, f"{rule.text}: {result.reason}" if rule.text else result.reason)
 
 
+def record_title(record):
+    """The item's display name: its name, else its title, else its text, else its id."""
+    for key in ("name", "title", "text"):
+        value = record.data.get(key)
+        if isinstance(value, str) and value.strip():
+            # A sentence used as a title drops its final period, so it reads inside "<title> is ready for ...".
+            title = value.strip()
+            return title[:-1].rstrip() if title.endswith(".") and not title.endswith("..") else title
+    return record.id
+
+
 def record_status(store, record, view=None):
     """The next configured stage and every deterministic entry-check result."""
     settings = store.plugins.stages.types.get(record.kind)
@@ -52,10 +63,12 @@ def record_status(store, record, view=None):
         )
     return {
         "record": {"kind": record.kind, "id": record.id},
+        "title": record_title(record),
         "version": record.version,
         "current": current,
         "current_label": next((s.label for s in stages if s.id == current), None),
         "next": None if target is None else {"id": target.id, "label": target.label},
+        "stages": [{"id": stage.id, "label": stage.label} for stage in stages],
         "checks": checks,
         "ready": target is not None and all(c["passed"] for c in checks),
     }

@@ -639,3 +639,46 @@ def test_record_types_may_not_redefine_the_stage_field(stage_workspace):
     assert not other.plugins.active("stage-test")
     assert "stage field" in other.plugins.status["stage-test"].reason
     other.close()
+
+
+def test_record_title_prefers_name_then_title_then_text_then_id():
+    from engine.stages import record_title
+    from engine.storage.store import Stored
+
+    def stored(**data):
+        return Stored(kind="k/x", id="X-1", version=1, deleted=False, data=data)
+
+    assert record_title(stored(name="A", title="B", text="C")) == "A"
+    assert record_title(stored(name=" ", title="B", text="C")) == "B"
+    assert record_title(stored(text="C")) == "C"
+    assert record_title(stored(stage="draft")) == "X-1"
+
+
+@pytest.mark.parametrize("prefix", ["", "/admin"])
+def test_stage_records_list_titles_and_every_stage(stage_workspace, prefix):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from api.routes import build_router
+    from engine.storage import WriteContext
+    from engine.worker import Events, Worker
+    from engine.workspace import Workspace
+
+    store, cfg, record = stage_workspace
+    with store.transaction() as tx:
+        gone = tx.create(record.kind, {}, WriteContext("pm", "trusted", "test"))
+    with store.transaction() as tx:
+        tx.delete(record.kind, gone.id, WriteContext("pm", "trusted", "test"), read_version=gone.version)
+    ws = Workspace(store.path.parent)
+    worker = Worker(ws, store, cfg, Events())
+    app = FastAPI()
+    app.include_router(build_router(ws, cfg, store, worker.events, worker), prefix=prefix)
+    with TestClient(app) as client:
+        rows = client.get(f"{prefix}/api/stages/records").json()
+        assert [row["record"]["id"] for row in rows] == [record.id]
+        row = rows[0]
+        assert row["title"] == record.id
+        assert row["stages"] == [{"id": "draft", "label": "Draft"}, {"id": "ready", "label": "Ready"}]
+        assert row["current"] is None and row["next"]["id"] == "draft" and row["ready"]
+        store.plugins.disable("stage-test", "test failure")
+        assert client.get(f"{prefix}/api/stages/records").json() == []

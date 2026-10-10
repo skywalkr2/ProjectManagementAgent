@@ -320,10 +320,12 @@ class StageCheckView(BaseModel):
 
 class StageView(BaseModel):
     record: RecordReference
+    title: str
     version: int
     current: str | None
     current_label: str | None
     next: StageLabel | None
+    stages: list[StageLabel]
     checks: list[StageCheckView]
     ready: bool
 

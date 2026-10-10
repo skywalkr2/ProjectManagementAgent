@@ -25,6 +25,7 @@ export function useWords() {
   return useMemo(() => {
     const t = (key: string, vars: Vars = {}) => format(words, key, { ...base, ...vars });
     const tn = (key: string, n: number, vars: Vars = {}) => t(`${key}.${n === 1 ? "one" : "other"}`, { n, ...vars });
-    return { t, tn };
+    const has = (key: string) => key in words;
+    return { t, tn, has };
   }, [words, base]);
 }
