@@ -23,6 +23,8 @@ class Entry(Record):
     unique: ClassVar[tuple] = (("project", "slug"),)
     slug: str
     project: Annotated[str | None, RefTo("project")] = None
+    people: list[Annotated[str, RefTo("person")]] = []
+    follows: Annotated[str | None, RefTo("p02/entry")] = None
     status: Literal["draft", "decided"] = "draft"
 
 class Add(OpModel):
@@ -30,6 +32,11 @@ class Add(OpModel):
     writes: ClassVar[dict] = {"p02/entry": ("*",)}
     slug: str
     project: str | None = None
+    people: list[str] = []
+    follows: str | None = None
+
+    def describe(self):
+        return "Add the entry " + self.slug
 
 class Decide(OpModel):
     op: Literal["p02/decide"] = "p02/decide"
@@ -42,7 +49,9 @@ class Remove(OpModel):
     slug: str
 
 def add(op, writer, cfg):
-    writer.create("p02/entry", {"slug": op.slug, "project": op.project})
+    writer.create(
+        "p02/entry", {"slug": op.slug, "project": op.project, "people": op.people, "follows": op.follows}
+    )
 
 def decide(op, writer, cfg):
     entry = writer.find("p02/entry", slug=op.slug)
@@ -56,6 +65,10 @@ def decide_needs_entry(op, view, origin):
     SEEN["origins"].append(origin)
     return [] if view.find("p02/entry", slug=op.slug) else ["no entry called " + op.slug]
 
+def remove_by_keyword(op, view, *, origin):
+    SEEN["origins"].append(origin)
+    return []
+
 def on_change(payload, context):
     SEEN["events"].append(payload["kind"])
 
@@ -65,6 +78,7 @@ def register(registrar):
     registrar.op(Decide, "data", decide)
     registrar.op(Remove, "data", remove)
     registrar.op_validator("p02/decide", decide_needs_entry)
+    registrar.op_validator("p02/remove", remove_by_keyword)
     registrar.subscribe("record.changed", on_change)
 """
 
@@ -88,7 +102,7 @@ def env(tmp_path):
         "provides": {
             "record_types": ["p02/entry"],
             "ops": ["p02/add", "p02/decide", "p02/remove"],
-            "op_validators": ["p02/decide"],
+            "op_validators": ["p02/decide", "p02/remove"],
         },
     }
     (plugin / "plugin.yaml").write_text(yaml.safe_dump(manifest))
@@ -222,5 +236,99 @@ def test_a_record_type_may_be_restricted_only_if_the_manifest_says_so(env):
     )
     other = Store(ws.root / "other.db", cfg=load_config(ws.config_dir, env={}))
     assert not other.plugins.active("p02")
-    assert "requires.data_levels" in other.plugins.status["p02"].reason
+    reason = other.plugins.status["p02"].reason
+    assert "requires.data_levels" in reason and "p02/entry" in reason
+    other.close()
+
+
+def test_references_inside_lists_are_enforced(env):
+    _, _, store = env
+    person = fixture_records(DEMO_B, "person")[0]["id"]
+    assert apply(env, [{"op": "p02/add", "slug": "l1", "people": ["PER-999"]}])[1] == ["refused"]
+    assert apply(env, [{"op": "p02/add", "slug": "l2", "people": [person]}])[1] == ["applied"]
+    stored = store.read().get("person", person)
+    delete = {"op": "record.delete", "record": {"kind": "person", "id": person}, "read_version": stored.version}
+    assert apply(env, [delete], pm=True)[1] == ["refused"]
+
+
+def test_an_op_names_itself_in_the_review_list(env):
+    _, _, store = env
+    cs_id, _ = apply(env, [{"op": "p02/add", "slug": "named"}])
+    assert store.read().get("changeset", cs_id).data["ops"][0]["label"] == "Add the entry named"
+
+
+def test_a_stale_delete_is_refused_not_raised(env):
+    _, _, store = env
+    apply(env, [{"op": "p02/add", "slug": "s"}])
+    entry = store.read().list("p02/entry")[0]
+    op = {"op": "record.delete", "record": {"kind": "p02/entry", "id": entry.id}, "read_version": entry.version + 1}
+    assert apply(env, [op], pm=True)[1] == ["refused"]
+    assert store.read().list("p02/entry")
+
+
+def test_lookups_refuse_unknown_fields_and_lists_and_can_ask_for_no_project(env):
+    from engine.plugin_api import ANY, ReadView
+    from engine.storage import StoreError
+
+    _, _, store = env
+    apply(env, [{"op": "p02/add", "slug": "in", "project": project_id()}, {"op": "p02/add", "slug": "out"}])
+    view = ReadView(store.read(), "p02")
+    with pytest.raises(StoreError, match="no field 'slgu'"):
+        view.list("p02/entry", slgu="in")
+    with pytest.raises(StoreError, match="one value"):
+        view.list("p02/entry", slug=["in", "out"])
+    assert [e.data["slug"] for e in view.list("p02/entry", project=None)] == ["out"]
+    assert len(view.list("p02/entry", project=ANY)) == len(view.list("p02/entry")) == 2
+    assert view.find("p02/entry", slug="IN") is None
+
+
+def test_a_validator_may_take_origin_as_a_keyword(env):
+    _, _, store = env
+    apply(env, [{"op": "p02/add", "slug": "k"}])
+    assert apply(env, [{"op": "p02/remove", "slug": "k"}], pm=True)[1] == ["applied"]
+    assert store.plugins.active("p02")
+    assert any(o["actor"] == "pm" for o in module(store).SEEN["origins"])
+
+
+def test_undo_skips_what_would_break_a_unique_or_reference_rule(env):
+    from engine.applier import undo
+
+    _, _, store = env
+    apply(env, [{"op": "p02/add", "slug": "u"}])
+    removed, _ = apply(env, [{"op": "p02/remove", "slug": "u"}])
+    apply(env, [{"op": "p02/add", "slug": "u"}])
+    report = undo(store, removed)
+    assert report.skipped and "slug=u" in report.skipped[0]["reason"]
+    assert len(store.read().list("p02/entry")) == 1
+
+    created, _ = apply(env, [{"op": "p02/add", "slug": "first"}])
+    first = store.read().find("p02/entry", {"slug": "first"})[0]
+    apply(env, [{"op": "p02/add", "slug": "second", "follows": first.id}])
+    report = undo(store, created)
+    assert report.skipped and "referred to" in report.skipped[0]["reason"]
+    assert store.read().get("p02/entry", first.id) is not None
+
+
+@pytest.mark.parametrize(
+    "subscription, reason",
+    [
+        ({"event": "question.answered", "kinds": ["note"]}, "carries no kind"),
+        ({"event": "record.changed", "kinds": ["p02/entyr"]}, "p02/entyr"),
+        ({"event": "record.changed", "kinds": ["other/thing"]}, "other/thing"),
+        ({"event": "file.added", "kinds": ["note"]}, "note"),
+    ],
+)
+def test_event_filters_are_checked_when_the_plugin_loads(env, subscription, reason):
+    from engine.storage import Store
+
+    ws, _, _ = env
+    path = ws.root / "plugins" / "p02" / "plugin.yaml"
+    manifest = yaml.safe_load(path.read_text())
+    manifest["subscribes"] = [subscription]
+    path.write_text(yaml.safe_dump(manifest))
+    fixture = ws.root / "plugins" / "p02" / "fixture.py"
+    fixture.write_text(FIXTURE.replace('"record.changed", on_change', f'"{subscription["event"]}", on_change'))
+    other = Store(ws.root / "other.db", cfg=load_config(ws.config_dir, env={}))
+    assert not other.plugins.active("p02")
+    assert reason in other.plugins.status["p02"].reason
     other.close()

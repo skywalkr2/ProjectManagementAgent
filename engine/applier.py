@@ -108,6 +108,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             refuse(i, "allowed-ops", f"{name} isn't an op this task may use")
             continue
         if isinstance(op, RecordDeleteOp):
+            target = view.get(op.record.kind, op.record.id)
+            if target is None or target.version != op.read_version:
+                refuse(i, "record-changed", f"{op.record.kind} {op.record.id} is gone or changed since it was read")
+                continue
             users = ctx.store.plugins._referrers(view)(op.record.kind, op.record.id)
             if users:
                 refuse(
@@ -271,6 +275,15 @@ class OpOutcome:
     reason: str | None = None
     question: str | None = None
     problems: list[dict[str, Any]] = field(default_factory=list)
+    label: str | None = None
+
+
+def _label(op: OpModel) -> str | None:
+    try:
+        text = op.describe()
+    except Exception:
+        return None
+    return " ".join(text.split())[:200] if isinstance(text, str) and text.strip() else None
 
 
 def apply_changeset(
@@ -303,6 +316,7 @@ def apply_changeset(
                 "applied",
                 op.group or f"op{i}",
                 problems=[asdict(p) for p in mine],
+                label=_label(op),
             )
             if any(p.severity == "refuse" for p in mine):
                 outcome.status = "refused"
@@ -317,25 +331,22 @@ def apply_changeset(
                     outcome.reason = hold
             if outcome.status == "applied":
                 wctx = _wctx(ctx, cs_id, i, op)
-                if "/" in op.op:
-                    tx.sql("SAVEPOINT plugin_op")
-                    pending = len(tx.pending)
-                    try:
-                        outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
-                        outcome.question = question
-                    except NeedsPerson as err:
-                        tx.sql("ROLLBACK TO plugin_op")
-                        del tx.pending[pending:]
-                        outcome.status, outcome.reason = "held", str(err)
-                    except StoreError as err:
-                        tx.sql("ROLLBACK TO plugin_op")
-                        del tx.pending[pending:]
-                        outcome.status, outcome.reason = "refused", str(err)
-                    finally:
-                        tx.sql("RELEASE plugin_op")
-                else:
+                # Each op in its own savepoint: one that fails is refused alone and leaves nothing behind.
+                tx.sql("SAVEPOINT plugin_op")
+                pending = len(tx.pending)
+                try:
                     outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
                     outcome.question = question
+                except NeedsPerson as err:
+                    tx.sql("ROLLBACK TO plugin_op")
+                    del tx.pending[pending:]
+                    outcome.status, outcome.reason = "held", str(err)
+                except StoreError as err:
+                    tx.sql("ROLLBACK TO plugin_op")
+                    del tx.pending[pending:]
+                    outcome.status, outcome.reason = "refused", str(err)
+                finally:
+                    tx.sql("RELEASE plugin_op")
             elif outcome.status == "held" and outcome.reason and outcome.reason.startswith("who-is"):
                 outcome.question = _routing_question(tx, op, i, cs_id, ctx, outcome.reason)
                 outcome.reason = "Waiting for you to say who this is"
@@ -712,7 +723,7 @@ def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> U
             members = groups[group]
             idx = {o["index"] for o in members}
             mine = [e for e in entries if _op_index(e["op"]) in idx]
-            conflict = _conflict(tx, mine)
+            conflict = _conflict(tx, mine) or _breaks_rules(store, tx, mine)
             if conflict:
                 report.skipped.append({"ops": sorted(idx), "reason": conflict})
                 continue
@@ -732,6 +743,29 @@ def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> U
     if report.restored:
         store.plugins.publish("changeset.undone", {"id": changeset_id, "ops": report.restored})
     return report
+
+
+def _breaks_rules(store: Store, tx: Tx, entries: list[dict[str, Any]]) -> str | None:
+    """Why undoing these entries would break a rule the records declare, or None: bringing back a record whose unique
+    values another live record now has, or removing a record something else still refers to."""
+    touched = {(e["kind"], e["record_id"]) for e in entries}
+    for kind, rid in sorted(touched):
+        current = tx.get(kind, rid, include_deleted=True)
+        model = store.plugins.records.get(kind)
+        if current is None or model is None:
+            continue
+        rows = [e for e in entries if (e["kind"], e["record_id"]) == (kind, rid)]
+        if current.deleted and any(r["field"] is None and r["version"] == current.version for r in rows):
+            for group in model.unique:
+                equals = {f: current.data.get(f) for f in group}
+                if [s for s in tx.find(kind, equals) if s.id != rid]:
+                    shown = ", ".join(f"{f}={v}" for f, v in equals.items())
+                    return f"another {kind} now has {shown}"
+        elif not current.deleted and any(r["version"] == 1 for r in rows):
+            users = [u for u in store.plugins._referrers(tx)(kind, rid) if u not in touched]
+            if users:
+                return f"{kind} {rid} is now referred to by {users[0][0]} {users[0][1]}"
+    return None
 
 
 def _op_index(op_name: str) -> int | None:

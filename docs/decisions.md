@@ -81,6 +81,23 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-10: Plugin API 0.2.1: the core keeps its own rules everywhere it applies them
+
+**Decided by:** Claude (design), from trying plugin API 0.2; the owner can override.
+
+**What:** References inside lists are enforced like single ones. Undo skips and reports a group that would break a
+unique group or leave a dangling reference. A stale `record.delete` is refused, not raised, and every op applies in its
+own savepoint. Event `kinds` filters are checked at load (only on events that carry a kind, naming core or own kinds),
+with one handler per event. Lookups refuse unknown fields and list values; `project=None` means "no project" and `ANY`
+means no filter; matching is exact and case-sensitive. An op may label itself with `describe()`. Validators may take
+`origin` as a keyword. A plugin's ops always act as the assistant, so person-only values wait for the person's release
+until person actions (0.3) run as the person. Reaching outside the declared scope still disables the plugin.
+
+**Why:** Each rule the core declares should hold on every path that writes, or a plugin can't rely on it; a typo should
+fail at load, not read as silence.
+
+**Impact:** Plugin API 0.2.1, compatible with `'>=0.2,<0.3'` manifests. `docs/plugin-api-0.x.md` updated.
+
 ## 2026-10-10: run_tool returns files the program wrote
 
 **Decided by:** Claude (design), from a plugin question; the owner can override.

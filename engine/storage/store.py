@@ -195,9 +195,14 @@ class Tx:
     def find(self, kind: str, equals: dict[str, Any]) -> list[Stored]:
         """Live records of a kind whose top-level fields equal the given values, matched in the database."""
         sql, args = "SELECT * FROM records WHERE kind=? AND deleted=0", [kind]
+        model = self.models.get(kind)
         for field, value in equals.items():
-            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", field):
-                raise StoreError(f"can't look up by {field!r}")
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", field) or (
+                model is not None and field not in model.model_fields
+            ):
+                raise StoreError(f"{kind} has no field {field!r} to look up by")
+            if isinstance(value, (list, tuple, set, dict)):
+                raise StoreError(f"look up {field!r} by one value, not a list")
             if value is None:
                 sql += f" AND json_extract(data, '$.{field}') IS NULL"
             else:

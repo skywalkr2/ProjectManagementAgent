@@ -744,7 +744,7 @@ def _op_view(o: dict[str, Any], store: Store, people: People, projects: dict[str
         if rec is not None and ref["kind"] in ("action", "question", "fact", "note", "person", "project"):
             record = (ref["kind"], rec)
             break
-    title = op.get("text") or op.get("title") or op.get("answer") or op.get("full_name") or ""
+    title = o.get("label") or op.get("text") or op.get("title") or op.get("answer") or op.get("full_name") or ""
     meta: dict[str, Any] = {}
     if record:
         kind, rec = record

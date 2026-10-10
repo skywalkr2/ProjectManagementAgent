@@ -1,4 +1,4 @@
-# Plugin API 0.2
+# Plugin API 0.2 (0.2.1)
 
 Plugin API 0.x, not 1.0: expect small changes until both of the host's own add-on packs run on it unchanged. Manifests
 declare `plugin_api: '>=0.2,<0.3'`; a manifest for 0.1 is refused (0.x minor versions may break). The complete runnable example is
@@ -32,6 +32,40 @@ declare `plugin_api: '>=0.2,<0.3'`; a manifest for 0.1 is refused (0.x minor ver
   still means every kind.
 - **`ext` on core records** is reserved and may be removed before 1.0; keep your own record linked by `RefTo`.
 
+## What 0.2.1 changes
+
+Fixes from trying 0.2; manifests stay `'>=0.2,<0.3'`.
+
+- **Who sets a person-only value.** Every op a plugin applies carries the assistant as its actor, so a person-only
+  value is held until the person releases it; releasing is how the person decides. Plugin API 0.3 adds person
+  actions, which run as the person and apply such values at once.
+- **Labels:** an op may override `describe(self) -> str | None` to give its one-line label in review lists (held,
+  applied, refused). Without it the list falls back to a `text`, `title`, `answer` or `full_name` field.
+- **References inside lists:** `list[Annotated[str, RefTo("kind")]]` is enforced like a single reference: every id
+  must exist, and a record still listed is not deleted.
+- **Undo keeps the rules:** Undo skips and reports a group that would bring back a record whose unique values another
+  live record now has, or remove a record that something outside the group now refers to.
+- **A stale `record.delete`** is refused like any stale op, not raised.
+- **Event filters are checked at load.** `kinds` is allowed only on events that carry a kind (`record.changed`,
+  `stage.moved`, and `file.added`, whose kinds are file kinds), and may name only core kinds or the plugin's own; a
+  typo or another plugin's kind refuses the plugin. Subscribe to an event once: one handler per event, routing by
+  `payload["kind"]` if it handles several.
+- **Lookups:** an unknown field name and a list value are refused with a plain message. `project` defaults to
+  `ANY` (no filter); `project=None` asks for records in no project. Matching, in lookups and in `unique`, is exact and
+  case-sensitive; store a normalized copy (a slug) when you need case-insensitive matching.
+- **Validators** may take `origin` as a third positional parameter or as a keyword-only `origin`. They run more than
+  once per op (in the dry run for the fix round, then in the changeset), so they must be pure and cheap. The `rule`
+  origin comes from the rule worker, which today moves stages only. Validators on the core `stage.move` work like any
+  other.
+- **`record.changed`** carries field names, not values; read the record for values. A delete and its Undo both list
+  `_deleted`. The core fields every record has (`ext`, `stage`) appear in `fields` when they change, plugin records
+  included.
+- **Data levels:** list every level your types use in `requires.data_levels`, the default `internal` included; the
+  refusal names the type.
+- **Reaching outside the declared scope** (writing a kind or field the op's `writes` doesn't give, deleting without
+  `("*",)`) is a contract breach and disables the plugin, unlike an ordinary refusal: it means the plugin's code and
+  manifest disagree.
+
 ## Discovery and configuration
 
 A bundled or private plugin lives in `<plugins>/<name>/` with `plugin.yaml` and a Python package. Private plugins are in
@@ -59,8 +93,8 @@ Plugins import engine types only from `engine.plugin_api`; other plugin packages
   always apply. `tier` is `data` or `system`; `outbound` is refused until the publisher is part of the API. `("*",)` permits creation of that kind; a field tuple permits updates only to those fields.
   `apply(op, writer, settings)` uses `writer.create(kind, data)` or
   `writer.update(kind, id, changes, read_version=version)`. It cannot replace the write context or access SQL through the API.
-  API 0.1 intentionally has no delete callback surface; created records can be undone through the ledger.
-- `op_validator(op_name, fn)`: `fn(op, read_view)` returns a list of refusal messages. It must be deterministic and cannot
+  `writer.delete(kind, id, read_version=version)` deletes one of the plugin's own records (see 0.2 above).
+- `op_validator(op_name, fn)`: `fn(op, read_view, origin)` (or `fn(op, read_view)`) returns a list of refusal messages. It must be deterministic and cannot
   modify records. Validators may target core or own ops. A validator that crashes refuses the op it was checking and
   disables its plugin; later core ops carry on without it, and the plugin's own ops are refused.
 - `task_kind(name, ops=..., prompt="notes", playbook="notes")`: the dispatcher uses the registered op list for parsing,
@@ -76,7 +110,7 @@ Plugins import engine types only from `engine.plugin_api`; other plugin packages
 
 Events publish after a successful transaction, never after rollback or while importing an export. `record.changed` carries
 `kind`, `id`, `fields`, `version`, and the ledger `op` (including its changeset index). The bus also publishes
-`request.queued`, `question.answered`, `changeset.applied`, and `changeset.undone`. A causal event chain does not re-enter the
+`request.queued`, `question.answered`, `changeset.applied`, `changeset.undone`, `stage.moved` and `file.added`. A causal event chain does not re-enter the
 same plugin/event handler, preventing unbounded request or record-event loops. Separate committed transactions still emit
 their own events. Event payloads are copied for each handler.
 
@@ -88,8 +122,9 @@ A failed op's savepoint is rolled back; its outcome is recorded as refused. Reco
 export after a runtime failure. Restarting with the plugin enabled attempts a fresh load.
 
 The host is not a Python sandbox. Enabling a plugin trusts its code. The API exposes no network, process, secret or sending
-capability. Manifests requesting these or later extension points are refused until implemented. Version 0.1 does not yet
-implement migrations, interface contracts, plugin panels, custom prompt bundles or tool runners.
+capability. Manifests requesting these or later extension points are refused until implemented. Version 0.2 does not yet
+implement migrations, interface contracts, plugin panels, custom prompt bundles or tool runners (`run_tool` and person
+actions come in 0.3).
 
 ## Verification
 

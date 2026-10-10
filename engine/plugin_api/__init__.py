@@ -16,11 +16,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from engine.config.schema import StageDefinition, TypeStages
 from engine.ops import EvidenceIn, OpModel, Tier
-from engine.records import Record, RefTo, ref_fields
+from engine.records import Record, RefTo, ref_fields, values_at
 from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
 
-PLUGIN_API_VERSION = "0.2.0"
+PLUGIN_API_VERSION = "0.2.1"
 
 
 class Settings(BaseModel):
@@ -30,6 +30,15 @@ class Settings(BaseModel):
 
 class PluginMisuse(StoreError):
     """The plugin broke its contract (reached outside its scope); the host disables it for the run."""
+
+
+class _Any:
+    def __repr__(self) -> str:
+        return "ANY"
+
+
+#: "No filter" for view.list's project argument; None means records in no project.
+ANY: Any = _Any()
 
 
 class NeedsPerson(StoreError):
@@ -50,11 +59,11 @@ class ReadView:
         self._allow(kind)
         return self.__view.get(kind, record_id)
 
-    def list(self, kind: str, *, project: str | None = None, **equals: Any) -> list[Stored]:
-        """Live records of a kind, optionally only those in one project or with given field values (matched in the
-        database, not by reading every record)."""
+    def list(self, kind: str, *, project: Any = ANY, **equals: Any) -> list[Stored]:
+        """Live records of a kind, optionally only those in one project (`project=None` for records in no project) or
+        with given field values, matched exactly (case-sensitive) in the database. An unknown field is refused."""
         self._allow(kind)
-        if project is not None:
+        if project is not ANY:
             equals = {**equals, "project": project}
         return self.__view.find(kind, equals) if equals else self.__view.list(kind)
 
@@ -117,10 +126,13 @@ class OpWriter(ReadView):
             if clash:
                 shown = ", ".join(f"{f}={v}" for f, v in equals.items())
                 raise StoreError(f"there is already a {kind} with {shown}")
-        for field, target in ref_fields(model):
-            value = data.get(field)
-            if value is not None and self.__tx.get(target, value) is None:
-                raise StoreError(f"{field} refers to {target} {value}, which doesn't exist")
+        for path, target in ref_fields(model):
+            field = path.removesuffix("[]")
+            if field not in data:
+                continue
+            for value in values_at(data, path):
+                if value is not None and self.__tx.get(target, value) is None:
+                    raise StoreError(f"{field} refers to {target} {value}, which doesn't exist")
 
     def _write(self, kind: str, fields: set[str]) -> None:
         self._allow(kind)
@@ -293,6 +305,7 @@ __all__ = [
     "Record",
     "OpModel",
     "EvidenceIn",
+    "ANY",
     "NeedsPerson",
     "PluginMisuse",
     "RefTo",

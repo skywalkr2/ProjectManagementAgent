@@ -48,6 +48,8 @@ EVENTS = {
     "question.answered",
     "file.added",
 }
+#: Events whose payload names a kind, so a subscription can be limited to kinds (file kinds for file.added).
+EVENTS_WITH_KIND = {"record.changed", "stage.moved", "file.added"}
 log = logging.getLogger(__name__)
 
 
@@ -220,6 +222,8 @@ class PluginHost:
         return symbol
 
     def _validate(self, manifest: Manifest, registrar: Registrar) -> None:
+        from engine.files import CORE_KINDS
+
         expected = manifest.provides
         for key, actual in (
             ("record_types", registrar.records),
@@ -234,6 +238,22 @@ class PluginHost:
                 raise ValueError(f"registered {key} does not match provides exactly")
         if set(manifest.events()) != set(registrar.handlers):
             raise ValueError("registered handlers do not match subscribes exactly")
+        if len(manifest.events()) != len(set(manifest.events())):
+            raise ValueError("subscribe to each event once; one handler can route the kinds it gets")
+        for event in manifest.events():
+            kinds = manifest.kinds_for(event)
+            if not kinds:
+                continue
+            if event not in EVENTS_WITH_KIND:
+                raise ValueError(f"{event} carries no kind, so it can't be filtered by kinds")
+            known = (
+                set(CORE_KINDS) | set(registrar.file_kinds)
+                if event == "file.added"
+                else set(REGISTRY) | set(registrar.records)
+            )
+            unknown = sorted(set(kinds) - known)
+            if unknown:
+                raise ValueError(f"{event} filter names {', '.join(unknown)}: not a core kind or the plugin's own")
         prefixes = {model.prefix for model in self.records.values()}
         for model in registrar.records.values():
             if model.prefix in prefixes:
@@ -246,7 +266,9 @@ class PluginHost:
             if model.data_level not in ("open", "internal", "restricted"):
                 raise ValueError("data_level must be open, internal or restricted")
             if model.data_level not in manifest.requires.data_levels:
-                raise ValueError("a record type's data_level must be listed in requires.data_levels")
+                raise ValueError(
+                    f"{model.record_kind} has data_level {model.data_level}, which requires.data_levels doesn't list"
+                )
             for field, target in ref_fields(model):
                 if target not in REGISTRY and target not in registrar.records:
                     raise ValueError(f"{field} refers to an unknown record kind {target}")
@@ -356,10 +378,13 @@ class PluginHost:
                     continue
                 try:
                     read = self._with_files(ReadView(view if view is not None else self.store.read(), name))
-                    args = [op.model_copy(deep=True), read]
-                    if _takes_three(fn):
-                        args.append(dict(origin))
-                    result = fn(*args)
+                    takes = _origin_parameter(fn)
+                    if takes == "keyword":
+                        result = fn(op.model_copy(deep=True), read, origin=dict(origin))
+                    elif takes == "positional":
+                        result = fn(op.model_copy(deep=True), read, dict(origin))
+                    else:
+                        result = fn(op.model_copy(deep=True), read)
                     if not isinstance(result, (list, tuple)) or any(not isinstance(p, str) for p in result):
                         raise ValueError("validators return a list of refusal messages")
                     problems.extend(result)
@@ -461,13 +486,20 @@ class PluginHost:
                 del sys.modules[key]
 
 
-def _takes_three(fn: Any) -> bool:
-    """Validators written for plugin API 0.1 take (op, view); 0.2 adds an optional third argument, the origin."""
+def _origin_parameter(fn: Any) -> str | None:
+    """How a validator takes the origin: as a third positional argument, as a keyword `origin`, or not at all
+    (validators written for plugin API 0.1 take only the op and the view)."""
     import inspect
 
     try:
-        params = inspect.signature(fn).parameters.values()
+        params = list(inspect.signature(fn).parameters.values())
     except (TypeError, ValueError):
-        return False
+        return None
     positional = [p for p in params if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)]
-    return len(positional) >= 3 or any(p.kind == p.VAR_POSITIONAL for p in params)
+    if len(positional) >= 3 or any(p.kind == p.VAR_POSITIONAL for p in params):
+        return "positional"
+    if any(p.name == "origin" and p.kind == p.KEYWORD_ONLY for p in params) or any(
+        p.kind == p.VAR_KEYWORD for p in params
+    ):
+        return "keyword"
+    return None

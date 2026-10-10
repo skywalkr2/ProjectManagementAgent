@@ -19,6 +19,10 @@ class OpModel(BaseModel):
 
     group: str | None = Field(None, description="Ops that must be undone together share a group name.")
 
+    def describe(self) -> str | None:
+        """A one-line plain label for this op in review lists; plugin ops may override it."""
+        return None
+
 
 class EvidenceIn(BaseModel):
     model_config = ConfigDict(extra="forbid")

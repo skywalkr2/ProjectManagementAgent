@@ -40,12 +40,29 @@ class RefTo:
 
 
 def ref_fields(model: type[BaseModel]) -> list[tuple[str, str]]:
-    """(field, kind it points to) for every field marked with RefTo."""
+    """(path, kind it points to) for every field marked with RefTo: "field" for a single reference, "field[]" for a
+    list of references (`list[Annotated[str, RefTo("kind")]]`), optional or not."""
+    from typing import Annotated, Union, get_args, get_origin
+
+    def in_list(annotation: Any) -> list[str]:
+        origin = get_origin(annotation)
+        if origin in (list, tuple, set):
+            return [m.kind for arg in get_args(annotation) for m in _ref_meta(arg)]
+        if origin is Union or type(annotation).__name__ == "UnionType":
+            return [k for arg in get_args(annotation) for k in in_list(arg)]
+        return []
+
+    def _ref_meta(annotation: Any) -> list[RefTo]:
+        if get_origin(annotation) is Annotated:
+            return [m for m in annotation.__metadata__ if isinstance(m, RefTo)]
+        return []
+
     found = []
     for name, info in model.model_fields.items():
         for meta in info.metadata:
             if isinstance(meta, RefTo):
                 found.append((name, meta.kind))
+        found += [(f"{name}[]", kind) for kind in in_list(info.annotation)]
     return found
 
 
