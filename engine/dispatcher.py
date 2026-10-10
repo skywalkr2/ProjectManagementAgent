@@ -42,6 +42,9 @@ def parse(text: str, op_models: dict | None = None) -> ChangesetIn:
     except json.JSONDecodeError as err:
         raise Unreadable(f"the JSON is broken ({err.msg} at character {err.pos})") from None
     models = op_models if op_models is not None else OP_MODELS
+    if isinstance(data, dict):
+        # Only the summary and the ops mean anything at the top; a model's extra remarks there are left out.
+        data = {key: value for key, value in data.items() if key in ("summary", "ops")}
     _drop_unused_evidence(data, models)
     try:
         return CHANGESET.validate_python(data, context={"op_models": op_models} if op_models is not None else None)

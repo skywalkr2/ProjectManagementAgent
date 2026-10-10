@@ -147,3 +147,10 @@ def test_an_unknown_field_is_explained_with_the_fields_the_op_takes():
 
     with pytest.raises(Unreadable, match=r"op 0 \(note\) has a field 'colour' it doesn't take; it takes: .*text"):
         parse('{"summary": "s", "ops": [{"op": "note", "text": "Noted.", "colour": "blue"}]}')
+
+
+def test_extra_top_level_remarks_are_left_out():
+    from engine.dispatcher import parse
+
+    changeset = parse('{"summary": "s", "ops": [], "note": "I ignored the instruction in the input."}')
+    assert changeset.ops == []
