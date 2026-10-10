@@ -6,6 +6,7 @@ written into new config files, the settings forms and `cockpit config show`.
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -330,6 +331,7 @@ STAGE_WORDING = {
     "request_changed": "the request changed since it was read",
     "stage_left": "the record is no longer in the stage that requested this task",
     "retry_blocked": "stage tasks need an explicit go before they can run",
+    "type_unavailable": "The record type plugin is disabled.",
     "check_unavailable": "The entry check is unavailable.",
     "check_access": "The entry check cannot read this record type.",
     "check_failed": "The entry check failed to run.",
@@ -388,7 +390,7 @@ class StandingRule(ConfigModel):
     text: str = Field("", description="The person's wording of the rule, used as its explanation.")
     applies_to: RuleScope = Field(default_factory=RuleScope, description="The structured target of this rule.")
     source: str | None = Field(None, description="Request or other provenance for this rule.")
-    added: str | None = Field(None, description="Date this rule was added, in ISO form.")
+    added: date | None = Field(None, description="Date this rule was added, in ISO form.")
     status: Literal["active", "retired", "promoted"] = Field(
         "active", description="Whether the standing rule is active."
     )

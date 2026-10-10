@@ -94,7 +94,14 @@ class Store:
         from engine.config import load_config
         from engine.plugin_host import PluginHost
 
-        self.plugins = PluginHost(self, cfg or load_config(path.parent / "config"))
+        try:
+            self.plugins = PluginHost(self, cfg or load_config(path.parent / "config"))
+        except BaseException:
+            for conn in self._all:
+                conn.close()
+            self._all.clear()
+            self._closed = True
+            raise
 
     @property
     def _conn(self) -> sqlite3.Connection:

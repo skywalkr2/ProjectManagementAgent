@@ -62,6 +62,8 @@ class OpWriter(ReadView):
             raise StoreError("op attempted to write outside its declared fields")
 
     def create(self, kind: str, data: dict[str, Any]) -> Stored:
+        if kind == "request" and (data.get("stage_start") is not None or data.get("approval") is not None):
+            raise StoreError("stage task approval belongs to the core")
         if data.get("stage") is not None:
             raise StoreError("stage changes require stage.move")
         self._write(kind, {"*"})
@@ -70,6 +72,8 @@ class OpWriter(ReadView):
         return result
 
     def update(self, kind: str, record_id: str, changes: dict[str, Any], *, read_version: int) -> Stored:
+        if kind == "request" and {"approval", "stage_start"} & set(changes):
+            raise StoreError("stage task approval belongs to the core")
         if "stage" in changes:
             raise StoreError("stage changes require stage.move")
         self._write(kind, set(changes))

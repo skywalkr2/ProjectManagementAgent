@@ -70,3 +70,57 @@ For the same core suite on copied fixtures with no plugins, run
 `COCKPIT_TEST_CORE_ONLY=1 uv run pytest --ignore=tests/test_plugins.py`. The plugin contract suite runs in the normal full
 suite, including its explicit core-only and enabled pipeline cases. The committed fictional fixtures are never changed by
 this test mode.
+
+## Stages
+
+A plugin declares `provides.stage_checks` (check ids) and `provides.stages`
+(record types with defaults) in its manifest. Register a pure deterministic
+check with `registrar.stage_check("<plugin>/<name>", fn)`. Its signature is
+`fn(record: Stored, view: ReadView, config: Settings) -> StageCheckResult`;
+return both a boolean and a plain reason. The view permits core and own
+records only. Checks never call AI; exceptions disable the plugin and block
+entry. Put check wording in plugin settings.
+
+Use `registrar.stages(record_type, [{id, label, entry, starts}, ...], moves=None)`
+for defaults on the plugin's own types. Workspace `config/stages.yaml` accepts
+`types: {record_type: {moves: person, stages: [...]}}`, or the design's shorter
+`record_type: [...]` form. `moves` defaults to `person`; a type may override it
+with `rule`. Each workspace list replaces the complete pack list. An empty list
+removes the stages. Stored ids and ledger history survive label changes and
+removed stages; no successor is inferred for an id that is no longer configured.
+When disabling a plugin, remove its stage overrides and rule bindings too;
+unknown record types, tasks and checks are config errors.
+
+Rules in `config/rules.yaml` retain the metadata in design 4.10. An optional
+`check` names the deterministic code check that implements a rule. Stage entry
+may name the rule id. Retired, out-of-scope, and prose-only rules do not pass.
+A general executable rule language remains an open design question; AI never
+interprets a rule to authorize a move.
+
+`stage.move` takes `record: {kind, id}`, `to`, and `read_version`. Every AI
+proposal waits for the person, including proposals from trusted notes. The
+person may enter a configured stage after its entry checks pass; the rule
+worker advances only to the next configured stage. Both paths use the applier,
+record exact versions, write the ledger, and support grouped Undo.
+
+On entry, `starts` task kinds create requests with `approval: required` and
+`state: needs_you`. The explicit go endpoint grants approval. Retry and direct
+dispatch cannot bypass this gate. `approve_stage_request` is the integration
+point for future estimates and budget authorization; request `stage_start`
+metadata identifies both the task's record and originating changeset. Undo
+removes pending tasks with the move, and refuses the group once a task changed.
+
+The `stage.moved` event contains `kind`, `id`, `version`, `from`, `to`, and `op`.
+It is published after commit, including reversals from Undo; rolled-back writes
+emit nothing.
+
+All endpoints are under the configured base path plus `/api`:
+
+- `GET /records/{id}?kind=...`: record data, stage status, next checks, and ledger history.
+- `GET /records/{id}/stage-history?kind=...`: stage entries and reversals from the ledger.
+- `GET /stages/ready`: records whose next stage checks pass.
+- `POST /stages/move`: explicit person move with the op fields above (without `op`).
+- `GET /stages/requests`: task requests originating from stage entries.
+- `POST /requests/{id}/go`: `{"read_version": n}` approves a waiting stage task.
+
+No stage UI is included in this increment.

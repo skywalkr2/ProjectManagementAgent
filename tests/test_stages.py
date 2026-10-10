@@ -464,3 +464,54 @@ def test_example_stage_check_and_workspace_wording(workspace):
         assert status["checks"][0]["passed"] and status["checks"][0]["reason"]
     finally:
         store.close()
+
+
+def test_direct_move_obeys_plugin_validators(stage_workspace):
+    from engine.applier import move_stage
+    from engine.storage import StoreError
+
+    store, cfg, record = stage_workspace
+    store.plugins.registrars["stage-test"].validators["stage.move"] = [lambda op, view: ["blocked by validator"]]
+    with pytest.raises(StoreError, match="blocked by validator"):
+        move_stage(store, move_op(record, "draft"))
+    assert store.read().get(record.kind, record.id).data["stage"] is None
+    assert not store.read().list("changeset")
+
+
+def test_disabled_plugin_records_cannot_move_even_without_checks(stage_workspace):
+    from engine.applier import move_stage
+    from engine.stages import record_status
+    from engine.storage import StoreError
+
+    store, cfg, record = stage_workspace
+    store.plugins.disable("stage-test", "test")
+    assert not record_status(store, record)["ready"]
+    with pytest.raises(StoreError, match="disabled"):
+        move_stage(store, move_op(record, "draft"))
+
+
+def test_stage_task_packet_carries_record_context(stage_workspace):
+    from datetime import date
+
+    from engine.applier import move_stage
+    from engine.packet import build
+    from engine.workspace import Workspace
+
+    store, cfg, record = stage_workspace
+    store.plugins.stages.types[record.kind].stages[0].starts = ["notes"]
+    move_stage(store, move_op(record, "draft"))
+    request = next(r for r in store.read().list("request") if r.data.get("stage_start"))
+    packet = build(Workspace(store.path.parent), store, cfg, request.id, date.today())
+    assert record.id in packet.task.request and '"stage": "draft"' in packet.task.request
+    assert "<untrusted>" in packet.task.request
+
+
+def test_rule_yaml_date_and_binding_validate_at_load(stage_workspace):
+    store, cfg, record = stage_workspace
+    path = store.path.parent / "config" / "rules.yaml"
+    path.write_text("rules:\n  - id: R-1\n    text: Be ready\n    added: 2026-10-01\n    check: stage-test/ready\n")
+    cfg = load_config(path.parent, env={})
+    assert cfg.rules.rules[0].added.isoformat() == "2026-10-01"
+    path.write_text("rules:\n  - id: R-1\n    check: missing\n")
+    with pytest.raises(ConfigError, match="unknown code check missing"):
+        load_config(path.parent, env={})

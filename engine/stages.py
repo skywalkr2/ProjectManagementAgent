@@ -42,6 +42,10 @@ def record_status(store, record, view=None):
         if target is None
         else [{"id": check, **vars(entry_check(store, check, record, view))} for check in target.entry]
     )
+    if "/" in record.kind and not store.plugins.active(record.kind.split("/")[0]):
+        checks.append(
+            {"id": "plugin-active", "passed": False, "reason": wording(store.plugins.cfg, "type_unavailable")}
+        )
     return {
         "record": {"kind": record.kind, "id": record.id},
         "version": record.version,
@@ -59,6 +63,8 @@ def validate_move(store, op, view):
     record = view.get(op.record.kind, op.record.id)
     if record is None:
         raise StoreError(wording(store.plugins.cfg, "record_missing"))
+    if "/" in record.kind and not store.plugins.active(record.kind.split("/")[0]):
+        raise StoreError(wording(store.plugins.cfg, "type_unavailable"))
     if record.version != op.read_version:
         raise StoreError(wording(store.plugins.cfg, "record_changed"))
     settings = store.plugins.stages.types.get(record.kind)
@@ -80,6 +86,9 @@ def apply_move(store, tx, op, context):
 
     if context.actor not in ("pm", "rule"):
         raise StoreError(wording(store.plugins.cfg, "confirm"))
+    refusals = store.plugins.validators(op)
+    if refusals:
+        raise StoreError("; ".join(refusals))
     record, target = validate_move(store, op, tx)
     if context.actor == "rule":
         settings = store.plugins.stages.types[record.kind]

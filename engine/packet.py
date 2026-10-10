@@ -7,6 +7,7 @@ projects. The request part comes last: the date, the PM's note (trusted) and the
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from datetime import date
 
@@ -55,6 +56,16 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         if part.strip()
     )
     request_parts = [f"Today is {today.isoformat()} ({today.strftime('%A')})."]
+    if req.data.get("stage_start"):
+        origin = req.data["stage_start"]
+        record = store.read().get(origin["kind"], origin["record"])
+        context = {
+            "stage_start": origin,
+            "record": record.data if record else None,
+            "read_version": record.version if record else None,
+        }
+        # Record content is data, not new instructions, even after the person approves a task.
+        request_parts.append("<untrusted>\n" + json.dumps(context, ensure_ascii=False) + "\n</untrusted>")
     if note:
         request_parts.append(f"<note>\n{note}\n</note>")
     if cleaned.text:

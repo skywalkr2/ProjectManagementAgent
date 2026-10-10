@@ -79,8 +79,14 @@ class PluginHost:
             self._load(name, set())
         defaults = {kind: value for reg in self.registrars.values() for kind, value in reg.stage_defaults.items()}
         self.stages.types = {**defaults, **self.stages.types}
-        validate_rules(cfg.rules, self.stage_checks)
-        validate_stages(self.stages, self.records, set(self.stage_checks) | {r.id for r in cfg.rules.rules}, self.tasks)
+        try:
+            validate_rules(cfg.rules, self.stage_checks)
+            validate_stages(
+                self.stages, self.records, set(self.stage_checks) | {r.id for r in cfg.rules.rules}, self.tasks
+            )
+        except Exception:
+            self.close()
+            raise
 
     def _discover(self, bundled: Path) -> None:
         for root in (bundled, self.store.path.parent / "plugins"):

@@ -124,12 +124,12 @@ def declared_plugins(config_dir: Path | None, enabled: list[str]):
     roots = [Path(__file__).resolve().parents[1] / "plugins"]
     if config_dir is not None:
         roots.append(config_dir.parent / "plugins")
-    paths = [path for root in roots for path in root.glob("*/plugin.yaml")]
+    paths = [(path.parent.name, path) for root in roots for path in root.glob("*/plugin.yaml")]
     for ep in entry_points(group="pm_cockpit.plugins"):
         module = ep.value.split(":")[0].split(".")[0]
-        paths.append(Path(ep.dist.locate_file(module)) / "plugin.yaml")
-    for path in paths:
-        if path.parent.name in enabled:
+        paths.append((ep.name, Path(ep.dist.locate_file(module)) / "plugin.yaml"))
+    for name, path in paths:
+        if name in enabled:
             try:
                 yield read_manifest(path)
             except (ValueError, OSError):
