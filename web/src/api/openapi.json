@@ -1,6 +1,221 @@
 {
   "components": {
     "schemas": {
+      "ActionApplied": {
+        "properties": {
+          "applied": {
+            "title": "Applied",
+            "type": "integer"
+          },
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          },
+          "held": {
+            "title": "Held",
+            "type": "integer"
+          },
+          "refused": {
+            "title": "Refused",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "changeset",
+          "applied",
+          "held",
+          "refused"
+        ],
+        "title": "ActionApplied",
+        "type": "object"
+      },
+      "ActionApply": {
+        "additionalProperties": false,
+        "properties": {
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token"
+        ],
+        "title": "ActionApply",
+        "type": "object"
+      },
+      "ActionChoice": {
+        "properties": {
+          "help": {
+            "default": "",
+            "title": "Help",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "description": "The values to pick from; none means on or off.",
+            "items": {
+              "$ref": "#/components/schemas/ChoiceOption"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "value",
+          "options"
+        ],
+        "title": "ActionChoice",
+        "type": "object"
+      },
+      "ActionPreviewItem": {
+        "properties": {
+          "caption": {
+            "default": "",
+            "title": "Caption",
+            "type": "string"
+          },
+          "data_base64": {
+            "description": "The preview's bytes; pictures or plain text only.",
+            "title": "Data Base64",
+            "type": "string"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "media_type",
+          "data_base64"
+        ],
+        "title": "ActionPreviewItem",
+        "type": "object"
+      },
+      "ActionProposalView": {
+        "description": "One action's proposal for the person's review; applying it needs the token.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "choices": {
+            "items": {
+              "$ref": "#/components/schemas/ActionChoice"
+            },
+            "title": "Choices",
+            "type": "array"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "files": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedFile"
+            },
+            "title": "Files",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "ops": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedOp"
+            },
+            "title": "Ops",
+            "type": "array"
+          },
+          "previews": {
+            "items": {
+              "$ref": "#/components/schemas/ActionPreviewItem"
+            },
+            "title": "Previews",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "action",
+          "summary",
+          "ops",
+          "files",
+          "previews",
+          "choices",
+          "notes",
+          "expires_at"
+        ],
+        "title": "ActionProposalView",
+        "type": "object"
+      },
+      "ActionRun": {
+        "additionalProperties": false,
+        "properties": {
+          "choices": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "title": "Choices",
+            "type": "object"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "ActionRun",
+        "type": "object"
+      },
       "ActionState": {
         "properties": {
           "status": {
@@ -361,6 +576,24 @@
           "ops"
         ],
         "title": "ChangesetView",
+        "type": "object"
+      },
+      "ChoiceOption": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "ChoiceOption",
         "type": "object"
       },
       "Created": {
@@ -1036,6 +1269,38 @@
         "title": "Option",
         "type": "object"
       },
+      "PersonActionView": {
+        "description": "Something a person can start on a record, a file or the workspace.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The record kind it works on; none means the whole workspace.",
+            "title": "On"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "on"
+        ],
+        "title": "PersonActionView",
+        "type": "object"
+      },
       "PersonChoice": {
         "properties": {
           "person": {
@@ -1542,6 +1807,52 @@
           "summary"
         ],
         "title": "ProjectView",
+        "type": "object"
+      },
+      "ProposedFile": {
+        "properties": {
+          "file_kind": {
+            "title": "File Kind",
+            "type": "string"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "media_type",
+          "size",
+          "file_kind"
+        ],
+        "title": "ProposedFile",
+        "type": "object"
+      },
+      "ProposedOp": {
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "op": {
+            "title": "Op",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "label"
+        ],
+        "title": "ProposedOp",
         "type": "object"
       },
       "ReadVersion": {
@@ -3387,6 +3698,159 @@
           }
         },
         "summary": "Restore Person"
+      }
+    },
+    "/api/plugin-actions": {
+      "get": {
+        "operationId": "plugin_actions_api_plugin_actions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PersonActionView"
+                  },
+                  "title": "Response Plugin Actions Api Plugin Actions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Plugin Actions"
+      }
+    },
+    "/api/plugin-actions/apply": {
+      "post": {
+        "operationId": "person_action_apply_api_plugin_actions_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionApply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionApplied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Person Action Apply"
+      }
+    },
+    "/api/plugin-actions/{name}/preview": {
+      "post": {
+        "operationId": "person_action_preview_api_plugin_actions__name__preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionRun"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionProposalView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Person Action Preview"
       }
     },
     "/api/plugins": {

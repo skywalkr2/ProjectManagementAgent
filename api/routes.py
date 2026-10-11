@@ -6,6 +6,7 @@ Responses carry data, not wording: labels for what the assistant did come from t
 from __future__ import annotations
 
 import asyncio
+import base64
 from datetime import date
 from typing import Any
 
@@ -13,6 +14,12 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 
 from api.schemas import (
+    ActionApplied,
+    ActionApply,
+    ActionChoice,
+    ActionPreviewItem,
+    ActionProposalView,
+    ActionRun,
     ActionState,
     AiState,
     Answer,
@@ -20,6 +27,7 @@ from api.schemas import (
     BackupStatus,
     ChangeItem,
     ChangesetView,
+    ChoiceOption,
     Created,
     FileKindView,
     FileView,
@@ -32,6 +40,7 @@ from api.schemas import (
     Ok,
     Option,
     OpView,
+    PersonActionView,
     PersonChoice,
     PersonIn,
     PersonPatch,
@@ -40,6 +49,8 @@ from api.schemas import (
     ProjectIn,
     ProjectPatch,
     ProjectView,
+    ProposedFile,
+    ProposedOp,
     ReadVersion,
     RecordView,
     Reply,
@@ -61,6 +72,7 @@ from api.schemas import (
     UndoReport,
     Unmark,
 )
+from engine import actions as person_actions
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.backup import run_backup, state
@@ -128,6 +140,56 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     "added_at",
                 )
             },
+        )
+
+    @r.get("/plugin-actions")
+    def plugin_actions(kind: str | None = None, id: str | None = None) -> list[PersonActionView]:
+        found = person_actions.available(store, kind, id)
+        return [PersonActionView(name=a.name, label=a.label, on=a.on) for a in found]
+
+    @r.post("/plugin-actions/{name:path}/preview")
+    def person_action_preview(name: str, body: ActionRun) -> ActionProposalView:
+        target = body.target.model_dump() if body.target else None
+        pending = guard(lambda: person_actions.preview(store, cfg, name, target, body.choices))
+        return ActionProposalView(
+            token=pending.token,
+            action=pending.action,
+            summary=pending.summary,
+            ops=[ProposedOp(**o) for o in guard(lambda: person_actions.labels(store, pending))],
+            files=[
+                ProposedFile(**{k: f[k] for k in ("name", "media_type", "size", "file_kind")}) for f in pending.files
+            ],
+            previews=[
+                ActionPreviewItem(
+                    name=p["name"],
+                    media_type=p["media_type"],
+                    caption=p["caption"],
+                    data_base64=base64.b64encode(p["data"]).decode("ascii"),
+                )
+                for p in pending.previews
+            ],
+            choices=[
+                ActionChoice(
+                    id=c["id"],
+                    label=c["label"],
+                    value=c["value"],
+                    options=[ChoiceOption(**o) for o in c["options"]],
+                    help=c["help"],
+                )
+                for c in pending.choice_list
+            ],
+            notes=pending.notes,
+            expires_at=pending.expires_at,
+        )
+
+    @r.post("/plugin-actions/apply")
+    def person_action_apply(body: ActionApply) -> ActionApplied:
+        cs_id = guard(lambda: person_actions.apply(store, cfg, body.token))
+        ops = store.read().get("changeset", cs_id).data["ops"]
+        changed()
+        return ActionApplied(
+            changeset=cs_id,
+            **{status: sum(o["status"] == status for o in ops) for status in ("applied", "held", "refused")},
         )
 
     @r.get("/file-kinds")

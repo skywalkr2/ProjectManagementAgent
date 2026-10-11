@@ -164,6 +164,25 @@ class RecordDeleteOp(OpModel):
     read_version: int = Field(ge=1)
 
 
+class FileAddOp(OpModel):
+    """Record a file whose bytes the host already stored under their hash, such as one a person action built. Only
+    person actions offer it; Undo removes the record (the bytes stay, unused)."""
+
+    op: Literal["file.add"] = "file.add"
+    id: str = Field(pattern=r"^FILE-[0-9]+$", description="The id the host set aside for this file.")
+    name: str = Field(min_length=1)
+    media_type: str
+    size: int = Field(ge=0)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    file_kind: str = "attachment"
+    project: str | None = None
+    meta: dict[str, Any] = Field(default_factory=dict)
+    replaces: str | None = None
+
+    def describe(self) -> str | None:
+        return f"Add the file {self.name}"
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -175,7 +194,8 @@ Op = Annotated[
     | QuestionDoneOp
     | PersonAddOp
     | StageMoveOp
-    | RecordDeleteOp,
+    | RecordDeleteOp
+    | FileAddOp,
     Field(discriminator="op"),
 ]
 
@@ -191,6 +211,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "person.add": PersonAddOp,
     "stage.move": StageMoveOp,
     "record.delete": RecordDeleteOp,
+    "file.add": FileAddOp,
 }
 
 TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {"record.delete": "system"}

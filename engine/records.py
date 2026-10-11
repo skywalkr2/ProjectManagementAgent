@@ -283,6 +283,9 @@ class Changeset(Record):
     trust: Literal["trusted", "untrusted"]
     reviewed: bool = False
     run: str | None = None
+    action: dict[str, Any] | None = Field(
+        None, description="The person action this came from: its name, target and the choices the person made."
+    )
     created_at: datetime
 
 

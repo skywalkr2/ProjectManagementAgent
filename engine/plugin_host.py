@@ -76,6 +76,9 @@ class PluginHost:
         self.manifests: dict[str, Manifest] = {}
         self.registrars: dict[str, Registrar] = {}
         self._tools: Any = None
+        from engine.actions import Proposals
+
+        self.proposals = Proposals()
         self.candidates: dict[str, Path] = {}
         self._modules: list[str] = []
         self._queue: deque = deque()
@@ -295,6 +298,7 @@ class PluginHost:
             ("op_validators", registrar.validators),
             ("ai_task_kinds", registrar.tasks),
             ("file_kinds", registrar.file_kinds),
+            ("actions", registrar.actions),
         ):
             if set(getattr(expected, key)) != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
@@ -334,6 +338,12 @@ class PluginHost:
             for field, target in ref_fields(model):
                 if target not in REGISTRY and target not in registrar.records:
                     raise ValueError(f"{field} refers to an unknown record kind {target}")
+        own_files = set(CORE_KINDS) | set(registrar.file_kinds)
+        for action in registrar.actions.values():
+            if action.on is not None and action.on not in REGISTRY and action.on not in registrar.records:
+                raise ValueError(f"action {action.name} is on an unknown record kind {action.on}")
+            if not set(action.file_kinds) <= own_files:
+                raise ValueError(f"action {action.name} names a file kind that isn't core or the plugin's own")
         if not set(registrar.stage_defaults) <= set(registrar.records):
             raise ValueError("default stages may target only the plugin's own record types")
         allowed_ops = set(OP_MODELS) | set(registrar.ops)
@@ -342,6 +352,8 @@ class PluginHost:
         for task in registrar.tasks.values():
             if not set(task.ops) <= allowed_ops:
                 raise ValueError("task may use only core or own ops")
+            if "file.add" in task.ops:
+                raise ValueError("file.add is made only by person actions, never by a task")
         for model in registrar.records.values():
             if "stage" in vars(model).get("__annotations__", {}):
                 raise ValueError("the stage field belongs to the core; record types may not redefine it")

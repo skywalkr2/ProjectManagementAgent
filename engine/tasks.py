@@ -6,6 +6,9 @@ from dataclasses import dataclass
 
 from engine.ops import OP_MODELS
 
+#: Core ops reading notes never offers: deleting is the person's call, and file.add is made only by person actions.
+NOT_FROM_NOTES = {"record.delete", "file.add"}
+
 
 @dataclass(frozen=True)
 class TaskKind:
@@ -18,7 +21,7 @@ class TaskKind:
 TASKS: dict[str, TaskKind] = {
     # Reading notes never deletes anything; deletion is the person's own act (or a plugin task that declares it).
     "notes": TaskKind(
-        name="notes", ops=tuple(n for n in OP_MODELS if n != "record.delete"), prompt="notes", playbook="notes"
+        name="notes", ops=tuple(n for n in OP_MODELS if n not in NOT_FROM_NOTES), prompt="notes", playbook="notes"
     ),
 }
 

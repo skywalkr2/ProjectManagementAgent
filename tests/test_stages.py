@@ -52,7 +52,7 @@ def stage_workspace(tmp_path):
             {
                 "name": "stage-test",
                 "version": "0.1.0",
-                "plugin_api": ">=0.2,<0.3",
+                "plugin_api": ">=0.3,<0.4",
                 "description": "Stage contract fixture",
                 "entry": "fixture:register",
                 "config_schema": "fixture:Config",

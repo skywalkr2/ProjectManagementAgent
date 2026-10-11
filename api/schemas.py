@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 # ---- requests --------------------------------------------------------------------------------------------------------
 
@@ -444,6 +444,78 @@ class FileView(BaseModel):
     origin: Literal["upload", "tool"]
     replaces: str | None
     added_at: str
+
+
+class PersonActionView(BaseModel):
+    """Something a person can start on a record, a file or the workspace."""
+
+    name: str
+    label: str
+    on: str | None = Field(description="The record kind it works on; none means the whole workspace.")
+
+
+class ActionRun(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    target: RecordReference | None = None
+    choices: dict[str, str | bool] = Field(default_factory=dict)
+
+
+class ActionApply(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    token: str
+
+
+class ChoiceOption(BaseModel):
+    value: str
+    label: str
+
+
+class ActionChoice(BaseModel):
+    id: str
+    label: str
+    value: str | bool
+    options: list[ChoiceOption] = Field(description="The values to pick from; none means on or off.")
+    help: str = ""
+
+
+class ActionPreviewItem(BaseModel):
+    name: str
+    media_type: str
+    caption: str = ""
+    data_base64: str = Field(description="The preview's bytes; pictures or plain text only.")
+
+
+class ProposedFile(BaseModel):
+    name: str
+    media_type: str
+    size: int
+    file_kind: str
+
+
+class ProposedOp(BaseModel):
+    op: str
+    label: str
+
+
+class ActionProposalView(BaseModel):
+    """One action's proposal for the person's review; applying it needs the token."""
+
+    token: str
+    action: str
+    summary: str
+    ops: list[ProposedOp]
+    files: list[ProposedFile]
+    previews: list[ActionPreviewItem]
+    choices: list[ActionChoice]
+    notes: list[str]
+    expires_at: str
+
+
+class ActionApplied(BaseModel):
+    changeset: str
+    applied: int
+    held: int
+    refused: int
 
 
 class FileKindView(BaseModel):

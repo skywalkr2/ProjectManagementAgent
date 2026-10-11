@@ -59,6 +59,7 @@ class Provides(Strict):
     op_validators: list[str] = Field(default_factory=list)
     ai_task_kinds: list[str] = Field(default_factory=list)
     file_kinds: list[str] = Field(default_factory=list)
+    actions: list[str] = Field(default_factory=list)
     panels: list[str] = Field(default_factory=list)
     today: list[str] = Field(default_factory=list)
     jobs: list[str] = Field(default_factory=list)

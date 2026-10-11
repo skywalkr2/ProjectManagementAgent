@@ -47,6 +47,68 @@ def blob_path(store: Store, sha256: str) -> Path:
     return files_dir(store) / sha256[:2] / sha256
 
 
+def check_file(
+    store: Store,
+    cfg: Config,
+    view: Any,
+    *,
+    name: str,
+    media_type: str,
+    size: int,
+    file_kind: str = "attachment",
+    meta: dict[str, Any] | None = None,
+    project: str | None = None,
+    replaces: str | None = None,
+) -> tuple[str, dict[str, Any]]:
+    """Check a file against the limits and its kind. Returns its cleaned name and validated details; refusals say why
+    in words."""
+    limits = cfg.storage.files
+    kind = store.plugins.file_kinds().get(file_kind)
+    if kind is None:
+        raise StoreError(f"there is no file kind called {file_kind}")
+    name = Path(name).name.strip()
+    if not name:
+        raise StoreError("the file needs a name")
+    accepted = kind.accept or tuple(limits.accepted_types)
+    if media_type not in accepted:
+        raise StoreError(f"files of type {media_type} can't be added here")
+    cap = min(limits.max_file_mb, kind.max_mb or limits.max_file_mb)
+    if size > cap * 1024 * 1024:
+        raise StoreError(f"{name} is larger than {cap:g} MB")
+    used = sum(f.data["size"] for f in view.list("file"))
+    if used + size > limits.max_total_mb * 1024 * 1024:
+        raise StoreError(f"adding {name} would go over the {limits.max_total_mb:g} MB limit for all files")
+    try:
+        details = kind.details.model_validate(meta or {}).model_dump(mode="json")
+    except ValidationError as err:
+        first = err.errors()[0]
+        raise StoreError(f"{'.'.join(map(str, first['loc'])) or 'details'}: {first['msg']}") from None
+    if project is not None and view.get("project", project) is None:
+        raise StoreError(f"there is no project {project}")
+    if replaces is not None and view.get("file", replaces) is None:
+        raise StoreError(f"there is no file {replaces} to replace")
+    return name, details
+
+
+def store_blob(store: Store, data: bytes) -> str:
+    """Keep the bytes under their hash (once, however often they are added). Returns the hash."""
+    digest = hashlib.sha256(data).hexdigest()
+    path = blob_path(store, digest)
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".part")
+        tmp.write_bytes(data)
+        tmp.replace(path)
+    return digest
+
+
+def blob_matches(store: Store, sha256: str, size: int) -> bool:
+    path = blob_path(store, sha256)
+    if not path.is_file() or path.stat().st_size != size:
+        return False
+    return hashlib.sha256(path.read_bytes()).hexdigest() == sha256
+
+
 def add_file(
     store: Store,
     cfg: Config,
@@ -62,40 +124,24 @@ def add_file(
     context: WriteContext = _PM,
     now: datetime | None = None,
 ) -> Stored:
-    """Check a file against the limits and its kind, store its bytes once, and record it. Refusals say why in words."""
-    limits = cfg.storage.files
-    kind = store.plugins.file_kinds().get(file_kind)
-    if kind is None:
-        raise StoreError(f"there is no file kind called {file_kind}")
-    name = Path(name).name.strip()
-    if not name:
-        raise StoreError("the file needs a name")
-    accepted = kind.accept or tuple(limits.accepted_types)
-    if media_type not in accepted:
-        raise StoreError(f"files of type {media_type} can't be added here")
-    cap = min(limits.max_file_mb, kind.max_mb or limits.max_file_mb)
-    if len(data) > cap * 1024 * 1024:
-        raise StoreError(f"{name} is larger than {cap:g} MB")
-    used = sum(f.data["size"] for f in store.read().list("file"))
-    if used + len(data) > limits.max_total_mb * 1024 * 1024:
-        raise StoreError(f"adding {name} would go over the {limits.max_total_mb:g} MB limit for all files")
-    try:
-        details = kind.details.model_validate(meta or {}).model_dump(mode="json")
-    except ValidationError as err:
-        first = err.errors()[0]
-        raise StoreError(f"{'.'.join(map(str, first['loc'])) or 'details'}: {first['msg']}") from None
-    digest = hashlib.sha256(data).hexdigest()
-    path = blob_path(store, digest)
-    if not path.exists():
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".part")
-        tmp.write_bytes(data)
-        tmp.replace(path)
+    """Check a file against the limits and its kind, store its bytes once, and record it."""
+    check_file(
+        store, cfg, store.read(), name=name, media_type=media_type, size=len(data), file_kind=file_kind, meta=meta
+    )
+    digest = store_blob(store, data)
     with store.transaction() as tx:
-        if project is not None and tx.get("project", project) is None:
-            raise StoreError(f"there is no project {project}")
-        if replaces is not None and tx.get("file", replaces) is None:
-            raise StoreError(f"there is no file {replaces} to replace")
+        name, details = check_file(
+            store,
+            cfg,
+            tx,
+            name=name,
+            media_type=media_type,
+            size=len(data),
+            file_kind=file_kind,
+            meta=meta,
+            project=project,
+            replaces=replaces,
+        )
         return tx.create(
             "file",
             {

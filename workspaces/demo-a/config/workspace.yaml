@@ -10,6 +10,10 @@ user:
 owner_format: "{team} ({full_name})"
 plugins:
   enabled: [example]
+  actions:
+    keep_minutes: 60
+    preview_mb: 5
+    max_previews: 20
   tools:
     timeout_seconds: 120
     max_timeout_seconds: 1800

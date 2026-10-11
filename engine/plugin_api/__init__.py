@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -20,7 +20,7 @@ from engine.records import Record, RefTo, ref_fields, values_at
 from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
 
-PLUGIN_API_VERSION = "0.2.1"
+PLUGIN_API_VERSION = "0.3.0"
 
 
 class Settings(BaseModel):
@@ -189,6 +189,73 @@ class EventContext(ReadView):
         self.commands.append(("question", {"title": title, "text": text}))
 
 
+class ActionContext(ReadView):
+    """What a person action sees: core and own records, file bytes, the plugin's settings and its declared programs.
+    It changes nothing itself; it returns a Proposal the person reviews."""
+
+    def __init__(self, view: Any, plugin: str, config: Settings, tools: Any):
+        super().__init__(view, plugin)
+        self.config = config.model_copy(deep=True)
+        self.tools = tools
+
+
+@dataclass
+class Choice:
+    """A named choice the person can flip on the review; the action runs again with the new value before anything
+    applies. `options` are (value, label) pairs; none means on or off."""
+
+    id: str
+    label: str
+    value: str | bool
+    options: list[tuple[str, str]] = field(default_factory=list)
+    help: str = ""
+
+
+@dataclass
+class Preview:
+    """Something to look at on the review (an image the plugin rendered, or plain text). Shown, never saved or sent."""
+
+    name: str
+    media_type: str
+    data: bytes
+    caption: str = ""
+
+
+@dataclass
+class NewFile:
+    """A file the action made. Applying the proposal adds it; ops refer to it as "$file:<index in files>"."""
+
+    name: str
+    media_type: str
+    data: bytes
+    file_kind: str = "attachment"
+    project: str | None = None
+    meta: dict[str, Any] = field(default_factory=dict)
+    replaces: str | None = None
+
+
+@dataclass
+class Proposal:
+    """One action's result for one review: what it would change (ops, as dicts), files it made, what to look at,
+    choices the person can flip, and anything the person should know (notes)."""
+
+    summary: str
+    ops: list[dict[str, Any]] = field(default_factory=list)
+    files: list[NewFile] = field(default_factory=list)
+    previews: list[Preview] = field(default_factory=list)
+    choices: list[Choice] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class ActionRegistration:
+    name: str
+    label: str
+    on: str | None
+    run: Callable
+    file_kinds: tuple[str, ...] = ()
+
+
 @dataclass(frozen=True)
 class OpRegistration:
     model: type[OpModel]
@@ -216,6 +283,7 @@ class Registrar:
         self.stage_checks: dict[str, Callable] = {}
         self.stage_defaults: dict[str, TypeStages] = {}
         self.file_kinds: dict[str, Any] = {}
+        self.actions: dict[str, ActionRegistration] = {}
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
@@ -293,6 +361,20 @@ class Registrar:
             raise ValueError("file kind details must be a pydantic model")
         self.file_kinds[name] = FileKind(name, details or AnyDetails, tuple(accept), max_mb, label)
 
+    def action(
+        self, name: str, *, label: str, run: Callable, on: str | None = None, file_kinds: tuple[str, ...] = ()
+    ) -> None:
+        """Something the person starts: on a record of kind `on` (core or own; "file" with optional `file_kinds`), or
+        on the workspace when `on` is None. `run(target, context, choices) -> Proposal` is deterministic work (it may
+        run declared programs through `context.tools`); the person reviews the proposal, and what they approve
+        applies as theirs."""
+        self._name(name)
+        if name in self.actions or not callable(run) or not label.strip():
+            raise ValueError("duplicate action, missing label or invalid callback")
+        if file_kinds and on != "file":
+            raise ValueError("file_kinds applies only to actions on files")
+        self.actions[name] = ActionRegistration(name, label.strip(), on, run, tuple(file_kinds))
+
     def subscribe(self, event: str, fn: Callable) -> None:
         if event in self.handlers or not callable(fn):
             raise ValueError("duplicate subscription or invalid handler")
@@ -316,6 +398,11 @@ __all__ = [
     "ReadView",
     "OpWriter",
     "EventContext",
+    "ActionContext",
+    "Proposal",
+    "NewFile",
+    "Preview",
+    "Choice",
     "Registrar",
     "StageDefinition",
     "StageCheckResult",

@@ -45,8 +45,17 @@ class ToolSettings(ConfigModel):
     collect_total_mb: float = Field(100, gt=0, description="Most a program's returned files may add up to, in MB.")
 
 
+class ActionSettings(ConfigModel):
+    keep_minutes: float = Field(60, gt=0, description="How long a reviewed proposal waits for the person's go.")
+    preview_mb: float = Field(5, gt=0, description="Largest single preview an action may show, in MB.")
+    max_previews: int = Field(20, ge=0, description="Most previews one action may show.")
+
+
 class PluginSettings(ConfigModel):
     enabled: list[str] = Field(default_factory=list, description="Plugins enabled in this workspace, by name.")
+    actions: ActionSettings = Field(
+        default_factory=ActionSettings, description="How person actions from plugins are reviewed."
+    )
     tools: ToolSettings = Field(
         default_factory=ToolSettings,
         description="Limits on the outside programs plugins run (where they are found is"

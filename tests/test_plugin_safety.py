@@ -26,7 +26,7 @@ def make(tmp_path, body, ops=()):
     manifest = {
         "name": "safety",
         "version": "0.1.0",
-        "plugin_api": ">=0.2,<0.3",
+        "plugin_api": ">=0.3,<0.4",
         "description": "Safety fixture",
         "entry": "fixture:register",
         "config_schema": "fixture:Config",

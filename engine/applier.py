@@ -26,6 +26,7 @@ from engine.ops import (
     ActionCloseOp,
     ChangesetIn,
     FactOp,
+    FileAddOp,
     NoteOp,
     OpModel,
     PersonAddOp,
@@ -81,6 +82,7 @@ class Context:
     inputs: Inputs
     hidden_words: list[str] = field(default_factory=list)
     confirmed_by_pm: bool = False
+    actor: Literal["assistant", "pm"] = "assistant"  # "pm" for a person action, whose exact proposal the person saw
 
 
 # ---- checks ----------------------------------------------------------------------------------------------------------
@@ -287,7 +289,13 @@ def _label(op: OpModel) -> str | None:
 
 
 def apply_changeset(
-    cs: ChangesetIn, problems: list[Problem], ctx: Context, *, run: str | None, now: datetime | None = None
+    cs: ChangesetIn,
+    problems: list[Problem],
+    ctx: Context,
+    *,
+    run: str | None,
+    now: datetime | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> str:
     """Apply what passed, hold what needs the PM, record refusals. Returns the changeset id."""
     now = now or datetime.now(UTC)
@@ -363,6 +371,7 @@ def apply_changeset(
                 "trust": ctx.inputs.trust,
                 "run": run,
                 "created_at": now.isoformat(),
+                **(extra or {}),
             },
             WriteContext(actor="engine", trust="trusted", op="changeset.record"),
             record_id=cs_id,
@@ -396,6 +405,8 @@ def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
 
 def origin_of(ctx: Context) -> dict[str, str]:
     """Who asked for a change, as plugin validators see it."""
+    if ctx.actor == "pm":
+        return {"actor": "pm", "trust": "trusted", "via": "action"}
     if ctx.confirmed_by_pm:
         return {"actor": "pm", "trust": "trusted", "via": "screen"}
     via = "input" if ctx.inputs.source else "task" if ctx.inputs.trust == "untrusted" else "note"
@@ -436,7 +447,7 @@ def _wctx(ctx: Context, cs_id: str, index: int, op: OpModel) -> WriteContext:
     if evidence is not None:
         ev = {"source": ctx.inputs.evidence_source(evidence.quote), "quote": evidence.quote}
     return WriteContext(
-        actor="assistant",
+        actor=ctx.actor,
         trust=ctx.inputs.trust,
         op=f"{op.op}#{index}",
         changeset=cs_id,
@@ -461,6 +472,37 @@ def _apply_op(
             raise StoreError(f"{kind} {rid} is still referred to by {users[0][0]} {users[0][1]}")
         tx.delete(kind, rid, w, read_version=op.read_version)
         return [{"kind": kind, "id": rid}], None
+    if isinstance(op, FileAddOp):
+        from engine.files import blob_matches, check_file
+
+        if not blob_matches(ctx.store, op.sha256, op.size):
+            raise StoreError(f"the bytes for {op.name} aren't stored")
+        name, details = check_file(
+            ctx.store,
+            ctx.cfg,
+            tx,
+            name=op.name,
+            media_type=op.media_type,
+            size=op.size,
+            file_kind=op.file_kind,
+            meta=op.meta,
+            project=op.project,
+            replaces=op.replaces,
+        )
+        data = {
+            "name": name,
+            "media_type": op.media_type,
+            "size": op.size,
+            "sha256": op.sha256,
+            "file_kind": op.file_kind,
+            "project": op.project,
+            "meta": details,
+            "origin": "tool",
+            "trust": "untrusted",
+            "replaces": op.replaces,
+            "added_at": ctx.store.clock(),
+        }
+        return [{"kind": "file", "id": tx.create("file", data, w, record_id=op.id).id}], None
     trust = ctx.inputs.trust
     source = ctx.inputs.source
     touched: list[dict[str, Any]] = []
@@ -715,7 +757,8 @@ def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> U
     for o in outcomes:
         if o["status"] == "applied":
             groups.setdefault(o["group"], []).append(o)
-    chosen = {o["group"] for o in wanted}
+    # Newest first, so a later op that refers to what an earlier one made is undone before it.
+    chosen = sorted({o["group"] for o in wanted}, key=lambda g: -max(o["index"] for o in groups[g]))
     report = UndoReport()
     entries = [e for e in store.read().ledger() if e["changeset"] == changeset_id]
     with store.transaction() as tx:

@@ -1,8 +1,49 @@
-# Plugin API 0.2 (0.2.1)
+# Plugin API 0.3
 
 Plugin API 0.x, not 1.0: expect small changes until both of the host's own add-on packs run on it unchanged. Manifests
-declare `plugin_api: '>=0.2,<0.3'`; a manifest for 0.1 is refused (0.x minor versions may break). The complete runnable example is
+declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is refused (0.x minor versions may break).
+0.3 adds files, programs and person actions to 0.2, and changes nothing a 0.2 plugin relies on, so moving up is the
+version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
+
+## What 0.3 adds
+
+- **Files** (design 5.3). People add files in the UI; bytes are stored once by hash and described by a core `file`
+  record (name, media type, size, kind, project, details, origin, replaces). `registrar.file_kind(name, details=Model,
+  accept=(...), max_mb=..., label=...)` declares what a kind of file is for and the details it asks for (validated on
+  add); declare it in `provides.file_kinds`. `file.added` publishes `{id, kind}` and may be filtered by file kinds.
+  Views read bytes with `view.file_bytes(file_id)`, checked against the hash. Files a program or action made are
+  `origin: tool` and untrusted.
+- **Programs** (`requires.tools`): `{name, min_version, probe, optional, features}`. Where a program is found is set
+  per computer in `<workspace>/.cockpit/tools.yaml` (`name: /path` or `name: {command: [...], env: {...}}`), else the
+  PATH. Each tool is probed when the plugin loads; the probe's first word is the tool's name, and the first version
+  number in its output is compared with `min_version`. A missing required tool keeps the plugin off; a missing
+  optional one shows in the plugin's status, and `context.tools.available(name)` is false.
+  `context.tools.run(name, args, files={path: bytes}, timeout=..., collect=[patterns], max_file_mb=...,
+  max_total_mb=...)` writes the files into a fresh folder, runs the program there without a shell, with a minimal
+  environment (PATH, locale; HOME and temp point at the folder), a timeout and capped output, and returns
+  `ToolResult(returncode, stdout, stderr, timed_out, output_cut, files, omitted, seconds)`. `files` holds what matched
+  `collect` (regular files inside the folder only); a file over a cap is listed in `omitted`, never cut short. Calls may
+  lower the timeout and caps, never raise them (`workspace.plugins.tools`). The folder is deleted afterwards and every
+  run is a `tool_run` record. Programs run only in person actions.
+- **Person actions:** `registrar.action(name, label=..., run=fn, on=kind | None, file_kinds=(...))`, declared in
+  `provides.actions`. `on` is a core or own record kind, `"file"` (optionally only some file kinds), or None for the
+  whole workspace. `fn(target, context, choices) -> Proposal` is deterministic work; `context` reads core and own
+  records and file bytes, has the plugin's settings and `context.tools`, and changes nothing. A `Proposal` has:
+  - `summary`: one line;
+  - `ops`: dicts for core ops or your own (not ops that need evidence: an action has no input to quote);
+  - `files`: `NewFile(name, media_type, data, file_kind, project, meta, replaces)`, added when it applies; ops refer to
+    one as `"$file:<index>"`;
+  - `previews`: `Preview(name, media_type, data, caption)`, PNG, JPEG, GIF, WebP or plain text, shown and never saved;
+  - `choices`: `Choice(id, label, value, options=[(value, label)], help)`; no options means on or off. Flipping one
+    runs `fn` again with the person's values in `choices`;
+  - `notes`: anything the person should know.
+
+  The person reviews the proposal and applies exactly that, as themselves (actor `pm`): person-only values apply, and
+  validators see `origin.via == "action"`. If the target changed since the review, nothing applies and the person runs
+  the action again. A review keeps for `workspace.plugins.actions.keep_minutes` and applies once. Ops apply as any
+  changeset does (each refused or held alone), and Undo takes back the whole action, its files included. An action
+  that raises `StoreError` or a tool error shows its message; any other exception turns the plugin off.
 
 ## What 0.2 adds
 
@@ -36,9 +77,9 @@ declare `plugin_api: '>=0.2,<0.3'`; a manifest for 0.1 is refused (0.x minor ver
 
 Fixes from trying 0.2; manifests stay `'>=0.2,<0.3'`.
 
-- **Who sets a person-only value.** Every op a plugin applies carries the assistant as its actor, so a person-only
-  value is held until the person releases it; releasing is how the person decides. Plugin API 0.3 adds person
-  actions, which run as the person and apply such values at once.
+- **Who sets a person-only value.** Ops from tasks and events carry the assistant as their actor, so a person-only
+  value is held until the person releases it; releasing is how the person decides. Person actions (0.3) apply as the
+  person, so such values apply at once.
 - **Labels:** an op may override `describe(self) -> str | None` to give its one-line label in review lists (held,
   applied, refused). Without it the list falls back to a `text`, `title`, `answer` or `full_name` field.
 - **References inside lists:** `list[Annotated[str, RefTo("kind")]]` is enforced like a single reference: every id
@@ -122,9 +163,8 @@ A failed op's savepoint is rolled back; its outcome is recorded as refused. Reco
 export after a runtime failure. Restarting with the plugin enabled attempts a fresh load.
 
 The host is not a Python sandbox. Enabling a plugin trusts its code. The API exposes no network, process, secret or sending
-capability. Manifests requesting these or later extension points are refused until implemented. Version 0.2 does not yet
-implement migrations, interface contracts, plugin panels, custom prompt bundles or tool runners (`run_tool` and person
-actions come in 0.3).
+capability (programs only through `context.tools`, see 0.3). Manifests requesting these or later extension points are refused until implemented. Version 0.2 does not yet
+implement migrations, interface contracts, plugin panels or custom prompt bundles.
 
 ## Verification
 

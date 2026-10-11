@@ -144,7 +144,7 @@ def workspace_with(tmp_path, program, tools_declared):
     manifest = {
         "name": "p03",
         "version": "0.1.0",
-        "plugin_api": ">=0.2,<0.4",
+        "plugin_api": ">=0.3,<0.4",
         "description": "Tool fixture",
         "entry": "fixture:register",
         "config_schema": "fixture:Config",

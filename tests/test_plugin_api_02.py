@@ -94,7 +94,7 @@ def env(tmp_path):
     manifest = {
         "name": "p02",
         "version": "0.1.0",
-        "plugin_api": ">=0.2,<0.3",
+        "plugin_api": ">=0.3,<0.4",
         "description": "Plugin API 0.2 fixture",
         "entry": "fixture:register",
         "config_schema": "fixture:Config",
@@ -216,7 +216,7 @@ def test_record_delete_from_the_assistant_waits_for_the_person(env):
 def test_reading_notes_never_offers_delete():
     from engine.tasks import TASKS
 
-    assert "record.delete" not in TASKS["notes"].ops
+    assert "record.delete" not in TASKS["notes"].ops and "file.add" not in TASKS["notes"].ops
 
 
 def test_an_event_subscription_can_be_limited_to_kinds(env):

@@ -81,6 +81,24 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-11: Person actions apply what the person reviewed, as the person
+
+**Decided by:** Claude (design), building plugin API 0.3; the owner can override.
+
+**What:** A plugin's person action returns one proposal (ops, files it made, previews, named choices, notes). The host
+keeps it under a token for a while; flipping a choice runs the action again; applying takes exactly the kept proposal,
+once, and refuses if the target changed since. It applies as the person (actor `pm`, confirmed), so person-only values
+and system ops apply without a second go. Files are added by a core `file.add` op in the same changeset, so Undo takes
+them back with everything else; Undo now goes newest first, so an op that refers to an earlier one's record is undone
+before it. Actions can't propose ops that need evidence. Previews are pictures or plain text only. The routes are under
+`/plugin-actions`, since an "action" in the core is a to-do.
+
+**Why:** The person must approve exact content, never a recomputation of it; and an action's result must come back as
+a whole with one Undo.
+
+**Impact:** Plugin API 0.3.0. New core op `file.add` (offered only to actions), `Changeset.action`, settings under
+`workspace.plugins.actions`. Manifests move to `'>=0.3,<0.4'`.
+
 ## 2026-10-11: How run_tool finds, checks and runs programs
 
 **Decided by:** Claude (design), building plugin API 0.3; the owner can override.
