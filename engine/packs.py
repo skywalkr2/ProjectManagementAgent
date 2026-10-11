@@ -48,6 +48,23 @@ class AiJob(BaseModel):
     data_level: Literal["open", "internal", "restricted"] = "internal"
 
 
+class Release(BaseModel):
+    """Where a pack's release file is, so the app can install it: an https address of a wheel of pure Python, and its
+    SHA-256 checksum, which the download must match."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    url: str = Field(max_length=1000)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+    @field_validator("url")
+    @classmethod
+    def _https(cls, value: str) -> str:
+        if not (value.startswith("https://") and urlsplit(value).hostname):
+            raise ValueError("a release is an https address")
+        return value
+
+
 class Entry(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -66,6 +83,7 @@ class Entry(BaseModel):
     ai_jobs: list[AiJob] = Field(default_factory=list, max_length=20)
     provides: dict[str, Any] = Field(default_factory=dict)
     requires: dict[str, Any] = Field(default_factory=dict)
+    release: Release | None = None
 
     @field_validator("homepage")
     @classmethod

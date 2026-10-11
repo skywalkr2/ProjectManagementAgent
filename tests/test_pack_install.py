@@ -1,0 +1,124 @@
+"""Installing an add-on from the Add-ons screen: the release file the catalog names is downloaded, checked against its
+checksum, and installed only when it is pure Python whose needs the app already has; removing takes away only what
+was installed from here."""
+
+import hashlib
+import io
+import zipfile
+
+import httpx
+import pytest
+
+from engine import pack_install
+from engine.pack_install import InstallError
+
+WEB = "https" + "://"
+RELEASE = f"{WEB}releases.example.com/p/pack-0.1.0-py3-none-any.whl"
+
+
+def wheel(name="pack-demo", tag="py3-none-any", purelib="true", requires=(), extra=None):
+    buffer = io.BytesIO()
+    info = f"{name.replace('-', '_')}-0.1.0.dist-info"
+    with zipfile.ZipFile(buffer, "w") as z:
+        z.writestr("pack_demo/__init__.py", "def register(registrar):\n    pass\n")
+        meta = f"Metadata-Version: 2.1\nName: {name}\nVersion: 0.1.0\n"
+        meta += "".join(f"Requires-Dist: {r}\n" for r in requires)
+        z.writestr(f"{info}/METADATA", meta)
+        z.writestr(f"{info}/WHEEL", f"Wheel-Version: 1.0\nRoot-Is-Purelib: {purelib}\nTag: {tag}\n")
+        z.writestr(f"{info}/entry_points.txt", "[pm_cockpit.plugins]\npackdemo = pack_demo:register\n")
+        z.writestr(f"{info}/RECORD", "")
+        for path, text in (extra or {}).items():
+            z.writestr(path, text)
+    return buffer.getvalue()
+
+
+def test_a_pure_python_pack_installs_and_removes(tmp_path):
+    done = pack_install.install(wheel(), tmp_path)
+    assert (done.name, done.version) == ("pack-demo", "0.1.0")
+    assert (tmp_path / "pack_demo" / "__init__.py").is_file()
+    assert (tmp_path / "pack_demo-0.1.0.dist-info" / "INSTALLER").read_text().strip() == "pm-cockpit"
+    again = pack_install.install(wheel(), tmp_path)  # an update replaces the earlier install
+    assert again.files == done.files
+    pack_install.remove("pack-demo", tmp_path)
+    assert not (tmp_path / "pack_demo").exists() and not list(tmp_path.glob("*.dist-info"))
+
+
+@pytest.mark.parametrize(
+    "data, problem",
+    [
+        (wheel(tag="cp312-cp312-linux_x86_64"), "pure Python"),
+        (wheel(purelib="false"), "pure Python"),
+        (wheel(requires=["a-package-nobody-has>=1"]), "a-package-nobody-has"),
+        (wheel(extra={"../escape.py": "x"}), "paths"),
+        (wheel(extra={"pack_demo-0.1.0.data/scripts/run": "x"}), "paths"),
+        (b"not a zip", "isn't a package"),
+    ],
+)
+def test_what_cant_be_installed_from_here_is_refused(tmp_path, data, problem):
+    with pytest.raises(InstallError, match=problem):
+        pack_install.install(data, tmp_path)
+    assert not (tmp_path / "pack_demo").exists()
+
+
+def test_a_pack_installed_another_way_is_left_alone(tmp_path):
+    pack_install.install(wheel(), tmp_path)
+    (tmp_path / "pack_demo-0.1.0.dist-info" / "INSTALLER").write_text("pip\n")
+    with pytest.raises(InstallError, match="another way"):
+        pack_install.remove("pack-demo", tmp_path)
+    with pytest.raises(InstallError, match="another way"):
+        pack_install.install(wheel(), tmp_path)
+
+
+def test_the_download_must_match_the_checksum_and_a_token_stays_with_its_host():
+    data = wheel()
+    seen = []
+
+    def service(request):
+        seen.append((request.url.host, request.headers.get("authorization")))
+        if request.url.host == "releases.example.com":
+            return httpx.Response(302, headers={"location": f"{WEB}files.example.com/blob"})
+        return httpx.Response(200, content=data)
+
+    client = httpx.Client(transport=httpx.MockTransport(service), follow_redirects=True)
+    got = pack_install.download(RELEASE, hashlib.sha256(data).hexdigest(), token="t0ken", client=client)
+    assert got == data
+    assert seen == [("releases.example.com", "Bearer t0ken"), ("files.example.com", None)]
+    with pytest.raises(InstallError, match="checksum"):
+        pack_install.download(RELEASE, "0" * 64, client=client)
+    refused = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(404)))
+    with pytest.raises(InstallError, match="read token"):
+        pack_install.download(RELEASE, "0" * 64, client=refused)
+
+
+def test_the_install_route_uses_the_catalog_entry(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine import packs
+    from tests.test_setup import make
+
+    data = wheel()
+    entry = packs.Entry(
+        id="packdemo",
+        name="Pack demo",
+        release={"url": RELEASE, "sha256": hashlib.sha256(data).hexdigest()},
+    )
+    bare = packs.Entry(id="bare", name="Bare", install="Ask the publisher.")
+    monkeypatch.setattr(packs, "read_feeds", lambda *a, **k: [packs.Feed(RELEASE, [entry, bare])])
+    monkeypatch.setattr(pack_install, "download", lambda url, sha, token=None, client=None: data)
+    place = tmp_path / "site"
+    place.mkdir()
+    monkeypatch.setattr(pack_install, "target", lambda: place)
+    ws, cfg, store = make(tmp_path)
+    store.close()
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    listed = {p["id"]: p for p in c.get(f"{api}/packs").json()["available"]}
+    assert listed["packdemo"]["installable"] and not listed["bare"]["installable"]
+    done = c.post(f"{api}/packs/packdemo/install")
+    assert done.status_code == 200, done.text
+    assert done.json() == {"name": "pack-demo", "version": "0.1.0", "needs_restart": True}
+    assert (place / "pack_demo" / "__init__.py").is_file()
+    assert c.post(f"{api}/packs/bare/install").status_code == 409
+    assert c.post(f"{api}/packs/nothing/install").status_code == 404

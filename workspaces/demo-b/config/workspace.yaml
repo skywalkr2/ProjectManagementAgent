@@ -24,7 +24,7 @@ plugins:
     collect_total_mb: 100
   jobs: {}   # e.g. {example/tidy: {every_minutes: 120}}
   failures_before_off: 3   # a plugin call may fail this many times in a row before the plugin is turned off
-  catalog: {enabled: true, shipped_feed: true, feeds: [], refresh_hours: 24}   # where Add-ons finds packs
+  catalog: {enabled: true, shipped_feed: true, feeds: [], refresh_hours: 24, release_tokens: {}}   # where Add-ons finds packs
   secrets: {}   # e.g. {mail-plugin: {token: env:MAIL_TOKEN}}: references only, never the secret
 our_accounts: [Cockpit assistant]   # names this app and the PM use on watched sources
 demo: true   # made-up example data: the screens say so

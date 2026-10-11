@@ -1449,6 +1449,9 @@ class PackView(BaseModel):
     what: PackSummary
     costs: list[PackCost]
     feed: str = Field(description="The domain of the feed that lists it.")
+    installable: bool | None = Field(
+        None, description="True when the app can install it from here (POST /api/packs/{id}/install)."
+    )
 
 
 class InstalledPackView(BaseModel):
@@ -1573,3 +1576,9 @@ class WatchSourceChange(BaseModel):
     enabled: bool | None = None
     settings: dict[str, Any] | None = None
     fingerprint: str
+
+
+class PackInstalled(BaseModel):
+    name: str = Field(description="The installed package's name.")
+    version: str
+    needs_restart: bool = Field(description="It is used after a restart the person chooses; turning it on is separate.")

@@ -7,9 +7,9 @@ import os
 from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
-from api.schemas import InstalledPackView, PackFeedView, PackSummary, PacksView, PackView
+from api.schemas import InstalledPackView, PackFeedView, PackInstalled, PackSummary, PacksView, PackView
 from engine import packs
 from engine.config import Config, ConfigError, load_config
 from engine.plugin_api import PLUGIN_API_VERSION
@@ -70,6 +70,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
                         installed_version=manifest.version if manifest else None,
                         enabled=entry.id in enabled,
                         what=PackSummary(**packs.summary(entry.provides, entry.requires)),
+                        installable=entry.release is not None and cfg.server.mode == "local",
                         costs=costs(entry),
                         feed=urlsplit(feed.url).hostname or "",
                     )
@@ -100,6 +101,59 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
             available=available,
             installed=installed,
         )
+
+    def entry_for(pack_id: str) -> packs.Entry:
+        settings = cfg.workspace.plugins.catalog
+        feeds = packs.read_feeds(packs.feed_urls(cfg, product()), ws.private_dir, settings.refresh_hours)
+        for feed in feeds:
+            for entry in feed.entries:
+                if entry.id == pack_id:
+                    return entry
+        raise HTTPException(status_code=404, detail=f"No catalog lists an add-on called {pack_id}.")
+
+    @r.post("/packs/{pack_id}/install")
+    def install(pack_id: str) -> PackInstalled:
+        """Install (or update) an add-on from the release file its catalog entry names, checked against the entry's
+        checksum. It isn't turned on; it is used after the restart the person chooses."""
+        from engine import pack_install
+        from engine.secrets import SecretError, resolve_secret
+
+        if cfg.server.mode != "local":
+            raise HTTPException(status_code=400, detail="A hosted app's add-ons are installed with its deployment.")
+        entry = entry_for(pack_id)
+        if entry.release is None:
+            raise HTTPException(
+                status_code=409, detail=f"{entry.name} has no release the app can install: {entry.install}"
+            )
+        host_name = urlsplit(entry.release.url).hostname or ""
+        ref = cfg.workspace.plugins.catalog.release_tokens.get(host_name)
+        try:
+            token = resolve_secret(ref) if ref else None
+            data = pack_install.download(entry.release.url, entry.release.sha256, token)
+            done = pack_install.install(data)
+        except SecretError as err:
+            raise HTTPException(status_code=409, detail=f"The read token for {host_name} isn't there: {err}") from None
+        except pack_install.InstallError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        return PackInstalled(name=done.name, version=done.version, needs_restart=True)
+
+    @r.post("/packs/{pack_id}/uninstall")
+    def uninstall(pack_id: str) -> PackInstalled:
+        """Remove an add-on installed from this screen. Its records and settings stay; turn it off first."""
+        from importlib.metadata import entry_points
+
+        from engine import pack_install
+
+        if pack_id in set(cfg.workspace.plugins.enabled):
+            raise HTTPException(status_code=409, detail="Turn it off first, then remove it.")
+        found = next((ep for ep in entry_points(group="pm_cockpit.plugins") if ep.name == pack_id), None)
+        if found is None or found.dist is None:
+            raise HTTPException(status_code=404, detail=f"{pack_id} isn't installed as a package.")
+        try:
+            pack_install.remove(found.dist.name)
+        except pack_install.InstallError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        return PackInstalled(name=found.dist.name, version=found.dist.version, needs_restart=True)
 
     @r.get("/packs")
     def listed() -> PacksView:

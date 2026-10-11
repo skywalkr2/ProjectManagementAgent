@@ -1020,6 +1020,7 @@ In the workspace's `config/workspace.yaml`; the person can change them.
 | `workspace.plugins.catalog.shipped_feed` | bool | `True` | Include the catalog feed this build of the app came with, if any. |
 | `workspace.plugins.catalog.feeds` | list[str] | `[]` | More catalog feeds to read, as https addresses (a team's own, say). |
 | `workspace.plugins.catalog.refresh_hours` | int | `24` | How old the kept copy of a feed may be before opening the screen reads it again. |
+| `workspace.plugins.catalog.release_tokens` | dict[str, str] | `{}` | Read tokens for hosts that keep private packs' release files, by host name, as references (env:NAME or file:/path, never the token itself); sent only to that host when installing. |
 
 Files, in `config/storage.yaml`. A file kind keeps only the media types listed here; the plugin's status notes any it loses.
 

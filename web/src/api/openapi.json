@@ -3775,6 +3775,31 @@
         "title": "PackFeedView",
         "type": "object"
       },
+      "PackInstalled": {
+        "properties": {
+          "name": {
+            "description": "The installed package's name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "needs_restart": {
+            "description": "It is used after a restart the person chooses; turning it on is separate.",
+            "title": "Needs Restart",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "needs_restart"
+        ],
+        "title": "PackInstalled",
+        "type": "object"
+      },
       "PackPrice": {
         "properties": {
           "amount": {
@@ -3966,6 +3991,18 @@
             "description": "How to install it, as the feed says (a command or a short instruction).",
             "title": "Install",
             "type": "string"
+          },
+          "installable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True when the app can install it from here (POST /api/packs/{id}/install).",
+            "title": "Installable"
           },
           "installed_version": {
             "anyOf": [
@@ -9800,6 +9837,86 @@
           }
         },
         "summary": "Pack On"
+      }
+    },
+    "/api/packs/{pack_id}/install": {
+      "post": {
+        "description": "Install (or update) an add-on from the release file its catalog entry names, checked against the entry's\nchecksum. It isn't turned on; it is used after the restart the person chooses.",
+        "operationId": "install_api_packs__pack_id__install_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackInstalled"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Install"
+      }
+    },
+    "/api/packs/{pack_id}/uninstall": {
+      "post": {
+        "description": "Remove an add-on installed from this screen. Its records and settings stay; turn it off first.",
+        "operationId": "uninstall_api_packs__pack_id__uninstall_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PackInstalled"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Uninstall"
       }
     },
     "/api/panels": {

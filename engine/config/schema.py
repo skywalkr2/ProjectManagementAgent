@@ -82,6 +82,19 @@ class CatalogSettings(ConfigModel):
         description="How old the kept copy of a feed may be before opening the screen reads it again.",
         json_schema_extra={"enabled_by": "enabled"},
     )
+    release_tokens: dict[str, str] = Field(
+        default_factory=dict,
+        description="Read tokens for hosts that keep private packs' release files, by host name, as references "
+        "(env:NAME or file:/path, never the token itself); sent only to that host when installing.",
+    )
+
+    @field_validator("release_tokens")
+    @classmethod
+    def _references(cls, value: dict[str, str]) -> dict[str, str]:
+        for host, ref in value.items():
+            if not str(ref).startswith(("env:", "file:")):
+                raise ValueError(f"{host}: a read token is given as env:NAME or file:/path, never the token itself")
+        return value
 
     @field_validator("feeds")
     @classmethod
