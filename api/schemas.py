@@ -784,11 +784,41 @@ class PanelView(BaseModel):
     title: str
     tab: str
     kind: str
-    view: str
+    view: str = Field(description='"list", "table" or "board" for records; "document" for a composed page.')
     columns: list[str]
     primary_action: str | None
     row_actions: list[str]
     new_action: str | None = Field(None, description="A person action on the workspace that adds one, shown above.")
+
+
+class DocumentInline(BaseModel):
+    """A run of text in a document: plain, strong, emphasis or code, or a link to a record or to a page outside."""
+
+    text: str
+    strong: bool = False
+    em: bool = False
+    code: bool = False
+    record: RecordReference | None = Field(None, description="A record the link opens.")
+    url: str | None = Field(None, description="A page outside the app; show `domain` beside it.")
+    domain: str | None = None
+
+
+class DocumentBlock(BaseModel):
+    """One block of a document panel, drawn by the screens as their own elements (never HTML)."""
+
+    type: Literal["heading", "paragraph", "list", "table", "rule"]
+    level: int | None = Field(None, description="A heading's level, 1 to 3.")
+    inlines: list[DocumentInline] = Field(default_factory=list, description="A heading's or paragraph's text.")
+    ordered: bool = False
+    items: list[list[DocumentInline]] = Field(default_factory=list, description="A list's items.")
+    header: list[list[DocumentInline]] = Field(default_factory=list, description="A table's header cells.")
+    rows: list[list[list[DocumentInline]]] = Field(default_factory=list, description="A table's rows of cells.")
+
+
+class DocumentView(BaseModel):
+    """A document panel as it reads now; `blocks` is None when the add-on has nothing to show yet."""
+
+    blocks: list[DocumentBlock] | None
 
 
 class PanelRow(BaseModel):

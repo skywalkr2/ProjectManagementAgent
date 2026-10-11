@@ -1767,6 +1767,175 @@
         "title": "Created",
         "type": "object"
       },
+      "DocumentBlock": {
+        "description": "One block of a document panel, drawn by the screens as their own elements (never HTML).",
+        "properties": {
+          "header": {
+            "description": "A table's header cells.",
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/DocumentInline"
+              },
+              "type": "array"
+            },
+            "title": "Header",
+            "type": "array"
+          },
+          "inlines": {
+            "description": "A heading's or paragraph's text.",
+            "items": {
+              "$ref": "#/components/schemas/DocumentInline"
+            },
+            "title": "Inlines",
+            "type": "array"
+          },
+          "items": {
+            "description": "A list's items.",
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/DocumentInline"
+              },
+              "type": "array"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A heading's level, 1 to 3.",
+            "title": "Level"
+          },
+          "ordered": {
+            "default": false,
+            "title": "Ordered",
+            "type": "boolean"
+          },
+          "rows": {
+            "description": "A table's rows of cells.",
+            "items": {
+              "items": {
+                "items": {
+                  "$ref": "#/components/schemas/DocumentInline"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "type": {
+            "enum": [
+              "heading",
+              "paragraph",
+              "list",
+              "table",
+              "rule"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "DocumentBlock",
+        "type": "object"
+      },
+      "DocumentInline": {
+        "description": "A run of text in a document: plain, strong, emphasis or code, or a link to a record or to a page outside.",
+        "properties": {
+          "code": {
+            "default": false,
+            "title": "Code",
+            "type": "boolean"
+          },
+          "domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain"
+          },
+          "em": {
+            "default": false,
+            "title": "Em",
+            "type": "boolean"
+          },
+          "record": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A record the link opens."
+          },
+          "strong": {
+            "default": false,
+            "title": "Strong",
+            "type": "boolean"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A page outside the app; show `domain` beside it.",
+            "title": "Url"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "DocumentInline",
+        "type": "object"
+      },
+      "DocumentView": {
+        "description": "A document panel as it reads now; `blocks` is None when the add-on has nothing to show yet.",
+        "properties": {
+          "blocks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/DocumentBlock"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocks"
+          }
+        },
+        "required": [
+          "blocks"
+        ],
+        "title": "DocumentView",
+        "type": "object"
+      },
       "EndpointView": {
         "properties": {
           "adapter": {
@@ -3723,6 +3892,7 @@
             "type": "string"
           },
           "view": {
+            "description": "\"list\", \"table\" or \"board\" for records; \"document\" for a composed page.",
             "title": "View",
             "type": "string"
           }
@@ -8984,6 +9154,62 @@
           }
         },
         "summary": "Panels"
+      }
+    },
+    "/api/panels/{name}/document": {
+      "get": {
+        "description": "A document panel's blocks for the project in view, or the workspace.",
+        "operationId": "panel_document_api_panels__name__document_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Panel Document"
       }
     },
     "/api/panels/{name}/rows": {

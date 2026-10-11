@@ -873,10 +873,38 @@ class PluginHost:
         registrar = self.registrars.get(plugin)
         return registrar.panels.get(name) if registrar and self.active(plugin) else None
 
+    def panel_document(self, name: str, project: str | None = None) -> list[dict[str, Any]] | None:
+        """A document panel's blocks for the project in view (or the workspace), from the plugin's Markdown; None
+        when it has nothing to show yet. A failure is contained, noted on the plugin, and raised as StoreError."""
+        from engine.documents import DocumentError, blocks
+        from engine.plugin_api import ReadView
+
+        panel = self.panel(name)
+        if panel is None or panel.view != "document":
+            raise StoreError(f"there is no document {name} running now")
+        plugin = name.split("/", 1)[0]
+        view = self.store.read()
+        reader = self._with_files(ReadView(view, plugin))
+        where = f"document {name}"
+
+        def can_link(kind: str, record_id: str) -> bool:
+            if "/" in kind and not kind.startswith(plugin + "/"):
+                return False
+            return view.get(kind, record_id) is not None
+
+        try:
+            text = panel.render(reader, self.registrars[plugin].config.model_copy(deep=True), project)
+            found = None if text is None else blocks(text, can_link)
+        except (DocumentError, Exception) as err:
+            self.failed(plugin, where, err)
+            raise StoreError(f"{panel.title} couldn't be shown: {err}") from None
+        self.succeeded(plugin, where)
+        return found
+
     def panel_rows(self, name: str, project: str | None = None) -> list[dict[str, Any]]:
         """The rows of a running plugin's panel: records of its kind matching its filter, with its columns."""
         panel = self.panel(name)
-        if panel is None:
+        if panel is None or panel.view == "document":
             raise StoreError(f"there is no panel {name} running now")
         from engine.plugin_api import ReadView
 
@@ -1398,6 +1426,8 @@ class PluginHost:
                 if model is None or unknown:
                     raise ValueError(f"action {action.name} narrows {action.on} by a field it doesn't have")
         for panel in registrar.panels.values():
+            if panel.view == "document":
+                continue
             model = registrar.records.get(panel.kind) or REGISTRY.get(panel.kind)
             if model is None:
                 raise ValueError(f"panel {panel.name} lists {panel.kind}, which is neither core nor the plugin's own")

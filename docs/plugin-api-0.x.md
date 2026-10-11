@@ -10,6 +10,17 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.51 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Document panels** (round 26, 135): `registrar.document(name, title=..., render=fn, tab=..., show_for=...)`,
+  listed in `provides.panels`. `render(view, settings, project) -> str | None` returns Markdown built per call
+  (`project` is the project in view, or None); the screens draw a small subset (headings, paragraphs, lists, tables,
+  rules, strong, emphasis, code and links) as their own elements, never HTML. `[text](record:<kind>/<id>)` opens a
+  record the plugin may read; an outside link shows its domain. `GET /api/panels/{name}/document?project=` gives the
+  blocks; a panel's `view` is "document".
+
 ## What 0.3.50 adds
 
 Manifests stay `'>=0.3,<0.4'`.

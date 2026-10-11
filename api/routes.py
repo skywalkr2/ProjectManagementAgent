@@ -37,6 +37,8 @@ from api.schemas import (
     ChangesetView,
     ChoiceOption,
     Created,
+    DocumentBlock,
+    DocumentView,
     FieldView,
     FileKindView,
     FileView,
@@ -450,6 +452,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     if project is None or store.plugins.panel_shown_for(p, project)
                 ]
         return found
+
+    @r.get("/panels/{name:path}/document")
+    def panel_document(name: str, project: str | None = None) -> DocumentView:
+        """A document panel's blocks for the project in view, or the workspace."""
+        found = guard(lambda: store.plugins.panel_document(name, project))
+        return DocumentView(blocks=None if found is None else [DocumentBlock(**b) for b in found])
 
     @r.get("/panels/{name:path}/rows")
     def panel_rows(name: str, project: str | None = None) -> list[PanelRow]:

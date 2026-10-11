@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.50"
+PLUGIN_API_VERSION = "0.3.51"
 
 
 class Settings(BaseModel):
@@ -780,6 +780,7 @@ class PanelRegistration:
     new_action: str | None = None
     computed: dict[str, Callable] = field(default_factory=dict)
     show_for: Callable | None = None
+    render: Callable | None = None  # a document panel's `render(view, settings, project)`
 
 
 @dataclass(frozen=True)
@@ -1501,6 +1502,39 @@ class Registrar:
             new_action,
             computed,
             show_for,
+        )
+
+    def document(
+        self,
+        name: str,
+        *,
+        title: str,
+        render: Callable,
+        tab: str = "work",
+        show_for: Callable | None = None,
+    ) -> None:
+        """A read-only document panel (listed in `provides.panels`): a page the plugin composes from many records
+        (a start-here page, a beat sheet, a timeline). `render(view, settings, project) -> str | None` returns
+        Markdown, built per call from the view (`project` is the project in view, or None for the workspace); None
+        shows that there is nothing to show yet. It must be quick and deterministic and never call AI; one that
+        raises shows the panel's problem and counts as the plugin failing (failure containment).
+
+        The screens draw a small Markdown subset as their own elements, never HTML: headings (`#` to `###`),
+        paragraphs, bullet and numbered lists (one level), tables (a header row, then `|---|`), rules (`---`), and
+        inline `**strong**`, `*emphasis*`, `` `code` `` and links. `[text](record:<kind>/<id>)` links to a record the
+        plugin may read (core or its own; one that doesn't exist shows as its text) and opens its page;
+        `[text](https://...)` links to a page outside, shown with its real domain. Anything else, raw HTML
+        included, shows as the characters it is. Up to 200,000 characters. `show_for(project, view) -> bool` lists
+        it only on some projects, as for record panels."""
+        self._name(name)
+        if name in self.panels or not str(title).strip() or not callable(render):
+            raise ValueError("duplicate panel, missing title or invalid render function")
+        if tab not in ("today", "work", "people", "settings"):
+            raise ValueError('a panel tab is "today", "work", "people" or "settings"')
+        if show_for is not None and not callable(show_for):
+            raise ValueError("show_for is a function of (project, view)")
+        self.panels[name] = PanelRegistration(
+            name, str(title).strip(), "", "document", (), {}, None, (), tab, None, {}, show_for, render
         )
 
     def job(self, name: str, *, every_minutes: int, run: Callable) -> None:
