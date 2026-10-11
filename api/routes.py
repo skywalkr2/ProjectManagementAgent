@@ -207,6 +207,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         runs = store.read().find("run", {"request": request_id})
         return bool(runs) and runs[-1].data["outcome"] == "refused"
 
+    def _summary_of(changeset_id: str | None) -> str | None:
+        found = store.read().get("changeset", changeset_id) if changeset_id else None
+        return found.data.get("summary") if found is not None else None
+
     def _independence(cs: Any) -> str | None:
         run = store.read().get("run", cs.data["run"]) if cs.data.get("run") else None
         return run.data.get("independence") if run is not None else None
@@ -629,10 +633,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     group=i["group"],
                     kept=i["kept"],
                     ops=[ProposedOp(**o) for o in guard(lambda i=i: person_actions.labels(store, pending, i["ops"]))],
+                    refused=i.get("refused"),
                 )
                 for i in pending.items
             ],
             groups=[ActionGroup(**g) for g in pending.groups],
+            problems=pending.problems,
             files=[
                 ProposedFile(**{k: f[k] for k in ("name", "media_type", "size", "file_kind")}) for f in pending.files
             ],
@@ -913,6 +919,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     stage_task=bool(d.get("stage_start")),
                     estimate_usd=d.get("estimate_usd"),
                     refused=d["state"] == "needs_you" and _last_refused(req.id),
+                    follows=d.get("follows"),
+                    follows_summary=_summary_of(d.get("follows")),
                     changeset=view,
                 )
             )

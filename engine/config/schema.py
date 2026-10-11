@@ -72,6 +72,12 @@ class PluginSettings(ConfigModel):
     jobs: dict[str, JobSettings] = Field(
         default_factory=dict, description="Plugins' scheduled work, by job name: on or off, and how often."
     )
+    failures_before_off: int = Field(
+        3,
+        ge=1,
+        description="How many times in a row a plugin's Today lines, interface items, event handler or job may fail "
+        "before the plugin is turned off; each failure is noted on the plugin.",
+    )
 
 
 class WorkspaceFile(FileModel):
@@ -585,6 +591,11 @@ class StageDefinition(ConfigModel):
     starts: list[str] = Field(
         default_factory=list, description="Task kinds requested on entry, waiting for the person's go."
     )
+    applies_if: list[str] = Field(
+        default_factory=list,
+        description="Check or standing rule ids that must all pass for this stage to apply to a record; moves pass "
+        "over a stage that doesn't apply. Empty: it applies to every record.",
+    )
 
 
 class TypeStages(ConfigModel):
@@ -612,6 +623,7 @@ STAGE_WORDING = {
     "stage_unknown": "There is no stage called {stage} for this item.",
     "stage_same": "It is already in that stage.",
     "stage_skip": "Move it one stage at a time, so each stage's checks run.",
+    "stage_not_applicable": "That stage doesn't apply to this item.",
     "person_required": "This move needs you.",
     "check_unavailable_rule": "Every stage after the first needs an entry check when rules move items.",
     "not_waiting": "this stage task is not waiting for approval",

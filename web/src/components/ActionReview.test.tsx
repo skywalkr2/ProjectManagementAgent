@@ -362,3 +362,31 @@ test("work the action also starts is listed with what it is about, and says each
   expect(within(section).getByText("Summarize everything")).toBeInTheDocument();
   expect(within(section).getByText("Each one waits for your go before it starts.")).toBeInTheDocument();
 });
+
+test("an item that can't apply says why and starts dropped, and other problems are listed", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    [PREVIEW_URL]: () =>
+      proposal({
+        items: [
+          { id: "a", label: "Add Harbor", group: null, kept: true, ops: [{ op: "project.add", label: "Add Harbor" }] },
+          {
+            id: "b",
+            label: "Add Lighthouse",
+            group: null,
+            kept: false,
+            refused: "there is already a project called Lighthouse",
+            ops: [{ op: "project.add", label: "Add Lighthouse" }],
+          },
+        ],
+        problems: ["there is already a project called Lighthouse"],
+      }),
+  });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const dialog = await screen.findByRole("dialog");
+  const refused = await within(dialog).findByRole("checkbox", { name: "Add Lighthouse" });
+  expect(refused).not.toBeChecked();
+  expect(refused).toHaveAccessibleDescription("Can't be applied as it stands: there is already a project called Lighthouse");
+  expect(within(dialog).getByRole("alert")).toHaveTextContent("Change a choice above");
+});

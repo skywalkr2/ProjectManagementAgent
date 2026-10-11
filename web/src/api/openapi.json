@@ -191,6 +191,18 @@
             },
             "title": "Ops",
             "type": "array"
+          },
+          "refused": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why this would be refused if applied now; it starts dropped.",
+            "title": "Refused"
           }
         },
         "required": [
@@ -296,6 +308,14 @@
               "$ref": "#/components/schemas/ActionPreviewItem"
             },
             "title": "Previews",
+            "type": "array"
+          },
+          "problems": {
+            "description": "Why parts outside the items would be refused if it were applied now.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
             "type": "array"
           },
           "requests": {
@@ -685,6 +705,30 @@
             ],
             "description": "What the run was estimated to cost when it asked for a go.",
             "title": "Estimate Usd"
+          },
+          "follows": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change (changeset id) this work followed from, if any.",
+            "title": "Follows"
+          },
+          "follows_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "That change's one-line summary, for the row.",
+            "title": "Follows Summary"
           },
           "id": {
             "title": "Id",

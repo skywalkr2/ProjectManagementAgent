@@ -140,7 +140,7 @@ class Store:
                 self._conn.execute("COMMIT")
         if notify:
             for event, payload in tx.events():
-                self.plugins.publish(event, payload)
+                self.plugins.publish(event, payload, follows=tx.changeset)
 
     @contextmanager
     def snapshot(self) -> Iterator[Tx]:
@@ -167,6 +167,7 @@ class Tx:
         self.models = REGISTRY if models is None else models
         self.pending: list[tuple] = []
         self.emitted: list[tuple[str, dict[str, Any]]] = []  # interface events raised by ops in this transaction
+        self.changeset: str | None = None  # the changeset whose ops this transaction wrote, if any
 
     def events(self) -> list[tuple[str, dict[str, Any]]]:
         grouped = {}
@@ -402,6 +403,8 @@ class Tx:
         after: Any,
     ) -> None:
         self.pending.append((kind, record_id, version, field, before, after, ctx.op))
+        if ctx.changeset and self.changeset is None:
+            self.changeset = ctx.changeset
         self._c.execute(
             "INSERT INTO ledger(at, changeset, request, op, kind, record_id, version, field, before, after, actor, "
             "trust, evidence) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",

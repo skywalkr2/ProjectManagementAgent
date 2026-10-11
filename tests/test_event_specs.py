@@ -12,7 +12,7 @@ def test_published_payloads_match_their_specs(env):  # noqa: F811
     _, cfg, store = env
     seen = []
     original = store.plugins.publish
-    store.plugins.publish = lambda event, data: (seen.append((event, data)), original(event, data))
+    store.plugins.publish = lambda event, data, **kw: (seen.append((event, data)), original(event, data, **kw))
     add_file(store, cfg, PNG, name="cover.png", media_type="image/png")
     cs_id, _ = apply(env, [{"op": "note", "text": "A note for the event check."}], pm=True)
     undo(store, cs_id)

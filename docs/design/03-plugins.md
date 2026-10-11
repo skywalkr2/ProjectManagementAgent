@@ -121,8 +121,11 @@ Enforced by the plugin host, the applier, the publisher and the self-check:
   plugin, reads its tables or calls its code.
 - **Code against the API, not the internals.** Plugins import only `engine.plugin_api`. The plugin API follows semantic
   versioning; a breaking change is a new major version.
-- **Failures stay contained.** A plugin that raises becomes an automation `Problem`; the core and other plugins keep running. Disabling a
-  plugin stops its jobs and hides its panels, and keeps its data on disk.
+- **Failures stay contained.** A plugin that raises becomes an automation `Problem`; the core and other plugins keep running. Calls
+  that only read or react (Today lines, interface items, event handlers, jobs) are contained one call at a time: the call is
+  skipped and noted on the plugin, and the plugin is turned off only after `workspace.plugins.failures_before_off` failures in
+  a row there. Breaking the contract, or failing inside a write (an op, a validator, a lint, a stage check), turns it off at
+  once. Disabling a plugin stops its jobs and hides its panels, and keeps its data on disk.
 - **Bundled plugins ship demo config and data** for both fictional workspaces and pass the suite against both.
 
 ## 3.6 Lifecycle
@@ -204,7 +207,10 @@ pack becomes a project to deliver. Plugins never import or call each other, so t
    applier, as a changeset the PM sees when it comes from another plugin.
 4. **Requests for another plugin's work.** A plugin may queue a request for a task kind another plugin's interface offers
    (the publishing pack's "short blurb in the imprint's voice"). It runs as that plugin's task, under its playbook, with the
-   normal cost estimate and go (6.16) and the normal review.
+   normal cost estimate and go (6.16) and the normal review. The request may name an item the user read through the
+   interface instead of a record: the provider says which of its own records the item stands for, so the user never needs
+   the provider's ids. Work a handler does in answer to an event records the change that raised it, and What changed shows
+   it after that change.
 
 **Optional means optional.** Each pack works alone. When both sides of an optional interface are enabled, extra actions
 appear; when one is disabled, they disappear and nothing breaks. Records stay linked by id and come back on re-enabling.

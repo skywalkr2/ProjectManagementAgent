@@ -177,7 +177,7 @@ def test_accepting_everything_makes_the_draft_current_and_says_so(env):
     record = chapter(env)
     seen = []
     original = store.plugins.publish
-    store.plugins.publish = lambda event, data: (seen.append((event, data)), original(event, data))
+    store.plugins.publish = lambda event, data, **kw: (seen.append((event, data)), original(event, data, **kw))
     draft = TEXT + "\nThe island came up out of the haze.\n"
     apply(env, [{"op": "p08/rewrite", "chapter": record.id, "text": draft}], person=False)
     pending = versions(env, record)[-1]

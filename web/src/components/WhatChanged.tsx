@@ -231,6 +231,7 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
           <strong id={`t-${item.id}`}>{title}</strong>
           <span className="sub">{gated ? (estimate(item.estimate_usd) ?? t("changes.sub.go_waiting", { when: dayAndTime(item.created_at) })) : subLine(item, t, tn)}</span>
           {cs?.second_opinion && <span className="sub second-opinion">{t(`changes.second.${cs.second_opinion}`)}</span>}
+          {item.follows_summary && <span className="sub">{t("changes.follows", { summary: item.follows_summary })}</span>}
         </button>
         <div className="acts">
           {primary && (

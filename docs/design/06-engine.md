@@ -728,6 +728,8 @@ pack's defaults, editable in `config/stages.yaml`, 4.21), each with:
   make one.
 - **What it starts:** task kinds or jobs that run on entry (draft the proposal, build the print files), each estimated and
   budgeted (6.16).
+- **Whether it applies:** a stage may apply to some records only (a review that only large orders need), by checks that must
+  pass for it to apply. Moves forward pass over a stage that doesn't apply to the record, and it isn't offered on it.
 
 Moving a record is an op (`stage.move`), so it is in the ledger and can be undone. When a record's entry checks pass, Today
 shows "ready to move on" for it (6.15), once it is in a stage (starting one is done from Stages); when they fail, the record shows which ones and why. Stages are data on the record,

@@ -24,3 +24,4 @@ plugins:
     collect_file_mb: 25
     collect_total_mb: 100
   jobs: {}   # e.g. {example/tidy: {every_minutes: 120}}
+  failures_before_off: 3   # a plugin call may fail this many times in a row before the plugin is turned off

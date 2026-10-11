@@ -3,6 +3,27 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Plugin API 0.3.23: contained failures, refusals shown before applying, stages that apply to some records
+
+**Decided by:** project lead, from a plugin author's questions.
+
+**What:**
+- Today lines, interface items, event handlers and jobs are contained per call: a failure skips that call and is noted on
+  the plugin; the plugin turns off after `workspace.plugins.failures_before_off` failures in a row there (default 3).
+  Contract breaches and failures inside writes still turn it off at once.
+- A person action's preview tries the whole proposal without keeping anything: an item that would be refused shows why
+  and starts dropped, and other refusals are listed, so the person changes a choice instead of the action failing.
+- A request can name an interface item; the provider's `about` function says which of its records the item stands for.
+  Undeclared item fields are noted on the provider.
+- `limits.room_mb`, `record_label` for messages, `follows` on work a handler does after a change, and `applies_if` on a
+  stage.
+
+**Why:** One failing read turned a whole plugin off, and an action failed outright on one refused part; a user of an
+interface had to know the provider's ids; a stage that only some records need blocked the others.
+
+**Impact:** New settings `workspace.plugins.failures_before_off` and a stage's `applies_if` (schema, defaults, demo
+values). Tests that expected one failure to turn a plugin off now expect the configured count. No change to scope.
+
 ## 2026-10-11: Agent accounts are a command run locked down, described entirely in settings
 
 **Decided by:** project lead, following design 6.16 (agent mode).

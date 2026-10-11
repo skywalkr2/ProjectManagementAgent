@@ -214,6 +214,7 @@ def record_model(kind: TypeDef) -> type[Record]:
     model = create_model(f"Kit_{kind.id}", __base__=Record, **fields)
     model.record_kind = f"kit/{kind.id}"
     model.prefix = kind.prefix
+    model.record_label = kind.name
     model.layout = f"{_folder(kind.plural)}/{{{kind.title_field}}}"
     return model
 

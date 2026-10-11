@@ -59,7 +59,7 @@ def test_adding_a_file_publishes_file_added(env):
     _, cfg, store = env
     seen = []
     original = store.plugins.publish
-    store.plugins.publish = lambda event, data: (seen.append((event, data)), original(event, data))
+    store.plugins.publish = lambda event, data, **kw: (seen.append((event, data)), original(event, data, **kw))
     record = add_file(store, cfg, PNG, name="cover.png", media_type="image/png")
     assert ("file.added", {"id": record.id, "kind": "attachment"}) in seen
 

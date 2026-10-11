@@ -132,7 +132,8 @@ def test_workspace_replaces_or_removes_plugin_stages(stage_workspace):
         loaded = load_config(config_dir, env={})
         other = Store(store.path.parent / "other.db", cfg=loaded)
         actual = other.plugins.stages.types[record.kind].stages
-        assert [s.model_dump() for s in actual] == [dict(entry=[], starts=[], description="", **s) for s in override]
+        empty = dict(entry=[], starts=[], applies_if=[], description="")
+        assert [s.model_dump() for s in actual] == [{**empty, **s} for s in override]
         other.close()
 
 
@@ -328,7 +329,7 @@ def test_stage_event_only_after_commit_including_undo(stage_workspace, monkeypat
     store, cfg, record = stage_workspace
     events = []
 
-    def publish(event, payload):
+    def publish(event, payload, **_):
         if event != "stage.moved":
             return
         with sqlite3.connect(store.path) as conn:

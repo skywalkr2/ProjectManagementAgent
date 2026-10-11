@@ -10,6 +10,35 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.23 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Requests about an interface item:** `context.request_from(..., item=item)` takes an `InterfaceItem` read from
+  `view.interface`. The item's provider gets the work, and its `provide_interface(..., about=fn)` says which of its
+  records the item stands for: `about(view, settings, item) -> record | (kind, id) | None`, given the item as `items`
+  returned it (fields the definition doesn't declare included). `InterfaceItem.key` is the host's stable key for it.
+- **Undeclared item fields are noted:** fields a provider's items carry that the definition doesn't declare are
+  listed in the provider's notes (Settings, plugins), once.
+- **A failing call is contained:** when Today lines, an `items` function, an event handler or a job raises, that call
+  is skipped (that delivery of the event, those lines or items, that job run) and noted on the plugin. The plugin is
+  turned off only after `workspace.plugins.failures_before_off` failures in a row from the same place (default 3); a
+  call that works resets the count. An item that doesn't match the definition is left out and noted. Breaking the
+  contract (a handler writing records directly, staging another plugin's or a core op) still turns the plugin off at
+  once, as do failing op callbacks, validators, lints and stage checks.
+- **Refusals shown on a proposal:** a preview tries the whole proposal without keeping anything. An item that would be
+  refused carries its reason (`refused`) and starts dropped; anything else that would be refused is listed in the
+  review's `problems`. The person changes a choice rather than the action failing. The screen holds a text choice to
+  its `max_length`.
+- **Room left for files:** `context.limits["room_mb"]` is what is left of `max_total_mb`. Files in one proposal are
+  checked together against it.
+- **A kind's label:** `record_label` on a record type is what one record is called ("chapter"); messages use it, or
+  the kind id's last part.
+- **Work follows its change:** ops a handler stages and requests it queues record the change whose event they answer
+  (`follows` on the request), and What changed shows it on the row.
+- **Stages for some records only:** a stage's `applies_if` lists check or rule ids that must all pass for it to apply
+  to a record. Moves forward pass over a stage that doesn't apply, and a stage that doesn't apply can't be chosen.
+
 ## What 0.3.22 adds
 
 Manifests stay `'>=0.3,<0.4'`.

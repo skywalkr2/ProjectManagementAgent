@@ -26,6 +26,9 @@ def validate_stages(config, records, checks, tasks, running=None):
             for check in stage.entry:
                 if check not in checks and not (running is not None and _dormant(check, running)):
                     raise ConfigError(f"stages.yaml: {kind}/{stage.id}: unknown entry check {check}")
+            for check in stage.applies_if:
+                if check not in checks and not (running is not None and _dormant(check, running)):
+                    raise ConfigError(f"stages.yaml: {kind}/{stage.id}: unknown applies_if check {check}")
             for task in stage.starts:
                 if task not in tasks and not (running is not None and _dormant(task, running)):
                     raise ConfigError(f"stages.yaml: {kind}/{stage.id}: unknown task kind {task}")

@@ -24,6 +24,8 @@ class Record(BaseModel):
     record_kind: ClassVar[str]
     #: The id prefix, capital letters, unique in the workspace: ids are "<prefix>-<number>" and never reused.
     prefix: ClassVar[str]
+    #: What one record of this kind is called on screen and in messages ("chapter"); empty: made from the kind's id.
+    record_label: ClassVar[str] = ""
     #: Field values only the person may set; an op from anyone else that sets one is held for the person.
     person_only: ClassVar[dict[str, tuple[Any, ...]]] = {}
     #: Field groups whose values must be unique among live records of this kind.
@@ -341,7 +343,7 @@ class JobRun(Record):
     started_at: datetime = Field(description="When the run started.")
     seconds: float = Field(0.0, description="How long it took.")
     outcome: Literal["ok", "failed"] = Field(
-        description="ok: it finished. failed: it raised, and the plugin was turned off."
+        description="ok: it finished. failed: it raised; repeated failures turn the plugin off."
     )
     error: str | None = Field(None, description="What went wrong, for a failed run.")
 
@@ -486,6 +488,9 @@ class Request(Record):
         "person. done: finished. needs_you: stopped until the person acts. failed: ended with an error.",
     )
     waiting: str | None = Field(None, description="Why it is waiting and until when, in plain words.")
+    follows: str | None = Field(
+        None, description="The change (a changeset id) whose event a plugin answered with this work, if any."
+    )
     attempts: int = Field(0, description="How many times the assistant has started on it.")
     created_at: datetime = Field(description="When the request was made.")
     changeset: str | None = Field(None, description="The id of the changeset the assistant proposed for it.")
@@ -684,3 +689,9 @@ def referrers(view: Any, kind: str, record_id: str) -> list[tuple[str, str]]:
             if any(record_id in values_at(stored.data, p) for p in paths):
                 found.append((other_kind, stored.id))
     return found
+
+
+def kind_label(model: type[BaseModel] | None, kind: str) -> str:
+    """What one record of a kind is called in words: its `record_label`, else its id's last part with spaces."""
+    label = getattr(model, "record_label", "") if model is not None else ""
+    return label or kind.rsplit("/", 1)[-1].replace("-", " ").replace("_", " ")

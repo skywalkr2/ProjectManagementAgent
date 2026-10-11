@@ -43,15 +43,25 @@ def record_title(record):
     return record.id
 
 
+def applies(store, stage, record, view=None):
+    """Whether a stage applies to this record: every one of its applies_if checks passes."""
+    return all(entry_check(store, check, record, view).passed for check in stage.applies_if)
+
+
+def next_stage(store, stages, after, record, view=None):
+    """The first stage after position `after` that applies to the record, or None."""
+    return next((stage for stage in stages[after + 1 :] if applies(store, stage, record, view)), None)
+
+
 def record_status(store, record, view=None):
-    """The next configured stage and every deterministic entry-check result."""
+    """The next configured stage that applies to the record and every deterministic entry-check result."""
     settings = store.plugins.stages.types.get(record.kind)
     stages = (settings.stages or []) if settings else []
     current = record.data.get("stage")
     ids = [stage.id for stage in stages]
     # Removed stages remain data and history. Never guess a successor for them.
     index = -1 if current is None else (ids.index(current) if current in ids else len(stages))
-    target = stages[index + 1] if index + 1 < len(stages) else None
+    target = next_stage(store, stages, index, record, view)
     checks = (
         []
         if target is None
@@ -68,7 +78,11 @@ def record_status(store, record, view=None):
         "current": current,
         "current_label": next((s.label for s in stages if s.id == current), None),
         "next": None if target is None else {"id": target.id, "label": target.label},
-        "stages": [{"id": stage.id, "label": stage.label} for stage in stages],
+        "stages": [
+            {"id": stage.id, "label": stage.label}
+            for stage in stages
+            if stage.id == current or applies(store, stage, record, view)
+        ],
         "checks": checks,
         "ready": target is not None and all(c["passed"] for c in checks),
     }
@@ -95,11 +109,13 @@ def validate_move(store, op, view):
         raise StoreError(wording(store.plugins.cfg, "stage_same"))
     # An item not yet in a stage (or in one config removed) may start at any stage whose entry checks pass,
     # so work already under way can be brought in where it is.
+    if not applies(store, target, record, view):
+        raise StoreError(wording(store.plugins.cfg, "stage_not_applicable"))
     here = ids.index(current) if current in ids else None
     if here is not None and ids.index(op.to) < here:
         # Moving back needs no entry checks: the record already passed them on the way forward.
         return record, target
-    if here is not None and ids.index(op.to) != here + 1:
+    if here is not None and next_stage(store, stages, here, record, view) is not target:
         raise StoreError(wording(store.plugins.cfg, "stage_skip"))
     failed = [
         result.reason for result in (entry_check(store, c, record, view) for c in target.entry) if not result.passed

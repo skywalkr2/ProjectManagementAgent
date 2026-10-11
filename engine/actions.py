@@ -50,6 +50,7 @@ class Pending:
     groups: list[dict[str, Any]] = field(default_factory=list)  # id, heading, explanation
     all_or_nothing: bool = False
     requests: list[dict[str, Any]] = field(default_factory=list)  # task, about {kind, id} or None, note
+    problems: list[str] = field(default_factory=list)  # why ops outside the items would be refused, if applied now
     created: float = field(default_factory=time.monotonic)
     expires_at: str = ""
 
@@ -133,15 +134,18 @@ def preview(
         if target is not None:
             raise StoreError(f"{action.label} works on the whole workspace, not on one record")
     else:
+        from engine.records import kind_label
+
+        what = kind_label(store.plugins.records.get(action.on), action.on)
         if target is None or target.get("kind") != action.on:
-            raise StoreError(f"{action.label} works on a {action.on}")
+            raise StoreError(f"{action.label} works on a {what}")
         record = view.get(action.on, target["id"])
         if record is None:
-            raise StoreError(f"there is no {action.on} {target['id']}")
+            raise StoreError(f"there is no {what} {target['id']}")
         if action.file_kinds and record.data.get("file_kind") not in action.file_kinds:
             raise StoreError(f"{action.label} doesn't work on this kind of file")
         if not action.offered_on(record):
-            raise StoreError(f"{action.label} isn't for this {action.on}")
+            raise StoreError(f"{action.label} isn't for this {what}")
     registrar = store.plugins.registrars[plugin]
     actions, files = cfg.workspace.plugins.actions, cfg.storage.files
     limits = {
@@ -151,6 +155,7 @@ def preview(
         "keep_minutes": actions.keep_minutes,
         "max_file_mb": files.max_file_mb,
         "max_total_mb": files.max_total_mb,
+        "room_mb": max(0.0, files.max_total_mb - sum(f.data["size"] for f in view.list("file")) / (1024 * 1024)),
         "accepted_types": list(files.accepted_types),
     }
     context = store.plugins._with_files(
@@ -170,6 +175,7 @@ def preview(
         pending = _checked(store, cfg, plugin, name, record, choices, result)
     except StoreError as err:
         raise ActionFailed(f"{action.label} proposed something that can't apply: {err}") from None
+    _trial(store, cfg, pending)
     keep = cfg.workspace.plugins.actions.keep_minutes
     before = store.plugins.proposals.peek(previous, keep) if previous else None
     if before is not None and before.action == name and before.target == pending.target:
@@ -181,6 +187,44 @@ def preview(
     _tick(pending, kept or {})
     store.plugins.proposals.put(pending, keep)
     return pending
+
+
+def _trial(store: Store, cfg: Config, pending: Pending) -> None:
+    """Try the whole proposal without keeping anything, and mark what would be refused: an item gets its reason and
+    starts dropped; anything else is listed in `problems`. The person can then change a choice instead."""
+    from engine.applier import refusals
+
+    first = store.read().sequences().get("file", 1)
+    ids = [f"FILE-{first + i}" for i in range(len(pending.files))]
+    in_items = [op for item in pending.items for op in item["ops"]]
+    ops = [*_file_ops(pending.files, ids), *(_substituted(op, ids) for op in [*pending.ops, *in_items])]
+    found = refusals(_validated(ops, store, pending.summary), _person_context(store, cfg, pending.plugin, ""))
+    start = len(pending.files) + len(pending.ops)
+    pending.problems = list(dict.fromkeys(found[i] for i in range(start) if i in found))
+    at = start
+    for item in pending.items:
+        reasons = [found[i] for i in range(at, at + len(item["ops"])) if i in found]
+        at += len(item["ops"])
+        item["refused"] = "; ".join(dict.fromkeys(reasons)) or None
+        if reasons:
+            item["kept"] = False
+
+
+def _person_context(store: Store, cfg: Config, plugin: str, request_id: str) -> Any:
+    """The applier's context for a proposal the person applies as their own."""
+    from engine.applier import Context, Inputs
+    from engine.names import People
+
+    allowed = tuple(sorted(ACTION_CORE_OPS | {"file.add"} | set(store.plugins.registrars[plugin].ops)))
+    return Context(
+        store,
+        cfg,
+        People(store, cfg),
+        allowed,
+        Inputs(request_id, None, "", "", "trusted"),
+        confirmed_by_pm=True,
+        actor="pm",
+    )
 
 
 def _tick(pending: Pending, kept: dict[str, bool]) -> None:
@@ -293,6 +337,9 @@ def _checked(
                 "replaces": f.replaces,
             }
         )
+    total = cfg.storage.files.max_total_mb
+    if sum(f["size"] for f in files) + sum(f.data["size"] for f in view.list("file")) > total * 1024 * 1024:
+        raise StoreError(f"these files together would go over the {total:g} MB limit for all files")
     own_ops = set(store.plugins.registrars[plugin].ops)
 
     def proposed(op: Any) -> dict[str, Any]:
@@ -451,8 +498,7 @@ def _fallback_label(op: dict[str, Any]) -> str:
 def apply(store: Store, cfg: Config, token: str, kept: dict[str, bool] | None = None) -> str:
     """Apply exactly the proposal the person reviewed, as theirs, with their final ticks (`kept`, by item id).
     Returns the changeset id."""
-    from engine.applier import Context, Inputs, apply_changeset
-    from engine.names import People
+    from engine.applier import apply_changeset
 
     keep = cfg.workspace.plugins.actions.keep_minutes
     pending = store.plugins.proposals.take(token, keep)
@@ -481,16 +527,7 @@ def apply(store: Store, cfg: Config, token: str, kept: dict[str, bool] | None = 
             WriteContext("pm", "trusted", "action.request"),
         )
     changeset = _validated(to_apply(pending, ids), store, pending.summary)
-    allowed = tuple(sorted(ACTION_CORE_OPS | {"file.add"} | set(store.plugins.registrars[pending.plugin].ops)))
-    ctx = Context(
-        store,
-        cfg,
-        People(store, cfg),
-        allowed,
-        Inputs(request.id, None, "", "", "trusted"),
-        confirmed_by_pm=True,
-        actor="pm",
-    )
+    ctx = _person_context(store, cfg, pending.plugin, request.id)
     action = {
         "name": pending.action,
         "target": pending.target,

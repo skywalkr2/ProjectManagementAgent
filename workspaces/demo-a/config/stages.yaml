@@ -33,4 +33,5 @@ types:
       entry:
       - example/has-text
       starts: []
+      applies_if: []   # check ids that must pass for this stage to apply to a reminder; empty: every reminder
 wording: {}

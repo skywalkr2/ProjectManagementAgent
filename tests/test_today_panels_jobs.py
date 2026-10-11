@@ -173,11 +173,14 @@ def test_a_panel_must_name_real_fields_and_its_own_actions(tmp_path, change, rea
         store.close()
 
 
-def test_a_today_line_with_an_unknown_action_turns_the_plugin_off(tmp_path):
+def test_a_today_line_with_an_unknown_action_is_skipped_then_turns_the_plugin_off(tmp_path):
     ws, cfg, store = workspace(tmp_path, FIXTURE.replace('action="p18/close")', 'action="p18/nope")'))
     try:
         goals(cfg, store, "Finish the map")
         assert store.plugins.today() == []
+        assert store.plugins.active("p18") and "Today lines" in store.plugins.status["p18"].notes[-1]
+        for _ in range(cfg.workspace.plugins.failures_before_off - 1):
+            store.plugins.today()
         assert "Today lines" in store.plugins.status["p18"].reason
     finally:
         store.close()
@@ -209,11 +212,14 @@ def test_the_workspace_sets_how_often_or_turns_a_job_off(tmp_path):
         store.close()
 
 
-def test_a_failing_job_is_recorded_and_turns_the_plugin_off(tmp_path):
+def test_a_failing_job_is_recorded_and_turns_the_plugin_off_when_it_keeps_failing(tmp_path):
     ws, cfg, store = workspace(tmp_path, FIXTURE.replace("def tidy(context):\n", "def tidy(context):\n    1 / 0\n"))
     try:
         assert store.plugins.run_job("p18/tidy") == "failed"
         assert store.read().list("job_run")[-1].data["outcome"] == "failed"
+        assert store.plugins.active("p18")
+        for _ in range(cfg.workspace.plugins.failures_before_off - 1):
+            store.plugins.run_job("p18/tidy")
         assert "job p18/tidy failed" in store.plugins.status["p18"].reason
     finally:
         store.close()

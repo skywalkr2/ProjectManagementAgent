@@ -190,6 +190,8 @@ class ChangeItem(BaseModel):
     refused: bool = Field(
         False, description="The account declined it under its own policy; it can be sent to another account."
     )
+    follows: str | None = Field(None, description="The change (changeset id) this work followed from, if any.")
+    follows_summary: str | None = Field(None, description="That change's one-line summary, for the row.")
     changeset: ChangesetView | None
 
 
@@ -765,6 +767,7 @@ class ActionItem(BaseModel):
     group: str | None = None
     kept: bool
     ops: list[ProposedOp]
+    refused: str | None = Field(None, description="Why this would be refused if applied now; it starts dropped.")
 
 
 class ActionPreviewItem(BaseModel):
@@ -809,6 +812,9 @@ class ActionProposalView(BaseModel):
     notes: list[str]
     requests: list[ActionRequestView] = Field(
         default_factory=list, description="AI work queued when it is applied, each waiting for the person's go."
+    )
+    problems: list[str] = Field(
+        default_factory=list, description="Why parts outside the items would be refused if it were applied now."
     )
     expires_at: str
 

@@ -237,6 +237,18 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
               onTick={tick}
             />
           )}
+          {(proposal.problems ?? []).length > 0 && (
+            <div className="problem-note" role="alert">
+              <p>{t("review.problems")}</p>
+              <ul className="plain-list">
+                {(proposal.problems ?? []).map((p, i) => (
+                  <li key={i}>
+                    <SafeText text={p} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <section aria-labelledby={`${base}-changes`}>
             <h3 id={`${base}-changes`} className="what">
               {t("review.changes")}
@@ -461,9 +473,19 @@ function ItemSection(props: {
           {props.items.map((item) => (
             <li key={item.id}>
               <label className="check-line">
-                <input type="checkbox" checked={props.ticks[item.id] ?? item.kept} onChange={(e) => props.onTick([item.id], e.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={props.ticks[item.id] ?? item.kept}
+                  aria-describedby={item.refused ? `${id}-${item.id}-why` : undefined}
+                  onChange={(e) => props.onTick([item.id], e.target.checked)}
+                />
                 <span>{item.label}</span>
               </label>
+              {item.refused && (
+                <p className="hint" id={`${id}-${item.id}-why`}>
+                  {t("review.item_refused", { reason: item.refused })}
+                </p>
+              )}
             </li>
           ))}
         </ul>

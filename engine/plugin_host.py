@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import importlib.util
+import json
 import logging
 import re
 import sys
@@ -120,10 +122,13 @@ class PluginHost:
         self.proposals = Proposals()
         self.candidates: dict[str, Path] = {}
         self.notes: dict[str, list[str]] = {}  # things the person should know about a plugin that still loads
+        self.failures: dict[tuple[str, str], int] = {}  # (plugin, where) -> failures in a row
+        self._items: dict[str, tuple[str, str, Any]] = {}  # interface item key -> (provider, interface, raw item)
         self._modules: list[str] = []
         self._queue: deque = deque()
         self._dispatching = False
         self._chain: frozenset = frozenset()
+        self._follows: str | None = None  # the change whose event is being delivered
         self._lock = threading.RLock()
         self._discover(bundled)
         for name in cfg.workspace.plugins.enabled:
@@ -278,22 +283,74 @@ class PluginHost:
             reader = self._with_files(ReadView(self.store.read(), provider))
             fn = registrar.interface_provisions[name].items
             wanted = project if project is not ANY else None
+            where = f"its {name} items"
             try:
                 if _positional_count(fn) >= 3:
-                    items = fn(reader, registrar.config.model_copy(deep=True), wanted)
+                    items = list(fn(reader, registrar.config.model_copy(deep=True), wanted))
                 else:
-                    items = fn(reader, registrar.config.model_copy(deep=True))
-                checked = [definition.item.model_validate(item).model_dump(mode="json") for item in items]
+                    items = list(fn(reader, registrar.config.model_copy(deep=True)))
             except Exception as err:
-                self.disable(provider, f"its {name} items failed: {err}")
+                self.failed(provider, where, err)
                 continue
-            for item in checked:
+            self.succeeded(provider, where)
+            checked, declared = [], set(definition.item.model_fields)
+            for item in items:
+                try:
+                    checked.append((item, definition.item.model_validate(item).model_dump(mode="json")))
+                except Exception as err:
+                    self._note(provider, f"{where}: one was left out because it doesn't match the definition: {err}")
+                    continue
+                unknown = sorted(set(item) - declared) if isinstance(item, dict) else []
+                if unknown:
+                    self._note(
+                        provider,
+                        f"{where} have fields {name}@{definition.version} doesn't declare, which no reader sees: "
+                        + ", ".join(unknown),
+                    )
+            for raw, item in checked:
                 if project is not ANY and project is not None and item.get("project") != project:
                     continue
                 if item.get("data_level", "internal") not in allowed:
                     continue
-                found.append(InterfaceItem(provider, item))
+                found.append(InterfaceItem(provider, item, self._keep_item(provider, name, raw)))
         return found
+
+    def _keep_item(self, provider: str, name: str, raw: Any) -> str:
+        """A stable key for an item as its provider gave it, remembered so a request can name the item."""
+        text = json.dumps([provider, name, raw], sort_keys=True, default=str)
+        key = hashlib.sha256(text.encode("utf-8")).hexdigest()[:24]
+        if len(self._items) > 5000:
+            self._items.clear()
+        self._items[key] = (provider, name, raw)
+        return key
+
+    def _item_about(self, plugin: str, name: str, key: str) -> dict[str, str]:
+        """The provider's record an item stands for, by the item's key; the provider's items are read again when the
+        key isn't remembered (after a restart)."""
+        from engine.plugin_api import ANY, ReadView, Stored
+
+        if key not in self._items:
+            self.read_interface(plugin, self._use_spec(plugin, name), ANY)
+        if key not in self._items:
+            raise StoreError("that item isn't offered any more")
+        provider, _, raw = self._items[key]
+        provision = self.registrars[provider].interface_provisions[name]
+        if provision.about is None:
+            raise StoreError(f"{provider} doesn't say which of its records an item of {name} stands for")
+        reader = self._with_files(ReadView(self.store.read(), provider))
+        try:
+            found = provision.about(reader, self.registrars[provider].config.model_copy(deep=True), deepcopy(raw))
+        except Exception as err:
+            self.failed(provider, f"its {name} about", err)
+            raise StoreError(f"{provider} couldn't say which record that item stands for") from None
+        if isinstance(found, Stored):
+            found = (found.kind, found.id)
+        if not (isinstance(found, tuple) and len(found) == 2 and all(isinstance(x, str) for x in found)):
+            raise StoreError(f"{provider} doesn't have a record for that item")
+        return {"kind": found[0], "id": found[1]}
+
+    def _use_spec(self, plugin: str, name: str) -> str:
+        return next(u.interface for u in self.manifests[plugin].interfaces.uses if u.interface.split("@")[0] == name)
 
     def _check_emit(self, plugin: str, event: str, payload: dict[str, Any]) -> dict[str, Any]:
         from engine.plugin_api import PluginMisuse
@@ -333,7 +390,12 @@ class PluginHost:
                 f"through {name}" + ("; name the provider" if offering else "")
             )
         task = self.registrars[offering[0]].interface_provisions[name].task_kinds[data["interface_task"]]
-        return {"task": task, "note": data["note"], **({"about": data["about"]} if data.get("about") else {})}
+        about = data.get("about")
+        if data.get("item"):
+            about = self._item_about(plugin, name, data["item"])
+            if self._items[data["item"]][0] != offering[0]:
+                raise StoreError("the item comes from another provider than the one offering that work")
+        return {"task": task, "note": data["note"], **({"about": about} if about else {})}
 
     # ---- Today lines, panels and jobs -----------------------------------------------------------------------------
 
@@ -359,8 +421,9 @@ class PluginHost:
                         if line.about is not None and "/" in line.about[0] and not line.about[0].startswith(plugin):
                             raise ValueError("a Today line is about a core record or one of the plugin's own")
                 except Exception as err:
-                    self.disable(plugin, f"Today lines {name} failed: {err}")
-                    break
+                    self.failed(plugin, f"Today lines {name}", err)
+                    continue
+                self.succeeded(plugin, f"Today lines {name}")
                 found += [(plugin, line) for line in lines]
         return found
 
@@ -419,9 +482,14 @@ class PluginHost:
         try:
             registrar.jobs[name].run(context)
             self._commands(plugin, context.commands, f"job:{name}", {})
+        except PluginMisuse as err:
+            outcome, error = "failed", str(err)
+            self.disable(plugin, f"job {name} broke the plugin contract: {error}")
         except Exception as err:
             outcome, error = "failed", str(err) or type(err).__name__
-            self.disable(plugin, f"job {name} failed: {error}")
+            self.failed(plugin, f"job {name}", error)
+        else:
+            self.succeeded(plugin, f"job {name}")
         with self.store.transaction() as tx:
             tx.create(
                 "job_run",
@@ -436,6 +504,37 @@ class PluginHost:
                 WriteContext(actor="engine", trust="trusted", op="job.run"),
             )
         return outcome
+
+    def failed(self, plugin: str, where: str, err: object) -> None:
+        """A contained failure of one call (Today lines, interface items, an event handler, a job): noted on the plugin
+        where the person sees it, and the plugin is turned off once the same place has failed the configured number of
+        times in a row."""
+        key = (plugin, where)
+        count = self.failures.get(key, 0) + 1
+        self.failures[key] = count
+        limit = self.cfg.workspace.plugins.failures_before_off
+        message = f"{where} failed: {err}" if str(err) else f"{where} failed: {type(err).__name__}"
+        if count >= limit:
+            self.disable(plugin, message + (f" ({count} times in a row)" if count > 1 else ""))
+            return
+        log.warning("Plugin %s: %s (%d of %d before it is turned off)", plugin, message, count, limit)
+        status = self.status.get(plugin)
+        if status is not None:
+            status.notes = [n for n in status.notes if not n.startswith(where + " failed")]
+            status.notes.append(f"{message} (it was skipped; {limit - count} more in a row turns the plugin off)")
+
+    def _note(self, plugin: str, note: str) -> None:
+        """Something the person should know about a running plugin, noted once."""
+        status = self.status.get(plugin)
+        if status is not None and note not in status.notes:
+            status.notes.append(note)
+            log.warning("Plugin %s: %s", plugin, note)
+
+    def succeeded(self, plugin: str, where: str) -> None:
+        """A call that worked after failures: the count starts again and its note goes."""
+        if self.failures.pop((plugin, where), None) is not None and plugin in self.status:
+            status = self.status[plugin]
+            status.notes = [n for n in status.notes if not n.startswith(where + " failed")]
 
     def disable(self, name: str, reason: str) -> None:
         status = self.status.setdefault(name, PluginStatus(name, "disabled"))
@@ -979,15 +1078,17 @@ class PluginHost:
         tx.emitted.extend(writer.emitted)
         return writer.touched
 
-    def publish(self, event: str, data: dict[str, Any]) -> None:
+    def publish(self, event: str, data: dict[str, Any], *, follows: str | None = None) -> None:
+        """Deliver an event to subscribed plugins. `follows` is the change that raised it; work a handler stages or
+        queues is linked to it, and so are events that work raises in turn."""
         with self._lock:
-            self._queue.append((event, deepcopy(data), self._chain))
+            self._queue.append((event, deepcopy(data), self._chain, follows or self._follows))
             if self._dispatching:
                 return
             self._dispatching = True
             try:
                 while self._queue:
-                    event, payload, chain = self._queue.popleft()
+                    event, payload, chain, self._follows = self._queue.popleft()
                     for name, registrar in list(self.registrars.items()):
                         key = (name, event)
                         if not self.active(name) or event not in registrar.handlers or key in chain:
@@ -1000,10 +1101,15 @@ class PluginHost:
                             context = self._with_files(EventContext(self.store.read(), name, registrar.config))
                             registrar.handlers[event](deepcopy(payload), context)
                             self._commands(name, context.commands, event, payload)
+                        except PluginMisuse as err:
+                            self.disable(name, f"event {event} broke the plugin contract: {err}")
                         except Exception as err:
-                            self.disable(name, f"event {event} failed: {err}")
+                            self.failed(name, f"event {event}", err)
+                        else:
+                            self.succeeded(name, f"event {event}")
             finally:
                 self._chain = frozenset()
+                self._follows = None
                 self._dispatching = False
 
     def _commands(self, name: str, commands: list, event: str = "", payload: dict | None = None) -> None:
@@ -1028,7 +1134,7 @@ class PluginHost:
         own = tuple(sorted(self.registrars[plugin].ops))
         for op in ops:
             if op.get("op") not in own:
-                raise StoreError(f"{op.get('op')} isn't one of {plugin}'s own ops")
+                raise PluginMisuse(f"{op.get('op')} isn't one of {plugin}'s own ops")
         summary = f"{plugin}: {event}" if event else plugin
         changeset = CHANGESET.validate_python({"summary": summary, "ops": ops}, context={"op_models": self.ops})
         with self.store.transaction() as tx:
@@ -1040,6 +1146,7 @@ class PluginHost:
                     "state": "done",
                     "note": summary,
                     "created_at": datetime.now(UTC).isoformat(),
+                    **({"follows": self._follows} if self._follows else {}),
                 },
                 WriteContext(actor="plugin", trust="untrusted", op=f"{plugin}/stage"),
             )
@@ -1053,11 +1160,11 @@ class PluginHost:
         with self.store.transaction() as tx:
             for kind, data in commands:
                 allowed_fields = {
-                    "request": {"task", "note", "about", "via", "interface_task", "provider", "needs_go"},
+                    "request": {"task", "note", "about", "via", "interface_task", "provider", "needs_go", "item"},
                     "question": {"title", "text"},
                 }
                 if kind not in allowed_fields or not set(data) <= allowed_fields[kind]:
-                    raise StoreError("event handlers may only queue requests or file questions")
+                    raise PluginMisuse("event handlers may only queue requests or file questions")
                 via = kind == "request" and "via" in data
                 needs_go = bool(data.pop("needs_go", False)) if kind == "request" else False
                 if via:
@@ -1070,6 +1177,8 @@ class PluginHost:
                         raise StoreError("requesting another plugin requires an interface")
                     check_about(tx, self.task_kind(task), data.get("about"))
                     data = {**data, "origin": "schedule", "created_at": datetime.now(UTC).isoformat()}
+                    if self._follows:
+                        data["follows"] = self._follows
                     if needs_go:
                         from engine.stages import wording
 

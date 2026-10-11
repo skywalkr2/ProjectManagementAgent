@@ -11,7 +11,8 @@ is namespaced `<plugin>/<name>`.
 
 Plugins run in the host's process: enabling one trusts its code. A plugin that breaks its contract, or whose callback
 raises an unexpected exception, is turned off for the run with the reason in its status; core work and other plugins
-carry on.
+carry on. Today lines, interface items, event handlers and jobs are contained per call: a failing call is skipped and
+noted, and the plugin is turned off only after `workspace.plugins.failures_before_off` failures in a row there.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.22"
+PLUGIN_API_VERSION = "0.3.23"
 
 
 class Settings(BaseModel):
@@ -387,14 +388,22 @@ class EventContext(ReadView):
         *,
         provider: str | None = None,
         needs_go: bool = False,
+        item: InterfaceItem | None = None,
     ) -> None:
         """Queue AI work another plugin offers through an interface this plugin uses: `task` is the interface's
         task kind name ("short-blurb"). It runs as that plugin's task, under its prompt and playbook, with the usual
         estimate, go and review (with `needs_go`, it waits for the go whatever it costs). `provider` picks one when
-        several plugins offer it. The note is untrusted material."""
+        several plugins offer it. The note is untrusted material. Name what the work is about with `about` (a record)
+        or with `item` (an InterfaceItem read from `view.interface`): its provider then says which of its records the
+        item stands for, and the work goes to that provider."""
         data: dict[str, Any] = {"via": interface, "interface_task": task, "note": note}
         if needs_go:
             data["needs_go"] = True
+        if item is not None:
+            if about is not None or not isinstance(item, InterfaceItem) or not item.key:
+                raise PluginMisuse("name what the work is about with about= or with an item read from view.interface")
+            data["item"] = item.key
+            provider = provider or item.provider
         if provider is not None:
             data["provider"] = provider
         if about is not None:
@@ -433,8 +442,8 @@ class PacketContext(ReadView):
 class ActionContext(ReadView):
     """What a person action sees: core and own records, file bytes, the plugin's settings and its declared programs.
     It changes nothing itself; it returns a Proposal the person reviews. `limits` holds the workspace's limits a
-    proposal works within: max_items, max_previews, preview_mb, keep_minutes, max_file_mb, max_total_mb and
-    accepted_types (media types files may have)."""
+    proposal works within: max_items, max_previews, preview_mb, keep_minutes, max_file_mb, max_total_mb, room_mb
+    (what is left of max_total_mb for new files) and accepted_types (media types files may have)."""
 
     def __init__(self, view: Any, plugin: str, config: Settings, tools: Any, limits: dict[str, Any] | None = None):
         super().__init__(view, plugin)
@@ -627,6 +636,7 @@ class InterfaceItem:
 
     provider: str
     data: dict[str, Any]
+    key: str = ""  # the host's stable key for the item as the provider gave it; pass the item to request_from
 
     @property
     def data_level(self) -> str:
@@ -660,6 +670,7 @@ class InterfaceProvision:
     major: int
     items: Callable
     task_kinds: dict[str, str]
+    about: Callable | None = None
 
 
 @dataclass(frozen=True)
@@ -1091,15 +1102,25 @@ class Registrar:
             name, version, item, dict(events or {}), tuple(task_kinds)
         )
 
-    def provide_interface(self, interface: str, *, items: Callable, task_kinds: dict[str, str] | None = None) -> None:
+    def provide_interface(
+        self,
+        interface: str,
+        *,
+        items: Callable,
+        task_kinds: dict[str, str] | None = None,
+        about: Callable | None = None,
+    ) -> None:
         """Provide an interface ("<name>@<major>", listed in `interfaces.provides`), defined here or by another
         plugin. `items(view, settings, project) -> list[dict]` returns what this plugin offers through it: for one
         project when `project` is an id, everything when it is None (a function taking only `view, settings` is
         called for everything and filtered). Each item is checked against the definition when read; include
         `project` (an id) for items that belong to one, and `data_level` when it isn't "internal". It must be quick
         and deterministic. `task_kinds` maps the interface's task kind names to this plugin's own task kinds, so
-        others can request them. Raise the interface's events from an op with `writer.emit`, or from an event handler
-        with `context.emit`. With no plugin defining the interface running, nothing reads it."""
+        others can request them. `about(view, settings, item) -> record | (kind, id) | None` says which of this
+        plugin's records an item (as `items` returned it) stands for, so a user can request work on the item itself;
+        the record must be of the kind the requested task kind is `on`. Raise the interface's events from an op with
+        `writer.emit`, or from an event handler with `context.emit`. With no plugin defining the interface running,
+        nothing reads it."""
         match = re.fullmatch(r"([a-z0-9-]+/[a-z0-9-]+)@([0-9]+)", interface)
         if match is None:
             raise ValueError('provide an interface as "<plugin>/<name>@<major>"')
@@ -1108,8 +1129,10 @@ class Registrar:
         for own in (task_kinds or {}).values():
             if not own.startswith(self.name + "/"):
                 raise ValueError("an interface offers this plugin's own task kinds")
+        if about is not None and not callable(about):
+            raise ValueError("an interface's about is a function")
         self.interface_provisions[match.group(1)] = InterfaceProvision(
-            match.group(1), int(match.group(2)), items, dict(task_kinds or {})
+            match.group(1), int(match.group(2)), items, dict(task_kinds or {}), about
         )
 
     def today(self, name: str, *, lines: Callable) -> None:

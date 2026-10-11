@@ -224,13 +224,27 @@ def test_a_newer_minor_version_than_defined_reads_nothing(tmp_path):
         store.close()
 
 
-def test_a_provider_whose_items_dont_fit_is_turned_off(tmp_path):
+def test_an_item_that_doesnt_fit_is_left_out_and_noted(tmp_path):
     broken = PROVIDER.replace('"words": w.data["words"],', '"words": "lots",')
     ws, cfg, store = workspace(tmp_path, code=broken)
     try:
         project = a_project(cfg, store)
         apply(cfg, store, [{"op": "p17/add-work", "project": project.id, "title": "X"}])
         assert store.plugins.read_interface("p16", "p16/source@1") == []
+        assert store.plugins.active("p17")
+        assert any("doesn't match the definition" in n for n in store.plugins.status["p17"].notes)
+    finally:
+        store.close()
+
+
+def test_a_failing_items_function_is_skipped_until_it_fails_too_often(tmp_path):
+    broken = PROVIDER.replace("def items(", "def items(*args):\n    1 / 0\n\ndef unused_items(")
+    ws, cfg, store = workspace(tmp_path, code=broken)
+    try:
+        assert store.plugins.read_interface("p16", "p16/source@1") == []
+        assert store.plugins.active("p17") and "items failed" in store.plugins.status["p17"].notes[-1]
+        for _ in range(cfg.workspace.plugins.failures_before_off - 1):
+            store.plugins.read_interface("p16", "p16/source@1")
         assert "items failed" in store.plugins.status["p17"].reason
     finally:
         store.close()

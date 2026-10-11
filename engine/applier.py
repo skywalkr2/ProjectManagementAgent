@@ -530,7 +530,7 @@ def apply_changeset(
             cs_id = tx.new_id("changeset")
             _record_changeset(tx, cs_id, cs, stopped.outcomes, "rejected", problems, ctx, run, now, extra)
         return cs_id
-    ctx.store.plugins.publish("changeset.applied", {"id": cs_id})
+    ctx.store.plugins.publish("changeset.applied", {"id": cs_id}, follows=cs_id)
     return cs_id
 
 
@@ -630,6 +630,35 @@ def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[tuple[int, str]]:
                     tx.sql("ROLLBACK TO dry_op")
                 finally:
                     tx.sql("RELEASE dry_op")
+            raise _DryRun
+    except _DryRun:
+        pass
+    return found
+
+
+def refusals(cs: ChangesetIn, ctx: Context) -> dict[int, str]:
+    """Why each op would be refused if the changeset applied now, by op index: the checks, then a trial apply in
+    order (later ops see what earlier ones made). Nothing is kept and no event is published."""
+    found: dict[int, str] = {}
+    for p in check(cs, ctx):
+        if p.severity == "refuse" and p.op is not None:
+            found.setdefault(p.op, p.message)
+    today = datetime.now(UTC).date()
+    try:
+        with ctx.store.transaction(notify=False) as tx:
+            for i, op in enumerate(cs.ops):
+                if i in found:
+                    continue
+                tx.sql("SAVEPOINT trial_op")
+                try:
+                    _apply_op(tx, op, ctx, _wctx(ctx, "dry-run", i, op), today)
+                except NeedsPerson:
+                    tx.sql("ROLLBACK TO trial_op")
+                except StoreError as err:
+                    tx.sql("ROLLBACK TO trial_op")
+                    found[i] = str(err)
+                finally:
+                    tx.sql("RELEASE trial_op")
             raise _DryRun
     except _DryRun:
         pass
@@ -964,7 +993,7 @@ def release(
             read_version=cs.version,
         )
 
-    store.plugins.publish("changeset.applied", {"id": changeset_id})
+    store.plugins.publish("changeset.applied", {"id": changeset_id}, follows=changeset_id)
 
 
 def pick_owner(store: Store, question_id: str, person: str) -> None:
@@ -1042,7 +1071,7 @@ def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> U
             read_version=cs.version,
         )
     if report.restored:
-        store.plugins.publish("changeset.undone", {"id": changeset_id, "ops": report.restored})
+        store.plugins.publish("changeset.undone", {"id": changeset_id, "ops": report.restored}, follows=changeset_id)
     return report
 
 
@@ -1161,7 +1190,7 @@ def move_stage(store: Store, op: StageMoveOp, *, actor: Literal["pm", "rule"] = 
             WriteContext("engine", "trusted", "changeset.record"),
             record_id=cs_id,
         )
-    store.plugins.publish("changeset.applied", {"id": cs_id})
+    store.plugins.publish("changeset.applied", {"id": cs_id}, follows=cs_id)
     return cs_id
 
 

@@ -243,6 +243,11 @@ def test_crashing_handler_stages_nothing_and_disables_plugin(workspace):
         record = tx.create("note", {"text": "Committed before handler"}, WRITE)
     assert store.read().get("note", record.id)
     assert len(store.read().list("question")) == before
+    assert store.plugins.active(EXAMPLE.name)
+    assert "event record.changed failed" in store.plugins.status[EXAMPLE.name].notes[-1]
+    for _ in range(store.plugins.cfg.workspace.plugins.failures_before_off - 1):
+        with store.transaction() as tx:
+            tx.create("note", {"text": "Again"}, WRITE)
     assert not store.plugins.active(EXAMPLE.name)
     store.close()
 

@@ -264,6 +264,14 @@ test("a second opinion is labeled in words, by where it came from", async () => 
   expect(within(row("No second opinion")).queryByText(/Second opinion/)).toBeNull();
 });
 
+test("work a plugin did in answer to a change says which change it followed", async () => {
+  const after = change("REQ-1", { source_title: "Chapter updates", follows: "CS-3", follows_summary: "Accept chapter 4" });
+  fakeApi({ "GET changes": () => [after] });
+  renderApp(<WhatChanged />);
+  const title = await screen.findByText("Chapter updates");
+  expect(within(title.closest("li")!).getByText("After: Accept chapter 4")).toBeInTheDocument();
+});
+
 test("a refused request offers Send to another account, with Try again and Dismiss in its menu", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({
