@@ -870,6 +870,14 @@ class SettingItem(BaseModel):
     locked: bool = Field(description="Set by an environment variable or a flag, so the screen can't change it.")
     basic: bool = Field(description="Shown first; the rest sit behind More settings.")
     editable: bool = Field(description="The screen can change it; others are changed in the file.")
+    enabled_by: str | None = Field(
+        None,
+        description="The key of the switch this setting only matters with: shown after it, and greyed while that "
+        "switch is off (a yes/no) or empty (a folder, say).",
+    )
+    picker: Literal["folder", "file"] | None = Field(
+        None, description="Offer a chooser for this path instead of typing it."
+    )
 
 
 class SettingsView(BaseModel):

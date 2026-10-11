@@ -75,6 +75,8 @@ class Setting:
     locked: bool
     basic: bool
     editable: bool
+    enabled_by: str | None = None  # the switch (yes/no) or field (set or empty) this one only matters with
+    picker: str | None = None  # "folder" or "file": the screen offers a chooser instead of typing a path
 
 
 @dataclass
@@ -116,6 +118,10 @@ def _walk(
             _walk(inner, here, (values or {}).get(key), (defaults or {}).get(key), sources, out)
             continue
         kind, options = _kind(info.annotation)
+        extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
+        switch = extra.get("enabled_by")
+        if isinstance(switch, str) and "." not in switch:
+            switch = ".".join([*path, switch])
         source = _source(dotted, sources)
         locked = source in ("env", "flag")
         out.append(
@@ -132,6 +138,8 @@ def _walk(
                 locked=locked,
                 basic=dotted in BASIC,
                 editable=kind != "other" and not locked and not dotted.startswith(FILE_ONLY),
+                enabled_by=switch if isinstance(switch, str) else None,
+                picker=extra.get("picker") if isinstance(extra.get("picker"), str) else None,
             )
         )
 

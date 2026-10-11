@@ -65,12 +65,22 @@ class JobSettings(ConfigModel):
 
 class CatalogSettings(ConfigModel):
     enabled: bool = Field(True, description="Show the packs catalog feeds list on the Add-ons screen.")
-    shipped_feed: bool = Field(True, description="Include the catalog feed this build of the app came with, if any.")
+    shipped_feed: bool = Field(
+        True,
+        description="Include the catalog feed this build of the app came with, if any.",
+        json_schema_extra={"enabled_by": "enabled"},
+    )
     feeds: list[str] = Field(
-        default_factory=list, description="More catalog feeds to read, as https addresses (a team's own, say)."
+        default_factory=list,
+        description="More catalog feeds to read, as https addresses (a team's own, say).",
+        json_schema_extra={"enabled_by": "enabled"},
     )
     refresh_hours: int = Field(
-        24, ge=1, le=720, description="How old the kept copy of a feed may be before opening the screen reads it again."
+        24,
+        ge=1,
+        le=720,
+        description="How old the kept copy of a feed may be before opening the screen reads it again.",
+        json_schema_extra={"enabled_by": "enabled"},
     )
 
     @field_validator("feeds")
@@ -176,15 +186,20 @@ class BackupTarget(ConfigModel):
 
 
 class BackupSettings(ConfigModel):
-    targets: list[BackupTarget] = Field(default_factory=list, description="Where full backups go. Use at least one.")
-    every_hours: int = Field(24, ge=1, description="How often a full backup is made.")
-    keep: int = Field(14, ge=1, description="How many backups to keep in each target.")
     automatic: bool = Field(
         True,
         description="Make backups on schedule while the app runs, with nothing to click; off means only on request.",
     )
+    targets: list[BackupTarget] = Field(default_factory=list, description="Where full backups go. Use at least one.")
+    every_hours: int = Field(
+        24, ge=1, description="How often a full backup is made.", json_schema_extra={"enabled_by": "automatic"}
+    )
+    keep: int = Field(14, ge=1, description="How many backups to keep in each target.")
     retry_minutes: int = Field(
-        60, ge=5, description="After a failed backup (a drive not connected, say), how long before trying again."
+        60,
+        ge=5,
+        description="After a failed backup (a drive not connected, say), how long before trying again.",
+        json_schema_extra={"enabled_by": "automatic"},
     )
 
 
@@ -218,17 +233,20 @@ class SyncSettings(ConfigModel):
         description="A folder a file-sync service keeps in step between your computers. After every change the "
         "workspace is written there, one folder per project, readable in any editor. Empty: off. The workspace "
         "itself must not be inside it.",
+        json_schema_extra={"picker": "folder"},
     )
     watch_outside_edits: bool = Field(
         True,
         description="Bring back edits made to the folder's files in other programs, as changes for you to review. "
         "Off: they are only reported, and the files are left as they are.",
+        json_schema_extra={"enabled_by": "folder"},
     )
     lease_stale_after_minutes: int = Field(
         10,
         ge=1,
         description="How long after the other computer was last seen the workspace can be opened here without it "
         "closing first (when it went to sleep or lost power, say).",
+        json_schema_extra={"enabled_by": "folder"},
     )
 
 

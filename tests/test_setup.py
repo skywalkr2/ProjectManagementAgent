@@ -73,6 +73,30 @@ def test_settings_are_described_for_the_forms(tmp_path, monkeypatch):
     assert "workspace.version" not in items and view["fingerprint"]
 
 
+def test_a_feature_switch_comes_first_and_its_settings_name_it(tmp_path):
+    from engine import settings
+
+    _, cfg, store = make(tmp_path)
+    store.close()
+    found = settings.describe(cfg)
+    order = {s.key: n for n, s in enumerate(found)}
+    by_key = {s.key: s for s in found}
+    switched = [s for s in found if s.enabled_by]
+    assert switched
+    for s in switched:
+        switch = by_key.get(s.enabled_by)
+        assert switch is not None, f"{s.key} names an unknown switch {s.enabled_by}"
+        assert switch.type in ("yes_no", "text"), f"{s.enabled_by} can't be on or off"
+        assert order[switch.key] < order[s.key], f"{s.enabled_by} must come before {s.key}"
+        assert switch.basic or not s.basic, f"{s.key} is shown first but its switch {s.enabled_by} isn't"
+    assert by_key["storage.backups.every_hours"].enabled_by == "storage.backups.automatic"
+    backups = [s.key for s in found if s.group == "storage.backups"]
+    assert backups[0] == "storage.backups.automatic"
+    assert by_key["storage.sync.folder"].picker == "folder"
+    assert all(s.picker in (None, "folder", "file") for s in found)
+    assert all(s.type == "text" for s in found if s.picker)
+
+
 def test_a_save_writes_the_file_records_the_change_and_never_races(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)

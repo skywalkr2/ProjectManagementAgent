@@ -4222,6 +4222,18 @@
             "title": "Editable",
             "type": "boolean"
           },
+          "enabled_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The key of the switch this setting only matters with: shown after it, and greyed while that switch is off (a yes/no) or empty (a folder, say).",
+            "title": "Enabled By"
+          },
           "file": {
             "title": "File",
             "type": "string"
@@ -4247,6 +4259,22 @@
             },
             "title": "Options",
             "type": "array"
+          },
+          "picker": {
+            "anyOf": [
+              {
+                "enum": [
+                  "folder",
+                  "file"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Offer a chooser for this path instead of typing it.",
+            "title": "Picker"
           },
           "source": {
             "enum": [
