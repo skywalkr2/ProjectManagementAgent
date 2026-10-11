@@ -10,6 +10,18 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.39 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Checking a pack whose plugins share a helper package:** `cockpit pack check` takes an installed plugin's name as
+  well as a folder. Install the built package beside the host and run `cockpit pack check <plugin name> --entry
+  catalog/pack.yaml`; the pack loads as people will install it, helper package included.
+- **One entry file for several packs:** an entry file with a `packs:` list is matched to the plugin by its `id`; a
+  file that lists no pack with that id fails the check.
+- **A workspace link to the installed copy itself** (a development install linked with `cockpit demo --plugin`) is
+  the same plugin: no "the installed one isn't used" note, so the check no longer fails on it.
+
 ## What 0.3.38 adds
 
 Manifests stay `'>=0.3,<0.4'`.

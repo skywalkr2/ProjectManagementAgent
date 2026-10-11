@@ -10,7 +10,10 @@ Publishing a pack (the process every plugin repository follows; the catalog's PU
    its typical AI jobs.
 
 3. **Check it:** `cockpit pack check <its plugin folder> --entry catalog/pack.yaml`, with the host at the version the
-   pack declares. Every line must pass.
+   pack declares. Every line must pass. A pack whose plugins share a helper package from the same distribution is
+   checked installed: install the built package beside the host and name the plugin instead of its folder
+   (`cockpit pack check <plugin name> --entry catalog/pack.yaml`). An entry file listing several packs is matched
+   to the plugin by its id.
 
 4. **Ask for it to be published:** add a "Publish request" to its `docs/host-questions.md` (the pack, the version and
    tag, what changed, the check's output, and whether the owner has said it may be listed publicly) and tell the
@@ -63,14 +66,23 @@ def _declared(values: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def check(folder: Path, entry_path: Path | None = None) -> Report:
+def check(plugin: Path | str, entry_path: Path | None = None) -> Report:
+    """Check a pack, given its plugin folder (the one holding plugin.yaml) or an installed plugin's name."""
     from packaging.specifiers import InvalidSpecifier, SpecifierSet
 
     from engine.plugin_api import PLUGIN_API_VERSION
     from engine.plugin_manifest import read_manifest
 
     report = Report()
-    folder = folder.expanduser().resolve()
+    folder = Path(plugin).expanduser()
+    installed = not (folder / "plugin.yaml").is_file()
+    if installed:
+        found = _installed(str(plugin))
+        if found is None:
+            report.failed.append(f"{plugin} isn't a plugin folder (no plugin.yaml in it) or an installed plugin's name")
+            return report
+        folder = found
+    folder = folder.resolve()
     try:
         manifest = read_manifest(folder / "plugin.yaml")
     except (OSError, ValueError) as err:
@@ -84,14 +96,28 @@ def check(folder: Path, entry_path: Path | None = None) -> Report:
     (report.passed if works else report.failed).append(
         f"plugin_api {manifest.plugin_api} {'includes' if works else 'excludes'} this host's {PLUGIN_API_VERSION}"
     )
-    _load_in_demo(folder, manifest.name, report)
+    _load_in_demo(manifest.name if installed else str(folder), manifest.name, report)
     if entry_path is not None:
         _check_entry(entry_path, manifest, report, folder)
     return report
 
 
-def _load_in_demo(folder: Path, name: str, report: Report) -> None:
-    """Turn the pack on in a throwaway demo workspace and see whether it loads."""
+def _installed(name: str) -> Path | None:
+    """The folder of an installed plugin with this name, found without importing it."""
+    from importlib.metadata import entry_points
+
+    from engine.plugin_manifest import installed_manifest
+
+    for ep in entry_points(group="pm_cockpit.plugins"):
+        if ep.name == name:
+            path = installed_manifest(ep)
+            return path.parent if path.is_file() else None
+    return None
+
+
+def _load_in_demo(plugin: str, name: str, report: Report) -> None:
+    """Turn the pack on in a throwaway demo workspace (its folder linked, or installed by name) and see whether it
+    loads."""
     from engine.cli import add_plugin
     from engine.config import load_config
     from engine.shipped import demo
@@ -100,7 +126,7 @@ def _load_in_demo(folder: Path, name: str, report: Report) -> None:
 
     with tempfile.TemporaryDirectory(prefix="cockpit-pack-check-") as tmp:
         ws = init_workspace(Path(tmp) / "demo", template=demo("demo-b"), git=False)
-        add_plugin(Workspace(ws.root), str(folder))
+        add_plugin(Workspace(ws.root), plugin)
         try:
             cfg = load_config(ws.config_dir, env={})
         except Exception as err:  # noqa: BLE001 - any refusal is the finding
@@ -129,7 +155,11 @@ def _check_entry(entry_path: Path, manifest: Any, report: Report, manifest_folde
         report.failed.append(f"the catalog entry can't be read: {err}")
         return
     if isinstance(raw, dict) and "packs" in raw:
-        raw = (raw.get("packs") or [None])[0]
+        listed = [p for p in raw.get("packs") or [] if isinstance(p, dict)]
+        raw = next((p for p in listed if p.get("id") == manifest.name), None)
+        if raw is None:
+            report.failed.append(f"the catalog entry file lists no pack with the id {manifest.name}")
+            return
     feed = packs.parse(str(entry_path), yaml.safe_dump({"version": 1, "packs": [raw]}))
     if feed.error or feed.notes or not feed.entries:
         report.failed.append(f"the catalog entry doesn't fit the catalog's format: {feed.error or feed.notes}")

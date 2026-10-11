@@ -204,6 +204,8 @@ class PluginHost:
                 path = installed_manifest(ep)
                 existing = self.candidates.get(ep.name)
                 if existing is not None and existing.parent.parent == local:
+                    if existing.resolve() == path.resolve():
+                        continue  # the workspace links to the installed copy itself (a development install)
                     note = (
                         f"the copy in the workspace's plugins folder is used; the installed one ({path.parent}) isn't"
                     )
