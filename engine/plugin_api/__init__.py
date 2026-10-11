@@ -38,7 +38,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.32"
+PLUGIN_API_VERSION = "0.3.33"
 
 
 class Settings(BaseModel):
@@ -868,6 +868,7 @@ class Registrar:
         self.setup_steps: dict[str, SetupStepRegistration] = {}
         self.connectors: dict[str, Any] = {}
         self.triage_matchers: dict[str, Callable] = {}
+        self.sign_ins: dict[str, Any] = {}
         self.interface_provisions: dict[str, InterfaceProvision] = {}
 
     def _name(self, name: str) -> None:
@@ -1322,6 +1323,47 @@ class Registrar:
         from engine.connectors import Connector
 
         self.connectors[name] = Connector(name, " ".join(str(label).split()) or name, settings, poll)
+
+    def sign_in(
+        self,
+        name: str,
+        *,
+        label: str,
+        authorize_url: str,
+        token_url: str,
+        scopes: tuple[str, ...] | list[str],
+        client_id: str = "client-id",
+        client_secret: str | None = None,
+        params: dict[str, str] | None = None,
+    ) -> None:
+        """A sign-in to a service through its own sign-in page, as the person (listed in `provides.sign_ins`):
+        OAuth 2.0 authorization code with PKCE. `authorize_url` and `token_url` are the service's HTTPS addresses, on
+        hosts listed in `requires.network`; `scopes` are what it asks the person to allow; `client_id` (and
+        `client_secret`, for services that issue one to apps on a computer) name secrets in `requires.secrets` that
+        hold the app registration the person made with the service; `params` adds parameters to the sign-in page's
+        address. The person signs in from Settings; the core receives the answer at its own callback address
+        (`<the app's address><base path>/api/sign-ins/callback`, which the app registration must allow), keeps the
+        tokens on this computer and renews them. A connector gets a current token with
+        `context.access_token(name)`; when the person needs to sign in (again) it raises `ConnectorError("auth",
+        ...)`, which asks them once. The plugin never sees the sign-in itself or the refresh token."""
+        self._name(name)
+        if name in self.sign_ins or not str(label).strip() or not scopes:
+            raise ValueError("duplicate sign-in, or a sign-in without a label or scopes")
+        if not all(isinstance(s, str) and s.strip() for s in scopes):
+            raise ValueError("a sign-in's scopes are words")
+        from engine.sign_in import SignIn
+
+        self.sign_ins[name] = SignIn(
+            plugin=self.name,
+            name=name,
+            label=" ".join(str(label).split()),
+            authorize_url=authorize_url,
+            token_url=token_url,
+            scopes=tuple(scopes),
+            client_id=client_id,
+            client_secret=client_secret,
+            params=dict(params or {}),
+        )
 
     def triage_matcher(self, name: str, *, match: Callable) -> None:
         """A rule kind for triage in `watch.yaml` (listed in `provides.triage_matchers`): `match(change, params) ->

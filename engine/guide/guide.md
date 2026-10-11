@@ -112,6 +112,10 @@ aside changes that don't matter, such as a spacing fix or a change made by your 
 Auto-closed, where Take a closer look hands one in after all. If a source can't be read several times in a row, you
 are asked once, with what to do.
 
+Some add-ons read a service through your own account, signing in on that service's page. Sign in from Settings: the
+service asks you what to allow, then sends you back to the app. The sign-in is kept on this computer only and renewed
+on its own; if the service withdraws it, you are asked to sign in again. Sign out from the same place.
+
 ## Templates and your own item types
 
 A template sets up the kinds of items you track (requests, pieces, orders), their fields, stages and checklists, and

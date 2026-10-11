@@ -502,6 +502,52 @@ class PluginHost:
             for name, connector in registrar.connectors.items()
         }
 
+    def sign_ins(self) -> dict[str, Any]:
+        """Every running plugin's sign-ins, by name."""
+        return {
+            name: sign_in
+            for plugin, registrar in sorted(self.registrars.items())
+            if self.active(plugin)
+            for name, sign_in in registrar.sign_ins.items()
+        }
+
+    def plugin_secret(self, plugin: str, name: str, workspace_root: Any) -> str | None:
+        """A secret a plugin declares: the workspace's reference to it, else the copy kept on this computer."""
+        from engine.secrets import SecretError, resolve_secret
+
+        ref = self.cfg.workspace.plugins.secrets.get(plugin, {}).get(name)
+        if ref:
+            try:
+                return resolve_secret(ref)
+            except SecretError:
+                return None
+        kept = Path(workspace_root) / ".cockpit" / "keys" / plugin / name
+        return kept.read_text(encoding="utf-8").strip() if kept.is_file() else None
+
+    def sign_in_token(self, name: str, workspace_root: Any) -> str:
+        """A current access token for a sign-in, renewed when needed; ConnectorError("auth") when the person needs
+        to sign in."""
+        from engine.connectors import ConnectorError
+        from engine.net import WebClient
+        from engine.sign_in import SignInError, access_token
+
+        sign_in = self.sign_ins().get(name)
+        if sign_in is None:
+            raise ConnectorError("auth", f"{name} isn't a sign-in of a running add-on")
+        plugin = sign_in.plugin
+        client_id = self.plugin_secret(plugin, sign_in.client_id, workspace_root)
+        client_secret = (
+            self.plugin_secret(plugin, sign_in.client_secret, workspace_root) if sign_in.client_secret else None
+        )
+        keys = Path(workspace_root) / ".cockpit" / "keys" / plugin
+        web = WebClient(list(self.manifests[plugin].requires.network))
+        try:
+            return access_token(keys, sign_in, web, client_id, client_secret)
+        except SignInError as err:
+            raise ConnectorError("auth", str(err)) from None
+        finally:
+            web.close()
+
     def triage_matchers(self) -> dict[str, Any]:
         """Every running plugin's triage matchers, by name."""
         return {
@@ -537,18 +583,19 @@ class PluginHost:
 
         def secret(name: str) -> str | None:
             from engine.plugin_api import PluginMisuse
-            from engine.secrets import SecretError, resolve_secret
 
             if name not in declared:
                 raise PluginMisuse(f"{name} isn't a secret this plugin declares in requires.secrets")
-            ref = self.cfg.workspace.plugins.secrets.get(plugin, {}).get(name)
-            if ref:
-                try:
-                    return resolve_secret(ref)
-                except SecretError:
-                    return None
-            kept = keys / name
-            return kept.read_text(encoding="utf-8").strip() if kept.is_file() else None
+            return self.plugin_secret(plugin, name, workspace_root)
+
+        own_sign_ins = set(self.registrars[plugin].sign_ins) if plugin in self.registrars else set()
+
+        def token(name: str) -> str:
+            from engine.plugin_api import PluginMisuse
+
+            if name not in own_sign_ins:
+                raise PluginMisuse(f"{name} isn't a sign-in this plugin registers")
+            return self.sign_in_token(name, workspace_root)
 
         def keep_secret(name: str, value: str) -> None:
             import os
@@ -568,6 +615,7 @@ class PluginHost:
             web=web,
             secret=secret if declared else None,
             keep_secret=keep_secret if declared else None,
+            access_token=token if own_sign_ins else None,
         )
 
     def poll_connector(self, connector: Any, settings: Any, state: dict[str, Any], context: Any) -> Any:
@@ -946,6 +994,7 @@ class PluginHost:
             ("setup_steps", registrar.setup_steps),
             ("connectors", registrar.connectors),
             ("triage_matchers", registrar.triage_matchers),
+            ("sign_ins", registrar.sign_ins),
         ):
             declared = set(getattr(expected, key))
             if f"{registrar.name}/*" in declared:
@@ -955,6 +1004,13 @@ class PluginHost:
                 continue
             if declared != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
+        for sign_in in registrar.sign_ins.values():
+            from engine.sign_in import check_addresses
+
+            check_addresses(sign_in, list(manifest.requires.network))
+            for secret in (sign_in.client_id, sign_in.client_secret):
+                if secret is not None and secret not in manifest.requires.secrets:
+                    raise ValueError(f"sign-in {sign_in.name} reads {secret}, which requires.secrets doesn't list")
         if set(manifest.interfaces.defines) != set(registrar.interface_definitions):
             raise ValueError("registered interface definitions do not match interfaces.defines exactly")
         provided = {f"{p.interface}@{p.major}" for p in registrar.interface_provisions.values()}

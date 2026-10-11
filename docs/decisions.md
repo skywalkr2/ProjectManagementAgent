@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Mail and calendar from named services are plugins in a private repository; the core signs in
+
+**Decided by:** project owner (plugins, in a new private repository); project lead (the sign-in in the core).
+
+**What:** Mail and calendar from the two named services are plugins kept in their own private repository, which may
+name the services and carry their sign-in addresses. The core gains a generic sign-in any plugin can declare
+(`registrar.sign_in`, plugin API 0.3.33): OAuth 2.0 authorization code with PKCE through the service's own page, the
+answer taken at the app's own callback route, tokens kept on this computer beside the plugin's other kept secrets and
+renewed by the core, and `context.access_token(name)` for the plugin's connectors. The app registration (client id)
+is the person's, set as a plugin secret.
+
+**Why:** The open protocols cover most mail and calendars today; the services' own sign-in and richer APIs need code
+that names them, which this repository keeps out.
+
+**Impact:** Answers the open question in "Calendars and mail are read through open protocols". New routes under
+`/api/sign-ins` and a Settings section for them. The plugins wait for the private repository.
+
 ## 2026-10-11: The package carries its screens, templates and demos; a demo says it is one
 
 **Decided by:** project lead, under the owner's friends' preview milestone.

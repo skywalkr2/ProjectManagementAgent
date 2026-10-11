@@ -3906,6 +3906,61 @@
         "title": "SetupView",
         "type": "object"
       },
+      "SignInStarted": {
+        "properties": {
+          "url": {
+            "description": "The service's sign-in page, to open in the person's browser.",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "SignInStarted",
+        "type": "object"
+      },
+      "SignInView": {
+        "properties": {
+          "callback": {
+            "description": "The address the service's app registration must allow to send people back to.",
+            "title": "Callback",
+            "type": "string"
+          },
+          "label": {
+            "description": "What to call the service's sign-in on screen.",
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "ready": {
+            "description": "The add-on's app registration (its client id) is set, so signing in can start.",
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "signed_in",
+              "expired",
+              "signed_out"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "status",
+          "ready",
+          "callback"
+        ],
+        "title": "SignInView",
+        "type": "object"
+      },
       "SourceView": {
         "properties": {
           "id": {
@@ -8156,6 +8211,106 @@
           }
         },
         "summary": "Setup Skip"
+      }
+    },
+    "/api/sign-ins": {
+      "get": {
+        "operationId": "sign_ins_api_sign_ins_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SignInView"
+                  },
+                  "title": "Response Sign Ins Api Sign Ins Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sign Ins"
+      }
+    },
+    "/api/sign-ins/{name}": {
+      "delete": {
+        "operationId": "sign_out_api_sign_ins__name__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sign Out"
+      }
+    },
+    "/api/sign-ins/{name}/start": {
+      "post": {
+        "operationId": "start_api_sign_ins__name__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start"
       }
     },
     "/api/sources/{src_id}": {

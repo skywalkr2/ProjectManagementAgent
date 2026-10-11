@@ -10,6 +10,20 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.33 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Signing in to a service as the person:** `registrar.sign_in(name, label=, authorize_url=, token_url=, scopes=,
+  client_id="client-id", client_secret=None, params=None)`, listed in `provides.sign_ins`. The flow is OAuth 2.0
+  authorization code with PKCE. Both addresses are HTTPS on hosts in `requires.network`. `client_id` (and
+  `client_secret`) name secrets in `requires.secrets`, which hold the app registration the person made with the
+  service. The person signs in from the screens; the service sends them back to `<the app's address><base
+  path>/api/sign-ins/callback`, which the registration must allow. The core keeps the tokens on this computer (never
+  in settings or the export) and renews them. A connector gets a current token with `context.access_token(name)`;
+  when the person has to sign in (again), it raises `ConnectorError("auth", ...)`. The plugin never sees the refresh
+  token.
+
 ## What 0.3.32 adds
 
 Manifests stay `'>=0.3,<0.4'`.

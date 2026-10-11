@@ -23,6 +23,7 @@ from api.ask_routes import build_ask_router
 from api.routes import build_router
 from api.schemas import RuntimeConfig
 from api.setup_routes import build_setup_router
+from api.sign_in_routes import build_sign_in_router
 from api.watch_routes import build_watch_router
 from engine import __version__
 from engine.ai.router import Router
@@ -166,6 +167,7 @@ def create_app(
     inner.include_router(build_setup_router(ws, cfg, store, events, worker))
     inner.include_router(build_ask_router(ws, cfg, store, events, worker))
     inner.include_router(build_watch_router(ws, cfg, store, events, worker))
+    inner.include_router(build_sign_in_router(ws, cfg, store))
     inner.state.worker = worker
     inner.state.store = store
     inner.state.events = events

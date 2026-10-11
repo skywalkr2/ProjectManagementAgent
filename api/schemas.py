@@ -1081,3 +1081,15 @@ class FingerprintIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     fingerprint: str
+
+
+class SignInView(BaseModel):
+    name: str
+    label: str = Field(description="What to call the service's sign-in on screen.")
+    status: Literal["signed_in", "expired", "signed_out"]
+    ready: bool = Field(description="The add-on's app registration (its client id) is set, so signing in can start.")
+    callback: str = Field(description="The address the service's app registration must allow to send people back to.")
+
+
+class SignInStarted(BaseModel):
+    url: str = Field(description="The service's sign-in page, to open in the person's browser.")

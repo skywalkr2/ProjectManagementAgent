@@ -56,6 +56,7 @@ class ConnectorContext:
     web: Any = None  # engine.net.WebClient, or None when the connector may not reach the network
     secret: Callable[[str], str | None] | None = None  # a declared secret's value, or None when it isn't set
     keep_secret: Callable[[str, str], None] | None = None  # keep a declared secret (a refreshed token) on this computer
+    access_token: Callable[[str], str] | None = None  # a current token for one of the plugin's own sign-ins
 
 
 @dataclass(frozen=True)
