@@ -748,6 +748,22 @@
             "title": "Reviewed",
             "type": "boolean"
           },
+          "second_opinion": {
+            "anyOf": [
+              {
+                "enum": [
+                  "other_account",
+                  "same_account"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an independent check: run on an account other than the one that wrote the work, or on the same account as a fresh run the person accepted.",
+            "title": "Second Opinion"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -818,6 +834,48 @@
           "quote"
         ],
         "title": "Evidence",
+        "type": "object"
+      },
+      "FieldView": {
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "long_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The long text format, for a long text field.",
+            "title": "Long Text"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "refers_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The kind of record the field holds an id of.",
+            "title": "Refers To"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "FieldView",
         "type": "object"
       },
       "FileKindView": {
@@ -1144,6 +1202,44 @@
         "title": "FollowupSection",
         "type": "object"
       },
+      "GenericRecordView": {
+        "description": "Any shown record: its ordinary fields and the names of its long text fields (read those from /texts).",
+        "properties": {
+          "fields": {
+            "additionalProperties": true,
+            "title": "Fields",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "long_text": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Long Text",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "version",
+          "fields",
+          "long_text"
+        ],
+        "title": "GenericRecordView",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1261,6 +1357,28 @@
           "last_error"
         ],
         "title": "JobView",
+        "type": "object"
+      },
+      "KindView": {
+        "description": "What a kind of record holds, for screens that show any record.",
+        "properties": {
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldView"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "fields"
+        ],
+        "title": "KindView",
         "type": "object"
       },
       "Link": {
@@ -1530,6 +1648,56 @@
           "name"
         ],
         "title": "Option",
+        "type": "object"
+      },
+      "OutsideEditView": {
+        "properties": {
+          "path": {
+            "description": "The file in the synced folder.",
+            "title": "Path",
+            "type": "string"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it couldn't be read back.",
+            "title": "Problem"
+          },
+          "proposal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The changeset it became, to review.",
+            "title": "Proposal"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The text version it became, to review.",
+            "title": "Version"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "title": "OutsideEditView",
         "type": "object"
       },
       "PanelRow": {
@@ -3157,6 +3325,80 @@
         "title": "Status",
         "type": "object"
       },
+      "SyncView": {
+        "description": "The synced folder's state.",
+        "properties": {
+          "changed_outside": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changed Outside",
+            "type": "array"
+          },
+          "conflict_copies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Conflict Copies",
+            "type": "array"
+          },
+          "folder": {
+            "description": "The configured folder; empty when off.",
+            "title": "Folder",
+            "type": "string"
+          },
+          "outside_edits": {
+            "items": {
+              "$ref": "#/components/schemas/OutsideEditView"
+            },
+            "title": "Outside Edits",
+            "type": "array"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it can't be written now, if it can't.",
+            "title": "Problem"
+          },
+          "rebuilt": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Rebuilt",
+            "type": "array"
+          },
+          "removed_outside": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed Outside",
+            "type": "array"
+          },
+          "stopped": {
+            "description": "Another computer opened the workspace; this copy stopped writing.",
+            "title": "Stopped",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "folder",
+          "problem",
+          "stopped",
+          "changed_outside",
+          "removed_outside",
+          "rebuilt",
+          "outside_edits",
+          "conflict_copies"
+        ],
+        "title": "SyncView",
+        "type": "object"
+      },
       "TakenBack": {
         "properties": {
           "unchanged": {
@@ -4606,6 +4848,45 @@
         "summary": "Jobs"
       }
     },
+    "/api/kinds/{kind}": {
+      "get": {
+        "operationId": "kind_view_api_kinds__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KindView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kind View"
+      }
+    },
     "/api/notes": {
       "get": {
         "description": "Every filed note, newest first, with the project it was filed under (if any).",
@@ -5429,6 +5710,54 @@
         "summary": "Reply"
       }
     },
+    "/api/record": {
+      "get": {
+        "operationId": "generic_record_api_record_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenericRecordView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generic Record"
+      }
+    },
     "/api/records/{record_id}": {
       "get": {
         "operationId": "record_view_api_records__record_id__get",
@@ -5954,6 +6283,24 @@
           }
         },
         "summary": "Status"
+      }
+    },
+    "/api/sync": {
+      "get": {
+        "operationId": "sync_status_api_sync_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sync Status"
       }
     },
     "/api/task-kinds": {

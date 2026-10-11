@@ -165,6 +165,11 @@ class ChangesetView(BaseModel):
     reviewed: bool
     trust: Literal["trusted", "untrusted"]
     ops: list[OpView]
+    second_opinion: Literal["other_account", "same_account"] | None = Field(
+        None,
+        description="For an independent check: run on an account other than the one that wrote the work, or on the "
+        "same account as a fresh run the person accepted.",
+    )
 
 
 class ChangeItem(BaseModel):
@@ -577,6 +582,50 @@ class TakenBack(BaseModel):
     unchanged: bool = Field(description="The file came back untouched, so nothing was proposed.")
     version: str | None = Field(description="The text version it became, to review.")
     unmapped: list[str] = Field(description="What couldn't be read back into the text.")
+
+
+class FieldView(BaseModel):
+    name: str
+    description: str = ""
+    long_text: str | None = Field(None, description="The long text format, for a long text field.")
+    refers_to: str | None = Field(None, description="The kind of record the field holds an id of.")
+
+
+class KindView(BaseModel):
+    """What a kind of record holds, for screens that show any record."""
+
+    kind: str
+    fields: list[FieldView]
+
+
+class GenericRecordView(BaseModel):
+    """Any shown record: its ordinary fields and the names of its long text fields (read those from /texts)."""
+
+    kind: str
+    id: str
+    version: int
+    fields: dict[str, Any]
+    long_text: list[str]
+
+
+class OutsideEditView(BaseModel):
+    path: str = Field(description="The file in the synced folder.")
+    proposal: str | None = Field(None, description="The changeset it became, to review.")
+    version: str | None = Field(None, description="The text version it became, to review.")
+    problem: str | None = Field(None, description="Why it couldn't be read back.")
+
+
+class SyncView(BaseModel):
+    """The synced folder's state."""
+
+    folder: str = Field(description="The configured folder; empty when off.")
+    problem: str | None = Field(description="Why it can't be written now, if it can't.")
+    stopped: bool = Field(description="Another computer opened the workspace; this copy stopped writing.")
+    changed_outside: list[str]
+    removed_outside: list[str]
+    rebuilt: list[str]
+    outside_edits: list[OutsideEditView]
+    conflict_copies: list[str]
 
 
 class TodayLineView(BaseModel):

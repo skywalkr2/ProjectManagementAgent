@@ -34,18 +34,22 @@ from api.schemas import (
     ChangesetView,
     ChoiceOption,
     Created,
+    FieldView,
     FileKindView,
     FileView,
     FollowupAction,
     FollowupQuestion,
     FollowupSection,
+    GenericRecordView,
     Handed,
     HandIn,
     JobView,
+    KindView,
     NoteView,
     Ok,
     Option,
     OpView,
+    OutsideEditView,
     PanelRow,
     PanelView,
     PersonActionView,
@@ -78,6 +82,7 @@ from api.schemas import (
     StageRequestView,
     StageView,
     Status,
+    SyncView,
     TakenBack,
     TaskKindView,
     TaskStart,
@@ -167,6 +172,90 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     "added_at",
                 )
             },
+        )
+
+    def _independence(cs: Any) -> str | None:
+        run = store.read().get("run", cs.data["run"]) if cs.data.get("run") else None
+        return run.data.get("independence") if run is not None else None
+
+    def shown_kinds() -> set[str]:
+        """Kinds a screen may show any record of: those written to the synced folder, running plugins' own, and
+        the kinds of their panels."""
+        kinds = {k for k, m in store.plugins.records.items() if getattr(m, "layout", None) or k == "project"}
+        for plugin, registrar in store.plugins.registrars.items():
+            if store.plugins.active(plugin):
+                kinds |= set(registrar.records) | {p.kind for p in registrar.panels.values()}
+        return kinds
+
+    @r.get("/kinds/{kind:path}")
+    def kind_view(kind: str) -> KindView:
+        from engine.records import ref_fields
+        from engine.texts import long_text_fields
+
+        if kind not in shown_kinds():
+            raise HTTPException(status_code=404, detail="not found")
+        model = store.plugins.records[kind]
+        texts, refs = long_text_fields(model), dict(ref_fields(model))
+        return KindView(
+            kind=kind,
+            fields=[
+                FieldView(
+                    name=name,
+                    description=info.description or "",
+                    long_text=texts.get(name),
+                    refers_to=refs.get(name),
+                )
+                for name, info in model.model_fields.items()
+                if name not in ("ext",)
+            ],
+        )
+
+    @r.get("/record")
+    def generic_record(kind: str, id: str) -> GenericRecordView:
+        from engine.texts import long_text_fields
+
+        if kind not in shown_kinds():
+            raise HTTPException(status_code=404, detail="not found")
+        need(kind, id)
+        record = store.read().get(kind, id)
+        texts = long_text_fields(store.plugins.records[kind])
+        return GenericRecordView(
+            kind=kind,
+            id=record.id,
+            version=record.version,
+            fields={k: v for k, v in record.data.items() if k not in texts and k != "ext"},
+            long_text=list(texts),
+        )
+
+    @r.get("/sync")
+    def sync_status() -> SyncView:
+        from engine import outside
+        from engine.handover import conflict_copies
+        from engine.sync import folder_problem
+
+        folder = cfg.storage.sync.folder.strip()
+        result = worker.sync_result
+        problem = worker.sync_problem or (folder_problem(ws, cfg) if folder else None)
+        edits, copies = [], []
+        if folder and problem is None:
+            from pathlib import Path
+
+            edits = [
+                OutsideEditView(
+                    path=path, proposal=note.get("changeset"), version=note.get("version"), problem=note.get("problem")
+                )
+                for path, note in sorted(outside.pending(cfg).items())
+            ]
+            copies = conflict_copies(Path(folder).expanduser().resolve())
+        return SyncView(
+            folder=folder,
+            problem=problem,
+            stopped=worker.sync_lost,
+            changed_outside=list(result.changed_outside) if result else [],
+            removed_outside=list(result.removed_outside) if result else [],
+            rebuilt=list(result.rebuilt) if result else [],
+            outside_edits=edits,
+            conflict_copies=copies,
         )
 
     @r.get("/plugin-today")
@@ -738,6 +827,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     reviewed=cs.data["reviewed"],
                     trust=cs.data["trust"],
                     ops=[_op_view(o, store, people, projects) for o in cs.data["ops"]],
+                    second_opinion=_independence(cs),
                 )
             out.append(
                 ChangeItem(
