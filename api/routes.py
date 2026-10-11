@@ -619,14 +619,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def request_accounts(request_id: str) -> list[AccountChoice]:
         """The accounts that may take this request's material, for sending it somewhere else after a refusal."""
         from engine.ai.router import accounts
-        from engine.dispatcher import _data_level
+        from engine.dispatcher import _data_level, content_levels
 
         need("request", request_id)
         req = store.read().get("request", request_id)
         tiers = {ref: name for name, t in cfg.ai.tiers.items() for ref in [t.use, *t.fallback] if ref}
         return [
             AccountChoice(use=ref, label=f"{ref.partition('/')[0]} ({tiers.get(ref, '')})".replace(" ()", ""))
-            for ref in accounts(cfg, _data_level(store, req.data))
+            for ref in accounts(cfg, _data_level(store, req.data), content_levels(store, req.data))
         ]
 
     @r.post("/requests/{request_id}/retry")
@@ -785,6 +785,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             _same_name("project", "name", changes["name"], except_id=prj)
         if changes.get("owner"):
             need("person", changes["owner"])
+        unknown = sorted(set(changes.get("content_levels") or []) - set(cfg.ai.content_levels))
+        if unknown:
+            detail = f"{', '.join(unknown)} isn't a content level in the AI settings"
+            raise HTTPException(status_code=409, detail=detail)
         guard(lambda: _update(store, "project", prj, changes, _setup("project.edit")))
         changed()
         return Ok(ok=prj)

@@ -356,6 +356,11 @@ class PluginHost:
             fields = set(model.model_fields)
             if not set(model.person_only) <= fields or any(not set(group) <= fields for group in model.unique):
                 raise ValueError("person_only and unique may name only the record type's own fields")
+            levels = model.content_levels_field
+            if levels is not None and (
+                levels not in fields or "list[str]" not in str(model.model_fields[levels].annotation)
+            ):
+                raise ValueError(f"{model.record_kind}.content_levels_field must name one of its list[str] fields")
             if model.data_level not in ("open", "internal", "restricted"):
                 raise ValueError("data_level must be open, internal or restricted")
             if model.data_level not in manifest.requires.data_levels:

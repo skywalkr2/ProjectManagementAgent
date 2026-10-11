@@ -307,6 +307,9 @@ class ProjectIn(BaseModel):
 
 class ProjectPatch(BaseModel):
     name: str | None = Field(None, min_length=1)
+    content_levels: list[str] | None = Field(
+        None, description="Content levels its material carries, from the AI settings; the person's choice."
+    )
     group: str | None = None
     status: str | None = None
     phase: str | None = None

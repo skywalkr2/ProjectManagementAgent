@@ -30,6 +30,9 @@ class Record(BaseModel):
     unique: ClassVar[tuple[tuple[str, ...], ...]] = ()
     #: How sensitive these records are: packets that include them go only to accounts allowed this level.
     data_level: ClassVar[str] = "internal"
+    #: The field (a list of ids from ai.content_levels) holding the content levels the person set on a record; work on
+    #: the record goes only to accounts that take them. Only the person sets it.
+    content_levels_field: ClassVar[str | None] = None
 
     id: str = Field(description='The record\'s id: "<prefix>-<number>", never reused.')
     stage: str | None = Field(None, description="Current configured stage id; wording lives in stages.yaml.")
@@ -149,6 +152,7 @@ class Project(Record):
 
     record_kind: ClassVar[str] = "project"
     prefix: ClassVar[str] = "PRJ"
+    content_levels_field: ClassVar[str | None] = "content_levels"
 
     name: str = Field(min_length=1, description="The name shown wherever the project appears.")
     group: str | None = Field(None, description="The portfolio grouping the project is listed under.")
@@ -160,6 +164,11 @@ class Project(Record):
     owner: str | None = Field(None, description="The id of the person responsible for the project.")
     links: list[Link] = Field(default_factory=list, description="Pages that belong to the project.")
     tags: list[str] = Field(default_factory=list, description="Free labels for finding the project.")
+    content_levels: list[str] = Field(
+        default_factory=list,
+        description="Content levels (from ai.content_levels) its material carries, set by the person; AI work on it "
+        "goes only to accounts that take them all.",
+    )
     log: list[LogEntry] = Field(
         default_factory=list, description="The update log, oldest first; `record.log` adds a line dated that day."
     )

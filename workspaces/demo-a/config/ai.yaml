@@ -11,6 +11,7 @@ providers:
     auth: env:GATEWAY_AI_KEY
     models: {large: gateway-large-model}
     allowed_data: [open, internal, restricted]
+    content_levels: [health]
   local:
     adapter: openai-compatible
     base_url: http://localhost:11434/v1
@@ -34,6 +35,8 @@ prices:
 evaluation: {runs: 3, min_score: 0.9}
 rate_limits: {tries: 3, max_wait_seconds: 30}
 catalog_refresh_hours: 24
+content_levels:
+  health: Health or medical details about people in project material.
 routing:
   - when: {task: notes, quoted_messages_over: 3}
     tier: deep

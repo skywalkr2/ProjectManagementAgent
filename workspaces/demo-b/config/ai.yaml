@@ -11,6 +11,7 @@ providers:
     auth: env:LOWCOST_AI_KEY
     models: {small: deepseek-chat}
     allowed_data: [open, internal]
+    content_levels: []
   router:
     adapter: openai-compatible
     base_url: https://openrouter.ai/api/v1
@@ -35,6 +36,8 @@ prices:
 evaluation: {runs: 3, min_score: 0.9}
 rate_limits: {tries: 3, max_wait_seconds: 30}
 catalog_refresh_hours: 24
+content_levels:
+  mature: Sex or graphic violence in the story.
 routing:
   - when: {task: notes, quoted_messages_over: 3}
     tier: deep

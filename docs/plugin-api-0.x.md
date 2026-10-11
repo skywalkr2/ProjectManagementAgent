@@ -22,6 +22,11 @@ Manifests stay `'>=0.3,<0.4'`. Plugin task kinds can now do real work (see "Regi
 - A request carries the record it is about (`Request.about`). `context.queue_request(task, note, about=)` and the
   person (`POST /api/task-kinds/<name>/start`) start work on a record; `GET /api/task-kinds?kind=` lists what can be
   started on a kind.
+- A record type may set `content_levels_field` to one of its `list[str]` fields: the content levels (from the
+  workspace's `ai.content_levels`) the person set on a record. Only the person sets it; an op from anyone else that
+  sets it is held. Work on the record goes only to accounts that take every level on it and on its project.
+- A refused run (the provider's own refusal signal) is recorded as refused and waits for the person; it is never
+  retried, sent to another account or escalated.
 - A run with a packet sees only its instructions, the op reference, its guidance and its parts. Untrusted parts make
   the changeset untrusted; evidence may quote any part that isn't reference-only, cited as `<kind>:<id>`.
 

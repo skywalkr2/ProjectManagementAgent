@@ -1764,6 +1764,21 @@
       },
       "ProjectPatch": {
         "properties": {
+          "content_levels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Content levels its material carries, from the AI settings; the person's choice.",
+            "title": "Content Levels"
+          },
           "group": {
             "anyOf": [
               {

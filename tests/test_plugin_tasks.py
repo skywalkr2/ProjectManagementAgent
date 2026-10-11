@@ -390,3 +390,71 @@ def test_after_a_refusal_the_person_sends_it_to_another_account(env, monkeypatch
     assert run(env, request_id) is not None and asked
     runs = [r.data for r in store.read().list("run") if r.data["request"] == request_id]
     assert runs[-1]["provider"] == options[0].partition("/")[0]
+
+
+# ---- content levels -----------------------------------------------------------------------------------------------
+
+
+def test_routing_skips_accounts_that_dont_take_the_material(env):
+    from engine.ai.router import NoProvider, accounts, choices
+
+    ws, _, _ = env
+    flags = {
+        "ai.content_levels": {"mature": "Adult material."},
+        "ai.providers.stub.content_levels": [],
+    }
+    cfg = ws.config(env={}, flags=flags)
+    with pytest.raises(NoProvider, match="doesn't take mature material"):
+        choices(cfg, "notes", "internal", content=frozenset({"mature"}))
+    assert choices(cfg, "notes", "internal")  # material with no levels goes as before
+    assert accounts(cfg, "internal", frozenset({"mature"})) == []
+    takes_it = ws.config(env={}, flags={**flags, "ai.providers.stub.content_levels": ["mature"]})
+    assert choices(takes_it, "notes", "internal", content=frozenset({"mature"}))
+
+
+def test_a_runs_levels_come_from_its_record_and_project(env):
+    from engine.dispatcher import content_levels
+    from engine.storage import WriteContext
+
+    _, _, store = env
+    record = chapter(env)
+    project = store.read().list("project")[0]
+    with store.transaction() as tx:
+        tx.update(
+            "project",
+            project.id,
+            {"content_levels": ["mature"]},
+            WriteContext("pm", "trusted", "x"),
+            read_version=project.version,
+        )
+    assert content_levels(store, {"about": {"kind": "project", "id": project.id}}) == frozenset({"mature"})
+    assert content_levels(store, {"about": {"kind": record.kind, "id": record.id}}) == frozenset()
+
+
+def test_unknown_levels_on_an_account_are_refused_in_the_settings(env):
+    from engine.config import ConfigError
+
+    ws, _, _ = env
+    with pytest.raises(ConfigError, match="not in content_levels"):
+        ws.config(env={}, flags={"ai.providers.stub.content_levels": ["nope"]})
+
+
+def test_only_the_person_sets_a_records_content_levels(env):
+    from engine.applier import Context, Inputs, apply_changeset
+    from engine.names import People
+    from engine.ops import CHANGESET
+
+    _, cfg, store = env
+    ops = [
+        {
+            "op": "record.set",
+            "kind": "project",
+            "id": store.read().list("project")[0].id,
+            "field": "content_levels",
+            "value": ["mature"],
+        }
+    ]
+    cs = CHANGESET.validate_python({"ops": ops}, context={"op_models": store.plugins.ops})
+    ctx = Context(store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs("REQ-0", None, "", "", "trusted"))
+    cs_id = apply_changeset(cs, [], ctx, run=None)
+    assert store.read().get("changeset", cs_id).data["ops"][0]["status"] == "refused"

@@ -132,7 +132,8 @@ def process(
         default=task_settings(cfg, store.plugins.task_kind(req.data["task"])).tier,
     )
     use = req.data.get("use")
-    estimate = router.estimate(packet.task, tier=tier, data_level=level, use=use)
+    content = content_levels(store, req.data)
+    estimate = router.estimate(packet.task, tier=tier, data_level=level, use=use, content=content)
     budgets = cfg.ai.budgets
     if estimate is not None and estimate > budgets.per_run_usd:
         return needs_you(
@@ -152,17 +153,19 @@ def process(
             waiting=f"About ${estimate:.2f}. Waiting for your go.",
         )
         return None
-    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use)
+    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use, content)
     outcome = first
     # The person's pick of account is theirs: no escalation away from it.
     stronger = escalation_tier(cfg, tier) if use is None else None
     second_estimate = (
-        router.estimate(packet.task, tier=stronger, data_level=level) if first.escalate and stronger else None
+        router.estimate(packet.task, tier=stronger, data_level=level, content=content)
+        if first.escalate and stronger
+        else None
     )
     within = second_estimate is None or second_estimate <= min(budgets.per_run_usd, budgets.confirm_above_usd)
     if first.escalate and stronger and stronger != tier and within:
         # One re-run on the stronger tier when checks still fail; it counts toward budgets like any run.
-        second = _rounds(store, cfg, router, packet.task, stronger, request_id, ctx, previous_ops, level)
+        second = _rounds(store, cfg, router, packet.task, stronger, request_id, ctx, previous_ops, level, None, content)
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
     if outcome.changeset is None:
@@ -182,6 +185,24 @@ def _data_level(store: Store, request: dict) -> str:
     about = target_of(store, request)
     model = store.plugins.records.get(about[0]) if about else None
     return model.data_level if model is not None else "internal"
+
+
+def content_levels(store: Store, request: dict) -> frozenset[str]:
+    """The content levels a request's material carries: those the person set on the record it is about, and on that
+    record's project (or the record itself when it is a project)."""
+    about = target_of(store, request)
+    record = store.read().get(*about) if about else None
+    if record is None:
+        return frozenset()
+    found: set[str] = set()
+    model = store.plugins.records.get(record.kind)
+    if model is not None and model.content_levels_field:
+        found |= set(record.data.get(model.content_levels_field) or [])
+    project_id = record.data.get("project") if record.kind != "project" else None
+    project = store.read().get("project", project_id) if isinstance(project_id, str) else None
+    if project is not None:
+        found |= set(project.data.get("content_levels") or [])
+    return frozenset(found)
 
 
 @dataclass
@@ -204,6 +225,7 @@ def _rounds(
     previous_ops: list | None,
     data_level: str = "internal",
     use: str | None = None,
+    content: frozenset[str] = frozenset(),
 ) -> _Outcome:
     """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong. A refusal
     stops at once: no fix round, no other account, no escalation."""
@@ -213,7 +235,7 @@ def _rounds(
         last = attempt == cfg.dispatch.fix_rounds
         try:
             result, _choice, out.run_id = router.call(
-                task, request_id=request_id, tier=tier, data_level=data_level, use=use
+                task, request_id=request_id, tier=tier, data_level=data_level, use=use, content=content
             )
         except (BudgetReached, NoProvider) as err:
             return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=str(err))
@@ -324,7 +346,7 @@ def retry(store: Store, request_id: str, use: str | None = None) -> None:
 
         cfg = store.plugins.cfg
         req = store.read().get("request", request_id)
-        if req is None or use not in accounts(cfg, _data_level(store, req.data)):
+        if req is None or use not in accounts(cfg, _data_level(store, req.data), content_levels(store, req.data)):
             raise ValueError(f"{use} isn't an account set up for this kind of material")
     with store.transaction() as tx:
         cur = tx.get("request", request_id)

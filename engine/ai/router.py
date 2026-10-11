@@ -37,7 +37,13 @@ class BudgetReached(Exception):
 
 
 def choices(
-    cfg: Config, task_kind: str, data_level: str, *, tier: str | None = None, use: str | None = None
+    cfg: Config,
+    task_kind: str,
+    data_level: str,
+    *,
+    tier: str | None = None,
+    use: str | None = None,
+    content: frozenset[str] = frozenset(),
 ) -> list[Choice]:
     """The main choice for the task's tier, then its fallbacks, keeping only accounts allowed to see this data. `use`
     (a "provider/model" the person picked for this request) replaces the tier's list."""
@@ -60,6 +66,9 @@ def choices(
             continue
         if LEVELS.index(data_level) > max(LEVELS.index(lvl) for lvl in provider.allowed_data):
             refused.append(f"{provider_name} isn't allowed to see {data_level} material")
+            continue
+        if not takes(provider, content):
+            refused.append(f"{provider_name} doesn't take {', '.join(sorted(content))} material")
             continue
         model_id = provider.models.get(model_key, model_key) if provider.adapter != "stub" else "stub"
         picked.append(Choice(tier_name, provider_name, model_key, model_id))
@@ -95,13 +104,19 @@ def route(
     return task.tier if task else "routine"
 
 
-def accounts(cfg: Config, data_level: str) -> list[str]:
-    """Every "provider/model" set up for any tier that may see material at this level, in tier order, once each."""
+def takes(provider: Any, content: frozenset[str]) -> bool:
+    """Whether an account takes material with these content levels: an account with no list takes every level."""
+    return provider.content_levels is None or content <= set(provider.content_levels)
+
+
+def accounts(cfg: Config, data_level: str, content: frozenset[str] = frozenset()) -> list[str]:
+    """Every "provider/model" set up for any tier that may see material at this level and takes these content levels,
+    in tier order, once each."""
     found: list[str] = []
     for tier in cfg.ai.tiers.values():
         for ref in [tier.use, *tier.fallback]:
             provider = cfg.ai.providers.get(ref.partition("/")[0]) if ref else None
-            if provider is None or ref in found:
+            if provider is None or ref in found or not takes(provider, content):
                 continue
             if LEVELS.index(data_level) <= max(LEVELS.index(lvl) for lvl in provider.allowed_data):
                 found.append(ref)
@@ -151,12 +166,15 @@ class Router:
         data_level: str = "internal",
         tier: str | None = None,
         use: str | None = None,
+        content: frozenset[str] = frozenset(),
     ) -> tuple[AiResult, Choice, str]:
         """Run the task on the first account that can serve it. Returns the result, the choice and the Run id. A
         refusal is returned like an answer (marked refused), never handed to the next account."""
         self._check_budget(task.kind)
         last: AiError | None = None
-        options = self._that_fit(task, list(choices(self.cfg, task.kind, data_level, tier=tier, use=use)))
+        options = self._that_fit(
+            task, list(choices(self.cfg, task.kind, data_level, tier=tier, use=use, content=content))
+        )
         for position, choice in enumerate(options):
             settings = self.cfg.ai.providers[choice.provider]
             started = self.now()
@@ -220,12 +238,19 @@ class Router:
         return day, month
 
     def estimate(
-        self, task: AiTask, *, tier: str | None = None, data_level: str = "internal", use: str | None = None
+        self,
+        task: AiTask,
+        *,
+        tier: str | None = None,
+        data_level: str = "internal",
+        use: str | None = None,
+        content: frozenset[str] = frozenset(),
     ) -> float | None:
         """What a run would cost in USD on the account it would use, or None when the price isn't known.
         Input from the packet's size; output from past runs of this kind, or its configured typical size."""
         try:
-            choice = self._that_fit(task, list(choices(self.cfg, task.kind, data_level, tier=tier, use=use)))[0]
+            options = choices(self.cfg, task.kind, data_level, tier=tier, use=use, content=content)
+            choice = self._that_fit(task, list(options))[0]
         except NoProvider:
             return None
         info = self.model_info(choice)

@@ -141,6 +141,7 @@ Base for every stored record. A plugin's record type subclasses it and sets `rec
 | `person_only` | ClassVar[dict[str, tuple[Any, ...]]] | Field values only the person may set; an op from anyone else that sets one is held for the person. |
 | `unique` | ClassVar[tuple[tuple[str, ...], ...]] | Field groups whose values must be unique among live records of this kind. |
 | `data_level` | ClassVar[str] | How sensitive these records are: packets that include them go only to accounts allowed this level. |
+| `content_levels_field` | ClassVar[str \| None] | The field (a list of ids from ai.content_levels) holding the content levels the person set on a record; work on the record goes only to accounts that take them. Only the person sets it. |
 
 ### References
 
@@ -532,6 +533,7 @@ A piece of work being run. `record.set` changes status, phase, target, priority 
 | `links[].label` | str | required | What the link is, in words for the reader. |
 | `links[].url` | str | required | The address to open. |
 | `tags` | list[str] | `[]` | Free labels for finding the project. |
+| `content_levels` | list[str] | `[]` | Content levels (from ai.content_levels) its material carries, set by the person; AI work on it goes only to accounts that take them all. |
 | `log` | list[LogEntry] | `[]` | The update log, oldest first; `record.log` adds a line dated that day. |
 | `log[].on` | date | required | The day the line was added. |
 | `log[].text` | str | required | What the line says. |

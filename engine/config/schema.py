@@ -182,6 +182,10 @@ class ProviderSettings(ConfigModel):
     allowed_data: list[DataLevel] = Field(
         default_factory=lambda: ["open"], description="The most sensitive material this account may see."
     )
+    content_levels: list[str] | None = Field(
+        None,
+        description="The content levels this account takes (from ai.content_levels); unset means it takes every level.",
+    )
     timeout_seconds: int = Field(90, ge=5, description="How long to wait for an answer.")
     json_mode: bool = Field(True, description="Ask the provider for JSON output when it supports that.")
 
@@ -296,11 +300,21 @@ class AiFile(FileModel):
         default_factory=list,
         description="Rules checked in order before a call that send some requests to another tier; first match wins.",
     )
+    content_levels: dict[str, str] = Field(
+        default_factory=dict,
+        description="Kinds of material some accounts won't take, by id, each with what it covers. A project (or a "
+        "plugin's record) is marked with the levels its material carries, and routing skips accounts that don't "
+        "take them all.",
+    )
 
     @model_validator(mode="after")
     def _tiers_name_real_accounts(self) -> AiFile:
         """A tier may be empty (no account yet), but never name an account or tier that doesn't exist."""
         problems = []
+        for name, provider in self.providers.items():
+            unknown = sorted(set(provider.content_levels or []) - set(self.content_levels))
+            if unknown:
+                problems.append(f"providers.{name}.content_levels names {', '.join(unknown)}, not in content_levels")
         for name, tier in self.tiers.items():
             for ref in ([tier.use] if tier.use else []) + tier.fallback:
                 provider = ref.partition("/")[0]

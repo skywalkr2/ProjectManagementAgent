@@ -131,6 +131,9 @@ class OpWriter(ReadView):
             for field, values in model.person_only.items():
                 if field in data and data[field] in values:
                     raise NeedsPerson(f"only you can set {field} to {data[field]}")
+            levels = model.content_levels_field
+            if levels and data.get(levels):
+                raise NeedsPerson(f"only you can set {levels}")
         current = self.__tx.get(kind, record_id).data if record_id else {}
         merged = {**current, **data}
         for group in model.unique:

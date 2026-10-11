@@ -81,6 +81,22 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-12: Content levels route work away from accounts that would refuse it
+
+**Decided by:** Claude (design), from a plugin question; the owner can override.
+
+**What:** The workspace defines its content levels in `ai.content_levels` (ids and what each covers; the core names
+none). Each account may list the levels it takes (`providers.<name>.content_levels`); an account without a list takes
+every level, so nothing changes for people who never use them. A project carries `content_levels`, and a plugin record
+type may name a field holding them; only the person sets either. A run carries the levels of its record and that
+record's project, and routing skips accounts that don't take them all; if none does, the request waits with that reason.
+
+**Why:** Refusals cost time and money and are predictable from the material; routing around them is cheaper than
+handling them after the fact.
+
+**Impact:** New settings `ai.content_levels` and `providers.<name>.content_levels`; `Project.content_levels`;
+`Record.content_levels_field`. Marking an account after a refusal from the review comes with the review screens.
+
 ## 2026-10-12: A refusal is its own outcome, and the person decides what happens next
 
 **Decided by:** Claude (design), from a plugin question; the owner can override.
