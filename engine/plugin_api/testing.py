@@ -46,6 +46,9 @@ __all__ = [
     "Outcome",
     "AskResult",
     "ActionResult",
+    "PluginDidNotStart",
+    "PluginState",
+    "SavedWorkspace",
 ]
 
 
@@ -194,20 +197,70 @@ class ActionResult:
         return self._apply(kept)
 
 
+class PluginDidNotStart(RuntimeError):
+    """A plugin given to `plugin_workspace` didn't start: `plugin` names it and `reason` says why, as its status on
+    the Add-ons screen would."""
+
+    def __init__(self, plugin: str, reason: str):
+        super().__init__(f"the plugin {plugin} didn't start: {reason}")
+        self.plugin, self.reason = plugin, reason
+
+
+@dataclass(frozen=True)
+class PluginState:
+    """A plugin's status as the host keeps it: `state` (enabled, disabled, off), the `reason` it is off, `notes`
+    (problems it was told about) and its declared programs' `tools` status."""
+
+    state: str
+    reason: str | None
+    notes: list[str]
+    tools: dict[str, str]
+
+
+@dataclass(frozen=True)
+class SavedWorkspace:
+    """A workspace saved with `ws.save()`, to start tests from fresh copies of: `plugin_workspace(...,
+    from_saved=saved)`."""
+
+    path: Path
+
+
 class PluginWorkspace:
     """A throwaway workspace (the fictional demo's data) with the plugins loaded, for a plugin's own tests. Use it
     through `plugin_workspace(...)`. Everything here goes through the same paths as the app: the applier, the
-    dispatcher with a scripted answer, person actions, events, stage moves and the synced folder's layout."""
+    dispatcher with a scripted answer, person actions, events, stage moves and the synced folder's layout.
 
-    def __init__(self, root: Path, folders: tuple[str | Path, ...], settings: dict[str, dict[str, Any]] | None):
+    Its attributes: `root` (the workspace folder), `plugins` (the names of the plugins given, in order) and `cfg`
+    (the workspace's settings as loaded). `store` and `ws` are the host's own objects: reach them only where no
+    method here covers a test, since they change with the host."""
+
+    def __init__(
+        self,
+        root: Path,
+        folders: tuple[str | Path, ...],
+        settings: dict[str, dict[str, Any]] | None,
+        *,
+        from_saved: SavedWorkspace | None = None,
+        require_started: bool = True,
+    ):
+        import shutil
+
         import yaml
 
         from engine.cli import add_plugin
         from engine.config import load_config
         from engine.shipped import demo
         from engine.storage import Store
-        from engine.workspace import init_workspace
+        from engine.workspace import Workspace, init_workspace
 
+        if from_saved is not None:
+            shutil.copytree(from_saved.path, root, symlinks=True)
+            self.ws = Workspace(root)
+            self.plugins = list(yaml.safe_load((root / ".plugin-workspace.yaml").read_text(encoding="utf-8")))
+            self.cfg = load_config(self.ws.config_dir, env={})
+            self.store = Store(self.ws.db_path, cfg=self.cfg)
+            self._check_started(require_started)
+            return
         self.ws = init_workspace(root, template=demo("demo-b"), git=False)
         storage_path = self.ws.config_dir / "storage.yaml"
         storage = yaml.safe_load(storage_path.read_text(encoding="utf-8")) or {}
@@ -217,13 +270,74 @@ class PluginWorkspace:
         for name, values in (settings or {}).items():
             (self.ws.config_dir / "plugins").mkdir(exist_ok=True)
             (self.ws.config_dir / "plugins" / f"{name}.yaml").write_text(yaml.safe_dump(values), encoding="utf-8")
+        (self.ws.root / ".plugin-workspace.yaml").write_text(yaml.safe_dump(self.plugins), encoding="utf-8")
         self.cfg = load_config(self.ws.config_dir, env={})
         self.store = Store(self.ws.db_path, cfg=self.cfg)
+        self._check_started(require_started)
+
+    def _check_started(self, required: bool) -> None:
+        if not required:
+            return
         for name in self.plugins:
             if not self.store.plugins.active(name):
-                reason = self.store.plugins.status[name].reason
+                status = self.store.plugins.status.get(name)
+                reason = (status.reason if status is not None else None) or "it isn't installed"
                 self.store.close()
-                raise RuntimeError(f"the plugin {name} didn't start: {reason}")
+                raise PluginDidNotStart(name, reason)
+
+    def status(self, plugin: str | None = None) -> PluginState:
+        """A plugin's status (the first plugin given, unless named), whether it started or not."""
+        found = self.store.plugins.status.get(plugin or self.plugins[0])
+        if found is None:
+            return PluginState("off", "it isn't installed or turned on", [], {})
+        return PluginState(found.state, found.reason, list(found.notes), dict(found.tools))
+
+    def registered(self, plugin: str | None = None) -> dict[str, dict[str, Any]]:
+        """What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ...,
+        "triage_matchers", "setup_steps", "actions", "tasks", "ops", "records", "panels", "today", "jobs",
+        "stage_checks", "file_kinds", "lints"}. Empty kinds are left out. A started plugin only."""
+        from types import MappingProxyType
+
+        registrar = self.store.plugins.registrars.get(plugin or self.plugins[0])
+        if registrar is None:
+            return {}
+        kinds = (
+            ("sign_ins", "sign_ins"),
+            ("connectors", "connectors"),
+            ("triage_matchers", "triage_matchers"),
+            ("setup_steps", "setup_steps"),
+            ("actions", "actions"),
+            ("tasks", "tasks"),
+            ("ops", "ops"),
+            ("records", "records"),
+            ("panels", "panels"),
+            ("today", "today_lines"),
+            ("jobs", "jobs"),
+            ("stage_checks", "stage_checks"),
+            ("file_kinds", "file_kinds"),
+            ("lints", "lints"),
+        )
+        found = {}
+        for label, attribute in kinds:
+            value = getattr(registrar, attribute, None)
+            if value:
+                found[label] = MappingProxyType(dict(value))
+        return found
+
+    def save(self, path: str | Path) -> SavedWorkspace:
+        """Save this workspace as it is now (records, settings, the plugins linked in), so other tests start from
+        fresh copies of it with `plugin_workspace(..., from_saved=saved)` instead of building it again."""
+        import shutil
+
+        target = Path(path)
+        self.store.close()
+        try:
+            shutil.copytree(self.ws.root, target, symlinks=True)
+        finally:
+            from engine.storage import Store
+
+            self.store = Store(self.ws.db_path, cfg=self.cfg)
+        return SavedWorkspace(target)
 
     @property
     def root(self) -> Path:
@@ -379,11 +493,20 @@ class PluginWorkspace:
 
 
 def plugin_workspace(
-    *folders: str | Path, settings: dict[str, dict[str, Any]] | None = None, root: str | Path | None = None
+    *folders: str | Path,
+    settings: dict[str, dict[str, Any]] | None = None,
+    root: str | Path | None = None,
+    from_saved: SavedWorkspace | None = None,
+    require_started: bool = True,
 ) -> Any:
     """A throwaway workspace with these plugins loaded (a plugin folder holding plugin.yaml, or an installed plugin's
     name), with `settings` per plugin as its settings file. A context manager: the workspace is made in `root` (a
-    pytest `tmp_path`, say) or a temporary folder, and closed after.
+    pytest `tmp_path`, say) or a temporary folder, and closed after. A plugin folder is linked into the workspace
+    (copied where links aren't allowed), so a temporary copy of a folder works as well as the real one.
+
+    `from_saved` starts from a fresh copy of a workspace saved with `ws.save(path)` (then `folders` and `settings`
+    are those it was saved with). A plugin that doesn't start raises `PluginDidNotStart` (with `plugin` and
+    `reason`); `require_started=False` opens the workspace anyway, to look at `ws.status()`.
 
         with plugin_workspace(PLUGIN_FOLDER, root=tmp_path) as ws:
             done = ws.apply([{"op": "myplugin/add", "title": "One"}])
@@ -396,7 +519,9 @@ def plugin_workspace(
     def opened() -> Any:
         with contextlib.ExitStack() as stack:
             base = Path(root) if root is not None else Path(stack.enter_context(tempfile.TemporaryDirectory()))
-            workspace = PluginWorkspace(base / "workspace", folders, settings)
+            workspace = PluginWorkspace(
+                base / "workspace", folders, settings, from_saved=from_saved, require_started=require_started
+            )
             try:
                 yield workspace
             finally:

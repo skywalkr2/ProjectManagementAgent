@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.49"
+PLUGIN_API_VERSION = "0.3.50"
 
 
 class Settings(BaseModel):
@@ -997,6 +997,8 @@ class StageStatus:
     next: str | None
     checks: dict[str, StageCheckResult]
     ready: bool
+    current_label: str | None = None  # the stages' names as the workspace calls them
+    next_label: str | None = None
 
 
 class Registrar:
@@ -1427,8 +1429,13 @@ class Registrar:
 
     def today(self, name: str, *, lines: Callable) -> None:
         """Lines for the Today list (listed in `provides.today`): `lines(view, settings) -> list[TodayLine]`, called
-        whenever Today is shown, so it must be quick and deterministic and never call AI. A line's `action` must be
-        one of this plugin's person actions or task kinds."""
+        whenever Today is shown, so it must be quick and deterministic and never call AI. A line's `action` is one
+        of this plugin's person actions or task kinds, or one of the core's own (`CORE_LINE_ACTIONS`), which need
+        `about`: "go" a `request` waiting for the go, "answer" a `question`, "move-stage" a record of a kind with
+        stages, and "open" or "review" any record. A line that counts several items ("three runs wait for your go")
+        names the one record its button acts on as `about`; when no single record fits, use "open" on the most
+        relevant one, or leave `action` unset and let the line inform. A line naming a core action with the wrong
+        `about` fails the contributor like any bad line."""
         self._name(name)
         if name in self.today_lines or not callable(lines):
             raise ValueError("duplicate Today contributor or invalid lines function")
@@ -1459,12 +1466,16 @@ class Registrar:
         as they always do.
 
         `computed` adds columns that aren't fields: {"words": fn} where `fn(record, view, settings)` returns a short
-        str, a number, a bool or None (a word count, a stage, "complete for its tier", the last build). It must be
-        quick and deterministic and never call AI; one that raises shows an empty cell and counts as the plugin
-        failing (failure containment). Filtered by project, a kind with no `project` field follows its
-        `layout_project` reference: a record is in the project its referenced record is in. `show_for(project,
-        view) -> bool` lists the panel only on the projects it returns True for (a panel of what a parent project's
-        children share, say); without it the panel is on every project."""
+        str, a number, a bool or None (a word count, a stage, "complete for its tier", the last build). A computed
+        column can't be named like a field of the kind (that is a load error). It must be quick and deterministic
+        and never call AI; one that raises shows an empty cell and counts as the plugin failing (failure
+        containment). A function taking a fourth argument gets a dict shared by every cell of one listing, to keep
+        work it would otherwise repeat per row (an index of builds by record); it is new for each listing.
+
+        Filtered by project, a kind with no `project` field follows its `layout_project` reference: a record is in the
+        project its referenced record is in. `show_for(project, view) -> bool` lists the panel only on the projects it
+        returns True for (a panel of what a parent project's children share, say); without it the panel is on every
+        project."""
         self._name(name)
         if name in self.panels or not title.strip() or not columns:
             raise ValueError("duplicate panel, missing title or no columns")
@@ -1696,15 +1707,15 @@ class Registrar:
         """A step of the first-run setup (listed in `provides.setup_steps`), shown after the core's steps: `label` says
         what to do in a few words, `explanation` why, and `done(view, settings) -> bool` whether it is done, called
         whenever setup is shown, so it must be quick and deterministic. A `done` taking a third argument gets a
-        `SetupState`: the names of its declared secrets that are set (a frozenset; never their values), the
-        effective values of the settings it suggests (`state.settings`), the AI accounts per role
-        (`state.accounts`) and `state.tool_available(name)` for its declared programs. `action` is one of this
-        plugin's person actions on the workspace, offered as the step's button; without one, the step points to the
-        plugin's settings. `settings` suggests core settings the plugin needs
-        ({"ai.budgets.confirm_unpriced": True}): the step shows them with an Apply button that saves them like any
-        settings change (checked, with Undo); the plugin never changes them itself. A suggested mapping is merged:
-        its keys are added and every key the person already has keeps its value. The person can skip it and come
-        back to it later."""
+        `SetupState`: the names of its declared secrets that are set (a frozenset; never their values), the effective
+        values of the settings it suggests (`state.settings`), the AI accounts per role (`state.accounts`) and
+        `state.tool_available(name)` for its declared programs. The host counts `done`'s positional parameters (through
+        `functools.wraps`), so a wrapper around it declares all three. `action` is one of this plugin's person actions
+        on the workspace, offered as the step's button; without one, the step points to the plugin's settings.
+        `settings` suggests core settings the plugin needs ({"ai.budgets.confirm_unpriced": True}): the step shows them
+        with an Apply button that saves them like any settings change (checked, with Undo); the plugin never changes
+        them itself. A suggested mapping is merged: its keys are added and every key the person already has keeps its
+        own value, nested keys included. The person can skip it and come back to it later."""
         self._name(name)
         label = " ".join(str(label).split())
         if name in self.setup_steps or not callable(done) or not label or len(label) > 80:

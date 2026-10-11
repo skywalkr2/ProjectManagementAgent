@@ -345,7 +345,14 @@ def build() -> str:
             _methods(testing.PluginWorkspace, "ws"),
             "\n\n".join(
                 _join(f"#### {cls.__name__}", _para(_doc(cls)))
-                for cls in (testing.Outcome, testing.AskResult, testing.ActionResult)
+                for cls in (
+                    testing.Outcome,
+                    testing.AskResult,
+                    testing.ActionResult,
+                    testing.PluginState,
+                    testing.SavedWorkspace,
+                    testing.PluginDidNotStart,
+                )
             ),
         ),
         _section(

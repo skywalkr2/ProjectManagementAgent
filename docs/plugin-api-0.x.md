@@ -10,6 +10,25 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.50 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A suggested mapping keeps the person's values:** applying a setup step's suggestion adds the keys the person
+  doesn't have; a key they have keeps its own value, nested keys included (0.3.48 replaced it; fixed).
+- **`StageStatus.current_label` and `next_label`:** the stages' names as the workspace calls them.
+- **Computed cells can share work:** a computed column's function taking a fourth argument gets a dict shared by every
+  cell of that column in one listing, new for each listing.
+- **The testing kit:** `ws.save(path)` saves a prepared workspace and `plugin_workspace(from_saved=saved)` starts a
+  test from a fresh copy; `ws.registered(plugin)` shows what a plugin registered, read-only; `ws.status(plugin)` its
+  state, reason and notes; a plugin that doesn't start raises `PluginDidNotStart` (`plugin`, `reason`), and
+  `require_started=False` opens the workspace anyway. The kit's attributes are listed in the guide; plugin folders
+  are linked in (copied where links aren't allowed).
+- **Said in the guide:** Today lines with the core's actions and the `about` each needs; `done`'s third argument
+  through wrappers; computed columns can't be named like fields.
+- **Add-ons are turned on and off from the Add-ons screen** (`POST /api/packs/{name}/on` and `/off`, with Undo and the
+  restart the person chooses).
+
 ## What 0.3.49 adds
 
 Manifests stay `'>=0.3,<0.4'`.

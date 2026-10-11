@@ -51,11 +51,15 @@ GUIDED = ("ai.providers.", "ai.tiers.", "storage.backups.targets")
 
 def _merged(current: Any, suggested: Any) -> Any:
     """A suggested value laid over the current one: a mapping adds the keys it suggests and keeps every key the
-    person already has, with their values; anything else is replaced."""
+    person already has, with their own values, nested mappings included; anything that isn't a mapping is
+    replaced."""
     if isinstance(current, dict) and isinstance(suggested, dict):
         out = dict(current)
         for key, value in suggested.items():
-            out[key] = _merged(current[key], value) if key in current else value
+            if key not in current:
+                out[key] = value
+            elif isinstance(current[key], dict) and isinstance(value, dict):
+                out[key] = _merged(current[key], value)
         return out
     return suggested
 
@@ -262,6 +266,32 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             installed = (shutil.which(e["program"]) is not None) if (e["program"] and local) else None
             found.append(EndpointView(**e, installed=installed))
         return found
+
+    # ---- turning add-ons on and off -------------------------------------------------------------------------------
+
+    @r.post("/packs/{name}/on")
+    def pack_on(name: str, body: FingerprintIn) -> SettingsSaved:
+        """Turn on an add-on installed on this computer: it is added to the add-ons that run, with Undo. Its code
+        runs after the restart the person chooses."""
+        from engine.plugin_manifest import declared_plugins
+
+        if name not in {m.name for m in declared_plugins(ws.config_dir, None)}:
+            raise HTTPException(status_code=404, detail=f"No add-on called {name} is installed on this computer.")
+        enabled = list(current().workspace.plugins.enabled)
+        if name in enabled:
+            raise HTTPException(status_code=409, detail=f"{name} is on already.")
+        changes = {"workspace.plugins.enabled": [*enabled, name]}
+        return saved(save(changes, [], body.fingerprint, allow=("workspace.plugins.enabled",)))
+
+    @r.post("/packs/{name}/off")
+    def pack_off(name: str, body: FingerprintIn) -> SettingsSaved:
+        """Turn an add-on off, with Undo: it stops after the restart the person chooses; its records and settings
+        stay."""
+        enabled = list(current().workspace.plugins.enabled)
+        if name not in enabled:
+            raise HTTPException(status_code=409, detail=f"{name} is off already.")
+        changes = {"workspace.plugins.enabled": [n for n in enabled if n != name]}
+        return saved(save(changes, [], body.fingerprint, allow=("workspace.plugins.enabled",)))
 
     @r.get("/ai/accounts")
     def ai_accounts() -> list[AiAccountView]:

@@ -717,3 +717,32 @@ def test_the_add_ons_step_is_done_until_an_installed_add_on_is_off(tmp_path):
         assert not {s.id: s for s in setup.steps(ws, cfg, store)}["addons"].done
     finally:
         store.close()
+
+
+def test_an_installed_add_on_is_turned_on_and_off_with_undo(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    folder = ws.root / "plugins" / "spare"
+    folder.mkdir(parents=True)
+    (folder / "plugin.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "spare",
+                "version": "0.1.0",
+                "plugin_api": ">=0.3,<0.4",
+                "description": "An add-on left off",
+                "entry": "spare:register",
+                "config_schema": "spare:Config",
+            }
+        )
+    )
+    c, api = client(ws, cfg, store)
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    assert c.post(f"{api}/packs/nothing-here/on", json={"fingerprint": fingerprint}).status_code == 404
+    turned = c.post(f"{api}/packs/spare/on", json={"fingerprint": fingerprint})
+    assert turned.status_code == 200, turned.text
+    assert turned.json()["needs_restart"] is True
+    assert "spare" in load_config(ws.config_dir, env={}).workspace.plugins.enabled
+    again = c.post(f"{api}/packs/spare/on", json={"fingerprint": turned.json()["fingerprint"]})
+    assert again.status_code == 409
+    off = c.post(f"{api}/packs/spare/off", json={"fingerprint": turned.json()["fingerprint"]})
+    assert off.status_code == 200 and "spare" not in load_config(ws.config_dir, env={}).workspace.plugins.enabled

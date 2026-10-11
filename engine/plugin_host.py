@@ -893,13 +893,16 @@ class PluginHost:
             records = [r for r in records if self._project_through(view, panel.kind, via, r) == project]
         reader = self._with_files(ReadView(view, plugin)) if panel.computed else None
         settings = self.registrars[plugin].config if panel.computed else None
+        shared: dict[str, dict] = {column: {} for column in panel.computed}
         rows = []
         for r in records:
             values = {}
             for column in panel.columns:
                 fn = panel.computed.get(column)
                 values[column] = (
-                    r.data.get(column) if fn is None else self._computed(plugin, panel, column, r, reader, settings)
+                    r.data.get(column)
+                    if fn is None
+                    else self._computed(plugin, panel, column, r, reader, settings, shared[column])
                 )
             rows.append({"id": r.id, "values": values})
         return rows
@@ -912,11 +915,18 @@ class PluginHost:
         referred = view.get(target, record.data.get(via) or "") if target else None
         return referred.data.get("project") if referred is not None else None
 
-    def _computed(self, plugin: str, panel: Any, column: str, record: Any, reader: Any, settings: Any) -> Any:
-        """One computed cell: a short value, or None when the function fails (contained, noted on the plugin)."""
+    def _computed(
+        self, plugin: str, panel: Any, column: str, record: Any, reader: Any, settings: Any, shared: dict
+    ) -> Any:
+        """One computed cell: a short value, or None when the function fails (contained, noted on the plugin). A
+        function taking a fourth argument gets `shared`, one dict for every cell of the column in this listing."""
         where = f"panel {panel.name} column {column}"
+        fn = panel.computed[column]
         try:
-            value = panel.computed[column](deepcopy(record), reader, settings.model_copy(deep=True))
+            args = [deepcopy(record), reader, settings.model_copy(deep=True)]
+            if _positional_count(fn) >= 4:
+                args.append(shared)
+            value = fn(*args)
             if value is not None and not isinstance(value, str | int | float | bool):
                 raise ValueError("a computed column returns a short str, a number, a bool or None")
             if isinstance(value, str) and (len(value) > 200 or "\n" in value):
@@ -1528,6 +1538,8 @@ class PluginHost:
             next=status["next"]["id"] if status["next"] else None,
             checks={c["id"]: StageCheckResult(c["passed"], c["reason"]) for c in status["checks"]},
             ready=status["ready"],
+            current_label=status["current_label"],
+            next_label=status["next"]["label"] if status["next"] else None,
         )
 
     def wording(self) -> dict[str, str]:
