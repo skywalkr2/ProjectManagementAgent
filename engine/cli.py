@@ -370,8 +370,28 @@ def cmd_serve(args: argparse.Namespace) -> int:
     finally:
         shut_down()
     if restart.is_set():
-        print("Restarting to use the new settings.", file=sys.stderr)
-        os.execv(sys.executable, [sys.executable, *sys.orig_argv[1:]])  # noqa: S606 - this same program again
+        return restart_self()
+    return 0
+
+
+def restart_self() -> int:
+    """Start this same command again to use new settings: the process replaces itself where the system allows it,
+    and elsewhere (Windows) starts a new one and ends. If neither works, it says how to start it again."""
+    command = [sys.executable, *sys.orig_argv[1:]]
+    print("Restarting to use the new settings.", file=sys.stderr)
+    sys.stderr.flush()
+    sys.stdout.flush()
+    try:
+        if os.name == "nt":
+            import subprocess
+
+            subprocess.Popen(command)  # noqa: S603 - this same program again
+            return 0
+        os.execv(sys.executable, command)  # noqa: S606 - this same program again
+    except OSError as err:
+        shown = " ".join(sys.orig_argv[1:]) or "cockpit serve"
+        print(f"cockpit: couldn't restart by itself ({err}). Start it again with: {shown}", file=sys.stderr)
+        return 1
     return 0
 
 

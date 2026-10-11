@@ -2134,6 +2134,48 @@
         "title": "Link",
         "type": "object"
       },
+      "MeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "full_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "full_name"
+        ],
+        "title": "MeIn",
+        "type": "object"
+      },
+      "MeView": {
+        "description": "The person the app is for: their own person record, the one place their name is kept.",
+        "properties": {
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          }
+        },
+        "required": [
+          "person",
+          "full_name"
+        ],
+        "title": "MeView",
+        "type": "object"
+      },
       "NoteView": {
         "properties": {
           "created_at": {
@@ -3996,6 +4038,18 @@
             ],
             "description": "Where the feedback button writes its email, if anywhere.",
             "title": "Feedback To"
+          },
+          "instance": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Changes every time the app starts, so a screen can tell it restarted.",
+            "title": "Instance"
           },
           "narrow_below_px": {
             "title": "Narrow Below Px",
@@ -6960,6 +7014,61 @@
           }
         },
         "summary": "Kind View"
+      }
+    },
+    "/api/me": {
+      "get": {
+        "operationId": "me_api_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Me"
+      },
+      "post": {
+        "description": "Name the person the app is for: renames their person record, or makes one and links it in the settings.",
+        "operationId": "me_save_api_me_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Me Save"
       }
     },
     "/api/notes": {

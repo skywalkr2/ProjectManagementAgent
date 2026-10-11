@@ -7,6 +7,7 @@ import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
+import { useStartSignIn } from "../lib/sign-in-start";
 import { formatValue, labelOf } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
@@ -55,11 +56,20 @@ export function Welcome(props: { focusStep: FocusStep | null; onOpenPeople: () =
       ) : (
         <ol className="guide">
           {setup.data.steps.map((step) => {
-            const label = step.label || (has(`setup_step.${step.id}`) ? t(`setup_step.${step.id}`) : step.id);
-            const why = step.explanation || (has(`setup_step.${step.id}.explanation`) ? t(`setup_step.${step.id}.explanation`) : "");
+            // A sign-in's step is worded by the guide from the service's label; its explanation lists what is asked.
+            const label = step.sign_in
+              ? t("welcome.sign_in.title", { label: step.label || step.sign_in })
+              : step.label || (has(`setup_step.${step.id}`) ? t(`setup_step.${step.id}`) : step.id);
+            const why = step.sign_in
+              ? step.explanation
+                ? t("welcome.sign_in.explanation", { allows: step.explanation })
+                : ""
+              : step.explanation || (has(`setup_step.${step.id}.explanation`) ? t(`setup_step.${step.id}.explanation`) : "");
             return (
               <StepSection key={step.id} step={step} label={label} explanation={why}>
-                {step.id === "workspace" ? (
+                {step.sign_in ? (
+                  <SignInStep name={step.sign_in} label={step.label || step.sign_in} done={step.done} />
+                ) : step.id === "workspace" ? (
                   <WorkspaceStep />
                 ) : step.id === "template" ? (
                   <TemplateStep />
@@ -102,6 +112,33 @@ export function Welcome(props: { focusStep: FocusStep | null; onOpenPeople: () =
       )}
       {review}
     </section>
+  );
+}
+
+/** A sign-in's step: one button that starts the sign-in, as the Sign-ins row does. Nothing to do once signed in. */
+function SignInStep(props: { name: string; label: string; done: boolean }) {
+  const { t } = useWords();
+  const { start, busy, problem } = useStartSignIn(props.name);
+  if (props.done) return null;
+  return (
+    <>
+      {problem && (
+        <p className="problem-note" role="alert">
+          {problem}
+        </p>
+      )}
+      <div className="row-end">
+        <button
+          type="button"
+          className="btn"
+          disabled={busy}
+          aria-label={t("sign_in.sign_in_named", { label: props.label })}
+          onClick={() => void start()}
+        >
+          {busy ? t("sign_in.working") : t("sign_in.sign_in")}
+        </button>
+      </div>
+    </>
   );
 }
 
@@ -209,7 +246,6 @@ function StepSection(props: { step: Step; label: string; explanation: string; ch
 // ---- workspace -----------------------------------------------------------------------------------------------------
 
 const NAME = "workspace.name";
-const FULL_NAME = "workspace.user.full_name";
 const TIMEZONE = "workspace.user.timezone";
 
 function browserZone(): string {
@@ -225,10 +261,17 @@ function WorkspaceStep() {
   const client = useQueryClient();
   const afterSave = useAfterSave();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  // The person's name lives on their person record only; the settings hold the workspace's own values.
+  const me = useQuery({ queryKey: ["me"], queryFn: api.me });
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const [nameEdit, setNameEdit] = useState<string | null>(null);
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
-  if (!settings.data) return <p className="empty">{t(settings.isError ? "welcome.failed" : "loading")}</p>;
+  if (!settings.data || !me.data) {
+    return <p className="empty">{t(settings.isError || me.isError ? "welcome.failed" : "loading")}</p>;
+  }
+  const fullName = nameEdit ?? me.data.full_name;
+  const nameChanged = fullName.trim() !== me.data.full_name;
 
   const item = (key: string) => settings.data.items.find((i) => i.key === key);
   const current = (key: string): string => {
@@ -241,19 +284,31 @@ function WorkspaceStep() {
   const shown = (key: string) => edits[key] ?? current(key);
   const stored = (key: string) => (item(key)?.value == null ? "" : String(item(key)?.value));
   const changes: Record<string, string> = {};
-  for (const key of [NAME, FULL_NAME, TIMEZONE]) {
+  for (const key of [NAME, TIMEZONE]) {
     const found = item(key);
     if (found && found.editable && !found.locked && shown(key).trim() !== stored(key)) changes[key] = shown(key).trim();
   }
-  const empty = Object.values(changes).some((v) => v === "");
+  const empty = Object.values(changes).some((v) => v === "") || (nameChanged && !fullName.trim());
+  const pending = Object.keys(changes).length > 0 || nameChanged;
 
   const save = async () => {
     setBusy(true);
     setProblem("");
     try {
-      const saved = await api.saveSettings({ changes, reset: [], fingerprint: settings.data!.fingerprint });
-      setEdits({});
-      await afterSave(saved);
+      if (nameChanged) {
+        await api.saveMe(fullName.trim());
+        setNameEdit(null);
+        await client.invalidateQueries({ queryKey: ["me"] });
+        await client.invalidateQueries({ queryKey: ["people"] });
+      }
+      if (Object.keys(changes).length) {
+        const fresh = nameChanged ? await api.settings() : settings.data!;
+        const saved = await api.saveSettings({ changes, reset: [], fingerprint: fresh.fingerprint });
+        setEdits({});
+        await afterSave(saved);
+      } else {
+        await client.invalidateQueries({ queryKey: ["setup"] });
+      }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
@@ -292,11 +347,24 @@ function WorkspaceStep() {
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (Object.keys(changes).length && !empty) void save();
+        if (pending && !empty) void save();
       }}
     >
       {field(NAME, "welcome.workspace.name", null)}
-      {field(FULL_NAME, "welcome.workspace.full_name", "welcome.workspace.full_name_hint")}
+      <div className="field">
+        <label htmlFor="workspace-full-name">{t("welcome.workspace.full_name")}</label>
+        <input
+          id="workspace-full-name"
+          type="text"
+          value={fullName}
+          autoComplete="name"
+          aria-describedby="workspace-full-name-hint"
+          onChange={(e) => setNameEdit(e.target.value)}
+        />
+        <p className="hint" id="workspace-full-name-hint">
+          {t("welcome.workspace.full_name_hint")}
+        </p>
+      </div>
       {field(TIMEZONE, "welcome.workspace.timezone", "welcome.workspace.timezone_hint")}
       {problem && (
         <p className="problem-note" role="alert">
@@ -304,7 +372,7 @@ function WorkspaceStep() {
         </p>
       )}
       <div className="row-end">
-        <button type="submit" className="btn primary" disabled={busy || empty || Object.keys(changes).length === 0}>
+        <button type="submit" className="btn primary" disabled={busy || empty || !pending}>
           {t("welcome.workspace.save")}
         </button>
       </div>

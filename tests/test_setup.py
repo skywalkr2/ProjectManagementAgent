@@ -264,3 +264,55 @@ def test_a_hosted_app_never_takes_a_pasted_key_or_lists_folders(tmp_path, mode):
         "fingerprint": fingerprint,
     }
     assert c.post(f"{api}/ai/accounts", json=account).status_code == 400
+
+
+def test_restarting_is_promised_only_when_something_on_disk_changed(tmp_path):
+    from engine.worker import Events, Worker
+
+    ws, cfg, store = make(tmp_path)
+    worker = Worker(ws, store, cfg, Events(), on_restart=lambda: None)
+    try:
+        assert worker.needs_restart() is False  # nothing changed: the screen must not say it is restarting
+        text = (ws.config_dir / "workspace.yaml").read_text()
+        (ws.config_dir / "workspace.yaml").write_text(set_key(text, ["name"], "Changed"))
+        assert worker.needs_restart() is True
+        assert Worker(ws, store, cfg, Events()).needs_restart() is False  # can't restart itself: never promised
+    finally:
+        store.close()
+
+
+def test_a_restart_that_fails_says_how_to_start_again(monkeypatch, capsys):
+    import engine.cli
+
+    def refused(*args):
+        raise OSError("not allowed here")
+
+    monkeypatch.setattr(engine.cli.os, "execv", refused)
+    monkeypatch.setattr(engine.cli.os, "name", "posix")
+    monkeypatch.setattr(engine.cli.sys, "orig_argv", ["python", "cockpit", "serve", "-w", "ws"])
+    assert engine.cli.restart_self() == 1
+    err = capsys.readouterr().err
+    assert "couldn't restart by itself" in err and "cockpit serve -w ws" in err
+
+
+def test_the_person_the_app_is_for_is_named_on_their_record(tmp_path):
+    from engine.storage import Store, WriteContext
+    from engine.workspace import init_workspace
+
+    ws = init_workspace(tmp_path / "fresh", git=False)
+    cfg = ws.config(env={})
+    c, api = client(ws, cfg, Store(ws.db_path, cfg=cfg))
+    assert c.get(f"{api}/me").json() == {"person": None, "full_name": ""}
+    made = c.post(f"{api}/me", json={"full_name": "  Sam   Tester "}).json()
+    assert made["full_name"] == "Sam Tester" and made["person"]
+    assert ws.config(env={}).workspace.user.person == made["person"]  # linked in the settings by id only
+    renamed = c.post(f"{api}/me", json={"full_name": "Sam T. Tester"}).json()
+    assert renamed["person"] == made["person"]
+    store = Store(ws.db_path)
+    try:
+        assert store.read().get("person", made["person"]).data["full_name"] == "Sam T. Tester"
+        with store.transaction() as tx:
+            tx.create("person", {"full_name": "Robin Other"}, WriteContext(actor="pm", trust="trusted", op="t"))
+    finally:
+        store.close()
+    assert c.post(f"{api}/me", json={"full_name": "robin other"}).status_code == 409

@@ -35,7 +35,6 @@ const setting = (key: string, value: unknown, extra: Partial<S["SettingItem"]> =
 
 const ITEMS = [
   setting("workspace.name", "Workspace"),
-  setting("workspace.user.full_name", ""),
   setting("workspace.user.timezone", "UTC"),
 ];
 
@@ -45,6 +44,7 @@ function api(steps: S["SetupStepView"][], extra: Record<string, (body: unknown) 
   return fakeApi({
     "GET setup": () => ({ steps, finished: false, local: true }),
     "GET settings": () => ({ fingerprint: "fp-1", items: ITEMS }),
+    "GET me": () => ({ person: null, full_name: "" }),
     "GET templates": () => [
       { id: "tpl-a", name: "Book project", description: "Chapters and drafts." },
       { id: "tpl-b", name: "Event", description: "Dates and tasks." },
@@ -136,18 +136,17 @@ test("the workspace step starts the time zone from this browser while it is stil
   vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({ timeZone: "Europe/Paris" } as Intl.ResolvedDateTimeFormatOptions);
   const calls = api([step("workspace")], {
     "POST settings": () => ({ changes: [], fingerprint: "fp-2", restarts: false }),
+    "POST me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
   });
   open();
   expect(await screen.findByLabelText("Your time zone")).toHaveValue("Europe/Paris");
   await user.type(screen.getByLabelText("Your full name"), "Sam Tester");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
-  const body = calls.find((c) => c.route === "POST settings")!.body;
-  expect(body).toEqual({
-    changes: { "workspace.user.full_name": "Sam Tester", "workspace.user.timezone": "Europe/Paris" },
-    reset: [],
-    fingerprint: "fp-1",
-  });
+  // The name goes to the person record (the one place it is kept); the time zone is a setting.
+  expect(calls.find((c) => c.route === "POST me")!.body).toEqual({ full_name: "Sam Tester" });
+  const body = calls.find((c) => c.route === "POST settings")!.body as { changes: Record<string, string> };
+  expect(body.changes).toEqual({ "workspace.user.timezone": "Europe/Paris" });
   vi.restoreAllMocks();
 });
 
@@ -263,4 +262,68 @@ test("a step that suggests nothing shows no settings", async () => {
   open();
   await screen.findByRole("heading", { name: "Connect the tidy-up tool" });
   expect(screen.queryByRole("button", { name: "Apply these settings" })).toBeNull();
+});
+
+describe("a sign-in's step", () => {
+  const signInStep = (extra: Partial<S["SetupStepView"]> = {}) =>
+    step("demo/mail", {
+      sign_in: "demo/mail",
+      label: "Demo Mail",
+      explanation: "Read your mail; Read your calendar",
+      plugin: "demo",
+      ...extra,
+    });
+  let assign: ReturnType<typeof vi.fn>;
+  beforeEach(() => {
+    assign = vi.fn();
+    vi.stubGlobal("location", { ...window.location, assign });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("reads 'Sign in to {label}', says what will be asked, and Sign in starts the sign-in", async () => {
+    const user = userEvent.setup();
+    const calls = api([signInStep()], {
+      "POST sign-ins/demo/mail/start": () => ({ url: "http://localhost:9090/login?x=1" }),
+    });
+    open();
+    const heading = await screen.findByRole("heading", { name: "Sign in to Demo Mail" });
+    expect(heading).toBeInTheDocument();
+    const mine = section("demo/mail");
+    expect(within(mine).getByText("You'll be asked to allow: Read your mail; Read your calendar")).toBeInTheDocument();
+    expect(mine).toHaveTextContent("Not done yet");
+    await user.click(within(mine).getByRole("button", { name: "Sign in to Demo Mail" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:9090/login?x=1"));
+    expect(calls.filter((c) => c.route === "POST sign-ins/demo/mail/start")).toHaveLength(1);
+    expect(within(mine).getByRole("button", { name: "Sign in to Demo Mail" })).toHaveTextContent("Opening the sign-in page");
+  });
+
+  test("a refusal to start is said on the step and goes nowhere", async () => {
+    const user = userEvent.setup();
+    api([signInStep()], { "POST sign-ins/demo/mail/start": () => new Refuse(409, "Set the app registration first.") });
+    open();
+    await user.click(await screen.findByRole("button", { name: "Sign in to Demo Mail" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Set the app registration first.");
+    expect(assign).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Sign in to Demo Mail" })).toBeEnabled();
+  });
+
+  test("no explanation line when the sign-in asks for nothing to say", async () => {
+    api([signInStep({ explanation: "" })]);
+    open();
+    await screen.findByRole("heading", { name: "Sign in to Demo Mail" });
+    expect(screen.queryByText(/You'll be asked to allow/)).toBeNull();
+  });
+
+  test("done shows no Sign in button, and skipped can be reopened like any step", async () => {
+    api([signInStep({ done: true }), signInStep({ id: "demo/other", sign_in: "demo/other", label: "Demo Other", skipped: true })]);
+    open();
+    await screen.findByRole("heading", { name: "Sign in to Demo Mail" });
+    expect(section("demo/mail")).toHaveTextContent("Done");
+    expect(within(section("demo/mail")).queryByRole("button")).toBeNull();
+    expect(section("demo/other")).toHaveTextContent("Skipped");
+    expect(within(section("demo/other")).getByRole("button", { name: "Sign in to Demo Other" })).toBeInTheDocument();
+    expect(within(section("demo/other")).getByRole("button", { name: /^Do it now/ })).toBeInTheDocument();
+  });
 });

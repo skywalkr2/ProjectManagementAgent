@@ -33,8 +33,6 @@ BASIC = frozenset(
     {
         "workspace.name",
         "workspace.assistant_name",
-        "workspace.user.full_name",
-        "workspace.user.aliases",
         "workspace.user.timezone",
         "workspace.language",
         "storage.backups.every_hours",

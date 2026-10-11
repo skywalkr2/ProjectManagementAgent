@@ -15,6 +15,8 @@ from api.schemas import (
     FingerprintIn,
     FolderCheckView,
     FolderListView,
+    MeIn,
+    MeView,
     Ok,
     SettingChangeView,
     SettingItem,
@@ -56,7 +58,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return SettingsSaved(
             changes=[SettingChangeView(**c) for c in result.changes],
             fingerprint=result.fingerprint,
-            restarts=worker.on_restart is not None and bool(result.changes),
+            restarts=bool(result.changes) and worker.needs_restart(),
         )
 
     def save(changes: dict[str, Any], reset: list[str], fingerprint: str, allow: tuple[str, ...] = ()) -> Any:
@@ -89,6 +91,50 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def settings_save(body: SettingsSave) -> SettingsSaved:
         # The keys the guided steps write are accepted here too, so their Undo (the values from before) works.
         return saved(save(body.changes, body.reset, body.fingerprint, allow=GUIDED))
+
+    # ---- the person the app is for --------------------------------------------------------------------------------
+
+    def me_now() -> MeView:
+        pid = current().workspace.user.person
+        person = store.read().get("person", pid) if pid else None
+        return MeView(person=person.id if person else None, full_name=person.data["full_name"] if person else "")
+
+    @r.get("/me")
+    def me() -> MeView:
+        return me_now()
+
+    @r.post("/me")
+    def me_save(body: MeIn) -> MeView:
+        """Name the person the app is for: renames their person record, or makes one and links it in the settings."""
+        from engine.storage import WriteContext
+
+        name = " ".join(body.full_name.split())
+        found = me_now()
+        clash = [
+            p
+            for p in store.read().list("person")
+            if p.id != found.person and p.data["full_name"].lower() == name.lower()
+        ]
+        if clash:
+            raise HTTPException(status_code=409, detail=f"{name} is already someone else in People.")
+        ctx = WriteContext(actor="pm", trust="trusted", op="person.edit" if found.person else "person.add")
+        with store.transaction() as tx:
+            if found.person:
+                current_person = tx.get("person", found.person)
+                tx.update("person", found.person, {"full_name": name}, ctx, read_version=current_person.version)
+                pid = found.person
+            else:
+                pid = tx.create("person", {"full_name": name}, ctx).id
+        events.changed()
+        if not found.person:
+            save(
+                {"workspace.user.person": pid},
+                [],
+                config_screens.fingerprint(ws.config_dir),
+                allow=("workspace.user.",),
+            )
+            worker.needs_restart()
+        return MeView(person=pid, full_name=name)
 
     # ---- setup steps ---------------------------------------------------------------------------------------------
 
@@ -139,7 +185,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail=str(err)) from None
         setup.template_applied(ws, body.id)
         events.changed()
-        return TemplateApplied(plugins=plugins, restarts=worker.on_restart is not None)
+        return TemplateApplied(plugins=plugins, restarts=worker.needs_restart())
 
     # ---- folders -------------------------------------------------------------------------------------------------
 

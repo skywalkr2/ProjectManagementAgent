@@ -30,9 +30,9 @@ def test_layers_in_order_file_env_flag(tmp_path):
 
 
 def test_env_reaches_nested_keys_and_parses_values():
-    env = {"COCKPIT__WORKSPACE__USER__ALIASES": "[me, boss]", "COCKPIT__STORAGE__EXPORT__COMMIT": "false"}
+    env = {"COCKPIT__WORKSPACE__OUR_ACCOUNTS": "[me, boss]", "COCKPIT__STORAGE__EXPORT__COMMIT": "false"}
     cfg = load_config(None, env=env)
-    assert cfg.workspace.user.aliases == ["me", "boss"]
+    assert cfg.workspace.our_accounts == ["me", "boss"]
     assert cfg.storage.export.commit is False
 
 
@@ -73,3 +73,31 @@ def test_default_files_are_valid_yaml_and_load_as_defaults(tmp_path, name):
 def test_fixture_workspaces_load(demo):
     cfg = load_config(demo / "config", env={})
     assert cfg.workspace.name
+
+
+def test_the_pms_name_moves_from_the_settings_to_their_person_record(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine.storage import Store
+    from engine.workspace import init_workspace
+    from tests.conftest import DEMO_B
+
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    path = ws.config_dir / "workspace.yaml"
+    pid = load_config(ws.config_dir, env={}).workspace.user.person
+    text = path.read_text().replace("  person: ", "  full_name: Renamed Person\n  aliases: [Ren, me]\n  person: ", 1)
+    path.write_text(text)
+    cfg = load_config(ws.config_dir, env={})
+    assert cfg.moved == {"workspace.user.full_name": "Renamed Person", "workspace.user.aliases": ["Ren", "me"]}
+    TestClient(create_app(ws, cfg, "t", start_worker=False))
+    after = path.read_text()
+    assert "  full_name:" not in after and "  aliases:" not in after and f"person: {pid}" in after
+    store = Store(ws.db_path)
+    try:
+        me = store.read().get("person", pid)
+        assert me.data["full_name"] == "Renamed Person" and "Ren" in me.data["aliases"]
+        assert "me" not in me.data["aliases"]  # "me" always means the PM; it isn't stored
+    finally:
+        store.close()
+    assert load_config(ws.config_dir, env={}).moved == {}

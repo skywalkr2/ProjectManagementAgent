@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { problemText } from "../lib/problem";
+import { useStartSignIn } from "../lib/sign-in-start";
 import { useWords } from "../lib/wording";
 
 type SignIn = S["SignInView"];
@@ -36,33 +36,24 @@ export function SignIns() {
 function SignInRow(props: { item: SignIn }) {
   const { t } = useWords();
   const act = useAct();
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState("");
+  const [signingOut, setSigningOut] = useState(false);
+  const [outProblem, setOutProblem] = useState("");
   const { item } = props;
   const base = `sign-in-${item.name.replace(/[^A-Za-z0-9_-]/g, "-")}`;
   const signedIn = item.status === "signed_in";
 
-  const start = async () => {
-    setBusy(true);
-    setProblem("");
-    try {
-      const started = await api.startSignIn(item.name);
-      // The service's own page replaces this one; the busy state stays until it does.
-      window.location.assign(started.url);
-    } catch (err) {
-      setProblem(problemText(err, t));
-      setBusy(false);
-    }
-  };
+  const { start, busy: starting, problem: startProblem } = useStartSignIn(item.name);
+  const busy = starting || signingOut;
+  const problem = startProblem || outProblem;
 
   const signOut = async () => {
-    setBusy(true);
-    setProblem("");
+    setSigningOut(true);
+    setOutProblem("");
     await act(
       () => api.signOut(item.name),
       () => ({ message: t("sign_in.signed_out_toast", { label: item.label }) }),
     );
-    setBusy(false);
+    setSigningOut(false);
   };
 
   const again = item.status === "expired";
@@ -75,6 +66,8 @@ function SignInRow(props: { item: SignIn }) {
     ? t("sign_in.sign_out_named", { label: item.label })
     : t(again ? "sign_in.sign_in_again_named" : "sign_in.sign_in_named", { label: item.label });
   const notReady = !signedIn && !item.ready;
+  const allows = signedIn ? [] : (item.allows ?? []);
+  const missing = signedIn ? (item.missing ?? []) : [];
   const describedBy = [problem && `${base}-problem`, notReady && `${base}-not-ready`].filter(Boolean).join(" ");
 
   return (
@@ -82,7 +75,42 @@ function SignInRow(props: { item: SignIn }) {
       <div className="row pair">
         <div className="text">
           <strong id={`${base}-title`}>{item.label}</strong>
-          <span className="sub">{t(`sign_in.status.${item.status}`)}</span>
+          <span className="sub">
+            {signedIn && item.account
+              ? t("sign_in.status.signed_in_as", { account: item.account })
+              : t(`sign_in.status.${item.status}`)}
+          </span>
+          {allows.length > 0 && (
+            <div className="field">
+              <span className="what" id={`${base}-allows`}>
+                {t("sign_in.allows")}
+              </span>
+              <ul className="plain-list" aria-labelledby={`${base}-allows`}>
+                {allows.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {missing.length > 0 && (
+            <div className="field">
+              <p className="hint" id={`${base}-missing`}>
+                {t("sign_in.missing", { list: missing.join(", ") })}
+              </p>
+              <div className="row-end">
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={busy || !item.ready}
+                  aria-label={t("sign_in.sign_in_again_named", { label: item.label })}
+                  aria-describedby={`${base}-missing`}
+                  onClick={() => void start()}
+                >
+                  {t("sign_in.sign_in_again")}
+                </button>
+              </div>
+            </div>
+          )}
           {notReady && (
             <p className="hint" id={`${base}-not-ready`}>
               {t("sign_in.not_ready")}

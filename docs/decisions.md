@@ -3,6 +3,37 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: One source of truth, value lists instead of free text, and settings that guide
+
+**Decided by:** project owner.
+
+**What:**
+- **One source of truth for all data.** Every fact lives in exactly one place; everything else refers to it by id.
+  The PM's name and aliases live on their person record only; `workspace.user` keeps the person's id and the
+  settings that are about the workspace (time zone). A setting never repeats a record, and a record never repeats a
+  setting. The rule binds plugins: a plugin refers to core records by id (`RefTo`) and never copies their names or
+  fields into its own records, and the host checks what it can (design 3.5, 5.1).
+- **Value lists.** A field with a known set of values (a project's status, phase and priority, a person's role and
+  organization, a plugin's categories) takes its values from a named list, shown as a dropdown. Lists are settings
+  (`config/lists.yaml`), with defaults from the core and from plugins, changed by the person; a value not on its list
+  is refused, and adding one is a deliberate act ("Add to the list"), with Undo. Free text is kept for what is truly
+  prose: notes, descriptions, summaries, the text of a question.
+- **Settings guide the person.** A setting that turns a feature on comes first in its group, and the settings it
+  governs are greyed out while it is off. A folder is chosen with a folder picker, a file with a file picker, a
+  choice from a dropdown; typing a path or a value is the fallback, not the way.
+- **AI setup for anyone.** Setup offers a list of AI services by name (a shipped data file; still no service names in
+  code): pick one, paste a key (kept on this computer by the app), pick from the models the service offers, with
+  suggested models for everyday and harder work, and test. Local models and command-line agents are on the same list.
+
+**Why:** Free text and duplicated data make a system that breaks quietly; guided settings prevent mistakes instead
+of explaining them.
+
+**Impact:** Design 3.5, 4.0, 5.1 and 7 (settings). `workspace.user.full_name` and `aliases` move to the person
+record. New `config/lists.yaml`, list-backed fields in core records and a plugin declaration for lists. Settings
+metadata for order, dependencies and pickers. Named services in `catalog/ai-endpoints.yaml`; this answers the open
+question "May catalogs list public AI services and addresses?" (yes, in data). Plugin API: lists and the one-source
+rule join the contract.
+
 ## 2026-10-11: Every plugin repository has its own autonomous builder, with a written brief and a question channel
 
 **Decided by:** project owner.

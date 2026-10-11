@@ -367,6 +367,9 @@ class RuntimeConfig(BaseModel):
     shortcuts: dict[str, str]
     wording: dict[str, str]
     demo: bool = Field(False, description="The workspace holds made-up example data; every screen says so.")
+    instance: str | None = Field(
+        None, description="Changes every time the app starts, so a screen can tell it restarted."
+    )
     feedback_to: str | None = Field(None, description="Where the feedback button writes its email, if anywhere.")
 
 
@@ -1191,3 +1194,15 @@ class PacksView(BaseModel):
     feeds: list[PackFeedView]
     available: list[PackView]
     installed: list[InstalledPackView]
+
+
+class MeView(BaseModel):
+    """The person the app is for: their own person record, the one place their name is kept."""
+
+    person: str | None
+    full_name: str
+
+
+class MeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    full_name: str = Field(min_length=1, max_length=200)

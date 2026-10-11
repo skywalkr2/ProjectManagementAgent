@@ -32,7 +32,7 @@ class People:
                 if name:
                     self._index.setdefault(name.lower(), set()).add(pid)
         if self.pm:
-            for alias in [*cfg.workspace.user.aliases, "me", "myself", "I", cfg.workspace.user.full_name]:
+            for alias in ["me", "myself", "I"]:
                 if alias:
                     self._index[alias.lower()] = {self.pm}
 

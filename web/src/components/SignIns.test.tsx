@@ -60,6 +60,75 @@ test("each status is in words, with one action per row", async () => {
   expect(within(three).getByRole("button", { name: "Sign in to Service demo/three" })).toHaveTextContent("Sign in");
 });
 
+test("before signing in, what the person will be asked to allow is listed, one item per line", async () => {
+  fakeApi({
+    ...settings,
+    "GET sign-ins": () => [
+      signIn("demo/three", { allows: ["Read your mail", "Read your calendar"] }),
+      signIn("demo/one", { status: "signed_in", allows: ["Read your mail"] }),
+    ],
+  });
+  open();
+  await screen.findByText("Service demo/three");
+  const three = row("Service demo/three");
+  expect(within(three).getByText("You'll be asked to allow:")).toBeInTheDocument();
+  const list = within(three).getByRole("list", { name: "You'll be asked to allow:" });
+  expect(within(list).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Read your mail", "Read your calendar"]);
+  // Once signed in there is nothing left to be asked.
+  expect(within(row("Service demo/one")).queryByText("You'll be asked to allow:")).toBeNull();
+});
+
+test("nothing is listed when the service asks for nothing to say", async () => {
+  fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/three")] });
+  open();
+  await screen.findByRole("button", { name: "Sign in to Service demo/three" });
+  expect(screen.queryByText("You'll be asked to allow:")).toBeNull();
+});
+
+test("signed in names the account when it is known", async () => {
+  fakeApi({
+    ...settings,
+    "GET sign-ins": () => [
+      signIn("demo/one", { status: "signed_in", account: "pat@example.com" }),
+      signIn("demo/two", { status: "signed_in", account: null }),
+    ],
+  });
+  open();
+  await screen.findByText("Service demo/one");
+  expect(within(row("Service demo/one")).getByText("Signed in as pat@example.com")).toBeInTheDocument();
+  expect(within(row("Service demo/two")).getByText("Signed in")).toBeInTheDocument();
+});
+
+test("a permission that wasn't allowed is named, with Sign in again as a secondary action", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    ...settings,
+    "GET sign-ins": () => [signIn("demo/one", { status: "signed_in", missing: ["Mail.Read", "Calendars.Read"] })],
+    "POST sign-ins/demo/one/start": () => ({ url: "http://localhost:9090/login?again=1" }),
+  });
+  open();
+  const one = await screen.findByText("Service demo/one").then((el) => el.closest("li") as HTMLElement);
+  const note = within(one).getByText(
+    "Permissions not allowed: Mail.Read, Calendars.Read. Sign in again and allow them to use everything.",
+  );
+  // Sign out stays the row's one primary action.
+  expect(within(one).getByRole("button", { name: "Sign out of Service demo/one" })).toHaveClass("primary");
+  const again = within(one).getByRole("button", { name: "Sign in again to Service demo/one" });
+  expect(again).not.toHaveClass("primary");
+  expect(again).toHaveAccessibleDescription(note.textContent ?? "");
+  await user.click(again);
+  await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:9090/login?again=1"));
+  expect(calls.filter((c) => c.route === "POST sign-ins/demo/one/start")).toHaveLength(1);
+});
+
+test("no note about permissions when none are missing", async () => {
+  fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/one", { status: "signed_in", missing: [] })] });
+  open();
+  await screen.findByText("Service demo/one");
+  expect(screen.queryByText(/Permissions not allowed/)).toBeNull();
+  expect(screen.queryByRole("button", { name: /Sign in again/ })).toBeNull();
+});
+
 test("the address the registration must allow is always shown, read-only", async () => {
   fakeApi({ ...settings, "GET sign-ins": () => [LIST[0], signIn("demo/three", { ready: false })] });
   open();
@@ -157,6 +226,46 @@ describe("coming back from the service", () => {
     fakeApi({ "GET sign-ins": () => LIST });
     renderApp(<Return />);
     expect(await screen.findByText("Signed in to Service demo/two.")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+  });
+
+  test("a refusal with the service's code and description shows both as text, and cleans the address", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/tools/cockpit/?keep=1&sign_in=refused&name=demo%2Ftwo&error=access_denied&detail=${encodeURIComponent("<b>User</b> said no")}#/settings`,
+    );
+    fakeApi({ "GET sign-ins": () => LIST });
+    renderApp(<Return />);
+    const toast = await screen.findByText("The service didn't allow the sign-in (access_denied): <b>User</b> said no");
+    expect(toast.querySelector("b")).toBeNull();
+    expect(window.location.pathname).toBe("/tools/cockpit/");
+    expect(window.location.search).toBe("?keep=1");
+    expect(window.location.hash).toBe("#/settings");
+  });
+
+  test("a long description is cut at 200 characters", async () => {
+    const detail = "x".repeat(300);
+    window.history.replaceState(null, "", `/?sign_in=refused&error=access_denied&detail=${detail}`);
+    fakeApi({ "GET sign-ins": () => LIST });
+    renderApp(<Return />);
+    expect(await screen.findByText(`The service didn't allow the sign-in (access_denied): ${"x".repeat(200)}`)).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+  });
+
+  test("a refusal with only a code says so without a description", async () => {
+    window.history.replaceState(null, "", "/?sign_in=refused&error=access_denied");
+    fakeApi({ "GET sign-ins": () => LIST });
+    renderApp(<Return />);
+    expect(await screen.findByText("The service didn't allow the sign-in (access_denied).")).toBeInTheDocument();
+  });
+
+  test("a code or description on a different outcome is cleaned from the address and not shown", async () => {
+    window.history.replaceState(null, "", "/?sign_in=failed&error=boom&detail=details");
+    fakeApi({ "GET sign-ins": () => LIST });
+    renderApp(<Return />);
+    await screen.findByText("The sign-in didn't finish. Try again from Settings.");
+    expect(screen.queryByText(/boom/)).toBeNull();
     expect(window.location.search).toBe("");
   });
 

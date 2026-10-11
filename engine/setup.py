@@ -79,7 +79,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
     view = store.read()
     people = view.list("person")
     done = {
-        "workspace": bool(cfg.workspace.user.full_name.strip()) and cfg.workspace.name != "Workspace",
+        "workspace": _pm_named(cfg, view) and cfg.workspace.name != "Workspace",
         "template": bool(state.get("template")),
         "ai": ai_state(ws, cfg, store)[0] == "ok",
         "backup": bool(cfg.storage.backups.targets),
@@ -117,6 +117,12 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
             )
         )
     return found
+
+
+def _pm_named(cfg: Any, view: Any) -> bool:
+    """The PM is a person record with a name: the one place their name is kept."""
+    person = view.get("person", cfg.workspace.user.person) if cfg.workspace.user.person else None
+    return person is not None and bool(str(person.data.get("full_name", "")).strip())
 
 
 def skip(ws: Any, step: str, skipped: bool = True) -> None:

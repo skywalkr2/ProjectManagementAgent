@@ -28,9 +28,10 @@ class FileModel(ConfigModel):
 
 
 class UserSettings(ConfigModel):
-    person: str | None = Field(None, description="The PM's own person record id, e.g. PER-1.")
-    full_name: str = Field("", description="The PM's full name, as it should appear to others.")
-    aliases: list[str] = Field(default_factory=list, description='Other names that mean the PM (a first name, "me").')
+    person: str | None = Field(
+        None,
+        description="The PM's own person record id, e.g. PER-1. Their name and other names live on that record only.",
+    )
     timezone: str = Field("UTC", description="The PM's time zone, as an IANA name such as Europe/Lisbon.")
 
 

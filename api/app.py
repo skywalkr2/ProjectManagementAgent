@@ -7,6 +7,7 @@ install token, presented once as `?token=` (which sets a cookie scoped to the ba
 from __future__ import annotations
 
 import hmac
+import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from html import escape
@@ -84,7 +85,12 @@ def create_app(
         raise RuntimeError(f"Can't start: {placed} (storage.sync.folder).")
     store = Store(ws.db_path, cfg=cfg)
     events = Events()
+    if cfg.moved:
+        from engine.migrate import move_identity
+
+        move_identity(ws, store, cfg)
     worker = Worker(ws, store, cfg, events, router_factory, on_restart)
+    instance = uuid.uuid4().hex
     dist = ui_dist if ui_dist is not None else UI_DIST
 
     @asynccontextmanager
@@ -161,6 +167,7 @@ def create_app(
             shortcuts=cfg.ui.shortcuts,
             wording={**store.plugins.wording(), **cfg.ui.wording},
             demo=cfg.workspace.demo,
+            instance=instance,
             feedback_to=cfg.ui.feedback_to or product().get("feedback_to") or None,
         )
 

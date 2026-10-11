@@ -109,7 +109,8 @@ def test_a_fresh_workspace_knows_who_you_are(tmp_path):
     store = Store(ws.db_path)
     me = store.read().get("person", cfg.workspace.user.person)
     store.close()
-    assert me.data["full_name"] == "Pat Example" and cfg.workspace.user.full_name == "Pat Example"
+    assert me.data["full_name"] == "Pat Example"  # the one place the name is kept
+    assert "  full_name:" not in (target / "config" / "workspace.yaml").read_text()
     assert cfg.workspace.name == "My Press" and cfg.workspace.assistant_name == "Ada"
     assert "# " in (target / "config" / "workspace.yaml").read_text()
 

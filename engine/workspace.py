@@ -137,7 +137,7 @@ def _set_identity(ws: Workspace, store: Store, you: str | None, name: str | None
             person = tx.create(
                 "person", {"full_name": you.strip()}, WriteContext(actor="pm", trust="trusted", op="init")
             )
-        settings.user = UserSettings(person=person.id, full_name=you.strip())
+        settings.user = UserSettings(person=person.id)
     if name:
         settings.name = name.strip()
     if assistant:

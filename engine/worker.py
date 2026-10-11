@@ -141,6 +141,14 @@ class Worker:
     def poke(self) -> None:
         self._wake.set()
 
+    def needs_restart(self) -> bool:
+        """Whether this process will restart to use changed settings or code: something on disk changed since it
+        started, and it can restart itself. Wakes the worker so the restart starts now, not on its next turn."""
+        if self.on_restart is None or not self._changed_since_start():
+            return False
+        self.poke()
+        return True
+
     def run_pending(self) -> int:
         """Process every queued request now. Returns how many were processed."""
         done = 0

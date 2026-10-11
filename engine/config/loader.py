@@ -32,6 +32,8 @@ class Config:
 
     files: dict[str, FileModel]
     sources: dict[str, str] = field(default_factory=dict)
+    #: Values found under keys that moved to records (one source of truth), by dotted key; the app moves them at start.
+    moved: dict[str, Any] = field(default_factory=dict)
 
     def __getattr__(self, name: str) -> Any:
         files = self.__dict__.get("files", {})
@@ -48,6 +50,10 @@ class Config:
         return rows
 
 
+#: Keys whose data now lives on a record (one source of truth): the PM's name and aliases are on their person record.
+MOVED_TO_RECORDS = ("workspace.user.full_name", "workspace.user.aliases")
+
+
 def load_config(
     config_dir: Path | None,
     *,
@@ -59,6 +65,7 @@ def load_config(
     raw: dict[str, dict[str, Any]] = {}
     sources: dict[str, str] = {}
 
+    moved: dict[str, Any] = {}
     for name in FILES:
         data: dict[str, Any] = {}
         if config_dir is not None:
@@ -66,6 +73,13 @@ def load_config(
             if path.exists():
                 data = _read_yaml(path)
                 _check_version(name, data, path)
+                for key in MOVED_TO_RECORDS:
+                    file, *rest = key.split(".")
+                    holder = data if file == name else None
+                    for part in rest[:-1]:
+                        holder = holder.get(part) if isinstance(holder, dict) else None
+                    if isinstance(holder, dict) and rest[-1] in holder:
+                        moved[key] = holder.pop(rest[-1])
                 for key, _ in _flatten(data, name):
                     sources[key] = "file"
         raw[name] = data
@@ -86,7 +100,7 @@ def load_config(
             files[name] = model.model_validate(raw[name])
         except ValidationError as err:
             raise ConfigError(_describe(name, err)) from None
-    cfg = Config(files=files, sources=sources)
+    cfg = Config(files=files, sources=sources, moved=moved)
     from engine.config.stages import validate_declared
 
     validate_declared(cfg, config_dir)

@@ -4,8 +4,6 @@ name: Tallowmere Freight PMO
 assistant_name: Shippy
 user:
   person: PER-1
-  full_name: Rafael Quist
-  aliases: [Rafa, me]
   timezone: America/Chicago
 owner_format: "{team} ({full_name})"
 language: en-US

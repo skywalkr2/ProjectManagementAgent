@@ -189,6 +189,8 @@ export const api = {
   settings: () => call<S["SettingsView"]>("GET", "settings"),
   saveSettings: (body: S["SettingsSave"]) => call<S["SettingsSaved"]>("POST", "settings", body),
   setup: () => call<S["SetupView"]>("GET", "setup"),
+  me: () => call<S["MeView"]>("GET", "me"),
+  saveMe: (fullName: string) => call<S["MeView"]>("POST", "me", { full_name: fullName }),
   applyStepSettings: (step: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `setup/${named(step)}/apply-settings`, { fingerprint }),
   skipStep: (step: string) => call<S["Ok"]>("POST", `setup/${named(step)}/skip`),
