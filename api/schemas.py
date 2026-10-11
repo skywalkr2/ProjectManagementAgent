@@ -598,6 +598,16 @@ class KindView(BaseModel):
     fields: list[FieldView]
 
 
+class RecordEdit(BaseModel):
+    """The person's own change to fields of a shown record."""
+
+    model_config = ConfigDict(extra="forbid")
+    kind: str
+    id: str
+    fields: dict[str, Any]
+    read_version: int = Field(ge=1)
+
+
 class GenericRecordView(BaseModel):
     """Any shown record: its ordinary fields and the names of its long text fields (read those from /texts)."""
 
@@ -654,6 +664,7 @@ class PanelView(BaseModel):
     columns: list[str]
     primary_action: str | None
     row_actions: list[str]
+    new_action: str | None = Field(None, description="A person action on the workspace that adds one, shown above.")
 
 
 class PanelRow(BaseModel):

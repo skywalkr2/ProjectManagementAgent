@@ -10,6 +10,15 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.21 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- `registrar.panel(..., new_action=None)`: a person action of the plugin's on the workspace (`on` None), shown above
+  the panel's rows to add one.
+- `POST /api/records/edit {kind, id, fields, read_version}` applies the person's own `record.edit` on any shown
+  record, with Undo.
+
 ## What 0.3.20 adds
 
 Manifests stay `'>=0.3,<0.4'`.

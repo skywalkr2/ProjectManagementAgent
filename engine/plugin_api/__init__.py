@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.20"
+PLUGIN_API_VERSION = "0.3.21"
 
 
 class Settings(BaseModel):
@@ -591,6 +591,7 @@ class PanelRegistration:
     primary_action: str | None
     row_actions: tuple[str, ...]
     tab: str
+    new_action: str | None = None
 
 
 @dataclass(frozen=True)
@@ -1112,12 +1113,14 @@ class Registrar:
         primary_action: str | None = None,
         row_actions: tuple[str, ...] = (),
         tab: str = "work",
+        new_action: str | None = None,
     ) -> None:
         """A screen listing records (listed in `provides.panels`), described as data so it looks and behaves like
         the core's (design 7.2): the records of `kind` (core or own) whose fields equal `filter`, shown as `view`
         ("list", "table" or "board"; a board groups by the first column) with `columns` (fields of the kind).
         `primary_action` is the one action on a row and `row_actions` the rest, in its menu: this plugin's person
-        actions or task kinds on that kind. Rows are read through the core, and actions run as they always do."""
+        actions or task kinds on that kind. `new_action` is a person action of this plugin's on the workspace (`on`
+        None) shown above the rows, to add one. Rows are read through the core, and actions run as they always do."""
         self._name(name)
         if name in self.panels or not title.strip() or not columns:
             raise ValueError("duplicate panel, missing title or no columns")
@@ -1126,7 +1129,16 @@ class Registrar:
         if tab not in ("today", "work", "people", "settings"):
             raise ValueError('a panel tab is "today", "work", "people" or "settings"')
         self.panels[name] = PanelRegistration(
-            name, title.strip(), kind, view, tuple(columns), dict(filter or {}), primary_action, tuple(row_actions), tab
+            name,
+            title.strip(),
+            kind,
+            view,
+            tuple(columns),
+            dict(filter or {}),
+            primary_action,
+            tuple(row_actions),
+            tab,
+            new_action,
         )
 
     def job(self, name: str, *, every_minutes: int, run: Callable) -> None:

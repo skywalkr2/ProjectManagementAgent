@@ -14,10 +14,12 @@ from typing import Annotated, Any, ClassVar, Literal
 from pydantic import BaseModel, ConfigDict, Field, create_model, model_validator
 
 from engine.plugin_api import (
+    Choice,
     EvidenceIn,
     LongText,
     OpModel,
     OpWriter,
+    Proposal,
     ReadView,
     Record,
     RefTo,
@@ -158,6 +160,12 @@ class Config(Settings):
     )
     date_pass: str = Field("{field} has come.", description="A stage check that passed: the date has come.")
     date_fail: str = Field("Wait until {field}.", description="A stage check that failed: the date hasn't come.")
+    new_label: str = Field("New {name}", description="The action that adds an item; {name} is the type's name.")
+    new_summary: str = Field("Add the {name} {title}", description="What adding an item does.")
+    new_untitled: str = Field("Type a title for the new {name}.", description="Shown until a title is typed.")
+    title_label: str = Field("Title", description="The choice where the person types the new item's title.")
+    project_label: str = Field("Project", description="The choice of the project a new item belongs to.")
+    no_project: str = Field("No project", description="The project choice for an item in no project.")
 
     @model_validator(mode="after")
     def _distinct(self) -> Config:
@@ -398,6 +406,27 @@ def _today(kind: TypeDef) -> Any:
     return lines
 
 
+def _new(kind: TypeDef) -> Any:
+    def new(target: Any, context: Any, choices: dict) -> Proposal:
+        config: Config = context.config
+        title = str(choices.get("title", "")).strip()
+        offered = [Choice("title", config.title_label, title, text=True, max_length=200)]
+        project = str(choices.get("project", "")) if kind.in_projects else ""
+        if kind.in_projects:
+            projects = [(p.id, p.data["name"]) for p in context.list("project")]
+            if project not in {p for p, _ in projects}:
+                project = ""
+            offered.append(
+                Choice("project", config.project_label, project, options=[("", config.no_project), *projects])
+            )
+        if not title:
+            return Proposal(config.new_untitled.format(name=kind.name), choices=offered)
+        op = {"op": f"kit/{kind.id}.add", "title": title, "project": project or None}
+        return Proposal(config.new_summary.format(name=kind.name, title=title), ops=[op], choices=offered)
+
+    return new
+
+
 # ---- registration ----------------------------------------------------------------------------------------------------
 
 
@@ -424,12 +453,14 @@ def register(registrar: Registrar) -> None:
             if kind.board_by:
                 columns = [kind.board_by, *[c for c in columns if c != kind.board_by]]
             visible = [c for c in columns if not next(f for f in kind.fields if f.name == c).hidden]
+            registrar.action(f"kit/{kind.id}.new", label=config.new_label.format(name=kind.name), run=_new(kind))
             registrar.panel(
                 f"kit/{kind.id}",
                 title=kind.plural,
                 kind=record_kind,
                 columns=tuple(visible),
                 view="board" if kind.board_by else "table",
+                new_action=f"kit/{kind.id}.new",
             )
             if kind.today.due_field or kind.today.waiting_at or kind.today.missing:
                 registrar.today(f"kit/{kind.id}", lines=_today(kind))

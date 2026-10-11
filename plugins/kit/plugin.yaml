@@ -12,6 +12,7 @@ provides:
   stages: [kit/*]
   panels: [kit/*]
   today: [kit/*]
+  actions: [kit/*]
 config_schema: kit:Config
 requires:
   network: []

@@ -150,6 +150,7 @@ def test_a_panel_is_described_as_data_and_lists_its_rows(env):
             "columns": ["title", "status"],
             "primary_action": "p18/close",
             "row_actions": ["p18/plan"],
+            "new_action": None,
         }
     ]
     rows = c.get(f"{api}/panels/p18/goals/rows").json()

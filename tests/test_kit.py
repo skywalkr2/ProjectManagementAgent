@@ -176,3 +176,41 @@ def test_items_have_a_place_in_the_synced_folder(env, tmp_path):
     a_request(cfg, store, "Harbor brochure", brief="Two pages.")
     files, _ = readable_files(store, store.read())
     assert "_workspace/requests/Harbor brochure.md" in files
+
+
+def test_a_new_item_is_added_from_its_panel_with_a_typed_title(env):
+    from engine import actions
+
+    _, cfg, store = env
+    assert store.plugins.panel("kit/request").new_action == "kit/request.new"
+    empty = actions.preview(store, cfg, "kit/request.new")
+    assert empty.ops == [] and empty.choice_list[0]["text"]
+    project = store.read().list("project")[0]
+    pending = actions.preview(store, cfg, "kit/request.new", None, {"title": "Spring catalog", "project": project.id})
+    actions.apply(store, cfg, pending.token, {})
+    item = store.read().list("kit/request")[-1]
+    assert item.data["title"] == "Spring catalog" and item.data["project"] == project.id
+
+
+def test_the_person_edits_any_shown_record_with_undo(env):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+
+    ws, cfg, store = env
+    item = a_request(cfg, store)
+    store.close()
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    body = {"kind": "kit/request", "id": item.id, "fields": {"client": "Lantern Press"}, "read_version": item.version}
+    done = c.post(f"{api}/records/edit", json=body)
+    assert done.status_code == 200, done.text
+    assert (
+        c.get(f"{api}/record", params={"kind": "kit/request", "id": item.id}).json()["fields"]["client"]
+        == "Lantern Press"
+    )
+    refused = c.post(
+        f"{api}/records/edit", json={**body, "fields": {"size": "enormous"}, "read_version": item.version + 1}
+    )
+    assert refused.status_code == 409

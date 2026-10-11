@@ -1737,6 +1737,18 @@
             "title": "Name",
             "type": "string"
           },
+          "new_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A person action on the workspace that adds one, shown above.",
+            "title": "New Action"
+          },
           "primary_action": {
             "anyOf": [
               {
@@ -2528,6 +2540,38 @@
           "read_version"
         ],
         "title": "ReadVersion",
+        "type": "object"
+      },
+      "RecordEdit": {
+        "additionalProperties": false,
+        "description": "The person's own change to fields of a shown record.",
+        "properties": {
+          "fields": {
+            "additionalProperties": true,
+            "title": "Fields",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "read_version": {
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "fields",
+          "read_version"
+        ],
+        "title": "RecordEdit",
         "type": "object"
       },
       "RecordRef": {
@@ -5756,6 +5800,45 @@
           }
         },
         "summary": "Generic Record"
+      }
+    },
+    "/api/records/edit": {
+      "post": {
+        "description": "The person's own change to fields of a shown record, with Undo.",
+        "operationId": "record_edit_api_records_edit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Edit"
       }
     },
     "/api/records/{record_id}": {

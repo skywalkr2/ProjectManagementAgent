@@ -64,6 +64,7 @@ from api.schemas import (
     ProposedFile,
     ProposedOp,
     ReadVersion,
+    RecordEdit,
     RecordReference,
     RecordView,
     Reply,
@@ -227,6 +228,23 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             long_text=list(texts),
         )
 
+    @r.post("/records/edit")
+    def record_edit(body: RecordEdit) -> Applied:
+        """The person's own change to fields of a shown record, with Undo."""
+        from engine.applier import apply_as_person
+
+        if body.kind not in shown_kinds():
+            raise HTTPException(status_code=404, detail="not found")
+        op = {
+            "op": "record.edit",
+            "record": {"kind": body.kind, "id": body.id},
+            "fields": body.fields,
+            "read_version": body.read_version,
+        }
+        cs_id = guard(lambda: apply_as_person(store, cfg, [op], "Changed on screen"))
+        changed()
+        return Applied(changeset=cs_id)
+
     @r.get("/sync")
     def sync_status() -> SyncView:
         from engine import outside
@@ -297,6 +315,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                         columns=list(p.columns),
                         primary_action=p.primary_action,
                         row_actions=list(p.row_actions),
+                        new_action=p.new_action,
                     )
                     for p in registrar.panels.values()
                 ]

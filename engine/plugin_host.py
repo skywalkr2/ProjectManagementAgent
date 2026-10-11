@@ -764,6 +764,12 @@ class PluginHost:
                 target = registrar.actions.get(action) or registrar.tasks.get(action)
                 if target is None or getattr(target, "on", None) != panel.kind:
                     raise ValueError(f"panel {panel.name}: {action} isn't this plugin's action or task on {panel.kind}")
+            if panel.new_action is not None:
+                action = registrar.actions.get(panel.new_action)
+                if action is None or action.on is not None:
+                    raise ValueError(
+                        f"panel {panel.name}: {panel.new_action} isn't this plugin's action on the workspace"
+                    )
         for derived in registrar.derived_files.values():
             unknown = [k for k in derived.depends_on if k not in REGISTRY and k not in registrar.records]
             if unknown:
