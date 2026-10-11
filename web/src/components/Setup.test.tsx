@@ -15,6 +15,9 @@ const project = (id: string, name: string): S["ProjectView"] => ({
   owner: null,
   owner_name: null,
   summary: null,
+  language: "en-US",
+  language_own: false,
+  spent_usd: 0,
 });
 const note = (id: string, text: string, p: S["ProjectView"] | null): S["NoteView"] => ({
   id,

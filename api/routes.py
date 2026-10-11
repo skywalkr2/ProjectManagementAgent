@@ -749,9 +749,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/projects")
     def projects() -> list[ProjectView]:
+        from engine.projects import language_for, spent_on
+
         names = People(store, cfg)
+        view = store.read()
         return [
             ProjectView(
+                parent=p.data.get("parent"),
+                language=language_for(view, cfg.workspace.language, p),
+                language_own=bool(p.data.get("language")),
+                content_levels=p.data.get("content_levels") or [],
+                budget_usd=p.data.get("budget_usd"),
+                spent_usd=round(spent_on(store, p.id), 4),
                 id=p.id,
                 name=p.data["name"],
                 group=p.data.get("group"),
@@ -765,11 +774,25 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             for p in store.read().list("project")
         ]
 
+    def _project_fields(changes: dict, prj: str | None = None) -> None:
+        """Refuse a parent that would put a project inside itself, and content levels the AI settings don't have."""
+        from engine.applier import parent_problem
+
+        if changes.get("parent"):
+            why = parent_problem(store.read(), prj, changes["parent"])
+            if why:
+                raise HTTPException(status_code=409, detail=why)
+        unknown = sorted(set(changes.get("content_levels") or []) - set(cfg.ai.content_levels))
+        if unknown:
+            detail = f"{', '.join(unknown)} isn't a content level in the AI settings"
+            raise HTTPException(status_code=409, detail=detail)
+
     @r.post("/projects")
     def add_project(body: ProjectIn) -> Created:
         _same_name("project", "name", body.name)
         if body.owner:
             need("person", body.owner)
+        _project_fields(body.model_dump())
 
         def do() -> str:
             with store.transaction() as tx:
@@ -787,10 +810,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             _same_name("project", "name", changes["name"], except_id=prj)
         if changes.get("owner"):
             need("person", changes["owner"])
-        unknown = sorted(set(changes.get("content_levels") or []) - set(cfg.ai.content_levels))
-        if unknown:
-            detail = f"{', '.join(unknown)} isn't a content level in the AI settings"
-            raise HTTPException(status_code=409, detail=detail)
+        _project_fields(changes, prj)
         guard(lambda: _update(store, "project", prj, changes, _setup("project.edit")))
         changed()
         return Ok(ok=prj)

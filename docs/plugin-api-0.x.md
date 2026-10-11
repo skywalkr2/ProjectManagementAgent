@@ -10,6 +10,18 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.4 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Projects inside projects: `Project.parent` (never itself or below it); `record.set` may change a project's `parent`
+  and `language`. A core op `project.add` (name, summary, parent, language) starts one; it is a system op, so from the
+  assistant it waits for the person, and reading notes never offers it. Actions and plugin task kinds may propose it.
+- Language: the workspace's `workspace.language` (default `en-US`), a project's `language`, inherited through its
+  parents. `view.language(record)` gives the tag for any record; a plugin task's run is told to write in it.
+- Budgets: `Project.budget_usd`, set only by the person, covers AI work on the project, the records in it and the
+  projects inside it; a run that would pass it waits for the person with what is spent.
+
 ## What 0.3.3 changes
 
 Manifests stay `'>=0.3,<0.4'`.

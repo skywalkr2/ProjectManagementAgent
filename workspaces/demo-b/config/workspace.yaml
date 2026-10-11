@@ -8,6 +8,7 @@ user:
   aliases: [me]
   timezone: America/New_York
 owner_format: "{full_name}"
+language: en-US
 plugins:
   enabled: [example]
   actions:

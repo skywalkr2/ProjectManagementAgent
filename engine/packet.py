@@ -156,6 +156,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     stable_parts = [
         "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
         "# Practice\n" + _guidance(kind),
+        f"Write in {view.language(target)}: its spelling, punctuation and date style." if target is not None else "",
         REFERENCE_RULE if any(p.reference_only for p in every) else "",
         *(_render_part(p) for p in parts.stable),
     ]

@@ -10,8 +10,9 @@ from typing import Any
 
 from engine.ops import OP_MODELS
 
-#: Core ops reading notes never offers: deleting is the person's call, and file.add is made only by person actions.
-NOT_FROM_NOTES = {"record.delete", "file.add"}
+#: Core ops reading notes never offers: deleting is the person's call, file.add is made only by person actions, and
+#: starting projects is for actions and plugin work.
+NOT_FROM_NOTES = {"record.delete", "file.add", "project.add"}
 
 
 @dataclass(frozen=True)

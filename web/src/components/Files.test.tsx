@@ -32,6 +32,9 @@ const project: S["ProjectView"] = {
   owner: null,
   owner_name: null,
   summary: null,
+  language: "en-US",
+  language_own: false,
+  spent_usd: 0,
 };
 
 const action = { name: "demo/make-note", label: "Make a note from this file", on: "file" };

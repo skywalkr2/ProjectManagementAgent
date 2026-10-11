@@ -71,6 +71,12 @@ class WorkspaceFile(FileModel):
     assistant_name: str = Field("Assistant", description="The assistant's display name; the only name people see.")
     user: UserSettings = Field(default_factory=UserSettings, description="Who the PM is.")
     owner_format: str = Field("{full_name}", description='How an action owner is written, e.g. "{team} ({full_name})".')
+    language: str = Field(
+        "en-US",
+        pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+        description="The language and variety work is written in, as a language tag (en-US, en-GB, fr-CA); a project "
+        "may set its own.",
+    )
     plugins: PluginSettings = Field(default_factory=PluginSettings, description="Which plugins run in this workspace.")
 
 

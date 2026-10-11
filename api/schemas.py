@@ -284,6 +284,12 @@ class ProjectView(BaseModel):
     owner: str | None
     owner_name: str | None
     summary: str | None
+    parent: str | None = Field(None, description="The project this one belongs to.")
+    language: str = Field("en-US", description="The language work on it is written in, its own or inherited.")
+    language_own: bool = Field(False, description="Whether the language is set on this project rather than inherited.")
+    content_levels: list[str] = Field(default_factory=list)
+    budget_usd: float | None = None
+    spent_usd: float = Field(0.0, description="What AI work on it and everything in it has cost.")
 
 
 class NoteView(BaseModel):
@@ -303,10 +309,17 @@ class ProjectIn(BaseModel):
     target: str | None = Field(None, description="A date, YYYY-MM-DD.")
     owner: str | None = None
     summary: str | None = None
+    parent: str | None = None
+    language: str | None = Field(None, description="A language tag such as en-US; unset to inherit.")
+    budget_usd: float | None = Field(None, ge=0)
+    content_levels: list[str] = Field(default_factory=list)
 
 
 class ProjectPatch(BaseModel):
     name: str | None = Field(None, min_length=1)
+    parent: str | None = None
+    language: str | None = Field(None, description="A language tag such as en-US; null to inherit.")
+    budget_usd: float | None = Field(None, ge=0, description="null for no cap.")
     content_levels: list[str] | None = Field(
         None, description="Content levels its material carries, from the AI settings; the person's choice."
     )

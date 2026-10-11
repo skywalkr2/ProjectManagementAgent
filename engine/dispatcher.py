@@ -18,6 +18,7 @@ from engine.config import Config
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
 from engine.packet import PacketRefused, build, target_of
+from engine.projects import budget_problem
 from engine.storage import Store, StoreError, WriteContext
 from engine.tasks import settings as task_settings
 from engine.workspace import Workspace
@@ -142,6 +143,9 @@ def process(
             f"This would cost about ${estimate:.2f}, above the per-run limit of ${budgets.per_run_usd:.2f}. "
             "Hand in less, or raise budgets.per_run_usd in ai.yaml.",
         )
+    over = budget_problem(store, req.data, estimate)
+    if over:
+        return needs_you(store, request_id, over)
     if estimate is not None and estimate > budgets.confirm_above_usd and req.data.get("approval") != "granted":
         # Spending above the configured amount is the person's choice: wait for their go with the estimate shown.
         _set(

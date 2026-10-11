@@ -83,7 +83,8 @@ class FactOp(OpModel):
 
 
 class RecordSetOp(OpModel):
-    """Change one field of an existing record. Allowed fields: project status, phase, target, priority and summary;
+    """Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent
+    (the id of the project it belongs to) and language (a tag such as en-US);
     action text, due and notes; question title and text; person role, org and why_they_matter. The new value must
     be valid for the field. Evidence is required for due, status, owners, target and owner."""
 
@@ -217,6 +218,22 @@ class FileAddOp(OpModel):
         return f"Add the file {self.name}"
 
 
+class ProjectAddOp(OpModel):
+    """Start a new project, optionally inside another (a book in its series). A system op: from the assistant it waits
+    for the person. The name must not be another live project's."""
+
+    op: Literal["project.add"] = "project.add"
+    name: str = Field(min_length=1, description="The project's name.")
+    summary: str | None = Field(None, description="A short description of what the project is.")
+    parent: str | None = Field(None, description="The id of the project it belongs to, if any.")
+    language: str | None = Field(
+        None, description="Its language tag, if it differs from its parent's or the workspace's."
+    )
+
+    def describe(self) -> str | None:
+        return f"Start the project {self.name}"
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -229,7 +246,8 @@ Op = Annotated[
     | PersonAddOp
     | StageMoveOp
     | RecordDeleteOp
-    | FileAddOp,
+    | FileAddOp
+    | ProjectAddOp,
     Field(discriminator="op"),
 ]
 
@@ -246,9 +264,10 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "stage.move": StageMoveOp,
     "record.delete": RecordDeleteOp,
     "file.add": FileAddOp,
+    "project.add": ProjectAddOp,
 }
 
-TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {"record.delete": "system"}
+TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {"record.delete": "system", "project.add": "system"}
 
 #: Ops whose evidence is required (record.set requires it for the fields in EVIDENCE_FIELDS).
 NEEDS_EVIDENCE = {"fact", "action.add", "action.close", "question.done"}
@@ -256,7 +275,7 @@ EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner"}
 
 #: Fields record.set may change, per kind.
 SETTABLE: dict[str, set[str]] = {
-    "project": {"status", "phase", "target", "priority", "summary"},
+    "project": {"status", "phase", "target", "priority", "summary", "parent", "language"},
     "action": {"text", "due", "notes"},
     "question": {"title", "text"},
     "person": {"role", "org", "why_they_matter"},

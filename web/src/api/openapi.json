@@ -1691,6 +1691,25 @@
       },
       "ProjectIn": {
         "properties": {
+          "budget_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "content_levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Content Levels",
+            "type": "array"
+          },
           "group": {
             "anyOf": [
               {
@@ -1701,6 +1720,18 @@
               }
             ],
             "title": "Group"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A language tag such as en-US; unset to inherit.",
+            "title": "Language"
           },
           "name": {
             "minLength": 1,
@@ -1717,6 +1748,17 @@
               }
             ],
             "title": "Owner"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent"
           },
           "phase": {
             "anyOf": [
@@ -1772,6 +1814,19 @@
       },
       "ProjectPatch": {
         "properties": {
+          "budget_usd": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "null for no cap.",
+            "title": "Budget Usd"
+          },
           "content_levels": {
             "anyOf": [
               {
@@ -1798,6 +1853,18 @@
             ],
             "title": "Group"
           },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A language tag such as en-US; null to inherit.",
+            "title": "Language"
+          },
           "name": {
             "anyOf": [
               {
@@ -1820,6 +1887,17 @@
               }
             ],
             "title": "Owner"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent"
           },
           "phase": {
             "anyOf": [
@@ -1871,6 +1949,24 @@
       },
       "ProjectView": {
         "properties": {
+          "budget_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "content_levels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Content Levels",
+            "type": "array"
+          },
           "group": {
             "anyOf": [
               {
@@ -1885,6 +1981,18 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "language": {
+            "default": "en-US",
+            "description": "The language work on it is written in, its own or inherited.",
+            "title": "Language",
+            "type": "string"
+          },
+          "language_own": {
+            "default": false,
+            "description": "Whether the language is set on this project rather than inherited.",
+            "title": "Language Own",
+            "type": "boolean"
           },
           "name": {
             "title": "Name",
@@ -1912,6 +2020,18 @@
             ],
             "title": "Owner Name"
           },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The project this one belongs to.",
+            "title": "Parent"
+          },
           "phase": {
             "anyOf": [
               {
@@ -1922,6 +2042,12 @@
               }
             ],
             "title": "Phase"
+          },
+          "spent_usd": {
+            "default": 0.0,
+            "description": "What AI work on it and everything in it has cost.",
+            "title": "Spent Usd",
+            "type": "number"
           },
           "status": {
             "anyOf": [

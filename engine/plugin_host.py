@@ -467,6 +467,7 @@ class PluginHost:
         from engine.files import read_bytes
 
         view.read_file = lambda file_id: read_bytes(self.store, file_id)[1]
+        view.default_language = self.cfg.workspace.language
         return view
 
     def file_kinds(self) -> dict[str, Any]:

@@ -81,6 +81,22 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-12: Projects inside projects, a language per project, and a budget per project
+
+**Decided by:** Claude (design), from the plugin's needs; the owner can override.
+
+**What:** A project may belong to another (`parent`; a series holds its books), never to itself or one of its own
+parts. Language is a workspace setting (`workspace.language`, a tag such as en-US) a project may override, inherited
+down through parents. `project.add` starts a project as a system op (the assistant's proposals wait for the person;
+reading notes doesn't offer it). A project may carry a budget, set only by the person, covering AI work on it and
+everything inside it; a run that would pass it waits with what is spent.
+
+**Why:** A book series is a parent with child books; spelling, punctuation and dates follow the book's variety; and a
+writer needs to see and cap what each book costs.
+
+**Impact:** Plugin API 0.3.4. New fields on Project (`parent`, `language`, `budget_usd`), setting
+`workspace.language`, op `project.add`. The project screens show and edit them in the UX pass.
+
 ## 2026-10-12: Content levels route work away from accounts that would refuse it
 
 **Decided by:** Claude (design), from a plugin question; the owner can override.

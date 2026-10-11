@@ -31,7 +31,7 @@ from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.3"
+PLUGIN_API_VERSION = "0.3.4"
 
 
 class Settings(BaseModel):
@@ -104,6 +104,16 @@ class ReadView:
         """The first live record of a kind with these field values, or None."""
         found = self.list(kind, **equals)
         return found[0] if found else None
+
+    #: Set by the host: the workspace's language tag.
+    default_language: str = "en-US"
+
+    def language(self, record: Stored) -> str:
+        """The language tag work on a record is written in: its project's (a project's own for a project), else the
+        nearest parent project's, else the workspace's."""
+        from engine.projects import language_for
+
+        return language_for(self.__view, self.default_language, record)
 
 
 class OpWriter(ReadView):

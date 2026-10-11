@@ -30,6 +30,7 @@ from engine.ops import (
     NoteOp,
     OpModel,
     PersonAddOp,
+    ProjectAddOp,
     QuestionAddOp,
     QuestionDoneOp,
     RecordDeleteOp,
@@ -172,6 +173,19 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     model_for(op.kind).model_validate({**target.data, op.field: op.value})
                 except ValidationError as err:
                     refuse(i, "targets", f"{op.kind}.{op.field}: {err.errors()[0]['msg']}")
+                else:
+                    if op.kind == "project" and op.field == "parent" and op.value is not None:
+                        why = parent_problem(view, op.id, op.value)
+                        if why:
+                            refuse(i, "targets", why)
+        if isinstance(op, ProjectAddOp):
+            taken = {p.data["name"].strip().lower() for p in view.list("project")}
+            if op.name.strip().lower() in taken:
+                refuse(i, "targets", f"there is already a project called {op.name}")
+            if op.parent is not None and view.get("project", op.parent) is None:
+                refuse(i, "targets", f"there is no project {op.parent}")
+            if op.language is not None and not re.fullmatch(LANGUAGE_TAG, op.language):
+                refuse(i, "targets", f"{op.language} isn't a language tag such as en-US")
         # questions to other people
         if isinstance(op, QuestionAddOp):
             resolved = ctx.people.resolve(op.to)
@@ -218,6 +232,24 @@ def _openable(url: str) -> bool:
         return False
     host = re.sub(r"^https?://", "", url).split("/", 1)[0].split(":", 1)[0].lower()
     return host not in ("localhost", "127.0.0.1", "::1", "0.0.0.0") and "." in host
+
+
+LANGUAGE_TAG = r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*"
+
+
+def parent_problem(view: Any, project: str | None, parent: str) -> str | None:
+    """Why `parent` can't hold `project`, or None: it must exist, and never be the project or inside it."""
+    seen = set()
+    current = view.get("project", parent)
+    if current is None:
+        return f"there is no project {parent}"
+    while current is not None and current.id not in seen:
+        if current.id == project:
+            return "a project can't be inside itself or one of its own parts"
+        seen.add(current.id)
+        up = current.data.get("parent")
+        current = view.get("project", up) if up else None
+    return None
 
 
 def _projects_of(op: OpModel) -> list[str]:
@@ -483,6 +515,9 @@ def _apply_op(
             raise StoreError(f"{kind} {rid} is still referred to by {users[0][0]} {users[0][1]}")
         tx.delete(kind, rid, w, read_version=op.read_version)
         return [{"kind": kind, "id": rid}], None
+    if isinstance(op, ProjectAddOp):
+        data = {"name": op.name.strip(), "summary": op.summary, "parent": op.parent, "language": op.language}
+        return [{"kind": "project", "id": tx.create("project", data, w).id}], None
     if isinstance(op, FileAddOp):
         from engine.files import blob_matches, check_file
 

@@ -8,6 +8,7 @@ user:
   aliases: [Rafa, me]
   timezone: America/Chicago
 owner_format: "{team} ({full_name})"
+language: en-US
 plugins:
   enabled: [example]
   actions:

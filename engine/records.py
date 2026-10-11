@@ -147,8 +147,9 @@ class Team(Record):
 
 
 class Project(Record):
-    """A piece of work being run. `record.set` changes status, phase, target, priority and summary, `record.log` adds
-    to its log; the person edits the rest in the app."""
+    """A piece of work being run, possibly inside another (a book in its series). `project.add` starts one;
+    `record.set` changes status, phase, target, priority, summary, parent and language; `record.log` adds to its log;
+    the person edits the rest in the app, and only the person sets its content levels and budget."""
 
     record_kind: ClassVar[str] = "project"
     prefix: ClassVar[str] = "PRJ"
@@ -168,6 +169,19 @@ class Project(Record):
         default_factory=list,
         description="Content levels (from ai.content_levels) its material carries, set by the person; AI work on it "
         "goes only to accounts that take them all.",
+    )
+    parent: str | None = Field(
+        None, description="The id of the project this one belongs to (a book in its series); never itself or below it."
+    )
+    language: str | None = Field(
+        None,
+        pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+        description="The language tag work on it is written in; unset means its parent's, else the workspace's.",
+    )
+    budget_usd: float | None = Field(
+        None,
+        ge=0,
+        description="The most AI work on it and everything in it may cost, set by the person; none for no cap.",
     )
     log: list[LogEntry] = Field(
         default_factory=list, description="The update log, oldest first; `record.log` adds a line dated that day."
@@ -492,7 +506,7 @@ REGISTRY: dict[str, type[Record]] = {
 REFERENCES: dict[str, list[tuple[str, str]]] = {
     "person": [("team", "team")],
     "team": [("members[]", "person")],
-    "project": [("owner", "person")],
+    "project": [("owner", "person"), ("parent", "project")],
     "action": [("project", "project"), ("owners[].person", "person"), ("owners[].team", "team"), ("source", "source")],
     "question": [("to", "person"), ("projects[]", "project"), ("source", "source")],
     "source": [("projects[]", "project")],
