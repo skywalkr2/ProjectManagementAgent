@@ -10,6 +10,20 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.26 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Triage matchers:** `registrar.triage_matcher(name, match=fn)`, listed in `provides.triage_matchers`.
+  `match(change, params) -> reason | None`; `change` has source, key, title, change, author, before, now, added,
+  removed and our_accounts. A workspace uses it in `watch.yaml` `triage: [{name, kind, params, why, sources}]`; the
+  first rule that returns a reason closes the change before the assistant reads it, and the person sees it under
+  Auto-closed with the rule and reason and can take a closer look. A failing matcher counts as no match and is
+  contained. The core's matchers are `cosmetic`, `by-us`, `terms-absent` and `name-matches`.
+- **Folding:** a newer change to an item whose earlier change is still waiting is handed in once, with the earlier
+  change first; the older request records `folded_into`.
+- `workspace.our_accounts` names the accounts that are ours; a watched change by one is marked `by_us`.
+
 ## What 0.3.25 adds
 
 Manifests stay `'>=0.3,<0.4'`.

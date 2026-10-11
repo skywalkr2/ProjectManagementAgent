@@ -3,6 +3,20 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Triage rules live beside the watched sources
+
+**Decided by:** project lead.
+
+**What:** Triage rules are a `triage:` list in `watch.yaml`, not a separate `triage.yaml`, because they only ever apply to
+watched changes and often name a source. A closed change is still kept as a source and a done request with the rule
+and reason, listed as Auto-closed; Take a closer look queues it and records a `pulled_back` signal. A newer change to
+an item whose earlier change hasn't been read yet folds the earlier one in, so the assistant reads them once, in order.
+`our_accounts` is in `workspace.yaml` (design 4.1).
+
+**Why:** Fewer files for the person to find, and one place that says what is read and what is set aside.
+
+**Impact:** Design 4.5 and 6.5 read `watch.yaml` for triage. Plugin API 0.3.26 adds triage matchers. No change to scope.
+
 ## 2026-10-11: Watchers hand in differences as ordinary inputs; the first read is a baseline
 
 **Decided by:** project lead, following design 6.4 and the decision on watchers and lookups (2026-10-10).

@@ -238,3 +238,167 @@ def test_the_worker_reads_due_sources_and_the_route_shows_them(tmp_path):
     assert listed[0]["label"] == "Board" and listed[0]["last"]["outcome"] == "baseline" and listed[0]["items"] == 1
     assert c.post(f"{api}/watch/s/read").json()["last"]["outcome"] == "ok"
     assert c.post(f"{api}/watch/nothing/read").status_code == 404
+
+
+# ---- triage and folding ----------------------------------------------------------------------------------------------
+
+
+def fake(items):
+    return {"id": "s", "connector": "fake", "label": "Board", "first_run": "all", "settings": {"items": items}}
+
+
+def reread(tmp_path, ws, store, items, **watch):
+    """Change what the stand-in source holds and read it again."""
+    from engine.storage import Store
+    from engine.watch import refresh
+
+    store.close()
+    current = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
+    current["sources"] = [fake(items)]
+    current.update(watch)
+    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(current))
+    cfg = load_config(ws.config_dir, env={})
+    store = Store(ws.db_path, cfg=cfg)
+    return cfg, store, refresh(ws, store, cfg, "s", NOW + timedelta(hours=len(store.read().list("watch_run"))))
+
+
+RULES = [
+    {"name": "Spacing", "kind": "cosmetic", "why": "Closed: {reason}."},
+    {"name": "Ours", "kind": "by-us"},
+    {"name": "Scratch", "kind": "name-matches", "params": {"patterns": ["*.tmp"]}},
+    {"name": "Budget only", "kind": "terms-absent", "params": {"terms": ["budget"]}, "sources": ["s"]},
+]
+
+
+def test_triage_rules_close_changes_with_a_reason(tmp_path):
+    from engine.watch import refresh
+
+    items = [{"key": "a", "title": "Plan", "text": "The budget is ten.\nLunch at noon."}]
+    ws, cfg, store = make(tmp_path, [fake(items)], triage=RULES)
+    try:
+        assert len(refresh(ws, store, cfg, "s", NOW).new) == 1
+        cfg, store, spaced = reread(tmp_path, ws, store, [{**items[0], "text": "The budget  is ten\nLunch at noon."}])
+        closed = store.read().get("request", spaced.changed[0])
+        assert closed.data["state"] == "done" and closed.data["auto_closed"]["rule"] == "Spacing"
+        assert closed.data["waiting"].startswith("Closed by Spacing: Closed: only spacing")
+        cfg, store, other = reread(tmp_path, ws, store, [{**items[0], "text": "The budget  is ten\nLunch at one."}])
+        assert store.read().get("request", other.changed[0]).data["auto_closed"]["rule"] == "Budget only"
+        cfg, store, real = reread(tmp_path, ws, store, [{**items[0], "text": "The budget is twelve.\nLunch at one."}])
+        assert store.read().get("request", real.changed[0]).data["state"] == "queued"
+    finally:
+        store.close()
+
+
+def test_changes_by_our_own_accounts_and_scratch_files_are_closed(tmp_path):
+    from engine.storage import Store
+    from engine.watch import refresh
+
+    items = [
+        {"key": "x.tmp", "title": "x.tmp", "text": "scratch"},
+        {"key": "b", "title": "Notes", "text": "Mine, the budget", "author": "Cockpit assistant"},
+    ]
+    ws, cfg, store = make(tmp_path, [fake(items)], triage=RULES)
+    store.close()
+    settings = yaml.safe_load((ws.config_dir / "workspace.yaml").read_text())
+    settings["our_accounts"] = ["Cockpit Assistant"]
+    (ws.config_dir / "workspace.yaml").write_text(yaml.safe_dump(settings))
+    cfg = load_config(ws.config_dir, env={})
+    store = Store(ws.db_path, cfg=cfg)
+    try:
+        result = refresh(ws, store, cfg, "s", NOW)
+        rules = sorted(store.read().get("request", r).data["auto_closed"]["rule"] for r in result.new)
+        assert rules == ["Ours", "Scratch"]
+        mine = next(
+            store.read().get("request", r) for r in result.new if "Ours" in str(store.read().get("request", r).data)
+        )
+        assert store.read().get("source", mine.data["source"]).data["watched"]["by_us"]
+    finally:
+        store.close()
+
+
+def test_a_newer_change_folds_in_the_older_one_still_waiting(tmp_path):
+    from engine.watch import refresh
+
+    items = [{"key": "a", "title": "Plan", "text": "First."}]
+    ws, cfg, store = make(tmp_path, [fake(items)])
+    try:
+        first = refresh(ws, store, cfg, "s", NOW).new[0]
+        cfg, store, second = reread(tmp_path, ws, store, [{**items[0], "text": "Second."}])
+        newer = second.changed[0]
+        older = store.read().get("request", first).data
+        assert older["state"] == "done" and older["folded_into"] == newer
+        text = source_text(ws, store, newer)[1]
+        assert text.index("New in Board: Plan") < text.index("Then:") < text.index("+Second.")
+    finally:
+        store.close()
+
+
+def test_a_closed_change_can_be_taken_a_closer_look_at(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine.watch import refresh
+
+    items = [{"key": "a", "title": "Plan", "text": "One budget."}]
+    ws, cfg, store = make(tmp_path, [fake(items)], triage=RULES)
+    refresh(ws, store, cfg, "s", NOW)
+    cfg, store, spaced = reread(tmp_path, ws, store, [{**items[0], "text": "One  budget"}])
+    store.close()
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    listed = c.get(f"{api}/auto-closed").json()
+    assert listed[0]["rule"] == "Spacing" and listed[0]["source"] == "Board" and listed[0]["change"] == "changed"
+    done = c.post(f"{api}/requests/{listed[0]['id']}/closer-look", json={"read_version": listed[0]["version"]})
+    assert done.status_code == 200, done.text
+    assert c.get(f"{api}/auto-closed").json() == []
+    from engine.storage import Store
+
+    again = Store(ws.db_path)
+    try:
+        request = again.read().get("request", listed[0]["id"]).data
+        assert request["state"] == "queued" and request["auto_closed"] is None
+        assert again.read().list("signal")[-1].data["kind"] == "pulled_back"
+    finally:
+        again.close()
+
+
+MATCHER_PLUGIN = PLUGIN.replace(
+    "def register(registrar):\n",
+    "def never_mind(change, params):\n"
+    "    if params.get('crash'):\n"
+    "        raise RuntimeError('broken')\n"
+    "    return 'it is a card' if change['key'].startswith('card') else None\n\n"
+    "def register(registrar):\n"
+    '    registrar.triage_matcher("p19/cards", match=never_mind)\n',
+)
+
+
+def test_a_plugin_adds_a_triage_matcher_and_a_crash_counts_as_no_match(tmp_path, caplog):
+    from engine.storage import Store
+    from engine.watch import refresh
+
+    ws, cfg, store = plugin_workspace(tmp_path)
+    store.close()
+    (ws.root / "plugins" / "p19" / "fixture.py").write_text(MATCHER_PLUGIN)
+    manifest_path = ws.root / "plugins" / "p19" / "plugin.yaml"
+    manifest = yaml.safe_load(manifest_path.read_text())
+    manifest["provides"]["triage_matchers"] = ["p19/cards"]
+    manifest_path.write_text(yaml.safe_dump(manifest))
+    watch = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
+    watch["triage"] = [
+        {"name": "Crashing", "kind": "p19/cards", "params": {"crash": True}},
+        {"name": "Cards", "kind": "p19/cards"},
+    ]
+    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(watch))
+    cfg = load_config(ws.config_dir, env={})
+    store = Store(ws.db_path, cfg=cfg)
+    try:
+        result = refresh(ws, store, cfg, "b", NOW)
+        assert store.read().get("request", result.new[0]).data["auto_closed"] == {
+            "rule": "Cards",
+            "reason": "it is a card",
+        }
+        assert "triage matcher p19/cards failed: broken" in caplog.text and store.plugins.active("p19")
+    finally:
+        store.close()

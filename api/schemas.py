@@ -1054,3 +1054,16 @@ class WatchSourceView(BaseModel):
     last: WatchRunView | None = None
     failures: int = Field(0, description="Failed reads in a row.")
     problem: str | None = Field(None, description="Why it can't be read, and what to do, while it fails.")
+
+
+class AutoClosedView(BaseModel):
+    """A watched change a triage rule closed before the assistant read it."""
+
+    id: str
+    version: int
+    title: str
+    source: str = Field(description="The watched source's label.")
+    change: Literal["new", "changed", "removed"]
+    rule: str
+    reason: str
+    created_at: str

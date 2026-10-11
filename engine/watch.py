@@ -163,7 +163,9 @@ def _compare(ws: Any, store: Any, cfg: Any, source: Any, poll: Any, now: datetim
             if baseline:
                 continue
             old = _read_text(ws, before.data["content_hash"]) if before is not None else None
-            request = _hand_in(ws, tx, cfg, source, item, change, _input_text(source, item, change, old), now)
+            facts = _change(cfg, source, item, change, old)
+            text = _input_text(source, item, change, old)
+            request = _hand_in(ws, store, tx, cfg, source, item, change, text, now, facts)
         if not baseline:
             (result.new if change == "new" else result.changed).append(request)
     if poll.complete and not baseline:
@@ -176,7 +178,8 @@ def _compare(ws: Any, store: Any, cfg: Any, source: Any, poll: Any, now: datetim
                     continue
                 gone = SourceItem(key, snapshot.data["title"], "", author=None)
                 text = f"{snapshot.data['title']} is no longer in {source.label or source.id}."
-                result.removed.append(_hand_in(ws, tx, cfg, source, gone, "removed", text, now))
+                facts = _change(cfg, source, gone, "removed", _read_text(ws, snapshot.data["content_hash"]))
+                result.removed.append(_hand_in(ws, store, tx, cfg, source, gone, "removed", text, now, facts))
     return result
 
 
@@ -191,9 +194,48 @@ def _input_text(source: Any, item: SourceItem, change: str, old: str | None) -> 
     return f"Changed in {where}: {item.title}\n\nWhat changed:\n{shown}\n\nIt now reads:\n{item.text}"
 
 
-def _hand_in(ws: Any, tx: Any, cfg: Any, source: Any, item: SourceItem, change: str, text: str, now: datetime) -> str:
-    """Save the input's text and queue it for the assistant, as outside content."""
+def _change(cfg: Any, source: Any, item: SourceItem, change: str, old: str | None) -> dict[str, Any]:
+    """What triage matchers see about a change."""
+    before, now = old or "", item.text
+    diff = list(difflib.ndiff(before.splitlines(), now.splitlines())) if change == "changed" else []
+    return {
+        "source": source.id,
+        "key": item.key,
+        "title": item.title,
+        "change": change,
+        "author": item.author,
+        "before": before,
+        "now": now,
+        "added": [line[2:] for line in diff if line.startswith("+ ")],
+        "removed": [line[2:] for line in diff if line.startswith("- ")],
+        "our_accounts": list(cfg.workspace.our_accounts),
+    }
+
+
+def _hand_in(
+    ws: Any,
+    store: Any,
+    tx: Any,
+    cfg: Any,
+    source: Any,
+    item: SourceItem,
+    change: str,
+    text: str,
+    now: datetime,
+    facts: dict[str, Any],
+) -> str:
+    """Save the input's text and queue it for the assistant, as outside content: closed at once when a triage rule
+    matches, and with any older change to the same item that is still waiting folded in, so they are read once, in
+    order."""
+    from engine.triage import first_match
+
+    closed = first_match(store, cfg, facts)
+    folded = [] if closed else _waiting_for(tx, source.id, item.key)
+    if folded:
+        earlier = [_read_text(ws, tx.get("source", r.data["source"]).data["content_hash"]) for r in folded]
+        text = "\n\nThen:\n\n".join([*earlier, text])
     digest = _keep_text(ws, text)
+    by_us = bool(item.author) and item.author.strip().lower() in {a.lower() for a in cfg.workspace.our_accounts}
     record = tx.create(
         "source",
         {
@@ -204,23 +246,49 @@ def _hand_in(ws: Any, tx: Any, cfg: Any, source: Any, item: SourceItem, change: 
             "trust": "untrusted",
             "projects": [source.project] if source.project else [],
             "url": item.link,
-            "watched": {"source": source.id, "key": item.key, "change": change, "author": item.author},
+            "watched": {
+                "source": source.id,
+                "key": item.key,
+                "change": change,
+                "author": item.author,
+                "by_us": by_us,
+            },
         },
         _WATCHER,
     )
-    request = tx.create(
-        "request",
-        {
-            "task": "notes",
-            "source": record.id,
-            "origin": "input",
-            "state": "queued",
-            "waiting": "With the assistant, starting now",
-            "created_at": now.isoformat(),
-        },
-        _WATCHER,
-    )
+    data: dict[str, Any] = {
+        "task": "notes",
+        "source": record.id,
+        "origin": "input",
+        "state": "queued",
+        "waiting": "With the assistant, starting now",
+        "created_at": now.isoformat(),
+    }
+    if closed:
+        data.update(state="done", waiting=f"Closed by {closed['rule']}: {closed['reason']}", auto_closed=closed)
+    request = tx.create("request", data, _WATCHER)
+    for older in folded:
+        tx.update(
+            "request",
+            older.id,
+            {"state": "done", "waiting": "Folded into a newer change to the same item", "folded_into": request.id},
+            _WATCHER,
+            read_version=older.version,
+        )
     return request.id
+
+
+def _waiting_for(tx: Any, source: str, key: str) -> list[Any]:
+    """Requests for earlier changes to this item that the assistant hasn't started, oldest first."""
+    found = []
+    for request in tx.list("request"):
+        if request.data["state"] != "queued" or not request.data.get("source"):
+            continue
+        record = tx.get("source", request.data["source"])
+        watched = record.data.get("watched") if record else None
+        if watched and watched["source"] == source and watched["key"] == key:
+            found.append(request)
+    return sorted(found, key=lambda r: str(r.data["created_at"]))
 
 
 def _keep_text(ws: Any, text: str) -> str:

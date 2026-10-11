@@ -861,6 +861,61 @@
         "title": "AuthorSpan",
         "type": "object"
       },
+      "AutoClosedView": {
+        "description": "A watched change a triage rule closed before the assistant read it.",
+        "properties": {
+          "change": {
+            "enum": [
+              "new",
+              "changed",
+              "removed"
+            ],
+            "title": "Change",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "source": {
+            "description": "The watched source's label.",
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "title",
+          "source",
+          "change",
+          "rule",
+          "reason",
+          "created_at"
+        ],
+        "title": "AutoClosedView",
+        "type": "object"
+      },
       "BackupFolderAdd": {
         "additionalProperties": false,
         "properties": {
@@ -5434,6 +5489,28 @@
         "summary": "Asks"
       }
     },
+    "/api/auto-closed": {
+      "get": {
+        "operationId": "auto_closed_api_auto_closed_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AutoClosedView"
+                  },
+                  "title": "Response Auto Closed Api Auto Closed Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Auto Closed"
+      }
+    },
     "/api/backup": {
       "post": {
         "operationId": "backup_now_api_backup_post",
@@ -7332,6 +7409,56 @@
           }
         },
         "summary": "Request Accounts"
+      }
+    },
+    "/api/requests/{request_id}/closer-look": {
+      "post": {
+        "description": "Hand in a change a triage rule closed after all; the correction is kept so rules can be tuned.",
+        "operationId": "closer_look_api_requests__request_id__closer_look_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Closer Look"
       }
     },
     "/api/requests/{request_id}/dismiss": {

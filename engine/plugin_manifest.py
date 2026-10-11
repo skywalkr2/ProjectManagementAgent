@@ -106,6 +106,7 @@ class Provides(Strict):
     jobs: list[str] = Field(default_factory=list, description="Work run on a schedule while the app runs.")
     setup_steps: list[str] = Field(default_factory=list, description="Steps added to the first-run setup.")
     connectors: list[str] = Field(default_factory=list, description="Places the assistant can keep reading.")
+    triage_matchers: list[str] = Field(default_factory=list, description="Rule kinds for triaging watched changes.")
     playbook: str | None = Field(None, description="The plugin's own playbook. Not yet available.")
     data: str | None = Field(
         None,

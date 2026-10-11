@@ -299,6 +299,7 @@ class Watched(BaseModel):
     key: str = Field(description="The item's key within that source.")
     change: Literal["new", "changed", "removed"] = Field(description="What happened to the item.")
     author: str | None = Field(None, description="Who changed it last, as the source says.")
+    by_us: bool = Field(False, description="The author is one of the workspace's own accounts.")
 
 
 class Source(Record):
@@ -601,6 +602,12 @@ class Request(Record):
     follows: str | None = Field(
         None, description="The change (a changeset id) whose event a plugin answered with this work, if any."
     )
+    auto_closed: dict[str, str] | None = Field(
+        None, description="For a watched change a triage rule closed: {rule, reason}. Taking a closer look clears it."
+    )
+    folded_into: str | None = Field(
+        None, description="The newer request this one's change was folded into, so they are read in order, once."
+    )
     attempts: int = Field(0, description="How many times the assistant has started on it.")
     created_at: datetime = Field(description="When the request was made.")
     changeset: str | None = Field(None, description="The id of the changeset the assistant proposed for it.")
@@ -764,7 +771,13 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "action": [("project", "project"), ("owners[].person", "person"), ("owners[].team", "team"), ("source", "source")],
     "question": [("to", "person"), ("projects[]", "project"), ("source", "source")],
     "source": [("projects[]", "project")],
-    "request": [("source", "source"), ("changeset", "changeset"), ("previous", "request"), ("follows", "changeset")],
+    "request": [
+        ("source", "source"),
+        ("changeset", "changeset"),
+        ("previous", "request"),
+        ("follows", "changeset"),
+        ("folded_into", "request"),
+    ],
     "changeset": [("request", "request"), ("run", "run")],
     "fact": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("source", "source")],

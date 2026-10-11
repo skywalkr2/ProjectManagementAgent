@@ -11,3 +11,10 @@ sources:
       path: inbox         # inside the workspace's folder; a full path works too
       patterns: ["*.txt", "*.md"]
 failures_before_asking: 3
+triage:
+  - name: Spacing only
+    kind: cosmetic
+    why: "Closed: {reason}."
+  - name: Scratch files
+    kind: name-matches
+    params: {patterns: ["*.tmp", "~*"]}

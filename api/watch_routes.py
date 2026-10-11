@@ -5,12 +5,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from api.schemas import WatchRunView, WatchSourceView
+from api.schemas import AutoClosedView, Created, ReadVersion, WatchRunView, WatchSourceView
 from engine import watch
 from engine.config import Config
-from engine.storage import Store, StoreError
+from engine.storage import Store, StoreError, WriteContext
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
+
+LISTED = 50
 
 
 def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
@@ -60,5 +62,54 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if result.new or result.changed or result.removed:
             worker.poke()
         return view(source)
+
+    @r.get("/auto-closed")
+    def auto_closed() -> list[AutoClosedView]:
+        view = store.read()
+        labels = {s.id: s.label or s.id for s in cfg.watch.sources}
+        closed = [q for q in view.list("request") if q.data.get("auto_closed")]
+        closed.sort(key=lambda q: str(q.data["created_at"]), reverse=True)
+        out = []
+        for q in closed[:LISTED]:
+            source = view.get("source", q.data["source"]) if q.data.get("source") else None
+            watched = (source.data.get("watched") if source else None) or {}
+            out.append(
+                AutoClosedView(
+                    id=q.id,
+                    version=q.version,
+                    title=source.data["title"] if source else q.id,
+                    source=labels.get(watched.get("source", ""), watched.get("source", "")),
+                    change=watched.get("change", "new"),
+                    rule=q.data["auto_closed"]["rule"],
+                    reason=q.data["auto_closed"]["reason"],
+                    created_at=str(q.data["created_at"]),
+                )
+            )
+        return out
+
+    @r.post("/requests/{request_id}/closer-look")
+    def closer_look(request_id: str, body: ReadVersion) -> Created:
+        """Hand in a change a triage rule closed after all; the correction is kept so rules can be tuned."""
+        from engine.dispatcher import signal
+
+        current = store.read().get("request", request_id)
+        if current is None or not current.data.get("auto_closed"):
+            raise HTTPException(status_code=404, detail="That isn't something a rule closed.")
+        try:
+            with store.transaction() as tx:
+                tx.update(
+                    "request",
+                    request_id,
+                    {"state": "queued", "waiting": "With the assistant, starting now", "auto_closed": None},
+                    WriteContext("pm", "trusted", "triage.closer_look"),
+                    read_version=body.read_version,
+                )
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        rule = current.data["auto_closed"]["rule"]
+        signal(store, "pulled_back", [request_id], f"Closed by {rule}: {current.data['auto_closed']['reason']}")
+        events.changed()
+        worker.poke()
+        return Created(id=request_id)
 
     return r

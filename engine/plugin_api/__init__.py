@@ -33,7 +33,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.25"
+PLUGIN_API_VERSION = "0.3.26"
 
 
 class Settings(BaseModel):
@@ -809,6 +809,7 @@ class Registrar:
         self.jobs: dict[str, JobRegistration] = {}
         self.setup_steps: dict[str, SetupStepRegistration] = {}
         self.connectors: dict[str, Any] = {}
+        self.triage_matchers: dict[str, Callable] = {}
         self.interface_provisions: dict[str, InterfaceProvision] = {}
 
     def _name(self, name: str) -> None:
@@ -1225,6 +1226,17 @@ class Registrar:
         from engine.connectors import Connector
 
         self.connectors[name] = Connector(name, " ".join(str(label).split()) or name, settings, poll)
+
+    def triage_matcher(self, name: str, *, match: Callable) -> None:
+        """A rule kind for triage in `watch.yaml` (listed in `provides.triage_matchers`): `match(change, params) ->
+        reason | None` closes a watched change before the assistant reads it when it returns a reason in plain words.
+        `change` has source, key, title, change (new, changed or removed), author, before, now, added and removed
+        (lines) and our_accounts; `params` are the rule's own. Deterministic and quick; it never calls AI. The person
+        sees what it closed and why, and can take a closer look."""
+        self._name(name)
+        if name in self.triage_matchers or not callable(match):
+            raise ValueError("duplicate triage matcher or invalid match function")
+        self.triage_matchers[name] = match
 
     def setup_step(
         self, name: str, *, label: str, done: Callable, explanation: str = "", action: str | None = None

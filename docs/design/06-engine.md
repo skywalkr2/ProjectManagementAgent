@@ -57,7 +57,8 @@ Run on schedule through connectors; compare against snapshots; file a `Change` p
 
 ## 6.5 Triage
 
-Applies `config/triage.yaml` rules in order before queueing, using registered matchers. Each closed item records the rule and a
+Applies triage rules in order before queueing, using registered matchers (the rules live in `watch.yaml`, beside the
+sources they apply to; the core's matchers are `cosmetic`, `by-us`, `terms-absent` and `name-matches`). Each closed item records the rule and a
 readable reason, appears under "Auto-closed", and has a one-click way to send it back ("This is ours", "Take a closer look");
 pulled-back items are recorded so rules can be tuned.
 

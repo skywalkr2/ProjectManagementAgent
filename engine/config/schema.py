@@ -92,6 +92,10 @@ class WorkspaceFile(FileModel):
         "may set its own.",
     )
     plugins: PluginSettings = Field(default_factory=PluginSettings, description="Which plugins run in this workspace.")
+    our_accounts: list[str] = Field(
+        default_factory=list,
+        description="The names the PM and this app use on watched sources, so changes by them read as ours.",
+    )
 
 
 # ---- config/server.yaml ----------------------------------------------------------------------------------------------
@@ -740,8 +744,24 @@ class WatchSource(ConfigModel):
     )
 
 
+class TriageRule(ConfigModel):
+    name: str = Field("", min_length=1, description="What the rule is called, shown with what it closed.")
+    kind: str = Field(
+        "",
+        min_length=1,
+        description='The matcher: cosmetic, by-us, terms-absent, name-matches, or a plugin\'s ("<plugin>/<name>").',
+    )
+    params: dict[str, Any] = Field(default_factory=dict, description="The matcher's settings (terms, patterns).")
+    why: str = Field("", description="What the person reads; {reason} is the matcher's own words. Empty: just those.")
+    sources: list[str] = Field(default_factory=list, description="The sources it applies to; empty: all of them.")
+
+
 class WatchFile(FileModel):
     sources: list[WatchSource] = Field(default_factory=list, description="The places the assistant keeps reading.")
+    triage: list[TriageRule] = Field(
+        default_factory=list,
+        description="Rules, in order, that close a watched change before the assistant reads it; the first match wins.",
+    )
     failures_before_asking: int = Field(
         3,
         ge=1,

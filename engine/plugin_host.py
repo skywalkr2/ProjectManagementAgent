@@ -436,6 +436,29 @@ class PluginHost:
             for name, connector in registrar.connectors.items()
         }
 
+    def triage_matchers(self) -> dict[str, Any]:
+        """Every running plugin's triage matchers, by name."""
+        return {
+            name: match
+            for plugin, registrar in sorted(self.registrars.items())
+            if self.active(plugin)
+            for name, match in registrar.triage_matchers.items()
+        }
+
+    def run_matcher(self, name: str, match: Any, change: dict[str, Any], params: dict[str, Any]) -> str | None:
+        """A plugin's matcher on one change; a failure counts as no match and is contained."""
+        plugin = name.split("/", 1)[0]
+        where = f"triage matcher {name}"
+        try:
+            reason = match(deepcopy(change), deepcopy(params))
+            if reason is not None and (not isinstance(reason, str) or not reason.strip() or len(reason) > 300):
+                raise ValueError("a matcher returns None or one line of up to 300 characters")
+        except Exception as err:
+            self.failed(plugin, where, err)
+            return None
+        self.succeeded(plugin, where)
+        return " ".join(reason.split()) if reason else None
+
     def poll_connector(self, connector: Any, settings: Any, state: dict[str, Any], context: Any) -> Any:
         """Read a plugin's connector: its ConnectorError passes through; anything else is contained like a job."""
         from engine.connectors import ConnectorError, Poll
@@ -807,6 +830,7 @@ class PluginHost:
             ("jobs", registrar.jobs),
             ("setup_steps", registrar.setup_steps),
             ("connectors", registrar.connectors),
+            ("triage_matchers", registrar.triage_matchers),
         ):
             declared = set(getattr(expected, key))
             if f"{registrar.name}/*" in declared:
