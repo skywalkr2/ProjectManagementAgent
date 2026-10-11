@@ -175,7 +175,9 @@ def test_validators_are_told_who_asked(env):
     apply(env, [{"op": "p02/add", "slug": "y"}])
     apply(env, [{"op": "p02/decide", "slug": "y"}], trust="untrusted")
     origins = module(store).SEEN["origins"]
-    assert {"actor": "assistant", "trust": "untrusted", "via": "task"} in origins
+    who = [{k: o[k] for k in ("actor", "trust", "via")} for o in origins]
+    assert {"actor": "assistant", "trust": "untrusted", "via": "task"} in who
+    assert all({"task", "about"} <= set(o) for o in origins)
 
 
 def test_a_person_only_value_from_the_assistant_is_held_and_applies_when_released(env):

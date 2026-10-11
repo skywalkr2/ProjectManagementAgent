@@ -49,6 +49,7 @@ class Pending:
     items: list[dict[str, Any]] = field(default_factory=list)  # id, label, group, kept, ops
     groups: list[dict[str, Any]] = field(default_factory=list)  # id, heading, explanation
     all_or_nothing: bool = False
+    requests: list[dict[str, Any]] = field(default_factory=list)  # task, about {kind, id} or None, note
     created: float = field(default_factory=time.monotonic)
     expires_at: str = ""
 
@@ -337,8 +338,53 @@ def _checked(
         items=items,
         groups=groups,
         all_or_nothing=bool(result.all_or_nothing),
+        requests=_requests_checked(store, plugin, result.requests),
         expires_at=datetime.fromtimestamp(time.time() + keep * 60, UTC).isoformat(),
     )
+
+
+def _queue(store: Store, cfg: Config, requests: list[dict[str, Any]]) -> None:
+    """Queue an applied proposal's requests, each waiting for the person's go."""
+    from engine.stages import wording
+
+    with store.transaction() as tx:
+        for r in requests:
+            tx.create(
+                "request",
+                {
+                    "task": r["task"],
+                    "about": r["about"],
+                    "note": r["note"] or None,
+                    "origin": "pm",
+                    "state": "needs_you",
+                    "approval": "required",
+                    "waiting": wording(cfg, "waiting"),
+                    "created_at": store.clock(),
+                },
+                WriteContext("pm", "trusted", "action.request"),
+            )
+
+
+def _requests_checked(store: Store, plugin: str, requests: list[Any]) -> list[dict[str, Any]]:
+    """A proposal's requests, each naming one of the plugin's own task kinds and a record it may work on."""
+    from engine.plugin_host import check_about
+
+    checked = []
+    view = store.read()
+    for r in requests:
+        if not isinstance(r, dict) or not isinstance(r.get("task"), str):
+            raise StoreError("a request to queue names a task kind")
+        task = r["task"]
+        if task not in store.plugins.registrars[plugin].tasks:
+            raise StoreError(f"{task} isn't one of this plugin's task kinds")
+        about = r.get("about")
+        if isinstance(about, (list, tuple)):
+            about = {"kind": about[0], "id": about[1]}
+        check_about(view, store.plugins.task_kind(task), about)
+        checked.append({"task": task, "about": about, "note": " ".join(str(r.get("note", "")).split())[:2000]})
+    if len(checked) > store.plugins.cfg.workspace.plugins.actions.max_items:
+        raise StoreError("more requests than an action may queue at once")
+    return checked
 
 
 def _placeholders_checked(value: Any, count: int) -> Any:
@@ -460,6 +506,8 @@ def apply(store: Store, cfg: Config, token: str, kept: dict[str, bool] | None = 
         extra={"action": action, "reviewed": True},
         all_or_nothing=pending.all_or_nothing,
     )
+    if pending.requests and store.read().get("changeset", cs_id).data["status"] != "rejected":
+        _queue(store, cfg, pending.requests)
     with store.transaction() as tx:
         current = tx.get("request", request.id)
         tx.update(

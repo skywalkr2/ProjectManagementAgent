@@ -22,6 +22,7 @@ from api.schemas import (
     ActionItem,
     ActionPreviewItem,
     ActionProposalView,
+    ActionRequestView,
     ActionRun,
     ActionState,
     AiState,
@@ -607,6 +608,15 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             token=pending.token,
             action=pending.action,
             summary=pending.summary,
+            requests=[
+                ActionRequestView(
+                    task=r["task"],
+                    label=store.plugins.task_kind(r["task"]).label or r["task"],
+                    about=RecordReference(**r["about"]) if r["about"] else None,
+                    note=r["note"],
+                )
+                for r in pending.requests
+            ],
             ops=[ProposedOp(**o) for o in guard(lambda: person_actions.labels(store, pending))],
             items=[
                 ActionItem(

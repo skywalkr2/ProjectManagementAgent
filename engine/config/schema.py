@@ -282,6 +282,11 @@ class TaskBudget(ConfigModel):
 
 class Budgets(ConfigModel):
     per_run_usd: float = Field(0.25, ge=0, description="Never start a single run estimated above this cost.")
+    confirm_unpriced: bool = Field(
+        False,
+        description="Ask for a go before a run whose cost can't be estimated (an account with no prices, such as a "
+        "subscription), too.",
+    )
     confirm_above_usd: float = Field(
         0.10,
         ge=0,

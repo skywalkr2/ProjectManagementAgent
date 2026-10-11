@@ -784,6 +784,13 @@ class ProposedOp(BaseModel):
     label: str
 
 
+class ActionRequestView(BaseModel):
+    task: str
+    label: str
+    about: RecordReference | None = None
+    note: str = ""
+
+
 class ActionProposalView(BaseModel):
     """One action's proposal for the person's review; applying it needs the token."""
 
@@ -797,6 +804,9 @@ class ActionProposalView(BaseModel):
     previews: list[ActionPreviewItem]
     choices: list[ActionChoice]
     notes: list[str]
+    requests: list[ActionRequestView] = Field(
+        default_factory=list, description="AI work queued when it is applied, each waiting for the person's go."
+    )
     expires_at: str
 
 

@@ -129,6 +129,11 @@ def _guidance(kind: TaskKind) -> str:
     return guidance(kind.playbook)
 
 
+NO_COPY_RULE = (
+    'Parts marked <material copy="no"> may be described and quoted as evidence, but never copy their words into new '
+    "text you write."
+)
+
 REFERENCE_RULE = (
     'Parts marked <reference quote="no"> are there to inform the work. Never quote or reproduce their words in your '
     "answer, and never cite them as evidence."
@@ -178,6 +183,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         "# Practice\n" + _guidance(kind),
         f"Write in {view.language(target)}: its spelling, punctuation and date style." if target is not None else "",
         REFERENCE_RULE if any(p.reference_only for p in every) else "",
+        NO_COPY_RULE if any(getattr(p, "no_copy", False) for p in every) else "",
         *(_render_part(p) for p in parts.stable),
     ]
     request_parts = [f"Today is {today.isoformat()} ({today.strftime('%A')})."]
@@ -251,6 +257,8 @@ def _render_part(part: object) -> str:
     title = " ".join(str(part.title).split()).replace('"', "'")
     if part.reference_only:
         return f'<reference quote="no" source="{title}">\n{part.text}\n</reference>'
+    if getattr(part, "no_copy", False):
+        return f'<material copy="no" source="{title}">\n{part.text}\n</material>'
     if not part.trusted:
         return f'<untrusted source="{title}">\n{part.text}\n</untrusted>'
     return f"# {title}\n{part.text}"

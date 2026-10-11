@@ -29,6 +29,7 @@ roles:
 budgets:
   per_run_usd: 0.25
   confirm_above_usd: 0.10
+  confirm_unpriced: false
   per_day_usd: 2
   per_month_usd: 30
   warn_at: 0.8

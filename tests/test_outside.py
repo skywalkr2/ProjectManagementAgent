@@ -362,3 +362,32 @@ def test_the_cockpits_own_bookkeeping_is_never_a_conflict_copy(env):
     page(folder).write_text(page(folder).read_text().replace("at dawn", "at dusk"))
     pick_up(env)
     assert (folder / ".cockpit" / "outside.json").is_file() and conflict_copies(folder) == []
+
+
+def test_a_record_with_no_project_is_placed_through_its_reference(env):
+    from engine.sync import check_layout, readable_files
+
+    _, _, store, folder = env
+    book(env)
+    model = store.plugins.records["p15/entry"]
+    try:
+        model.layout_project = "section"
+        check_layout(model.layout, model, store.plugins.records)
+        entry = store.read().list("p15/entry")[-1]
+        assert entry.data["project"]  # placed by its own project when it has one
+        files, _ = readable_files(store, store.read())
+        assert "Lake Ferries/bible/sections/03-the-crossing.yaml" in files
+        model.layout_project = "summary"
+        with pytest.raises(ValueError, match="isn't a reference"):
+            check_layout(model.layout, model, store.plugins.records)
+    finally:
+        model.layout_project = None
+
+
+def test_the_current_text_version_is_read_directly(env):
+    from engine.plugin_api import ReadView
+
+    _, _, store, _ = env
+    _, section = book(env)
+    view = store.plugins._with_files(ReadView(store.read(), "p15"))
+    assert view.text_version(section, "body").data["number"] == 1

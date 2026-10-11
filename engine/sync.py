@@ -116,6 +116,9 @@ def check_layout(template: str, model: Any, models: dict[str, Any] | None = None
         sort = getattr(model, "layout_sort", None)
         if sort is not None and sort not in fields:
             raise ValueError(f"layout_sort names {sort}, which isn't a field of {model.record_kind}")
+    via = getattr(model, "layout_project", None)
+    if via is not None and via not in refs:
+        raise ValueError(f"layout_project names {via}, which isn't a reference to one record")
 
 
 def check_derived_path(path: str) -> None:
@@ -255,6 +258,13 @@ def readable_files(store: Any, view: Any) -> tuple[dict[str, bytes | Blob], dict
 
     def base_of(record: Any) -> str:
         project = project_of(record)
+        via = getattr(store.plugins.records.get(record.kind), "layout_project", None)
+        if project is None and via and record.data.get(via):
+            from engine.records import ref_fields
+
+            target = dict(ref_fields(store.plugins.records[record.kind])).get(via)
+            referred = view.get(target, record.data[via]) if target else None
+            project = project_of(referred) if referred is not None else None
         return folders.get(project, WORKSPACE) if project else WORKSPACE
 
     models = {k: m for k, m in store.plugins.records.items() if getattr(m, "layout", None) and k != "project"}
@@ -288,9 +298,18 @@ def _collection_files(
     for record in records:
         groups.setdefault(f"{base_of(record)}/{render(model.layout, record, view, models)}", []).append(record)
     sort = getattr(model, "layout_sort", None)
+
+    def order(record: Any) -> tuple[Any, ...]:
+        value = record.data.get(sort)
+        if value is None:
+            return (2, 0, "", _id_order(record.id))
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return (0, value, "", _id_order(record.id))
+        return (1, 0, str(value), _id_order(record.id))
+
     for path, members in groups.items():
         if sort:
-            members.sort(key=lambda r: (r.data.get(sort) is None, str(r.data.get(sort) or ""), _id_order(r.id)))
+            members.sort(key=order)
         rel = names.claim(path, members[0].id) + ".yaml"
         files[rel] = _yaml([_fields(r, model, set()) for r in members]).encode()
         index[rel] = Entry("collection", model.record_kind, records=tuple((r.id, r.version) for r in members))

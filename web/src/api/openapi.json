@@ -298,6 +298,14 @@
             "title": "Previews",
             "type": "array"
           },
+          "requests": {
+            "description": "AI work queued when it is applied, each waiting for the person's go.",
+            "items": {
+              "$ref": "#/components/schemas/ActionRequestView"
+            },
+            "title": "Requests",
+            "type": "array"
+          },
           "summary": {
             "title": "Summary",
             "type": "string"
@@ -319,6 +327,39 @@
           "expires_at"
         ],
         "title": "ActionProposalView",
+        "type": "object"
+      },
+      "ActionRequestView": {
+        "properties": {
+          "about": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          },
+          "task": {
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task",
+          "label"
+        ],
+        "title": "ActionRequestView",
         "type": "object"
       },
       "ActionRun": {

@@ -920,7 +920,7 @@ class PluginHost:
         sees records earlier ops in the same changeset created; `origin` says who asked (passed to validators that
         take a third argument)."""
         problems = []
-        origin = dict(origin or {"actor": "pm", "trust": "trusted", "via": "screen"})
+        origin = {"task": None, "about": None, **(origin or {"actor": "pm", "trust": "trusted", "via": "screen"})}
         owner = op.op.split("/")[0] if "/" in op.op else None
         if owner and not self.active(owner):
             problems.append("op plugin is disabled")
@@ -1053,12 +1053,13 @@ class PluginHost:
         with self.store.transaction() as tx:
             for kind, data in commands:
                 allowed_fields = {
-                    "request": {"task", "note", "about", "via", "interface_task", "provider"},
+                    "request": {"task", "note", "about", "via", "interface_task", "provider", "needs_go"},
                     "question": {"title", "text"},
                 }
                 if kind not in allowed_fields or not set(data) <= allowed_fields[kind]:
                     raise StoreError("event handlers may only queue requests or file questions")
                 via = kind == "request" and "via" in data
+                needs_go = bool(data.pop("needs_go", False)) if kind == "request" else False
                 if via:
                     data = self._interface_request(name, data)
                 elif kind == "request" and "task" not in data:
@@ -1069,6 +1070,10 @@ class PluginHost:
                         raise StoreError("requesting another plugin requires an interface")
                     check_about(tx, self.task_kind(task), data.get("about"))
                     data = {**data, "origin": "schedule", "created_at": datetime.now(UTC).isoformat()}
+                    if needs_go:
+                        from engine.stages import wording
+
+                        data |= {"state": "needs_you", "approval": "required", "waiting": wording(self.cfg, "waiting")}
                     if event == "stage.moved" and payload and payload.get("to"):
                         from engine.stages import wording
 

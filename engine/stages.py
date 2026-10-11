@@ -115,7 +115,13 @@ def apply_move(store, tx, op, context):
 
     if context.actor not in ("pm", "rule"):
         raise StoreError(wording(store.plugins.cfg, "confirm"))
-    origin = {"actor": context.actor, "trust": context.trust, "via": "screen" if context.actor == "pm" else "rule"}
+    origin = {
+        "actor": context.actor,
+        "trust": context.trust,
+        "via": "screen" if context.actor == "pm" else "rule",
+        "task": None,
+        "about": {"kind": op.record.kind, "id": op.record.id},
+    }
     refusals = store.plugins.validators(op, view=tx, origin=origin)
     if refusals:
         raise StoreError("; ".join(refusals))

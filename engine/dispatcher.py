@@ -152,6 +152,10 @@ def process(
     over = budget_problem(store, req.data, estimate)
     if over:
         return needs_you(store, request_id, over)
+    unpriced = estimate is None and budgets.confirm_unpriced
+    if unpriced and req.data.get("approval") != "granted":
+        _set(store, request_id, state="needs_you", approval="required", waiting=UNPRICED_GO)
+        return None
     if estimate is not None and estimate > budgets.confirm_above_usd and req.data.get("approval") != "granted":
         # Spending above the configured amount is the person's choice: wait for their go with the estimate shown.
         _set(
@@ -387,6 +391,8 @@ def _rounds(
         return out
     return out
 
+
+UNPRICED_GO = "Its cost can't be estimated on this account. Waiting for your go."
 
 CONTINUE = (
     "Your answer was cut off at the output limit. Here is what you wrote so far:\n<so-far>\n{text}\n</so-far>\n"

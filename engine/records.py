@@ -45,8 +45,11 @@ class Record(BaseModel):
     #: its id. Not for record types with long text. Edits made outside come back per entry: a changed entry as a
     #: field edit and a removed one as a delete, both waiting for the person; an added entry is reported, not created.
     layout_collection: ClassVar[bool] = False
-    #: The field a collection's entries are sorted by (the id when unset).
+    #: The field a collection's entries are sorted by (the id when unset); numbers sort as numbers.
     layout_sort: ClassVar[str | None] = None
+    #: For a record with no project of its own: the reference field whose record's project it is placed under in the
+    #: synced folder (a chapter's entry, under the chapter's book).
+    layout_project: ClassVar[str | None] = None
 
     id: str = Field(description='The record\'s id: "<prefix>-<number>", never reused.')
     stage: str | None = Field(None, description="Current configured stage id; wording lives in stages.yaml.")

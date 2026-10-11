@@ -172,6 +172,26 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: Plugin API 0.3.22: work that always asks first, and queueing from an action
+
+**Decided by:** Claude (design), from plugin questions 73-79; the owner can override.
+
+**What:**
+- Plugin requests can always wait for the person's go.
+- A new setting, `ai.budgets.confirm_unpriced`, makes runs whose cost can't be estimated wait too.
+- An action's proposal can queue the plugin's own work, each item waiting for the go.
+- Validators see the run's task and record.
+- Records can be placed in the synced folder through a reference.
+- Collections sort numbers as numbers.
+- Plugins can read a field's current version directly.
+- "Don't copy" is separate from "don't cite".
+
+**Why:**
+- On a subscription there is no price, so "ask above an amount" never asks. Spending stays the person's choice only
+  if some work always asks.
+
+**Impact:** New setting `ai.budgets.confirm_unpriced`. The action review shows the work a proposal will queue.
+
 ## 2026-10-12: How the define-your-own kit is built
 
 **Decided by:** Claude (design), from the owner's decision of 2026-10-10; the owner can override.

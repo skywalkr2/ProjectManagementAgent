@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.21"
+PLUGIN_API_VERSION = "0.3.22"
 
 
 class Settings(BaseModel):
@@ -183,6 +183,10 @@ class ReadView:
 
         self._allow(record.kind)
         return versions(self.__view, record.kind, record.id, field)
+
+    def text_version(self, record: Stored, field: str) -> Stored | None:
+        """The `text_version` record of a long text field's current text (its latest accepted version), or None."""
+        return self._text_version(record, field, None)
 
     def text(self, record: Stored, field: str, version: int | None = None) -> str:
         """A long text field's current text, or the text of version `version`; empty when it has none."""
@@ -358,11 +362,16 @@ class EventContext(ReadView):
         self.config = config.model_copy(deep=True)
         self.commands: list[tuple[str, dict[str, Any]]] = []
 
-    def queue_request(self, task: str, note: str, about: Stored | tuple[str, str] | None = None) -> None:
+    def queue_request(
+        self, task: str, note: str, about: Stored | tuple[str, str] | None = None, *, needs_go: bool = False
+    ) -> None:
         """Queue AI work of one of this plugin's task kinds (or a core one). `about` is the record it works on, as a
         record or (kind, id), required for a task kind declared `on` a kind. The note reaches the assistant as
-        untrusted material, and system ops from it wait for the person. After a stage move, it waits for the go."""
+        untrusted material, and system ops from it wait for the person. After a stage move, or with `needs_go`, it
+        waits for the person's go whatever it costs."""
         data: dict[str, Any] = {"task": task, "note": note}
+        if needs_go:
+            data["needs_go"] = True
         if about is not None:
             kind, record_id = (about.kind, about.id) if isinstance(about, Stored) else about
             self._allow(kind)
@@ -377,11 +386,15 @@ class EventContext(ReadView):
         about: Stored | tuple[str, str] | None = None,
         *,
         provider: str | None = None,
+        needs_go: bool = False,
     ) -> None:
         """Queue AI work another plugin offers through an interface this plugin uses: `task` is the interface's
         task kind name ("short-blurb"). It runs as that plugin's task, under its prompt and playbook, with the usual
-        estimate, go and review. `provider` picks one when several plugins offer it. The note is untrusted material."""
+        estimate, go and review (with `needs_go`, it waits for the go whatever it costs). `provider` picks one when
+        several plugins offer it. The note is untrusted material."""
         data: dict[str, Any] = {"via": interface, "interface_task": task, "note": note}
+        if needs_go:
+            data["needs_go"] = True
         if provider is not None:
             data["provider"] = provider
         if about is not None:
@@ -514,6 +527,9 @@ class Proposal:
     groups: list[Group] = field(default_factory=list)
     #: The ops only make sense together (an import): if any is refused when applied, none applies.
     all_or_nothing: bool = False
+    #: AI work to queue when the person applies it: {"task": one of this plugin's task kinds, "about": (kind, id)
+    #: or None, "note": ""}. Each waits for the person's go, whatever it costs.
+    requests: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -675,7 +691,9 @@ class Part:
     person's own words) is marked in the packet as material, never instructions, and any untrusted part makes the run's
     changeset untrusted, so its system ops wait for the person. A `reference_only` part informs the run but is marked
     not to be quoted or reproduced. Evidence may quote any part that isn't reference-only, and is cited as
-    "<kind>:<id>" of the record the run is about. `data_level` marks content more sensitive than the record the
+    "<kind>:<id>" of the record the run is about. `no_copy` marks material the run may describe and quote as evidence
+    (in a finding) but must not copy into new text, such as a character's entry. `data_level` marks content more
+    sensitive than the record the
     run is about (an interface item's level, say): the run goes only to accounts allowed the highest level among
     the record and its parts."""
 
@@ -684,6 +702,7 @@ class Part:
     trusted: bool = False
     reference_only: bool = False
     data_level: str | None = None
+    no_copy: bool = False
 
 
 @dataclass
@@ -811,7 +830,8 @@ class Registrar:
         """Check a core or own op before it applies: `fn(op, view, origin)` (or `fn(op, view)`; `origin` may also be
         keyword-only) returns a list of refusal messages, empty to let it through. The view is the changeset so far.
         `origin` is {"actor": "pm" | "assistant" | "rule", "trust": "trusted" | "untrusted", "via": "screen" | "note" |
-        "input" | "task" | "rule" | "action"}. Before anything applies, the core dry-runs the whole changeset in order
+        "input" | "task" | "rule" | "action", "task": the run's task kind, "about": the record it works on as
+        {"kind", "id"} or None}. Before anything applies, the core dry-runs the whole changeset in order
         (text writes included) and rolls it back, so a validator sees what earlier ops in it created; with the check
         at the write boundary, a validator usually runs about three times per op, so it must be pure and quick."""
         if not callable(fn):

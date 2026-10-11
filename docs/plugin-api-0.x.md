@@ -10,6 +10,25 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.22 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Always waiting for the go:**
+  - `context.queue_request(..., needs_go=True)` and `context.request_from(..., needs_go=True)` queue work that waits
+    for the person's go, whatever it costs.
+  - The workspace setting `ai.budgets.confirm_unpriced` makes every run whose cost can't be estimated wait too.
+- **Queueing from an action:** `Proposal(..., requests=[{"task", "about", "note"}])` queues the plugin's own task
+  kinds when the person applies it, each waiting for the go. They are shown on the review, and nothing is queued
+  when an all-or-nothing proposal is rejected.
+- **Validators know the run:** a validator's `origin` carries `task` (the run's task kind) and `about` (`{kind, id}`
+  or None).
+- **Placing through a reference:** `layout_project` on a record type names the reference field whose record's project
+  it is placed under, when it has no project of its own.
+- **Collections sort numbers as numbers.**
+- **The current version:** `view.text_version(record, field)` returns it, or None.
+- **`Part(..., no_copy=True)`:** material the run may describe and quote as evidence but must not copy into new text.
+
 ## What 0.3.21 adds
 
 Manifests stay `'>=0.3,<0.4'`.
