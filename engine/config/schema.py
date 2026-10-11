@@ -156,11 +156,23 @@ class FileLimits(ConfigModel):
     )
 
 
+class SyncSettings(ConfigModel):
+    folder: str = Field(
+        "",
+        description="A folder a file-sync service keeps in step between your computers. After every change the "
+        "workspace is written there, one folder per project, readable in any editor. Empty: off. The workspace "
+        "itself must not be inside it.",
+    )
+
+
 class StorageFile(FileModel):
     backend: Literal["sqlite"] = Field("sqlite", description="Where records live. Postgres comes later.")
     export: ExportSettings = Field(default_factory=ExportSettings, description="The readable export and its history.")
     backups: BackupSettings = Field(default_factory=BackupSettings, description="Full backups to somewhere else.")
     files: FileLimits = Field(default_factory=FileLimits, description="Limits on files people and programs add.")
+    sync: SyncSettings = Field(
+        default_factory=SyncSettings, description="Handing the workspace between computers through a synced folder."
+    )
 
 
 # ---- config/ai.yaml --------------------------------------------------------------------------------------------------

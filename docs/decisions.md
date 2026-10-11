@@ -172,6 +172,30 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: The synced folder holds a readable layout and a machine copy
+
+**Decided by:** Claude (design), building design 5.0; the owner can override.
+
+**What:**
+- Plugin API 0.3.14. Each record type declares a `layout` path template. The core writes those records as Markdown
+  (front matter and the current long text) or YAML, with every long-text version in `.versions/`.
+- Beside the readable files, the folder holds a machine copy in `.cockpit/`: the plain export, config and plugin data.
+  Loading the folder reads the machine copy, never the readable files.
+- Files the cockpit wrote are tracked by hash. A file whose content changed outside is never overwritten or removed.
+- This first part writes the folder. The lease, handover, outside edits coming back for review, `working/`, `outputs/`
+  and sources come next.
+
+**Why:**
+- Loading from readable files would make every outside edit a load-time merge. A machine copy loads exactly, and the
+  readable files stay a view whose edits come back as proposals.
+- Writing the whole export at once (not per changeset) keeps the folder consistent even when a write is missed.
+
+**Impact:**
+- Design 5.0.
+- New setting `storage.sync.folder`.
+- Core record types person, team, action, question, fact and note have layouts.
+- `cockpit import` accepts a synced folder.
+
 ## 2026-10-12: Roles, and second opinions on one account
 
 **Decided by:** Claude (design), from plugin questions; the owner can override.

@@ -10,6 +10,37 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.14 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Layout declarations: a record type sets `layout`, a path template relative to its project's folder in the synced
+  folder, without an extension, such as `"plan/chapters/{order:02}-{slug}"`.
+  - **Placeholders:** `{field}` and `{field:format}` take the record's own values (and `{id}`). A missing value
+    becomes the id.
+  - **Checked at load:** the template must be a relative path of the record's fields, with no extension and no name
+    the core keeps for itself.
+  - **The files:**
+    - a record with one long text field is a Markdown file: its other fields as YAML front matter, the current text
+      as the body;
+    - a record with none is a YAML file;
+    - a record with several is a folder with `record.yaml` and a file per field.
+  - **Versions:** every version of the long text goes in `.versions/<name>/` beside it (`v<N>.md`, or `.txt` for
+    plain text), with `versions.yaml` listing each version's status, source, base, words per author, authorship spans,
+    note, unmapped and questions.
+  - **No layout:** a record type without one appears only in the folder's machine copy.
+- The synced folder, first part: `storage.sync.folder`.
+  - **When:** after every change, the core writes one folder per project there, a child project's inside its
+    parent's. Records in no project go under `_workspace/`.
+  - **The machine copy:** `.cockpit/` holds the plain export, the config and the plugin data.
+  - **How:** each file is written beside its target and renamed into place, and its hash is kept in
+    `.cockpit/manifest.json`. A file changed outside is never overwritten or removed. Two records that would share a
+    file get the second one's id added to its name.
+  - **Placement:** the workspace may not be inside the folder; start-up refuses.
+  - **Loading:** `cockpit import <synced folder>` loads it into an empty workspace.
+  - **Still to come:** the lease and handover, outside edits coming back for review, `working/`, `outputs/` and
+    sources.
+
 ## What 0.3.13 adds
 
 Manifests stay `'>=0.3,<0.4'`.

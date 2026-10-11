@@ -9,6 +9,7 @@ import os
 import threading
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from engine.ai.router import Router
 from engine.config import Config
@@ -62,6 +63,9 @@ class Events:
 
 
 class Worker:
+    #: How often the synced folder is checked for changes when nothing signals one.
+    SYNC_CHECK_SECONDS = 10
+
     def __init__(
         self,
         ws: Workspace,
@@ -76,6 +80,10 @@ class Worker:
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._backups: threading.Thread | None = None
+        self._sync: threading.Thread | None = None
+        self._synced_at: int | None = -1
+        self.sync_result: Any = None
+        self.sync_problem: str | None = None
         self._started_with = (config_fingerprint(ws), code_fingerprint())
         self.restart_needed: str | None = None
 
@@ -101,6 +109,8 @@ class Worker:
         self._thread.start()
         self._backups = threading.Thread(target=self._backup_loop, name="cockpit-backups", daemon=True)
         self._backups.start()
+        self._sync = threading.Thread(target=self._sync_loop, name="cockpit-sync", daemon=True)
+        self._sync.start()
 
     def stop(self) -> None:
         self._stop.set()
@@ -109,6 +119,9 @@ class Worker:
             self._thread.join(timeout=10)
         if self._backups:
             self._backups.join(timeout=60)
+        if self._sync:
+            self.events.changed()
+            self._sync.join(timeout=60)
 
     def poke(self) -> None:
         self._wake.set()
@@ -145,6 +158,35 @@ class Worker:
         run_backup(self.ws, self.cfg)
         self.events.changed()
         return True
+
+    def sync_if_changed(self) -> bool:
+        """Write the synced folder when anything changed since it was last written. Returns whether it wrote."""
+        from engine.sync import write_folder
+
+        if not self.cfg.storage.sync.folder.strip():
+            return False
+        row = self.store.read().sql("SELECT max(seq) FROM ledger").fetchone()
+        head = row[0] if row else None
+        if head == self._synced_at:
+            return False
+        try:
+            self.sync_result = write_folder(self.store, self.ws, self.cfg)
+            self.sync_problem = None
+        except (OSError, ValueError) as err:
+            self.sync_problem = str(err)
+            return False
+        self._synced_at = head
+        return True
+
+    def _sync_loop(self) -> None:
+        after = -1
+        while not self._stop.is_set():
+            try:
+                self.sync_if_changed()
+            except Exception:  # a failed write is retried on the next change; nothing here may stop the thread
+                log.exception("writing the synced folder failed")
+            after = self.events.wait(after, timeout=self.SYNC_CHECK_SECONDS)
+            self._stop.wait(timeout=1)
 
     def _backup_loop(self) -> None:
         while not self._stop.is_set():

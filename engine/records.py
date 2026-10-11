@@ -33,6 +33,14 @@ class Record(BaseModel):
     #: The field (a list of ids from ai.content_levels) holding the content levels the person set on a record; work on
     #: the record goes only to accounts that take them. Only the person sets it.
     content_levels_field: ClassVar[str | None] = None
+    #: Where each record is written in the synced folder, relative to its project's folder (or the workspace's, for
+    #: a record in no project), without an extension: "plan/chapters/{order:02}-{slug}". `{field}` and
+    #: `{field:format}` take the record's own values (and `{id}`); a missing value becomes the id. The core adds
+    #: the extension: a record with one long text field is a Markdown file, its other fields as front matter and the
+    #: current text as the body; a record with none is a YAML file; one with several is a folder holding
+    #: `record.yaml` and a file per field. Every version of its long text is kept beside it, in `.versions/`. None:
+    #: the record is only in the folder's machine copy.
+    layout: ClassVar[str | None] = None
 
     id: str = Field(description='The record\'s id: "<prefix>-<number>", never reused.')
     stage: str | None = Field(None, description="Current configured stage id; wording lives in stages.yaml.")
@@ -131,6 +139,7 @@ class Person(Record):
 
     record_kind: ClassVar[str] = "person"
     prefix: ClassVar[str] = "PER"
+    layout: ClassVar[str | None] = "people/{full_name}"
 
     full_name: str = Field(min_length=1, description="The name shown wherever the person appears.")
     aliases: list[str] = Field(
@@ -156,6 +165,7 @@ class Team(Record):
 
     record_kind: ClassVar[str] = "team"
     prefix: ClassVar[str] = "TEAM"
+    layout: ClassVar[str | None] = "teams/{name}"
 
     name: str = Field(min_length=1, description="The name shown wherever the team appears.")
     aliases: list[str] = Field(default_factory=list, description="Other names that mean this team.")
@@ -210,6 +220,7 @@ class Action(Record):
 
     record_kind: ClassVar[str] = "action"
     prefix: ClassVar[str] = "ACT"
+    layout: ClassVar[str | None] = "actions/{id}"
 
     project: str | None = Field(None, description="The id of the project it belongs to.")
     text: str = Field(min_length=1, description="What is to be done, starting with a verb.")
@@ -240,6 +251,7 @@ class Question(Record):
 
     record_kind: ClassVar[str] = "question"
     prefix: ClassVar[str] = "Q"
+    layout: ClassVar[str | None] = "questions/{id}"
 
     to: str = Field(description="The id of the person being asked.")
     title: str = Field(min_length=1, description="The question in one line.")
@@ -498,6 +510,7 @@ class Fact(Record):
 
     record_kind: ClassVar[str] = "fact"
     prefix: ClassVar[str] = "FACT"
+    layout: ClassVar[str | None] = "facts/{id}"
 
     text: str = Field(min_length=1, description="The fact, as a statement.")
     project: str | None = Field(None, description="The id of the project it is about, if any.")
@@ -513,6 +526,7 @@ class Note(Record):
 
     record_kind: ClassVar[str] = "note"
     prefix: ClassVar[str] = "NOTE"
+    layout: ClassVar[str | None] = "notes/{id}"
 
     text: str = Field(min_length=1, description="What was kept.")
     project: str | None = Field(None, description="The id of the project it is about, if any.")

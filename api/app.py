@@ -68,7 +68,12 @@ def create_app(
     `on_shutdown` runs while the server shuts down, before the process exits on a stop signal, so cleanup such as
     releasing the instance lease always happens. With `start_worker`, queued requests are processed in the background;
     otherwise they wait until `app.state.worker.run_pending()` is called (tests)."""
+    from engine.sync import placement_problem
+
     base_path = cfg.server.base_path
+    placed = placement_problem(ws, cfg)
+    if placed:
+        raise RuntimeError(f"Can't start: {placed} (storage.sync.folder).")
     store = Store(ws.db_path, cfg=cfg)
     events = Events()
     worker = Worker(ws, store, cfg, events, router_factory)

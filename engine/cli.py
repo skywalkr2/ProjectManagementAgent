@@ -96,7 +96,9 @@ def _parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("import", help="load an export into an empty workspace database")
     ws_arg(sp)
-    sp.add_argument("data_dir", type=Path, nargs="?", help="export folder (default: the workspace's data/)")
+    sp.add_argument(
+        "data_dir", type=Path, nargs="?", help="export folder or synced folder (default: the workspace's data/)"
+    )
     sp.set_defaults(func=cmd_import)
 
     sp = sub.add_parser("config", help="show the effective configuration")
@@ -227,7 +229,13 @@ def cmd_import(args: argparse.Namespace) -> int:
     ws = resolve(args.workspace)
     store = Store(ws.db_path)
     try:
-        count = import_data(store, args.data_dir or ws.data_dir)
+        source = args.data_dir or ws.data_dir
+        if (source / ".cockpit" / "export").is_dir():
+            from engine.sync import load_folder
+
+            count = load_folder(store, source)
+        else:
+            count = import_data(store, source)
     finally:
         store.close()
     print(f"Loaded {count} records.")

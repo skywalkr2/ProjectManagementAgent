@@ -14,3 +14,5 @@ backups:
 files:
   max_file_mb: 50
   max_total_mb: 2000
+sync:
+  folder: ""   # e.g. ~/CloudDrive/cockpit; off until set

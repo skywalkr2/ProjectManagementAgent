@@ -142,6 +142,17 @@ class Store:
             for event, payload in tx.events():
                 self.plugins.publish(event, payload)
 
+    @contextmanager
+    def snapshot(self) -> Iterator[Tx]:
+        """A consistent read-only view: every read on this thread inside the block sees the database as it was when
+        the first one ran, whatever other threads write meanwhile."""
+        conn = self._conn
+        conn.execute("BEGIN")
+        try:
+            yield Tx(conn, self.clock, self.plugins.records)
+        finally:
+            conn.execute("ROLLBACK")
+
     def read(self) -> Tx:
         """A read-only view outside a transaction, for simple lookups."""
         return Tx(self._conn, self.clock, self.plugins.records)

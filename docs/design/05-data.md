@@ -72,8 +72,11 @@ repositories, so neither ever lives in the synced folder:
   findings) plus the workspace-wide records (people, teams, config, sequences, the ledger). Each file is written beside its
   target and then renamed into place, so a half-written file never syncs. A record type (core or plugin) declares how its
   records and long text are named in the project folder (`proposal.md`, `sections/07-pricing.md`), so the folder reads
-  naturally in any editor. The layout round-trips through `cockpit import`
-  like the plain export, and the self-check tests it.
+  naturally in any editor (`layout` on the record type; types without one are only in the machine copy). The folder
+  also holds a machine copy in `.cockpit/` (the plain export, config and plugin data), which is what loading the folder
+  reads, so it round-trips through `cockpit import` exactly; the readable files are generated from the same records, and
+  edits to them come back as proposals. A file whose content no longer matches what the cockpit wrote is never
+  overwritten or removed.
 - **Nested projects nest their folders:** a project with a parent (5.1) has its folder inside its parent's, so a series folder
   holds its titles. Moving a project to another parent moves its folder, as one op.
 - **Sources travel with their project:** handover needs every source on the other computer, so each source (the original

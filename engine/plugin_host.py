@@ -459,6 +459,10 @@ class PluginHost:
                 if "/" in name and not name.startswith(registrar.name + "/"):
                     raise ValueError("a task's prompt and guidance are core ones or the plugin's own")
         for model in registrar.records.values():
+            if getattr(model, "layout", None) is not None:
+                from engine.sync import check_layout
+
+                check_layout(model.layout, model)
             if "stage" in vars(model).get("__annotations__", {}):
                 raise ValueError("the stage field belongs to the core; record types may not redefine it")
         for op in registrar.ops.values():
