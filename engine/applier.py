@@ -40,6 +40,7 @@ from engine.ops import (
     StageMoveOp,
     TextAcceptOp,
     TextDiscardOp,
+    TextDraftOp,
     TextEditOp,
     TextProposeOp,
 )
@@ -122,7 +123,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         if name in PERSON_ONLY_OPS and ctx.actor != "pm":
             refuse(i, "person-only", f"only the person can {name.split('.', 1)[1]} text")
             continue
-        if isinstance(op, (TextEditOp, TextProposeOp)):
+        if isinstance(op, (TextEditOp, TextProposeOp, TextDraftOp)):
             why = _text_target(ctx.store, view, op.record.kind, op.record.id, op.field)
             if why:
                 refuse(i, "targets", why)
@@ -576,6 +577,23 @@ def _apply_op(
             accept=not proposal,
         )
         return [{"kind": op.record.kind, "id": op.record.id}, {"kind": "text_version", "id": version.id}], None
+    if isinstance(op, TextDraftOp):
+        from engine.texts import new_version
+
+        version = new_version(
+            ctx.store,
+            tx,
+            w,
+            op.record.kind,
+            op.record.id,
+            op.field,
+            op.text,
+            source="draft",
+            by="assistant",
+            run=op.run,
+            base=op.base,
+        )
+        return [{"kind": "text_version", "id": version.id}], None
     if isinstance(op, TextAcceptOp):
         from engine.texts import accept
 

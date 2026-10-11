@@ -23,6 +23,11 @@ from engine.storage import Store, Stored, StoreError
 from engine.tasks import TaskKind, settings
 from engine.workspace import Workspace
 
+DRAFT_RULE = (
+    "Answer with the text only, in plain prose: no JSON, no heading before it, no notes about it, no code fence "
+    "around it."
+)
+
 
 @dataclass(frozen=True)
 class Packet:
@@ -34,6 +39,7 @@ class Packet:
     untrusted_material: bool = False  # a plugin's packet carried content that isn't the person's own words
     cites: str | None = None  # what quotes from raw_input are cited as, when it isn't a saved source
     about: tuple[str, str] | None = None  # (kind, id) of the record the work is about
+    draft_base: int | None = None  # for a draft, the number of the field's version it is made from
 
     @property
     def input_chars(self) -> int:
@@ -95,14 +101,16 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
 
 def _task(cfg: Config, store: Store, kind: TaskKind, instructions: str, stable: str, request: str) -> AiTask:
     chosen = settings(cfg, kind)
+    drafting = kind.output == "draft"
     return AiTask(
         kind=kind.name,
         instructions=instructions,
         stable=stable,
         request=request,
-        output_schema=schema_for(list(kind.ops), store.plugins.ops),
+        output_schema={} if drafting else schema_for(list(kind.ops), store.plugins.ops),
         temperature=chosen.temperature,
         max_output=chosen.max_output,
+        output="text" if drafting else "json",
     )
 
 
@@ -153,8 +161,9 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         raise PacketRefused("the add-on this work belongs to failed, and was turned off")
     every = [*parts.stable, *parts.request]
     instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
+    drafting = kind.output == "draft"
     stable_parts = [
-        "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
+        "" if drafting else "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
         "# Practice\n" + _guidance(kind),
         f"Write in {view.language(target)}: its spelling, punctuation and date style." if target is not None else "",
         REFERENCE_RULE if any(p.reference_only for p in every) else "",
@@ -166,6 +175,8 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     elif note:
         request_parts.append(f"<note>\n{note}\n</note>")
     request_parts += [_render_part(p) for p in parts.request]
+    if drafting:
+        request_parts.append(DRAFT_RULE)
     task = _task(
         cfg,
         store,
@@ -174,6 +185,12 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         "\n\n".join(p for p in stable_parts if p.strip()),
         "\n\n".join(request_parts),
     )
+    base = None
+    if drafting:
+        from engine.texts import current
+
+        now = current(store.read(), target.kind, target.id, kind.field)
+        base = now.data["number"] if now else None
     quotable = "\n\n".join(p.text for p in every if not p.reference_only)
     empty = Cleaned("", 0, 0, False, 0)
     return Packet(
@@ -185,6 +202,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         untrusted_material=any(not p.trusted for p in every),
         cites=f"{target.kind}:{target.id}" if target is not None else kind.name,
         about=(target.kind, target.id) if target is not None else None,
+        draft_base=base,
     )
 
 

@@ -438,6 +438,12 @@ class PluginHost:
                 raise ValueError("file.add is made only by person actions, never by a task")
             if task.on is not None and task.on not in REGISTRY and task.on not in registrar.records:
                 raise ValueError(f"task {task.name} is on an unknown record kind {task.on}")
+            if task.output == "draft":
+                from engine.texts import long_text_fields
+
+                model = registrar.records.get(task.on) or REGISTRY.get(task.on)
+                if task.field not in long_text_fields(model):
+                    raise ValueError(f"task {task.name} drafts {task.on}.{task.field}, which isn't a long text field")
             for name in (task.prompt, task.playbook):
                 if "/" in name and not name.startswith(registrar.name + "/"):
                     raise ValueError("a task's prompt and guidance are core ones or the plugin's own")

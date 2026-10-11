@@ -288,6 +288,21 @@ class TextDiscardOp(OpModel):
         return f"Set aside text version {self.version}"
 
 
+class TextDraftOp(OpModel):
+    """The assistant's draft for a long text field, made by the core from a draft task's prose answer: a pending
+    version for the person's review, never the field's text until accepted. Draft tasks only."""
+
+    op: Literal["text.draft"] = "text.draft"
+    record: RecordRef = Field(description="The record whose field it is.")
+    field: str = Field(description="The long text field.")
+    text: str = Field(description="The whole drafted text.")
+    base: int | None = Field(None, description="The number of the version it was made from.")
+    run: str | None = Field(None, description="The AI run that wrote it.")
+
+    def describe(self) -> str | None:
+        return f"Draft new text for {self.record.kind} {self.record.id}"
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -305,7 +320,8 @@ Op = Annotated[
     | TextEditOp
     | TextProposeOp
     | TextAcceptOp
-    | TextDiscardOp,
+    | TextDiscardOp
+    | TextDraftOp,
     Field(discriminator="op"),
 ]
 
@@ -327,6 +343,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "text.propose": TextProposeOp,
     "text.accept": TextAcceptOp,
     "text.discard": TextDiscardOp,
+    "text.draft": TextDraftOp,
 }
 
 #: Ops only the person makes: from anyone else they are refused, never held.

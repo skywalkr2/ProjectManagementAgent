@@ -31,6 +31,10 @@ class StubAdapter:
         if _responder is not None:
             return AiResult(text=_responder(task), model_served="stub", seconds=0.0)
         first = _first_line(task.request)
+        if task.output == "text":
+            return AiResult(
+                text=f"A draft about: {first or 'nothing in particular'}\n", model_served="stub", seconds=0.0
+            )
         body = {"summary": "Filed the input as a note.", "ops": [{"op": "note", "text": first or "(empty input)"}]}
         return AiResult(text=json.dumps(body), model_served="stub", seconds=0.0)
 

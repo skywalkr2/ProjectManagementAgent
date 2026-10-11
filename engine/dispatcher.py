@@ -157,7 +157,11 @@ def process(
             waiting=f"About ${estimate:.2f}. Waiting for your go.",
         )
         return None
-    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use, content)
+    kind = store.plugins.task_kind(req.data["task"])
+    draft = None
+    if kind.output == "draft" and packet.about is not None:
+        draft = {"kind": packet.about[0], "id": packet.about[1], "field": kind.field, "base": packet.draft_base}
+    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use, content, draft)
     outcome = first
     # The person's pick of account is theirs: no escalation away from it.
     stronger = escalation_tier(cfg, tier) if use is None else None
@@ -169,7 +173,9 @@ def process(
     within = second_estimate is None or second_estimate <= min(budgets.per_run_usd, budgets.confirm_above_usd)
     if first.escalate and stronger and stronger != tier and within:
         # One re-run on the stronger tier when checks still fail; it counts toward budgets like any run.
-        second = _rounds(store, cfg, router, packet.task, stronger, request_id, ctx, previous_ops, level, None, content)
+        second = _rounds(
+            store, cfg, router, packet.task, stronger, request_id, ctx, previous_ops, level, None, content, draft
+        )
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
     if outcome.changeset is None:
@@ -230,6 +236,7 @@ def _rounds(
     data_level: str = "internal",
     use: str | None = None,
     content: frozenset[str] = frozenset(),
+    draft: dict | None = None,
 ) -> _Outcome:
     """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong. A refusal
     stops at once: no fix round, no other account, no escalation."""
@@ -248,6 +255,19 @@ def _rounds(
             return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=stop)
         if result.refused:
             return _Outcome(run_id=out.run_id, stop=_refused(store, out.run_id, result.refusal or ""))
+        if draft is not None:
+            text, stop = _drafted(router, task, result, request_id, tier, data_level, use, content)
+            if stop:
+                return _Outcome(run_id=out.run_id, stop=stop)
+            changeset = _draft_changeset(draft, text, out.run_id)
+            problems = check(changeset, ctx)
+            out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id)
+            if needs_another_round(problems):
+                if not last:
+                    task = replace(task, request=base.request + "\n\n" + feedback(problems))
+                    continue
+                out.escalate = True
+            return out
         try:
             changeset = parse(result.text, store.plugins.ops)
         except Unreadable as err:
@@ -282,6 +302,61 @@ def _rounds(
             out.escalate = True
         return out
     return out
+
+
+CONTINUE = (
+    "Your answer was cut off at the output limit. Here is what you wrote so far:\n<so-far>\n{text}\n</so-far>\n"
+    "Write only what comes next, starting exactly where it stops, with nothing before it."
+)
+
+
+def _drafted(
+    router: Router,
+    task: AiTask,
+    result: object,
+    request_id: str,
+    tier: str,
+    data_level: str,
+    use: str | None,
+    content: frozenset[str],
+) -> tuple[str, str | None]:
+    """A draft's text from a prose answer: one surrounding code fence removed, and an answer cut off at the output
+    limit continued once. Returns the text and, when it can't be finished, why the person is needed."""
+    text = _unfenced(result.text)
+    if not text.strip():
+        return "", "The assistant's draft came back empty."
+    if result.truncated:
+        more_task = replace(task, request=task.request + "\n\n" + CONTINUE.format(text=text))
+        try:
+            more, _choice, _run = router.call(
+                more_task, request_id=request_id, tier=tier, data_level=data_level, use=use, content=content
+            )
+        except (AiError, BudgetReached, NoProvider) as err:
+            return text, f"The draft was cut off at the output limit and couldn't be continued ({err})."
+        if more.refused or more.truncated:
+            return text, (
+                f"The draft was cut off at the output limit twice. Raise tasks.{task.kind}.max_output in ai.yaml, "
+                "or ask for less at a time."
+            )
+        text = text + _unfenced(more.text)
+    return text, None
+
+
+def _unfenced(text: str) -> str:
+    match = re.fullmatch(r"\s*```[\w-]*\n(.*?)\n```\s*", text, re.S)
+    return match.group(1) + "\n" if match else text
+
+
+def _draft_changeset(draft: dict, text: str, run_id: str | None) -> ChangesetIn:
+    op = {
+        "op": "text.draft",
+        "record": {"kind": draft["kind"], "id": draft["id"]},
+        "field": draft["field"],
+        "text": text,
+        "base": draft["base"],
+        "run": run_id,
+    }
+    return CHANGESET.validate_python({"summary": "A draft for your review.", "ops": [op]})
 
 
 REPEATED = (

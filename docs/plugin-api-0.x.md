@@ -10,6 +10,16 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.7 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Draft task kinds: `task_kind(..., output="draft", field="<long text field>", on="<kind>")`. The model answers in
+  plain prose (no JSON is asked for); the core removes one surrounding code fence, continues an answer cut off at the
+  output limit once (holding it for the person if it is cut off again), and files it as a core `text.draft` op: a
+  pending version, made from the field's current version, written by the assistant. Lints on the op `text.draft` run
+  on it; a "return" finding gets one fix round, then the stronger tier, then the draft stays pending with its findings.
+
 ## What 0.3.6 adds
 
 Manifests stay `'>=0.3,<0.4'`.

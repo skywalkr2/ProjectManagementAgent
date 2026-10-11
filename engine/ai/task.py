@@ -22,6 +22,7 @@ class AiTask:
     output_schema: dict[str, Any]
     temperature: float = 0.0
     max_output: int = 4000
+    output: Literal["json", "text"] = "json"  # text: the answer is prose (a draft), not a JSON object
 
     @property
     def size(self) -> int:

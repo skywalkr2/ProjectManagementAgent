@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.6"
+PLUGIN_API_VERSION = "0.3.7"
 
 
 class Settings(BaseModel):
@@ -525,8 +525,10 @@ class Registrar:
         self,
         name: str,
         *,
-        ops: tuple[str, ...],
+        ops: tuple[str, ...] = (),
         label: str = "",
+        output: str = "ops",
+        field: str | None = None,
         prompt: str = "notes",
         playbook: str = "notes",
         on: str | None = None,
@@ -548,11 +550,24 @@ class Registrar:
         what the run sees (without it, the run sees what reading notes sees). It runs before every call, so it must be
         deterministic and quick; raising StoreError stops the run with that message for the person.
 
+        `output` is "ops" (the answer is a changeset of `ops`) or "draft": the answer is plain prose for the long text
+        field `field` of the record the run is about (`on` is required). The core wraps it as a pending `text.draft`
+        version for the person's review, runs lints on it (lints on the op "text.draft"), sends a "return" finding
+        back for one fix round, and continues a draft cut off at the output limit once before holding it.
+
         `tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates
         before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them."""
         from engine.config.schema import TaskSettings
 
         self._name(name)
+        if output not in ("ops", "draft"):
+            raise ValueError('a task kind\'s output is "ops" or "draft"')
+        if output == "draft":
+            if on is None or not field or ops:
+                raise ValueError(
+                    "a draft task kind names the record kind it works on and the long text field it drafts"
+                )
+            ops = ("text.draft",)
         if name in self.tasks or not ops:
             raise ValueError("duplicate task kind or empty op list")
         if packet is not None and not callable(packet):
@@ -581,6 +596,8 @@ class Registrar:
             defaults=defaults,
             prompt_file=prompt_file,
             guidance_file=guidance_file,
+            output=output,
+            field=field,
         )
 
     def _own_file(self, name: str, folder: str) -> Path | None:

@@ -41,7 +41,7 @@ class OpenAICompatibleAdapter:
             "temperature": task.temperature,
             "max_tokens": task.max_output,
         }
-        if self.settings.json_mode:
+        if self.settings.json_mode and task.output == "json":
             body["response_format"] = {"type": "json_object"}
         started = time.monotonic()
         try:
