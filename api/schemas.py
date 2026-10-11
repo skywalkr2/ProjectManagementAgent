@@ -114,6 +114,9 @@ class Status(BaseModel):
     requests: RequestCounts
     version: int
     restart_needed: str | None = Field(None, description="Why new work waits until the cockpit restarts, if it does.")
+    can_restart: bool = Field(
+        False, description="The app can start itself again when the person asks (POST /api/restart)."
+    )
 
 
 class Option(BaseModel):
@@ -977,7 +980,10 @@ class SettingChangeView(BaseModel):
 class SettingsSaved(BaseModel):
     changes: list[SettingChangeView] = Field(description="What changed, for the read-back and Undo.")
     fingerprint: str
-    restarts: bool = Field(description="The app restarts in a moment to use the new settings.")
+    needs_restart: bool = Field(
+        description="These settings take effect after a restart. Nothing restarts until the person chooses to: ask "
+        "them first, then POST /api/restart. False when the change is in use already (AI accounts are)."
+    )
 
 
 class SetupStepView(BaseModel):
@@ -1016,7 +1022,11 @@ class TemplateApply(BaseModel):
 
 class TemplateApplied(BaseModel):
     plugins: list[str]
-    restarts: bool
+    needs_restart: bool = Field(description="The template's add-ons start after a restart the person chooses.")
+
+
+class RestartAsked(BaseModel):
+    restarting: bool = Field(description="The app is restarting now; it is back in a few seconds.")
 
 
 class FolderCheckView(BaseModel):
@@ -1116,11 +1126,13 @@ class AiAccountAdd(BaseModel):
 
 
 class AiTestResult(BaseModel):
-    tier: str
-    account: str
-    main: bool
+    """One kind of work's account, tested: whether it answered, in plain words."""
+
+    tier: str = Field(description='The kind of work: "routine" (everyday) or "deep" (harder), or another tier.')
+    account: str = Field(description="The account's short name, as the person named it.")
+    main: bool = Field(description="It is the tier's main account; otherwise a fallback.")
     ok: bool
-    detail: str
+    detail: str = Field(description='"answered", or what went wrong in plain words.')
 
 
 # ---- asking the assistant --------------------------------------------------------------------------------------------

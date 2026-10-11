@@ -16,6 +16,10 @@ import { PersonPicker } from "./PersonPicker";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
 import { useTextReview } from "./TextReview";
+import { ValueSelect } from "./ValueSelect";
+
+/** The value lists a project's fields take their choices from. */
+const PROJECT_LISTS = { status: "project-status", phase: "project-phase", group: "project-group" } as const;
 
 const list = (text: string) =>
   text
@@ -386,9 +390,16 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
     >
       <Field id={`jn-${key}`} label={t("setup.project_name")} value={name} onChange={setName} required autoFocus />
       <Field id={`jt-${key}`} label={t("setup.target")} value={target} onChange={setTarget} type="date" />
-      <Field id={`js-${key}`} label={t("setup.status")} value={status} onChange={setStatus} hint={t("setup.status_hint")} />
-      <Field id={`jp-${key}`} label={t("setup.phase")} value={phase} onChange={setPhase} />
-      <Field id={`jg-${key}`} label={t("setup.group")} value={group} onChange={setGroup} hint={t("setup.group_hint")} />
+      <ValueSelect id={`js-${key}`} list={PROJECT_LISTS.status} label={t("setup.status")} value={status} onChange={setStatus} />
+      <ValueSelect id={`jp-${key}`} list={PROJECT_LISTS.phase} label={t("setup.phase")} value={phase} onChange={setPhase} />
+      <ValueSelect
+        id={`jg-${key}`}
+        list={PROJECT_LISTS.group}
+        label={t("setup.group")}
+        value={group}
+        onChange={setGroup}
+        hint={t("setup.group_hint")}
+      />
       <PersonPicker
         label={t("setup.owner")}
         value={owner}

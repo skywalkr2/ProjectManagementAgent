@@ -47,7 +47,7 @@ function api(items = ITEMS, extra: Record<string, (body: unknown) => unknown> = 
     ...extra,
     "POST settings": (body) => {
       const handler = extra["POST settings"];
-      const out = handler ? handler(body) : { changes: [], fingerprint, restarts: false };
+      const out = handler ? handler(body) : { changes: [], fingerprint, needs_restart: false };
       if (!(out instanceof Refuse)) fingerprint = (out as S["SettingsSaved"]).fingerprint;
       return out;
     },
@@ -119,7 +119,7 @@ test("Save sends only what changed, with the fingerprint, then reads it back", a
     "POST settings": () => ({
       changes: [{ key: "demo.title", before: "Lantern", after: "Harbor", was_default: false, is_default: false }],
       fingerprint: "fp-2",
-      restarts: false,
+      needs_restart: false,
     }),
   });
   open();
@@ -159,9 +159,9 @@ test("Undo sends the old values back, with the fingerprint from the save", async
               { key: "demo.count", before: 4, after: 9, was_default: true, is_default: false },
             ],
             fingerprint: "fp-2",
-            restarts: false,
+            needs_restart: false,
           }
-        : { changes: [], fingerprint: "fp-3", restarts: false };
+        : { changes: [], fingerprint: "fp-3", needs_restart: false };
     },
   });
   open();
@@ -179,7 +179,7 @@ test("Back to default is offered where the file sets the value, and sends a rese
     "POST settings": () => ({
       changes: [{ key: "demo.title", before: "Lantern", after: "Workspace", was_default: false, is_default: true }],
       fingerprint: "fp-2",
-      restarts: false,
+      needs_restart: false,
     }),
   });
   open();
@@ -227,34 +227,100 @@ test("a list and a yes/no setting send their own kinds of value", async () => {
   expect(posted(calls)[0]).toMatchObject({ changes: { "demo.names": ["one", "two", "three"], "demo.on": false } });
 });
 
-test("a save that restarts the app says so in a live region until it is back", async () => {
-  const user = userEvent.setup();
-  api(ITEMS, {
-    "POST settings": () => ({
-      changes: [{ key: "demo.title", before: "Lantern", after: "Harborx", was_default: false, is_default: false }],
-      fingerprint: "fp-2",
-      restarts: true,
-    }),
-  });
-  function Harness() {
-    const [hellos, setHellos] = useState(1);
-    return (
-      <RestartProvider hellos={hellos}>
-        <RestartNotice />
-        <button type="button" onClick={() => setHellos(hellos + 1)}>
-          reconnect
-        </button>
-        <Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} />
-      </RestartProvider>
-    );
-  }
-  renderApp(<Harness />);
+const ASK = "This change needs the app to restart. It takes a few seconds; anything you're typing elsewhere stays.";
+
+function RestartHarness() {
+  const [hellos, setHellos] = useState(1);
+  return (
+    <RestartProvider hellos={hellos}>
+      <RestartNotice />
+      <button type="button" onClick={() => setHellos(hellos + 1)}>
+        reconnect
+      </button>
+      <Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} />
+    </RestartProvider>
+  );
+}
+
+const savedTitle = (needs_restart: boolean) => ({
+  changes: [{ key: "demo.title", before: "Lantern", after: "Harborx", was_default: false, is_default: false }],
+  fingerprint: "fp-2",
+  needs_restart,
+});
+
+async function saveTitle(user: ReturnType<typeof userEvent.setup>) {
   await user.type(await screen.findByLabelText("The display name."), "x");
   await user.click(screen.getByRole("button", { name: /Save/ }));
-  const live = screen.getAllByRole("status").find((el) => el.classList.contains("restart-slot"))!;
+  return screen.getAllByRole("status").find((el) => el.classList.contains("restart-slot"))!;
+}
+
+test("a save that needs a restart asks first; Restart now asks the app, then says so until it is back", async () => {
+  const user = userEvent.setup();
+  const calls = api(ITEMS, {
+    "POST settings": () => savedTitle(true),
+    "POST restart": () => ({ restarting: true }),
+    "GET runtime-config": () => ({ instance: null }),
+  });
+  renderApp(<RestartHarness />);
+  const live = await saveTitle(user);
+  await waitFor(() => expect(live).toHaveTextContent(ASK));
+  expect(live).not.toHaveTextContent("Restarting");
+  expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+  await user.click(within(live).getByRole("button", { name: "Restart now" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
   await waitFor(() => expect(live).toHaveTextContent("Restarting to use the new settings…"));
+  expect(within(live).queryByRole("button", { name: "Restart now" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "reconnect" }));
   await waitFor(() => expect(live).toHaveTextContent("Restarted with the new settings."));
+});
+
+test("Later hides the question and sends nothing", async () => {
+  const user = userEvent.setup();
+  const calls = api(ITEMS, { "POST settings": () => savedTitle(true) });
+  renderApp(<RestartHarness />);
+  const live = await saveTitle(user);
+  await waitFor(() => expect(live).toHaveTextContent(ASK));
+  await user.click(within(live).getByRole("button", { name: "Later" }));
+  expect(live).toBeEmptyDOMElement();
+  expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+});
+
+test("a save that needs no restart says nothing about restarting", async () => {
+  const user = userEvent.setup();
+  api(ITEMS, { "POST settings": () => savedTitle(false) });
+  renderApp(<RestartHarness />);
+  const live = await saveTitle(user);
+  expect(await screen.findByText(/Saved/)).toBeInTheDocument();
+  expect(live).toBeEmptyDOMElement();
+  expect(screen.queryByRole("button", { name: "Restart now" })).toBeNull();
+  expect(screen.queryByText(/Restarting|Restarted/)).toBeNull();
+});
+
+test("when this copy can't restart itself, the refusal's words are shown in the notice", async () => {
+  const user = userEvent.setup();
+  api(ITEMS, {
+    "POST settings": () => savedTitle(true),
+    "POST restart": () => new Refuse(409, "Close it and start it again."),
+  });
+  renderApp(<RestartHarness />);
+  const live = await saveTitle(user);
+  await user.click(await within(live).findByRole("button", { name: "Restart now" }));
+  await waitFor(() => expect(live).toHaveTextContent("Close it and start it again."));
+  expect(live).not.toHaveTextContent("Restarting");
+  await user.click(within(live).getByRole("button", { name: "Dismiss" }));
+  expect(live).toBeEmptyDOMElement();
+});
+
+test("undoing a save asks about a restart when the undo needs one", async () => {
+  const user = userEvent.setup();
+  api(ITEMS, {
+    "POST settings": (body) => ((body as { changes: Record<string, unknown> }).changes["demo.title"] === "Lantern" ? { changes: [], fingerprint: "fp-3", needs_restart: true } : savedTitle(false)),
+  });
+  renderApp(<RestartHarness />);
+  const live = await saveTitle(user);
+  expect(live).toBeEmptyDOMElement();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(live).toHaveTextContent(ASK));
 });
 
 const DEPENDENTS: S["SettingItem"][] = [
@@ -336,4 +402,16 @@ test("Add-ons opens the add-ons screen", async () => {
   renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} />);
   await user.click(screen.getByRole("button", { name: "Add-ons" }));
   expect(onOpenAddons).toHaveBeenCalled();
+});
+
+test("Settings ends with a Lists section where the choices dropdowns offer can be changed", async () => {
+  api(ITEMS, {
+    "GET lists": () => [
+      { id: "L-1", name: "project-status", label: "Project status", values: ["On track"], retired: [], used_by: ["project.status"] },
+    ],
+  });
+  open();
+  expect(await screen.findByRole("heading", { name: "Lists" })).toBeInTheDocument();
+  expect(screen.getByText("Project status")).toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Add a value to Project status" })).toBeInTheDocument();
 });

@@ -24,6 +24,7 @@ import { useWords } from "../lib/wording";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
 import { restoreFocus } from "./ModalPanel";
 import { SignIns } from "./SignIns";
+import { ValueLists } from "./ValueLists";
 
 type Edits = Record<string, Draft>;
 
@@ -171,6 +172,7 @@ export function Settings(props: { onOpenGuide: () => void; onOpenAddons: () => v
           })
         )}
       </div>
+      <ValueLists />
       <SignIns />
     </section>
   );

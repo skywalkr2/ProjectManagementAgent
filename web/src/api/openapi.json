@@ -862,16 +862,20 @@
         "type": "object"
       },
       "AiTestResult": {
+        "description": "One kind of work's account, tested: whether it answered, in plain words.",
         "properties": {
           "account": {
+            "description": "The account's short name, as the person named it.",
             "title": "Account",
             "type": "string"
           },
           "detail": {
+            "description": "\"answered\", or what went wrong in plain words.",
             "title": "Detail",
             "type": "string"
           },
           "main": {
+            "description": "It is the tier's main account; otherwise a fallback.",
             "title": "Main",
             "type": "boolean"
           },
@@ -880,6 +884,7 @@
             "type": "boolean"
           },
           "tier": {
+            "description": "The kind of work: \"routine\" (everyday) or \"deep\" (harder), or another tier.",
             "title": "Tier",
             "type": "string"
           }
@@ -4420,6 +4425,20 @@
         "title": "Requeued",
         "type": "object"
       },
+      "RestartAsked": {
+        "properties": {
+          "restarting": {
+            "description": "The app is restarting now; it is back in a few seconds.",
+            "title": "Restarting",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "restarting"
+        ],
+        "title": "RestartAsked",
+        "type": "object"
+      },
       "RetryRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4844,16 +4863,16 @@
             "title": "Fingerprint",
             "type": "string"
           },
-          "restarts": {
-            "description": "The app restarts in a moment to use the new settings.",
-            "title": "Restarts",
+          "needs_restart": {
+            "description": "These settings take effect after a restart. Nothing restarts until the person chooses to: ask them first, then POST /api/restart. False when the change is in use already (AI accounts are).",
+            "title": "Needs Restart",
             "type": "boolean"
           }
         },
         "required": [
           "changes",
           "fingerprint",
-          "restarts"
+          "needs_restart"
         ],
         "title": "SettingsSaved",
         "type": "object"
@@ -5523,6 +5542,12 @@
           "backup": {
             "$ref": "#/components/schemas/BackupStatus"
           },
+          "can_restart": {
+            "default": false,
+            "description": "The app can start itself again when the person asks (POST /api/restart).",
+            "title": "Can Restart",
+            "type": "boolean"
+          },
           "requests": {
             "$ref": "#/components/schemas/RequestCounts"
           },
@@ -5735,21 +5760,22 @@
       },
       "TemplateApplied": {
         "properties": {
+          "needs_restart": {
+            "description": "The template's add-ons start after a restart the person chooses.",
+            "title": "Needs Restart",
+            "type": "boolean"
+          },
           "plugins": {
             "items": {
               "type": "string"
             },
             "title": "Plugins",
             "type": "array"
-          },
-          "restarts": {
-            "title": "Restarts",
-            "type": "boolean"
           }
         },
         "required": [
           "plugins",
-          "restarts"
+          "needs_restart"
         ],
         "title": "TemplateApplied",
         "type": "object"
@@ -9316,6 +9342,25 @@
           }
         },
         "summary": "Undismiss Request"
+      }
+    },
+    "/api/restart": {
+      "post": {
+        "description": "Restart now, because the person chose to (never on its own). It starts between pieces of work.",
+        "operationId": "restart_api_restart_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestartAsked"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Restart"
       }
     },
     "/api/runtime-config": {

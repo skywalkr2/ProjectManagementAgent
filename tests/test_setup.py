@@ -258,20 +258,62 @@ def test_a_plugin_adds_a_setup_step(tmp_path):
         store.close()
 
 
-def test_saved_settings_restart_the_app_once_between_requests(tmp_path):
+def test_the_app_restarts_only_when_the_person_asks(tmp_path):
     from engine.worker import Events, Worker
 
     ws, cfg, store = make(tmp_path)
     asked = []
     worker = Worker(ws, store, cfg, Events(), on_restart=lambda: asked.append(True))
     try:
-        assert not worker.restart_due()
-        text = (ws.config_dir / "workspace.yaml").read_text()
-        (ws.config_dir / "workspace.yaml").write_text(set_key(text, ["name"], "Changed"))
+        assert not worker.restart_due() and not worker.needs_restart()
+        text = (ws.config_dir / "storage.yaml").read_text()
+        (ws.config_dir / "storage.yaml").write_text(set_key(text, ["backups", "keep"], 3))
+        assert worker.needs_restart() and not worker.restart_due() and asked == []  # shown, never on its own
+        worker.request_restart()
         assert worker.restart_due() and asked == [True]
         assert not worker.restart_due() and asked == [True]
     finally:
         store.close()
+
+
+def test_live_settings_are_taken_in_at_once_and_a_mixed_change_waits(tmp_path):
+    from engine.worker import Events, Worker
+
+    ws, cfg, store = make(tmp_path)
+    worker = Worker(ws, store, cfg, Events(), on_restart=lambda: None)
+    try:
+        text = (ws.config_dir / "workspace.yaml").read_text()
+        (ws.config_dir / "workspace.yaml").write_text(set_key(text, ["name"], "Changed"))
+        assert worker.needs_restart() is False and cfg.workspace.name == "Changed"  # in use already
+        ai = (ws.config_dir / "ai.yaml").read_text()
+        (ws.config_dir / "ai.yaml").write_text(set_key(ai, ["budgets", "per_run_usd"], 0.5))
+        assert worker.needs_restart() is False and cfg.ai.budgets.per_run_usd == 0.5
+        text = (ws.config_dir / "workspace.yaml").read_text()
+        storage = (ws.config_dir / "storage.yaml").read_text()
+        (ws.config_dir / "workspace.yaml").write_text(set_key(text, ["name"], "Again"))
+        (ws.config_dir / "storage.yaml").write_text(set_key(storage, ["backups", "keep"], 3))
+        assert worker.needs_restart() is True and cfg.workspace.name == "Changed"  # nothing half taken in
+    finally:
+        store.close()
+
+
+def test_restart_is_asked_for_and_refused_when_the_app_cant_start_itself(tmp_path):
+    from api.app import create_app
+
+    ws, cfg, store = make(tmp_path)
+    store.close()
+    plain = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    plain.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    refused = plain.post(f"{api}/restart")
+    assert refused.status_code == 409 and "start it again" in refused.text
+    assert plain.get(f"{api}/status").json()["can_restart"] is False
+    plain.close()
+    asked = []
+    able = TestClient(create_app(ws, cfg, "t", start_worker=False, on_restart=lambda: asked.append(True)))
+    able.headers["Authorization"] = "Bearer t"
+    assert able.post(f"{api}/restart").json() == {"restarting": True}
+    assert able.app.state.worker.restart_due() and asked == [True]
 
 
 @pytest.mark.parametrize("mode", ["hosted"])
@@ -289,21 +331,6 @@ def test_a_hosted_app_never_takes_a_pasted_key_or_lists_folders(tmp_path, mode):
         "fingerprint": fingerprint,
     }
     assert c.post(f"{api}/ai/accounts", json=account).status_code == 400
-
-
-def test_restarting_is_promised_only_when_something_on_disk_changed(tmp_path):
-    from engine.worker import Events, Worker
-
-    ws, cfg, store = make(tmp_path)
-    worker = Worker(ws, store, cfg, Events(), on_restart=lambda: None)
-    try:
-        assert worker.needs_restart() is False  # nothing changed: the screen must not say it is restarting
-        text = (ws.config_dir / "workspace.yaml").read_text()
-        (ws.config_dir / "workspace.yaml").write_text(set_key(text, ["name"], "Changed"))
-        assert worker.needs_restart() is True
-        assert Worker(ws, store, cfg, Events()).needs_restart() is False  # can't restart itself: never promised
-    finally:
-        store.close()
 
 
 def test_a_restart_that_fails_says_how_to_start_again(monkeypatch, capsys):
@@ -467,3 +494,13 @@ def test_an_add_ons_settings_are_a_form_group_saved_to_its_own_file(tmp_path):
     assert wrong.status_code >= 400 and "ask_on_add" in wrong.text
     unknown = c.post(f"{api}/settings", json={"changes": {"plugins/nobody.thing": 1}, "fingerprint": fingerprint})
     assert unknown.status_code >= 400
+
+
+def test_the_ai_test_says_in_plain_words_whether_each_kind_of_work_answered(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    lines = c.post(f"{api}/ai/test").json()
+    assert lines and len({(x["tier"], x["account"]) for x in lines}) == len(lines)  # one line each
+    for x in lines:
+        assert "/" not in x["account"] and "temperature" not in x["account"] and "max output" not in x["detail"]
+        assert x["ok"] is False or x["detail"] == "answered"

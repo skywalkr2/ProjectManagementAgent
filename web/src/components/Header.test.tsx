@@ -1,10 +1,11 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { RestartNotice, RestartProvider } from "../lib/restart";
+import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { Header } from "./Header";
 
-function status(spend: Partial<S["SpendStatus"]> = {}): S["Status"] {
+function status(spend: Partial<S["SpendStatus"]> = {}, over: Partial<S["Status"]> = {}): S["Status"] {
   return {
     backup: { configured: false, last_success: null, age_hours: null, needs_attention: false, last_error: null },
     ai: { state: "ok", detail: null },
@@ -21,6 +22,8 @@ function status(spend: Partial<S["SpendStatus"]> = {}): S["Status"] {
     requests: { queued: 0, running: 0, review: 0, needs_you: 0 },
     version: 1,
     restart_needed: null,
+    can_restart: false,
+    ...over,
   };
 }
 
@@ -133,4 +136,46 @@ test("panels on the work tab are views of their own; other tabs' panels are not"
   expect(onView).toHaveBeenCalledWith("home");
   await user.click(goals);
   expect(onView).toHaveBeenLastCalledWith("panel:demo/goals");
+});
+
+const NEEDED = "A change needs the app to restart. New AI work waits until then.";
+
+function showRestart(over: Partial<S["Status"]>, routes: Record<string, (body: unknown) => unknown> = {}) {
+  const calls = fakeApi({ "GET status": () => status({}, over), "GET runtime-config": () => ({ instance: null }), ...routes });
+  renderApp(
+    <RestartProvider hellos={1}>
+      <RestartNotice />
+      <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="home" onView={() => {}} onHandIn={() => {}} onAsk={() => {}} onHelp={() => {}} />
+    </RestartProvider>,
+  );
+  return calls;
+}
+
+test("the restart-needed line has Restart now when this copy can restart itself, and it asks the app", async () => {
+  const user = userEvent.setup();
+  const calls = showRestart({ restart_needed: "A setting changed.", can_restart: true }, { "POST restart": () => ({ restarting: true }) });
+  expect(await screen.findByText(NEEDED, { exact: false })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Restart now" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
+  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("Restarting to use the new settings…"));
+});
+
+test("when this copy can't restart itself, the line says to close and start the app again, with no button", async () => {
+  showRestart({ restart_needed: "A setting changed.", can_restart: false });
+  expect(await screen.findByText(/Close the app and start it again/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Restart now" })).toBeNull();
+});
+
+test("a refusal from the header's Restart now is shown in the notice", async () => {
+  const user = userEvent.setup();
+  showRestart({ restart_needed: "A setting changed.", can_restart: true }, { "POST restart": () => new Refuse(409, "Close it and start it again.") });
+  await user.click(await screen.findByRole("button", { name: "Restart now" }));
+  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("Close it and start it again."));
+});
+
+test("nothing about restarting shows when no restart is needed", async () => {
+  showRestart({ restart_needed: null, can_restart: true });
+  await screen.findByText("No off-device backup");
+  expect(screen.queryByRole("button", { name: "Restart now" })).toBeNull();
+  expect(screen.queryByText(/restart/i)).toBeNull();
 });

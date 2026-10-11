@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: The app restarts only when it must, and only when the person says so
+
+**Decided by:** project owner ("only restart when it's necessary and then warn the user before that happens").
+
+**What:** Settings that everything reads at the moment of use apply at once, with no restart: AI accounts, tiers and
+budgets, who the person is, the workspace's and assistant's names, the screens' wording and shortcuts, and the
+accounts counted as ours. When saved settings (or the app's code) change in a way that needs a restart, the app says
+so, holds new AI work, and waits: the person chooses "Restart now" or "Later". The app never restarts on its own. A
+copy that can't start itself again says to close and start it.
+
+**Why:** Adding an AI account restarted the app mid-setup, and the restart itself could fail (the web server raised
+the stop signal again after shutting down, ending the process). A restart nobody asked for loses the person's place.
+
+**Impact:** `engine/worker.py` (`LIVE_KEYS`, `apply_live`, `request_restart`); `POST /api/restart`;
+`SettingsSaved.needs_restart` and `TemplateApplied.needs_restart` replace `restarts`; `status.can_restart`; the
+settings screens ask before restarting. The serve command stops the server without a signal.
+
 ## 2026-10-11: Publishing a pack is a set process the owner approves
 
 **Decided by:** project owner (a set process; plugin sessions never publish to the catalog); project lead (the steps).

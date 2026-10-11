@@ -12,6 +12,7 @@ function status(ai: S["AiState"]): S["Status"] {
     requests: { queued: 0, running: 0, review: 0, needs_you: 0 },
     version: 1,
     restart_needed: null,
+    can_restart: false,
   };
 }
 

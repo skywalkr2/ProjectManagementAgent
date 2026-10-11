@@ -14,6 +14,7 @@ import { PersonPicker } from "./PersonPicker";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { TextSection } from "./TextSection";
 import { useTextReview } from "./TextReview";
+import { ValueSelect } from "./ValueSelect";
 
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
   const { t } = useWords();
@@ -286,6 +287,20 @@ function DetailInput(props: {
     // The person who is picked stays pickable even after they have left.
     const people = props.people.filter((p) => p.status === "active" || p.id === text);
     return <PersonPicker label={label} value={text} onChange={props.onChange} suggested={[]} people={people} />;
+  }
+  if (f.value_list) {
+    return (
+      <ValueSelect
+        id={id}
+        list={f.value_list}
+        label={label}
+        value={text}
+        onChange={props.onChange}
+        note={f.description || undefined}
+        required={required}
+        autoFocus={props.autoFocus}
+      />
+    );
   }
   let control;
   if (f.type === "choice" || (f.type === "reference" && f.refers_to === "project")) {

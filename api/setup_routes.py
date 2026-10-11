@@ -22,6 +22,7 @@ from api.schemas import (
     MeIn,
     MeView,
     Ok,
+    RestartAsked,
     SettingChangeView,
     SettingItem,
     SettingsSave,
@@ -62,7 +63,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return SettingsSaved(
             changes=[SettingChangeView(**c) for c in result.changes],
             fingerprint=result.fingerprint,
-            restarts=bool(result.changes) and worker.needs_restart(),
+            needs_restart=bool(result.changes) and worker.needs_restart(),
         )
 
     def save(changes: dict[str, Any], reset: list[str], fingerprint: str, allow: tuple[str, ...] = ()) -> Any:
@@ -90,6 +91,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             fingerprint=config_screens.fingerprint(ws.config_dir),
             items=[SettingItem(**vars(s)) for s in config_screens.describe(current(), store.plugins, ws.config_dir)],
         )
+
+    @r.post("/restart")
+    def restart() -> RestartAsked:
+        """Restart now, because the person chose to (never on its own). It starts between pieces of work."""
+        if not worker.can_restart:
+            raise HTTPException(
+                status_code=409, detail="This copy of the app can't restart itself. Close it and start it again."
+            )
+        worker.request_restart()
+        return RestartAsked(restarting=True)
 
     @r.post("/settings")
     def settings_save(body: SettingsSave) -> SettingsSaved:
@@ -137,7 +148,6 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 config_screens.fingerprint(ws.config_dir),
                 allow=("workspace.user.",),
             )
-            worker.needs_restart()
         return MeView(person=pid, full_name=name)
 
     # ---- setup steps ---------------------------------------------------------------------------------------------
@@ -189,7 +199,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail=str(err)) from None
         setup.template_applied(ws, body.id)
         events.changed()
-        return TemplateApplied(plugins=plugins, restarts=worker.needs_restart())
+        return TemplateApplied(plugins=plugins, needs_restart=worker.needs_restart())
 
     # ---- folders -------------------------------------------------------------------------------------------------
 
@@ -339,6 +349,15 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         results = smoke_test(current, os.environ)
         record(ws, results)
         events.changed()
-        return [AiTestResult(tier=x.tier, account=x.account, main=x.main, ok=x.ok, detail=x.detail) for x in results]
+        # One line per kind of work and account, in plain words: the run's own details are for `cockpit ai test`.
+        lines: dict[tuple[str, str], AiTestResult] = {}
+        for x in results:
+            account = x.account.split("/", 1)[0].split(" ", 1)[0]
+            line = lines.setdefault(
+                (x.tier, account), AiTestResult(tier=x.tier, account=account, main=x.main, ok=True, detail="answered")
+            )
+            if not x.ok and line.ok:
+                line.ok, line.detail = False, x.detail
+        return list(lines.values())
 
     return r

@@ -135,7 +135,7 @@ test("the workspace step starts the time zone from this browser while it is stil
   const user = userEvent.setup();
   vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({ timeZone: "Europe/Paris" } as Intl.ResolvedDateTimeFormatOptions);
   const calls = api([step("workspace")], {
-    "POST settings": () => ({ changes: [], fingerprint: "fp-2", restarts: false }),
+    "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
     "POST me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
   });
   open();
@@ -162,9 +162,9 @@ test("the workspace step shows the server's words when a value is refused, and k
   expect(screen.getByLabelText("Workspace name")).toHaveValue("Harbor");
 });
 
-test("the template step applies one template and says the app restarts", async () => {
+test("the template step applies one template and asks before the app restarts", async () => {
   const user = userEvent.setup();
-  const calls = api([step("template")], { "POST templates/apply": () => ({ plugins: [], restarts: true }) });
+  const calls = api([step("template")], { "POST templates/apply": () => ({ plugins: [], needs_restart: true }) });
   renderApp(
     <RestartProvider hellos={1}>
       <RestartNotice />
@@ -175,7 +175,8 @@ test("the template step applies one template and says the app restarts", async (
   await user.click(screen.getByRole("button", { name: "Apply Event" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST templates/apply")?.body).toEqual({ id: "tpl-b" }));
   expect(await screen.findByText("Applied Event.")).toBeInTheDocument();
-  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("Restarting to use the new settings…"));
+  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("This change needs the app to restart."));
+  expect(calls.some((c) => c.route === "POST restart")).toBe(false);
 });
 
 test("People & projects and Hand in are buttons that open those screens", async () => {
@@ -230,7 +231,7 @@ test("a plugin's step shows the settings it suggests in words, and Apply sends t
       "POST setup/plugin/tidy/apply-settings": () => ({
         changes: [{ key: "workspace.name", before: "Workspace", after: "Harbor", was_default: true, is_default: false }],
         fingerprint: "fp-2",
-        restarts: false,
+        needs_restart: false,
       }),
     },
   );

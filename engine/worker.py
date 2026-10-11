@@ -23,6 +23,12 @@ log = logging.getLogger(__name__)
 RESTART_NEEDED = "Settings or code changed since the cockpit started; restart it to use them."
 
 
+#: Settings the running app takes in at once, without a restart: everything that reads them reads the shared config
+#: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
+#: each request). Any other change waits for a restart the person chooses.
+LIVE_KEYS = ("ai.", "ui.", "workspace.user.", "workspace.name", "workspace.assistant_name", "workspace.our_accounts")
+
+
 def config_fingerprint(ws: Workspace) -> str:
     """A hash of the workspace's config files, to notice edits made while the process runs."""
     digest = hashlib.sha256()
@@ -30,6 +36,11 @@ def config_fingerprint(ws: Workspace) -> str:
         digest.update(str(path.relative_to(ws.config_dir)).encode())
         digest.update(path.read_bytes())
     return digest.hexdigest()
+
+
+def is_live(key: str) -> bool:
+    """Whether a changed settings key is taken in without a restart."""
+    return any(key.startswith(p) if p.endswith(".") else key == p or key.startswith(p + ".") for p in LIVE_KEYS)
 
 
 def code_fingerprint() -> str:
@@ -95,11 +106,48 @@ class Worker:
         self.sync_result: Any = None
         self.sync_problem: str | None = None
         self._started_with = (config_fingerprint(ws), code_fingerprint())
+        self._config_seen = self._started_with[0]
         self.restart_needed: str | None = None
+        self.restart_requested = False
+
+    def apply_live(self) -> bool:
+        """Take in changed settings now when every changed key is live (an AI account, the person's name); returns
+        whether anything was taken in. A change to any other key leaves the settings in use as they were, for the
+        restart the person chooses. A file that doesn't load changes nothing."""
+        seen = config_fingerprint(self.ws)
+        if seen == self._config_seen:
+            return False
+        from engine.config import ConfigError, load_config
+
+        try:
+            fresh = load_config(self.ws.config_dir, env=dict(os.environ))
+        except ConfigError as err:
+            log.warning("Changed settings weren't taken in: %s", err)
+            return False
+        before = {k: v for k, v, _ in self.cfg.flat()}
+        after = {k: v for k, v, _ in fresh.flat()}
+        changed = {k for k in before.keys() | after.keys() if before.get(k) != after.get(k)}
+        if any(not is_live(k) for k in changed):
+            return False
+        for name in {k.split(".", 1)[0] for k in changed}:
+            self.cfg.files[name] = fresh.files[name]
+            for key in [k for k in self.cfg.sources if k.startswith(name + ".")]:
+                del self.cfg.sources[key]
+            self.cfg.sources.update({k: v for k, v in fresh.sources.items() if k.startswith(name + ".")})
+        self._config_seen = seen
+        if changed:
+            log.info("Took in changed settings: %s", ", ".join(sorted(changed)))
+            self.events.changed()
+        return bool(changed)
 
     def _changed_since_start(self) -> bool:
-        """Old code never runs new settings: once config or code changed, no new job starts in this process."""
-        if self.restart_needed is None and (config_fingerprint(self.ws), code_fingerprint()) != self._started_with:
+        """Old code never runs new settings: once settings that need a restart or code changed, no new job starts in
+        this process. Live settings are taken in first and don't count."""
+        self.apply_live()
+        if self.restart_needed is None and (self._config_seen, code_fingerprint()) != (
+            config_fingerprint(self.ws),
+            self._started_with[1],
+        ):
             self.restart_needed = RESTART_NEEDED
         return self.restart_needed is not None
 
@@ -142,12 +190,19 @@ class Worker:
         self._wake.set()
 
     def needs_restart(self) -> bool:
-        """Whether this process will restart to use changed settings or code: something on disk changed since it
-        started, and it can restart itself. Wakes the worker so the restart starts now, not on its next turn."""
-        if self.on_restart is None or not self._changed_since_start():
-            return False
+        """Whether changed settings or code wait for a restart. Live settings are taken in first, so they never
+        count. Nothing restarts until the person asks (`request_restart`)."""
+        return self._changed_since_start()
+
+    @property
+    def can_restart(self) -> bool:
+        """Whether this process can start itself again (it was started by `cockpit serve`)."""
+        return self.on_restart is not None
+
+    def request_restart(self) -> None:
+        """The person asked for the restart: it starts between requests, at once if none is running."""
+        self.restart_requested = True
         self.poke()
-        return True
 
     def run_pending(self) -> int:
         """Process every queued request now. Returns how many were processed."""
@@ -312,11 +367,12 @@ class Worker:
             self._wake.clear()
 
     def restart_due(self) -> bool:
-        """Ask for a restart once, when settings or code changed and no request is being processed."""
-        if self.on_restart is None or self.restarting or not self._changed_since_start():
+        """Restart once the person asked for it, between requests. The app never restarts on its own: a change that
+        needs one is shown, and new work waits, until the person chooses to restart."""
+        if self.on_restart is None or self.restarting or not self.restart_requested:
             return False
         self.restarting = True
-        log.warning("Settings or code changed; restarting to use them.")
+        log.warning("Restarting, as asked, to use changed settings or code.")
         self.events.changed()
         self.on_restart()
         return True

@@ -38,7 +38,7 @@ const setting = (key: string, value: unknown, description = key): S["SettingItem
 const saved = (key: string, before: unknown, after: unknown): S["SettingsSaved"] => ({
   changes: [{ key, before, after, was_default: true, is_default: false }],
   fingerprint: "fp-2",
-  restarts: false,
+  needs_restart: false,
 });
 
 function open(asks: AskItem[], extra: Record<string, (b: unknown) => unknown> = {}, initial?: string, feedbackTo?: string | null) {

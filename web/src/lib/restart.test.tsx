@@ -26,7 +26,7 @@ function tree(hellos: number, seconds = 60) {
 
 const SAYS = "Restarting to use the new settings…";
 const DONE = "Restarted with the new settings.";
-const STUCK = "The app didn't restart by itself. Close it and start it again to use the new settings.";
+const STUCK = "The app didn't come back after restarting. Close it and start it again to use the new settings.";
 
 const begin = () => act(() => screen.getByRole("button", { name: "begin" }).click());
 

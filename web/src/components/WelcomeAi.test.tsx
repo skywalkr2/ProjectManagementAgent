@@ -59,7 +59,7 @@ function api(extra: Record<string, (body: unknown) => unknown> = {}) {
     "GET ai/local": () => [],
     "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
     "POST ai/models": () => ({ models: MODELS }),
-    "POST ai/accounts": () => ({ changes: [], fingerprint: "fp-2", restarts: false }),
+    "POST ai/accounts": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
     "POST ai/test": () => [],
     ...extra,
   });
@@ -413,13 +413,23 @@ test("a refusal shows the server's words and keeps what was typed", async () => 
   expect(screen.getByLabelText("Model for everyday work")).toHaveValue("model-a");
 });
 
-test("after adding, focus goes to Test again, the test runs by itself, and the results are listed in words", async () => {
+test("there is no Test button before an account exists to test", async () => {
+  api();
+  open();
+  await screen.findByRole("radio", { name: /Service A/ });
+  expect(screen.queryByRole("button", { name: /Test/ })).toBeNull();
+  expect(screen.queryByText("Test the connection")).toBeNull();
+});
+
+test("after adding, focus goes to Test again, the test runs by itself, and one plain line is listed per kind of work", async () => {
   const user = userEvent.setup();
   const calls = api({
     "POST ai/test": () => [
-      { tier: "routine", account: "service-a", main: true, ok: true, detail: "" },
-      { tier: "deep", account: "service-a", main: false, ok: true, detail: "" },
-      { tier: "routine", account: "second", main: false, ok: false, detail: "The key was refused." },
+      { tier: "routine", account: "main-account", main: true, ok: true, detail: "answered" },
+      { tier: "deep", account: "main-account", main: true, ok: true, detail: "answered" },
+      { tier: "routine", account: "second", main: false, ok: true, detail: "answered" },
+      { tier: "deep", account: "second", main: false, ok: false, detail: "The key was refused." },
+      { tier: "review", account: "second", main: true, ok: true, detail: "answered" },
     ],
   });
   open();
@@ -430,18 +440,45 @@ test("after adding, focus goes to Test again, the test runs by itself, and the r
   await waitFor(() => expect(calls.filter((c) => c.route === "POST ai/test")).toHaveLength(1));
   const rows = await screen.findAllByRole("listitem");
   const results = rows.filter((r) => r.closest(".test-results"));
-  expect(results).toHaveLength(2);
-  expect(results[0]).toHaveTextContent("service-a: ✓ Answered");
-  expect(results[1]).toHaveTextContent("second: ✗ Didn't answer: The key was refused.");
-  expect(within(results[1]).queryByText("routine")).toBeNull();
+  expect(results.map((r) => r.textContent)).toEqual([
+    "Everyday work: main-account — answered ✓",
+    "Harder work: main-account — answered ✓",
+    "Everyday work (backup): second — answered ✓",
+    "Harder work (backup): second — didn't answer: The key was refused. ✗",
+    "review: second — answered ✓",
+  ]);
+  const body = document.body.textContent ?? "";
+  expect(body).not.toMatch(/temperature|max output|stub|routine|deep/i);
   await user.click(test);
   await waitFor(() => expect(calls.filter((c) => c.route === "POST ai/test")).toHaveLength(2));
 });
 
-test("testing with nothing to test says so", async () => {
+test("adding stays on the step and shows no restart notice, because accounts apply at once", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "POST ai/test": () => [{ tier: "routine", account: "main-account", main: true, ok: true, detail: "answered" }] });
+  open();
+  await keyed(user);
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(document.querySelector(".test-results li")).toHaveTextContent("Everyday work: main-account — answered ✓"));
+  expect(screen.queryByText(/restart/i)).toBeNull();
+  expect(screen.queryByRole("button", { name: "Restart now" })).toBeNull();
+  expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+  expect(screen.getByLabelText("Key")).toBeInTheDocument();
+});
+
+test("a failure shows its reason with the word and a cross, not colour alone", async () => {
+  const user = userEvent.setup();
+  api({ "POST ai/test": () => [{ tier: "routine", account: "main-account", main: true, ok: false, detail: "The key was refused." }] });
+  open({ done: true });
+  await user.click(await screen.findByRole("button", { name: "Test the connection" }));
+  const line = await screen.findByText(/didn't answer/);
+  expect(line).toHaveTextContent("Everyday work: main-account — didn't answer: The key was refused. ✗");
+});
+
+test("when the step was already done, the test button is there from the start", async () => {
   const user = userEvent.setup();
   api({ "POST ai/test": () => [] });
-  open();
+  open({ done: true });
   await user.click(await screen.findByRole("button", { name: "Test the connection" }));
   expect(await screen.findByText("There is nothing to test yet. Add an account first.")).toBeInTheDocument();
 });

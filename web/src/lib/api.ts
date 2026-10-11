@@ -48,6 +48,7 @@ const named = (name: string) => name.split("/").map(id).join("/");
 export const api = {
   runtimeConfig: () => call<S["RuntimeConfig"]>("GET", "runtime-config"),
   status: () => call<S["Status"]>("GET", "status"),
+  restart: () => call<S["RestartAsked"]>("POST", "restart"),
   changes: () => call<S["ChangeItem"][]>("GET", "changes"),
   source: (src: string) => call<S["SourceView"]>("GET", `sources/${id(src)}`),
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
@@ -155,6 +156,11 @@ export const api = {
   panels: () => call<S["PanelView"][]>("GET", "panels"),
   panelRows: (name: string, project?: string) =>
     call<S["PanelRow"][]>("GET", `panels/${named(name)}/rows${project ? `?project=${id(project)}` : ""}`),
+  valueLists: () => call<S["ValueListView"][]>("GET", "lists"),
+  listAdd: (list: string, value: string) => call<S["Applied"]>("POST", `lists/${named(list)}/add`, { value }),
+  listRename: (list: string, value: string, to: string) =>
+    call<S["Applied"]>("POST", `lists/${named(list)}/rename`, { value, to }),
+  listRetire: (list: string, value: string) => call<S["Applied"]>("POST", `lists/${named(list)}/retire`, { value }),
   editRecord: (body: S["RecordEdit"]) => call<S["Applied"]>("POST", "records/edit", body),
   kindView: (kind: string) => call<S["KindView"]>("GET", `kinds/${named(kind)}`),
   record: (kind: string, record: string) =>

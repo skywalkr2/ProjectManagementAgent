@@ -70,6 +70,9 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 - Never assume the app is served at the root: every route, link, cookie and asset path comes from `server.public_url` and
   `server.base_path`.
 - Hosted mode refuses to start unless the deploy checks pass (design 11.5). Never weaken a check to get a deployment running.
+- Restart only when necessary, and only when the person says so: a setting that everything reads at the moment of use
+  applies at once (`LIVE_KEYS` in `engine/worker.py`); any other change says a restart is needed, holds new work, and
+  waits for the person to choose "Restart now". The app never restarts on its own.
 - Hosting platform names appear only in `deploy/` and docs. No user's domain, account or secret anywhere in the repository;
   examples use `example.com`.
 

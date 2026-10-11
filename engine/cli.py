@@ -5,7 +5,6 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
-import signal
 import sys
 import tempfile
 import threading
@@ -369,17 +368,24 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
     def ask_restart() -> None:
         restart.set()
-        server.handle_exit(signal.SIGTERM, None)
+        server.stop()
 
     app = create_app(ws, cfg, token, on_shutdown=shut_down, start_worker=True, on_restart=ask_restart)
 
-    class Server(uvicorn.Server):
+    class CockpitServer(uvicorn.Server):
+        """The web server, with live streams ended first on the way out so it isn't kept waiting on them."""
+
         def handle_exit(self, sig: int, frame: Any) -> None:
-            # Live streams end first, so the server isn't kept waiting on open connections.
             app.state.events.close()
             super().handle_exit(sig, frame)
 
-    server = Server(uvicorn.Config(app, host=cfg.server.host, port=cfg.server.port, log_level="warning"))
+        def stop(self) -> None:
+            """Stop serving from any thread without a signal: a signal the server catches is raised again once it
+            has stopped, which would end the process before it could start itself again."""
+            app.state.events.close()
+            self.should_exit = True
+
+    server = CockpitServer(uvicorn.Config(app, host=cfg.server.host, port=cfg.server.port, log_level="warning"))
     try:
         server.run()
     except KeyboardInterrupt:

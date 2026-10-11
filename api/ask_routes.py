@@ -132,7 +132,7 @@ def build_ask_router(ws: Workspace, cfg: Config, store: Store, events: Events, w
         return SettingsSaved(
             changes=[SettingChangeView(**c) for c in saved.changes],
             fingerprint=saved.fingerprint,
-            restarts=worker.on_restart is not None,
+            needs_restart=bool(saved.changes) and worker.needs_restart(),
         )
 
     @r.post("/setting-proposals/{proposal_id}/dismiss")

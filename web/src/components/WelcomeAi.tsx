@@ -38,7 +38,7 @@ function freeName(id: string, taken: Set<string>): string {
 }
 
 export function WelcomeAi(props: { local: boolean; done: boolean }) {
-  const { t, tn } = useWords();
+  const { t, tn, has } = useWords();
   const money = useSmallMoney();
   const client = useQueryClient();
   const afterSave = useAfterSave();
@@ -231,15 +231,14 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
     }
   };
 
-  // One row per account and outcome: an account that does several kinds of work is not listed once for each.
-  const rows = [
-    ...new Map(
-      (results ?? []).map((r) => {
-        const text = r.ok ? t("welcome.ai.answered") : r.detail ? t("welcome.ai.failed", { detail: r.detail }) : t("welcome.ai.failed_plain");
-        return [`${r.account}\n${text}`, { account: r.account, ok: r.ok, text }] as const;
-      }),
-    ).values(),
-  ];
+  // One line per kind of work: the work, the account that does it, and whether it answered, in words and a mark.
+  const rows = (results ?? []).map((r) => {
+    const outcome = r.ok ? t("welcome.ai.answered") : r.detail ? t("welcome.ai.failed", { detail: r.detail }) : t("welcome.ai.failed_plain");
+    const work = has(`welcome.ai.tier.${r.tier}`) ? t(`welcome.ai.tier.${r.tier}`) : r.tier;
+    const text = t(r.main ? "welcome.ai.result" : "welcome.ai.result_backup", { work, account: r.account, outcome });
+    return { key: `${r.tier}:${r.account}:${r.main}`, ok: r.ok, text };
+  });
+  const canTest = !!added || props.done;
 
   const all = endpoints.data ?? [];
   const foundIds = new Set((found.data ?? []).map((s) => s.endpoint));
@@ -630,22 +629,20 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
         </form>
       )}
       <div className="guide-test">
-        <button type="button" className="btn" ref={testButton} disabled={testing} onClick={() => void test()}>
-          {t(added || results ? "welcome.ai.test_again" : "welcome.ai.test")}
-        </button>
+        {canTest && (
+          <button type="button" className="btn" ref={testButton} disabled={testing} onClick={() => void test()}>
+            {t(added || results ? "welcome.ai.test_again" : "welcome.ai.test")}
+          </button>
+        )}
         <div role="status" aria-live="polite">
           {testing && <p className="hint">{t("welcome.ai.testing")}</p>}
           {results && rows.length === 0 && <p className="hint">{t("welcome.ai.test_none")}</p>}
           {rows.length > 0 && (
             <ul className="plain-list test-results">
               {rows.map((r) => (
-                <li key={`${r.account}:${r.text}`}>
-                  <strong>{r.account}</strong>
-                  {": "}
-                  <span className={r.ok ? "result-ok" : "result-bad"}>
-                    <span aria-hidden="true">{r.ok ? "✓ " : "✗ "}</span>
-                    {r.text}
-                  </span>
+                <li key={r.key} className={r.ok ? "result-ok" : "result-bad"}>
+                  {r.text}
+                  <span aria-hidden="true">{r.ok ? " ✓" : " ✗"}</span>
                 </li>
               ))}
             </ul>

@@ -380,6 +380,58 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
   });
 
+  test("a value added to the project status list from a project form is selected, and still there after a reload", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("button", { name: "People & projects" }).click();
+    await page.getByRole("button", { name: "Add a project" }).click();
+    const form = page.locator("form.setup-form");
+    await form.getByRole("textbox", { name: "Name" }).fill("Listed project");
+    const status = form.getByRole("combobox", { name: "Status" });
+    await expect(status.locator("option")).toContainText(["Not set", "Add to the list…"]);
+    await status.selectOption({ label: "Add to the list…" });
+    const field = form.getByRole("textbox", { name: "Add a value to Project status" });
+    await expect(field).toBeFocused();
+    await field.fill("Parked for now");
+    await checkAccessibility(page);
+    // Enter adds the value; it does not send the project.
+    await field.press("Enter");
+    await expect(status).toHaveValue("Parked for now");
+    await expect(page.getByRole("region", { name: "Notifications" })).toContainText("Added Parked for now to Project status.");
+    await form.getByRole("button", { name: "Add a project" }).click();
+    const row = page.locator("li.line", { hasText: "Listed project" });
+    await expect(row).toContainText("Parked for now");
+    await page.reload();
+    await page.getByRole("button", { name: "People & projects" }).click();
+    const again = page.locator("li.line", { hasText: "Listed project" });
+    await expect(again).toContainText("Parked for now");
+    await again.getByRole("button", { name: "Edit" }).click();
+    await expect(again.getByRole("combobox", { name: "Status" })).toHaveValue("Parked for now");
+    await checkAccessibility(page);
+  });
+
+  test("Settings lists the value lists, and a value can be renamed and stopped being offered", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("button", { name: "Settings" }).click();
+    const lists = page.getByRole("region", { name: "Lists" });
+    await expect(lists).toBeVisible();
+    const status = lists.locator("li.line", { hasText: "Project status" });
+    await expect(status).toContainText("Used for: project status");
+    await expect(status.getByText("Parked for now", { exact: true })).toBeVisible();
+    await checkAccessibility(page);
+    await status.getByRole("button", { name: /More actions for Parked for now/ }).click();
+    await page.getByRole("menuitem", { name: "Rename" }).click();
+    const rename = status.getByRole("textbox", { name: "New name for Parked for now" });
+    await rename.fill("On the shelf");
+    await rename.press("Enter");
+    await expect(status.getByText("On the shelf", { exact: true })).toBeVisible();
+    await status.getByRole("button", { name: /More actions for On the shelf/ }).click();
+    await page.getByRole("menuitem", { name: "Stop offering" }).click();
+    await status.getByRole("button", { name: /No longer offered/ }).click();
+    await expect(status.locator(".list-value", { hasText: "On the shelf" })).toBeVisible();
+    await expect(status.getByRole("button", { name: "Offer again On the shelf" })).toBeVisible();
+    await checkAccessibility(page);
+  });
+
   test("items move through stages from Stages and Today, with undo", async ({ page }) => {
     await signIn(page);
     const before: Array<{

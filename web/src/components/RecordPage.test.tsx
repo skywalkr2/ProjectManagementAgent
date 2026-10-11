@@ -341,3 +341,49 @@ test("Cancel puts the values back and closes the form", async () => {
   await user.click(await screen.findByRole("button", { name: "Edit details" }));
   expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("The harbor");
 });
+
+test("a field bound to a value list is a list choice, with the record's dropped value kept and marked; a plain choice keeps its options", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi(
+    editRoutes({
+      [`GET kinds/${KIND}`]: () => ({
+        kind: KIND,
+        fields: [
+          ...editKind.fields,
+          { name: "stage_label", description: "Where it stands.", type: "choice", options: ["Draft", "Done"], value_list: "demo-stages", required: false, editable: true },
+        ],
+      }),
+      [`GET record?${on}`]: () => ({
+        kind: KIND,
+        id: ID,
+        version: 4,
+        fields: { id: ID, title: "The harbor", state: "draft", mood: "calm", stage_label: "Shelved" },
+        long_text: [field],
+      }),
+      "GET lists": () => [
+        { id: "L-1", name: "demo-stages", label: "Demo stages", values: ["Draft", "Done"], retired: ["Shelved"], used_by: [`${KIND}.stage_label`] },
+      ],
+      "POST records/edit": () => ({ changeset: "CS-4" }),
+    }),
+  );
+  const form = await openForm(user);
+  const stage = within(form).getByRole("combobox", { name: "Stage label" });
+  await waitFor(() =>
+    expect(within(stage).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Not set",
+      "Draft",
+      "Done",
+      "Shelved (no longer offered)",
+      "Add to the list…",
+    ]),
+  );
+  expect(stage).toHaveValue("Shelved");
+  expect(within(form).getByText("Where it stands.")).toBeInTheDocument();
+  // A plain choice still offers just its own options.
+  const state = within(form).getByRole("combobox", { name: "State" });
+  expect(within(state).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "draft", "revised", "locked"]);
+  await user.selectOptions(stage, "Done");
+  await user.click(within(form).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST records/edit")).toBe(true));
+  expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { stage_label: "Done" } });
+});

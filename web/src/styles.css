@@ -431,3 +431,11 @@ html[data-today]:not([data-narrow]) main > .today-board { flex: 1 1 0; min-heigh
 html[data-today]:not([data-narrow]) .footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; padding-top: 6px; font-size: 13px; }
 [data-narrow] .today-board { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; }
 [data-narrow] .tb-col, [data-narrow] .tb-body { overflow: visible; }
+
+.list-values { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.list-values > li { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; border-left: 3px solid var(--line); padding-left: 10px; min-height: 36px; }
+.list-values > li > .inline-field { flex: 1 1 100%; }
+.list-value { overflow-wrap: anywhere; min-width: 0; flex: 1 1 auto; }
+.list-retired { display: grid; gap: 8px; justify-items: start; }
+.list-retired > div { display: grid; gap: 8px; justify-self: stretch; }
+.list-add { margin-top: 2px; }

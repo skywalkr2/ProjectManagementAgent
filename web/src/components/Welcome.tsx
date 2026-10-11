@@ -397,7 +397,7 @@ function TemplateStep() {
       () => ({ message: t("welcome.template.applied", { name: template.name }) }),
     );
     setBusy(false);
-    if (done?.restarts) restart.begin();
+    if (done?.needs_restart) restart.offer();
   };
   return (
     <ul className="queue">

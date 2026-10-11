@@ -12,6 +12,7 @@ from engine.ai.router import Router
 from engine.ai.smoke import record, smoke_test, untested_since_change
 from engine.ai.task import AiError
 from engine.config import ConfigError
+from engine.config.yaml_edit import set_key
 from engine.dispatcher import process, send_back
 from engine.intake import hand_in
 from engine.storage import Store
@@ -103,6 +104,9 @@ def test_changed_settings_stop_new_work_until_restart(env):
     worker = Worker(ws, store, cfg, Events(), lambda: Router(cfg, store, env={}))
     path = ws.config_dir / "ai.yaml"
     path.write_text(path.read_text() + "\n# edited while running\n")
+    assert worker.restart_needed is None and not worker.needs_restart()  # AI settings are taken in live
+    path = ws.config_dir / "storage.yaml"
+    path.write_text(set_key(path.read_text(), ["backups", "keep"], 3))  # this one waits for a restart
     req = hand_in(ws, store, note="file this", now=NOW).request
     assert worker.run_pending() == 0
     assert worker.restart_needed == RESTART_NEEDED

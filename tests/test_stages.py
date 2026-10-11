@@ -2,6 +2,7 @@ import pytest
 import yaml
 
 from engine.config import ConfigError, load_config
+from engine.config.yaml_edit import set_key
 
 
 def config(tmp_path, stages):
@@ -263,7 +264,9 @@ def test_person_override_and_restart_stop_rule_moves(stage_workspace):
     worker.run_pending()
     assert store.read().get(record.kind, record.id).data["stage"] is None
     settings.moves = "rule"
-    (store.path.parent / "config" / "stages.yaml").write_text("moves: person\n")
+    storage = store.path.parent / "config" / "storage.yaml"
+    text = storage.read_text() if storage.exists() else "version: 1\n"
+    storage.write_text(set_key(text, ["backups", "keep"], 3))  # a change that waits for a restart
     worker.run_pending()
     assert worker.restart_needed
     assert store.read().get(record.kind, record.id).data["stage"] is None

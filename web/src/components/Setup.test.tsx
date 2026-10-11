@@ -130,7 +130,7 @@ test("with no synced folder it says what one is for and offers to choose, withou
   expect(calls.some((c) => c.route === "GET sync")).toBe(false);
 });
 
-test("choosing a folder saves it as the synced folder setting and starts the restart notice", async () => {
+test("choosing a folder saves it as the synced folder setting and asks before restarting", async () => {
   const user = userEvent.setup();
   const calls = others(
     {
@@ -139,7 +139,7 @@ test("choosing a folder saves it as the synced folder setting and starts the res
       "POST settings": () => ({
         changes: [{ key: "storage.sync.folder", before: "", after: "/home/me", was_default: true, is_default: false }],
         fingerprint: "fp-2",
-        restarts: true,
+        needs_restart: true,
       }),
     },
     "",
@@ -160,7 +160,9 @@ test("choosing a folder saves it as the synced folder setting and starts the res
     fingerprint: "fp-1",
   });
   const live = screen.getAllByRole("status").find((el) => el.classList.contains("restart-slot"))!;
-  await waitFor(() => expect(live).toHaveTextContent("Restarting to use the new settings…"));
+  await waitFor(() => expect(live).toHaveTextContent("This change needs the app to restart."));
+  expect(within(live).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+  expect(live).not.toHaveTextContent("Restarting");
 });
 
 test("where folders can't be listed, the synced folder can be typed", async () => {
@@ -169,7 +171,7 @@ test("where folders can't be listed, the synced folder can be typed", async () =
     {
       "GET jobs": () => [],
       "GET setup/folders": () => new Refuse(403, "no"),
-      "POST settings": () => ({ changes: [], fingerprint: "fp-2", restarts: false }),
+      "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
     },
     "",
   );
@@ -362,4 +364,60 @@ test("an empty language and budget are sent as nothing, so the project inherits 
   await user.click(within(row).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-1")).toBe(true));
   expect(calls.find((c) => c.route === "POST projects/PRJ-1")?.body).toMatchObject({ parent: null, language: null, budget_usd: null });
+});
+
+const projectLists = (): S["ValueListView"][] => [
+  { id: "L-1", name: "project-status", label: "Project status", values: ["On track", "At risk"], retired: [], used_by: ["project.status"] },
+  { id: "L-2", name: "project-phase", label: "Project phase", values: ["Planning", "Underway"], retired: [], used_by: ["project.phase"] },
+  { id: "L-3", name: "project-group", label: "Project group", values: ["Books"], retired: ["Old shelf"], used_by: ["project.group"] },
+];
+
+test("a project's status, phase and group are chosen from their lists, and the chosen values are saved", async () => {
+  const user = userEvent.setup();
+  const calls = others({
+    "GET lists": projectLists,
+    "GET projects": () => [withDetails("PRJ-1", "Book one", { status: "On track", group: "Old shelf" })],
+    "GET sync": () => syncView({ folder: "" }),
+    "GET jobs": () => [],
+    "POST projects/PRJ-1": () => ({ ok: "PRJ-1" }),
+  });
+  renderApp(<Setup />);
+  const row = (await screen.findByText("Book one")).closest("li")!;
+  await user.click(within(row).getByRole("button", { name: "Edit" }));
+  const status = within(row).getByRole("combobox", { name: "Status" });
+  const phase = within(row).getByRole("combobox", { name: "Phase" });
+  const group = within(row).getByRole("combobox", { name: /Group/ });
+  await waitFor(() => expect(within(group).getAllByRole("option").map((o) => o.textContent)).toContain("Old shelf (no longer offered)"));
+  expect(within(status).getAllByRole("option").map((o) => o.textContent)).toEqual(["Not set", "On track", "At risk", "Add to the list…"]);
+  expect(status).toHaveValue("On track");
+  expect(group).toHaveValue("Old shelf");
+  expect(within(row).queryByRole("textbox", { name: "Status" })).toBeNull();
+  await user.selectOptions(status, "At risk");
+  await user.selectOptions(phase, "Underway");
+  await user.click(within(row).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-1")).toBe(true));
+  // The group it still held is kept; nothing is lost by editing something else.
+  expect(calls.find((c) => c.route === "POST projects/PRJ-1")?.body).toMatchObject({
+    name: "Book one",
+    status: "At risk",
+    phase: "Underway",
+    group: "Old shelf",
+  });
+});
+
+test("a new project with nothing chosen sends no status, phase or group", async () => {
+  const user = userEvent.setup();
+  const calls = others({
+    "GET lists": projectLists,
+    "GET projects": () => [],
+    "GET sync": () => syncView({ folder: "" }),
+    "GET jobs": () => [],
+    "POST projects": () => ({ id: "PRJ-9" }),
+  });
+  renderApp(<Setup />);
+  await user.click(await screen.findByRole("button", { name: "Add a project" }));
+  await user.type(await screen.findByRole("textbox", { name: "Name" }), "Fresh");
+  await user.click(screen.getByRole("button", { name: "Add a project" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST projects")).toBe(true));
+  expect(calls.find((c) => c.route === "POST projects")?.body).toMatchObject({ name: "Fresh", status: null, phase: null, group: null });
 });

@@ -1,20 +1,40 @@
-// Saved settings take effect when the app restarts itself a few seconds later. This keeps a notice up from the save
-// until the app answers as a new start (or, with a server that can't say, until the event stream connects again). If
-// no restart came in time, the notice says so and stays until dismissed, so nobody is left thinking it restarted.
+// A change that needs a restart never restarts the app by itself: the person is asked first ("asking"), and only
+// "Restart now" sends the request. Then a notice stays up until the app answers as a new start (or, with a server that
+// can't say, until the event stream connects again). If no restart came in time, or the app can't restart itself, the
+// notice says so and stays until dismissed, so nobody is left thinking it restarted.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api } from "./api";
+import { problemText } from "./problem";
 import { useWords } from "./wording";
 
-type Phase = "idle" | "waiting" | "done" | "stuck";
+type Phase = "idle" | "asking" | "waiting" | "done" | "stuck" | "refused";
 
 interface RestartApi {
   waiting: boolean;
   phase: Phase;
+  /** The words for a restart the app couldn't do, when the phase is "refused". */
+  problem: string;
+  /** A restart was asked for and the answer has not come yet. */
+  busy: boolean;
+  /** Starts the notice that waits for the app to come back; the request itself is `now`. */
   begin: () => void;
+  /** Asks the person whether to restart now; nothing restarts until they say so. */
+  offer: () => void;
+  /** Asks the app to restart, then waits for it. A refusal is shown in the notice. */
+  now: () => Promise<void>;
   dismiss: () => void;
 }
 
-const RestartContext = createContext<RestartApi>({ waiting: false, phase: "idle", begin: () => undefined, dismiss: () => undefined });
+const RestartContext = createContext<RestartApi>({
+  waiting: false,
+  phase: "idle",
+  problem: "",
+  busy: false,
+  begin: () => undefined,
+  offer: () => undefined,
+  now: () => Promise.resolve(),
+  dismiss: () => undefined,
+});
 
 export function useRestart(): RestartApi {
   return useContext(RestartContext);
@@ -26,7 +46,10 @@ export const RESTART_POLL_SECONDS = 2;
 
 /** `hellos` is how many times the event stream has connected; the next one is a hint that the app is back. */
 export function RestartProvider(props: { hellos: number; seconds?: number; doneSeconds?: number; pollSeconds?: number; children: ReactNode }) {
+  const { t } = useWords();
   const [phase, setPhase] = useState<Phase>("idle");
+  const [problem, setProblem] = useState("");
+  const [busy, setBusy] = useState(false);
   const [since, setSince] = useState(0);
   // The start the app was on when the wait began: a text, null when the server doesn't say, undefined while it is looked up.
   const [baseline, setBaseline] = useState<string | null | undefined>(undefined);
@@ -54,6 +77,24 @@ export function RestartProvider(props: { hellos: number; seconds?: number; doneS
       },
     );
   }, []);
+
+  const offer = useCallback(() => {
+    setPhase((cur) => (cur === "idle" || cur === "stuck" || cur === "refused" ? "asking" : cur));
+  }, []);
+
+  const now = useCallback(async () => {
+    setBusy(true);
+    try {
+      await api.restart();
+      begin();
+    } catch (err) {
+      round.current += 1;
+      setProblem(problemText(err, t));
+      setPhase("refused");
+    } finally {
+      setBusy(false);
+    }
+  }, [begin, t]);
 
   const dismiss = useCallback(() => {
     round.current += 1;
@@ -104,14 +145,27 @@ export function RestartProvider(props: { hellos: number; seconds?: number; doneS
     return () => window.clearTimeout(timer);
   }, [phase, doneSeconds]);
 
-  const value = useMemo(() => ({ waiting: phase === "waiting", phase, begin, dismiss }), [phase, begin, dismiss]);
+  const value = useMemo(
+    () => ({ waiting: phase === "waiting", phase, problem, busy, begin, offer, now, dismiss }),
+    [phase, problem, busy, begin, offer, now, dismiss],
+  );
   return <RestartContext.Provider value={value}>{props.children}</RestartContext.Provider>;
 }
 
-/** The live region that says the app is restarting. It is always on the page, so a screen reader hears the change. */
+/** The live region that asks about a restart and says it is happening. It is always on the page, so a screen reader hears the change. */
 export function RestartNotice() {
   const { t } = useWords();
-  const { phase, dismiss } = useRestart();
+  const { phase, problem, busy, now, dismiss } = useRestart();
+  const text =
+    phase === "asking"
+      ? t("restart.ask")
+      : phase === "waiting"
+        ? t("restart.restarting")
+        : phase === "done"
+          ? t("restart.done")
+          : phase === "refused"
+            ? problem
+            : t("restart.stuck");
   return (
     <div className="restart-slot" role="status" aria-live="polite">
       {phase !== "idle" && (
@@ -119,8 +173,18 @@ export function RestartNotice() {
           <span className="mark" aria-hidden="true">
             {phase === "done" ? "✓" : "!"}
           </span>
-          <span className="notice-text">{t(phase === "waiting" ? "restart.restarting" : phase === "done" ? "restart.done" : "restart.stuck")}</span>
-          {phase === "stuck" && (
+          <span className="notice-text">{text}</span>
+          {phase === "asking" && (
+            <>
+              <button type="button" className="btn primary small" disabled={busy} onClick={() => void now()}>
+                {t("restart.now")}
+              </button>
+              <button type="button" className="btn small" onClick={dismiss}>
+                {t("restart.later")}
+              </button>
+            </>
+          )}
+          {(phase === "stuck" || phase === "refused") && (
             <button type="button" className="btn small" onClick={dismiss}>
               {t("restart.dismiss")}
             </button>

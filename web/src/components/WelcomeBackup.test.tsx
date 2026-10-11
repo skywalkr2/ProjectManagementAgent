@@ -55,7 +55,7 @@ test("the folders backups already go to are listed", async () => {
 
 test("Save sends the path, the name and the fingerprint, and says where backups will go", async () => {
   const user = userEvent.setup();
-  const calls = api({ "POST setup/backup-folder": () => ({ changes: [], fingerprint: "fp-2", restarts: false }) });
+  const calls = api({ "POST setup/backup-folder": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) });
   open();
   await user.type(await screen.findByLabelText("Folder"), "/mnt/new");
   await user.type(screen.getByLabelText("Name for this folder (optional)"), "Cloud drive");

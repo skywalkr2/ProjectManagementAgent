@@ -1,4 +1,4 @@
-// What follows any saved settings (the Settings screen and the guided setup steps): the restart notice, a refresh of
+// What follows any saved settings (the Settings screen and the guided setup steps): the question about restarting when a change needs one, a refresh of
 // what the saved files change, and a toast that reads back what changed with Undo.
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
@@ -17,7 +17,7 @@ export function useAfterSave() {
   const restart = useRestart();
   return useCallback(
     (saved: S["SettingsSaved"], opts: { message?: string } = {}): Promise<void> => {
-      if (saved.restarts) restart.begin();
+      if (saved.needs_restart) restart.offer();
       const refreshed = client.invalidateQueries();
       if (!saved.changes.length) {
         push({ message: opts.message ?? t("settings.nothing_changed") });
@@ -38,7 +38,7 @@ export function useAfterSave() {
         message: opts.message ?? t("settings.saved", { changes: lines.join("; ") }),
         undo: async () => {
           const undone = await api.saveSettings(undoBody(saved.changes, saved.fingerprint));
-          if (undone.restarts) restart.begin();
+          if (undone.needs_restart) restart.offer();
           await client.invalidateQueries();
         },
       });
