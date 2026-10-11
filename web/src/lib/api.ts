@@ -73,7 +73,9 @@ export const api = {
   actionStatus: (a: string, status: S["ActionState"]["status"]) =>
     call<S["Ok"]>("POST", `actions/${id(a)}/status`, { status }),
   reply: (q: string, text: string) => call<S["Handed"]>("POST", `questions/${id(q)}/reply`, { text }),
-  retry: (req: string) => call<S["Ok"]>("POST", `requests/${id(req)}/retry`),
+  retry: (req: string, use?: string) =>
+    call<S["Ok"]>("POST", `requests/${id(req)}/retry`, use ? { use } : undefined),
+  requestAccounts: (req: string) => call<S["AccountChoice"][]>("GET", `requests/${id(req)}/accounts`),
   dismiss: (req: string, readVersion: number) =>
     call<S["RequestChanged"]>("POST", `requests/${id(req)}/dismiss`, { read_version: readVersion }),
   undismiss: (req: string, readVersion: number) =>
@@ -114,7 +116,11 @@ export const api = {
     ),
   actionPreview: (name: string, body: S["ActionRun"]) =>
     call<S["ActionProposalView"]>("POST", `plugin-actions/${named(name)}/preview`, body),
-  actionApply: (token: string) => call<S["ActionApplied"]>("POST", "plugin-actions/apply", { token }),
+  actionApply: (token: string, kept?: Record<string, boolean>) =>
+    call<S["ActionApplied"]>("POST", "plugin-actions/apply", kept ? { token, kept } : { token }),
+
+  sync: () => call<S["SyncView"]>("GET", "sync"),
+  jobs: () => call<S["JobView"][]>("GET", "jobs"),
 
   pluginToday: () => call<S["TodayLineView"][]>("GET", "plugin-today"),
   taskKinds: (kind?: string, record?: string) =>
@@ -125,6 +131,7 @@ export const api = {
   panels: () => call<S["PanelView"][]>("GET", "panels"),
   panelRows: (name: string, project?: string) =>
     call<S["PanelRow"][]>("GET", `panels/${named(name)}/rows${project ? `?project=${id(project)}` : ""}`),
+  editRecord: (body: S["RecordEdit"]) => call<S["Applied"]>("POST", "records/edit", body),
   kindView: (kind: string) => call<S["KindView"]>("GET", `kinds/${named(kind)}`),
   record: (kind: string, record: string) =>
     call<S["GenericRecordView"]>("GET", `record?kind=${id(kind)}&id=${id(record)}`),

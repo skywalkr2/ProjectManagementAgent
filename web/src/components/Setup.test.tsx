@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp } from "../test-utils";
+import { fakeApi, renderApp, type Routes } from "../test-utils";
 import { Setup } from "./Setup";
 
 const project = (id: string, name: string): S["ProjectView"] => ({
@@ -74,4 +74,213 @@ test("the group is absent when every note is filed under a project", async () =>
   renderApp(<Setup />);
   await screen.findByText(first.name);
   expect(screen.queryByRole("heading", { name: "Notes not filed under a project" })).not.toBeInTheDocument();
+});
+
+const syncView = (extra: Partial<S["SyncView"]> = {}): S["SyncView"] => ({
+  folder: "/shared/Cockpit",
+  problem: null,
+  stopped: false,
+  changed_outside: [],
+  removed_outside: [],
+  rebuilt: [],
+  outside_edits: [],
+  conflict_copies: [],
+  ...extra,
+});
+
+function others(routes: Routes) {
+  return fakeApi({ "GET people": () => [], "GET projects": () => [], "GET notes": () => [], ...routes });
+}
+
+async function section(name: string) {
+  return (await screen.findByRole("region", { name })) as HTMLElement;
+}
+
+test("with no synced folder it says the workspace isn't kept in one", async () => {
+  others({ "GET sync": () => syncView({ folder: "" }), "GET jobs": () => [] });
+  renderApp(<Setup />);
+  const sync = await section("Synced folder");
+  expect(await within(sync).findByText("This workspace isn't kept in a synced folder.")).toBeInTheDocument();
+});
+
+test("the synced folder shows its path, why it can't write, that this copy stopped, and what changed outside", async () => {
+  others({
+    "GET sync": () =>
+      syncView({
+        problem: "the folder is read-only",
+        stopped: true,
+        changed_outside: ["a.md", "b.md"],
+        removed_outside: ["c.md"],
+      }),
+    "GET jobs": () => [],
+  });
+  renderApp(<Setup />);
+  const sync = await section("Synced folder");
+  expect(await within(sync).findByText("Kept in /shared/Cockpit")).toBeInTheDocument();
+  const alerts = within(sync).getAllByRole("alert").map((a) => a.textContent);
+  expect(alerts).toContain("Another computer opened this workspace, so this copy has stopped writing to the folder.");
+  expect(alerts).toContain("It can't write to the folder right now: the folder is read-only");
+  expect(within(sync).getByText("2 files were changed outside the app.")).toBeInTheDocument();
+  expect(within(sync).getByText("1 file was removed outside the app.")).toBeInTheDocument();
+  expect(within(sync).queryByText("Edits made outside the app")).toBeNull();
+});
+
+test("an outside edit that became a version can be reviewed; one that failed shows why; the rest wait in What changed", async () => {
+  const user = userEvent.setup();
+  others({
+    "GET sync": () =>
+      syncView({
+        outside_edits: [
+          { path: "book/chapter-1.md", version: "V-1", proposal: null, problem: null },
+          { path: "book/chapter-2.md", version: null, proposal: null, problem: "It isn't a file the app can read back." },
+          { path: "book/people.yaml", version: null, proposal: "CS-1", problem: null },
+        ],
+        conflict_copies: ["book/chapter-1 (conflicted copy).md"],
+      }),
+    "GET jobs": () => [],
+    "GET text-versions/V-1/review": () => ({
+      version: {
+        id: "V-1",
+        number: 2,
+        version: 3,
+        status: "pending",
+        source: "edit",
+        words: 1,
+        base: null,
+        note: null,
+        created_at: "2026-10-09T14:00:00Z",
+        questions: [],
+        unmapped: [],
+      },
+      current: 1,
+      three_way: false,
+      regions: [],
+      pending_text: "",
+    }),
+  });
+  renderApp(<Setup />);
+  const sync = await section("Synced folder");
+  const rows = (await within(sync).findAllByRole("listitem")).filter((li) => li.classList.contains("line"));
+  expect(rows).toHaveLength(3);
+  expect(within(rows[0]).getByText("book/chapter-1.md")).toBeInTheDocument();
+  expect(within(rows[1]).getByText("It isn't a file the app can read back.")).toBeInTheDocument();
+  expect(within(rows[1]).queryByRole("button")).toBeNull();
+  expect(within(rows[2]).getByText("Waiting for you in What changed.")).toBeInTheDocument();
+  expect(within(rows[2]).queryByRole("button")).toBeNull();
+  expect(within(sync).getByText("book/chapter-1 (conflicted copy).md")).toBeInTheDocument();
+  expect(within(sync).getByText(/These copies were not loaded/)).toBeInTheDocument();
+  await user.click(within(rows[0]).getByRole("button", { name: "Review: book/chapter-1.md" }));
+  expect(await screen.findByRole("dialog", { name: "Review the changes" })).toBeInTheDocument();
+});
+
+test("scheduled work is one row per job with how often, on or off in words, and the last run", async () => {
+  others({
+    "GET sync": () => syncView({ folder: "" }),
+    "GET jobs": () => [
+      { name: "demo/refresh-feeds", plugin: "demo", enabled: true, every_minutes: 60, last_run_at: "2026-10-09T14:00:00Z", last_outcome: "ok", last_error: null },
+      { name: "demo/sweep_old-items", plugin: "demo", enabled: false, every_minutes: 1, last_run_at: "2026-10-09T15:30:00Z", last_outcome: "failed", last_error: "The source didn't answer." },
+      { name: "demo/never-ran", plugin: "demo", enabled: true, every_minutes: 15, last_run_at: null, last_outcome: null, last_error: null },
+    ],
+  });
+  renderApp(<Setup />);
+  const jobs = await section("Scheduled work");
+  const rows = within(jobs).getAllByRole("listitem");
+  expect(rows).toHaveLength(3);
+  expect(rows[0]).toHaveTextContent("Refresh feeds");
+  expect(rows[0]).toHaveTextContent("On");
+  expect(rows[0]).toHaveTextContent("every 60 minutes");
+  expect(rows[0]).toHaveTextContent(/Last ran .*: it worked/);
+  expect(rows[1]).toHaveTextContent("Sweep old items");
+  expect(rows[1]).toHaveTextContent("Off");
+  expect(rows[1]).toHaveTextContent("every minute");
+  expect(rows[1]).toHaveTextContent(/it failed/);
+  expect(rows[1]).toHaveTextContent("The source didn't answer.");
+  expect(rows[2]).toHaveTextContent("Hasn't run yet");
+  expect(within(jobs).queryByRole("button")).toBeNull();
+});
+
+test("the scheduled work section is hidden when there are no jobs", async () => {
+  const calls = others({ "GET sync": () => syncView({ folder: "" }), "GET jobs": () => [] });
+  renderApp(<Setup />);
+  await section("Synced folder");
+  await waitFor(() => expect(calls.some((c) => c.route === "GET jobs")).toBe(true));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(screen.queryByRole("region", { name: "Scheduled work" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Scheduled work" })).toBeNull();
+});
+
+const withDetails = (id: string, name: string, extra: Partial<S["ProjectView"]> = {}): S["ProjectView"] => ({
+  ...project(id, name),
+  ...extra,
+});
+
+test("a project's row states where it sits, its own language and its budget as plain facts", async () => {
+  others({
+    "GET projects": () => [
+      withDetails("PRJ-1", "The series"),
+      withDetails("PRJ-2", "Book one", { parent: "PRJ-1", language: "en-GB", language_own: true, budget_usd: 250 }),
+      withDetails("PRJ-3", "Book two", { parent: "PRJ-1", language: "en-US", language_own: false }),
+    ],
+    "GET sync": () => syncView({ folder: "" }),
+    "GET jobs": () => [],
+  });
+  renderApp(<Setup />);
+  const one = (await screen.findByText("Book one")).closest("li")!;
+  expect(one).toHaveTextContent("inside The series");
+  expect(one).toHaveTextContent("language en-GB");
+  expect(one).toHaveTextContent("budget $250.00");
+  const two = screen.getByText("Book two").closest("li")!;
+  expect(two).toHaveTextContent("inside The series");
+  expect(two).not.toHaveTextContent("language");
+  expect(two).not.toHaveTextContent("budget");
+  expect(screen.getByText("The series").closest("li")).not.toHaveTextContent("inside");
+});
+
+test("the project form offers Inside (never itself), Language with the inherited one as a hint, and a budget; they are saved", async () => {
+  const user = userEvent.setup();
+  const calls = others({
+    "GET projects": () => [
+      withDetails("PRJ-1", "The series", { language: "en-GB", language_own: true }),
+      withDetails("PRJ-2", "Book one", { parent: "PRJ-1", language: "en-GB", language_own: false }),
+    ],
+    "GET sync": () => syncView({ folder: "" }),
+    "GET jobs": () => [],
+    "POST projects/PRJ-2": () => ({ ok: "PRJ-2" }),
+  });
+  renderApp(<Setup />);
+  const row = (await screen.findByText("Book one")).closest("li")!;
+  await user.click(within(row).getByRole("button", { name: "Edit" }));
+  const inside = within(row).getByRole("combobox", { name: "Inside" });
+  expect(within(inside).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "The series"]);
+  expect(inside).toHaveValue("PRJ-1");
+  const language = within(row).getByRole("textbox", { name: /Language/ });
+  expect(language).toHaveValue("");
+  expect(language).toHaveAttribute("placeholder", "en-GB");
+  expect(within(row).getByText("(inherited; type one to set its own)")).toBeInTheDocument();
+  const budget = within(row).getByRole("spinbutton", { name: /Budget \(USD\)/ });
+  expect(budget).toHaveValue(null);
+  await user.type(language, "en-AU");
+  await user.type(budget, "120.5");
+  await user.selectOptions(inside, "");
+  await user.click(within(row).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-2")).toBe(true));
+  expect(calls.find((c) => c.route === "POST projects/PRJ-2")?.body).toMatchObject({ parent: null, language: "en-AU", budget_usd: 120.5 });
+});
+
+test("an empty language and budget are sent as nothing, so the project inherits and has no cap", async () => {
+  const user = userEvent.setup();
+  const calls = others({
+    "GET projects": () => [withDetails("PRJ-1", "The series", { language: "en-GB", language_own: true, budget_usd: 50 })],
+    "GET sync": () => syncView({ folder: "" }),
+    "GET jobs": () => [],
+    "POST projects/PRJ-1": () => ({ ok: "PRJ-1" }),
+  });
+  renderApp(<Setup />);
+  const row = (await screen.findByText("The series")).closest("li")!;
+  await user.click(within(row).getByRole("button", { name: "Edit" }));
+  await user.clear(within(row).getByRole("textbox", { name: /Language/ }));
+  await user.clear(within(row).getByRole("spinbutton", { name: /Budget/ }));
+  await user.click(within(row).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-1")).toBe(true));
+  expect(calls.find((c) => c.route === "POST projects/PRJ-1")?.body).toMatchObject({ parent: null, language: null, budget_usd: null });
 });

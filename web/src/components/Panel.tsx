@@ -19,6 +19,9 @@ export function Panel(props: { name: string; project?: string; onOpenRecord: (ki
   });
   const { run, review } = usePluginRun();
   const panel = panels.data?.find((p) => p.name === props.name);
+  const workspaceActions = usePluginActions(undefined, undefined, !!panel?.new_action);
+  const newAction = panel?.new_action ? workspaceActions.data?.find((a) => a.name === panel.new_action) : undefined;
+  const newButton = useRef<HTMLButtonElement>(null);
   const title = panel?.title ?? readable(props.name.slice(props.name.lastIndexOf("/") + 1));
   const headingId = "panel-title";
 
@@ -53,6 +56,18 @@ export function Panel(props: { name: string; project?: string; onOpenRecord: (ki
         <h2 id={headingId}>{title}</h2>
         {rows.data && rows.data.length > 0 && <span className="hint">{tn("panel.count", rows.data.length)}</span>}
       </div>
+      {newAction && (
+        <div className="panel-new">
+          <button
+            type="button"
+            className="btn primary"
+            ref={newButton}
+            onClick={() => run({ name: newAction.name, label: newAction.label, is: "action", on: null }, null, () => newButton.current)}
+          >
+            {newAction.label}
+          </button>
+        </div>
+      )}
       {body}
       {review}
     </section>

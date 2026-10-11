@@ -1,14 +1,17 @@
 // Reviewing what a plugin's action would do (design 5.3): one dialog for every action, wherever it was started. It asks
 // for a proposal when it opens, asks again whenever a choice changes, and applies exactly the proposal on screen.
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
+import { countKept, opsWithTicks, ticksOf, type Ticks } from "../lib/action-items";
 import { api, type S } from "../lib/api";
 import { useSize } from "../lib/files";
 import { problemText } from "../lib/problem";
+import { readableTail } from "../lib/records";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
+import { RowMenu } from "./RowMenu";
 import { SafeText } from "./SafeText";
 
 export type ActionTarget = { kind: string; id: string } | null;
@@ -63,24 +66,44 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
   const [error, setError] = useState<{ text: string; applying: boolean } | null>(null);
   const [busy, setBusy] = useState(true);
   const [applying, setApplying] = useState(false);
+  const [kept, setKept] = useState<Ticks>({});
   const latest = useRef(0);
   const sent = useRef<Choices>({});
+  const token = useRef<string | null>(null);
+  const ticks = useRef<Ticks>({});
   const { name } = props.action;
   const targetKind = props.target?.kind;
   const targetId = props.target?.id;
 
+  const setTicks = useCallback((next: Ticks) => {
+    ticks.current = next;
+    setKept(next);
+  }, []);
+
+  // Ticking never asks the action again; a changed choice does, and the ticks go along so they carry over.
   const preview = useCallback(
-    async (choices: Choices) => {
+    async (choices: Choices, carry: boolean) => {
       const mine = ++latest.current;
       sent.current = choices;
       setBusy(true);
       setError(null);
       try {
         const target = targetKind && targetId ? { kind: targetKind, id: targetId } : null;
-        const result = await api.actionPreview(name, { target, choices });
+        const asked = ticks.current;
+        const body: S["ActionRun"] = { target, choices };
+        if (Object.keys(asked).length) body.kept = asked;
+        if (carry && token.current) body.previous = token.current;
+        const result = await api.actionPreview(name, body);
         if (mine !== latest.current) return;
         const shown = Object.fromEntries(result.choices.map((c) => [c.id, c.value]));
         sent.current = shown;
+        token.current = result.token;
+        // What the action says, except a tick the person changed while it was working.
+        const fresh = ticksOf(result.items);
+        for (const id of Object.keys(fresh)) {
+          if (id in asked && ticks.current[id] !== asked[id]) fresh[id] = ticks.current[id];
+        }
+        setTicks(fresh);
         setValues(shown);
         setProposal(result);
       } catch (err) {
@@ -89,11 +112,13 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
         if (mine === latest.current) setBusy(false);
       }
     },
-    [name, targetKind, targetId, t],
+    [name, targetKind, targetId, t, setTicks],
   );
 
   useEffect(() => {
-    void preview({});
+    token.current = null;
+    ticks.current = {};
+    void preview({}, false);
     return () => {
       latest.current++;
     };
@@ -102,15 +127,23 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
   const change = (id: string, value: string | boolean) => {
     const next = { ...sent.current, [id]: value };
     setValues(next);
-    void preview(next);
+    void preview(next, true);
   };
+
+  const tick = (ids: string[], value: boolean) => setTicks({ ...ticks.current, ...Object.fromEntries(ids.map((id) => [id, value])) });
 
   const apply = async () => {
     if (!proposal) return;
     setApplying(true);
     try {
-      const done = await api.actionApply(proposal.token);
+      const items = proposal.items ?? [];
+      const done = await api.actionApply(proposal.token, items.length ? { ...ticksOf(items), ...ticks.current } : undefined);
       await client.invalidateQueries();
+      if (done.applied === 0 && done.refused > 0) {
+        setError({ text: t("review.all_refused"), applying: true });
+        setApplying(false);
+        return;
+      }
       const parts = [
         done.applied ? tn("review.count_applied", done.applied) : "",
         done.held ? tn("review.count_waiting", done.held) : "",
@@ -133,8 +166,15 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
     }
   };
 
-  const again = () => void preview({ ...sent.current });
+  const again = () => void preview({ ...sent.current }, false);
   const heading = proposal?.summary ?? props.action.label;
+  const items = proposal?.items ?? [];
+  const groups = proposal?.groups ?? [];
+  const requests = proposal?.requests ?? [];
+  const inGroup = new Set(groups.map((g) => g.id));
+  const looseChoices = (proposal?.choices ?? []).filter((c) => !c.group || !inGroup.has(c.group));
+  const looseItems = items.filter((i) => !i.group || !inGroup.has(i.group));
+  const shownOps = proposal ? opsWithTicks(proposal, kept) : [];
 
   return (
     <ModalPanel titleId={titleId} onClose={props.onClose}>
@@ -158,51 +198,52 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
               {t("review.updating")}
             </p>
           )}
-          {proposal.choices.length > 0 && (
+          {looseChoices.length > 0 && (
             <div className="review-choices" role="group" aria-label={t("review.choices")}>
-              {proposal.choices.map((c) => {
-                const value = values[c.id] ?? c.value;
-                const field = `${base}-choice-${c.id}`;
-                const help = c.help ? `${field}-help` : undefined;
-                return c.options.length > 0 ? (
-                  <div className="field" key={c.id}>
-                    <label htmlFor={field}>{c.label}</label>
-                    <select id={field} value={String(value)} aria-describedby={help} onChange={(e) => change(c.id, e.target.value)}>
-                      {c.options.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                    {c.help && (
-                      <span id={help} className="hint">
-                        {c.help}
-                      </span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="field" key={c.id}>
-                    <label className="check-line" htmlFor={field}>
-                      <input id={field} type="checkbox" checked={value === true} aria-describedby={help} onChange={(e) => change(c.id, e.target.checked)} />
-                      <span>{c.label}</span>
-                    </label>
-                    {c.help && (
-                      <span id={help} className="hint">
-                        {c.help}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
+              {looseChoices.map((c) => (
+                <ChoiceField key={c.id} base={base} choice={c} value={values[c.id] ?? c.value} onChange={change} />
+              ))}
             </div>
+          )}
+          {groups.map((g) => {
+            const own = items.filter((i) => i.group === g.id);
+            const ownChoices = proposal.choices.filter((c) => c.group === g.id);
+            if (!own.length && !ownChoices.length) return null;
+            return (
+              <ItemSection
+                key={g.id}
+                base={base}
+                heading={g.heading}
+                explanation={g.explanation ?? ""}
+                items={own}
+                choices={ownChoices}
+                values={values}
+                ticks={kept}
+                onChoice={change}
+                onTick={tick}
+              />
+            );
+          })}
+          {looseItems.length > 0 && (
+            <ItemSection
+              base={base}
+              heading={t("review.items")}
+              explanation=""
+              items={looseItems}
+              choices={[]}
+              values={values}
+              ticks={kept}
+              onChoice={change}
+              onTick={tick}
+            />
           )}
           <section aria-labelledby={`${base}-changes`}>
             <h3 id={`${base}-changes`} className="what">
               {t("review.changes")}
             </h3>
-            {proposal.ops.length > 0 ? (
+            {shownOps.length > 0 ? (
               <ul className="plain-list">
-                {proposal.ops.map((op, i) => (
+                {shownOps.map((op, i) => (
                   <li key={i}>{op.label.trim() || t("review.op_generic")}</li>
                 ))}
               </ul>
@@ -230,6 +271,19 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
               {proposal.previews.map((p, i) => (
                 <Preview key={i} item={p} />
               ))}
+            </section>
+          )}
+          {requests.length > 0 && (
+            <section aria-labelledby={`${base}-requests`}>
+              <h3 id={`${base}-requests`} className="what">
+                {t("review.requests")}
+              </h3>
+              <ul className="plain-list">
+                {requests.map((r, i) => (
+                  <RequestLine key={i} request={r} />
+                ))}
+              </ul>
+              <p className="hint">{t("review.requests_note")}</p>
             </section>
           )}
           {proposal.notes.length > 0 && (
@@ -286,4 +340,162 @@ function Preview(props: { item: S["ActionPreviewItem"] }) {
     );
   }
   return null;
+}
+
+/** One choice: a pick from a list, a line of text, or on or off. */
+function ChoiceField(props: {
+  base: string;
+  choice: S["ActionChoice"];
+  value: string | boolean;
+  onChange: (id: string, value: string | boolean) => void;
+}) {
+  const { choice: c, value } = props;
+  const field = `${props.base}-choice-${c.id}`;
+  const help = c.help ? `${field}-help` : undefined;
+  const note = c.help ? (
+    <span id={help} className="hint">
+      {c.help}
+    </span>
+  ) : null;
+  if (c.options.length > 0) {
+    return (
+      <div className="field">
+        <label htmlFor={field}>{c.label}</label>
+        <select id={field} value={String(value)} aria-describedby={help} onChange={(e) => props.onChange(c.id, e.target.value)}>
+          {c.options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        {note}
+      </div>
+    );
+  }
+  if (c.text) {
+    return (
+      <div className="field">
+        <label htmlFor={field}>{c.label}</label>
+        <TextChoice id={field} help={help} value={String(value)} maxLength={c.max_length} onCommit={(v) => props.onChange(c.id, v)} />
+        {note}
+      </div>
+    );
+  }
+  return (
+    <div className="field">
+      <label className="check-line" htmlFor={field}>
+        <input id={field} type="checkbox" checked={value === true} aria-describedby={help} onChange={(e) => props.onChange(c.id, e.target.checked)} />
+        <span>{c.label}</span>
+      </label>
+      {note}
+    </div>
+  );
+}
+
+/** A typed value: the action asks again when the person presses Enter or leaves the field with a changed value. */
+function TextChoice(props: { id: string; help?: string; value: string; maxLength: number; onCommit: (value: string) => void }) {
+  const [draft, setDraft] = useState(props.value);
+  useEffect(() => setDraft(props.value), [props.value]);
+  const commit = () => {
+    if (draft !== props.value) props.onCommit(draft);
+  };
+  return (
+    <input
+      id={props.id}
+      type="text"
+      value={draft}
+      maxLength={props.maxLength}
+      aria-describedby={props.help}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        }
+      }}
+    />
+  );
+}
+
+/** A group of items to keep or drop, with its explanation, its own choices and "Keep all" / "Drop all". */
+function ItemSection(props: {
+  base: string;
+  heading: string;
+  explanation: string;
+  items: S["ActionItem"][];
+  choices: S["ActionChoice"][];
+  values: Choices;
+  ticks: Ticks;
+  onChoice: (id: string, value: string | boolean) => void;
+  onTick: (ids: string[], value: boolean) => void;
+}) {
+  const { t } = useWords();
+  const id = useId();
+  const ids = props.items.map((i) => i.id);
+  return (
+    <section className="review-group" aria-labelledby={`${id}-h`}>
+      <div className="review-group-head">
+        <h3 id={`${id}-h`} className="what">
+          {props.heading}
+        </h3>
+        {props.items.length > 0 && (
+          <>
+            <span className="hint">{t("review.kept_count", { kept: countKept(props.items, props.ticks), total: props.items.length })}</span>
+            <RowMenu
+              label={props.heading}
+              actions={[
+                { id: "keep", label: t("review.keep_all"), run: () => props.onTick(ids, true) },
+                { id: "drop", label: t("review.drop_all"), run: () => props.onTick(ids, false) },
+              ]}
+            />
+          </>
+        )}
+      </div>
+      {props.explanation && <p className="hint">{props.explanation}</p>}
+      {props.choices.map((c) => (
+        <ChoiceField key={c.id} base={props.base} choice={c} value={props.values[c.id] ?? c.value} onChange={props.onChoice} />
+      ))}
+      {props.items.length > 0 && (
+        <ul className="review-items">
+          {props.items.map((item) => (
+            <li key={item.id}>
+              <label className="check-line">
+                <input type="checkbox" checked={props.ticks[item.id] ?? item.kept} onChange={(e) => props.onTick([item.id], e.target.checked)} />
+                <span>{item.label}</span>
+              </label>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** Work the action also starts: what it is and, when there is one, the record it is about. */
+function RequestLine(props: { request: S["ActionRequestView"] }) {
+  const { t } = useWords();
+  const { request: r } = props;
+  const about = r.about;
+  const record = useQuery({
+    queryKey: ["record", about?.kind, about?.id],
+    queryFn: () => api.record(about!.kind, about!.id),
+    enabled: !!about,
+  });
+  const note = r.note ? <span className="hint"> {r.note}</span> : null;
+  if (!about)
+    return (
+      <li>
+        {r.label}
+        {note}
+      </li>
+    );
+  const fields = record.data?.fields ?? {};
+  const named = [fields.title, fields.name].find((v): v is string => typeof v === "string" && !!v.trim());
+  return (
+    <li>
+      {t("review.request_about", { label: r.label, about: named ?? readableTail(about.kind) })}
+      {note}
+    </li>
+  );
 }

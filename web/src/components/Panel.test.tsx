@@ -168,3 +168,56 @@ test("no rows says there is nothing yet", async () => {
   renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
   expect(await screen.findByText("Nothing here yet.")).toBeInTheDocument();
 });
+
+test("a new action shows as a button above the rows, opens its review with no target and refreshes the rows after it applies", async () => {
+  const user = userEvent.setup();
+  let added = false;
+  const calls = fakeApi(
+    routes(panel({ new_action: "demo/goal.add" }), {
+      "GET plugin-actions": () => [
+        { name: "demo/other", label: "Something else", on: null },
+        { name: "demo/goal.add", label: "Add a goal", on: null },
+      ],
+      "GET panels/demo/goals/rows": () => (added ? [...rows, { id: "G-3", values: { title: "A brand new goal", due_date: null, status: "open" } }] : rows),
+      "POST plugin-actions/demo/goal.add/preview": () => ({
+        token: "t",
+        action: "demo/goal.add",
+        summary: "Add a goal",
+        ops: [{ op: "record.set", label: "Add the goal" }],
+        files: [],
+        previews: [],
+        choices: [],
+        notes: [],
+        expires_at: "2026-10-09T15:00:00Z",
+      }),
+      "POST plugin-actions/apply": () => {
+        added = true;
+        return { changeset: "CS-1", applied: 1, held: 0, refused: 0 };
+      },
+    }),
+  );
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  const add = await screen.findByRole("button", { name: "Add a goal" });
+  const table = await screen.findByRole("table");
+  expect(add.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  await user.click(add);
+  await screen.findByRole("dialog", { name: "Add a goal" });
+  expect(calls.find((c) => c.route === "POST plugin-actions/demo/goal.add/preview")?.body).toEqual({ target: null, choices: {} });
+  await user.click(await screen.findByRole("button", { name: "Apply" }));
+  expect(await screen.findByText("A brand new goal")).toBeInTheDocument();
+  await waitFor(() => expect(add).toHaveFocus());
+});
+
+test("with no new action there is no add button", async () => {
+  fakeApi(routes(panel(), { "GET plugin-actions": () => [{ name: "demo/goal.add", label: "Add a goal", on: null }] }));
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  await screen.findByRole("table");
+  expect(screen.queryByRole("button", { name: "Add a goal" })).toBeNull();
+});
+
+test("a new action nobody offers is not shown", async () => {
+  fakeApi(routes(panel({ new_action: "demo/goal.add" }), { "GET plugin-actions": () => [] }));
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  await screen.findByRole("table");
+  expect(screen.queryByRole("button", { name: "Add a goal" })).toBeNull();
+});

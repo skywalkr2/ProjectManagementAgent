@@ -116,8 +116,8 @@ test("changing a choice asks again with every current value and keeps focus on t
   const previews = calls.filter((c) => c.route === PREVIEW_URL).map((c) => c.body);
   expect(previews).toEqual([
     { target, choices: {} },
-    { target, choices: { count: false, style: "short" } },
-    { target, choices: { count: false, style: "long" } },
+    { target, choices: { count: false, style: "short" }, previous: "tok-1" },
+    { target, choices: { count: false, style: "long" }, previous: "tok-1" },
   ]);
   expect(screen.getByRole("combobox", { name: "Style" })).toHaveValue("long");
 });
@@ -143,7 +143,7 @@ test("Apply applies exactly what was reviewed, says what happened in words and o
   expect(await screen.findByText("Undone. It's back as it was.")).toBeInTheDocument();
 });
 
-test("when nothing applied there is nothing to undo", async () => {
+test("when every change was refused it says so instead of reporting success, and there is nothing to undo", async () => {
   const user = userEvent.setup();
   fakeApi({
     [PREVIEW_URL]: () => proposal(),
@@ -152,8 +152,23 @@ test("when nothing applied there is nothing to undo", async () => {
   renderApp(<Harness />);
   await user.click(screen.getByRole("button", { name: "Start it" }));
   await user.click(await screen.findByRole("button", { name: "Apply" }));
-  expect(await screen.findByText("Make a note from notes.txt: 1 refused.")).toBeInTheDocument();
+  expect(await screen.findByRole("alert")).toHaveTextContent("Nothing was applied because a change was refused.");
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(screen.queryByText(/1 refused/)).toBeNull();
   expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+});
+
+test("some refused but some applied is still reported as the usual summary", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    [PREVIEW_URL]: () => proposal(),
+    "POST plugin-actions/apply": () => ({ changeset: "CS-5", applied: 1, held: 0, refused: 1 }),
+    "POST changesets/CS-5/undo": () => ({ restored: [], skipped: [] }),
+  });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  await user.click(await screen.findByRole("button", { name: "Apply" }));
+  expect(await screen.findByText("Make a note from notes.txt: 1 change made, 1 refused.")).toBeInTheDocument();
 });
 
 test("if the review expired or the item changed, the dialog shows the server's text and Run it again asks afresh", async () => {
@@ -190,4 +205,160 @@ test("an action that can't make a proposal shows why, with no Apply to press", a
   expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
   await user.click(screen.getByRole("button", { name: "Cancel" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+const kept = (items: S["ActionItem"][], ticks: Record<string, boolean>) => items.map((i) => ({ ...i, kept: ticks[i.id] ?? i.kept }));
+
+const ITEMS: S["ActionItem"][] = [
+  { id: "i1", label: "Change the first thing", group: "g1", kept: true, ops: [{ op: "note", label: "Note one" }] },
+  { id: "i2", label: "Change the second thing", group: "g1", kept: true, ops: [{ op: "note", label: "Note two" }] },
+  { id: "i3", label: "Change the third thing", group: "g1", kept: false, ops: [{ op: "note", label: "Note three" }] },
+  { id: "i4", label: "A loose thing", group: null, kept: true, ops: [] },
+];
+const GROUPS: S["ActionGroup"][] = [
+  { id: "g1", heading: "Likely duplicates", explanation: "These look like things you already have." },
+  { id: "g2", heading: "Empty group", explanation: "Nothing in here." },
+];
+
+test("items sit under their group's heading and explanation with a count, and ticking does not ask again", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    [PREVIEW_URL]: () =>
+      proposal({
+        items: ITEMS,
+        groups: GROUPS,
+        ops: [
+          { op: "note", label: "Note one" },
+          { op: "note", label: "Note two" },
+        ],
+      }),
+    "POST plugin-actions/apply": () => ({ changeset: "CS-7", applied: 2, held: 0, refused: 0 }),
+    "POST changesets/CS-7/undo": () => ({ restored: [{ kind: "note", id: "N-1" }], skipped: [] }),
+  });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const dialog = await screen.findByRole("dialog");
+  const group = (await within(dialog).findByRole("region", { name: "Likely duplicates" })) as HTMLElement;
+  expect(within(group).getByText("These look like things you already have.")).toBeInTheDocument();
+  expect(within(group).getByText("2 of 3 kept")).toBeInTheDocument();
+  expect(within(group).getByRole("checkbox", { name: "Change the first thing" })).toBeChecked();
+  expect(within(group).getByRole("checkbox", { name: "Change the third thing" })).not.toBeChecked();
+  expect(within(dialog).queryByRole("region", { name: "Empty group" })).toBeNull();
+  const loose = within(dialog).getByRole("region", { name: "Pick what to keep" });
+  expect(within(loose).getByText("1 of 1 kept")).toBeInTheDocument();
+
+  await user.click(within(group).getByRole("checkbox", { name: "Change the first thing" }));
+  expect(within(group).getByText("1 of 3 kept")).toBeInTheDocument();
+  const changes = within(dialog).getByRole("region", { name: "What it will change" });
+  expect(within(changes).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Note two"]);
+  expect(calls.filter((c) => c.route === PREVIEW_URL)).toHaveLength(1);
+
+  await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(calls.find((c) => c.route === "POST plugin-actions/apply")?.body).toEqual({
+    token: "tok-1",
+    kept: { i1: false, i2: true, i3: false, i4: true },
+  });
+});
+
+test("Keep all and Drop all in a group's menu set every item in it", async () => {
+  const user = userEvent.setup();
+  fakeApi({ [PREVIEW_URL]: () => proposal({ items: ITEMS, groups: GROUPS }) });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const group = (await screen.findByRole("region", { name: "Likely duplicates" })) as HTMLElement;
+  await user.click(within(group).getByRole("button", { name: "More actions for Likely duplicates" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop all" }));
+  expect(within(group).getByText("0 of 3 kept")).toBeInTheDocument();
+  for (const box of within(group).getAllByRole("checkbox")) expect(box).not.toBeChecked();
+  await user.click(within(group).getByRole("button", { name: "More actions for Likely duplicates" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Keep all" }));
+  expect(within(group).getByText("3 of 3 kept")).toBeInTheDocument();
+});
+
+test("a changed choice asks again with the previous review and the ticks, and the ticks carry over", async () => {
+  const user = userEvent.setup();
+  let n = 0;
+  const calls = fakeApi({
+    [PREVIEW_URL]: (body) => {
+      const run = body as { choices: Record<string, string | boolean>; kept?: Record<string, boolean> };
+      const style = (run.choices.style as string) ?? "short";
+      return proposal({
+        token: `tok-${++n}`,
+        items: kept(ITEMS, run.kept ?? {}),
+        groups: GROUPS,
+        choices: [
+          { id: "style", label: "Style", value: style, options: [{ value: "short", label: "Short" }, { value: "long", label: "Long" }], help: "", text: false, max_length: 200, group: "g1" },
+        ],
+      });
+    },
+  });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const group = (await screen.findByRole("region", { name: "Likely duplicates" })) as HTMLElement;
+  expect(within(group).getByRole("combobox", { name: "Style" })).toBeInTheDocument();
+  await user.click(within(group).getByRole("checkbox", { name: "Change the first thing" }));
+  await user.selectOptions(within(group).getByRole("combobox", { name: "Style" }), "long");
+  await waitFor(() => expect(within(group).getByRole("combobox", { name: "Style" })).toHaveValue("long"));
+  await waitFor(() => expect(calls.filter((c) => c.route === PREVIEW_URL)).toHaveLength(2));
+  const second = calls.filter((c) => c.route === PREVIEW_URL)[1].body;
+  expect(second).toEqual({
+    target,
+    choices: { style: "long" },
+    previous: "tok-1",
+    kept: { i1: false, i2: true, i3: false, i4: true },
+  });
+  await waitFor(() => expect(within(group).getByText("1 of 3 kept")).toBeInTheDocument());
+  expect(within(group).getByRole("checkbox", { name: "Change the first thing" })).not.toBeChecked();
+});
+
+test("a typed choice asks again on Enter or when the field is left with a changed value, not otherwise", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    [PREVIEW_URL]: (body) => {
+      const title = ((body as { choices: Record<string, string> }).choices.title as string) ?? "Draft";
+      return proposal({
+        summary: `Make a note (${title})`,
+        choices: [{ id: "title", label: "Title", value: title, options: [], help: "", text: true, max_length: 12 }],
+      });
+    },
+  });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const input = await screen.findByRole("textbox", { name: "Title" });
+  expect(input).toHaveValue("Draft");
+  expect(input).toHaveAttribute("maxlength", "12");
+  const asked = () => calls.filter((c) => c.route === PREVIEW_URL).length;
+  await user.click(input);
+  await user.tab();
+  expect(asked()).toBe(1);
+  await user.clear(input);
+  await user.type(input, "Plan{Enter}");
+  await screen.findByRole("dialog", { name: "Make a note (Plan)" });
+  expect(asked()).toBe(2);
+  expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("Plan");
+  await user.type(screen.getByRole("textbox", { name: "Title" }), "ning");
+  await user.tab();
+  await screen.findByRole("dialog", { name: "Make a note (Planning)" });
+  expect(asked()).toBe(3);
+});
+
+test("work the action also starts is listed with what it is about, and says each waits for the go", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    [PREVIEW_URL]: () =>
+      proposal({
+        requests: [
+          { task: "demo/check", label: "Check the chapter", about: { kind: "demo/chapter", id: "CH-1" }, note: "" },
+          { task: "demo/other", label: "Summarize everything", about: null, note: "" },
+        ],
+      }),
+    "GET record?kind=demo%2Fchapter&id=CH-1": () => ({ kind: "demo/chapter", id: "CH-1", version: 1, fields: { title: "The first chapter" }, long_text: [] }),
+  });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const section = (await screen.findByRole("region", { name: "Also starts" })) as HTMLElement;
+  expect(await within(section).findByText("Check the chapter (about The first chapter)")).toBeInTheDocument();
+  expect(within(section).getByText("Summarize everything")).toBeInTheDocument();
+  expect(within(section).getByText("Each one waits for your go before it starts.")).toBeInTheDocument();
 });

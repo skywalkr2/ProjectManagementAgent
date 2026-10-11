@@ -147,6 +147,7 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
   const cs = item.changeset;
   const [open, setOpen] = useState(item.state === "review" || (item.state === "needs_you" && !gated));
   const [sendingBack, setSendingBack] = useState(false);
+  const [choosing, setChoosing] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
   const title = item.source_title || firstLine(item.note) || t("changes.untitled");
   const live = cs ? cs.ops.filter((o) => o.status === "applied" || o.status === "held") : [];
@@ -168,6 +169,8 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
     setSendingBack(true);
   };
 
+  const retry = () => void act(() => api.retry(item.id), () => ({ message: t("toast.retrying") }));
+
   const dismiss = () =>
     void act(
       () => api.dismiss(item.id, item.version),
@@ -182,12 +185,19 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
       run: () => void act(() => api.stageGo(item.id, item.version), () => ({ message: t("toast.go") })),
     };
   else if (item.state === "needs_you" || item.state === "failed")
-    primary = {
-      label: t("action.try_again"),
-      run: () => void act(() => api.retry(item.id), () => ({ message: t("toast.retrying") })),
-    };
+    primary = item.refused
+      ? {
+          label: t("changes.send_other"),
+          run: () => {
+            setOpen(true);
+            setChoosing(true);
+          },
+        }
+      : { label: t("action.try_again"), run: retry };
 
   const menu: MenuAction[] = [];
+  if (item.refused && (item.state === "needs_you" || item.state === "failed"))
+    menu.push({ id: "retry", label: t("action.try_again"), run: retry });
   if (cs && item.state === "review") menu.push({ id: "sendback", label: t("changes.send_back"), run: startSendBack });
   if (item.state === "needs_you" || item.state === "failed") menu.push({ id: "dismiss", label: t("changes.dismiss"), run: dismiss });
   if (cs && item.state === "done") {
@@ -220,6 +230,7 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
         >
           <strong id={`t-${item.id}`}>{title}</strong>
           <span className="sub">{gated ? (estimate(item.estimate_usd) ?? t("changes.sub.go_waiting", { when: dayAndTime(item.created_at) })) : subLine(item, t, tn)}</span>
+          {cs?.second_opinion && <span className="sub second-opinion">{t(`changes.second.${cs.second_opinion}`)}</span>}
         </button>
         <div className="acts">
           {primary && (
@@ -254,6 +265,7 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
             </ul>
           )}
           {sendingBack && cs && <SendBackForm cs={cs.id} onDone={() => setSendingBack(false)} />}
+          {choosing && <AccountChooser request={item.id} onDone={() => setChoosing(false)} />}
         </div>
       )}
     </li>
@@ -425,5 +437,54 @@ function SendBackForm(props: { cs: string; onDone: () => void }) {
         </button>
       </div>
     </form>
+  );
+}
+
+/** Where a request that an account declined can go instead: the other accounts that may take its material. */
+function AccountChooser(props: { request: string; onDone: () => void }) {
+  const { t } = useWords();
+  const act = useAct();
+  const accounts = useQuery({
+    queryKey: ["request-accounts", props.request],
+    queryFn: () => api.requestAccounts(props.request),
+    gcTime: 0,
+  });
+  const box = useRef<HTMLDivElement>(null);
+  const ready = !accounts.isPending;
+  useEffect(() => {
+    if (ready) box.current?.querySelector<HTMLElement>("button")?.focus();
+  }, [ready]);
+  const choose = (account: S["AccountChoice"]) =>
+    void act(
+      () => api.retry(props.request, account.use),
+      () => ({ message: t("toast.sent_other", { account: account.label }) }),
+    ).then((done) => {
+      if (done) props.onDone();
+    });
+  const list = accounts.data ?? [];
+  return (
+    <div className="sendback" role="group" aria-labelledby={`ac-${props.request}`} ref={box}>
+      <p className="hint" id={`ac-${props.request}`}>
+        {t(ready && list.length === 0 ? "changes.no_accounts" : "changes.choose_account")}
+      </p>
+      {accounts.isPending && <p className="hint">{t("loading")}</p>}
+      {accounts.isError && <p className="problem-note">{t("changes.accounts_failed")}</p>}
+      {list.length > 0 && (
+        <ul className="plain-list account-list">
+          {list.map((a) => (
+            <li key={a.use}>
+              <button type="button" className="btn" onClick={() => choose(a)}>
+                {a.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="row-end">
+        <button type="button" className="btn quiet" onClick={props.onDone}>
+          {t("action.cancel")}
+        </button>
+      </div>
+    </div>
   );
 }

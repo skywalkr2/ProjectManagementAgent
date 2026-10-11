@@ -1,14 +1,17 @@
 // People and projects (design 5.1): set up a workspace's people and projects without editing files. Records refer to
 // people and projects by id, so a rename shows everywhere at once. Every change acts at once with Undo.
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day, dayAndTime } from "../lib/dates";
+import { useTotal } from "../lib/money";
+import { readable, readableTail } from "../lib/records";
 import { useWords } from "../lib/wording";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
+import { useTextReview } from "./TextReview";
 
 const list = (text: string) =>
   text
@@ -21,6 +24,8 @@ export function Setup() {
     <>
       <PeoplePanel />
       <ProjectsPanel />
+      <SyncPanel />
+      <JobsPanel />
     </>
   );
 }
@@ -193,7 +198,7 @@ function ProjectsPanel() {
           </button>
         )}
       </div>
-      {adding && <ProjectForm onDone={() => setAdding(false)} />}
+      {adding && <ProjectForm projects={projects.data ?? []} onDone={() => setAdding(false)} />}
       {projects.isPending ? (
         <p className="empty">{t("loading")}</p>
       ) : (projects.data ?? []).length === 0 ? (
@@ -201,7 +206,12 @@ function ProjectsPanel() {
       ) : (
         <ul className="queue">
           {(projects.data ?? []).map((p) => (
-            <ProjectRow key={p.id} project={p} notes={(notes.data ?? []).filter((n) => n.project === p.id)} />
+            <ProjectRow
+              key={p.id}
+              project={p}
+              projects={projects.data ?? []}
+              notes={(notes.data ?? []).filter((n) => n.project === p.id)}
+            />
           ))}
         </ul>
       )}
@@ -215,10 +225,12 @@ function ProjectsPanel() {
   );
 }
 
-function ProjectRow(props: { project: S["ProjectView"]; notes: S["NoteView"][] }) {
+function ProjectRow(props: { project: S["ProjectView"]; projects: S["ProjectView"][]; notes: S["NoteView"][] }) {
   const { t } = useWords();
   const act = useAct();
+  const total = useTotal();
   const p = props.project;
+  const parent = p.parent ? props.projects.find((x) => x.id === p.parent) : undefined;
   const [editing, setEditing] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
   const menu: MenuAction[] = [
@@ -242,6 +254,9 @@ function ProjectRow(props: { project: S["ProjectView"]; notes: S["NoteView"][] }
     p.phase,
     p.target ? t("setup.target_on", { date: day(p.target) }) : "",
     p.owner_name ? t("setup.owned_by", { name: p.owner_name }) : "",
+    parent ? t("setup.inside_of", { name: parent.name }) : "",
+    p.language_own ? t("setup.language_is", { language: p.language }) : "",
+    p.budget_usd != null ? t("setup.budget_is", { amount: total(p.budget_usd) }) : "",
   ]
     .filter(Boolean)
     .join(" · ");
@@ -269,7 +284,7 @@ function ProjectRow(props: { project: S["ProjectView"]; notes: S["NoteView"][] }
       )}
       {editing && (
         <div className="body">
-          <ProjectForm project={p} onDone={() => setEditing(false)} />
+          <ProjectForm project={p} projects={props.projects} onDone={() => setEditing(false)} />
         </div>
       )}
     </li>
@@ -295,7 +310,7 @@ function NoteList(props: { notes: S["NoteView"][] }) {
   );
 }
 
-function ProjectForm(props: { project?: S["ProjectView"]; onDone: () => void }) {
+function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectView"][]; onDone: () => void }) {
   const { t } = useWords();
   const act = useAct();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
@@ -307,9 +322,19 @@ function ProjectForm(props: { project?: S["ProjectView"]; onDone: () => void }) 
   const [target, setTarget] = useState(p?.target ?? "");
   const [owner, setOwner] = useState(p?.owner ?? "");
   const [summary, setSummary] = useState(p?.summary ?? "");
+  const [parent, setParent] = useState(p?.parent ?? "");
+  const [language, setLanguage] = useState(p?.language_own ? p.language : "");
+  const [budget, setBudget] = useState(p?.budget_usd != null ? String(p.budget_usd) : "");
   const key = p?.id ?? "new";
+  const others = props.projects.filter((x) => x.id !== p?.id);
+  // An empty language means it follows the project it is inside, so that one's language is what the box suggests.
+  const inherited = others.find((x) => x.id === parent)?.language ?? (p && !p.language_own ? p.language : "");
+  const budgetNumber = budget.trim() === "" ? null : Number(budget);
   const save = async () => {
     const body = {
+      parent: parent || null,
+      language: language.trim() || null,
+      budget_usd: budgetNumber,
       name: name.trim(),
       status: status.trim() || null,
       phase: phase.trim() || null,
@@ -332,6 +357,9 @@ function ProjectForm(props: { project?: S["ProjectView"]; onDone: () => void }) 
                 target: p.target,
                 owner: p.owner,
                 summary: p.summary,
+                parent: p.parent ?? null,
+                language: p.language_own ? p.language : null,
+                budget_usd: p.budget_usd ?? null,
               }),
           }),
         )
@@ -365,6 +393,36 @@ function ProjectForm(props: { project?: S["ProjectView"]; onDone: () => void }) 
         people={(people.data ?? []).filter((x) => x.status === "active")}
       />
       <div className="field">
+        <label htmlFor={`jw-${key}`}>{t("setup.inside")}</label>
+        <select id={`jw-${key}`} value={parent} onChange={(e) => setParent(e.target.value)}>
+          <option value="">{t("setup.inside_none")}</option>
+          {others.map((x) => (
+            <option key={x.id} value={x.id}>
+              {x.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="field">
+        <label htmlFor={`jl-${key}`}>
+          {t("setup.language")} <span className="hint">{p && !p.language_own ? t("setup.language_inherited") : t("setup.language_hint")}</span>
+        </label>
+        <input id={`jl-${key}`} type="text" value={language} placeholder={inherited} onChange={(e) => setLanguage(e.target.value)} />
+      </div>
+      <div className="field">
+        <label htmlFor={`jb-${key}`}>
+          {t("setup.budget")} <span className="hint">{t("setup.budget_hint")}</span>
+        </label>
+        <input
+          id={`jb-${key}`}
+          type="number"
+          min="0"
+          step="any"
+          value={budget}
+          onChange={(e) => setBudget(e.target.value)}
+        />
+      </div>
+      <div className="field">
         <label htmlFor={`jm-${key}`}>{t("setup.summary")}</label>
         <textarea id={`jm-${key}`} className="short" value={summary} onChange={(e) => setSummary(e.target.value)} />
       </div>
@@ -372,7 +430,7 @@ function ProjectForm(props: { project?: S["ProjectView"]; onDone: () => void }) 
         <button type="button" className="btn quiet" onClick={props.onDone}>
           {t("action.cancel")}
         </button>
-        <button type="submit" className="btn primary" disabled={!name.trim()}>
+        <button type="submit" className="btn primary" disabled={!name.trim() || (budgetNumber !== null && !(budgetNumber >= 0))}>
           {t(p ? "setup.save" : "setup.add_project")}
         </button>
       </div>
@@ -404,5 +462,144 @@ function Field(props: {
         onChange={(e) => props.onChange(e.target.value)}
       />
     </div>
+  );
+}
+
+// ---- synced folder -------------------------------------------------------------------------------------------------
+
+function SyncPanel() {
+  const { t, tn } = useWords();
+  const sync = useQuery({ queryKey: ["sync"], queryFn: api.sync });
+  const { open, dialog } = useTextReview();
+  const data = sync.data;
+  return (
+    <section className="panel-section" aria-labelledby="sync-title">
+      <div className="heading">
+        <h2 id="sync-title">{t("setup.sync")}</h2>
+      </div>
+      {sync.isPending ? (
+        <p className="empty">{t("loading")}</p>
+      ) : sync.isError || !data ? (
+        <p className="empty">
+          {t("setup.sync_failed")}{" "}
+          <button type="button" className="btn" onClick={() => void sync.refetch()}>
+            {t("action.try_again")}
+          </button>
+        </p>
+      ) : !data.folder ? (
+        <p className="empty">{t("setup.sync_off")}</p>
+      ) : (
+        <div className="sync-body">
+          <p>{t("setup.sync_in", { folder: data.folder })}</p>
+          {data.stopped && (
+            <p className="problem-note" role="alert">
+              {t("setup.sync_stopped")}
+            </p>
+          )}
+          {data.problem && (
+            <p className="problem-note" role="alert">
+              {t("setup.sync_problem", { problem: data.problem })}
+            </p>
+          )}
+          {data.changed_outside.length > 0 && <p className="hint">{tn("setup.sync_changed", data.changed_outside.length)}</p>}
+          {data.removed_outside.length > 0 && <p className="hint">{tn("setup.sync_removed", data.removed_outside.length)}</p>}
+          {data.outside_edits.length > 0 && (
+            <section aria-labelledby="sync-edits">
+              <h3 id="sync-edits" className="what">
+                {t("setup.sync_edits")}
+              </h3>
+              <ul className="queue">
+                {data.outside_edits.map((edit) => (
+                  <OutsideEdit key={edit.path} edit={edit} onReview={open} />
+                ))}
+              </ul>
+            </section>
+          )}
+          {data.conflict_copies.length > 0 && (
+            <section aria-labelledby="sync-copies">
+              <h3 id="sync-copies" className="what">
+                {t("setup.sync_copies")}
+              </h3>
+              <ul className="plain-list">
+                {data.conflict_copies.map((path) => (
+                  <li key={path} className="path">
+                    {path}
+                  </li>
+                ))}
+              </ul>
+              <p className="hint">{t("setup.sync_copies_note")}</p>
+            </section>
+          )}
+        </div>
+      )}
+      {dialog}
+    </section>
+  );
+}
+
+function OutsideEdit(props: { edit: S["OutsideEditView"]; onReview: (version: string, returnTo?: () => HTMLElement | null | undefined) => void }) {
+  const { t } = useWords();
+  const { edit } = props;
+  const button = useRef<HTMLButtonElement>(null);
+  return (
+    <li className="line">
+      <div className="row">
+        <div className="text">
+          <strong className="path">{edit.path}</strong>
+          {edit.problem && <span className="sub">{edit.problem}</span>}
+          {!edit.version && !edit.problem && <span className="sub">{t("setup.sync_waiting")}</span>}
+        </div>
+        {edit.version && (
+          <div className="acts">
+            <button
+              type="button"
+              className="btn primary"
+              ref={button}
+              aria-label={t("panel.action_for", { action: t("setup.sync_review"), what: edit.path })}
+              onClick={() => props.onReview(edit.version!, () => button.current)}
+            >
+              {t("setup.sync_review")}
+            </button>
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
+
+// ---- scheduled work ------------------------------------------------------------------------------------------------
+
+const OUTCOMES: Record<string, string> = { ok: "setup.job_ok", failed: "setup.job_failed" };
+
+function JobsPanel() {
+  const { t, tn } = useWords();
+  const jobs = useQuery({ queryKey: ["jobs"], queryFn: api.jobs });
+  const rows = jobs.data ?? [];
+  if (rows.length === 0) return null;
+  return (
+    <section className="panel-section" aria-labelledby="jobs-title">
+      <div className="heading">
+        <h2 id="jobs-title">{t("setup.jobs")}</h2>
+      </div>
+      <ul className="queue">
+        {rows.map((job) => {
+          const outcome = job.last_outcome ? t(OUTCOMES[job.last_outcome] ?? "setup.job_other", { outcome: readable(job.last_outcome) }) : "";
+          const last = job.last_run_at ? t("setup.job_last", { when: dayAndTime(job.last_run_at), outcome }) : t("setup.job_never");
+          return (
+            <li className="line" key={job.name}>
+              <div className="row">
+                <span className={`kind ${job.enabled ? "k-send" : "k-done"}`}>{t(job.enabled ? "setup.job_on" : "setup.job_off")}</span>
+                <div className="text">
+                  <strong>{readableTail(job.name)}</strong>
+                  <span className="sub">{tn("setup.job_every", job.every_minutes)}</span>
+                  <span className="sub">{last}</span>
+                  {job.last_error && <span className="sub problem-note">{job.last_error}</span>}
+                </div>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

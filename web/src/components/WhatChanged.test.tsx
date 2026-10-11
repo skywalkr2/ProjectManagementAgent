@@ -248,3 +248,57 @@ test("a cost-held row can be dismissed from its menu, which has nothing else", a
     expect(calls.find((c) => c.route === "POST requests/REQ-9/dismiss")?.body).toEqual({ read_version: 4 }),
   );
 });
+
+test("a second opinion is labeled in words, by where it came from", async () => {
+  const other = change("REQ-1", { source_title: "From another account" });
+  other.changeset!.second_opinion = "other_account";
+  const same = change("REQ-2", { source_title: "From the same account" });
+  same.changeset!.second_opinion = "same_account";
+  const plain = change("REQ-3", { source_title: "No second opinion" });
+  fakeApi({ "GET changes": () => [other, same, plain] });
+  renderApp(<WhatChanged />);
+  await screen.findByText("From another account");
+  const row = (title: string) => screen.getByText(title).closest("li")!;
+  expect(within(row("From another account")).getByText("Second opinion from another account")).toBeInTheDocument();
+  expect(within(row("From the same account")).getByText("Second opinion from the same account, as a fresh run")).toBeInTheDocument();
+  expect(within(row("No second opinion")).queryByText(/Second opinion/)).toBeNull();
+});
+
+test("a refused request offers Send to another account, with Try again and Dismiss in its menu", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET changes": () => [stopped({ refused: true })],
+    "GET requests/REQ-9/accounts": () => [
+      { use: "first/model-a", label: "Work account" },
+      { use: "second/model-b", label: "Second account" },
+    ],
+    "POST requests/REQ-9/retry": () => ({ ok: "REQ-9" }),
+  });
+  renderApp(<WhatChanged />);
+  expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  await user.click(await screen.findByRole("button", { name: "Send to another account" }));
+  const chooser = await screen.findByRole("group", { name: "Choose an account to try it with." });
+  expect(within(chooser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Work account", "Second account", "Cancel"]);
+  await waitFor(() => expect(within(chooser).getByRole("button", { name: "Work account" })).toHaveFocus());
+  await user.click(within(chooser).getByRole("button", { name: "Second account" }));
+  expect(await screen.findByText("Sent to Second account.")).toBeInTheDocument();
+  expect(calls.find((c) => c.route === "POST requests/REQ-9/retry")?.body).toEqual({ use: "second/model-b" });
+  await waitFor(() => expect(screen.queryByRole("group", { name: "Choose an account to try it with." })).toBeNull());
+  await user.click(screen.getByRole("button", { name: /More actions for/ }));
+  expect((await screen.findAllByRole("menuitem")).map((m) => m.textContent)).toEqual(["Try again", "Dismiss"]);
+  await user.click(screen.getByRole("menuitem", { name: "Try again" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST requests/REQ-9/retry")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST requests/REQ-9/retry")[1].body).toBeUndefined();
+});
+
+test("with no other account, the chooser says so and points to the AI settings", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET changes": () => [stopped({ refused: true })], "GET requests/REQ-9/accounts": () => [] });
+  renderApp(<WhatChanged />);
+  await user.click(await screen.findByRole("button", { name: "Send to another account" }));
+  expect(await screen.findByText("No other account can take this. You can add one in the AI settings.")).toBeInTheDocument();
+  const chooser = screen.getByRole("group", { name: /No other account/ });
+  expect(within(chooser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Cancel"]);
+  await user.click(within(chooser).getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("group", { name: /No other account/ })).toBeNull();
+});

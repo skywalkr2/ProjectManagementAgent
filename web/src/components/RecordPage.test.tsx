@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
 const KIND = "demo/chapter";
@@ -214,4 +214,129 @@ test("Back goes back", async () => {
   renderApp(<RecordPage kind={KIND} id={ID} onBack={back} />);
   await user.click(await screen.findByRole("button", { name: "Back" }));
   expect(back).toHaveBeenCalled();
+});
+
+const editKind: S["KindView"] = {
+  kind: KIND,
+  fields: [
+    { name: "id", description: "", type: "text", required: true, editable: false },
+    { name: "title", description: "What the chapter is called.", type: "text", required: true, editable: true },
+    { name: "pages", description: "", type: "number", required: false, editable: true },
+    { name: "final", description: "", type: "yes_no", required: false, editable: true },
+    { name: "due", description: "", type: "date", required: false, editable: true },
+    { name: "state", description: "", type: "choice", options: ["draft", "revised", "locked"], required: false, editable: true },
+    { name: "mood", description: "", type: "choice", options: ["calm", "tense"], required: true, editable: true },
+    { name: "owner", description: "", refers_to: "person", type: "reference", required: false, editable: true },
+    { name: "book", description: "", refers_to: "project", type: "reference", required: false, editable: true },
+    { name: "link", description: "", refers_to: "demo/other", type: "reference", required: false, editable: true },
+    { name: "tags", description: "", type: "list", required: false, editable: true },
+    { name: "locked", description: "", type: "text", required: false, editable: false },
+    { name: "body_text", description: "", long_text: "plain", type: "long_text", required: false, editable: false },
+    { name: "raw", description: "", type: "other", required: false, editable: true },
+  ],
+};
+
+function editRoutes(extra: Routes = {}): Routes {
+  return routes({
+    [`GET kinds/${KIND}`]: () => editKind,
+    [`GET record?${on}`]: () => ({
+      kind: KIND,
+      id: ID,
+      version: 4,
+      fields: { id: ID, title: "The harbor", pages: 12, final: false, due: "2026-11-01", state: "draft", mood: "calm", owner: "P-2", tags: ["one", "two"], locked: "x" },
+      long_text: [field],
+    }),
+    "GET people": () => [
+      { id: "P-2", name: "Robin Example", status: "active" },
+      { id: "P-3", name: "Sam Sample", status: "active" },
+    ],
+    "GET projects": () => [
+      { id: "PRJ-1", name: "First book" },
+      { id: "PRJ-2", name: "Second book" },
+    ],
+    ...extra,
+  });
+}
+
+async function openForm(user: ReturnType<typeof userEvent.setup>) {
+  renderApp(<RecordPage kind={KIND} id={ID} onBack={() => {}} />);
+  await user.click(await screen.findByRole("button", { name: "Edit details" }));
+  return screen.getByRole("form", { name: "Edit details" });
+}
+
+test("Edit details offers the right control for each editable field and skips the rest", async () => {
+  const user = userEvent.setup();
+  fakeApi(editRoutes());
+  const form = await openForm(user);
+  expect(within(form).getByRole("textbox", { name: "Title" })).toHaveValue("The harbor");
+  expect(within(form).getByRole("textbox", { name: "Title" })).toBeRequired();
+  expect(within(form).getByRole("spinbutton", { name: "Pages" })).toHaveValue(12);
+  expect(within(form).getByRole("checkbox", { name: "Final" })).not.toBeChecked();
+  expect(within(form).getByLabelText("Due")).toHaveAttribute("type", "date");
+  expect(within(form).getByLabelText("Due")).toHaveValue("2026-11-01");
+  const state = within(form).getByRole("combobox", { name: "State" });
+  expect(within(state).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "draft", "revised", "locked"]);
+  const mood = within(form).getByRole("combobox", { name: "Mood" });
+  expect(within(mood).getAllByRole("option").map((o) => o.textContent)).toEqual(["calm", "tense"]);
+  expect(within(form).getByRole("combobox", { name: "Owner" })).toHaveValue("P-2");
+  const book = within(form).getByRole("combobox", { name: "Book" });
+  expect(within(book).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "First book", "Second book"]);
+  expect(within(form).getByRole("textbox", { name: /Tags/ })).toHaveValue("one\ntwo");
+  for (const skipped of ["Id", "Link", "Locked", "Body text", "Raw"]) expect(within(form).queryByLabelText(skipped)).toBeNull();
+});
+
+test("Save sends only the changed fields with the version that was read, then offers Undo", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi(
+    editRoutes({
+      "POST records/edit": () => ({ changeset: "CS-9" }),
+      "POST changesets/CS-9/undo": () => ({ restored: [{ kind: KIND, id: ID }], skipped: [] }),
+    }),
+  );
+  const form = await openForm(user);
+  const save = within(form).getByRole("button", { name: "Save" });
+  expect(save).toBeDisabled();
+  await user.clear(within(form).getByRole("textbox", { name: "Title" }));
+  await user.type(within(form).getByRole("textbox", { name: "Title" }), "The new harbor");
+  await user.click(within(form).getByRole("checkbox", { name: "Final" }));
+  await user.selectOptions(within(form).getByRole("combobox", { name: "Book" }), "PRJ-2");
+  await user.selectOptions(within(form).getByRole("combobox", { name: "Owner" }), "");
+  await user.clear(within(form).getByRole("spinbutton", { name: "Pages" }));
+  await user.clear(within(form).getByRole("textbox", { name: /Tags/ }));
+  await user.type(within(form).getByRole("textbox", { name: /Tags/ }), "a{Enter}b{Enter}");
+  await user.click(save);
+  await waitFor(() => expect(screen.queryByRole("form", { name: "Edit details" })).toBeNull());
+  expect(calls.find((c) => c.route === "POST records/edit")?.body).toEqual({
+    kind: KIND,
+    id: ID,
+    read_version: 4,
+    fields: { title: "The new harbor", final: true, book: "PRJ-2", owner: null, pages: null, tags: ["a", "b"] },
+  });
+  expect(await screen.findByText("Saved.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole("button", { name: "Edit details" })).toHaveFocus());
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-9/undo"));
+});
+
+test("a refusal shows the server's words and keeps the form open with what was typed", async () => {
+  const user = userEvent.setup();
+  fakeApi(editRoutes({ "POST records/edit": () => new Refuse(409, "This record changed after you opened it.") }));
+  const form = await openForm(user);
+  await user.type(within(form).getByRole("textbox", { name: "Title" }), "!");
+  await user.click(within(form).getByRole("button", { name: "Save" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("This record changed after you opened it.");
+  expect(screen.getByRole("form", { name: "Edit details" })).toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("The harbor!");
+  expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+});
+
+test("Cancel puts the values back and closes the form", async () => {
+  const user = userEvent.setup();
+  fakeApi(editRoutes());
+  const form = await openForm(user);
+  await user.type(within(form).getByRole("textbox", { name: "Title" }), " and more");
+  await user.click(within(form).getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("form", { name: "Edit details" })).toBeNull();
+  await user.click(await screen.findByRole("button", { name: "Edit details" }));
+  expect(screen.getByRole("textbox", { name: "Title" })).toHaveValue("The harbor");
 });
