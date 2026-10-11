@@ -4961,6 +4961,141 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "WatchRunView": {
+        "properties": {
+          "changed": {
+            "default": 0,
+            "title": "Changed",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "error_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Kind"
+          },
+          "new": {
+            "default": 0,
+            "title": "New",
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "ok",
+              "baseline",
+              "failed",
+              "offline"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "removed": {
+            "default": 0,
+            "title": "Removed",
+            "type": "integer"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "started_at",
+          "outcome"
+        ],
+        "title": "WatchRunView",
+        "type": "object"
+      },
+      "WatchSourceView": {
+        "description": "One place the assistant keeps reading, from watch.yaml, with its last read.",
+        "properties": {
+          "connector": {
+            "title": "Connector",
+            "type": "string"
+          },
+          "connector_label": {
+            "description": "What kind of place it is, in words; empty when no connector runs it.",
+            "title": "Connector Label",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "every_minutes": {
+            "title": "Every Minutes",
+            "type": "integer"
+          },
+          "failures": {
+            "default": 0,
+            "description": "Failed reads in a row.",
+            "title": "Failures",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "description": "Items it held at the last read.",
+            "title": "Items",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WatchRunView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why it can't be read, and what to do, while it fails.",
+            "title": "Problem"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "connector",
+          "connector_label",
+          "enabled",
+          "every_minutes",
+          "items"
+        ],
+        "title": "WatchSourceView",
+        "type": "object"
+      },
       "WorkingCopyFormatView": {
         "properties": {
           "extension": {
@@ -8377,6 +8512,67 @@
           }
         },
         "summary": "Text Edit"
+      }
+    },
+    "/api/watch": {
+      "get": {
+        "operationId": "sources_api_watch_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WatchSourceView"
+                  },
+                  "title": "Response Sources Api Watch Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sources"
+      }
+    },
+    "/api/watch/{source_id}/read": {
+      "post": {
+        "operationId": "read_now_api_watch__source_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchSourceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Read Now"
       }
     },
     "/api/working-copies": {

@@ -254,12 +254,37 @@ class Worker:
             self.poke()
         return len(due)
 
+    def run_due_watches(self) -> int:
+        """Read every watched source that is due. Returns how many were read."""
+        from datetime import UTC, datetime
+
+        from engine.watch import due, refresh
+
+        if self._changed_since_start():
+            return 0
+        sources = due(self.store, self.cfg, datetime.now(UTC))
+        handed = 0
+        for source in sources:
+            if self._stop.is_set():
+                break
+            result = refresh(self.ws, self.store, self.cfg, source)
+            handed += len(result.new) + len(result.changed) + len(result.removed)
+        if sources:
+            self.events.changed()
+        if handed:
+            self.poke()
+        return len(sources)
+
     def _jobs_loop(self) -> None:
         while not self._stop.is_set():
             try:
                 self.run_due_jobs()
             except Exception:  # a job's failure is recorded on its run; nothing here may stop the thread
                 log.exception("running scheduled jobs failed")
+            try:
+                self.run_due_watches()
+            except Exception:  # a failed read is recorded on its run; nothing here may stop the thread
+                log.exception("reading watched sources failed")
             self._stop.wait(timeout=60)
 
     def _backup_loop(self) -> None:

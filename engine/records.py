@@ -292,6 +292,15 @@ class Question(Record):
     resolves: dict[str, Any] | None = Field(None, description="What answering it releases, e.g. a held op.")
 
 
+class Watched(BaseModel):
+    """Where a watched input came from: the source in watch.yaml, the item's key there, and what happened to it."""
+
+    source: str = Field(description="The id of the source in watch.yaml.")
+    key: str = Field(description="The item's key within that source.")
+    change: Literal["new", "changed", "removed"] = Field(description="What happened to the item.")
+    author: str | None = Field(None, description="Who changed it last, as the source says.")
+
+
 class Source(Record):
     """One input the workspace received, such as pasted text; the text is kept by its hash. The engine adds it when
     something is handed in, and it is never edited."""
@@ -308,6 +317,7 @@ class Source(Record):
     )
     projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")
     url: str | None = Field(None, description="Where it came from, when it has an address.")
+    watched: Watched | None = Field(None, description="For an input a watcher found: where and what changed.")
 
 
 class File(Record):
@@ -394,6 +404,43 @@ class Report(Record):
     status: Literal["draft", "sent", "dismissed"] = Field(
         "draft", description="draft: not yet reviewed. sent: the PM sent it. dismissed: set aside."
     )
+
+
+class Snapshot(Record):
+    """What a watched item looked like when last read: its text is kept in the sources folder by hash. The watcher
+    writes it; nothing else changes it."""
+
+    record_kind: ClassVar[str] = "snapshot"
+    prefix: ClassVar[str] = "SNAP"
+
+    source: str = Field(description="The id of the source in watch.yaml.")
+    key: str = Field(description="The item's key within the source.")
+    title: str = Field(description="The item's title when last read.")
+    content_hash: str = Field(description="Hash of its text when last read.")
+    author: str | None = Field(None, description="Who changed it last, as the source said.")
+    seen_at: datetime = Field(description="When this version was first seen.")
+    gone: bool = Field(False, description="It was no longer in the source at the last complete read.")
+
+
+class WatchRun(Record):
+    """One read of a watched source and what came of it. The watcher writes it; nothing changes it."""
+
+    record_kind: ClassVar[str] = "watch_run"
+    prefix: ClassVar[str] = "WRUN"
+
+    source: str = Field(description="The id of the source in watch.yaml.")
+    started_at: datetime = Field(description="When the read started.")
+    seconds: float = Field(0.0, description="How long it took.")
+    outcome: Literal["ok", "baseline", "failed", "offline"] = Field(
+        description="ok: read and compared. baseline: a first read that only noted what is there. failed: it "
+        "couldn't be read. offline: no network here, so it wasn't tried."
+    )
+    error_kind: str | None = Field(None, description="For a failed read: auth, no_access, not_found or outage.")
+    error: str | None = Field(None, description="What went wrong, in the connector's words.")
+    new: int = Field(0, description="Items handed in as new.")
+    changed: int = Field(0, description="Items handed in as changed.")
+    removed: int = Field(0, description="Items handed in as gone.")
+    state: dict[str, Any] = Field(default_factory=dict, description="What the connector keeps between reads.")
 
 
 class SettingChange(Record):
@@ -702,6 +749,8 @@ REGISTRY: dict[str, type[Record]] = {
         Answer,
         SettingProposal,
         Report,
+        Snapshot,
+        WatchRun,
         TextVersion,
         WorkingCopy,
     )

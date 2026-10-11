@@ -10,6 +10,21 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.25 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Connectors:** `registrar.connector(name, label=..., settings=Model, poll=fn)`, listed in `provides.connectors`.
+  `poll(settings, state, context) -> Poll(items=[SourceItem(key, title, text, author=None, changed_at=None,
+  link=None)], state={...}, complete=True)`; raise `ConnectorError(kind, detail)` with kind `auth`, `no_access`,
+  `not_found`, `outage` or `offline`. A workspace reads it by naming it in `watch.yaml` (`sources: [{id, connector,
+  label, every_minutes, project, first_run, report_removed, settings}]`). The core keeps snapshots, compares, and
+  hands in what is new, changed (with a readable diff) or gone as outside content for the assistant; the first read
+  only notes what is there unless `first_run: all`. A failing read is contained like a job; the person is asked once
+  after `watch.failures_before_asking` failures in a row. Connectors can't reach the network yet: that comes with
+  `requires.network`.
+- The core ships a `folder` connector (text files in a folder) and a `fake` one for tests.
+
 ## What 0.3.24 adds
 
 Manifests stay `'>=0.3,<0.4'`.

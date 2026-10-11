@@ -33,7 +33,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.24"
+PLUGIN_API_VERSION = "0.3.25"
 
 
 class Settings(BaseModel):
@@ -808,6 +808,7 @@ class Registrar:
         self.panels: dict[str, PanelRegistration] = {}
         self.jobs: dict[str, JobRegistration] = {}
         self.setup_steps: dict[str, SetupStepRegistration] = {}
+        self.connectors: dict[str, Any] = {}
         self.interface_provisions: dict[str, InterfaceProvision] = {}
 
     def _name(self, name: str) -> None:
@@ -1207,6 +1208,24 @@ class Registrar:
             raise ValueError("duplicate job, invalid run function, or a schedule under 5 minutes")
         self.jobs[name] = JobRegistration(name, every_minutes, run)
 
+    def connector(self, name: str, *, label: str, settings: type[BaseModel], poll: Callable) -> None:
+        """A place the assistant can keep reading (listed in `provides.connectors`). A workspace watches it by naming
+        it in `watch.yaml` with its settings, which `settings` (a pydantic model) checks. `poll(settings, state,
+        context) -> Poll` lists what the source holds now as `SourceItem`s (a stable key, a title, the text, who
+        changed it last) and returns the `state` to keep for the next read; set `complete=False` when it lists only
+        what changed.
+        Raise `ConnectorError(kind, detail)` with kind `auth`, `no_access`, `not_found`, `outage` or `offline`. The
+        core compares, keeps snapshots and hands in what is new, changed or gone; the connector never writes
+        records. It must not reach the network until `requires.network` is available."""
+        self._name(name)
+        if name in self.connectors or not callable(poll):
+            raise ValueError("duplicate connector or invalid poll function")
+        if not isinstance(settings, type) or not issubclass(settings, BaseModel):
+            raise ValueError("a connector's settings are a pydantic model")
+        from engine.connectors import Connector
+
+        self.connectors[name] = Connector(name, " ".join(str(label).split()) or name, settings, poll)
+
     def setup_step(
         self, name: str, *, label: str, done: Callable, explanation: str = "", action: str | None = None
     ) -> None:
@@ -1258,7 +1277,12 @@ class Registrar:
         self.handlers[event] = fn
 
 
+from engine.connectors import ConnectorError, Poll, SourceItem  # noqa: E402 - part of the plugin API
+
 __all__ = [
+    "ConnectorError",
+    "Poll",
+    "SourceItem",
     "PLUGIN_API_VERSION",
     "Settings",
     "Record",

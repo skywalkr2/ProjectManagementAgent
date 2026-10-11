@@ -427,6 +427,33 @@ class PluginHost:
                 found += [(plugin, line) for line in lines]
         return found
 
+    def connectors(self) -> dict[str, Any]:
+        """Every running plugin's connectors, by name."""
+        return {
+            name: connector
+            for plugin, registrar in sorted(self.registrars.items())
+            if self.active(plugin)
+            for name, connector in registrar.connectors.items()
+        }
+
+    def poll_connector(self, connector: Any, settings: Any, state: dict[str, Any], context: Any) -> Any:
+        """Read a plugin's connector: its ConnectorError passes through; anything else is contained like a job."""
+        from engine.connectors import ConnectorError, Poll
+
+        plugin = connector.name.split("/", 1)[0]
+        where = f"connector {connector.name}"
+        try:
+            poll = connector.poll(settings, deepcopy(state), context)
+            if not isinstance(poll, Poll):
+                raise ValueError("poll must return a Poll")
+        except ConnectorError:
+            raise
+        except Exception as err:
+            self.failed(plugin, where, err)
+            raise ConnectorError("outage", f"the add-on {plugin} failed reading it: {err}") from None
+        self.succeeded(plugin, where)
+        return poll
+
     def setup_steps(self) -> list[tuple[str, Any]]:
         """(plugin, step) for every running plugin's setup steps."""
         found = []
@@ -779,6 +806,7 @@ class PluginHost:
             ("today", registrar.today_lines),
             ("jobs", registrar.jobs),
             ("setup_steps", registrar.setup_steps),
+            ("connectors", registrar.connectors),
         ):
             declared = set(getattr(expected, key))
             if f"{registrar.name}/*" in declared:

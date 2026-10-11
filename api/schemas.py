@@ -1029,3 +1029,28 @@ class ProposalApply(BaseModel):
 
     fingerprint: str
     read_version: int
+
+
+class WatchRunView(BaseModel):
+    started_at: str
+    outcome: Literal["ok", "baseline", "failed", "offline"]
+    error_kind: str | None = None
+    error: str | None = None
+    new: int = 0
+    changed: int = 0
+    removed: int = 0
+
+
+class WatchSourceView(BaseModel):
+    """One place the assistant keeps reading, from watch.yaml, with its last read."""
+
+    id: str
+    label: str
+    connector: str
+    connector_label: str = Field(description="What kind of place it is, in words; empty when no connector runs it.")
+    enabled: bool
+    every_minutes: int
+    items: int = Field(description="Items it held at the last read.")
+    last: WatchRunView | None = None
+    failures: int = Field(0, description="Failed reads in a row.")
+    problem: str | None = Field(None, description="Why it can't be read, and what to do, while it fails.")

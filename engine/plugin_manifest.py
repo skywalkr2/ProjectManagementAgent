@@ -105,6 +105,7 @@ class Provides(Strict):
     today: list[str] = Field(default_factory=list, description="Contributors of lines on Today.")
     jobs: list[str] = Field(default_factory=list, description="Work run on a schedule while the app runs.")
     setup_steps: list[str] = Field(default_factory=list, description="Steps added to the first-run setup.")
+    connectors: list[str] = Field(default_factory=list, description="Places the assistant can keep reading.")
     playbook: str | None = Field(None, description="The plugin's own playbook. Not yet available.")
     data: str | None = Field(
         None,

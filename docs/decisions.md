@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Watchers hand in differences as ordinary inputs; the first read is a baseline
+
+**Decided by:** project lead, following design 6.4 and the decision on watchers and lookups (2026-10-10).
+
+**What:** A watched source's read returns what it holds now; the core compares with snapshots and turns each
+difference into a source record and a queued request, exactly like a pasted input but untrusted and marked with where
+it came from. The first read of a source records a baseline instead of handing in everything (configurable). Removed
+items are reported unless the source turns that off. No network files nothing; repeated failures file one question,
+and a good read drops it. Connectors are an extension point (plugin API 0.3.25); the core ships a folder connector.
+
+**Why:** One path for every input keeps evidence, trust and review the same whatever the source. A baseline avoids a
+flood of work and cost on day one.
+
+**Impact:** New config file `watch.yaml` (demo values with an inbox folder in both workspaces), records `snapshot` and
+`watch_run`, `source.watched`, routes `/api/watch`. Triage and supersede come next, then a feed connector and network
+access for plugins. No change to scope.
+
 ## 2026-10-11: Asking the assistant answers from quoted material only
 
 **Decided by:** project lead, following the decision on asking about the app (2026-10-10).

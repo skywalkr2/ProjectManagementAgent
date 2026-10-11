@@ -48,6 +48,12 @@ Run on schedule through connectors; compare against snapshots; file a `Change` p
   diffs, in order) so the AI never processes them out of order.
 - Watch lists stay complete: when a record cites an item key inside an already-configured source, that item is followed in
   the same step (`watch.item`, a data op). Adding a new source is a system op (6.7).
+- **What is built.** Sources are listed in `watch.yaml`; each names a connector (the core's `folder`, or a plugin's)
+  and its settings. A read lists what the source holds now; the core keeps a snapshot per item (its text in the
+  sources folder by hash) and hands in a new item with its text, a changed one with a readable diff and its text now,
+  and one gone from a complete listing as gone, each as an untrusted input queued for the assistant. A source's first
+  read only notes what is there, so connecting a full folder doesn't flood the queue. Every read is recorded with its
+  outcome; the connector's own state is kept between reads.
 
 ## 6.5 Triage
 

@@ -716,6 +716,46 @@ class RulesFile(FileModel):
 # ---- registry --------------------------------------------------------------------------------------------------------
 
 #: Config file name (without .yaml) to its model, in the order `config show` lists them.
+# ---- config/watch.yaml ----------------------------------------------------------------------------------------------
+
+
+class WatchSource(ConfigModel):
+    id: str = Field(
+        "", pattern=r"^[a-z0-9][a-z0-9-]*$", description="The source's short name: lowercase letters, digits, dashes."
+    )
+    connector: str = Field(
+        "", min_length=1, description='What reads it: a core connector ("folder") or a plugin\'s ("<plugin>/<name>").'
+    )
+    label: str = Field("", description="What to call it on screen.")
+    enabled: bool = Field(True, description="Off keeps its history and stops reading it.")
+    every_minutes: int = Field(60, ge=5, description="How often it is read while the app runs.")
+    project: str | None = Field(None, description="The project its changes are about, if they all are.")
+    first_run: Literal["baseline", "all"] = Field(
+        "baseline",
+        description="baseline: the first read only notes what is there; all: everything there is handed in as new.",
+    )
+    report_removed: bool = Field(True, description="Hand in an item that disappeared from the source.")
+    settings: dict[str, Any] = Field(
+        default_factory=dict, description="The connector's own settings (a folder's path, say), checked by it."
+    )
+
+
+class WatchFile(FileModel):
+    sources: list[WatchSource] = Field(default_factory=list, description="The places the assistant keeps reading.")
+    failures_before_asking: int = Field(
+        3,
+        ge=1,
+        description="Failed reads in a row before the person is asked about a source; one question, not one per read.",
+    )
+
+    @model_validator(mode="after")
+    def unique_ids(self):
+        ids = [source.id for source in self.sources]
+        if len(ids) != len(set(ids)):
+            raise ValueError("source ids must be unique")
+        return self
+
+
 FILES: dict[str, type[FileModel]] = {
     "workspace": WorkspaceFile,
     "server": ServerFile,
@@ -727,6 +767,7 @@ FILES: dict[str, type[FileModel]] = {
     "ui": UiFile,
     "stages": StagesFile,
     "rules": RulesFile,
+    "watch": WatchFile,
 }
 
 #: The newest version each file format has reached.

@@ -1,0 +1,13 @@
+# Places the assistant keeps reading. Each source names a connector and that connector's settings.
+version: 1
+sources:
+  - id: inbox
+    connector: folder
+    label: Inbox folder
+    every_minutes: 30
+    first_run: baseline   # the first read only notes what is there
+    report_removed: false
+    settings:
+      path: inbox         # inside the workspace's folder; a full path works too
+      patterns: ["*.txt", "*.md"]
+failures_before_asking: 3
