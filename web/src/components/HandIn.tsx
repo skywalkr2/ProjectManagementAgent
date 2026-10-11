@@ -2,10 +2,12 @@
 // default) sends the box as pasted content (untrusted: material, never instructions) with an optional line saying what
 // to do with it, which is the PM's own note (trusted). "Mine" sends the box as the PM's note. Either way the assistant
 // always knows which words are the PM's.
+import { useQuery } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { Label, Radio, RadioGroup, Text } from "react-aria-components";
-import { api } from "../lib/api";
+import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { projectChoices } from "../lib/project-choices";
 import { useWords } from "../lib/wording";
 
 const OwnContext = createContext<{ ids: Set<string>; add: (id: string) => void }>({
@@ -43,6 +45,9 @@ export function HandIn(props: { onClose: () => void }) {
   const [whose, setWhose] = useState<Whose>("others");
   const [todo, setTodo] = useState("");
   const [sensitivity, setSensitivity] = useState<Sensitivity>("");
+  const [project, setProject] = useState("");
+  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const choices = projectChoices(projects.data ?? [], (parent, name) => t("handin.project.path", { parent, name }));
   const [dropProblem, setDropProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const first = useRef<HTMLTextAreaElement>(null);
@@ -52,7 +57,9 @@ export function HandIn(props: { onClose: () => void }) {
     setBusy(true);
     // Someone else's words are always material (pasted); only the PM's own words are ever sent as the note.
     const words = whose === "mine" ? { note: text, pasted: "" } : { note: todo, pasted: text };
-    const body = sensitivity ? { ...words, data_level: sensitivity } : words;
+    const body: S["HandIn"] = { ...words };
+    if (sensitivity) body.data_level = sensitivity;
+    if (project) body.project = project;
     const handed = await act(
       () => api.handIn(body),
       () => ({ message: t("toast.handed_in") }),
@@ -150,6 +157,25 @@ export function HandIn(props: { onClose: () => void }) {
           </select>
           <span id="handin-sensitivity-hint" className="hint">
             {t("handin.sensitivity_hint")}
+          </span>
+        </div>
+        <div className="field">
+          <label htmlFor="handin-project">{t("handin.project")}</label>
+          <select
+            id="handin-project"
+            value={project}
+            aria-describedby="handin-project-hint"
+            onChange={(e) => setProject(e.target.value)}
+          >
+            <option value="">{t("handin.project.none")}</option>
+            {choices.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+          <span id="handin-project-hint" className="hint">
+            {t("handin.project_hint")}
           </span>
         </div>
         <div className="row-end">

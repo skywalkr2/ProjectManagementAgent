@@ -17,6 +17,13 @@ noted, and the plugin is turned off only after `workspace.plugins.failures_befor
 To try a plugin without touching a real workspace, run `cockpit demo --plugin <its folder>`: it makes (or reuses) a
 demo workspace of made-up data, links the plugin folder into it, turns the plugin on and serves it. Edits show after a
 restart; `--fresh` starts the demo over, and an installed plugin is named instead of its folder.
+
+For a plugin's own tests, install the host from its repository without the web screens, which need npm to build:
+`PM_COCKPIT_WITHOUT_SCREENS=1 uv pip install "pm-cockpit @ git+<the host's repository address>@<branch or tag>"`.
+Test connectors with `engine.plugin_api.testing` (see Connectors), never the host's internals.
+
+One distribution may ship several plugins. They may share a helper package of their own (a module neither plugin
+registers from); what a plugin may not do is import another plugin's registered package or read its records.
 """
 
 from __future__ import annotations
@@ -38,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.34"
+PLUGIN_API_VERSION = "0.3.35"
 
 
 class Settings(BaseModel):
@@ -1310,14 +1317,20 @@ class Registrar:
         context) -> Poll` lists what the source holds now as `SourceItem`s (a stable key, a title, the text, who
         changed it last) and returns the `state` to keep for the next read; set `complete=False` when it lists only
         what changed.
-        Raise `ConnectorError(kind, detail)` with kind `auth`, `no_access`, `not_found`, `outage` or `offline`. The
-        core compares, keeps snapshots and hands in what is new, changed or gone; the connector never writes
+        Raise `ConnectorError(kind, detail)` with kind `auth`, `no_access`, `not_found`, `outage`, `offline` or
+        `throttled` (with `retry_after=` seconds). The core compares, keeps snapshots and hands in what is new,
+        changed or gone (for a read that lists only changes, the keys in `Poll.removed`); the connector never writes
         records. `context.web` (when `requires.network` lists hosts) reaches only those hosts, over HTTPS:
         `context.web.get(url, params=..., headers=...)` and `.post(...)` return a response with `status`, `headers`,
-        `content`, `.text` and `.json()`, and raise `ConnectorError` for no connection (offline), timeouts and server
-        errors (outage), 401 (auth), 403 (no_access) and 404 (not_found). `context.secret(name)` reads a secret named
-        in `requires.secrets` (None when it isn't set), and `context.keep_secret(name, value)` keeps one on this
-        computer (a refreshed token)."""
+        `content`, `.text` and `.json()`, and raise `ConnectorError` for no connection (offline), timeouts and 5xx
+        (outage), 401 (auth), 403 (no_access), 404 (not_found), and 429 or 503 with a Retry-After (throttled, with
+        the wait). Those errors carry the answer's `status`, `headers` and `body` (`err.json()`), so a connector can
+        read the service's own error code and raise a better kind: a 403 that means "slow down" is `throttled`.
+        Every other status (410, say) comes back as a response to read. A throttled read isn't counted as a failure,
+        and the source isn't read again before its wait ends. `context.secret(name)` reads a secret named in
+        `requires.secrets` (None when it isn't set), `context.keep_secret(name, value)` keeps one on this computer,
+        and `context.access_token(name)` gives a current token for one of the plugin's sign-ins. Test a connector
+        with `engine.plugin_api.testing`."""
         self._name(name)
         if name in self.connectors or not callable(poll):
             raise ValueError("duplicate connector or invalid poll function")
@@ -1345,7 +1358,9 @@ class Registrar:
         `client_secret`, for services that issue one to apps on a computer) name secrets in `requires.secrets` that
         hold the app registration the person made with the service; `params` adds parameters to the sign-in page's
         address. The person signs in from Settings; the core receives the answer at its own callback address
-        (`<the app's address><base path>/api/sign-ins/callback`, which the app registration must allow), keeps the
+        (`<the app's address><base path>/api/sign-ins/callback`, which the app registration must allow: register
+        exactly the address the Sign-ins section shows, since some services tell `localhost` from `127.0.0.1`, and
+        register it again if the app's address or port changes), keeps the
         tokens on this computer and renews them. A connector gets a current token with
         `context.access_token(name)`; when the person needs to sign in (again) it raises `ConnectorError("auth",
         ...)`, which asks them once. The plugin never sees the sign-in itself or the refresh token."""

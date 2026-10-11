@@ -10,6 +10,31 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.35 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A service's "wait":** the web client raises `ConnectorError("throttled", retry_after=seconds)` for 429, and for
+  503 with a Retry-After (seconds or a date, at most a day). A connector may raise it too. The watcher records the
+  read as throttled, doesn't count it toward `watch.failures_before_asking`, and doesn't read the source again before
+  the wait ends.
+- **The service's own error:** a `ConnectorError` the web client raises from an answer carries `status`, `headers`
+  and `body` (`err.json()` parses it), so a connector can read the service's error code and raise a better kind.
+  Statuses other than 401, 403, 404, 429 and 5xx come back as responses to read.
+- **Removals from change-only reads:** `Poll(removed=[key, ...])` with `complete=False` hands in those keys as gone,
+  like an item missing from a complete read (when the source reports removals). `checked_poll` refuses `removed` on a
+  complete read, a key listed twice, and items that aren't `SourceItem`s with text.
+- **A failed read keeps the last good state:** the next read starts from the state of the last read that worked, not
+  from nothing.
+- **Testing connectors:** `engine.plugin_api.testing` has `connector_context(service, network=, secrets=, tokens=)`,
+  where `service(asked) -> Reply` answers every request, and `read(poll, settings, state, context)`, which runs a
+  poll and checks it as the watcher does. Plugin tests no longer need `engine.net` or `engine.connectors`.
+- **The host for a plugin's tests:** `PM_COCKPIT_WITHOUT_SCREENS=1` builds the host's wheel without the web screens,
+  so `uv pip install "pm-cockpit @ git+<host repository>@<ref>"` works without npm.
+- **Guide:** a Connectors section (`SourceItem`, `Poll` and `ConnectorError` fields, the web client's statuses and
+  the testing helper); the sign-in callback address must be registered exactly as the Sign-ins section shows it; one
+  distribution's plugins may share a helper package of their own.
+
 ## What 0.3.34 adds
 
 Manifests stay `'>=0.3,<0.4'`.

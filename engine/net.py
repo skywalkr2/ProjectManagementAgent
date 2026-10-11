@@ -44,7 +44,9 @@ def host_allowed(host: str, allowed: list[str]) -> bool:
 
 class WebClient:
     """GET and POST to allowed hosts only. Raises ConnectorError: offline (no connection could be made), outage
-    (timeouts, server errors), auth (401), no_access (403), not_found (404)."""
+    (timeouts, server errors), auth (401), no_access (403), not_found (404), throttled (429, or 503 with a
+    Retry-After; `retry_after` is the wait in seconds). Errors from an answer carry its status, headers and body.
+    Every other status comes back as a Response for the caller to read."""
 
     def __init__(
         self,
@@ -100,14 +102,43 @@ class WebClient:
         self._client.close()
 
 
+#: The longest wait a service's Retry-After is taken at, in seconds.
+MAX_RETRY_AFTER = 24 * 3600
+
+
+def retry_after(headers: dict[str, str], now: float | None = None) -> float | None:
+    """A Retry-After header in seconds from now: a number of seconds, or a date. None when absent or unreadable."""
+    import time
+    from email.utils import parsedate_to_datetime
+
+    value = next((v for k, v in headers.items() if k.lower() == "retry-after"), None)
+    if not value:
+        return None
+    value = value.strip()
+    try:
+        seconds = float(value)
+    except ValueError:
+        try:
+            seconds = parsedate_to_datetime(value).timestamp() - (time.time() if now is None else now)
+        except (TypeError, ValueError):
+            return None
+    return min(max(seconds, 0.0), MAX_RETRY_AFTER)
+
+
 def _checked(response: Response) -> Response:
     status = response.status
+    answer = {"status": status, "headers": response.headers, "body": response.text}
+    if status == 429 or (status == 503 and retry_after(response.headers) is not None):
+        wait = retry_after(response.headers)
+        raise ConnectorError(
+            "throttled", f"the service asked to wait (it answered {status})", retry_after=wait, **answer
+        )
     if status == 401:
-        raise ConnectorError("auth", "the service asked to sign in again")
+        raise ConnectorError("auth", "the service asked to sign in again", **answer)
     if status == 403:
-        raise ConnectorError("no_access", "the service refused access")
+        raise ConnectorError("no_access", "the service refused access", **answer)
     if status == 404:
-        raise ConnectorError("not_found", "the service says it isn't there")
-    if status == 429 or status >= 500:
-        raise ConnectorError("outage", f"the service answered {status}")
+        raise ConnectorError("not_found", "the service says it isn't there", **answer)
+    if status >= 500:
+        raise ConnectorError("outage", f"the service answered {status}", **answer)
     return response

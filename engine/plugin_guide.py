@@ -160,6 +160,7 @@ def _join(*parts: str) -> str:
 
 def build() -> str:
     import engine.plugin_api as api
+    import engine.plugin_api.testing as testing
     from engine import actions, plugin_host, plugin_manifest, texts, tools, working
     from engine.config.schema import FileLimits, PluginSettings
     from engine.ops import OP_MODELS
@@ -308,6 +309,21 @@ def build() -> str:
             _methods(api.ToolBox, "context.tools"),
             "### ToolResult\n\n" + _para(_doc(api.ToolResult)),
             _table(["Field", "Type", "Default"], _dataclass_rows(api.ToolResult)),
+        ),
+        _section(
+            "Connectors",
+            "What `registrar.connector`'s `poll` returns and raises.",
+            "### SourceItem\n\n" + _para(_doc(api.SourceItem)),
+            _table(["Field", "Type", "Default"], _dataclass_rows(api.SourceItem)),
+            "### Poll\n\n" + _para(_doc(api.Poll)),
+            _table(["Field", "Type", "Default"], _dataclass_rows(api.Poll)),
+            "### ConnectorError\n\n" + _para(_doc(api.ConnectorError)),
+            "### Testing a connector: `engine.plugin_api.testing`\n\n" + _para(_doc(testing)),
+            "\n\n".join(
+                _join(f"#### `{name}{inspect.signature(getattr(testing, name))}`", _para(_doc(getattr(testing, name))))
+                for name in ("connector_context", "read")
+            ),
+            "#### Reply and Asked\n\n" + _para(_doc(testing.Reply)) + " " + _para(_doc(testing.Asked)),
         ),
         _section(
             "Errors",

@@ -57,15 +57,19 @@ def due(store: Any, cfg: Any, now: datetime) -> list[str]:
             continue
         last = last_run(store, source.id)
         started = datetime.fromisoformat(str(last.data["started_at"])) if last else None
-        if started is None or now - started >= timedelta(minutes=source.every_minutes):
-            found.append(source.id)
+        if started is not None and now - started < timedelta(minutes=source.every_minutes):
+            continue
+        retry_at = last.data.get("retry_at") if last else None
+        if retry_at and now < datetime.fromisoformat(str(retry_at)):
+            continue  # the service asked to wait
+        found.append(source.id)
     return found
 
 
 def failures_in_a_row(store: Any, source: str) -> int:
     count = 0
     for run in reversed(store.read().find("watch_run", {"source": source})):
-        if run.data["outcome"] == "offline":
+        if run.data["outcome"] in ("offline", "throttled"):
             continue
         if run.data["outcome"] != "failed":
             break
@@ -80,8 +84,11 @@ def refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None 
     source = next((s for s in cfg.watch.sources if s.id == source_id), None)
     if source is None:
         raise StoreError(f"there is no source {source_id} in watch.yaml")
-    last = last_run(store, source.id)
-    state = dict(last.data.get("state") or {}) if last and last.data["outcome"] in ("ok", "baseline") else {}
+    worked = [
+        r for r in store.read().find("watch_run", {"source": source.id}) if r.data["outcome"] in ("ok", "baseline")
+    ]
+    # A read that failed keeps nothing: the next one starts from the last read that worked.
+    state = dict(worked[-1].data.get("state") or {}) if worked else {}
     connector = connectors(store).get(source.connector)
     try:
         if connector is None:
@@ -94,15 +101,17 @@ def refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None 
             raise ConnectorError("no_access", f"its settings don't fit: {where}: {first['msg']}") from None
         poll = _poll(store, connector, settings, state, ws)
     except ConnectorError as err:
-        outcome = "offline" if err.kind == "offline" else "failed"
+        outcome = {"offline": "offline", "throttled": "throttled"}.get(err.kind, "failed")
+        wait = err.retry_after if err.retry_after is not None else source.every_minutes * 60
         _record(
             store,
             source.id,
             now,
             clock,
             outcome,
-            error_kind=None if outcome == "offline" else err.kind,
+            error_kind=err.kind if outcome == "failed" else None,
             error=err.detail or None,
+            **({"retry_at": (now + timedelta(seconds=wait)).isoformat()} if outcome == "throttled" else {}),
         )
         problem = None
         if outcome == "failed":
@@ -168,18 +177,17 @@ def _compare(ws: Any, store: Any, cfg: Any, source: Any, poll: Any, now: datetim
             request = _hand_in(ws, store, tx, cfg, source, item, change, text, now, facts)
         if not baseline:
             (result.new if change == "new" else result.changed).append(request)
-    if poll.complete and not baseline:
-        for key, snapshot in seen.items():
-            if key in listed:
+    gone_keys = [k for k in seen if k not in listed] if poll.complete else [k for k in poll.removed if k in seen]
+    for key in gone_keys:
+        snapshot = seen[key]
+        with store.transaction() as tx:
+            tx.update("snapshot", snapshot.id, {"gone": True}, _WATCHER, read_version=snapshot.version)
+            if baseline or not source.report_removed:
                 continue
-            with store.transaction() as tx:
-                tx.update("snapshot", snapshot.id, {"gone": True}, _WATCHER, read_version=snapshot.version)
-                if not source.report_removed:
-                    continue
-                gone = SourceItem(key, snapshot.data["title"], "", author=None)
-                text = f"{snapshot.data['title']} is no longer in {source.label or source.id}."
-                facts = _change(cfg, source, gone, "removed", _read_text(ws, snapshot.data["content_hash"]))
-                result.removed.append(_hand_in(ws, store, tx, cfg, source, gone, "removed", text, now, facts))
+            gone = SourceItem(key, snapshot.data["title"], "", author=None)
+            text = f"{snapshot.data['title']} is no longer in {source.label or source.id}."
+            facts = _change(cfg, source, gone, "removed", _read_text(ws, snapshot.data["content_hash"]))
+            result.removed.append(_hand_in(ws, store, tx, cfg, source, gone, "removed", text, now, facts))
     return result
 
 

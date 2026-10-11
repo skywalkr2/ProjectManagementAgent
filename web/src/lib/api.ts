@@ -133,8 +133,12 @@ export const api = {
     ),
   actionPreview: (name: string, body: S["ActionRun"]) =>
     call<S["ActionProposalView"]>("POST", `plugin-actions/${named(name)}/preview`, body),
-  actionApply: (token: string, kept?: Record<string, boolean>) =>
-    call<S["ActionApplied"]>("POST", "plugin-actions/apply", kept ? { token, kept } : { token }),
+  actionApply: (token: string, kept?: Record<string, boolean>, keptRequests?: Record<string, boolean>) => {
+    const body: S["ActionApply"] = { token };
+    if (kept) body.kept = kept;
+    if (keptRequests) body.kept_requests = keptRequests;
+    return call<S["ActionApplied"]>("POST", "plugin-actions/apply", body);
+  },
 
   sync: () => call<S["SyncView"]>("GET", "sync"),
   jobs: () => call<S["JobView"][]>("GET", "jobs"),

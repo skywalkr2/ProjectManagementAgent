@@ -432,10 +432,11 @@ class WatchRun(Record):
     source: str = Field(description="The id of the source in watch.yaml.")
     started_at: datetime = Field(description="When the read started.")
     seconds: float = Field(0.0, description="How long it took.")
-    outcome: Literal["ok", "baseline", "failed", "offline"] = Field(
+    outcome: Literal["ok", "baseline", "failed", "offline", "throttled"] = Field(
         description="ok: read and compared. baseline: a first read that only noted what is there. failed: it "
-        "couldn't be read. offline: no network here, so it wasn't tried."
+        "couldn't be read. offline: no network here, so it wasn't tried. throttled: the service asked to wait."
     )
+    retry_at: datetime | None = Field(None, description="For a throttled read: not read again before this time.")
     error_kind: str | None = Field(None, description="For a failed read: auth, no_access, not_found or outage.")
     error: str | None = Field(None, description="What went wrong, in the connector's words.")
     new: int = Field(0, description="Items handed in as new.")

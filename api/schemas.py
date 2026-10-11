@@ -1049,7 +1049,8 @@ class ProposalApply(BaseModel):
 
 class WatchRunView(BaseModel):
     started_at: str
-    outcome: Literal["ok", "baseline", "failed", "offline"]
+    outcome: Literal["ok", "baseline", "failed", "offline", "throttled"]
+    retry_at: str | None = Field(None, description="For a throttled read: not read again before this time.")
     error_kind: str | None = None
     error: str | None = None
     new: int = 0

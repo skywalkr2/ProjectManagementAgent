@@ -2,12 +2,14 @@
 `engine.shipped` finds them in an installed package. An editable install reads them from the checkout instead.
 
 A wheel without the built web screens would install an app with no screens, so the build stops and says how to build
-them.
+them, unless PM_COCKPIT_WITHOUT_SCREENS=1 asks for a wheel without them (for a plugin's tests, which need the engine
+and the API but no screens).
 """
 
 from __future__ import annotations
 
 import fnmatch
+import os
 from pathlib import Path
 
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
@@ -33,9 +35,14 @@ class ShippedFiles(BuildHookInterface):
         if self.target_name != "wheel" or version == "editable":
             return
         root = Path(self.root)
-        if not (root / "web" / "dist" / "index.html").is_file():
-            raise RuntimeError("The web screens aren't built. Run: npm --prefix web ci && npm --prefix web run build")
-        sources = {root / src: f"engine/_shipped/{dest}" for src, dest in FOLDERS.items()}
+        without_screens = os.environ.get("PM_COCKPIT_WITHOUT_SCREENS") == "1"
+        if not without_screens and not (root / "web" / "dist" / "index.html").is_file():
+            raise RuntimeError(
+                "The web screens aren't built. Run: npm --prefix web ci && npm --prefix web run build "
+                "(or set PM_COCKPIT_WITHOUT_SCREENS=1 for a wheel without them, for tests)"
+            )
+        folders = {k: v for k, v in FOLDERS.items() if not (without_screens and k == "web/dist")}
+        sources = {root / src: f"engine/_shipped/{dest}" for src, dest in folders.items()}
         sources |= {root / "workspaces" / name: f"engine/_shipped/demos/{name}" for name in DEMOS}
         for folder, dest in sources.items():
             for path, rel in _files(folder):

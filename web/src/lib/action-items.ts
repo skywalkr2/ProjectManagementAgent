@@ -34,3 +34,39 @@ export function opsWithTicks(proposal: S["ActionProposalView"], ticks: Ticks): S
 export function countKept(items: S["ActionItem"][], ticks: Ticks): number {
   return items.filter((item) => ticks[item.id] ?? item.kept).length;
 }
+
+/** The item a request goes with, when it has one that is in the proposal. */
+export function itemOf(request: S["ActionRequestView"], items: S["ActionItem"][] = []): S["ActionItem"] | undefined {
+  return request.item ? items.find((i) => i.id === request.item) : undefined;
+}
+
+/** Whether a request is dropped because the item it goes with is dropped: then its own tick has no say. */
+export function followsDroppedItem(request: S["ActionRequestView"], items: S["ActionItem"][], itemTicks: Ticks): boolean {
+  const item = itemOf(request, items);
+  return !!item && !(itemTicks[item.id] ?? item.kept);
+}
+
+/** Whether a request will be queued: kept by its own tick, and not dropped along with its item. */
+export function requestKept(request: S["ActionRequestView"], items: S["ActionItem"][], itemTicks: Ticks, ticks: Ticks): boolean {
+  return !followsDroppedItem(request, items, itemTicks) && (ticks[request.id] ?? request.kept);
+}
+
+/** How many of the requests will be queued with the ticks as they are now. */
+export function countKeptRequests(requests: S["ActionRequestView"][], items: S["ActionItem"][], itemTicks: Ticks, ticks: Ticks): number {
+  return requests.filter((r) => requestKept(r, items, itemTicks, ticks)).length;
+}
+
+/** The requests whose final state differs from what the proposal offered, by id; nothing when none do. */
+export function changedRequests(
+  requests: S["ActionRequestView"][],
+  items: S["ActionItem"][],
+  itemTicks: Ticks,
+  ticks: Ticks,
+): Ticks | undefined {
+  const changed: Ticks = {};
+  for (const r of requests) {
+    const now = requestKept(r, items, itemTicks, ticks);
+    if (now !== r.kept) changed[r.id] = now;
+  }
+  return Object.keys(changed).length ? changed : undefined;
+}

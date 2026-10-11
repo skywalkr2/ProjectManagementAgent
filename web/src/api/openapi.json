@@ -5705,7 +5705,8 @@
               "ok",
               "baseline",
               "failed",
-              "offline"
+              "offline",
+              "throttled"
             ],
             "title": "Outcome",
             "type": "string"
@@ -5714,6 +5715,18 @@
             "default": 0,
             "title": "Removed",
             "type": "integer"
+          },
+          "retry_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a throttled read: not read again before this time.",
+            "title": "Retry At"
           },
           "started_at": {
             "title": "Started At",

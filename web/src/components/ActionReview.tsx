@@ -3,7 +3,17 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Heading } from "react-aria-components";
-import { countKept, opsWithTicks, ticksOf, type Ticks } from "../lib/action-items";
+import {
+  changedRequests,
+  countKept,
+  countKeptRequests,
+  followsDroppedItem,
+  itemOf,
+  opsWithTicks,
+  requestKept,
+  ticksOf,
+  type Ticks,
+} from "../lib/action-items";
 import { api, type S } from "../lib/api";
 import { useSize } from "../lib/files";
 import { problemText } from "../lib/problem";
@@ -16,6 +26,9 @@ import { SafeText } from "./SafeText";
 
 export type ActionTarget = { kind: string; id: string } | null;
 type Choices = Record<string, string | boolean>;
+
+/** More queued work than this gets "Keep all" and "Drop all". */
+const REQUESTS_BEFORE_SET_ALL = 5;
 
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 
@@ -67,10 +80,13 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
   const [busy, setBusy] = useState(true);
   const [applying, setApplying] = useState(false);
   const [kept, setKept] = useState<Ticks>({});
+  const [keptRequests, setKeptRequests] = useState<Ticks>({});
   const latest = useRef(0);
   const sent = useRef<Choices>({});
   const token = useRef<string | null>(null);
   const ticks = useRef<Ticks>({});
+  const requestTicks = useRef<Ticks>({});
+  const shownRequests = useRef<S["ActionRequestView"][]>([]);
   const { name } = props.action;
   const targetKind = props.target?.kind;
   const targetId = props.target?.id;
@@ -78,6 +94,11 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
   const setTicks = useCallback((next: Ticks) => {
     ticks.current = next;
     setKept(next);
+  }, []);
+
+  const setRequestTicks = useCallback((next: Ticks) => {
+    requestTicks.current = next;
+    setKeptRequests(next);
   }, []);
 
   // Ticking never asks the action again; a changed choice does, and the ticks go along so they carry over.
@@ -104,6 +125,16 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
           if (id in asked && ticks.current[id] !== asked[id]) fresh[id] = ticks.current[id];
         }
         setTicks(fresh);
+        // The person's own ticks on queued work carry over to a request that is still the same one.
+        const sameRequest = (a: S["ActionRequestView"], b: S["ActionRequestView"]) =>
+          a.id === b.id && a.task === b.task && a.label === b.label && a.item === b.item && a.about?.id === b.about?.id;
+        const carried: Ticks = {};
+        for (const r of result.requests ?? []) {
+          const before = shownRequests.current.find((old) => sameRequest(old, r));
+          if (before && r.id in requestTicks.current) carried[r.id] = requestTicks.current[r.id];
+        }
+        shownRequests.current = result.requests ?? [];
+        setRequestTicks(carried);
         setValues(shown);
         setProposal(result);
       } catch (err) {
@@ -112,12 +143,14 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
         if (mine === latest.current) setBusy(false);
       }
     },
-    [name, targetKind, targetId, t, setTicks],
+    [name, targetKind, targetId, t, setTicks, setRequestTicks],
   );
 
   useEffect(() => {
     token.current = null;
     ticks.current = {};
+    requestTicks.current = {};
+    shownRequests.current = [];
     void preview({}, false);
     return () => {
       latest.current++;
@@ -130,14 +163,24 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
     void preview(next, true);
   };
 
-  const tick = (ids: string[], value: boolean) => setTicks({ ...ticks.current, ...Object.fromEntries(ids.map((id) => [id, value])) });
+  const tick = (ids: string[], value: boolean, requestIds: string[] = []) => {
+    setTicks({ ...ticks.current, ...Object.fromEntries(ids.map((id) => [id, value])) });
+    if (requestIds.length) tickRequests(requestIds, value);
+  };
+  const tickRequests = (ids: string[], value: boolean) =>
+    setRequestTicks({ ...requestTicks.current, ...Object.fromEntries(ids.map((id) => [id, value])) });
 
   const apply = async () => {
     if (!proposal) return;
     setApplying(true);
     try {
       const items = proposal.items ?? [];
-      const done = await api.actionApply(proposal.token, items.length ? { ...ticksOf(items), ...ticks.current } : undefined);
+      const itemTicks = { ...ticksOf(items), ...ticks.current };
+      const done = await api.actionApply(
+        proposal.token,
+        items.length ? itemTicks : undefined,
+        changedRequests(proposal.requests ?? [], items, itemTicks, requestTicks.current),
+      );
       await client.invalidateQueries();
       if (done.applied === 0 && done.refused > 0) {
         setError({ text: t("review.all_refused"), applying: true });
@@ -171,9 +214,12 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
   const items = proposal?.items ?? [];
   const groups = proposal?.groups ?? [];
   const requests = proposal?.requests ?? [];
+  const itemTicks = { ...ticksOf(items), ...kept };
   const inGroup = new Set(groups.map((g) => g.id));
   const looseChoices = (proposal?.choices ?? []).filter((c) => !c.group || !inGroup.has(c.group));
   const looseItems = items.filter((i) => !i.group || !inGroup.has(i.group));
+  // "Keep all" and "Drop all" leave alone a request that follows a dropped item: it is dropped with it.
+  const freeRequests = requests.filter((r) => !followsDroppedItem(r, items, itemTicks));
   const shownOps = proposal ? opsWithTicks(proposal, kept) : [];
 
   return (
@@ -208,7 +254,8 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
           {groups.map((g) => {
             const own = items.filter((i) => i.group === g.id);
             const ownChoices = proposal.choices.filter((c) => c.group === g.id);
-            if (!own.length && !ownChoices.length) return null;
+            const ownRequests = requests.filter((r) => r.group === g.id);
+            if (!own.length && !ownChoices.length && !ownRequests.length) return null;
             return (
               <ItemSection
                 key={g.id}
@@ -216,6 +263,9 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
                 heading={g.heading}
                 explanation={g.explanation ?? ""}
                 items={own}
+                requests={ownRequests}
+                allItems={items}
+                requestTicks={keptRequests}
                 choices={ownChoices}
                 values={values}
                 ticks={kept}
@@ -230,6 +280,9 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
               heading={t("review.items")}
               explanation=""
               items={looseItems}
+              requests={[]}
+              allItems={items}
+              requestTicks={keptRequests}
               choices={[]}
               values={values}
               ticks={kept}
@@ -290,12 +343,35 @@ export function ActionReview(props: { action: S["PersonActionView"]; target: Act
               <h3 id={`${base}-requests`} className="what">
                 {t("review.requests")}
               </h3>
-              <ul className="plain-list">
-                {requests.map((r, i) => (
-                  <RequestLine key={i} request={r} />
+              {requests.length > REQUESTS_BEFORE_SET_ALL && (
+                <div className="review-group-head">
+                  <span className="hint">
+                    {t("review.kept_count", { kept: countKeptRequests(requests, items, itemTicks, keptRequests), total: requests.length })}
+                  </span>
+                  <RowMenu
+                    label={t("review.requests")}
+                    actions={[
+                      { id: "keep", label: t("review.keep_all"), run: () => tickRequests(freeRequests.map((r) => r.id), true) },
+                      { id: "drop", label: t("review.drop_all"), run: () => tickRequests(freeRequests.map((r) => r.id), false) },
+                    ]}
+                  />
+                </div>
+              )}
+              <ul className="review-items">
+                {requests.map((r) => (
+                  <RequestLine
+                    key={r.id}
+                    request={r}
+                    item={itemOf(r, items)}
+                    checked={requestKept(r, items, itemTicks, keptRequests)}
+                    follows={followsDroppedItem(r, items, itemTicks)}
+                    onTick={(value) => tickRequests([r.id], value)}
+                  />
                 ))}
               </ul>
-              <p className="hint">{t("review.requests_note")}</p>
+              <p className="hint" aria-live="polite">
+                {tn("review.requests_count", requests.length, { kept: countKeptRequests(requests, items, itemTicks, keptRequests) })}
+              </p>
             </section>
           )}
           {proposal.notes.length > 0 && (
@@ -436,29 +512,42 @@ function ItemSection(props: {
   heading: string;
   explanation: string;
   items: S["ActionItem"][];
+  /** The queued work that belongs to this group: setting the group sets it too. */
+  requests: S["ActionRequestView"][];
+  allItems: S["ActionItem"][];
+  requestTicks: Ticks;
   choices: S["ActionChoice"][];
   values: Choices;
   ticks: Ticks;
   onChoice: (id: string, value: string | boolean) => void;
-  onTick: (ids: string[], value: boolean) => void;
+  onTick: (ids: string[], value: boolean, requestIds?: string[]) => void;
 }) {
   const { t } = useWords();
   const id = useId();
   const ids = props.items.map((i) => i.id);
+  const requestIds = props.requests.map((r) => r.id);
+  const itemTicks = { ...ticksOf(props.allItems), ...props.ticks };
   return (
     <section className="review-group" aria-labelledby={`${id}-h`}>
       <div className="review-group-head">
         <h3 id={`${id}-h`} className="what">
           {props.heading}
         </h3>
-        {props.items.length > 0 && (
+        {(props.items.length > 0 || props.requests.length > 0) && (
           <>
-            <span className="hint">{t("review.kept_count", { kept: countKept(props.items, props.ticks), total: props.items.length })}</span>
+            <span className="hint">
+              {props.items.length > 0
+                ? t("review.kept_count", { kept: countKept(props.items, props.ticks), total: props.items.length })
+                : t("review.kept_count", {
+                    kept: countKeptRequests(props.requests, props.allItems, itemTicks, props.requestTicks),
+                    total: props.requests.length,
+                  })}
+            </span>
             <RowMenu
               label={props.heading}
               actions={[
-                { id: "keep", label: t("review.keep_all"), run: () => props.onTick(ids, true) },
-                { id: "drop", label: t("review.drop_all"), run: () => props.onTick(ids, false) },
+                { id: "keep", label: t("review.keep_all"), run: () => props.onTick(ids, true, requestIds) },
+                { id: "drop", label: t("review.drop_all"), run: () => props.onTick(ids, false, requestIds) },
               ]}
             />
           </>
@@ -494,9 +583,17 @@ function ItemSection(props: {
   );
 }
 
-/** Work the action also starts: what it is and, when there is one, the record it is about. */
-function RequestLine(props: { request: S["ActionRequestView"] }) {
+/** Work the action also starts: a tick, what it is and, when there is one, the record it is about. One that goes with a
+ * dropped item shows dropped and can't be ticked on its own. */
+function RequestLine(props: {
+  request: S["ActionRequestView"];
+  item: S["ActionItem"] | undefined;
+  checked: boolean;
+  follows: boolean;
+  onTick: (value: boolean) => void;
+}) {
   const { t } = useWords();
+  const id = useId();
   const { request: r } = props;
   const about = r.about;
   const record = useQuery({
@@ -504,20 +601,28 @@ function RequestLine(props: { request: S["ActionRequestView"] }) {
     queryFn: () => api.record(about!.kind, about!.id),
     enabled: !!about,
   });
-  const note = r.note ? <span className="hint"> {r.note}</span> : null;
-  if (!about)
-    return (
-      <li>
-        {r.label}
-        {note}
-      </li>
-    );
   const fields = record.data?.fields ?? {};
   const named = [fields.title, fields.name].find((v): v is string => typeof v === "string" && !!v.trim());
+  const text = about ? t("review.request_about", { label: r.label, about: named ?? readableTail(about.kind) }) : r.label;
+  const hint = props.follows && props.item ? t("review.request_follows", { item: props.item.label }) : "";
   return (
     <li>
-      {t("review.request_about", { label: r.label, about: named ?? readableTail(about.kind) })}
-      {note}
+      <label className="check-line">
+        <input
+          type="checkbox"
+          checked={props.checked}
+          disabled={props.follows}
+          aria-describedby={hint ? `${id}-why` : undefined}
+          onChange={(e) => props.onTick(e.target.checked)}
+        />
+        <span>{text}</span>
+      </label>
+      {r.note && <p className="hint">{r.note}</p>}
+      {hint && (
+        <p className="hint" id={`${id}-why`}>
+          {hint}
+        </p>
+      )}
     </li>
   );
 }

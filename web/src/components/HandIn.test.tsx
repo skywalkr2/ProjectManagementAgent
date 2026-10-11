@@ -1,14 +1,37 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
 import { HandIn } from "./HandIn";
 
 const handed = () => ({ request: "REQ-1", source: null });
 
+const project = (id: string, name: string, extra: Partial<S["ProjectView"]> = {}): S["ProjectView"] => ({
+  id,
+  name,
+  group: null,
+  status: null,
+  phase: null,
+  target: null,
+  owner: null,
+  owner_name: null,
+  summary: null,
+  language: "en-US",
+  language_own: false,
+  spent_usd: 0,
+  ...extra,
+});
+const PROJECTS = [
+  project("P-1", "Harbor"),
+  project("P-2", "Lighthouse", { parent: "P-1" }),
+  project("P-3", "Old dock", { status: "Done" }),
+  project("P-4", "Ferry"),
+];
+
 async function setup() {
   const user = userEvent.setup();
-  const calls = fakeApi({ "POST handin": handed });
+  const calls = fakeApi({ "POST handin": handed, "GET projects": () => PROJECTS });
   const onClose = vi.fn();
   renderApp(<HandIn onClose={onClose} />);
   return { user, calls, onClose };
@@ -97,4 +120,36 @@ test("Private is sent with the person's own note too", async () => {
   await user.selectOptions(screen.getByLabelText("How sensitive is this?"), "Private: only accounts allowed private material");
   await user.click(screen.getByRole("button", { name: "Hand in" }));
   await waitFor(() => expect(sent(calls)).toEqual({ note: "keep this quiet", pasted: "", data_level: "restricted" }));
+});
+
+test("the project choice starts at not sure, lists every project with sub-projects after their parent, and sends none", async () => {
+  const { user, calls } = await setup();
+  const choice = screen.getByLabelText("Which project is this about?");
+  expect(choice).toHaveValue("");
+  expect(choice).toHaveAccessibleDescription("Helps Helper file things in the right place.");
+  await waitFor(() =>
+    expect(within(choice).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Not sure / several",
+      "Harbor",
+      "Harbor › Lighthouse",
+      "Old dock",
+      "Ferry",
+    ]),
+  );
+  await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
+  await user.click(screen.getByRole("button", { name: "Hand in" }));
+  await waitFor(() => expect(sent(calls)).toEqual({ note: "", pasted: "Subject: dates" }));
+  expect(sent(calls)).not.toHaveProperty("project");
+});
+
+test("a chosen project is sent by its id, and choosing not sure again takes it back", async () => {
+  const { user, calls } = await setup();
+  const choice = screen.getByLabelText("Which project is this about?");
+  await screen.findByRole("option", { name: "Harbor › Lighthouse" });
+  await user.type(screen.getByLabelText("Paste or type it here"), "Subject: dates");
+  await user.selectOptions(choice, "Harbor › Lighthouse");
+  await user.selectOptions(choice, "Not sure / several");
+  await user.selectOptions(choice, "Ferry");
+  await user.click(screen.getByRole("button", { name: "Hand in" }));
+  await waitFor(() => expect(sent(calls)).toEqual({ note: "", pasted: "Subject: dates", project: "P-4" }));
 });

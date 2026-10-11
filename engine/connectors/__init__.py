@@ -15,12 +15,16 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-ErrorKind = Literal["auth", "no_access", "not_found", "outage", "offline"]
+ErrorKind = Literal["auth", "no_access", "not_found", "outage", "offline", "throttled"]
 
 
 @dataclass(frozen=True)
 class SourceItem:
-    """One thing a source holds: a stable key within the source, a title, its text now, and who changed it last."""
+    """One thing a source holds. `key`: stable within the source (a message or event id), so the same thing read
+    again is compared with what was seen. `title`: one line naming it. `text`: everything the assistant should read
+    about it now, as plain text; a change is a change in this text. `author`: who changed it last, as the service
+    names them (triage rules compare it with `workspace.our_accounts`). `changed_at`: when, as the service says it.
+    `link`: where the person can open it."""
 
     key: str
     title: str
@@ -32,19 +36,72 @@ class SourceItem:
 
 @dataclass
 class Poll:
-    """What a source holds now. `complete`: the list is everything (an item missing from it is gone); otherwise it is
-    only what changed since `state`. `state` is kept and given back on the next read."""
+    """What a source holds now. `items`: what it lists. `complete`: True when the list is everything, so an item
+    missing from it is gone; False when it is only what changed since `state`. `removed`: keys the service says are
+    gone, for a read that lists only changes (handed in like an item missing from a complete read, when the source
+    reports removals). `state`: kept and given back on the next read (a change marker, say); a read that fails keeps
+    the state of the last read that worked."""
 
     items: list[SourceItem]
     state: dict[str, Any] = field(default_factory=dict)
     complete: bool = True
+    removed: list[str] = field(default_factory=list)
 
 
 class ConnectorError(Exception):
-    def __init__(self, kind: ErrorKind, detail: str = ""):
+    """Why a read failed. `kind`: auth (sign in again), no_access, not_found, outage (the service is failing),
+    offline (no network here: never counted as a failure), or throttled (the service asked to wait: `retry_after`
+    seconds; the source isn't read again before then, and it isn't counted as a failure). When the web client raised
+    it from an answer, `status`, `headers` and `body` (its text, at most 20 KB) are the service's own, and `json()`
+    parses the body, so a connector can read the service's error code and raise a better kind itself."""
+
+    def __init__(
+        self,
+        kind: ErrorKind,
+        detail: str = "",
+        *,
+        retry_after: float | None = None,
+        status: int | None = None,
+        headers: dict[str, str] | None = None,
+        body: str | None = None,
+    ):
         self.kind = kind
         self.detail = detail[:500]
+        self.retry_after = retry_after
+        self.status = status
+        self.headers = dict(headers or {})
+        self.body = body[:20_000] if body is not None else None
         super().__init__(f"{kind}: {self.detail}" if self.detail else kind)
+
+    def json(self) -> Any:
+        """The answer's body as JSON, or None when it isn't any."""
+        import json
+
+        try:
+            return json.loads(self.body) if self.body else None
+        except ValueError:
+            return None
+
+
+def checked_poll(poll: Any) -> Poll:
+    """A connector's answer, checked the way the watcher reads it. Raises ValueError with what is wrong."""
+    if not isinstance(poll, Poll):
+        raise ValueError("poll must return a Poll")
+    for item in poll.items:
+        if not isinstance(item, SourceItem):
+            raise ValueError("a Poll's items are SourceItems")
+        if not all(isinstance(v, str) for v in (item.key, item.title, item.text)) or not item.key:
+            raise ValueError("a SourceItem has a key, a title and its text, all text")
+    if not isinstance(poll.state, dict):
+        raise ValueError("a Poll's state is a dict")
+    if not all(isinstance(k, str) and k for k in poll.removed):
+        raise ValueError("a Poll's removed lists keys")
+    if poll.complete and poll.removed:
+        raise ValueError("only a read that lists changes (complete=False) names removed keys")
+    keys = [i.key for i in poll.items]
+    if len(keys) != len(set(keys)):
+        raise ValueError("a Poll lists each key once")
+    return poll
 
 
 @dataclass(frozen=True)

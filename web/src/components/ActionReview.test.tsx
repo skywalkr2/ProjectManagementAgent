@@ -360,7 +360,7 @@ test("work the action also starts is listed with what it is about, and says each
   const section = (await screen.findByRole("region", { name: "Also starts" })) as HTMLElement;
   expect(await within(section).findByText("Check the chapter (about The first chapter)")).toBeInTheDocument();
   expect(within(section).getByText("Summarize everything")).toBeInTheDocument();
-  expect(within(section).getByText("Each one waits for your go before it starts.")).toBeInTheDocument();
+  expect(within(section).getByText("2 of 2 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
 });
 
 test("an item that can't apply says why and starts dropped, and other problems are listed", async () => {
@@ -389,4 +389,109 @@ test("an item that can't apply says why and starts dropped, and other problems a
   expect(refused).not.toBeChecked();
   expect(refused).toHaveAccessibleDescription("Can't be applied as it stands: there is already a project called Lighthouse");
   expect(within(dialog).getByRole("alert")).toHaveTextContent("Change a choice above");
+});
+
+type Req = S["ActionRequestView"];
+const req = (id: string, extra: Partial<Req> = {}): Req => ({ id, kept: true, task: "demo/check", label: `Check ${id}`, about: null, note: "", ...extra });
+const APPLY = "POST plugin-actions/apply";
+const applied = () => ({ changeset: "CS-1", applied: 1, held: 0, refused: 0 });
+
+async function openWith(extra: Partial<S["ActionProposalView"]>) {
+  const user = userEvent.setup();
+  const calls = fakeApi({ [PREVIEW_URL]: () => proposal(extra), [APPLY]: applied });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const section = (await screen.findByRole("region", { name: "Also starts" })) as HTMLElement;
+  const dialog = screen.getByRole("dialog");
+  const applyBody = async () => {
+    await user.click(within(dialog).getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(calls.some((c) => c.route === APPLY)).toBe(true));
+    return calls.find((c) => c.route === APPLY)?.body;
+  };
+  return { user, calls, section, dialog, applyBody };
+}
+
+test("each piece of queued work has a tick, ticked as offered, and an untick is sent as that id false", async () => {
+  const { user, section, applyBody } = await openWith({ requests: [req("r1"), req("r2"), req("r3", { kept: false })] });
+  const boxes = within(section).getAllByRole("checkbox");
+  expect(boxes.map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, false]);
+  expect(within(section).getAllByRole("listitem")).toHaveLength(3);
+  expect(within(section).getByText("2 of 3 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  await user.click(within(section).getByRole("checkbox", { name: "Check r2" }));
+  expect(within(section).getByText("1 of 3 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  expect(await applyBody()).toEqual({ token: "tok-1", kept_requests: { r2: false } });
+});
+
+test("nothing about queued work is sent when the person changed none", async () => {
+  const { applyBody } = await openWith({ requests: [req("r1")] });
+  expect(await applyBody()).toEqual({ token: "tok-1" });
+});
+
+test("work that goes with an item follows it: dropped with the item, disabled, with a hint, and free again when kept", async () => {
+  const items: S["ActionItem"][] = [{ id: "i1", label: "Change the first thing", group: null, kept: true, ops: [] }];
+  const { user, dialog, section, applyBody } = await openWith({
+    items,
+    requests: [req("r1", { item: "i1" }), req("r2", { item: "i1", label: "Also check the second" }), req("r3")],
+  });
+  const first = within(section).getByRole("checkbox", { name: "Check r1" });
+  expect(first).toBeEnabled();
+  await user.click(within(section).getByRole("checkbox", { name: "Also check the second" }));
+  await user.click(within(dialog).getByRole("checkbox", { name: "Change the first thing" }));
+  expect(first).not.toBeChecked();
+  expect(first).toBeDisabled();
+  expect(first).toHaveAccessibleDescription("Goes with Change the first thing");
+  expect(within(section).getByRole("checkbox", { name: "Check r3" })).toBeEnabled();
+  expect(within(section).getByText("1 of 3 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  await user.click(within(dialog).getByRole("checkbox", { name: "Change the first thing" }));
+  expect(first).toBeEnabled();
+  expect(first).toBeChecked();
+  // The one the person unticked stays unticked.
+  expect(within(section).getByRole("checkbox", { name: "Also check the second" })).not.toBeChecked();
+  await user.click(within(dialog).getByRole("checkbox", { name: "Change the first thing" }));
+  expect(await applyBody()).toEqual({
+    token: "tok-1",
+    kept: { i1: false },
+    kept_requests: { r1: false, r2: false },
+  });
+});
+
+test("a group's Keep all and Drop all set the work that belongs to the group", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    [PREVIEW_URL]: () =>
+      proposal({ items: ITEMS, groups: GROUPS, requests: [req("r1", { group: "g1" }), req("r2", { group: "g1" }), req("r3")] }),
+  });
+  renderApp(<Harness />);
+  await user.click(screen.getByRole("button", { name: "Start it" }));
+  const group = (await screen.findByRole("region", { name: "Likely duplicates" })) as HTMLElement;
+  const section = screen.getByRole("region", { name: "Also starts" });
+  await user.click(within(group).getByRole("button", { name: "More actions for Likely duplicates" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop all" }));
+  expect(within(section).getAllByRole("checkbox").map((b) => (b as HTMLInputElement).checked)).toEqual([false, false, true]);
+  await user.click(within(section).getByRole("checkbox", { name: "Check r1" }));
+  expect(within(section).getAllByRole("checkbox").map((b) => (b as HTMLInputElement).checked)).toEqual([true, false, true]);
+  await user.click(within(group).getByRole("button", { name: "More actions for Likely duplicates" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Keep all" }));
+  expect(within(section).getAllByRole("checkbox").map((b) => (b as HTMLInputElement).checked)).toEqual([true, true, true]);
+});
+
+test("more than five pieces of work get Keep all and Drop all, and fewer do not", async () => {
+  const many = Array.from({ length: 6 }, (_, i) => req(`r${i + 1}`));
+  const { user, section, applyBody } = await openWith({ requests: many });
+  expect(within(section).getByText("6 of 6 kept")).toBeInTheDocument();
+  await user.click(within(section).getByRole("button", { name: "More actions for Also starts" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop all" }));
+  expect(within(section).getByText("0 of 6 kept")).toBeInTheDocument();
+  expect(within(section).getByText("0 of 6 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  for (const box of within(section).getAllByRole("checkbox")) expect(box).not.toBeChecked();
+  await user.click(within(section).getByRole("button", { name: "More actions for Also starts" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Keep all" }));
+  expect(within(section).getByText("6 of 6 pieces of AI work will wait for your go before they start.")).toBeInTheDocument();
+  await user.click(within(section).getByRole("checkbox", { name: "Check r4" }));
+  expect(await applyBody()).toEqual({ token: "tok-1", kept_requests: { r4: false } });
+});
+
+test("five pieces of work or fewer have no Keep all and Drop all", async () => {
+  const { section } = await openWith({ requests: Array.from({ length: 5 }, (_, i) => req(`r${i + 1}`)) });
+  expect(within(section).queryByRole("button", { name: /More actions/ })).toBeNull();
 });

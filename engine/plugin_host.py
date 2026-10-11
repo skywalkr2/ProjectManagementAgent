@@ -624,15 +624,13 @@ class PluginHost:
 
     def poll_connector(self, connector: Any, settings: Any, state: dict[str, Any], context: Any) -> Any:
         """Read a plugin's connector: its ConnectorError passes through; anything else is contained like a job."""
-        from engine.connectors import ConnectorError, Poll
+        from engine.connectors import ConnectorError, checked_poll
 
         plugin = connector.name.split("/", 1)[0]
         where = f"connector {connector.name}"
         context = self.connector_context(plugin, context.workspace_root)
         try:
-            poll = connector.poll(settings, deepcopy(state), context)
-            if not isinstance(poll, Poll):
-                raise ValueError("poll must return a Poll")
+            poll = checked_poll(connector.poll(settings, deepcopy(state), context))
         except ConnectorError:
             raise
         except Exception as err:
