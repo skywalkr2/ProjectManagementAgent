@@ -10,6 +10,17 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.20 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **`registrar.op(..., notes=True)`** offers the op to the core's reading of notes, so the assistant can use it on
+  what the person hands in. Give it an `EvidenceIn` field for what it claims; the core checks the quote.
+- **`<plugin>/*` in a `provides` list** stands for identifiers the plugin's own settings define; any identifier in
+  its namespace is accepted. It must stand alone in its list.
+- **The define-your-own kit** (`plugins/kit`, design 3.10) is built on these. Workspace templates (`templates/`,
+  `cockpit template list|apply|save`) set plugins up from one file.
+
 ## What 0.3.19 adds
 
 Manifests stay `'>=0.3,<0.4'`.

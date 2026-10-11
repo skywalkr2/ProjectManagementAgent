@@ -82,6 +82,9 @@ class Requires(Strict):
 
 
 class Provides(Strict):
+    """What the plugin registers, by identifier. A list may be just `<plugin>/*` when the plugin's own settings
+    define the identifiers (the kit's item types, say); the host then accepts any identifier in its namespace."""
+
     record_types: list[str] = Field(default_factory=list, description="Record kinds the plugin registers.")
     stages: list[str] = Field(default_factory=list, description="Own record kinds the plugin gives default stages.")
     stage_checks: list[str] = Field(default_factory=list, description="Stage entry checks the plugin registers.")
@@ -179,8 +182,10 @@ class Manifest(Strict):
             names = getattr(self.provides, category)
             if len(set(names)) != len(names):
                 raise ValueError(f"duplicate {category}")
-            if any(not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", n) for n in names):
+            if any(not re.fullmatch(re.escape(self.name) + r"/([a-z][a-z0-9_.-]*|\*)", n) for n in names):
                 raise ValueError(f"{category} identifiers must be namespaced {self.name}/<name>")
+            if f"{self.name}/*" in names and len(names) > 1:
+                raise ValueError(f"{category}: {self.name}/* stands alone (identifiers its settings define)")
         if len(set(self.events())) != len(self.subscribes):
             raise ValueError("duplicate event subscription")
         return self

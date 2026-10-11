@@ -172,6 +172,28 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: How the define-your-own kit is built
+
+**Decided by:** Claude (design), from the owner's decision of 2026-10-10; the owner can override.
+
+**What:**
+- The kit is a bundled plugin, `kit`, built only on the plugin API. It reads item types from its settings and
+  registers record types, ops, stages, a panel and Today lines for each. Its settings are the plugin's own
+  (`config/plugins/kit.yaml`), so the core config doesn't change.
+- A plugin op can be offered to reading notes, a generic extension point, so the assistant can fill the fields a person
+  allows, with evidence.
+- Templates are the kit's settings with a name and a description, shipped in `templates/`.
+- A manifest may declare `<plugin>/*` in a `provides` list for identifiers its own settings define.
+- Changing a type keeps the data: a removed field is hidden, not deleted, and a renamed field is renamed in every
+  record.
+
+**Why:**
+- Building the kit on the plugin API proves the API and keeps the core free of any one kind of work.
+- Item types are settings a person edits, so they live in config with a schema and validation, like every other
+  setting.
+
+**Impact:** Design 3.10 (new). Settings screens for the kit come with guided setup.
+
 ## 2026-10-12: Plugin API 0.3.19, and evidence only for claims
 
 **Decided by:** Claude (design), from plugin questions 69-72; the owner can override.

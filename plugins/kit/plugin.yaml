@@ -1,0 +1,21 @@
+name: kit
+version: 0.1.0
+plugin_api: '>=0.3,<0.4'
+description: Define your own kinds of items, with fields, stages, checklists and what Today shows, in settings.
+depends_on: []
+interfaces: {defines: [], provides: [], uses: []}
+subscribes: []
+provides:
+  record_types: [kit/*]
+  ops: [kit/*]
+  stage_checks: [kit/*]
+  stages: [kit/*]
+  panels: [kit/*]
+  today: [kit/*]
+config_schema: kit:Config
+requires:
+  network: []
+  secrets: []
+  data_levels: [open, internal]
+  tools: []
+entry: kit:register

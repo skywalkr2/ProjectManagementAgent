@@ -139,7 +139,7 @@ def test_a_panel_is_described_as_data_and_lists_its_rows(env):
     goals(cfg, store, "Finish the map")
     goals(cfg, store, "Already done", status="done")
     c, api = client(env)
-    panels = c.get(f"{api}/panels").json()
+    panels = [p for p in c.get(f"{api}/panels").json() if p["name"].startswith("p18/")]
     assert panels == [
         {
             "name": "p18/goals",

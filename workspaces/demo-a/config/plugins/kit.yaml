@@ -1,0 +1,60 @@
+types:
+- id: request
+  name: request
+  plural: Requests
+  prefix: RQ
+  title_field: title
+  fields:
+  - name: title
+    label: Title
+    kind: text
+  - name: client
+    label: Client
+    kind: text
+    assistant: true
+  - name: contact
+    label: Contact
+    kind: person
+  - name: due
+    label: Due
+    kind: date
+    assistant: true
+  - name: size
+    label: Size
+    kind: choice
+    options:
+    - small
+    - medium
+    - large
+    assistant: true
+  - name: brief
+    label: Brief
+    kind: long_text
+  stages:
+  - id: new
+    label: New
+    description: Just arrived; nobody has looked at it yet.
+  - id: agreed
+    label: Agreed
+    description: Scope and date agreed with the client.
+    checks:
+    - kind: filled
+      field: due
+    checklist:
+    - Scope written down
+    - Date confirmed with the client
+  - id: delivered
+    label: Delivered
+    description: Handed over to the client.
+    checks:
+    - kind: checklist
+  columns:
+  - title
+  - client
+  - due
+  - size
+  today:
+    due_field: due
+    due_within_days: 7
+    missing:
+    - due

@@ -223,3 +223,43 @@ optionally:
 **Tested together.** CI runs every bundled pack alone, every pair that shares an interface, and the core with no packs, on
 both fictional workspaces. An interface version that a user declares but no enabled plugin provides is a self-check failure
 when required and a quiet absence when optional.
+
+## 3.10 The define-your-own kit
+
+The free version is the core plus a kit for defining one's own kind of work on screens, with no code (decisions,
+2026-10-10). The kit is a bundled plugin, `kit`, built only on the plugin API, so it proves the API and needs nothing
+special from the core.
+
+**What a person defines** (kept in the kit's settings, `config/plugins/kit.yaml`, edited on settings screens, saved and
+shared as one template file):
+
+- **Item types**, such as a "deliverable", a "submission" or a "client request". Each has a name, a plural, an id
+  prefix, and **fields** of the kinds text, long text, date, number, yes/no, choice (with its options), person (a person's
+  id) and link. One text field is the title. An item may belong to a project.
+- **Stages** for an item type, with a plain description each and entry checks chosen from a short list (a field is
+  filled, a checklist is complete, a date has passed). They become the type's default stages (6.26).
+- **Checklists** per stage: lines the person ticks.
+- **What the assistant may fill**: the fields reading notes may set from inputs, always with evidence (6.7). The others
+  only the person sets.
+- **What Today shows**: items due within a number of days, items waiting at a stage, items missing a field.
+- **The list screen** for each type: which fields are its columns, how it is grouped.
+
+**How it works.**
+- At start-up the kit plugin reads its settings and registers, for each item type:
+  - a record type `kit/<type>`, with its layout in the synced folder (`<plural>/<title>`);
+  - ops `kit/<type>.add`, `kit/<type>.set` and `kit/<type>.tick`;
+  - its stages and stage checks;
+  - a panel;
+  - Today lines;
+  - for the fields the assistant may fill, an op reading notes may use (a plugin op can be offered to reading notes),
+    with evidence required.
+- Settings are validated like every config file: a field kind the kit doesn't know, a choice without options, two
+  types with one prefix, or a stage check naming a field the type lacks is refused with the reason.
+- **Changing a type keeps the data.** Adding a field or an option is immediate. A field removed from the type is hidden,
+  and its values stay in the records and the readable folder until the person deletes them. A field renamed in the
+  settings is one change that renames it in every record. An item type with items can't be deleted, only hidden.
+
+**Templates.** A template is the kit's settings plus a name and a description. Starting templates ship with the core in
+`templates/`. A template is applied in the first-run wizard or later from settings; applying one to a workspace that
+already has types adds the new ones and leaves the existing ones as they are. "Save as template" writes the current
+settings to a file to share. The fictional demo workspaces run on templates.

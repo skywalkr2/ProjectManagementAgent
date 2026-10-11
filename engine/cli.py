@@ -114,6 +114,15 @@ def _parser() -> argparse.ArgumentParser:
     which.add_argument("--folder", action="store_true", help="keep the synced folder's copy; this one is backed up")
     sp.set_defaults(func=cmd_sync)
 
+    sp = sub.add_parser("template", help="list, apply or save workspace templates")
+    ws_arg(sp)
+    sp.add_argument("action", choices=["list", "apply", "save"])
+    sp.add_argument("name", nargs="?", help="apply: a starting template's id or a file; save: the file to write")
+    sp.add_argument("--title", default="My template", help="save: the template's name")
+    sp.add_argument("--description", default="", help="save: one line on what it sets up")
+    sp.add_argument("--plugin", action="append", default=[], help="save: a plugin whose settings to include")
+    sp.set_defaults(func=cmd_template)
+
     sp = sub.add_parser("config", help="show the effective configuration")
     ws_arg(sp)
     sp.add_argument("action", choices=["show"])
@@ -308,6 +317,33 @@ def cmd_sync(args: argparse.Namespace) -> int:
         print(f"cockpit: {err}", file=sys.stderr)
         return 1
     print(f"Kept {'this computer' if args.here else 'the synced folder'}'s copy. The other was saved to {saved}.")
+    return 0
+
+
+def cmd_template(args: argparse.Namespace) -> int:
+    from engine import templates
+
+    if args.action == "list":
+        for t in templates.shipped():
+            print(f"{t['id']:<20} {t['name']}: {t['description']}")
+        return 0
+    ws = resolve(args.workspace)
+    if not args.name:
+        print("cockpit: name the template (apply) or the file to write (save).", file=sys.stderr)
+        return 1
+    try:
+        if args.action == "apply":
+            plugins = templates.apply(ws, args.name)
+            print(f"Applied {args.name}: set up {', '.join(plugins) or 'nothing'}. Restart the app to use it.")
+        else:
+            if not args.plugin:
+                print("cockpit: name the plugins whose settings to save with --plugin.", file=sys.stderr)
+                return 1
+            path = templates.save(ws, Path(args.name), args.title, args.description, args.plugin)
+            print(f"Saved the template to {path}.")
+    except templates.TemplateError as err:
+        print(f"cockpit: {err}", file=sys.stderr)
+        return 1
     return 0
 
 

@@ -4,7 +4,7 @@ The working checklist from today to the first public release. Tick items as they
 time come from `schedule.md`; what is in each horizon comes from `scope.md`; the milestones are in `docs/design/13-build-plan.md`.
 "1.0" is the first public release, which is version 1 in the plan.
 
-Last updated: 2026-10-10.
+Last updated: 2026-10-12.
 
 ## 1. Launch slice (done)
 
@@ -27,7 +27,7 @@ Last updated: 2026-10-10.
 - [ ] Guided install and setup: built screens in the package, one-step install and update, first-run wizard, settings
   screens; agent accounts; ask the assistant about the app; a user guide.
 - [ ] **Friends' preview**: packaged install, guided setup, labeled demo, bring-your-own AI, feedback button, download.
-- [ ] Plugin API 0.3 with the file channel (uploads, previews, person actions); dependencies and baselines.
+- [x] Plugin API 0.3 with uploads, previews and person actions (2026-10-11); now 0.3.19, see `docs/plugin-api-0.x.md`.
 - [ ] Watchers and lookups (engine and general sources in the core; product connectors as plugins).
 - [ ] Publishing pack in its own private repository. For the 2026-12-01 launch, a publishing template built with the
   kit is the stretch goal, alongside the manual process.
@@ -49,19 +49,19 @@ Last updated: 2026-10-10.
 
 ## 3a. Plugin host and document features early (from 2026-10-31, separate branch, about three and a half weeks)
 
-- [ ] Minimal plugin host: plugin API 0.x, manifests, registries, plugins working together (3.9), one example plugin.
-- [ ] Long text with versions and authorship (5.0).
-- [ ] Drafts with prose output; proposed versions and accepting them per passage (6.7).
-- [ ] Compare view for long text, two-way and three-way (7.2).
-- [ ] Long text formats (`plain`, `markdown`, plugin-registered) dividing text into units; paragraph-anchored drafts; lints computed in code, anchored to passages; lints on drafts count for escalation (6.7, 3.3, 6.16).
-- [ ] Events: `record.changed` with full details, `text.accepted` (3.4).
-- [ ] Working copies: hand out for the person's own tools, take back, review (5.0, 3.3).
-- [ ] Stages (6.26).
-- [ ] Cost control: estimates, a go above a set amount, budgets per task kind and per record (6.16).
-- [ ] Independent second opinion (6.16).
-- [ ] File channel (6.3).
-- [ ] Two computers through a synced folder: readable export by project, lease in the folder, no silent merges (5.0).
-- [ ] Plugin developer guide generated from the plugin API, for plugins kept in other repositories.
+- [x] Plugin host: plugin API 0.x, manifests, registries, plugins working together through interfaces (3.9), one example plugin (2026-10-12).
+- [x] Long text with versions and authorship (5.0) (2026-10-11).
+- [x] Drafts with prose output; proposed versions and accepting them per passage (6.7) (2026-10-11).
+- [ ] Compare view for long text, two-way and three-way (7.2). Routes done (2026-10-11); the screen is in the UX pass.
+- [x] Long text formats (`plain`, `markdown`, plugin-registered) dividing text into units; paragraph-anchored drafts; lints computed in code, anchored to passages; lints on drafts count for escalation (6.7, 3.3, 6.16) (2026-10-11).
+- [x] Events: `record.changed`, `text.accepted`, and interface events (3.4) (2026-10-12).
+- [x] Working copies: hand out for the person's own tools, take back, review (5.0, 3.3) (2026-10-11; screens in the UX pass).
+- [x] Stages (6.26) (2026-10-10).
+- [x] Cost control: estimates, a go above a set amount, budgets per task kind and per project (6.16) (2026-10-11).
+- [x] Independent second opinion, with roles and same-account checks (6.16) (2026-10-12).
+- [ ] File channel (6.3). Files, uploads and outputs exist (2026-10-12); the publisher's channel waits for M6.
+- [x] Two computers through a synced folder: readable layout by project, lease in the folder, no silent merges, outside edits back for review (5.0) (2026-10-12).
+- [x] Plugin developer guide generated from the plugin API, for plugins kept in other repositories (2026-10-11).
 - [ ] A sandbox workspace for trying plugins, apart from the launch workspace.
 
 ## 4. Retrospective (by 2026-12-11)

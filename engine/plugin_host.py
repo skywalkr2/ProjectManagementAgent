@@ -139,6 +139,7 @@ class PluginHost:
             )
         self.stages.types = merged
         self._check_interfaces()
+        self._offer_to_notes()
         running = {name for name in self.status if self.active(name)}
         try:
             validate_rules(cfg.rules, self.stage_checks, running)
@@ -182,6 +183,21 @@ class PluginHost:
             except Exception as err:
                 if ep.name in self.cfg.workspace.plugins.enabled:
                     self.disable(ep.name, str(err))
+
+    def _offer_to_notes(self) -> None:
+        """Add running plugins' ops registered with notes=True to what reading notes may use."""
+        from dataclasses import replace as _replace
+
+        offered = sorted(
+            name
+            for plugin, registrar in self.registrars.items()
+            if self.active(plugin)
+            for name, op in registrar.ops.items()
+            if op.notes
+        )
+        if offered and "notes" in self.tasks:
+            notes = self.tasks["notes"]
+            self.tasks["notes"] = _replace(notes, ops=tuple(dict.fromkeys([*notes.ops, *offered])))
 
     # ---- interfaces (design 3.9) ----------------------------------------------------------------------------------
 
@@ -569,6 +585,23 @@ class PluginHost:
                 context,
             )
 
+    @staticmethod
+    def settings_schema(manifest_path: Path) -> type[Settings]:
+        """A plugin's settings schema, loaded without starting the plugin (for checking settings before writing)."""
+        manifest = read_manifest(manifest_path)
+        root = manifest_path.parent
+        top = manifest.entry.split(":")[0].split(".")[0]
+        loader = PluginHost.__new__(PluginHost)
+        loader._modules = []
+        try:
+            schema = loader._importer(root, top)(manifest.config_schema)
+        finally:
+            for name in [m for m in sys.modules if any(m == n or m.startswith(n + ".") for n in loader._modules)]:
+                sys.modules.pop(name, None)
+        if not isinstance(schema, type) or not issubclass(schema, Settings):
+            raise ValueError("config schema must derive from plugin_api.Settings")
+        return schema
+
     def _importer(self, root: Path, top: str):
         namespace = "_cockpit_plugin_" + uuid.uuid4().hex
         self._modules.append(namespace)
@@ -620,7 +653,13 @@ class PluginHost:
             ("today", registrar.today_lines),
             ("jobs", registrar.jobs),
         ):
-            if set(getattr(expected, key)) != set(actual):
+            declared = set(getattr(expected, key))
+            if f"{registrar.name}/*" in declared:
+                # Identifiers the plugin's own settings define: any of its namespace, and only those.
+                if not all(n.startswith(registrar.name + "/") for n in actual):
+                    raise ValueError(f"registered {key} must be in the plugin's own namespace")
+                continue
+            if declared != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
         if set(manifest.interfaces.defines) != set(registrar.interface_definitions):
             raise ValueError("registered interface definitions do not match interfaces.defines exactly")

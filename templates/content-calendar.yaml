@@ -1,0 +1,34 @@
+name: Content calendar
+description: Pieces to write and publish, by channel and date, from idea to published.
+plugins:
+  kit:
+    types:
+      - id: piece
+        name: piece
+        plural: Pieces
+        prefix: PC
+        title_field: title
+        fields:
+          - {name: title, label: Title, kind: text}
+          - {name: channel, label: Channel, kind: choice, options: [newsletter, blog, social], assistant: true}
+          - {name: publish_on, label: Publish on, kind: date, assistant: true}
+          - {name: owner, label: Owner, kind: person}
+          - {name: draft, label: Draft, kind: long_text}
+          - {name: link, label: Published at, kind: link}
+        stages:
+          - {id: idea, label: Idea, description: Worth doing; not started.}
+          - id: drafting
+            label: Drafting
+            description: Being written.
+            checklist: [Outline agreed, First draft done, Read through]
+          - id: scheduled
+            label: Scheduled
+            description: Ready, with a date.
+            checks: [{kind: checklist}, {kind: filled, field: publish_on}]
+          - id: published
+            label: Published
+            description: Out, with its link.
+            checks: [{kind: filled, field: link}]
+        board_by: channel
+        columns: [channel, title, publish_on]
+        today: {due_field: publish_on, due_within_days: 3, waiting_at: [scheduled]}

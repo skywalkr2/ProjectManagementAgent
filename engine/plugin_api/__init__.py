@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.19"
+PLUGIN_API_VERSION = "0.3.20"
 
 
 class Settings(BaseModel):
@@ -732,6 +732,7 @@ class OpRegistration:
     tier: Tier
     apply: Callable
     writes: dict[str, tuple[str, ...]]
+    notes: bool = False
 
 
 @dataclass(frozen=True)
@@ -780,11 +781,13 @@ class Registrar:
             raise ValueError("duplicate record kind or invalid id prefix")
         self.records[model.record_kind] = model
 
-    def op(self, model: type[OpModel], tier: Tier, apply: Callable) -> None:
+    def op(self, model: type[OpModel], tier: Tier, apply: Callable, *, notes: bool = False) -> None:
         """Register an op: an `OpModel` subclass with a single literal `op` id and a `writes` class variable mapping
         own record kinds to the fields it may change (`("*",)` to create or delete). `tier` is "data" or "system"
         (system ops from the assistant wait for the person). `apply(op, writer, settings)` makes the change through
-        the `OpWriter`; raising StoreError refuses this op only."""
+        the `OpWriter`; raising StoreError refuses this op only. With `notes=True` the op is also offered to the
+        core's reading of notes, so the assistant can use it on what the person hands in: give it an `EvidenceIn`
+        field, which the core checks against the input, for anything it claims."""
         if not issubclass(model, OpModel) or "op" not in model.model_fields:
             raise ValueError("op requires an OpModel with a literal op identifier")
         annotation = model.model_fields["op"].annotation
@@ -801,7 +804,7 @@ class Registrar:
         for kind in writes:
             if "/" in kind:
                 self._name(kind)
-        self.ops[name] = OpRegistration(model, tier, apply, writes)
+        self.ops[name] = OpRegistration(model, tier, apply, writes, bool(notes))
 
     def op_validator(self, op_name: str, fn: Callable) -> None:
         """Check a core or own op before it applies: `fn(op, view, origin)` (or `fn(op, view)`; `origin` may also be

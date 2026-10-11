@@ -10,7 +10,7 @@ user:
 owner_format: "{team} ({full_name})"
 language: en-US
 plugins:
-  enabled: [example]
+  enabled: [example, kit]
   actions:
     keep_minutes: 60
     preview_mb: 5
