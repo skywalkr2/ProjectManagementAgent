@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.9"
+PLUGIN_API_VERSION = "0.3.10"
 
 
 class Settings(BaseModel):
@@ -56,6 +56,15 @@ class _Any:
 
 #: "No filter" for view.list's project argument; None means records in no project.
 ANY: Any = _Any()
+
+
+def _data_path(path: str) -> str:
+    from pathlib import PurePosixPath
+
+    clean = PurePosixPath(path.replace("\\", "/"))
+    if not path or clean.is_absolute() or ".." in clean.parts or re.match(r"^[A-Za-z]:", path):
+        raise StoreError(f"{path!r} must be a relative path inside the plugin's data")
+    return str(clean)
 
 
 class NeedsPerson(StoreError):
@@ -114,6 +123,32 @@ class ReadView:
     read_text: Callable[[str], str] | None = None
     #: Set by the host: reads a saved source's text by its content hash.
     read_source: Callable[[str], str] | None = None
+    #: Set by the host: the plugin's data layers, shipped first and the most specific last.
+    data_layers: Callable[[str | None], list[Path]] | None = None
+
+    def data(self, path: str, *, project: str | None = None) -> bytes | None:
+        """A data file by relative path ("templates/classic.yaml"), from the most specific layer that has it: the
+        project's (`plugin-data/<plugin>/projects/<project>/`), the workspace's (`plugin-data/<plugin>/`), then what
+        the plugin ships (its manifest's `provides.data` folder). None when no layer has it. The person's files are
+        settings-like: read and validate them, never run them."""
+        rel = _data_path(path)
+        for layer in reversed(self.data_layers(project) if self.data_layers else []):
+            candidate = layer / rel
+            if candidate.is_file() and candidate.resolve().is_relative_to(layer.resolve()):
+                return candidate.read_bytes()
+        return None
+
+    def data_files(self, folder: str = "", *, project: str | None = None) -> list[str]:
+        """Relative paths of the data files under a folder, across all layers, each once, sorted."""
+        rel = _data_path(folder) if folder else ""
+        found = set()
+        for layer in self.data_layers(project) if self.data_layers else []:
+            base = layer / rel if rel else layer
+            if base.is_dir():
+                for item in base.rglob("*"):
+                    if item.is_file() and not item.is_symlink():
+                        found.add(item.relative_to(layer).as_posix())
+        return sorted(found)
 
     def source_text(self, source_id: str) -> str:
         """The text of a saved core `source` (a handed-in email, a page): untrusted material to check quotes against,

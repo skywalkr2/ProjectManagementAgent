@@ -10,6 +10,18 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.10 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Data files: `provides.data` names a folder beside `plugin.yaml` with what the plugin ships. `view.data(path,
+  project=None)` reads a file from the most specific layer that has it (the project's
+  `plugin-data/<plugin>/projects/<id>/`, the workspace's `plugin-data/<plugin>/`, then what the plugin ships);
+  `view.data_files(folder, project=None)` lists them across layers. Paths stay inside the data; the workspace's layer is
+  committed with config and included in backups.
+- Prompt bundles are the task kind's `packet` function: it says exactly what each run sees, part by part, with trust
+  and reference-only marks. No separate declaration is needed.
+
 ## What 0.3.9 adds
 
 Manifests stay `'>=0.3,<0.4'`.

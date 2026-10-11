@@ -209,6 +209,10 @@ class PluginHost:
             self.status[name] = PluginStatus(name, "loading", manifest.version, notes=list(self.notes.get(name, [])))
             if Version(PLUGIN_API_VERSION) not in SpecifierSet(manifest.plugin_api):
                 raise ValueError(f"plugin API {PLUGIN_API_VERSION} is outside {manifest.plugin_api}")
+            if manifest.provides.data and not (path.parent / manifest.provides.data).is_dir():
+                raise ValueError(
+                    f"provides.data names {manifest.provides.data}, which isn't a folder beside plugin.yaml"
+                )
             for key in NOT_YET:
                 section, _, attribute = key.partition(".")
                 if getattr(getattr(manifest, section), attribute):
@@ -522,8 +526,24 @@ class PluginHost:
         view.read_file = lambda file_id: read_bytes(self.store, file_id)[1]
         view.read_text = lambda sha256: read_text(self.store, sha256)
         view.read_source = lambda digest: _source_text(self.store, digest)
+        plugin = getattr(view, "_ReadView__plugin", None)
+        view.data_layers = lambda project: self.data_layers(plugin, project)
         view.default_language = self.cfg.workspace.language
         return view
+
+    def data_layers(self, plugin: str | None, project: str | None = None) -> list[Path]:
+        """A plugin's data folders, least specific first: what it ships, the workspace's, then the project's."""
+        if plugin is None or plugin not in self.manifests:
+            return []
+        layers = []
+        shipped = self.manifests[plugin].provides.data
+        if shipped:
+            layers.append(self.candidates[plugin].parent / shipped)
+        workspace = self.store.path.parent / "plugin-data" / plugin
+        layers.append(workspace)
+        if project and re.fullmatch(r"[A-Z]+-[0-9]+", project):
+            layers.append(workspace / "projects" / project)
+        return layers
 
     def text_formats(self) -> dict[str, Any]:
         """The core's long text formats and those of running plugins."""

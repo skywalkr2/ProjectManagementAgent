@@ -138,7 +138,7 @@ def commit_export(workspace_root: Path, message: str) -> bool:
     if not (workspace_root / ".git").exists():
         return False
     git = ["git", "-C", str(workspace_root), "-c", "user.name=PM Cockpit", "-c", "user.email=cockpit@localhost"]
-    paths = [name for name in ("config", "data") if (workspace_root / name).exists()]
+    paths = [name for name in ("config", "data", "plugin-data") if (workspace_root / name).exists()]
     if not paths:
         return False
     subprocess.run([*git, "add", "-A", "--", *paths], check=True, capture_output=True)

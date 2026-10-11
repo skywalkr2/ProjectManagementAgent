@@ -89,6 +89,11 @@ class Provides(Strict):
     today: list[str] = Field(default_factory=list, description="Lines on Today. Not yet available.")
     jobs: list[str] = Field(default_factory=list, description="Scheduled work. Not yet available.")
     playbook: str | None = Field(None, description="The plugin's own playbook. Not yet available.")
+    data: str | None = Field(
+        None,
+        description="A folder beside plugin.yaml holding the data files the plugin ships (templates, word lists); the "
+        "workspace overrides them in plugin-data/<plugin>/ and per project in plugin-data/<plugin>/projects/<id>/.",
+    )
 
 
 class Subscription(Strict):
