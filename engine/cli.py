@@ -167,6 +167,12 @@ def _parser() -> argparse.ArgumentParser:
     ws_arg(sp)
     sp.set_defaults(func=cmd_backup)
 
+    sp = sub.add_parser("pack", help="check a pack before asking for it to be published")
+    sp.add_argument("action", choices=["check"])
+    sp.add_argument("folder", type=Path, help="the pack's plugin folder (the one holding plugin.yaml)")
+    sp.add_argument("--entry", type=Path, help="its catalog entry (catalog/pack.yaml), to compare with plugin.yaml")
+    sp.set_defaults(func=cmd_pack)
+
     sp = sub.add_parser("evaluate", help="score an AI account on a fictional workspace's cases")
     sp.add_argument("--from", dest="template", type=Path, help="workspace whose evals/ to run (default: --workspace)")
     sp.add_argument(
@@ -247,6 +253,15 @@ def add_plugin(ws: Workspace, plugin: str) -> str:
     if name not in enabled:
         path.write_text(set_key(text, ["plugins", "enabled"], [*enabled, name]), encoding="utf-8")
     return name
+
+
+def cmd_pack(args: argparse.Namespace) -> int:
+    from engine.pack_check import check
+
+    report = check(args.folder, args.entry)
+    print("\n".join(report.lines()))
+    print("All checks pass." if report.ok else f"{len(report.failed)} check(s) failed.")
+    return 0 if report.ok else 1
 
 
 def cmd_init(args: argparse.Namespace) -> int:

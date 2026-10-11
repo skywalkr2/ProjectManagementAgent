@@ -161,7 +161,7 @@ def _join(*parts: str) -> str:
 def build() -> str:
     import engine.plugin_api as api
     import engine.plugin_api.testing as testing
-    from engine import actions, plugin_host, plugin_manifest, texts, tools, working
+    from engine import actions, pack_check, plugin_host, plugin_manifest, texts, tools, working
     from engine.config.schema import FileLimits, PluginSettings
     from engine.ops import OP_MODELS
     from engine.records import REGISTRY
@@ -309,6 +309,13 @@ def build() -> str:
             _methods(api.ToolBox, "context.tools"),
             "### ToolResult\n\n" + _para(_doc(api.ToolResult)),
             _table(["Field", "Type", "Default"], _dataclass_rows(api.ToolResult)),
+        ),
+        _section("Publishing a pack", _para(_doc(pack_check))),
+        _section(
+            "Wording",
+            "A plugin's wording files (`provides.wording`) may set these keys for identifiers in its own namespace; "
+            "the screens read nothing else from them. The workspace's `ui.wording` overrides any of them.",
+            _table(["Key", "What it names"], [[f"`{k}`", v] for k, v in plugin_host.WORDING_KEYS.items()]),
         ),
         _section(
             "Connectors",

@@ -3,6 +3,40 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Publishing a pack is a set process the owner approves
+
+**Decided by:** project owner (a set process; plugin sessions never publish to the catalog); project lead (the steps).
+
+**What:** A plugin repository releases in its own repository, keeps its entry in `catalog/pack.yaml`, runs `cockpit
+pack check` (the manifest fits this host, the pack loads in a demo workspace, the entry matches `plugin.yaml` as
+written), and adds a Publish request to its questions file. The host's session verifies the release itself and opens
+a pull request on the catalog; the owner merges it, and only then is the pack listed. The steps are in the generated
+developer guide ("Publishing a pack"), the catalog's PUBLISHING.md and `docs/plugin-kickoff-template.md`, which every
+new plugin repository's kickoff brief is built from.
+
+**Why:** The catalog is public and lists only what the owner chooses; a checked, repeatable path keeps entries honest
+about what a pack reaches and keeps.
+
+**Impact:** `engine/pack_check.py` and `cockpit pack check`; plugin API 0.3.37 notes; the catalog's main branch takes
+changes by pull request only.
+
+## 2026-10-11: The core is an everyday assistant, with Today as a dashboard
+
+**Decided by:** project owner.
+
+**What:** The core serves anyone running their own days, not only project managers: a solo person sets it up and lets
+it read their mail and calendar and tell them what to do each day; a PM gets the same home and more. Today becomes a
+dashboard that uses the screen: on a laptop, several columns visible without scrolling (today's agenda, what to do
+today, what needs a reply or a decision, what changed since last time), each column scrolling on its own with a way to
+see everything; fewer columns on smaller screens, one on a phone. Calendar events and mail messages that sources read
+carry structured fields (start, end, place, people, sender) so the agenda and the inbox show them without an AI call.
+
+**Why:** The same daily needs sit under every kind of work; a one-column list wastes a laptop screen and hides things
+below the fold.
+
+**Impact:** Design Part 7 (Today) and 6.4 (watched items carry structure); a Today redesign; `SourceItem` gains
+optional event and message fields in a plugin API version; the scope's audience widens beyond project managers.
+
 ## 2026-10-11: One source of truth, value lists instead of free text, and settings that guide
 
 **Decided by:** project owner.

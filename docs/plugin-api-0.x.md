@@ -10,6 +10,28 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.37 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Publishing a pack:** a set process (the guide's "Publishing a pack" section and the catalog's PUBLISHING.md):
+  release in the pack's own repository, write `catalog/pack.yaml`, run `cockpit pack check <folder> --entry
+  catalog/pack.yaml`, add a Publish request to the questions file and tell the host's session. The host verifies and
+  opens a pull request on the catalog; the owner merges it. A plugin repository never writes to the catalog.
+- **`cockpit pack check`:** the manifest reads and fits this host, the pack loads in a throwaway demo workspace, and
+  the catalog entry fits the catalog's format and matches `plugin.yaml` as written (id, version, `plugin_api`,
+  `provides`, `requires`).
+- **Setup steps and secrets:** a `done` taking a third argument gets the names of the plugin's declared secrets that
+  are set (a frozenset, never the values).
+- **Wording keys:** a plugin's wording files may set only the keys the screens read for its own things, now listed
+  in the guide's Wording section (`task.`, `stages.group.`, `op.`, `setup_step.`, `welcome.skip.`); others are left
+  out with a note. Connectors, sign-ins, actions, panels and triage rule kinds take their names from `label`.
+- **A linked plugin imports its own package by name:** a plugin folder with an `__init__.py` is loaded under its
+  package's own name (unless something else has it), so `from mypack.part import x` works linked as it does
+  installed.
+- **Guide notes:** `context.access_token` on a sign-in the plugin doesn't register raises `PluginMisuse`; a
+  `client_secret` is sent to `token_url` with the code and every renewal, beside PKCE.
+
 ## What 0.3.36 adds
 
 Manifests stay `'>=0.3,<0.4'`.

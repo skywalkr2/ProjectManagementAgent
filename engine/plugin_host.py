@@ -45,6 +45,29 @@ from engine.tasks import TASKS
 BUNDLED = Path(__file__).resolve().parents[1] / "plugins"
 #: The longest text a plugin's wording entry may have.
 WORDING_MAX = 200
+#: The wording keys the screens read for a plugin's own things, with what each names. A plugin's wording file may set
+#: only these, for identifiers in its own namespace; connectors, sign-ins, actions, panels and triage rule kinds take
+#: their names from their registration's `label` instead.
+WORDING_KEYS = {
+    "task.{task kind}": "What a kind of AI work is called (set from the task kind's label unless the file sets it).",
+    "stages.group.{record kind}": "The heading for a kind of record on the Stages screen.",
+    "op.{op}": "What an op is called in What changed and on reviews.",
+    "setup_step.{setup step}": "A setup step's title in the setup guide (instead of its label).",
+    "setup_step.{setup step}.explanation": "A setup step's explanation in the setup guide.",
+    "welcome.skip.{setup step}": "The words on a setup step's Skip button.",
+}
+
+
+def _wording_key_known(key: str) -> bool:
+    import re
+
+    for pattern in WORDING_KEYS:
+        regex = "^" + re.sub(r"\\{[^}]+\\}", r"\\S+", re.escape(pattern)) + "$"
+        if re.match(regex, key):
+            return True
+    return False
+
+
 #: Events plugins may subscribe to: what each means and the fields of its payload. Payloads carry ids and names,
 #: never record contents; read the record for its values.
 EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
@@ -744,8 +767,13 @@ class PluginHost:
 
         registrar = self.registrars[plugin]
         reader = self._with_files(ReadView(self.store.read(), plugin))
+        args = [reader, registrar.config.model_copy(deep=True)]
+        if _positional_count(step.done) >= 3:
+            root = Path(self.store.path).parent
+            declared = self.manifests[plugin].requires.secrets
+            args.append(frozenset(n for n in declared if self.plugin_secret(plugin, n, root)))
         try:
-            done = bool(step.done(reader, registrar.config.model_copy(deep=True)))
+            done = bool(step.done(*args))
         except Exception as err:
             self.failed(plugin, f"setup step {step.name}", err)
             return False
@@ -1031,6 +1059,11 @@ class PluginHost:
         self._modules.append(namespace)
         init = root / "__init__.py"
         if init.exists():
+            # A plugin may import its own package by name, as it would when installed: it is loaded under that name,
+            # unless something else already has it.
+            if top and top not in sys.modules and importlib.util.find_spec(top) is None:
+                self._modules.append(top)
+                namespace = top
             spec = importlib.util.spec_from_file_location(namespace, init, submodule_search_locations=[str(root)])
             module = importlib.util.module_from_spec(spec)
             sys.modules[namespace] = module
@@ -1332,11 +1365,16 @@ class PluginHost:
                     if (
                         not isinstance(key, str)
                         or f"{plugin}/" not in key
+                        or not _wording_key_known(key)
                         or not isinstance(text, str)
                         or not text.strip()
                         or len(text) > WORDING_MAX
                     ):
-                        self._note(plugin, f"its wording {key!r} was left out: keys name its own things, text is short")
+                        self._note(
+                            plugin,
+                            f"its wording {key!r} was left out: it isn't a key the screens read for its own things "
+                            "(see the guide), or the text isn't short",
+                        )
                         continue
                     found[key] = " ".join(text.split())
         return found

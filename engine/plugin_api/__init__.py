@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.36"
+PLUGIN_API_VERSION = "0.3.37"
 
 
 class Settings(BaseModel):
@@ -1359,14 +1359,16 @@ class Registrar:
         OAuth 2.0 authorization code with PKCE. `authorize_url` and `token_url` are the service's HTTPS addresses, on
         hosts listed in `requires.network`; `scopes` are what it asks the person to allow; `client_id` (and
         `client_secret`, for services that issue one to apps on a computer) name secrets in `requires.secrets` that
-        hold the app registration the person made with the service; `params` adds parameters to the sign-in page's
+        hold the app registration the person made with the service (the secret, when given, is sent to `token_url`
+        with the code and with every renewal, beside PKCE); `params` adds parameters to the sign-in page's
         address. The person signs in from Settings; the core receives the answer at its own callback address
         (`<the app's address><base path>/api/sign-ins/callback`, which the app registration must allow: register
         exactly the address the Sign-ins section shows, since some services tell `localhost` from `127.0.0.1`, and
         register it again if the app's address or port changes), keeps the
         tokens on this computer and renews them. A connector gets a current token with
         `context.access_token(name)`; when the person needs to sign in (again) it raises `ConnectorError("auth",
-        ...)`, which asks them once. The plugin never sees the sign-in itself or the refresh token.
+        ...)`, which asks them once; naming a sign-in the plugin doesn't register raises `PluginMisuse`. The
+        plugin never sees the sign-in itself or the refresh token.
 
         `allows` says in plain words what the person is asked to allow ("Read your mail"), shown on the Sign-ins
         row and the setup step before they leave for the service's page. `account(context) -> str`, when given, is
@@ -1426,7 +1428,9 @@ class Registrar:
     ) -> None:
         """A step of the first-run setup (listed in `provides.setup_steps`), shown after the core's steps: `label` says
         what to do in a few words, `explanation` why, and `done(view, settings) -> bool` whether it is done, called
-        whenever setup is shown, so it must be quick and deterministic. `action` is one of this plugin's person
+        whenever setup is shown, so it must be quick and deterministic. A `done` taking a third argument gets the
+        names of its declared secrets that are set (a frozenset; never their values), so a step such as "set up the
+        app registration" can tell when it is done. `action` is one of this plugin's person
         actions on the workspace, offered as the step's button; without one, the step points to the plugin's
         settings. `settings` suggests core settings the plugin needs ({"ai.budgets.confirm_unpriced": True}): the
         step shows them with an Apply button that saves them like any settings change (checked, with Undo); the
