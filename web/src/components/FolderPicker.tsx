@@ -13,6 +13,12 @@ export function joinPath(base: string, name: string): string {
   return base.endsWith(sep) ? `${base}${name}` : `${base}${sep}${name}`;
 }
 
+/** Whether this app can list folders here. It can't when hosted; callers then offer a typed path and say nothing about it. */
+export function useFolderListing(enabled = true): boolean {
+  const probe = useQuery({ queryKey: ["folders", ""], queryFn: () => api.folders(), retry: false, enabled });
+  return enabled && !probe.isError;
+}
+
 export function FolderPicker(props: { start?: string; onPick: (path: string) => void; onClose: () => void }) {
   const { t } = useWords();
   const titleId = useId();

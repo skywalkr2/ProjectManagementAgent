@@ -254,7 +254,79 @@ test("a save that restarts the app says so in a live region until it is back", a
   const live = screen.getAllByRole("status").find((el) => el.classList.contains("restart-slot"))!;
   await waitFor(() => expect(live).toHaveTextContent("Restarting to use the new settings…"));
   await user.click(screen.getByRole("button", { name: "reconnect" }));
-  await waitFor(() => expect(live).toBeEmptyDOMElement());
+  await waitFor(() => expect(live).toHaveTextContent("Restarted with the new settings."));
+});
+
+const DEPENDENTS: S["SettingItem"][] = [
+  item("demo.auto", { type: "yes_no", value: false, default: false, description: "Do it on a schedule." }),
+  item("demo.hours", { type: "integer", value: 6, default: 6, enabled_by: "demo.auto", description: "Hours between runs." }),
+  item("demo.folder", { value: "", picker: "folder", description: "Where it goes." }),
+  item("demo.keep", { type: "integer", value: 3, default: 3, enabled_by: "demo.folder", description: "How many to keep." }),
+];
+
+test("a setting that needs a switch is greyed with a reason while it is off, and works once the switch is turned on in the form", async () => {
+  const user = userEvent.setup();
+  const calls = api(DEPENDENTS);
+  open();
+  const hours = await screen.findByLabelText("Hours between runs.");
+  expect(hours).toBeDisabled();
+  expect(hours).toHaveAccessibleDescription(/Turn on “Do it on a schedule\.” to change this\./);
+  expect(screen.getByText("Turn on “Do it on a schedule.” to change this.")).toBeInTheDocument();
+  expect(hours.closest(".setting")).toHaveClass("dependent");
+  await user.click(screen.getByLabelText("Do it on a schedule."));
+  expect(screen.getByLabelText("Hours between runs.")).toBeEnabled();
+  expect(screen.queryByText(/Turn on “Do it on a schedule/)).toBeNull();
+  await user.clear(screen.getByLabelText("Hours between runs."));
+  await user.type(screen.getByLabelText("Hours between runs."), "8");
+  await user.click(screen.getAllByRole("button", { name: /Save/ })[0]);
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "demo.auto": true, "demo.hours": 8 } });
+});
+
+test("turning the switch back off in the form greys the setting again", async () => {
+  const user = userEvent.setup();
+  api(DEPENDENTS);
+  open();
+  await user.click(await screen.findByLabelText("Do it on a schedule."));
+  expect(screen.getByLabelText("Hours between runs.")).toBeEnabled();
+  await user.click(screen.getByLabelText("Do it on a schedule."));
+  expect(screen.getByLabelText("Hours between runs.")).toBeDisabled();
+});
+
+test("a setting that depends on a text setting waits until that has a value", async () => {
+  const user = userEvent.setup();
+  api(DEPENDENTS, { "GET setup/folders": () => ({ path: "/home/me", parent: "/home", folders: ["shared"] }) });
+  open();
+  const keep = await screen.findByLabelText("How many to keep.");
+  expect(keep).toBeDisabled();
+  expect(screen.getByText("Set “Where it goes.” to change this.")).toBeInTheDocument();
+  await user.type(screen.getByLabelText("Where it goes."), "/mnt/x");
+  expect(screen.getByLabelText("How many to keep.")).toBeEnabled();
+});
+
+test("a folder setting offers a chooser that fills the value, and a way to clear it", async () => {
+  const user = userEvent.setup();
+  api(DEPENDENTS, {
+    "GET setup/folders": () => ({ path: "/home/me", parent: "/home", folders: ["shared"] }),
+    [`GET setup/folders?path=${encodeURIComponent("/home/me/shared")}`]: () => ({ path: "/home/me/shared", parent: "/home/me", folders: [] }),
+  });
+  open();
+  await user.click(await screen.findByRole("button", { name: /Choose a folder…/ }));
+  await user.click(await screen.findByRole("button", { name: "shared" }));
+  await user.click(await screen.findByRole("button", { name: "Use this folder" }));
+  await waitFor(() => expect(screen.getByLabelText("Where it goes.")).toHaveValue("/home/me/shared"));
+  expect(screen.getByLabelText("How many to keep.")).toBeEnabled();
+  await user.click(screen.getByRole("button", { name: /Clear/ }));
+  expect(screen.getByLabelText("Where it goes.")).toHaveValue("");
+});
+
+test("where folders can't be listed the folder setting is a plain text box with no error", async () => {
+  api(DEPENDENTS, { "GET setup/folders": () => new Refuse(403, "Folders can't be listed here.") });
+  open();
+  const input = await screen.findByLabelText("Where it goes.");
+  await waitFor(() => expect(screen.queryByRole("button", { name: /Choose a folder…/ })).toBeNull());
+  expect(input).toBeEnabled();
+  expect(screen.queryByRole("alert")).toBeNull();
 });
 
 test("Add-ons opens the add-ons screen", async () => {

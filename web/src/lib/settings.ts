@@ -91,6 +91,25 @@ export function groupItems(items: Item[], opts: { more: boolean; query: string }
   return [...out.filter((g) => g.items.some((i) => i.basic)), ...out.filter((g) => !g.items.some((i) => i.basic))];
 }
 
+/** The setting that switches this one on or off, if there is one. */
+export function switchOf(item: Pick<Item, "enabled_by">, items: Item[]): Item | undefined {
+  return item.enabled_by ? items.find((i) => i.key === item.enabled_by) : undefined;
+}
+
+/** Whether a switch is off: a yes/no setting that is not on, or a text setting (such as a folder) that is empty. Reads
+ * what is on screen when it was changed there, otherwise the saved value. */
+export function isOff(switchItem: Item, edits: Record<string, Draft>): boolean {
+  const draft = switchItem.key in edits ? edits[switchItem.key] : toDraft(switchItem);
+  return switchItem.type === "yes_no" ? draft !== true : String(draft).trim() === "";
+}
+
+/** How many switches sit above a setting, so dependents can be indented under theirs. */
+export function depthOf(item: Item, items: Item[]): number {
+  let depth = 0;
+  for (let at = switchOf(item, items); at && depth < 4; at = switchOf(at, items)) depth += 1;
+  return depth;
+}
+
 /** The body that puts a save back as it was: what was default goes back to default, the rest to its old value. */
 export function undoBody(changes: S["SettingChangeView"][], fingerprint: string): S["SettingsSave"] {
   const body: S["SettingsSave"] = { changes: {}, reset: [], fingerprint };

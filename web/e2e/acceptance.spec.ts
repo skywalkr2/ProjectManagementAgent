@@ -321,7 +321,9 @@ test.describe.serial("acceptance scenario", () => {
     await row.getByLabel(/Full name/).fill("Renamed Person");
     await row.getByRole("button", { name: "Save" }).click();
     await expect(page.locator("li.line", { hasText: "Renamed Person" })).toBeVisible();
-    await page.getByRole("button", { name: "Undo" }).last().click();
+    // The rename's own toast, not whichever Undo happens to be last on screen.
+    const renamed = page.getByRole("region", { name: "Notifications" }).locator("div", { hasText: /^Saved Renamed Person/ });
+    await renamed.getByRole("button", { name: "Undo" }).click();
     await expect(page.locator("li.line", { hasText: "Test Person" })).toBeVisible();
     await checkAccessibility(page);
     await page.reload();

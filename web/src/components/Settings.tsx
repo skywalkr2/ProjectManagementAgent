@@ -1,7 +1,7 @@
 // Settings (design 7.9): every setting the config schemas describe, as a form. Basic settings come first and the rest
 // sit behind a toggle; the search looks at all of them. A save sends only what changed, reads it back and offers Undo.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { problemText } from "../lib/problem";
 import {
@@ -10,7 +10,10 @@ import {
   fromDraft,
   groupItems,
   groupLabel,
+  isOff,
   labelOf,
+  depthOf,
+  switchOf,
   toDraft,
   type Draft,
   type Group,
@@ -18,6 +21,8 @@ import {
 } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
+import { FolderPicker, useFolderListing } from "./FolderPicker";
+import { restoreFocus } from "./ModalPanel";
 import { SignIns } from "./SignIns";
 
 type Edits = Record<string, Draft>;
@@ -37,6 +42,9 @@ export function Settings(props: { onOpenGuide: () => void; onOpenAddons: () => v
 
   const groups = groupItems(settings.data?.items ?? [], { more, query }, t, has);
   const shown = groups.reduce((n, g) => n + g.items.length, 0);
+
+  const everything = settings.data?.items ?? [];
+  const canList = useFolderListing(everything.some((i) => i.picker === "folder"));
 
   const edit = (key: string, draft: Draft) => setEdits((all) => ({ ...all, [key]: draft }));
 
@@ -131,16 +139,22 @@ export function Settings(props: { onOpenGuide: () => void; onOpenAddons: () => v
                 }}
               >
                 <h3 id={titleId}>{groupLabel(group.group, t, has)}</h3>
-                {group.items.map((item) => (
-                  <SettingRow
-                    key={item.key}
-                    item={item}
-                    draft={item.key in edits ? edits[item.key] : toDraft(item)}
-                    onChange={(draft) => edit(item.key, draft)}
-                    onReset={() => void reset(group.group, item)}
-                    disabled={busy !== null}
-                  />
-                ))}
+                {group.items.map((item) => {
+                  const gate = switchOf(item, everything);
+                  return (
+                    <SettingRow
+                      key={item.key}
+                      item={item}
+                      draft={item.key in edits ? edits[item.key] : toDraft(item)}
+                      onChange={(draft) => edit(item.key, draft)}
+                      onReset={() => void reset(group.group, item)}
+                      disabled={busy !== null}
+                      depth={depthOf(item, everything)}
+                      gate={gate && isOff(gate, edits) ? gate : null}
+                      canList={canList}
+                    />
+                  );
+                })}
                 {problems[group.group] && (
                   <p className="problem-note" role="alert">
                     {problems[group.group]}
@@ -168,8 +182,14 @@ function SettingRow(props: {
   onChange: (draft: Draft) => void;
   onReset: () => void;
   disabled: boolean;
+  depth: number;
+  /** The switch this setting depends on, when it is off. */
+  gate: Item | null;
+  canList: boolean;
 }) {
   const { t, has } = useWords();
+  const [picking, setPicking] = useState(false);
+  const chooser = useRef<HTMLButtonElement>(null);
   const { item, draft } = props;
   const id = `setting-${item.key}`;
   const label = labelOf(item, t, has);
@@ -182,10 +202,11 @@ function SettingRow(props: {
   const hint = label !== item.description ? item.description : null;
   const parsed = !readOnly && !item.locked && draft !== toDraft(item) ? fromDraft(item, draft) : null;
   const invalid = parsed && !parsed.ok ? t(`settings.invalid.${parsed.problem}`) : null;
-  const describedBy = [hint && `${id}-hint`, item.type === "list" && `${id}-list`, invalid && `${id}-bad`, note && `${id}-note`, `${id}-default`]
+  const waiting = props.gate ? t(props.gate.type === "yes_no" ? "settings.needs_on" : "settings.needs_value", { label: labelOf(props.gate, t, has) }) : null;
+  const describedBy = [hint && `${id}-hint`, waiting && `${id}-waiting`, item.type === "list" && `${id}-list`, invalid && `${id}-bad`, note && `${id}-note`, `${id}-default`]
     .filter(Boolean)
     .join(" ");
-  const off = item.locked || props.disabled;
+  const off = item.locked || props.disabled || props.gate !== null;
   const option = (o: string) => (has(`settings.option.${item.key}.${o}`) ? t(`settings.option.${item.key}.${o}`) : o);
 
   let control;
@@ -228,7 +249,7 @@ function SettingRow(props: {
       />
     );
   } else {
-    control = (
+    const input = (
       <input
         id={id}
         type="text"
@@ -240,11 +261,34 @@ function SettingRow(props: {
         onChange={(e) => props.onChange(e.target.value)}
       />
     );
+    // A folder can be picked from a list where the app can list folders; otherwise it is typed, with no fuss.
+    control =
+      item.picker === "folder" && props.canList ? (
+        <div className="inline-field">
+          {input}
+          <button type="button" className="btn primary" ref={chooser} disabled={off} onClick={() => setPicking(true)}>
+            {t("settings.choose_folder")}
+            <span className="sr"> {label}</span>
+          </button>
+          {String(draft) !== "" && (
+            <button type="button" className="btn quiet" disabled={off} onClick={() => props.onChange("")}>
+              {t("settings.clear_value")}
+              <span className="sr"> {label}</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        input
+      );
   }
 
   const checkbox = item.type === "yes_no" && !readOnly;
   return (
-    <div className="setting" data-key={item.key}>
+    <div
+      className={`setting${props.depth ? " dependent" : ""}${props.gate ? " waiting" : ""}`}
+      data-key={item.key}
+      style={props.depth ? { marginInlineStart: `${Math.min(props.depth, 3) * 20}px` } : undefined}
+    >
       {checkbox ? (
         <label className="check-line" htmlFor={id}>
           {control}
@@ -261,6 +305,11 @@ function SettingRow(props: {
       {hint && (
         <p className="hint" id={`${id}-hint`}>
           {hint}
+        </p>
+      )}
+      {waiting && (
+        <p className="hint" id={`${id}-waiting`}>
+          {waiting}
         </p>
       )}
       {item.type === "list" && !readOnly && (
@@ -296,6 +345,20 @@ function SettingRow(props: {
           </button>
         )}
       </div>
+      {picking && (
+        <FolderPicker
+          start={String(draft) || undefined}
+          onClose={() => {
+            setPicking(false);
+            restoreFocus(() => chooser.current);
+          }}
+          onPick={(picked) => {
+            setPicking(false);
+            props.onChange(picked);
+            restoreFocus(() => chooser.current);
+          }}
+        />
+      )}
     </div>
   );
 }

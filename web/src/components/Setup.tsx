@@ -1,13 +1,17 @@
 // People and projects (design 5.1): set up a workspace's people and projects without editing files. Records refer to
 // people and projects by id, so a rename shows everywhere at once. Every change acts at once with Undo.
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { api, type S } from "../lib/api";
+import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day, dayAndTime } from "../lib/dates";
 import { useTotal } from "../lib/money";
+import { problemText } from "../lib/problem";
 import { readable, readableTail } from "../lib/records";
+import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
+import { FolderPicker, useFolderListing } from "./FolderPicker";
+import { restoreFocus } from "./ModalPanel";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
@@ -467,9 +471,96 @@ function Field(props: {
 
 // ---- synced folder -------------------------------------------------------------------------------------------------
 
+const SYNC_FOLDER = "storage.sync.folder";
+
+/** The synced folder isn't set up yet: what it is for, and a way to choose one that is saved like any other setting. */
+function SyncUnset(props: { fingerprint: string }) {
+  const { t } = useWords();
+  const client = useQueryClient();
+  const afterSave = useAfterSave();
+  const canList = useFolderListing();
+  const [picking, setPicking] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+  const chooser = useRef<HTMLButtonElement>(null);
+
+  const save = async (path: string) => {
+    setBusy(true);
+    setProblem("");
+    try {
+      const saved = await api.saveSettings({ changes: { [SYNC_FOLDER]: path.trim() }, reset: [], fingerprint: props.fingerprint });
+      await afterSave(saved);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="sync-body">
+      <p>{t("setup.sync_unset")}</p>
+      {canList ? (
+        <div className="row-end">
+          <button type="button" className="btn primary" ref={chooser} disabled={busy} onClick={() => setPicking(true)}>
+            {t("setup.sync_choose")}
+          </button>
+        </div>
+      ) : (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (typed.trim()) void save(typed);
+          }}
+        >
+          <div className="field">
+            <label htmlFor="sync-path">{t("setup.sync_path")}</label>
+            <div className="inline-field">
+              <input id="sync-path" type="text" value={typed} autoComplete="off" onChange={(e) => setTyped(e.target.value)} />
+              <button type="submit" className="btn primary" disabled={busy || !typed.trim()}>
+                {t("setup.sync_save")}
+              </button>
+            </div>
+          </div>
+        </form>
+      )}
+      {problem && (
+        <p className="problem-note" role="alert">
+          {problem}
+        </p>
+      )}
+      {picking && (
+        <FolderPicker
+          onClose={() => {
+            setPicking(false);
+            restoreFocus(() => chooser.current);
+          }}
+          onPick={(picked) => {
+            setPicking(false);
+            void save(picked);
+            restoreFocus(() => chooser.current);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 function SyncPanel() {
   const { t, tn } = useWords();
-  const sync = useQuery({ queryKey: ["sync"], queryFn: api.sync });
+  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const saved = settings.data?.items.find((i) => i.key === SYNC_FOLDER)?.value;
+  const folderSet = typeof saved === "string" && saved.trim() !== "";
+  // Nothing is asked of the sync route until a folder is set; a failed answer is retried quietly before it is shown.
+  const sync = useQuery({
+    queryKey: ["sync"],
+    queryFn: api.sync,
+    enabled: folderSet,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(500 * 2 ** attempt, 4000),
+  });
   const { open, dialog } = useTextReview();
   const data = sync.data;
   return (
@@ -477,8 +568,17 @@ function SyncPanel() {
       <div className="heading">
         <h2 id="sync-title">{t("setup.sync")}</h2>
       </div>
-      {sync.isPending ? (
+      {settings.isPending || (folderSet && sync.isPending) ? (
         <p className="empty">{t("loading")}</p>
+      ) : settings.isError ? (
+        <p className="empty">
+          {t("setup.sync_failed")}{" "}
+          <button type="button" className="btn" onClick={() => void settings.refetch()}>
+            {t("action.try_again")}
+          </button>
+        </p>
+      ) : !folderSet ? (
+        <SyncUnset fingerprint={settings.data!.fingerprint} />
       ) : sync.isError || !data ? (
         <p className="empty">
           {t("setup.sync_failed")}{" "}

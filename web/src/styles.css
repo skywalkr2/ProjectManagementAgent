@@ -314,6 +314,8 @@ input[type="radio"] { width: 18px; height: 18px; padding: 0; flex: none; accent-
 .settings-group h3 { font-family: var(--display); font-weight: 600; font-size: 20px; margin: 0; }
 .setting { display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 12px; }
 .setting-label { font-weight: 600; font-size: 13.5px; }
+.setting.dependent { border-inline-start: 2px solid var(--line); padding-inline-start: 12px; }
+.setting.waiting .setting-label, .setting.waiting .check-line { color: var(--muted); }
 .setting-value { margin: 0; overflow-wrap: anywhere; padding: 6px 10px; background: var(--sunk); border-radius: 8px; font-size: 13.5px; }
 .setting-foot { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; justify-content: space-between; }
 .setting-foot .hint { overflow-wrap: anywhere; min-width: 0; }

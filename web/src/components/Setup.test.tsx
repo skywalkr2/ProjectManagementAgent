@@ -2,7 +2,8 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { RestartNotice, RestartProvider } from "../lib/restart";
+import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { Setup } from "./Setup";
 
 const project = (id: string, name: string): S["ProjectView"] => ({
@@ -88,19 +89,97 @@ const syncView = (extra: Partial<S["SyncView"]> = {}): S["SyncView"] => ({
   ...extra,
 });
 
-function others(routes: Routes) {
-  return fakeApi({ "GET people": () => [], "GET projects": () => [], "GET notes": () => [], ...routes });
+const folderItem = (value: string): S["SettingItem"] => ({
+  key: "storage.sync.folder",
+  file: "storage",
+  group: "storage.sync",
+  description: "Where the synced folder is.",
+  type: "text",
+  options: [],
+  value,
+  default: "",
+  source: "default",
+  locked: false,
+  basic: true,
+  editable: true,
+  picker: "folder",
+});
+
+function others(routes: Routes, folder = "/shared/Cockpit") {
+  return fakeApi({
+    "GET people": () => [],
+    "GET projects": () => [],
+    "GET notes": () => [],
+    "GET settings": () => ({ fingerprint: "fp-1", items: [folderItem(folder)] }),
+    ...routes,
+  });
 }
 
 async function section(name: string) {
   return (await screen.findByRole("region", { name })) as HTMLElement;
 }
 
-test("with no synced folder it says the workspace isn't kept in one", async () => {
-  others({ "GET sync": () => syncView({ folder: "" }), "GET jobs": () => [] });
+test("with no synced folder it says what one is for and offers to choose, without asking for the sync status", async () => {
+  const calls = others({ "GET jobs": () => [] }, "");
   renderApp(<Setup />);
   const sync = await section("Synced folder");
-  expect(await within(sync).findByText("This workspace isn't kept in a synced folder.")).toBeInTheDocument();
+  expect(await within(sync).findByText(/A synced folder keeps a readable copy/)).toBeInTheDocument();
+  expect(within(sync).getByRole("button", { name: "Choose a folder" })).toBeInTheDocument();
+  expect(within(sync).queryByText(/status didn't load/)).toBeNull();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(calls.some((c) => c.route === "GET sync")).toBe(false);
+});
+
+test("choosing a folder saves it as the synced folder setting and starts the restart notice", async () => {
+  const user = userEvent.setup();
+  const calls = others(
+    {
+      "GET jobs": () => [],
+      "GET setup/folders": () => ({ path: "/home/me", parent: "/home", folders: [] }),
+      "POST settings": () => ({
+        changes: [{ key: "storage.sync.folder", before: "", after: "/home/me", was_default: true, is_default: false }],
+        fingerprint: "fp-2",
+        restarts: true,
+      }),
+    },
+    "",
+  );
+  renderApp(
+    <RestartProvider hellos={1}>
+      <RestartNotice />
+      <Setup />
+    </RestartProvider>,
+  );
+  const sync = await section("Synced folder");
+  await user.click(await within(sync).findByRole("button", { name: "Choose a folder" }));
+  await user.click(await screen.findByRole("button", { name: "Use this folder" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+  expect(calls.find((c) => c.route === "POST settings")!.body).toEqual({
+    changes: { "storage.sync.folder": "/home/me" },
+    reset: [],
+    fingerprint: "fp-1",
+  });
+  const live = screen.getAllByRole("status").find((el) => el.classList.contains("restart-slot"))!;
+  await waitFor(() => expect(live).toHaveTextContent("Restarting to use the new settings…"));
+});
+
+test("where folders can't be listed, the synced folder can be typed", async () => {
+  const user = userEvent.setup();
+  const calls = others(
+    {
+      "GET jobs": () => [],
+      "GET setup/folders": () => new Refuse(403, "no"),
+      "POST settings": () => ({ changes: [], fingerprint: "fp-2", restarts: false }),
+    },
+    "",
+  );
+  renderApp(<Setup />);
+  const sync = await section("Synced folder");
+  await user.type(await within(sync).findByLabelText("Folder"), "/mnt/shared");
+  await user.click(within(sync).getByRole("button", { name: "Use this folder" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+  expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "storage.sync.folder": "/mnt/shared" } });
+  expect(within(sync).queryByRole("alert")).toBeNull();
 });
 
 test("the synced folder shows its path, why it can't write, that this copy stopped, and what changed outside", async () => {
