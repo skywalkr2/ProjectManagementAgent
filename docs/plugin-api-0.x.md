@@ -6,6 +6,25 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.1 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Groups:** `Group(id, heading, explanation="")` in `Proposal.groups`. A `Choice` and an `Item` may name one with
+  `group=`; a group the proposal doesn't list is refused. Setting a whole group of choices is one rerun with every value
+  in `choices`.
+- **Items the person keeps or drops without a rerun:** `Item(id, label, ops, group=None, kept=True)` in
+  `Proposal.items`. `ops` are dicts like `Proposal.ops` (same rules, `"$file:N"` included) and apply and undo together.
+  `Proposal.ops` always apply; an item's ops apply only while it is kept. Ids must be unique, and at most
+  `workspace.plugins.actions.max_items` items per proposal.
+- **Ticks:** the preview route takes `previous` (the review it replaces) and `kept` (`{item_id: bool}`); the person's
+  ticks carry over to items that came back with the same id and the same ops, and an item that changed starts as the
+  action says. `apply` takes the final `kept`. An unknown item id is refused and the review stays open.
+- `Changeset.action` records `kept` and `dropped` item ids; the review's `ops` list is everything that applies with
+  the ticks as they are.
+- `Proposal`'s new fields come after the existing ones, so positional calls keep working.
+- A `tool_run` records the program's `version` from its probe.
+
 ## What 0.3 adds
 
 - **Files** (design 5.3). People add files in the UI; bytes are stored once by hash and described by a core `file`

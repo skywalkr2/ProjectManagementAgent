@@ -20,7 +20,7 @@ from engine.records import Record, RefTo, ref_fields, values_at
 from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
 
-PLUGIN_API_VERSION = "0.3.0"
+PLUGIN_API_VERSION = "0.3.1"
 
 
 class Settings(BaseModel):
@@ -209,6 +209,30 @@ class Choice:
     value: str | bool
     options: list[tuple[str, str]] = field(default_factory=list)
     help: str = ""
+    group: str | None = None  # the id of a Group in the proposal's groups
+
+
+@dataclass
+class Group:
+    """A heading and a short explanation shared by the choices and items under it, so a long review reads as a few
+    groups with counts."""
+
+    id: str
+    heading: str
+    explanation: str = ""
+
+
+@dataclass
+class Item:
+    """A change the person keeps or drops without the action running again: one judgment call, made of one or more
+    ops (dicts) that apply together. `id` is stable across runs, so the person's tick carries over to an unchanged
+    item when a choice reruns the action."""
+
+    id: str
+    label: str
+    ops: list[dict[str, Any]]
+    group: str | None = None
+    kept: bool = True
 
 
 @dataclass
@@ -240,11 +264,13 @@ class Proposal:
     choices the person can flip, and anything the person should know (notes)."""
 
     summary: str
-    ops: list[dict[str, Any]] = field(default_factory=list)
+    ops: list[dict[str, Any]] = field(default_factory=list)  # always applied
     files: list[NewFile] = field(default_factory=list)
     previews: list[Preview] = field(default_factory=list)
     choices: list[Choice] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    items: list[Item] = field(default_factory=list)  # applied only while kept
+    groups: list[Group] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -403,6 +429,8 @@ __all__ = [
     "NewFile",
     "Preview",
     "Choice",
+    "Group",
+    "Item",
     "Registrar",
     "StageDefinition",
     "StageCheckResult",

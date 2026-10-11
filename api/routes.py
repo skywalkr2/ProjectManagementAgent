@@ -17,6 +17,8 @@ from api.schemas import (
     ActionApplied,
     ActionApply,
     ActionChoice,
+    ActionGroup,
+    ActionItem,
     ActionPreviewItem,
     ActionProposalView,
     ActionRun,
@@ -150,12 +152,27 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.post("/plugin-actions/{name:path}/preview")
     def person_action_preview(name: str, body: ActionRun) -> ActionProposalView:
         target = body.target.model_dump() if body.target else None
-        pending = guard(lambda: person_actions.preview(store, cfg, name, target, body.choices))
+        pending = guard(
+            lambda: person_actions.preview(
+                store, cfg, name, target, body.choices, previous=body.previous, kept=body.kept
+            )
+        )
         return ActionProposalView(
             token=pending.token,
             action=pending.action,
             summary=pending.summary,
             ops=[ProposedOp(**o) for o in guard(lambda: person_actions.labels(store, pending))],
+            items=[
+                ActionItem(
+                    id=i["id"],
+                    label=i["label"],
+                    group=i["group"],
+                    kept=i["kept"],
+                    ops=[ProposedOp(**o) for o in guard(lambda i=i: person_actions.labels(store, pending, i["ops"]))],
+                )
+                for i in pending.items
+            ],
+            groups=[ActionGroup(**g) for g in pending.groups],
             files=[
                 ProposedFile(**{k: f[k] for k in ("name", "media_type", "size", "file_kind")}) for f in pending.files
             ],
@@ -175,6 +192,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     value=c["value"],
                     options=[ChoiceOption(**o) for o in c["options"]],
                     help=c["help"],
+                    group=c["group"],
                 )
                 for c in pending.choice_list
             ],
@@ -184,7 +202,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.post("/plugin-actions/apply")
     def person_action_apply(body: ActionApply) -> ActionApplied:
-        cs_id = guard(lambda: person_actions.apply(store, cfg, body.token))
+        cs_id = guard(lambda: person_actions.apply(store, cfg, body.token, body.kept))
         ops = store.read().get("changeset", cs_id).data["ops"]
         changed()
         return ActionApplied(

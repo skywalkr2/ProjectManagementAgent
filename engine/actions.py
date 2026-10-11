@@ -1,7 +1,8 @@
 """Person actions (plugin API 0.3): deterministic work a person starts on a record, a file or the workspace.
 
 Running an action gives one proposal for one review: the ops it would apply, the files it made, previews and named
-choices. Flipping a choice runs the action again. The person approves exactly what they reviewed: the proposal is kept
+choices, and items the person keeps or drops without a rerun. Flipping a choice runs the action again, and the person's
+ticks carry over to items that came back unchanged. The person approves exactly what they reviewed: the proposal is kept
 under a token and applied as theirs (actor `pm`), so person-only values apply and system ops need no second go. If
 the target changed since the review, nothing applies and the person runs the action again.
 """
@@ -45,6 +46,8 @@ class Pending:
     previews: list[dict[str, Any]]
     choice_list: list[dict[str, Any]]
     notes: list[str]
+    items: list[dict[str, Any]] = field(default_factory=list)  # id, label, group, kept, ops
+    groups: list[dict[str, Any]] = field(default_factory=list)  # id, heading, explanation
     created: float = field(default_factory=time.monotonic)
     expires_at: str = ""
 
@@ -60,6 +63,10 @@ class Proposals:
         while len(self._items) >= limit:
             self._items.pop(next(iter(self._items)))
         self._items[pending.token] = pending
+
+    def peek(self, token: str, keep_minutes: float) -> Pending | None:
+        self._prune(keep_minutes)
+        return self._items.get(token)
 
     def take(self, token: str, keep_minutes: float) -> Pending:
         self._prune(keep_minutes)
@@ -104,8 +111,13 @@ def preview(
     name: str,
     target: dict[str, str] | None = None,
     choices: dict[str, Any] | None = None,
+    *,
+    previous: str | None = None,
+    kept: dict[str, bool] | None = None,
 ) -> Pending:
-    """Run an action and keep its proposal for the person's review."""
+    """Run an action and keep its proposal for the person's review. `previous` is the review this one replaces (after a
+    choice changed): its ticks carry over to items with the same id and the same ops. `kept` then sets ticks by item
+    id."""
     from engine.plugin_api import ActionContext, Proposal
     from engine.tools import ToolError
 
@@ -140,8 +152,27 @@ def preview(
         pending = _checked(store, cfg, plugin, name, record, choices, result)
     except StoreError as err:
         raise ActionFailed(f"{action.label} proposed something that can't apply: {err}") from None
-    store.plugins.proposals.put(pending, cfg.workspace.plugins.actions.keep_minutes)
+    keep = cfg.workspace.plugins.actions.keep_minutes
+    before = store.plugins.proposals.peek(previous, keep) if previous else None
+    if before is not None and before.action == name and before.target == pending.target:
+        ticks = {i["id"]: i for i in before.items}
+        for item in pending.items:
+            old = ticks.get(item["id"])
+            if old is not None and old["ops"] == item["ops"]:
+                item["kept"] = old["kept"]
+    _tick(pending, kept or {})
+    store.plugins.proposals.put(pending, keep)
     return pending
+
+
+def _tick(pending: Pending, kept: dict[str, bool]) -> None:
+    items = {i["id"]: i for i in pending.items}
+    for item_id, value in kept.items():
+        if item_id not in items:
+            raise StoreError(f"there is no item {item_id} in this review")
+        if not isinstance(value, bool):
+            raise StoreError("an item is kept or dropped: true or false")
+        items[item_id]["kept"] = value
 
 
 def _checked(
@@ -156,7 +187,22 @@ def _checked(
     choice_list = []
     for c in result.choices:
         options = [{"value": str(v), "label": str(label)} for v, label in c.options]
-        choice_list.append({"id": c.id, "label": c.label, "value": c.value, "options": options, "help": c.help})
+        choice_list.append(
+            {"id": c.id, "label": c.label, "value": c.value, "options": options, "help": c.help, "group": c.group}
+        )
+    groups = []
+    for g in result.groups:
+        if not str(g.id) or not " ".join(str(g.heading).split()):
+            raise StoreError("every group needs an id and a heading")
+        groups.append({"id": str(g.id), "heading": " ".join(str(g.heading).split()), "explanation": g.explanation})
+    group_ids = [g["id"] for g in groups]
+    if len(group_ids) != len(set(group_ids)):
+        raise StoreError("group ids must be unique")
+    if len({c["id"] for c in choice_list}) != len(choice_list):
+        raise StoreError("choice ids must be unique")
+    for c in choice_list:
+        if c["group"] is not None and c["group"] not in group_ids:
+            raise StoreError(f"choice {c['id']} is in a group the proposal doesn't list")
     offered = {c["id"]: c for c in choice_list}
     for key, value in choices.items():
         choice = offered.get(key)
@@ -213,14 +259,33 @@ def _checked(
             }
         )
     own_ops = set(store.plugins.registrars[plugin].ops)
-    ops = []
-    for op in result.ops:
+
+    def proposed(op: Any) -> dict[str, Any]:
         if not isinstance(op, dict) or op.get("op") not in ACTION_CORE_OPS | own_ops:
             shown = op.get("op") if isinstance(op, dict) else op
             raise StoreError(f"{shown} isn't an op an action may propose")
-        ops.append(_placeholders_checked(op, len(files)))
+        return _placeholders_checked(op, len(files))
+
+    ops = [proposed(op) for op in result.ops]
+    if len(result.items) > limits.max_items:
+        raise StoreError(f"more than {limits.max_items} items")
+    items = []
+    for item in result.items:
+        label = " ".join(str(item.label).split())
+        if not str(item.id) or not label or not item.ops:
+            raise StoreError("every item needs an id, a label and at least one op")
+        if item.group is not None and item.group not in group_ids:
+            raise StoreError(f"item {item.id} is in a group the proposal doesn't list")
+        # An item's ops apply and undo together.
+        item_ops = [{"group": f"item:{item.id}", **proposed(op)} for op in item.ops]
+        items.append(
+            {"id": str(item.id), "label": label[:200], "group": item.group, "kept": bool(item.kept), "ops": item_ops}
+        )
+    if len({i["id"] for i in items}) != len(items):
+        raise StoreError("item ids must be unique")
     stand_ins = [f"FILE-{i + 1}" for i in range(len(files))]
-    _validated([*_file_ops(files, stand_ins), *(_substituted(op, stand_ins) for op in ops)], store, summary)
+    every = [*ops, *(op for i in items for op in i["ops"])]
+    _validated([*_file_ops(files, stand_ins), *(_substituted(op, stand_ins) for op in every)], store, summary)
     target = {"kind": record.kind, "id": record.id, "version": record.version} if record is not None else None
     keep = cfg.workspace.plugins.actions.keep_minutes
     return Pending(
@@ -235,6 +300,8 @@ def _checked(
         previews=previews,
         choice_list=choice_list,
         notes=[" ".join(str(n).split()) for n in result.notes],
+        items=items,
+        groups=groups,
         expires_at=datetime.fromtimestamp(time.time() + keep * 60, UTC).isoformat(),
     )
 
@@ -273,12 +340,18 @@ def _validated(ops: list[dict[str, Any]], store: Store, summary: str) -> Any:
         raise StoreError(f"{'.'.join(map(str, first['loc']))}: {first['msg']}") from None
 
 
-def labels(store: Store, pending: Pending) -> list[dict[str, Any]]:
-    """Each op the proposal would apply, with its one-line label, for the review."""
+def to_apply(pending: Pending, ids: list[str]) -> list[dict[str, Any]]:
+    """Every op that applies with the ticks as they are: the files, the proposal's own ops, then kept items' ops."""
+    kept = [op for item in pending.items if item["kept"] for op in item["ops"]]
+    return [*_file_ops(pending.files, ids), *(_substituted(op, ids) for op in [*pending.ops, *kept])]
+
+
+def labels(store: Store, pending: Pending, ops: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    """Each op with its one-line label, for the review: by default everything that applies with the current ticks."""
     from engine.applier import _label
 
     ids = [f"FILE-{i + 1}" for i in range(len(pending.files))]
-    ops = [*_file_ops(pending.files, ids), *(_substituted(op, ids) for op in pending.ops)]
+    ops = to_apply(pending, ids) if ops is None else [_substituted(op, ids) for op in ops]
     parsed = _validated(ops, store, pending.summary).ops
     return [{"op": op.op, "label": _label(op) or _fallback_label(raw)} for op, raw in zip(parsed, ops, strict=True)]
 
@@ -290,12 +363,19 @@ def _fallback_label(op: dict[str, Any]) -> str:
     return ""
 
 
-def apply(store: Store, cfg: Config, token: str) -> str:
-    """Apply exactly the proposal the person reviewed, as theirs. Returns the changeset id."""
+def apply(store: Store, cfg: Config, token: str, kept: dict[str, bool] | None = None) -> str:
+    """Apply exactly the proposal the person reviewed, as theirs, with their final ticks (`kept`, by item id).
+    Returns the changeset id."""
     from engine.applier import Context, Inputs, apply_changeset
     from engine.names import People
 
-    pending = store.plugins.proposals.take(token, cfg.workspace.plugins.actions.keep_minutes)
+    keep = cfg.workspace.plugins.actions.keep_minutes
+    pending = store.plugins.proposals.take(token, keep)
+    try:
+        _tick(pending, kept or {})
+    except StoreError:
+        store.plugins.proposals.put(pending, keep)
+        raise
     if not store.plugins.active(pending.plugin):
         raise StoreError("the add-on this action belongs to is turned off")
     if pending.target is not None:
@@ -315,8 +395,7 @@ def apply(store: Store, cfg: Config, token: str) -> str:
             },
             WriteContext("pm", "trusted", "action.request"),
         )
-    ops = [*_file_ops(pending.files, ids), *(_substituted(op, ids) for op in pending.ops)]
-    changeset = _validated(ops, store, pending.summary)
+    changeset = _validated(to_apply(pending, ids), store, pending.summary)
     allowed = tuple(sorted(ACTION_CORE_OPS | {"file.add"} | set(store.plugins.registrars[pending.plugin].ops)))
     ctx = Context(
         store,
@@ -327,7 +406,13 @@ def apply(store: Store, cfg: Config, token: str) -> str:
         confirmed_by_pm=True,
         actor="pm",
     )
-    action = {"name": pending.action, "target": pending.target, "choices": pending.choices}
+    action = {
+        "name": pending.action,
+        "target": pending.target,
+        "choices": pending.choices,
+        "kept": [i["id"] for i in pending.items if i["kept"]],
+        "dropped": [i["id"] for i in pending.items if not i["kept"]],
+    }
     cs_id = apply_changeset(changeset, [], ctx, run=None, extra={"action": action, "reviewed": True})
     with store.transaction() as tx:
         current = tx.get("request", request.id)

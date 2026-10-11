@@ -219,6 +219,7 @@ class ToolRun(Record):
 
     plugin: str
     tool: str
+    version: str | None = Field(None, description="The program's version, from its version check.")
     args: list[str] = Field(default_factory=list)
     inputs: list[str] = Field(default_factory=list, description="Names of the files given to the program.")
     returncode: int

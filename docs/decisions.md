@@ -81,6 +81,21 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-11: Long reviews: groups, and items kept or dropped without a rerun
+
+**Decided by:** Claude (design), from a plugin question; the owner can override.
+
+**What:** Plugin API 0.3.1. A proposal may group its choices and items under headings. Items are judgment calls the
+person keeps or drops without the action running again; only kept items' ops apply, each item's ops together. Ticks
+carry over a rerun to items that came back unchanged. The changeset records which items were kept and dropped. Field
+names are announced only from the code and the contract document.
+
+**Why:** A book-length file gives hundreds of judgment calls; rerunning the action for each tick would be slow and run
+programs needlessly, and one long list is unreadable.
+
+**Impact:** New setting `workspace.plugins.actions.max_items`. The review screen shows items in a later UI pass; until
+then the review lists every op that applies with the ticks as they are, so nothing applies unseen.
+
 ## 2026-10-11: Person actions apply what the person reviewed, as the person
 
 **Decided by:** Claude (design), building plugin API 0.3; the owner can override.

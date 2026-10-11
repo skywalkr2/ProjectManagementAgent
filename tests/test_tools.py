@@ -203,6 +203,7 @@ def test_a_plugin_runs_only_declared_tools_and_each_run_is_recorded(tmp_path, pr
     assert result.files == {"out/book.txt": b"WORDS"}
     run = store.read().list("tool_run")[-1].data
     assert run["plugin"] == "p03" and run["tool"] == "fakeprog" and run["returncode"] == 3
+    assert run["version"] == "2.4.1"
     assert run["inputs"] == ["chapter.txt"] and run["collected"] == [{"name": "out/book.txt", "size": 5}]
     assert "warning: something" in run["stderr_tail"]
     store.close()

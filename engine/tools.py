@@ -305,5 +305,5 @@ class ToolBox:
             max_file_mb=max_file_mb,
             max_total_mb=max_total_mb,
         )
-        self.__record(self.__plugin, name, list(args), sorted(files or {}), result)
+        self.__record(self.__plugin, name, list(args), sorted(files or {}), result, status.version)
         return result

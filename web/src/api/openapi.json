@@ -32,6 +32,14 @@
       "ActionApply": {
         "additionalProperties": false,
         "properties": {
+          "kept": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "The person's final ticks, by item id.",
+            "title": "Kept",
+            "type": "object"
+          },
           "token": {
             "title": "Token",
             "type": "string"
@@ -45,6 +53,17 @@
       },
       "ActionChoice": {
         "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
+          },
           "help": {
             "default": "",
             "title": "Help",
@@ -85,6 +104,72 @@
           "options"
         ],
         "title": "ActionChoice",
+        "type": "object"
+      },
+      "ActionGroup": {
+        "properties": {
+          "explanation": {
+            "default": "",
+            "title": "Explanation",
+            "type": "string"
+          },
+          "heading": {
+            "title": "Heading",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "heading"
+        ],
+        "title": "ActionGroup",
+        "type": "object"
+      },
+      "ActionItem": {
+        "description": "A change the person keeps or drops without running the action again.",
+        "properties": {
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kept": {
+            "title": "Kept",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ops": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedOp"
+            },
+            "title": "Ops",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "kept",
+          "ops"
+        ],
+        "title": "ActionItem",
         "type": "object"
       },
       "ActionPreviewItem": {
@@ -141,6 +226,20 @@
             "title": "Files",
             "type": "array"
           },
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/ActionGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ActionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
           "notes": {
             "items": {
               "type": "string"
@@ -149,6 +248,7 @@
             "type": "array"
           },
           "ops": {
+            "description": "Everything that applies with the ticks as they are now.",
             "items": {
               "$ref": "#/components/schemas/ProposedOp"
             },
@@ -201,6 +301,26 @@
             },
             "title": "Choices",
             "type": "object"
+          },
+          "kept": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Items to keep (true) or drop (false), by id.",
+            "title": "Kept",
+            "type": "object"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The review this one replaces; its ticks carry over to unchanged items.",
+            "title": "Previous"
           },
           "target": {
             "anyOf": [

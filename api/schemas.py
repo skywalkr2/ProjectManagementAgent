@@ -458,11 +458,16 @@ class ActionRun(BaseModel):
     model_config = ConfigDict(extra="forbid")
     target: RecordReference | None = None
     choices: dict[str, str | bool] = Field(default_factory=dict)
+    previous: str | None = Field(
+        None, description="The review this one replaces; its ticks carry over to unchanged items."
+    )
+    kept: dict[str, bool] = Field(default_factory=dict, description="Items to keep (true) or drop (false), by id.")
 
 
 class ActionApply(BaseModel):
     model_config = ConfigDict(extra="forbid")
     token: str
+    kept: dict[str, bool] = Field(default_factory=dict, description="The person's final ticks, by item id.")
 
 
 class ChoiceOption(BaseModel):
@@ -476,6 +481,23 @@ class ActionChoice(BaseModel):
     value: str | bool
     options: list[ChoiceOption] = Field(description="The values to pick from; none means on or off.")
     help: str = ""
+    group: str | None = None
+
+
+class ActionGroup(BaseModel):
+    id: str
+    heading: str
+    explanation: str = ""
+
+
+class ActionItem(BaseModel):
+    """A change the person keeps or drops without running the action again."""
+
+    id: str
+    label: str
+    group: str | None = None
+    kept: bool
+    ops: list[ProposedOp]
 
 
 class ActionPreviewItem(BaseModel):
@@ -503,7 +525,9 @@ class ActionProposalView(BaseModel):
     token: str
     action: str
     summary: str
-    ops: list[ProposedOp]
+    ops: list[ProposedOp] = Field(description="Everything that applies with the ticks as they are now.")
+    items: list[ActionItem] = Field(default_factory=list)
+    groups: list[ActionGroup] = Field(default_factory=list)
     files: list[ProposedFile]
     previews: list[ActionPreviewItem]
     choices: list[ActionChoice]

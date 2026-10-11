@@ -15,7 +15,7 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
 
 FIXTURE = """
 from typing import Annotated, ClassVar, Literal
-from engine.plugin_api import NewFile, OpModel, Preview, Proposal, Choice, Record, RefTo, Settings
+from engine.plugin_api import Choice, Group, Item, NewFile, OpModel, Preview, Proposal, Record, RefTo, Settings
 
 PNG = b"\\x89PNG\\r\\n\\x1a\\n" + b"\\x00" * 32
 
@@ -97,6 +97,22 @@ def broken(target, context, choices):
 def claims(target, context, choices):
     return Proposal("Say something", ops=[{"op": "fact", "text": "x", "evidence": {"quote": "x"}}])
 
+def batch(target, context, choices):
+    prefix = choices.get("prefix", "")
+    titles = {"alpha": "Alpha", "beta": "Beta", "gamma": prefix + "Gamma"}
+    return Proposal(
+        "Start three works",
+        choices=[Choice("prefix", "Prefix", prefix, options=[("", "None"), ("New ", "New")], group="style")],
+        groups=[Group("style", "Style"), Group("works", "Works to start", "One per line in the list.")],
+        items=[
+            Item(key, "Start " + title, [{"op": "p04/add-work", "title": title}], group="works", kept=key != "beta")
+            for key, title in titles.items()
+        ],
+    )
+
+def bad_items(target, context, choices):
+    return Proposal("Broken", items=[Item("x", "X", [{"op": "p04/add-work", "title": "X"}], group="missing")])
+
 def bad_preview(target, context, choices):
     return Proposal("Show a page", previews=[Preview("page.html", "text/html", b"<b>hi</b>")])
 
@@ -114,6 +130,8 @@ def register(registrar):
     registrar.action("p04/broken", label="Broken", run=broken, on="p04/work")
     registrar.action("p04/claims", label="Claims", run=claims)
     registrar.action("p04/bad-preview", label="Bad preview", run=bad_preview)
+    registrar.action("p04/batch", label="Batch", run=batch)
+    registrar.action("p04/bad-items", label="Bad items", run=bad_items)
 """
 
 PROGRAM = """
@@ -152,6 +170,8 @@ def env(tmp_path):
                 "p04/broken",
                 "p04/claims",
                 "p04/bad-preview",
+                "p04/batch",
+                "p04/bad-items",
             ],
         },
     }
@@ -173,11 +193,11 @@ def env(tmp_path):
     store.close()
 
 
-def run(env, name, target=None, choices=None):
+def run(env, name, target=None, choices=None, **more):
     from engine import actions
 
     _, cfg, store = env
-    return actions.preview(store, cfg, name, target, choices)
+    return actions.preview(store, cfg, name, target, choices, **more)
 
 
 def apply(env, pending):
@@ -215,7 +235,13 @@ def test_a_person_action_applies_as_the_person(env):
     assert store.read().get("p04/work", work["id"]).data["status"] == "final"
     cs = store.read().get("changeset", cs_id).data
     assert cs["ops"][0]["status"] == "applied" and cs["reviewed"]
-    assert cs["action"] == {"name": "p04/finish", "target": pending.target, "choices": {"status": "final"}}
+    assert cs["action"] == {
+        "name": "p04/finish",
+        "target": pending.target,
+        "choices": {"status": "final"},
+        "kept": [],
+        "dropped": [],
+    }
     request = store.read().get("request", cs["request"]).data
     assert request["origin"] == "pm" and request["changeset"] == cs_id
     entries = [e for e in store.read().ledger() if e["record_id"] == work["id"] and e["field"] == "status"]
@@ -324,3 +350,75 @@ def test_actions_through_the_api(env):
     assert applied["applied"] == 2 and applied["refused"] == 0
     refused = client.post(f"{api}/plugin-actions/p04/finish/preview", json={"target": None})
     assert refused.status_code == 409
+
+
+def titles(store):
+    return sorted(w.data["title"] for w in store.read().list("p04/work"))
+
+
+def test_only_kept_items_apply_and_the_changeset_says_which(env):
+    _, _, store = env
+    pending = run(env, "p04/batch")
+    assert [(i["id"], i["kept"]) for i in pending.items] == [("alpha", True), ("beta", False), ("gamma", True)]
+    cs_id = apply(env, pending)
+    assert titles(store) == ["Alpha", "Gamma"]
+    action = store.read().get("changeset", cs_id).data["action"]
+    assert action["kept"] == ["alpha", "gamma"] and action["dropped"] == ["beta"]
+
+
+def test_the_final_ticks_come_with_apply(env):
+    from engine import actions
+
+    _, cfg, store = env
+    pending = run(env, "p04/batch")
+    actions.apply(store, cfg, pending.token, {"alpha": False, "beta": True})
+    assert titles(store) == ["Beta", "Gamma"]
+
+
+def test_ticks_carry_over_to_unchanged_items_when_a_choice_reruns(env):
+    first = run(env, "p04/batch", kept={"alpha": False, "beta": True, "gamma": False})
+    again = run(env, "p04/batch", choices={"prefix": "New "}, previous=first.token)
+    ticks = {i["id"]: i["kept"] for i in again.items}
+    # alpha and beta came back unchanged and keep the person's ticks; gamma changed and starts as the action says.
+    assert ticks == {"alpha": False, "beta": True, "gamma": True}
+
+
+def test_a_bad_tick_refuses_and_keeps_the_review(env):
+    from engine import actions
+    from engine.storage import StoreError
+
+    _, cfg, store = env
+    pending = run(env, "p04/batch")
+    with pytest.raises(StoreError, match="no item nope"):
+        actions.apply(store, cfg, pending.token, {"nope": True})
+    actions.apply(store, cfg, pending.token)
+    assert titles(store) == ["Alpha", "Gamma"]
+
+
+def test_items_and_choices_must_name_listed_groups(env):
+    from engine.actions import ActionFailed
+
+    with pytest.raises(ActionFailed, match="group the proposal doesn't list"):
+        run(env, "p04/bad-items")
+
+
+def test_the_review_lists_items_and_what_applies_now(env):
+    from api.app import create_app
+
+    ws, cfg, store = env
+    store.close()
+    token = "test-token"
+    client = TestClient(create_app(ws, cfg, token, start_worker=False))
+    client.headers["Authorization"] = f"Bearer {token}"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    body = client.post(f"{api}/plugin-actions/p04/batch/preview", json={}).json()
+    assert [o["label"] for o in body["ops"]] == ["Start Alpha", "Start Gamma"]
+    assert [(i["id"], i["group"], i["kept"]) for i in body["items"]][1] == ("beta", "works", False)
+    assert body["groups"][1] == {"id": "works", "heading": "Works to start", "explanation": "One per line in the list."}
+    assert body["choices"][0]["group"] == "style"
+    rerun = client.post(
+        f"{api}/plugin-actions/p04/batch/preview",
+        json={"choices": {"prefix": "New "}, "previous": body["token"], "kept": {"beta": True}},
+    ).json()
+    applied = client.post(f"{api}/plugin-actions/apply", json={"token": rerun["token"], "kept": {"alpha": False}})
+    assert applied.json()["applied"] == 2

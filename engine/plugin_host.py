@@ -234,7 +234,9 @@ class PluginHost:
         declared = {tool.name: tool for tool in self.manifests[name].requires.tools}
         return ToolBox(self.tools, name, declared, self._record_tool_run)
 
-    def _record_tool_run(self, plugin: str, tool: str, args: list[str], inputs: list[str], result: Any) -> None:
+    def _record_tool_run(
+        self, plugin: str, tool: str, args: list[str], inputs: list[str], result: Any, version: str | None = None
+    ) -> None:
         context = WriteContext(actor="plugin", trust="untrusted", op=f"{plugin}/tool")
         with self.store.transaction() as tx:
             tx.create(
@@ -242,6 +244,7 @@ class PluginHost:
                 {
                     "plugin": plugin,
                     "tool": tool,
+                    "version": version,
                     "args": args,
                     "inputs": inputs,
                     "returncode": result.returncode,

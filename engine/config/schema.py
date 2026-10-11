@@ -49,6 +49,9 @@ class ActionSettings(ConfigModel):
     keep_minutes: float = Field(60, gt=0, description="How long a reviewed proposal waits for the person's go.")
     preview_mb: float = Field(5, gt=0, description="Largest single preview an action may show, in MB.")
     max_previews: int = Field(20, ge=0, description="Most previews one action may show.")
+    max_items: int = Field(
+        2000, ge=0, description="Most items one action may offer to keep or drop (a long file gives many)."
+    )
 
 
 class PluginSettings(ConfigModel):
