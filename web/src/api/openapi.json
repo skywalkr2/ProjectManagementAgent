@@ -4708,6 +4708,18 @@
             "description": "Offer a chooser for this path instead of typing it.",
             "title": "Picker"
           },
+          "plugin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The add-on whose setting this is (its file is plugins/<name>); its name and label are in GET /api/plugins. None for the app's own settings.",
+            "title": "Plugin"
+          },
           "source": {
             "enum": [
               "default",

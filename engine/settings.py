@@ -77,6 +77,7 @@ class Setting:
     editable: bool
     enabled_by: str | None = None  # the switch (yes/no) or field (set or empty) this one only matters with
     picker: str | None = None  # "folder" or "file": the screen offers a chooser instead of typing a path
+    plugin: str | None = None  # the add-on whose settings these are; None for the app's own
 
 
 @dataclass
@@ -85,24 +86,71 @@ class Saved:
     fingerprint: str = ""
 
 
+PLUGIN_PREFIX = "plugins/"
+
+
 def fingerprint(config_dir: Path) -> str:
-    """A hash of the config files the screens edit."""
+    """A hash of the config files the screens edit, the add-ons' settings files included."""
     digest = hashlib.sha256()
     for name in FILES:
         path = config_dir / f"{name}.yaml"
         digest.update(name.encode())
         digest.update(path.read_bytes() if path.exists() else b"-")
+    for path in sorted((config_dir / "plugins").glob("*.yaml")):
+        digest.update(f"plugins/{path.name}".encode())
+        digest.update(path.read_bytes())
     return digest.hexdigest()
 
 
-def describe(cfg: Any) -> list[Setting]:
-    """Every key of every config file, for the Settings forms."""
+def describe(cfg: Any, plugins: Any = None, config_dir: Path | None = None) -> list[Setting]:
+    """Every key of every config file, for the Settings forms; with the plugin host and the config folder, also each
+    running add-on's settings (file `plugins/<name>`, as read from its file now)."""
     found: list[Setting] = []
     for name, model in FILES.items():
         defaults = model().model_dump(mode="json")
         values = getattr(cfg, name).model_dump(mode="json")
         _walk(model, [name], values, defaults, cfg.sources, found)
+    for plugin, model in (plugin_models(plugins) if config_dir is not None else {}).items():
+        file = PLUGIN_PREFIX + plugin
+        raw = _plugin_raw(config_dir, plugin)
+        try:
+            values = model.model_validate(raw).model_dump(mode="json")
+        except Exception:  # a file the add-on refuses: show the defaults; saving checks again
+            values = model().model_dump(mode="json")
+        sources = {f"{file}.{'.'.join(path)}": "file" for path in _leaf_paths(raw)}
+        start = len(found)
+        _walk(model, [file], values, model().model_dump(mode="json"), sources, found)
+        for setting in found[start:]:
+            setting.plugin = plugin
     return found
+
+
+def plugin_models(plugins: Any) -> dict[str, type[BaseModel]]:
+    """The settings model of each running add-on, by name."""
+    if plugins is None:
+        return {}
+    return {
+        name: type(registrar.config)
+        for name, registrar in sorted(plugins.registrars.items())
+        if plugins.active(name) and isinstance(registrar.config, BaseModel)
+    }
+
+
+def _plugin_raw(config_dir: Path, plugin: str) -> dict[str, Any]:
+    path = config_dir / "plugins" / f"{plugin}.yaml"
+    if not path.exists():
+        return {}
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _leaf_paths(data: Any, prefix: tuple[str, ...] = ()) -> list[tuple[str, ...]]:
+    if isinstance(data, dict) and data:
+        return [p for k, v in data.items() for p in _leaf_paths(v, (*prefix, str(k)))]
+    return [prefix] if prefix else []
 
 
 def _walk(
@@ -207,9 +255,11 @@ def save(
         raise SettingsError(f"the settings files have a problem to fix first: {err}") from None
     if not changes and not reset:
         return Saved(fingerprint=fingerprint(config_dir))
-    shown = {s.key: s for s in describe(cfg)}
+    plugins = getattr(store, "plugins", None)
+    models = {PLUGIN_PREFIX + name: model for name, model in plugin_models(plugins).items()}
+    shown = {s.key: s for s in describe(cfg, plugins, config_dir)}
     for key in [*changes, *reset]:
-        _check_key(key, shown, cfg, allow)
+        _check_key(key, shown, cfg, allow, models)
     texts: dict[str, str] = {}
     before: dict[str, tuple[Any, bool]] = {}
     for key in [*changes, *reset]:
@@ -218,16 +268,21 @@ def save(
             source = config_dir / f"{name}.yaml"
             texts[name] = source.read_text(encoding="utf-8") if source.exists() else "version: 1\n"
         data = yaml.safe_load(texts[name]) or {}
-        before[key] = (_effective(cfg, key), not has_key(data, path))
+        before[key] = (_value(key, cfg, models, texts[name]), not has_key(data, path))
     for key, value in changes.items():
         name, *path = key.split(".")
         texts[name] = set_key(texts[name], path, value)
     for key in reset:
         name, *path = key.split(".")
         texts[name] = remove_key(texts[name], path)
-    checked = _check_whole(config_dir, texts, env)
+    core = {name: text for name, text in texts.items() if name not in models}
+    checked = _check_whole(config_dir, core, env) if core else cfg
+    for name, text in texts.items():
+        if name in models:
+            _check_plugin(models[name], text)
     for name, text in texts.items():
         target = config_dir / f"{name}.yaml"
+        target.parent.mkdir(parents=True, exist_ok=True)
         temporary = target.with_suffix(".yaml.saving")
         temporary.write_text(text, encoding="utf-8")
         temporary.replace(target)
@@ -235,7 +290,7 @@ def save(
     now = datetime.now(UTC)
     with store.transaction() as tx:
         for key in [*changes, *reset]:
-            after = _effective(checked, key)
+            after = _value(key, checked, models, texts[key.split(".")[0]])
             was, was_default = before[key]
             entry = {
                 "key": key,
@@ -259,9 +314,34 @@ def _effective(cfg: Any, key: str) -> Any:
     return get_key(data, path) if has_key(data, path) else None
 
 
-def _check_key(key: str, shown: dict[str, Setting], cfg: Any, allow: tuple[str, ...]) -> None:
+def _value(key: str, cfg: Any, models: dict[str, type[BaseModel]], text: str) -> Any:
+    """A key's value: from the loaded config for the app's own files, from the file's text for an add-on's."""
+    name, *path = key.split(".")
+    if name not in models:
+        return _effective(cfg, key)
+    try:
+        data = models[name].model_validate(yaml.safe_load(text) or {}).model_dump(mode="json")
+    except Exception:  # an add-on's file it refuses: no value to show
+        return None
+    return get_key(data, path) if has_key(data, path) else None
+
+
+def _check_plugin(model: type[BaseModel], text: str) -> None:
+    """An add-on's settings file, checked against its settings model."""
+    from pydantic import ValidationError
+
+    try:
+        model.model_validate(yaml.safe_load(text) or {})
+    except ValidationError as err:
+        first = err.errors()[0]
+        raise SettingsError(f"{'.'.join(map(str, first['loc']))}: {first['msg']}") from None
+
+
+def _check_key(
+    key: str, shown: dict[str, Setting], cfg: Any, allow: tuple[str, ...], models: dict[str, Any] | None = None
+) -> None:
     name = key.split(".", 1)[0]
-    if name not in FILES or "." not in key:
+    if (name not in FILES and name not in (models or {})) or "." not in key:
         raise SettingsError(f"there is no setting {key}")
     if key.startswith(FILE_ONLY):
         raise SettingsError(f"{key} is set in {name}.yaml or with a flag, not here")

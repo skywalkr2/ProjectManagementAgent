@@ -946,6 +946,11 @@ class SettingItem(BaseModel):
     picker: Literal["folder", "file"] | None = Field(
         None, description="Offer a chooser for this path instead of typing it."
     )
+    plugin: str | None = Field(
+        None,
+        description="The add-on whose setting this is (its file is plugins/<name>); its name and label are in "
+        "GET /api/plugins. None for the app's own settings.",
+    )
 
 
 class SettingsView(BaseModel):

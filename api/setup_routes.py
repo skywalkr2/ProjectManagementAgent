@@ -88,7 +88,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def settings_view() -> SettingsView:
         return SettingsView(
             fingerprint=config_screens.fingerprint(ws.config_dir),
-            items=[SettingItem(**vars(s)) for s in config_screens.describe(current())],
+            items=[SettingItem(**vars(s)) for s in config_screens.describe(current(), store.plugins, ws.config_dir)],
         )
 
     @r.post("/settings")

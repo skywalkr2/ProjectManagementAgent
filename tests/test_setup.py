@@ -2,6 +2,7 @@
 race, steps that know when they are done, a backup folder, an AI account with its key kept on this computer, plugin
 steps, and a restart to use what was saved."""
 
+import os
 import stat
 
 import pytest
@@ -436,3 +437,33 @@ def test_an_account_of_a_known_kind_starts_with_its_settings(tmp_path):
     provider = loaded.ai.providers["picked"]
     for key, value in kind["settings"].items():
         assert getattr(provider, key) == value
+
+
+@pytest.mark.skipif(os.environ.get("COCKPIT_TEST_CORE_ONLY") == "1", reason="the example plugin is off in this run")
+def test_an_add_ons_settings_are_a_form_group_saved_to_its_own_file(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    view = c.get(f"{api}/settings").json()
+    mine = {i["key"]: i for i in view["items"] if i["plugin"] == "example"}
+    assert mine and all(i["file"] == "plugins/example" and i["group"] == "plugins/example" for i in mine.values())
+    label = mine["plugins/example.draft_label"]
+    assert label["type"] == "text" and label["editable"] and label["source"] == "file"
+    assert "plugins/example.version" not in mine
+    path = ws.config_dir / "plugins" / "example.yaml"
+    comments = [line for line in path.read_text().splitlines() if line.startswith("#")]
+    done = c.post(
+        f"{api}/settings",
+        json={"changes": {"plugins/example.draft_label": "Noted"}, "fingerprint": view["fingerprint"]},
+    )
+    assert done.status_code == 200, done.text
+    change = done.json()["changes"][0]
+    assert change["key"] == "plugins/example.draft_label" and change["after"] == "Noted" and change["before"]
+    assert yaml.safe_load(path.read_text())["draft_label"] == "Noted"
+    assert all(line in path.read_text() for line in comments)  # the file's comments stay
+    fingerprint = done.json()["fingerprint"]
+    wrong = c.post(
+        f"{api}/settings", json={"changes": {"plugins/example.ask_on_add": "maybe"}, "fingerprint": fingerprint}
+    )
+    assert wrong.status_code >= 400 and "ask_on_add" in wrong.text
+    unknown = c.post(f"{api}/settings", json={"changes": {"plugins/nobody.thing": 1}, "fingerprint": fingerprint})
+    assert unknown.status_code >= 400

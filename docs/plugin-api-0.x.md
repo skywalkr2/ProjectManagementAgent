@@ -10,6 +10,18 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.44 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Settings forms for plugins:** the Settings screen's data (`GET /api/settings`) now includes each running plugin's
+  `Settings` model as its own group, keys `plugins/<plugin>.<field>` with `plugin` set, read from
+  `config/plugins/<plugin>.yaml`. The same rules as the core's settings apply: types and choices from the model,
+  `json_schema_extra={"enabled_by": "<field>"}` to grey a field while its switch is off, `{"picker": "folder"}` for
+  a folder chooser. A save is checked against the model (a refusal names the field), keeps the file's comments, is
+  recorded with Undo, and restarts the app to use it like any settings change. The form itself on the screen follows
+  shortly; the data and the save are in place now.
+
 ## What 0.3.43 adds
 
 Manifests stay `'>=0.3,<0.4'`.
