@@ -3,6 +3,26 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Calendars and mail are read through open protocols in the core; product sign-ins wait for the owner
+
+**Decided by:** project lead, pending the owner's answer below.
+
+**What:** The core reads a calendar through its private calendar-file address and a mail folder over IMAP with an app
+password. Both are protocol-level connectors that name no service, so they belong in the core. The address and the
+password are secret references. Mail is read without marking anything as read. Calendar events in the configured
+window are followed, so a moved meeting or a new invitation is handed in.
+
+**Open question for the owner:** the to-do was mail and calendar for two named services. Their own sign-in (needed
+when a service doesn't offer app passwords) and their richer APIs belong in plugins that name the service. This
+repository's rules say it holds the core, the kit, its templates and the example plugin, and that real service
+addresses don't appear anywhere in it. Should those plugins live in their own repository (like the industry packs),
+and may they carry the services' public sign-in addresses?
+
+**Why:** Most of the value (meetings, invitations, project mail) comes through the open protocols, which work today
+without any decision about naming services.
+
+**Impact:** Two more core connectors, demo sources (off) in both workspaces, a user-guide section. No change to scope.
+
 ## 2026-10-11: Plugins reach the network only through the core's client, to declared hosts
 
 **Decided by:** project lead, following design 3.2 (what a plugin may reach) and 12.

@@ -7,3 +7,6 @@ evil_host: evil.example.org
 atom_author: Ines Albescu
 atom_key: urn:a-1
 first_link_path: /1
+calendar_host: calendar.example.com
+mail_host: mail.example.com
+mail_user: rafael@example.com

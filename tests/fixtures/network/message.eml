@@ -1,0 +1,17 @@
+Message-ID: <msg-1@mail.example.com>
+From: Odile Fenwick <odile@example.com>
+To: Rafael Quist <rafael@example.com>
+Date: Tue, 05 Mar 2030 09:15:00 +0000
+Subject: Revised floor plan
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset="utf-8"
+
+Here is the revised plan. I'll send the vendor quotes by Friday.
+--b1
+Content-Type: text/html; charset="utf-8"
+
+<p>Here is the <b>revised</b> plan.</p>
+--b1--

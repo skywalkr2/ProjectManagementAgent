@@ -94,6 +94,19 @@ computer works on the workspace at a time: the app takes a lease in the folder a
 start on the other computer, it loads the newer copy. Copies a sync service makes on a conflict are never loaded; the app
 lists them so you can look. Files you edit in the synced folder come back as proposals you review.
 
+## Sources the assistant keeps reading
+
+Besides what you hand in, the assistant can keep reading places for you: a folder, a news feed, a calendar or a mail
+folder. Each is a source in watch.yaml with how often it is read. A source's first read only notes what is there;
+after that, anything new, changed or gone is handed in for the assistant to read, marked as outside content. A
+calendar is read through its private address (most calendar services offer one in their sharing settings), and the
+events in the coming weeks are followed: a moved meeting or a new invitation comes in as a change. A mail folder is
+read over IMAP with an app password from your mail service; messages are never marked as read or changed. Addresses
+and passwords are kept outside the settings files, as environment variables or files on this computer. Rules can set
+aside changes that don't matter, such as a spacing fix or a change made by your own account; they are listed under
+Auto-closed, where Take a closer look hands one in after all. If a source can't be read several times in a row, you
+are asked once, with what to do.
+
 ## Templates and your own item types
 
 A template sets up the kinds of items you track (requests, pieces, orders), their fields, stages and checklists, and

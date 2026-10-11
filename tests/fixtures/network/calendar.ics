@@ -1,0 +1,35 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Fictional//Calendar//EN
+BEGIN:VEVENT
+UID:evt-1@calendar.example.com
+DTSTAMP:20300301T080000Z
+DTSTART:20300305T090000Z
+DTEND:20300305T100000Z
+SUMMARY:Floor plan review
+LOCATION:Room 4\, second floor
+ORGANIZER;CN=Odile Fenwick:mailto:odile@example.com
+DESCRIPTION:Bring the revised plan.\nWe decide on the vendor list
+  too.
+BEGIN:VALARM
+TRIGGER:-PT15M
+DESCRIPTION:Not the event's description
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-2@calendar.example.com
+DTSTART;VALUE=DATE:20300310
+SUMMARY:Print slot
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-old@calendar.example.com
+DTSTART:20290101T090000Z
+SUMMARY:Long ago
+END:VEVENT
+BEGIN:VEVENT
+UID:evt-weekly@calendar.example.com
+DTSTART:20290107T090000Z
+RRULE:FREQ=WEEKLY;BYDAY=MO
+SUMMARY:Weekly sync
+END:VEVENT
+END:VCALENDAR

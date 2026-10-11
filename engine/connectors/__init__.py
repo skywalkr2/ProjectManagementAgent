@@ -125,11 +125,15 @@ def _read_fake(settings: FakeSettings, state: dict[str, Any], context: Connector
 
 
 def _core() -> dict[str, Connector]:
+    from engine.connectors.calendar import CalendarSettings, read_calendar
     from engine.connectors.feed import FeedSettings, read_feed
+    from engine.connectors.mailbox import MailboxSettings, read_mailbox
 
     return {
         "folder": Connector("folder", "A folder", FolderSettings, _read_folder),
         "feed": Connector("feed", "A news feed (RSS or Atom)", FeedSettings, read_feed, network=True),
+        "calendar": Connector("calendar", "A calendar (its private address)", CalendarSettings, read_calendar, True),
+        "mailbox": Connector("mailbox", "A mail folder (IMAP)", MailboxSettings, read_mailbox, network=True),
         "fake": Connector("fake", "A stand-in source for tests", FakeSettings, _read_fake),
     }
 

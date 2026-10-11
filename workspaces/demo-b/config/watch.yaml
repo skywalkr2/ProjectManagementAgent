@@ -17,6 +17,24 @@ sources:
     every_minutes: 240
     settings:
       url: https://news.example.com/feed.xml
+  - id: calendar
+    connector: calendar
+    label: Work calendar
+    enabled: false        # turn on once the calendar's private address is set
+    every_minutes: 60
+    settings:
+      address: env:WORK_CALENDAR_ADDRESS   # the private address, kept outside the files
+      days_ahead: 30
+  - id: mail
+    connector: mailbox
+    label: Project mail
+    enabled: false        # turn on once an app password is set
+    every_minutes: 15
+    settings:
+      host: mail.example.com
+      user: pm@example.com
+      password: env:PROJECT_MAIL_PASSWORD
+      folder: Projects
 failures_before_asking: 3
 triage:
   - name: Spacing only
