@@ -104,6 +104,7 @@ class Provides(Strict):
     panels: list[str] = Field(default_factory=list, description="Screens listing records, described as data.")
     today: list[str] = Field(default_factory=list, description="Contributors of lines on Today.")
     jobs: list[str] = Field(default_factory=list, description="Work run on a schedule while the app runs.")
+    setup_steps: list[str] = Field(default_factory=list, description="Steps added to the first-run setup.")
     playbook: str | None = Field(None, description="The plugin's own playbook. Not yet available.")
     data: str | None = Field(
         None,

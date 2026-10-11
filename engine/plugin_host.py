@@ -427,6 +427,33 @@ class PluginHost:
                 found += [(plugin, line) for line in lines]
         return found
 
+    def setup_steps(self) -> list[tuple[str, Any]]:
+        """(plugin, step) for every running plugin's setup steps."""
+        found = []
+        for plugin, registrar in sorted(self.registrars.items()):
+            if self.active(plugin):
+                for name in sorted(registrar.setup_steps):
+                    step = registrar.setup_steps[name]
+                    if step.action is not None and step.action not in registrar.actions:
+                        self.failed(plugin, f"setup step {name}", f"{step.action} isn't one of its person actions")
+                        continue
+                    found.append((plugin, step))
+        return found
+
+    def setup_step_done(self, plugin: str, step: Any) -> bool:
+        """Whether a plugin's setup step is done; a failing check counts as not done and is contained."""
+        from engine.plugin_api import ReadView
+
+        registrar = self.registrars[plugin]
+        reader = self._with_files(ReadView(self.store.read(), plugin))
+        try:
+            done = bool(step.done(reader, registrar.config.model_copy(deep=True)))
+        except Exception as err:
+            self.failed(plugin, f"setup step {step.name}", err)
+            return False
+        self.succeeded(plugin, f"setup step {step.name}")
+        return done
+
     def panel(self, name: str) -> Any | None:
         plugin = name.split("/", 1)[0]
         registrar = self.registrars.get(plugin)
@@ -751,6 +778,7 @@ class PluginHost:
             ("panels", registrar.panels),
             ("today", registrar.today_lines),
             ("jobs", registrar.jobs),
+            ("setup_steps", registrar.setup_steps),
         ):
             declared = set(getattr(expected, key))
             if f"{registrar.name}/*" in declared:

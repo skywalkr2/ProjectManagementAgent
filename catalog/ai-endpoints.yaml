@@ -1,0 +1,20 @@
+# Kinds of AI account the Add account screen offers before the person types an address. Each needs an id, a name shown
+# on screen, the adapter that talks to it, the base address of its endpoint where it has one, and an optional note.
+# Which public services to list is the owner's decision (decisions.md); until then only kinds that name no service
+# are here.
+endpoints:
+  - id: local
+    name: A model server on this computer
+    adapter: openai-compatible
+    base_url: http://localhost:11434/v1
+    note: Nothing leaves this computer. Start the model server first, then press Test.
+  - id: other
+    name: Another service that speaks the common chat format
+    adapter: openai-compatible
+    base_url: ""
+    note: Enter its address from the service's own documentation.
+  - id: agent
+    name: A command-line agent signed in as you
+    adapter: cli-agent
+    base_url: ""
+    note: Give the command that starts it with its locked-down options; Test also checks the lockdown.

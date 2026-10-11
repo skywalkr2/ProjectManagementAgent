@@ -450,6 +450,110 @@
         "title": "ActionState",
         "type": "object"
       },
+      "AiAccountAdd": {
+        "additionalProperties": false,
+        "description": "A new AI account from the Add account screen. A pasted key is kept on this computer, never in ai.yaml.",
+        "properties": {
+          "adapter": {
+            "description": "The adapter of the kind of account chosen, from GET /api/ai/endpoints.",
+            "title": "Adapter",
+            "type": "string"
+          },
+          "agent": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a command-line agent: its `agent` settings.",
+            "title": "Agent"
+          },
+          "allowed_data": {
+            "items": {
+              "enum": [
+                "open",
+                "internal",
+                "restricted"
+              ],
+              "type": "string"
+            },
+            "title": "Allowed Data",
+            "type": "array"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A key pasted on the screen; kept in this computer's private folder.",
+            "title": "Key"
+          },
+          "key_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Or a reference: env:NAME or file:/path.",
+            "title": "Key Ref"
+          },
+          "models": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Short names for the account's models, to their ids.",
+            "title": "Models",
+            "type": "object"
+          },
+          "name": {
+            "description": "The account's short name in ai.yaml: lowercase letters, digits and dashes.",
+            "title": "Name",
+            "type": "string"
+          },
+          "use_for": {
+            "description": "Tiers this account's first model should do (\"routine\", \"deep\").",
+            "items": {
+              "type": "string"
+            },
+            "title": "Use For",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "adapter",
+          "models",
+          "fingerprint"
+        ],
+        "title": "AiAccountAdd",
+        "type": "object"
+      },
       "AiState": {
         "description": "Whether the assistant can do its work: set up, tested, and answering.",
         "properties": {
@@ -481,6 +585,39 @@
           "state"
         ],
         "title": "AiState",
+        "type": "object"
+      },
+      "AiTestResult": {
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "main": {
+            "title": "Main",
+            "type": "boolean"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier",
+          "account",
+          "main",
+          "ok",
+          "detail"
+        ],
+        "title": "AiTestResult",
         "type": "object"
       },
       "Answer": {
@@ -602,6 +739,30 @@
           "kind"
         ],
         "title": "AuthorSpan",
+        "type": "object"
+      },
+      "BackupFolderAdd": {
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "fingerprint"
+        ],
+        "title": "BackupFolderAdd",
         "type": "object"
       },
       "BackupStatus": {
@@ -914,6 +1075,40 @@
         "title": "Created",
         "type": "object"
       },
+      "EndpointView": {
+        "properties": {
+          "adapter": {
+            "description": "The adapter to send when adding an account of this kind.",
+            "title": "Adapter",
+            "type": "string"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "adapter",
+          "base_url"
+        ],
+        "title": "EndpointView",
+        "type": "object"
+      },
       "Evidence": {
         "properties": {
           "quote": {
@@ -1130,6 +1325,78 @@
           "added_at"
         ],
         "title": "FileView",
+        "type": "object"
+      },
+      "FolderCheckView": {
+        "properties": {
+          "free_mb": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Free Mb"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem"
+          }
+        },
+        "required": [
+          "path",
+          "ok"
+        ],
+        "title": "FolderCheckView",
+        "type": "object"
+      },
+      "FolderListView": {
+        "properties": {
+          "folders": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Folders",
+            "type": "array"
+          },
+          "parent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "folders"
+        ],
+        "title": "FolderListView",
         "type": "object"
       },
       "FollowupAction": {
@@ -3007,6 +3274,286 @@
         "title": "SentText",
         "type": "object"
       },
+      "SettingChangeView": {
+        "properties": {
+          "after": {
+            "title": "After"
+          },
+          "before": {
+            "title": "Before"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "was_default": {
+            "title": "Was Default",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "key",
+          "was_default",
+          "is_default"
+        ],
+        "title": "SettingChangeView",
+        "type": "object"
+      },
+      "SettingItem": {
+        "description": "One config key, for the Settings forms.",
+        "properties": {
+          "basic": {
+            "description": "Shown first; the rest sit behind More settings.",
+            "title": "Basic",
+            "type": "boolean"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "editable": {
+            "description": "The screen can change it; others are changed in the file.",
+            "title": "Editable",
+            "type": "boolean"
+          },
+          "file": {
+            "title": "File",
+            "type": "string"
+          },
+          "group": {
+            "description": "The section it belongs to: the file, or the file and its first part.",
+            "title": "Group",
+            "type": "string"
+          },
+          "key": {
+            "description": "Its dotted key, as in `cockpit config show`.",
+            "title": "Key",
+            "type": "string"
+          },
+          "locked": {
+            "description": "Set by an environment variable or a flag, so the screen can't change it.",
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "source": {
+            "enum": [
+              "default",
+              "file",
+              "env",
+              "flag"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "text",
+              "number",
+              "integer",
+              "yes_no",
+              "choice",
+              "list",
+              "other"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "file",
+          "group",
+          "description",
+          "type",
+          "source",
+          "locked",
+          "basic",
+          "editable"
+        ],
+        "title": "SettingItem",
+        "type": "object"
+      },
+      "SettingsSave": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "additionalProperties": true,
+            "description": "Key to its new value.",
+            "title": "Changes",
+            "type": "object"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "reset": {
+            "description": "Keys going back to their defaults.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Reset",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "SettingsSave",
+        "type": "object"
+      },
+      "SettingsSaved": {
+        "properties": {
+          "changes": {
+            "description": "What changed, for the read-back and Undo.",
+            "items": {
+              "$ref": "#/components/schemas/SettingChangeView"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "restarts": {
+            "description": "The app restarts in a moment to use the new settings.",
+            "title": "Restarts",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "changes",
+          "fingerprint",
+          "restarts"
+        ],
+        "title": "SettingsSaved",
+        "type": "object"
+      },
+      "SettingsView": {
+        "properties": {
+          "fingerprint": {
+            "description": "Send it back with a save, so two saves never race.",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SettingItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fingerprint",
+          "items"
+        ],
+        "title": "SettingsView",
+        "type": "object"
+      },
+      "SetupStepView": {
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A plugin step's person action, if it has one.",
+            "title": "Action"
+          },
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          },
+          "explanation": {
+            "default": "",
+            "title": "Explanation",
+            "type": "string"
+          },
+          "id": {
+            "description": "A core step (\"workspace\", \"template\", \"ai\", \"backup\", \"people\", \"first_note\") or a plugin's step.",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "description": "A plugin step's own words; core steps take theirs from the wording sheet.",
+            "title": "Label",
+            "type": "string"
+          },
+          "plugin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plugin"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "done",
+          "skipped"
+        ],
+        "title": "SetupStepView",
+        "type": "object"
+      },
+      "SetupView": {
+        "properties": {
+          "finished": {
+            "description": "Every step is done or skipped.",
+            "title": "Finished",
+            "type": "boolean"
+          },
+          "local": {
+            "description": "The app runs on the person's own computer, so folders can be picked here.",
+            "title": "Local",
+            "type": "boolean"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/SetupStepView"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "steps",
+          "finished",
+          "local"
+        ],
+        "title": "SetupView",
+        "type": "object"
+      },
       "SourceView": {
         "properties": {
           "id": {
@@ -3673,6 +4220,64 @@
         "title": "TaskStarted",
         "type": "object"
       },
+      "TemplateApplied": {
+        "properties": {
+          "plugins": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Plugins",
+            "type": "array"
+          },
+          "restarts": {
+            "title": "Restarts",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "plugins",
+          "restarts"
+        ],
+        "title": "TemplateApplied",
+        "type": "object"
+      },
+      "TemplateApply": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "TemplateApply",
+        "type": "object"
+      },
+      "TemplateView": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description"
+        ],
+        "title": "TemplateView",
+        "type": "object"
+      },
       "TextChoices": {
         "additionalProperties": false,
         "properties": {
@@ -4308,6 +4913,88 @@
           }
         },
         "summary": "Action Status"
+      }
+    },
+    "/api/ai/accounts": {
+      "post": {
+        "operationId": "ai_account_add_api_ai_accounts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAccountAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Account Add"
+      }
+    },
+    "/api/ai/endpoints": {
+      "get": {
+        "operationId": "endpoints_api_ai_endpoints_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EndpointView"
+                  },
+                  "title": "Response Endpoints Api Ai Endpoints Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Endpoints"
+      }
+    },
+    "/api/ai/test": {
+      "post": {
+        "operationId": "ai_test_api_ai_test_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AiTestResult"
+                  },
+                  "title": "Response Ai Test Api Ai Test Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ai Test"
       }
     },
     "/api/backup": {
@@ -6334,6 +7021,279 @@
         "summary": "Runtime Config"
       }
     },
+    "/api/settings": {
+      "get": {
+        "operationId": "settings_view_api_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Settings View"
+      },
+      "post": {
+        "operationId": "settings_save_api_settings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsSave"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Settings Save"
+      }
+    },
+    "/api/setup": {
+      "get": {
+        "operationId": "setup_view_api_setup_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Setup View"
+      }
+    },
+    "/api/setup/backup-folder": {
+      "post": {
+        "operationId": "backup_folder_api_setup_backup_folder_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupFolderAdd"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Backup Folder"
+      }
+    },
+    "/api/setup/folder-check": {
+      "get": {
+        "operationId": "folder_check_api_setup_folder_check_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderCheckView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Folder Check"
+      }
+    },
+    "/api/setup/folders": {
+      "get": {
+        "operationId": "folders_api_setup_folders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "path",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FolderListView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Folders"
+      }
+    },
+    "/api/setup/{step}/reopen": {
+      "post": {
+        "operationId": "setup_reopen_api_setup__step__reopen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step",
+            "required": true,
+            "schema": {
+              "title": "Step",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Setup Reopen"
+      }
+    },
+    "/api/setup/{step}/skip": {
+      "post": {
+        "operationId": "setup_skip_api_setup__step__skip_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step",
+            "required": true,
+            "schema": {
+              "title": "Step",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Setup Skip"
+      }
+    },
     "/api/sources/{src_id}": {
       "get": {
         "operationId": "source_api_sources__src_id__get",
@@ -6627,6 +7587,66 @@
           }
         },
         "summary": "Task Start"
+      }
+    },
+    "/api/templates": {
+      "get": {
+        "operationId": "template_list_api_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TemplateView"
+                  },
+                  "title": "Response Template List Api Templates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Template List"
+      }
+    },
+    "/api/templates/apply": {
+      "post": {
+        "operationId": "template_apply_api_templates_apply_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateApply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateApplied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Template Apply"
       }
     },
     "/api/text-versions/{version_id}/accept": {

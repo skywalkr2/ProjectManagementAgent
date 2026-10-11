@@ -3,6 +3,29 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Settings are saved from the screens, and the app restarts itself to use them
+
+**Decided by:** project lead, following design 4.0, 6.14 and 7.8.
+
+**What:**
+- The Settings forms are described from the config schemas. A save names the fingerprint of the files the form came
+  from, so two saves never race. Keys set by an environment variable or flag are locked, and the server's own keys and
+  the storage backend are changed only in their files. The changed files are checked as a whole before anything is
+  written, written keeping their comments, committed to the workspace's git, and recorded as `setting_change`
+  records.
+- Instead of reloading settings inside a running process, the app restarts itself between requests when its config or
+  code changed (locally it re-executes). Old code never runs new settings, and nothing is half-reloaded.
+- The first run has the design's steps plus a template step and plugins' own steps. Skips are kept per computer.
+- A key pasted on the Add account screen is kept in the workspace's private folder (readable only by the user) and
+  referred to as `file:`; a hosted app takes keys only from its environment.
+- Kinds of AI account come from `catalog/ai-endpoints.yaml`. It lists only kinds that name no service for now.
+
+**Open question for the owner:** may the catalog list public AI services by name and address (the repository rule
+says no real URLs anywhere)? Until answered, people type the address of any service that isn't a local server.
+
+**Impact:** New `setting_change` record type, plugin API 0.3.24 (`setup_step`), new routes under `/api/settings`,
+`/api/setup`, `/api/templates` and `/api/ai`. No change to scope.
+
 ## 2026-10-11: Plugin API 0.3.23: contained failures, refusals shown before applying, stages that apply to some records
 
 **Decided by:** project lead, from a plugin author's questions.

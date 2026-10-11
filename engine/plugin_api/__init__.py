@@ -33,7 +33,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.23"
+PLUGIN_API_VERSION = "0.3.24"
 
 
 class Settings(BaseModel):
@@ -629,6 +629,17 @@ class JobRegistration:
 
 
 @dataclass(frozen=True)
+class SetupStepRegistration:
+    """A registered setup step (host side)."""
+
+    name: str
+    label: str
+    explanation: str
+    done: Callable
+    action: str | None
+
+
+@dataclass(frozen=True)
 class InterfaceItem:
     """One item a provider offers through an interface: who provides it and its fields, as the definition shapes
     them. Read-only: it is a copy, never the provider's record. Put it in a packet with
@@ -796,6 +807,7 @@ class Registrar:
         self.today_lines: dict[str, TodayRegistration] = {}
         self.panels: dict[str, PanelRegistration] = {}
         self.jobs: dict[str, JobRegistration] = {}
+        self.setup_steps: dict[str, SetupStepRegistration] = {}
         self.interface_provisions: dict[str, InterfaceProvision] = {}
 
     def _name(self, name: str) -> None:
@@ -1194,6 +1206,20 @@ class Registrar:
         if name in self.jobs or not callable(run) or not isinstance(every_minutes, int) or every_minutes < 5:
             raise ValueError("duplicate job, invalid run function, or a schedule under 5 minutes")
         self.jobs[name] = JobRegistration(name, every_minutes, run)
+
+    def setup_step(
+        self, name: str, *, label: str, done: Callable, explanation: str = "", action: str | None = None
+    ) -> None:
+        """A step of the first-run setup (listed in `provides.setup_steps`), shown after the core's steps: `label` says
+        what to do in a few words, `explanation` why, and `done(view, settings) -> bool` whether it is done, called
+        whenever setup is shown, so it must be quick and deterministic. `action` is one of this plugin's person
+        actions on the workspace, offered as the step's button; without one, the step points to the plugin's
+        settings. The person can skip it and come back to it later."""
+        self._name(name)
+        label = " ".join(str(label).split())
+        if name in self.setup_steps or not callable(done) or not label or len(label) > 80:
+            raise ValueError("duplicate setup step, invalid done function, or a label that isn't one short line")
+        self.setup_steps[name] = SetupStepRegistration(name, label, " ".join(str(explanation).split()), done, action)
 
     def derived_file(self, name: str, *, path: str, depends_on: tuple[str, ...], render: Callable) -> None:
         """A read-only file generated from records into each project's folder in the synced folder (an overview, a

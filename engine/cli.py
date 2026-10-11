@@ -5,8 +5,10 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import signal
 import sys
 import tempfile
+import threading
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -253,7 +255,13 @@ def cmd_serve(args: argparse.Namespace) -> int:
             lease.release()
             store.close()
 
-    app = create_app(ws, cfg, token, on_shutdown=shut_down, start_worker=True)
+    restart = threading.Event()
+
+    def ask_restart() -> None:
+        restart.set()
+        server.handle_exit(signal.SIGTERM, None)
+
+    app = create_app(ws, cfg, token, on_shutdown=shut_down, start_worker=True, on_restart=ask_restart)
 
     class Server(uvicorn.Server):
         def handle_exit(self, sig: int, frame: Any) -> None:
@@ -265,9 +273,12 @@ def cmd_serve(args: argparse.Namespace) -> int:
     try:
         server.run()
     except KeyboardInterrupt:
-        pass
+        restart.clear()
     finally:
         shut_down()
+    if restart.is_set():
+        print("Restarting to use the new settings.", file=sys.stderr)
+        os.execv(sys.executable, [sys.executable, *sys.orig_argv[1:]])  # noqa: S606 - this same program again
     return 0
 
 

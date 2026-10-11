@@ -834,3 +834,141 @@ class FileKindView(BaseModel):
     accept: list[str]
     max_mb: float
     details_schema: dict[str, Any]
+
+
+# ---- settings and setup ----------------------------------------------------------------------------------------------
+
+
+class SettingItem(BaseModel):
+    """One config key, for the Settings forms."""
+
+    key: str = Field(description="Its dotted key, as in `cockpit config show`.")
+    file: str
+    group: str = Field(description="The section it belongs to: the file, or the file and its first part.")
+    description: str
+    type: Literal["text", "number", "integer", "yes_no", "choice", "list", "other"]
+    options: list[str] = Field(default_factory=list)
+    value: Any = None
+    default: Any = None
+    source: Literal["default", "file", "env", "flag"]
+    locked: bool = Field(description="Set by an environment variable or a flag, so the screen can't change it.")
+    basic: bool = Field(description="Shown first; the rest sit behind More settings.")
+    editable: bool = Field(description="The screen can change it; others are changed in the file.")
+
+
+class SettingsView(BaseModel):
+    fingerprint: str = Field(description="Send it back with a save, so two saves never race.")
+    items: list[SettingItem]
+
+
+class SettingsSave(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    changes: dict[str, Any] = Field(default_factory=dict, description="Key to its new value.")
+    reset: list[str] = Field(default_factory=list, description="Keys going back to their defaults.")
+    fingerprint: str
+
+
+class SettingChangeView(BaseModel):
+    key: str
+    before: Any = None
+    after: Any = None
+    was_default: bool
+    is_default: bool
+
+
+class SettingsSaved(BaseModel):
+    changes: list[SettingChangeView] = Field(description="What changed, for the read-back and Undo.")
+    fingerprint: str
+    restarts: bool = Field(description="The app restarts in a moment to use the new settings.")
+
+
+class SetupStepView(BaseModel):
+    id: str = Field(
+        description='A core step ("workspace", "template", "ai", "backup", "people", "first_note") or a plugin\'s step.'
+    )
+    done: bool
+    skipped: bool
+    label: str = Field("", description="A plugin step's own words; core steps take theirs from the wording sheet.")
+    explanation: str = ""
+    action: str | None = Field(None, description="A plugin step's person action, if it has one.")
+    plugin: str | None = None
+
+
+class SetupView(BaseModel):
+    steps: list[SetupStepView]
+    finished: bool = Field(description="Every step is done or skipped.")
+    local: bool = Field(description="The app runs on the person's own computer, so folders can be picked here.")
+
+
+class TemplateView(BaseModel):
+    id: str
+    name: str
+    description: str
+
+
+class TemplateApply(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+
+
+class TemplateApplied(BaseModel):
+    plugins: list[str]
+    restarts: bool
+
+
+class FolderCheckView(BaseModel):
+    path: str
+    ok: bool
+    problem: str | None = None
+    free_mb: float | None = None
+
+
+class FolderListView(BaseModel):
+    path: str
+    parent: str | None = None
+    folders: list[str]
+
+
+class BackupFolderAdd(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str
+    label: str = ""
+    fingerprint: str
+
+
+class EndpointView(BaseModel):
+    id: str
+    name: str
+    adapter: str = Field(description="The adapter to send when adding an account of this kind.")
+    base_url: str
+    note: str = ""
+
+
+class AiAccountAdd(BaseModel):
+    """A new AI account from the Add account screen. A pasted key is kept on this computer, never in ai.yaml."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(description="The account's short name in ai.yaml: lowercase letters, digits and dashes.")
+    adapter: str = Field(description="The adapter of the kind of account chosen, from GET /api/ai/endpoints.")
+    base_url: str | None = None
+    key: str | None = Field(None, description="A key pasted on the screen; kept in this computer's private folder.")
+    key_ref: str | None = Field(None, description="Or a reference: env:NAME or file:/path.")
+    models: dict[str, str] = Field(description="Short names for the account's models, to their ids.")
+    allowed_data: list[Literal["open", "internal", "restricted"]] = Field(default_factory=lambda: ["open"])
+    agent: dict[str, Any] | None = Field(None, description="For a command-line agent: its `agent` settings.")
+    use_for: list[str] = Field(
+        default_factory=list, description='Tiers this account\'s first model should do ("routine", "deep").'
+    )
+    fingerprint: str
+
+
+class AiTestResult(BaseModel):
+    tier: str
+    account: str
+    main: bool
+    ok: bool
+    detail: str

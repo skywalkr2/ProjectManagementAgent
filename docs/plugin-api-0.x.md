@@ -10,6 +10,19 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.24 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Setup steps:** `registrar.setup_step(name, label=..., done=fn, explanation="", action=None)`, listed in
+  `provides.setup_steps`. The first-run setup shows it after the core's steps; `done(view, settings) -> bool` says
+  whether it is done and is contained like Today lines; `action` (one of the plugin's person actions on the
+  workspace) is its button. The person can skip it and reopen it.
+- **Settings from the screens:** `GET /api/settings` describes every core config key; `POST /api/settings` saves
+  changes with the fingerprint the form was built from, refuses keys set by environment variables or flags, keeps the
+  files' comments, records each change as a `setting_change` and restarts the app to use them. Plugins' own settings
+  files are not edited here yet.
+
 ## What 0.3.23 adds
 
 Manifests stay `'>=0.3,<0.4'`.

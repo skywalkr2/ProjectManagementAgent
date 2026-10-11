@@ -21,6 +21,7 @@ from starlette.types import ASGIApp
 
 from api.routes import build_router
 from api.schemas import RuntimeConfig
+from api.setup_routes import build_setup_router
 from engine import __version__
 from engine.ai.router import Router
 from engine.config import Config
@@ -62,12 +63,14 @@ def create_app(
     start_worker: bool = False,
     router_factory: Callable[[], Router] | None = None,
     ui_dist: Path | None = None,
+    on_restart: Callable[[], None] | None = None,
 ) -> ASGIApp:
     """Build the app for a workspace. The returned app serves the base path from the config.
 
     `on_shutdown` runs while the server shuts down, before the process exits on a stop signal, so cleanup such as
     releasing the instance lease always happens. With `start_worker`, queued requests are processed in the background;
-    otherwise they wait until `app.state.worker.run_pending()` is called (tests)."""
+    otherwise they wait until `app.state.worker.run_pending()` is called (tests). `on_restart` is called when saved
+    settings or new code need the process to start again; without it, waiting work says a restart is needed."""
     from engine.sync import placement_problem
 
     base_path = cfg.server.base_path
@@ -76,7 +79,7 @@ def create_app(
         raise RuntimeError(f"Can't start: {placed} (storage.sync.folder).")
     store = Store(ws.db_path, cfg=cfg)
     events = Events()
-    worker = Worker(ws, store, cfg, events, router_factory)
+    worker = Worker(ws, store, cfg, events, router_factory, on_restart)
     dist = ui_dist if ui_dist is not None else UI_DIST
 
     @asynccontextmanager
@@ -155,6 +158,7 @@ def create_app(
         )
 
     inner.include_router(build_router(ws, cfg, store, events, worker))
+    inner.include_router(build_setup_router(ws, cfg, store, events, worker))
     inner.state.worker = worker
     inner.state.store = store
     inner.state.events = events

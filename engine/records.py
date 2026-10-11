@@ -348,6 +348,21 @@ class JobRun(Record):
     error: str | None = Field(None, description="What went wrong, for a failed run.")
 
 
+class SettingChange(Record):
+    """One setting the person changed from the screens: which key, what it was and what it became. Written with the
+    config file; nothing changes it."""
+
+    record_kind: ClassVar[str] = "setting_change"
+    prefix: ClassVar[str] = "SETCHG"
+
+    key: str = Field(description="The setting's dotted key, as in `cockpit config show`.")
+    before: Any = Field(None, description="Its value before the change.")
+    after: Any = Field(None, description="Its value after the change.")
+    was_default: bool = Field(False, description="It was at its default before the change (set in no file).")
+    is_default: bool = Field(False, description="The change put it back to its default (removed from the file).")
+    at: datetime = Field(description="When it was changed.")
+
+
 class ToolRun(Record):
     """One run of an outside program a plugin declared: what ran, how it ended and what it returned. The engine writes
     it after each run; nothing changes it."""
@@ -635,6 +650,7 @@ REGISTRY: dict[str, type[Record]] = {
         File,
         ToolRun,
         JobRun,
+        SettingChange,
         TextVersion,
         WorkingCopy,
     )
@@ -648,7 +664,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "action": [("project", "project"), ("owners[].person", "person"), ("owners[].team", "team"), ("source", "source")],
     "question": [("to", "person"), ("projects[]", "project"), ("source", "source")],
     "source": [("projects[]", "project")],
-    "request": [("source", "source"), ("changeset", "changeset"), ("previous", "request")],
+    "request": [("source", "source"), ("changeset", "changeset"), ("previous", "request"), ("follows", "changeset")],
     "changeset": [("request", "request"), ("run", "run")],
     "fact": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("source", "source")],

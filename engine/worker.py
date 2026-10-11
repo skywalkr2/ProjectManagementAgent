@@ -76,9 +76,13 @@ class Worker:
         cfg: Config,
         events: Events,
         router_factory: Callable[[], Router] | None = None,
+        on_restart: Callable[[], None] | None = None,
     ):
         self.ws, self.store, self.cfg, self.events = ws, store, cfg, events
         self.router_factory = router_factory or (lambda: Router(cfg, store, env=os.environ))
+        # Called once, between requests, when settings or code changed: the process restarts to use them (6.14).
+        self.on_restart = on_restart
+        self.restarting = False
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -269,5 +273,17 @@ class Worker:
     def _loop(self) -> None:
         while not self._stop.is_set():
             self.run_pending()
+            if self.restart_due():
+                return
             self._wake.wait(timeout=5)
             self._wake.clear()
+
+    def restart_due(self) -> bool:
+        """Ask for a restart once, when settings or code changed and no request is being processed."""
+        if self.on_restart is None or self.restarting or not self._changed_since_start():
+            return False
+        self.restarting = True
+        log.warning("Settings or code changed; restarting to use them.")
+        self.events.changed()
+        self.on_restart()
+        return True
