@@ -9,6 +9,7 @@ import signal
 import sys
 import tempfile
 import threading
+import webbrowser
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -16,10 +17,11 @@ from typing import Any
 import yaml
 
 from engine.config import ConfigError
+from engine.shipped import DEMOS, demo
 from engine.storage import Store, StoreError
 from engine.storage.export import commit_export, export_data, import_data
 from engine.storage.lease import Lease, LeaseHeld
-from engine.workspace import WorkspaceError, init_workspace, resolve
+from engine.workspace import Workspace, WorkspaceError, init_workspace, resolve
 
 STALE_BUILD = "The web screens are out of date. Run: npm --prefix web run build"
 TEMP_FOLDER = "This folder is emptied when the computer restarts. Keep workspaces in your home folder."
@@ -94,7 +96,21 @@ def _parser() -> argparse.ArgumentParser:
     sp.add_argument("--host", help="address to listen on (server.host)")
     sp.add_argument("--port", type=int, help="port to listen on (server.port)")
     sp.add_argument("--base-path", help="path to serve under (server.base_path)")
+    _open_args(sp)
     sp.set_defaults(func=cmd_serve)
+
+    sp = sub.add_parser("demo", help="try the app on a demo workspace of made-up data")
+    sp.add_argument(
+        "folder",
+        type=Path,
+        nargs="?",
+        default=Path("~/cockpit-demo"),
+        help="where the demo lives",
+    )
+    sp.add_argument("--which", choices=DEMOS, default="demo-b", help="which demo to start from (default: %(default)s)")
+    sp.add_argument("--fresh", action="store_true", help="start over: replace the demo folder with a new copy")
+    _open_args(sp, default=True)
+    sp.set_defaults(func=cmd_demo, host=None, port=None, base_path=None)
 
     sp = sub.add_parser("export", help="write the readable export to data/ and commit it")
     ws_arg(sp)
@@ -163,6 +179,35 @@ def _parser() -> argparse.ArgumentParser:
     return p
 
 
+def _open_args(sp: argparse.ArgumentParser, default: bool | None = None) -> None:
+    which = sp.add_mutually_exclusive_group()
+    which.add_argument("--open", dest="open_browser", action="store_true", help="open the app in the browser")
+    which.add_argument("--no-open", dest="open_browser", action="store_false", help="don't open the browser")
+    sp.set_defaults(open_browser=default)
+
+
+def cmd_demo(args: argparse.Namespace) -> int:
+    """Copy a demo workspace into the folder if it isn't there yet (or with --fresh), then serve it."""
+    folder = args.folder.expanduser().resolve()
+    if (folder / "config" / "workspace.yaml").is_file():
+        ws = Workspace(folder)
+        if not ws.config().workspace.demo:
+            print(f"cockpit: {folder} holds a workspace that isn't a demo. Choose another folder.", file=sys.stderr)
+            return 1
+        if args.fresh:
+            store = Store(ws.db_path)
+            try:
+                Lease(store).acquire()  # refuses while the demo is running elsewhere
+            finally:
+                store.close()
+            shutil.rmtree(folder)
+    if not folder.exists() or not any(folder.iterdir()):
+        init_workspace(folder, template=demo(args.which))
+        print(f"Made a demo workspace at {folder}. Everything in it is made up.")
+    args.workspace = str(folder)
+    return cmd_serve(args)
+
+
 def cmd_init(args: argparse.Namespace) -> int:
     if args.sync is not None and (args.template or args.you or args.name or args.assistant):
         print(
@@ -209,7 +254,12 @@ def cmd_serve(args: argparse.Namespace) -> int:
     from api.app import create_app
 
     ws = resolve(args.workspace)
-    flags = {"server.host": args.host, "server.port": args.port, "server.base_path": args.base_path}
+    flags = {
+        "server.host": args.host,
+        "server.port": args.port,
+        "server.base_path": args.base_path,
+        "server.open_browser": args.open_browser,
+    }
     cfg = ws.config(flags=flags)
     if cfg.server.mode == "hosted":
         print("cockpit: hosted mode isn't available yet; set server.mode to local.", file=sys.stderr)
@@ -246,6 +296,8 @@ def cmd_serve(args: argparse.Namespace) -> int:
     prefix = "" if cfg.server.base_path == "/" else cfg.server.base_path
     url = f"http://{cfg.server.host}:{cfg.server.port}{prefix}/?token={token}"
     print(f"Open {url}")
+    if cfg.server.open_browser:
+        threading.Timer(1.0, webbrowser.open, args=(url,)).start()
     released = False
 
     def shut_down() -> None:

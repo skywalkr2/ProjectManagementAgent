@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: The package carries its screens, templates and demos; a demo says it is one
+
+**Decided by:** project lead, under the owner's friends' preview milestone.
+
+**What:** The wheel carries the starting templates, the AI endpoint catalog, the built web screens and the two fictional
+demo workspaces in `engine/_shipped/` (a build hook copies them; a checkout reads them in place, through
+`engine.shipped`). Building a wheel without the web screens stops with how to build them. `cockpit demo [folder]` makes
+a demo workspace once (`--fresh` starts over, and refuses a folder holding a workspace that isn't a demo) and serves it,
+opening the browser. New settings: `workspace.demo` (the screens label made-up data) and `server.open_browser` (with
+`--open` and `--no-open`). Install and update are one script around `uv tool install --force`; a tag builds the package,
+checks that it installs and starts the demo, and attaches it to a release with the scripts and `docs/install.md`.
+
+**Why:** Friends get a download, not the repository: no Node, no checkout, one command to try it.
+
+**Impact:** Roadmap "Friends' preview" (packaged install done; labeled demo screens and feedback button next). No change
+to scope.
+
 ## 2026-10-11: Calendars and mail are read through open protocols in the core; product sign-ins wait for the owner
 
 **Decided by:** project lead, pending the owner's answer below.

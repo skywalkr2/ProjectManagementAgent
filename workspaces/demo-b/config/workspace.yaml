@@ -27,3 +27,4 @@ plugins:
   failures_before_off: 3   # a plugin call may fail this many times in a row before the plugin is turned off
   secrets: {}   # e.g. {mail-plugin: {token: env:MAIL_TOKEN}}: references only, never the secret
 our_accounts: [Cockpit assistant]   # names this app and the PM use on watched sources
+demo: true   # made-up example data: the screens say so

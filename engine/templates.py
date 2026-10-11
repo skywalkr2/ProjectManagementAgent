@@ -10,7 +10,7 @@ A template file looks like:
 Applying one turns those plugins on and merges their settings into `config/plugins/<plugin>.yaml`: values already set
 stay as they are, and in a list of entries with ids (item types, stages) entries are added by id and existing ones are
 left alone. Every merged file is checked against the plugin's settings schema before anything is written. Starting
-templates ship in the repository's `templates/` folder.
+templates ship with the product (`engine.shipped`).
 """
 
 from __future__ import annotations
@@ -21,7 +21,9 @@ from typing import Any
 
 import yaml
 
-SHIPPED = Path(__file__).resolve().parents[1] / "templates"
+from engine.shipped import shipped as shipped_folder
+
+SHIPPED = shipped_folder("templates")
 
 
 class TemplateError(Exception):

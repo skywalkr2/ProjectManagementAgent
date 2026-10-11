@@ -18,11 +18,12 @@ from typing import Any
 
 import yaml
 
+from engine.shipped import shipped
 from engine.storage import StoreError
 
 STATE_FILE = "setup.json"
 CORE_STEPS = ("workspace", "template", "ai", "backup", "people", "first_note")
-CATALOG = Path(__file__).resolve().parents[1] / "catalog" / "ai-endpoints.yaml"
+CATALOG = shipped("catalog") / "ai-endpoints.yaml"
 
 
 @dataclass

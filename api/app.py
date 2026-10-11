@@ -27,11 +27,12 @@ from api.watch_routes import build_watch_router
 from engine import __version__
 from engine.ai.router import Router
 from engine.config import Config
+from engine.shipped import shipped
 from engine.storage import Store
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
-UI_DIST = Path(__file__).resolve().parents[1] / "web" / "dist"
+UI_DIST = shipped("web")
 
 COOKIE = "cockpit_token"
 OPEN_PATHS = {"/api/health"}

@@ -31,6 +31,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["engine", "api", "plugins"]
 
+# Copies templates, the catalog, the built web screens and the demo workspaces into engine/_shipped/ (hatch_build.py).
+[tool.hatch.build.targets.wheel.hooks.custom]
+
+[tool.hatch.build.targets.sdist]
+artifacts = ["web/dist"]
+
 [tool.ruff]
 line-length = 120
 target-version = "py312"

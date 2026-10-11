@@ -101,6 +101,10 @@ class WorkspaceFile(FileModel):
         default_factory=list,
         description="The names the PM and this app use on watched sources, so changes by them read as ours.",
     )
+    demo: bool = Field(
+        False,
+        description="Made-up example data: every screen says so, so nobody mistakes it for real work.",
+    )
 
 
 # ---- config/server.yaml ----------------------------------------------------------------------------------------------
@@ -115,6 +119,9 @@ class ServerFile(FileModel):
     port: int = Field(8765, ge=1, le=65535, description="Port to listen on.")
     base_path: str = Field("/", description="Path the app is served under, e.g. /admin. Every route and link uses it.")
     public_url: str | None = Field(None, description="The address people use to reach the app. Required when hosted.")
+    open_browser: bool = Field(
+        False, description="Open the app in this computer's browser when it starts (local mode only)."
+    )
 
     @field_validator("base_path")
     @classmethod

@@ -27,6 +27,9 @@ real-world tested with a live AI account. See the plan in [`docs/project/`](docs
 
 ## Try it
 
+To install from a package file, without the source or Node, see [`docs/install.md`](docs/install.md). From a
+checkout:
+
 Needs Python 3.12 or newer with [uv](https://docs.astral.sh/uv/), and Node 22.12 or newer with npm for the web UI.
 
 ```

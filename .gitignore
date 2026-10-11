@@ -31,3 +31,6 @@ web/dist/
 cockpit.db
 cockpit.db-*
 .cockpit/
+
+# Shipped files copied in by the wheel build
+engine/_shipped/
