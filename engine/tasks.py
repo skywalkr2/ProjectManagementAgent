@@ -23,7 +23,12 @@ NOT_FROM_NOTES = {
     "text.accept",
     "text.discard",
     "text.draft",
+    "answer",
+    "setting.propose",
+    "report.draft",
 }
+#: What an ask may do besides what reading notes does: answer, suggest a setting, draft a report to the maintainers.
+ASK_OPS = ("answer", "setting.propose", "report.draft")
 
 
 @dataclass(frozen=True)
@@ -54,6 +59,14 @@ TASKS: dict[str, TaskKind] = {
     # Reading notes never deletes anything; deletion is the person's own act (or a plugin task that declares it).
     "notes": TaskKind(
         name="notes", ops=tuple(n for n in OP_MODELS if n not in NOT_FROM_NOTES), prompt="notes", playbook="notes"
+    ),
+    # A question from the PM about the app or the workspace (design 6.25), answered from the material it is given.
+    "ask": TaskKind(
+        name="ask",
+        ops=(*ASK_OPS, *(n for n in OP_MODELS if n not in NOT_FROM_NOTES)),
+        prompt="ask",
+        playbook="notes",
+        label="Ask",
     ),
 }
 

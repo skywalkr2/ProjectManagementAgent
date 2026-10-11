@@ -22,6 +22,9 @@ Manifests stay `'>=0.3,<0.4'`.
   changes with the fingerprint the form was built from, refuses keys set by environment variables or flags, keeps the
   files' comments, records each change as a `setting_change` and restarts the app to use them. Plugins' own settings
   files are not edited here yet.
+- **Asking the assistant:** a core task kind `ask` with three core ops plugins may see in changesets: `answer` (an
+  `answer` record whose `cites` must quote the help material), `setting.propose` (a `setting_proposal` the person
+  applies) and `report.draft` (a `report` to the maintainers the person sends). Plugins' ops are not offered to asks.
 
 ## What 0.3.23 adds
 

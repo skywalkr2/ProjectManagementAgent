@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Asking the assistant answers from quoted material only
+
+**Decided by:** project lead, following the decision on asking about the app (2026-10-10).
+
+**What:** An ask is a core `ask` request. Its packet holds the user guide sections that match the question, the
+settings (no key locations), what the install can do and the records. The answer is an op whose cites are checked
+against that material like evidence. Suggested settings are proposals the person applies through the same settings
+save (fingerprint, validation, Undo). Requests the product can't meet become report drafts the person sends. The user
+guide ships in `engine/guide/guide.md` and is the only source for how the app works.
+
+**Why:** An assistant that explains the app must not invent buttons or settings. Quoting checked words gives the
+same guarantee as evidence on claims, and proposals keep the person in charge of every change.
+
+**Impact:** New core ops `answer`, `setting.propose` and `report.draft`; records `answer`, `setting_proposal` and
+`report`; routes `/api/ask`, `/api/asks`, `/api/setting-proposals/*` and `/api/reports/*`. The Ask screen comes with
+the next screens step. No change to scope.
+
 ## 2026-10-11: Settings are saved from the screens, and the app restarts itself to use them
 
 **Decided by:** project lead, following design 4.0, 6.14 and 7.8.

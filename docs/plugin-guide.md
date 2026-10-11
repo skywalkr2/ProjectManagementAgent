@@ -545,7 +545,7 @@ Something to look at on the review (an image the plugin rendered, or plain text)
 
 Previews may be: `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
-Core ops an action may propose: `note`, `person.add`, `project.add`, `question.add`, `record.delete`, `record.edit`, `record.log`, `record.set`, `stage.move`, `text.edit`, `text.propose`.
+Core ops an action may propose: `answer`, `note`, `person.add`, `project.add`, `question.add`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
 
 ## AI task kinds
 
@@ -1010,6 +1010,41 @@ One setting the person changed from the screens: which key, what it was and what
 | `is_default` | bool | `False` | The change put it back to its default (removed from the file). |
 | `at` | datetime | required | When it was changed. |
 
+### `answer` (ANS-n)
+
+The assistant's answer to a question the PM asked, with the words it rests on.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `request` | str | required | The ask it answers. |
+| `text` | str | required | The answer. |
+| `cites` | list[Cite] | `[]` | The words the answer rests on. |
+| `cites[].quote` | str | required | The exact words. |
+| `cites[].source` | str \| None | `None` | Where they are: the help material, or a saved source's id. |
+
+### `setting_proposal` (SETPROP-n)
+
+A setting change the assistant suggested in an answer; the PM applies it or sets it aside.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `request` | str | required | The ask it came from. |
+| `key` | str | required | The setting's dotted key. |
+| `value` | Any | `None` | The suggested value. |
+| `why` | str | required | Why it answers the question. |
+| `status` | Literal['open', 'applied', 'dismissed'] | `'open'` | open: waiting for the PM. applied: saved. dismissed: set aside. |
+
+### `report` (RPT-n)
+
+A report to the product's maintainers the assistant drafted for something the product can't do (design 6.13). The PM reviews it and sends it themselves.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `request` | str | required | The ask it came from. |
+| `title` | str | required | What is missing, in one line. |
+| `text` | str | required | The report. |
+| `status` | Literal['draft', 'sent', 'dismissed'] | `'draft'` | draft: not yet reviewed. sent: the PM sent it. dismissed: set aside. |
+
 ### `text_version` (TXT-n)
 
 One version of a long text field: its text (stored once by hash in the workspace's texts folder), where it came from, whether it is waiting for review, and who wrote each passage. Written by the text ops and `writer.set_text`; the person accepts or discards pending ones.
@@ -1082,6 +1117,17 @@ Close an open action the input says is done. Refused if the action doesn't exist
 | `id` | str | required | The id of the open action that is done. |
 | `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `answer`
+
+Answer the PM's question from the material given: the user guide, the settings, what this install can do and the records. Every claim the answer makes cites the exact words it comes from. Creates an answer record.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `text` | str | required | The answer, in plain words, for the PM. |
+| `cites` | list[EvidenceIn] | required | The exact words from the material that the answer rests on. |
+| `cites[].quote` | str | required | The exact words from the input that justify this op. |
 
 ### `fact`
 
@@ -1223,6 +1269,27 @@ Change one field of an existing record. Allowed fields: project status, phase, t
 | `value` | Any | required | The new value, in the field's own type; a date is written YYYY-MM-DD. |
 | `evidence` | EvidenceIn \| None | see below | The words that justify the change; see the fields needing it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `report.draft`
+
+Draft a report to the product's maintainers when the PM asks for something the product can't do: what was wanted, what happens now, and why it would help. The PM reviews and sends it.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `title` | str | required | One line naming what is missing. |
+| `text` | str | required | The report, written for the maintainers. |
+
+### `setting.propose`
+
+Propose a change to one setting, when the answer is a setting the PM can change. Nothing changes until the PM applies it. The key is a setting key from the settings list.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `key` | str | required | The setting's dotted key, exactly as in the settings list. |
+| `value` | Any | required | Its new value, of the type the settings list shows for it. |
+| `why` | str | required | Why this change answers the question, in one line. |
 
 ### `stage.move`
 

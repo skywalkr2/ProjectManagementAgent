@@ -66,6 +66,8 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     kind = store.plugins.task_kind(req.data["task"])
     if kind.packet is not None:
         return _plugin_packet(ws, store, cfg, req, kind, today)
+    if kind.name == "ask":
+        return _ask_packet(ws, store, cfg, req, kind, today)
     raw = source_text(ws, store, req.data.get("source"))
     known = _known_texts(ws, store, exclude=req.data.get("source"))
     cleaned = clean(raw, cfg.dispatch.cleaning, known)
@@ -106,6 +108,48 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     request = "\n\n".join(request_parts)
     task = _task(cfg, store, kind, instructions, stable, request)
     return Packet(task, raw, cleaned, note, too_long=len(cleaned.text) > cfg.dispatch.max_input_chars)
+
+
+def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: TaskKind, today: date) -> Packet:
+    """An ask (design 6.25): the stable part holds the op reference, what this install can do, the settings and the
+    records; the request holds the guide sections chosen for the question, then the question. All of the material
+    may be quoted, and an answer's quotes must come from it."""
+    from engine.help import capability_lines, chosen_sections, settings_lines
+
+    question = req.data.get("note") or ""
+    people = People(store, cfg)
+    records = "\n\n".join(
+        part
+        for part in (
+            "# Open actions\n" + _open_actions(store, people),
+            "# Open questions\n" + _open_questions(store, people),
+            "# People\n" + _people(store, cfg),
+            "# Projects\n" + _projects(store),
+        )
+        if part.strip()
+    )
+    install = "\n".join(capability_lines(store))
+    configured = "\n".join(settings_lines(cfg))
+    sections = "\n\n".join(f"## {s.title}\n{s.text}" for s in chosen_sections(question))
+    instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
+    stable = "\n\n".join(
+        (
+            "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
+            "# What this install can do\n" + install,
+            "# Settings\n" + configured,
+            records,
+        )
+    )
+    request = "\n\n".join(
+        (
+            f"Today is {today.isoformat()} ({today.strftime('%A')}).",
+            "# From the user guide\n" + sections,
+            f"<question>\n{question}\n</question>",
+        )
+    )
+    material = "\n\n".join((install, configured, records, sections))
+    task = _task(cfg, store, kind, instructions, stable, request)
+    return Packet(task, material, Cleaned("", 0, 0, False, 0), question, too_long=False, cites="help")
 
 
 def _task(cfg: Config, store: Store, kind: TaskKind, instructions: str, stable: str, request: str) -> AiTask:

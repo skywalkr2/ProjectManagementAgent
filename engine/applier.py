@@ -16,7 +16,8 @@ from typing import Any, Literal
 from pydantic import ValidationError
 
 from engine.cleaning import normalize
-from engine.config import Config
+from engine.config import Config, ConfigError, load_config
+from engine.config.yaml_edit import set_key
 from engine.names import People
 from engine.ops import (
     EVIDENCE_FIELDS,
@@ -25,6 +26,7 @@ from engine.ops import (
     SETTABLE,
     ActionAddOp,
     ActionCloseOp,
+    AnswerOp,
     ChangesetIn,
     EvidenceIn,
     FactOp,
@@ -39,6 +41,8 @@ from engine.ops import (
     RecordEditOp,
     RecordLogOp,
     RecordSetOp,
+    ReportDraftOp,
+    SettingProposeOp,
     StageMoveOp,
     TextAcceptOp,
     TextDiscardOp,
@@ -169,6 +173,14 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             refuse(i, "evidence", f"{name} needs evidence: the exact words from the input that justify it")
         if evidence is not None and ctx.inputs.evidence_source(evidence.quote) is None:
             refuse(i, "evidence", f"the quote {evidence.quote!r} isn't in the input; copy the words exactly")
+        if isinstance(op, AnswerOp):
+            for cite in op.cites:
+                if ctx.inputs.evidence_source(cite.quote) is None:
+                    refuse(i, "evidence", f"the quote {cite.quote!r} isn't in the material; copy the words exactly")
+        if isinstance(op, SettingProposeOp):
+            why = setting_problem(ctx.store, op.key, op.value)
+            if why:
+                refuse(i, "targets", why)
         # targets
         for project in _projects_of(op):
             if view.get("project", project) is None:
@@ -281,6 +293,31 @@ def _openable(url: str) -> bool:
 
 
 LANGUAGE_TAG = r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*"
+
+
+def setting_problem(store: Store, key: str, value: Any) -> str | None:
+    """Why a suggested setting can't be offered: not a setting the screens change, or a value its file refuses."""
+    import os
+
+    from engine import settings as config_screens
+
+    config_dir = store.path.parent / "config"  # the workspace's own folder holds its database and its config
+    try:
+        current = load_config(config_dir, env=dict(os.environ))
+    except ConfigError as err:
+        return f"the settings have a problem to fix first: {err}"
+    shown = {s.key: s for s in config_screens.describe(current)}
+    setting = shown.get(key)
+    if setting is None or not setting.editable:
+        return f"{key} isn't a setting the PM can change from the screens"
+    name, *path = key.split(".")
+    source = config_dir / f"{name}.yaml"
+    text = source.read_text(encoding="utf-8") if source.exists() else "version: 1\n"
+    try:
+        config_screens._check_whole(config_dir, {name: set_key(text, path, value)}, dict(os.environ))
+    except StoreError as err:
+        return f"{key} can't be {value!r}: {err}"
+    return None
 
 
 def parent_problem(view: Any, project: str | None, parent: str) -> str | None:
@@ -797,7 +834,17 @@ def _apply_op(
     def made(kind: str, rid: str) -> None:
         touched.append({"kind": kind, "id": rid})
 
-    if isinstance(op, NoteOp):
+    if isinstance(op, AnswerOp):
+        cites = [{"quote": c.quote, "source": ctx.inputs.evidence_source(c.quote)} for c in op.cites]
+        data = {"request": ctx.inputs.request, "text": op.text, "cites": cites}
+        made("answer", tx.create("answer", data, w).id)
+    elif isinstance(op, SettingProposeOp):
+        data = {"request": ctx.inputs.request, "key": op.key, "value": op.value, "why": op.why}
+        made("setting_proposal", tx.create("setting_proposal", data, w).id)
+    elif isinstance(op, ReportDraftOp):
+        data = {"request": ctx.inputs.request, "title": " ".join(op.title.split()), "text": op.text}
+        made("report", tx.create("report", data, w).id)
+    elif isinstance(op, NoteOp):
         made(
             "note", tx.create("note", {"text": op.text, "project": op.project, "source": source, "trust": trust}, w).id
         )

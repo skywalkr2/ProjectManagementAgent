@@ -348,6 +348,54 @@ class JobRun(Record):
     error: str | None = Field(None, description="What went wrong, for a failed run.")
 
 
+class Cite(BaseModel):
+    """Words an answer rests on, and where they come from."""
+
+    quote: str = Field(description="The exact words.")
+    source: str | None = Field(None, description="Where they are: the help material, or a saved source's id.")
+
+
+class Answer(Record):
+    """The assistant's answer to a question the PM asked, with the words it rests on."""
+
+    record_kind: ClassVar[str] = "answer"
+    prefix: ClassVar[str] = "ANS"
+
+    request: str = Field(description="The ask it answers.")
+    text: str = Field(description="The answer.")
+    cites: list[Cite] = Field(default_factory=list, description="The words the answer rests on.")
+
+
+class SettingProposal(Record):
+    """A setting change the assistant suggested in an answer; the PM applies it or sets it aside."""
+
+    record_kind: ClassVar[str] = "setting_proposal"
+    prefix: ClassVar[str] = "SETPROP"
+
+    request: str = Field(description="The ask it came from.")
+    key: str = Field(description="The setting's dotted key.")
+    value: Any = Field(None, description="The suggested value.")
+    why: str = Field(description="Why it answers the question.")
+    status: Literal["open", "applied", "dismissed"] = Field(
+        "open", description="open: waiting for the PM. applied: saved. dismissed: set aside."
+    )
+
+
+class Report(Record):
+    """A report to the product's maintainers the assistant drafted for something the product can't do (design
+    6.13). The PM reviews it and sends it themselves."""
+
+    record_kind: ClassVar[str] = "report"
+    prefix: ClassVar[str] = "RPT"
+
+    request: str = Field(description="The ask it came from.")
+    title: str = Field(description="What is missing, in one line.")
+    text: str = Field(description="The report.")
+    status: Literal["draft", "sent", "dismissed"] = Field(
+        "draft", description="draft: not yet reviewed. sent: the PM sent it. dismissed: set aside."
+    )
+
+
 class SettingChange(Record):
     """One setting the person changed from the screens: which key, what it was and what it became. Written with the
     config file; nothing changes it."""
@@ -651,6 +699,9 @@ REGISTRY: dict[str, type[Record]] = {
         ToolRun,
         JobRun,
         SettingChange,
+        Answer,
+        SettingProposal,
+        Report,
         TextVersion,
         WorkingCopy,
     )
@@ -671,6 +722,9 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "run": [("request", "request")],
     "file": [("project", "project"), ("replaces", "file")],
     "working_copy": [("file", "file"), ("returned_file", "file"), ("proposal", "text_version")],
+    "answer": [("request", "request")],
+    "setting_proposal": [("request", "request")],
+    "report": [("request", "request")],
 }
 
 

@@ -972,3 +972,60 @@ class AiTestResult(BaseModel):
     main: bool
     ok: bool
     detail: str
+
+
+# ---- asking the assistant --------------------------------------------------------------------------------------------
+
+
+class AskIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: str = Field(min_length=1, max_length=2000)
+
+
+class CiteView(BaseModel):
+    quote: str
+    source: str | None = None
+
+
+class AnswerView(BaseModel):
+    text: str
+    cites: list[CiteView]
+
+
+class SettingProposalView(BaseModel):
+    id: str
+    version: int
+    key: str
+    value: Any = None
+    why: str
+    status: Literal["open", "applied", "dismissed"]
+
+
+class ReportView(BaseModel):
+    id: str
+    version: int
+    title: str
+    text: str
+    status: Literal["draft", "sent", "dismissed"]
+
+
+class AskView(BaseModel):
+    """One question the PM asked and what came of it."""
+
+    id: str
+    question: str
+    state: Literal["queued", "running", "review", "done", "needs_you", "failed"]
+    waiting: str | None = None
+    created_at: str
+    changeset: str | None = None
+    answer: AnswerView | None = None
+    proposals: list[SettingProposalView] = Field(default_factory=list)
+    reports: list[ReportView] = Field(default_factory=list)
+
+
+class ProposalApply(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fingerprint: str
+    read_version: int

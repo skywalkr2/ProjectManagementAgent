@@ -332,6 +332,45 @@ class TextDraftOp(OpModel):
         return f"Draft new text for {self.record.kind} {self.record.id}"
 
 
+class AnswerOp(OpModel):
+    """Answer the PM's question from the material given: the user guide, the settings, what this install can do and
+    the records. Every claim the answer makes cites the exact words it comes from. Creates an answer record."""
+
+    op: Literal["answer"]
+    text: str = Field(min_length=1, max_length=4000, description="The answer, in plain words, for the PM.")
+    cites: list[EvidenceIn] = Field(
+        min_length=1, max_length=10, description="The exact words from the material that the answer rests on."
+    )
+
+    def describe(self) -> str | None:
+        return "Answer: " + " ".join(self.text.split())[:150]
+
+
+class SettingProposeOp(OpModel):
+    """Propose a change to one setting, when the answer is a setting the PM can change. Nothing changes until the PM
+    applies it. The key is a setting key from the settings list."""
+
+    op: Literal["setting.propose"]
+    key: str = Field(description="The setting's dotted key, exactly as in the settings list.")
+    value: Any = Field(description="Its new value, of the type the settings list shows for it.")
+    why: str = Field(min_length=1, max_length=500, description="Why this change answers the question, in one line.")
+
+    def describe(self) -> str | None:
+        return f"Suggest setting {self.key}"
+
+
+class ReportDraftOp(OpModel):
+    """Draft a report to the product's maintainers when the PM asks for something the product can't do: what was
+    wanted, what happens now, and why it would help. The PM reviews and sends it."""
+
+    op: Literal["report.draft"]
+    title: str = Field(min_length=1, max_length=120, description="One line naming what is missing.")
+    text: str = Field(min_length=1, max_length=4000, description="The report, written for the maintainers.")
+
+    def describe(self) -> str | None:
+        return "Draft a report: " + " ".join(self.title.split())
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -351,7 +390,10 @@ Op = Annotated[
     | TextProposeOp
     | TextAcceptOp
     | TextDiscardOp
-    | TextDraftOp,
+    | TextDraftOp
+    | AnswerOp
+    | SettingProposeOp
+    | ReportDraftOp,
     Field(discriminator="op"),
 ]
 
@@ -375,6 +417,9 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "text.accept": TextAcceptOp,
     "text.discard": TextDiscardOp,
     "text.draft": TextDraftOp,
+    "answer": AnswerOp,
+    "setting.propose": SettingProposeOp,
+    "report.draft": ReportDraftOp,
 }
 
 #: Ops only the person makes: from anyone else they are refused, never held.

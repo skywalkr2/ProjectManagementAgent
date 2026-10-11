@@ -715,6 +715,13 @@ path for the launch?", "which contributors haven't replied this week?", "draft a
   reassigned action), they come as ops in a changeset under the usual tiers and checks (6.7); a draft for someone else waits for
   approval like any other.
 - An ask that comes up again and again is a signal (6.20): it may deserve a Today line, a panel or a playbook entry.
+- **Asking about the app.** The same box answers questions about the product. The packet holds what this install can do
+  (each add-on's kinds of work, actions, screens and setup steps), the settings with their values, defaults and
+  descriptions (never where keys come from), the records, and the sections of the user guide that share the most words
+  with the question. The answer is an `answer` op whose cited words must be in that material, so a made-up button or
+  setting can't be cited. A setting the person can change comes as a `setting.propose` op, applied with one click and
+  Undo; something the product can't do comes as a `report.draft` to the maintainers (6.13), written without names from
+  the records, which the person reviews and sends.
 
 ## 6.26 Stages
 
