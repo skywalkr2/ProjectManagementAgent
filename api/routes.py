@@ -217,7 +217,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             FileKindView(
                 name=k.name,
                 label=k.label or k.name.rsplit("/", 1)[-1].replace("-", " ").capitalize(),
-                accept=list(k.accept or limits.accepted_types),
+                accept=[t for t in k.accept if t in limits.accepted_types] if k.accept else list(limits.accepted_types),
                 max_mb=min(limits.max_file_mb, k.max_mb or limits.max_file_mb),
                 details_schema=k.details.model_json_schema(),
             )

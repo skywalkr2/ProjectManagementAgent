@@ -69,7 +69,8 @@ def check_file(
     name = Path(name).name.strip()
     if not name:
         raise StoreError("the file needs a name")
-    accepted = kind.accept or tuple(limits.accepted_types)
+    # A kind narrows the workspace's accepted types; it never widens them.
+    accepted = [t for t in kind.accept if t in limits.accepted_types] if kind.accept else limits.accepted_types
     if media_type not in accepted:
         raise StoreError(f"files of type {media_type} can't be added here")
     cap = min(limits.max_file_mb, kind.max_mb or limits.max_file_mb)

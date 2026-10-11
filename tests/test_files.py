@@ -3,7 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from engine.files import add_file, blob_path, read_bytes
+from engine.files import FileKind, add_file, blob_path, read_bytes
 from engine.storage import StoreError
 from tests.conftest import fixture_records
 
@@ -92,3 +92,11 @@ def test_upload_and_download_through_the_api(env):
     assert refused.status_code == 409
     assert [f["name"] for f in client.get(f"{api}/files").json()] == ["notes.txt", "cover.png"]
     assert any(k["name"] == "attachment" for k in client.get(f"{api}/file-kinds").json())
+
+
+def test_a_kind_never_widens_the_accepted_types(env):
+    _, cfg, store = env
+    store.plugins.file_kinds = lambda: {"narrow": FileKind("narrow", accept=("image/svg+xml", "image/png"))}
+    with pytest.raises(StoreError, match="can't be added"):
+        add_file(store, cfg, b"<svg/>", name="x.svg", media_type="image/svg+xml", file_kind="narrow")
+    assert add_file(store, cfg, PNG, name="x.png", media_type="image/png", file_kind="narrow").data["size"] == len(PNG)
