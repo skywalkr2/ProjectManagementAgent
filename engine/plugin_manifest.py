@@ -128,6 +128,9 @@ class Provides(Strict):
     today: list[str] = Field(default_factory=list, description="Contributors of lines on Today.")
     jobs: list[str] = Field(default_factory=list, description="Work run on a schedule while the app runs.")
     setup_steps: list[str] = Field(default_factory=list, description="Steps added to the first-run setup.")
+    data_forms: list[str] = Field(
+        default_factory=list, description="Kinds of data file the screens offer a form for, checked by a schema."
+    )
     connectors: list[str] = Field(default_factory=list, description="Places the assistant can keep reading.")
     triage_matchers: list[str] = Field(default_factory=list, description="Rule kinds for triaging watched changes.")
     value_lists: list[str] = Field(

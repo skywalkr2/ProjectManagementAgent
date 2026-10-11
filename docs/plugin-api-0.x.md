@@ -10,6 +10,17 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.52 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Data-file forms** (round 26, 136): `registrar.data_form(name, label=..., folder=..., schema=Model)`, listed in
+  `provides.data_forms`. The `.yaml` files in `folder` of the plugin's data layers are listed with the layer each
+  comes from, and edited through a form built from the schema (fields need a default and a description, as in
+  `Settings`). A save writes the workspace's or a project's copy, never the shipped one, checked against the schema
+  (a refusal names the field), with Undo; a new file starts from the defaults; a copy can be removed to fall back to
+  the less specific one. The plugin reads the files as before, with `view.data`. Routes under `/api/data-forms`.
+
 ## What 0.3.51 adds
 
 Manifests stay `'>=0.3,<0.4'`.

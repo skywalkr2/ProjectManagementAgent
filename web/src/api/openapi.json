@@ -1767,6 +1767,261 @@
         "title": "Created",
         "type": "object"
       },
+      "DataFile": {
+        "description": "One file of a kind, across the data layers.",
+        "properties": {
+          "file": {
+            "title": "File",
+            "type": "string"
+          },
+          "layer": {
+            "description": "The copy in effect.",
+            "enum": [
+              "shipped",
+              "workspace",
+              "project"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "layers": {
+            "description": "The layers that hold a copy.",
+            "items": {
+              "enum": [
+                "shipped",
+                "workspace",
+                "project"
+              ],
+              "type": "string"
+            },
+            "title": "Layers",
+            "type": "array"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the copy in effect doesn't fit the form, if it doesn't.",
+            "title": "Problem"
+          }
+        },
+        "required": [
+          "file",
+          "layers",
+          "layer"
+        ],
+        "title": "DataFile",
+        "type": "object"
+      },
+      "DataFileChange": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "additionalProperties": true,
+            "description": "New values by field (dotted for groups).",
+            "title": "Changes",
+            "type": "object"
+          },
+          "file": {
+            "description": "The file's name, like classic.yaml.",
+            "title": "File",
+            "type": "string"
+          },
+          "layer": {
+            "description": "Which copy to write or remove; never the shipped one.",
+            "enum": [
+              "workspace",
+              "project"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The project, for its layer.",
+            "title": "Project"
+          }
+        },
+        "required": [
+          "file",
+          "layer"
+        ],
+        "title": "DataFileChange",
+        "type": "object"
+      },
+      "DataFileRestore": {
+        "additionalProperties": false,
+        "properties": {
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The copy's text from before, or None to remove it.",
+            "title": "Before"
+          },
+          "file": {
+            "title": "File",
+            "type": "string"
+          },
+          "layer": {
+            "enum": [
+              "workspace",
+              "project"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          }
+        },
+        "required": [
+          "file",
+          "layer",
+          "before"
+        ],
+        "title": "DataFileRestore",
+        "type": "object"
+      },
+      "DataFileSaved": {
+        "properties": {
+          "before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The layer's copy before this change, for Undo; None when there was none.",
+            "title": "Before"
+          }
+        },
+        "required": [
+          "before"
+        ],
+        "title": "DataFileSaved",
+        "type": "object"
+      },
+      "DataFileView": {
+        "description": "One file as a form: the schema's fields with the values in effect.",
+        "properties": {
+          "file": {
+            "title": "File",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SettingItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "layer": {
+            "anyOf": [
+              {
+                "enum": [
+                  "shipped",
+                  "workspace",
+                  "project"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The copy in effect; None for a new file, shown with the defaults.",
+            "title": "Layer"
+          },
+          "layers": {
+            "items": {
+              "enum": [
+                "shipped",
+                "workspace",
+                "project"
+              ],
+              "type": "string"
+            },
+            "title": "Layers",
+            "type": "array"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem"
+          }
+        },
+        "required": [
+          "file",
+          "layer",
+          "layers",
+          "items"
+        ],
+        "title": "DataFileView",
+        "type": "object"
+      },
+      "DataFormView": {
+        "description": "A kind of data file an add-on lets the person edit through a form.",
+        "properties": {
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plugin": {
+            "title": "Plugin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "plugin",
+          "label"
+        ],
+        "title": "DataFormView",
+        "type": "object"
+      },
       "DocumentBlock": {
         "description": "One block of a document panel, drawn by the screens as their own elements (never HTML).",
         "properties": {
@@ -8055,6 +8310,301 @@
           }
         },
         "summary": "Undo"
+      }
+    },
+    "/api/data-forms": {
+      "get": {
+        "description": "The kinds of data file running add-ons let the person edit through a form.",
+        "operationId": "forms_api_data_forms_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DataFormView"
+                  },
+                  "title": "Response Forms Api Data Forms Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Forms"
+      }
+    },
+    "/api/data-forms/{name}/file": {
+      "get": {
+        "description": "One file as a form: its fields (from the schema) with the values in effect, and the layer they come from;\na file that doesn't exist yet shows the schema's defaults.",
+        "operationId": "file_api_data_forms__name__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "path",
+            "required": true,
+            "schema": {
+              "title": "Path",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataFileView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "File"
+      },
+      "post": {
+        "description": "Save the workspace's or a project's copy with these changes, checked against the schema; `before` undoes.",
+        "operationId": "save_api_data_forms__name__file_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataFileChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataFileSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save"
+      }
+    },
+    "/api/data-forms/{name}/files": {
+      "get": {
+        "operationId": "files_api_data_forms__name__files_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DataFile"
+                  },
+                  "title": "Response Files Api Data Forms  Name  Files Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Files"
+      }
+    },
+    "/api/data-forms/{name}/remove": {
+      "post": {
+        "description": "Remove the workspace's or a project's copy; the less specific one is in effect again.",
+        "operationId": "remove_api_data_forms__name__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataFileChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataFileSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove"
+      }
+    },
+    "/api/data-forms/{name}/restore": {
+      "post": {
+        "description": "Undo a save or a removal: the layer's copy as it was before.",
+        "operationId": "restore_api_data_forms__name__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataFileRestore"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataFileSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Restore"
       }
     },
     "/api/events": {

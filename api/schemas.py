@@ -1485,3 +1485,58 @@ class MeView(BaseModel):
 class MeIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     full_name: str = Field(min_length=1, max_length=200)
+
+
+# ---- data-file forms -------------------------------------------------------------------------------------------------
+
+
+class DataFormView(BaseModel):
+    """A kind of data file an add-on lets the person edit through a form."""
+
+    name: str
+    plugin: str
+    label: str
+    description: str = ""
+
+
+class DataFile(BaseModel):
+    """One file of a kind, across the data layers."""
+
+    file: str
+    layers: list[Literal["shipped", "workspace", "project"]] = Field(description="The layers that hold a copy.")
+    layer: Literal["shipped", "workspace", "project"] = Field(description="The copy in effect.")
+    problem: str | None = Field(None, description="Why the copy in effect doesn't fit the form, if it doesn't.")
+
+
+class DataFileView(BaseModel):
+    """One file as a form: the schema's fields with the values in effect."""
+
+    file: str
+    layer: Literal["shipped", "workspace", "project"] | None = Field(
+        description="The copy in effect; None for a new file, shown with the defaults."
+    )
+    layers: list[Literal["shipped", "workspace", "project"]]
+    problem: str | None = None
+    items: list[SettingItem]
+
+
+class DataFileChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    file: str = Field(description="The file's name, like classic.yaml.")
+    layer: Literal["workspace", "project"] = Field(description="Which copy to write or remove; never the shipped one.")
+    project: str | None = Field(None, description="The project, for its layer.")
+    changes: dict[str, Any] = Field(default_factory=dict, description="New values by field (dotted for groups).")
+
+
+class DataFileRestore(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    file: str
+    layer: Literal["workspace", "project"]
+    project: str | None = None
+    before: str | None = Field(description="The copy's text from before, or None to remove it.")
+
+
+class DataFileSaved(BaseModel):
+    before: str | None = Field(description="The layer's copy before this change, for Undo; None when there was none.")

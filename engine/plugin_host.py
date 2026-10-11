@@ -1307,6 +1307,7 @@ class PluginHost:
             ("triage_matchers", registrar.triage_matchers),
             ("sign_ins", registrar.sign_ins),
             ("value_lists", registrar.value_lists),
+            ("data_forms", registrar.data_forms),
         ):
             declared = set(getattr(expected, key))
             if f"{registrar.name}/*" in declared:

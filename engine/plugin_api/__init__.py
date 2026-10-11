@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.51"
+PLUGIN_API_VERSION = "0.3.52"
 
 
 class Settings(BaseModel):
@@ -784,6 +784,17 @@ class PanelRegistration:
 
 
 @dataclass(frozen=True)
+class DataFormRegistration:
+    """A registered kind of data file the screens edit through a form (host side)."""
+
+    name: str
+    label: str
+    folder: str
+    schema: type[BaseModel]
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class JobRegistration:
     """A registered job (host side)."""
 
@@ -1022,6 +1033,7 @@ class Registrar:
         self.file_kinds: dict[str, Any] = {}
         self.actions: dict[str, ActionRegistration] = {}
         self.lints: dict[str, LintRegistration] = {}
+        self.data_forms: dict[str, DataFormRegistration] = {}
         self.text_formats: dict[str, Callable] = {}
         self.working_copies: dict[str, WorkingCopyRegistration] = {}
         self.derived_files: dict[str, DerivedFileRegistration] = {}
@@ -1536,6 +1548,28 @@ class Registrar:
         self.panels[name] = PanelRegistration(
             name, str(title).strip(), "", "document", (), {}, None, (), tab, None, {}, show_for, render
         )
+
+    def data_form(self, name: str, *, label: str, folder: str, schema: type[BaseModel], description: str = "") -> None:
+        """A kind of data file the person edits through a form (listed in `provides.data_forms`): the `.yaml` files
+        in `folder` of the plugin's data layers (`view.data`), each checked against `schema` (a pydantic model;
+        every field needs a default and a description, as in `Settings`). The screens list the files with the layer
+        each comes from (shipped, the workspace's, a project's) and offer a form built from the schema, as for
+        settings: editing a shipped file saves a copy in the workspace's layer (or a project's), never the shipped
+        one; a new file starts from the schema's defaults; a copy can be removed to fall back to the less specific
+        one. Every save is checked against the schema (a refusal names the field) and offers Undo. The plugin reads
+        the files as before, with `view.data(path, project=...)`."""
+        self._name(name)
+        folder = str(folder).strip("/")
+        if name in self.data_forms or not str(label).strip():
+            raise ValueError("duplicate data form or missing label")
+        if not re.fullmatch(r"[a-z0-9_-]+(/[a-z0-9_-]+)*", folder):
+            raise ValueError("a data form's folder is a relative path of lowercase names, like templates")
+        if not isinstance(schema, type) or not issubclass(schema, BaseModel):
+            raise ValueError("a data form's schema is a pydantic model")
+        for key, info in schema.model_fields.items():
+            if info.is_required() or not info.description:
+                raise ValueError(f"data form field {key} needs a default and a description")
+        self.data_forms[name] = DataFormRegistration(name, " ".join(str(label).split()), folder, schema, description)
 
     def job(self, name: str, *, every_minutes: int, run: Callable) -> None:
         """Work on a schedule (listed in `provides.jobs`): `run(context)` with an `EventContext`, every
