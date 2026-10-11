@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Signing in needs no app registration from the person
+
+**Decided by:** project owner (both ways: the add-on's own registration by default, and the person's own pasted on
+screen; registering with a service "shouldn't be cumbersome").
+
+**What:** A sign-in can come with the add-on's own app registration, so the person only signs in. A person who wants
+their own pastes it on the Sign-ins row, beside a numbered list of steps with links that the add-on supplies; no
+settings file or environment variable to edit. The workspace's references still win, and a hosted app uses them. A
+pasted registration can be set aside and brought back.
+
+**Why:** Services offer no way to script making an app registration for a personal account, so asking every person
+to make one in a developer console was the hardest step of setting up an add-on.
+
+**Impact:** `registrar.sign_in(default_client_id, default_client_secret, default_app_note, own_app_steps)`;
+`POST /api/sign-ins/{name}/app`, `.../app/set-aside`, `.../app/bring-back`; `SignInView.app`, `app_note`,
+`can_paste`, `needs_secret`, `set_aside`, `own_app_steps`. Plugin API 0.3.47. No change to scope.
+
 ## 2026-10-11: Command-line agents are chosen from a list, and accounts can be fixed after adding
 
 **Decided by:** project owner ("we should have built in Anthropic CLI and Copilot CLI options … as there is no reason why

@@ -9,7 +9,7 @@ from urllib.parse import quote, urlencode
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse
 
-from api.schemas import Ok, SignInStarted, SignInView
+from api.schemas import Ok, SignInApp, SignInStarted, SignInStep, SignInView
 from engine import sign_in as flow
 from engine.config import Config
 from engine.connectors import ConnectorError
@@ -31,29 +31,68 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
             raise HTTPException(status_code=404, detail=f"there is no sign-in {name}")
         return found
 
+    local = cfg.server.mode == "local"
+
+    def view(s: flow.SignIn) -> SignInView:
+        client_id, _, source = host.sign_in_app(s, ws.root)
+        status = flow.status(keys(s.plugin), s)
+        return SignInView(
+            name=s.name,
+            label=s.label,
+            status=status,
+            ready=bool(client_id),
+            callback=flow.redirect_uri(cfg.server),
+            allows=list(s.allows),
+            account=(flow.kept(keys(s.plugin), s) or {}).get("account"),
+            missing=flow.missing(s, flow.granted(keys(s.plugin), s)) if status == "signed_in" else [],
+            app=source,  # type: ignore[arg-type]
+            app_note=s.default_app_note if source == "add-on" else None,
+            can_paste=local and source != "workspace",
+            needs_secret=bool(s.client_secret),
+            set_aside=(keys(s.plugin) / f"{s.client_id}.set-aside").is_file(),
+            own_app_steps=[SignInStep(text=text, link=link) for text, link in s.own_app_steps],
+        )
+
     @r.get("/sign-ins")
     def sign_ins() -> list[SignInView]:
-        return [
-            SignInView(
-                name=s.name,
-                label=s.label,
-                status=flow.status(keys(s.plugin), s),
-                ready=bool(host.plugin_secret(s.plugin, s.client_id, ws.root)),
-                callback=flow.redirect_uri(cfg.server),
-                allows=list(s.allows),
-                account=(flow.kept(keys(s.plugin), s) or {}).get("account"),
-                missing=flow.missing(s, flow.granted(keys(s.plugin), s))
-                if flow.status(keys(s.plugin), s) == "signed_in"
-                else [],
+        return [view(s) for s in host.sign_ins().values()]
+
+    @r.post("/sign-ins/{name:path}/app")
+    def paste_app(name: str, body: SignInApp) -> SignInView:
+        """Use the person's own app registration for this sign-in, kept on this computer. Signing in starts over."""
+        s = find(name)
+        if not local:
+            raise HTTPException(
+                status_code=400,
+                detail="On a hosted app, set the registration in the workspace's settings as env: or file: references.",
             )
-            for s in host.sign_ins().values()
-        ]
+        if host.sign_in_app(s, ws.root)[2] == "workspace":
+            raise HTTPException(status_code=409, detail="The workspace's settings already set this registration.")
+        if s.client_secret and not (body.client_secret or "").strip():
+            raise HTTPException(status_code=400, detail="This service also gives a client secret: paste it too.")
+        flow.paste_app(keys(s.plugin), s, body.client_id, body.client_secret if s.client_secret else None)
+        return view(s)
+
+    @r.post("/sign-ins/{name:path}/app/set-aside")
+    def set_aside_app(name: str) -> SignInView:
+        """Stop using the pasted registration (the add-on's own is used, if it has one); it can be brought back."""
+        s = find(name)
+        if not flow.set_aside_app(keys(s.plugin), s):
+            raise HTTPException(status_code=404, detail="No registration was pasted for this sign-in.")
+        return view(s)
+
+    @r.post("/sign-ins/{name:path}/app/bring-back")
+    def bring_back_app(name: str) -> SignInView:
+        s = find(name)
+        if not flow.bring_back_app(keys(s.plugin), s):
+            raise HTTPException(status_code=404, detail="There is no registration to bring back.")
+        return view(s)
 
     @r.post("/sign-ins/{name:path}/start")
     def start(name: str) -> SignInStarted:
         s = find(name)
         try:
-            url = flow.start(s, host.plugin_secret(s.plugin, s.client_id, ws.root) or "", flow.redirect_uri(cfg.server))
+            url = flow.start(s, host.sign_in_app(s, ws.root)[0] or "", flow.redirect_uri(cfg.server))
         except flow.SignInError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         return SignInStarted(url=url)
@@ -75,10 +114,8 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
 
         web = WebClient(list(host.manifests[s.plugin].requires.network))
         try:
-            client_secret = host.plugin_secret(s.plugin, s.client_secret, ws.root) if s.client_secret else None
-            done, tokens = flow.finish(
-                state, code, web, host.plugin_secret(s.plugin, s.client_id, ws.root) or "", client_secret
-            )
+            client_id, client_secret, _ = host.sign_in_app(s, ws.root)
+            done, tokens = flow.finish(state, code, web, client_id or "", client_secret)
             flow.keep(keys(done.plugin), done, tokens)
         except (flow.SignInError, ConnectorError):
             return RedirectResponse(f"{prefix}/?sign_in=failed&name={quote(s.name)}", status_code=303)
@@ -95,7 +132,7 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
 
             web = WebClient(list(host.manifests[s.plugin].requires.network))
             try:
-                flow.revoke(web, s, flow.kept(keys(s.plugin), s), host.plugin_secret(s.plugin, s.client_id, ws.root))
+                flow.revoke(web, s, flow.kept(keys(s.plugin), s), host.sign_in_app(s, ws.root)[0])
             finally:
                 web.close()
         flow.forget(keys(s.plugin), s)

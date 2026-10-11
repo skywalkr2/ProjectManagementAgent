@@ -249,6 +249,7 @@ def build() -> str:
             "Person actions",
             _para(_doc(actions)),
             "### The action's context\n\n" + _para(_doc(api.ActionContext)),
+            _methods(api.ActionContext, "context"),
             "\n\n".join(
                 _join(f"### {cls.__name__}", _para(_doc(cls)))
                 + "\n\n"

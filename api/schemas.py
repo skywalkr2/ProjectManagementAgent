@@ -1317,6 +1317,32 @@ class SignInView(BaseModel):
     missing: list[str] = Field(
         default_factory=list, description="Scopes asked for that the person didn't allow, while signed in."
     )
+    app: Literal["workspace", "pasted", "add-on", "none"] = Field(
+        "none",
+        description="Where its app registration comes from: the workspace's settings, values pasted here, the "
+        "add-on's own, or nowhere yet.",
+    )
+    app_note: str | None = Field(None, description="What using the add-on's own registration means, while in use.")
+    can_paste: bool = Field(False, description="The person can paste their own registration here (on this computer).")
+    needs_secret: bool = Field(False, description="The service issues a client secret along with the client id.")
+    set_aside: bool = Field(False, description="A pasted registration was set aside and can be brought back.")
+    own_app_steps: list[SignInStep] = Field(
+        default_factory=list, description="How to make one's own registration with the service."
+    )
+
+
+class SignInStep(BaseModel):
+    text: str
+    link: str | None = Field(None, description="The service's page for this step (https).")
+
+
+class SignInApp(BaseModel):
+    """A person's own app registration for a sign-in, pasted on the Sign-ins row."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    client_id: str = Field(min_length=1, max_length=500)
+    client_secret: str | None = Field(None, max_length=500)
 
 
 class SignInStarted(BaseModel):

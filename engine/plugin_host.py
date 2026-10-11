@@ -565,6 +565,34 @@ class PluginHost:
         kept = Path(workspace_root) / ".cockpit" / "keys" / plugin / name
         return kept.read_text(encoding="utf-8").strip() if kept.is_file() else None
 
+    def sign_in_app(self, sign_in: Any, workspace_root: Any) -> tuple[str | None, str | None, str]:
+        """The app registration a sign-in uses, as (client id, client secret, source): the workspace's references
+        when it sets the client id, else values the person pasted on this computer, else the add-on's own. The id
+        and the secret always come from the same place."""
+        from engine.secrets import SecretError, resolve_secret
+
+        plugin = sign_in.plugin
+        refs = self.cfg.workspace.plugins.secrets.get(plugin, {})
+        if refs.get(sign_in.client_id):
+            try:
+                client_id = resolve_secret(refs[sign_in.client_id])
+                ref = refs.get(sign_in.client_secret) if sign_in.client_secret else None
+                return client_id, resolve_secret(ref) if ref else None, "workspace"
+            except SecretError:
+                return None, None, "workspace"
+        keys = Path(workspace_root) / ".cockpit" / "keys" / plugin
+        pasted = keys / sign_in.client_id
+        if pasted.is_file():
+            secret = keys / sign_in.client_secret if sign_in.client_secret else None
+            return (
+                pasted.read_text(encoding="utf-8").strip(),
+                secret.read_text(encoding="utf-8").strip() if secret is not None and secret.is_file() else None,
+                "pasted",
+            )
+        if sign_in.default_client_id:
+            return sign_in.default_client_id, sign_in.default_client_secret, "add-on"
+        return None, None, "none"
+
     def sign_in_token(self, name: str, workspace_root: Any) -> str:
         """A current access token for a sign-in, renewed when needed; ConnectorError("auth") when the person needs
         to sign in."""
@@ -576,10 +604,7 @@ class PluginHost:
         if sign_in is None:
             raise ConnectorError("auth", f"{name} isn't a sign-in of a running add-on")
         plugin = sign_in.plugin
-        client_id = self.plugin_secret(plugin, sign_in.client_id, workspace_root)
-        client_secret = (
-            self.plugin_secret(plugin, sign_in.client_secret, workspace_root) if sign_in.client_secret else None
-        )
+        client_id, client_secret, _ = self.sign_in_app(sign_in, workspace_root)
         keys = Path(workspace_root) / ".cockpit" / "keys" / plugin
         web = WebClient(list(self.manifests[plugin].requires.network))
         try:

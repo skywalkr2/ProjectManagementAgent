@@ -13,6 +13,11 @@ function signIn(name: string, extra: Partial<S["SignInView"]> = {}): S["SignInVi
     status: "signed_out",
     ready: true,
     callback: `http://localhost:8080/auth/${name}/callback`,
+    app: "workspace",
+    can_paste: false,
+    needs_secret: false,
+    set_aside: false,
+    own_app_steps: [],
     ...extra,
   };
 }

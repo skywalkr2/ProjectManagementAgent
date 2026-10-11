@@ -55,6 +55,65 @@ class SignIn:
     allows: tuple[str, ...] = ()  # what the person is asked to allow, in plain words, shown before they leave the app
     account: Any = None  # (context) -> str: the signed-in account's name, read once after signing in
     revoke_url: str | None = None  # where signing out withdraws the access at the service (RFC 7009), if it offers it
+    default_client_id: str | None = None  # the add-on's own app registration, used when the person sets none
+    default_client_secret: str | None = None
+    default_app_note: str | None = None  # what using the add-on's own registration means for the person
+    own_app_steps: tuple[tuple[str, str | None], ...] = ()  # how to make one's own registration: (step, link)
+
+
+#: Where the app registration a sign-in uses comes from: the workspace's references, values pasted on this computer,
+#: the add-on's own, or nowhere yet.
+APP_SOURCES = ("workspace", "pasted", "add-on", "none")
+
+
+def pasted_path(keys: Path, secret: str) -> Path:
+    """Where a value the person pasted for a sign-in's app registration is kept, beside the plugin's kept secrets."""
+    return keys / secret
+
+
+def paste_app(keys: Path, sign_in: SignIn, client_id: str, client_secret: str | None) -> None:
+    """Keep the person's own app registration for a sign-in on this computer (readable by its owner only), and
+    forget the tokens of the registration it replaces, which the service ties to that registration."""
+    keys.mkdir(parents=True, exist_ok=True)
+    os.chmod(keys, 0o700)
+    _write_private(pasted_path(keys, sign_in.client_id), client_id.strip())
+    if sign_in.client_secret:
+        if client_secret and client_secret.strip():
+            _write_private(pasted_path(keys, sign_in.client_secret), client_secret.strip())
+        else:
+            pasted_path(keys, sign_in.client_secret).unlink(missing_ok=True)
+    forget(keys, sign_in)
+
+
+def set_aside_app(keys: Path, sign_in: SignIn) -> bool:
+    """Stop using the pasted registration, keeping it aside so it can be brought back; the sign-in made with it is
+    forgotten. False when nothing was pasted."""
+    moved = False
+    for secret in (sign_in.client_id, sign_in.client_secret):
+        if secret and pasted_path(keys, secret).is_file():
+            pasted_path(keys, secret).replace(keys / f"{secret}.set-aside")
+            moved = True
+    if moved:
+        forget(keys, sign_in)
+    return moved
+
+
+def bring_back_app(keys: Path, sign_in: SignIn) -> bool:
+    """Use the registration set aside last again. False when there is none."""
+    moved = False
+    for secret in (sign_in.client_id, sign_in.client_secret):
+        aside = keys / f"{secret}.set-aside" if secret else None
+        if aside is not None and aside.is_file():
+            aside.replace(pasted_path(keys, secret))
+            moved = True
+    if moved:
+        forget(keys, sign_in)
+    return moved
+
+
+def _write_private(path: Path, value: str) -> None:
+    path.write_text(value + "\n", encoding="utf-8")
+    os.chmod(path, 0o600)
 
 
 @dataclass
@@ -91,7 +150,7 @@ def check_addresses(sign_in: SignIn, network: list[str]) -> None:
 def start(sign_in: SignIn, client_id: str, redirect: str, now: float | None = None) -> str:
     """The address of the service's sign-in page for this sign-in; the answer comes back to `redirect`."""
     if not client_id:
-        raise SignInError(f"{sign_in.label} needs the app's client id first: set it in the add-on's secrets")
+        raise SignInError(f"{sign_in.label} needs an app registration first: paste one on its Sign-ins row")
     now = time.time() if now is None else now
     for state in [s for s, p in _PENDING.items() if now - p.started > PENDING_SECONDS]:
         del _PENDING[state]

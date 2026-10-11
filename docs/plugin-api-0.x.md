@@ -10,6 +10,24 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.47 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A sign-in can come with the add-on's own app registration:** `registrar.sign_in(..., default_client_id=...,
+  default_client_secret=..., default_app_note=...)`, so people sign in without registering anything with the
+  service. Ship one only for a registration the service issues to apps on a person's computer (its secret isn't
+  treated as confidential, and it allows loopback addresses). `default_app_note` says what using it means.
+- **People can paste their own registration** on the Sign-ins row (on their own computer), kept beside the plugin's
+  other kept secrets and readable by its owner only. `own_app_steps=[line, (line, https link), ...]` lists how to
+  make one, shown beside the paste boxes and the address to allow. Which is used: the workspace's references in
+  `workspace.plugins.secrets`, else the pasted one, else the add-on's. Changing it starts the sign-in over; a
+  pasted one can be set aside and brought back.
+- **Restarts, said once:** the app never restarts on its own. A plugin's settings changing, or plugins being turned on
+  or off, makes it say a restart is needed and wait for the person; registration keeps the old settings until then,
+  and the plugin isn't told. The guide's "Registering" said otherwise; corrected.
+- **The guide lists the action's context methods,** `context.estimate` among them.
+
 ## What 0.3.46 adds
 
 Manifests stay `'>=0.3,<0.4'`.
@@ -45,7 +63,7 @@ Manifests stay `'>=0.3,<0.4'`.
   `config/plugins/<plugin>.yaml`. The same rules as the core's settings apply: types and choices from the model,
   `json_schema_extra={"enabled_by": "<field>"}` to grey a field while its switch is off, `{"picker": "folder"}` for
   a folder chooser. A save is checked against the model (a refusal names the field), keeps the file's comments, is
-  recorded with Undo, and restarts the app to use it like any settings change. The form itself on the screen follows
+  recorded with Undo, and (corrected in 0.3.47) asks for a restart like any settings change. The form itself on the screen follows
   shortly; the data and the save are in place now.
 
 ## What 0.3.43 adds

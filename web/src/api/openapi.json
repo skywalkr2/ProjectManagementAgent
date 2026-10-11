@@ -5336,6 +5336,35 @@
         "title": "SetupView",
         "type": "object"
       },
+      "SignInApp": {
+        "additionalProperties": false,
+        "description": "A person's own app registration for a sign-in, pasted on the Sign-ins row.",
+        "properties": {
+          "client_id": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Secret"
+          }
+        },
+        "required": [
+          "client_id"
+        ],
+        "title": "SignInApp",
+        "type": "object"
+      },
       "SignInStarted": {
         "properties": {
           "url": {
@@ -5348,6 +5377,31 @@
           "url"
         ],
         "title": "SignInStarted",
+        "type": "object"
+      },
+      "SignInStep": {
+        "properties": {
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The service's page for this step (https).",
+            "title": "Link"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SignInStep",
         "type": "object"
       },
       "SignInView": {
@@ -5372,10 +5426,40 @@
             "title": "Allows",
             "type": "array"
           },
+          "app": {
+            "default": "none",
+            "description": "Where its app registration comes from: the workspace's settings, values pasted here, the add-on's own, or nowhere yet.",
+            "enum": [
+              "workspace",
+              "pasted",
+              "add-on",
+              "none"
+            ],
+            "title": "App",
+            "type": "string"
+          },
+          "app_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What using the add-on's own registration means, while in use.",
+            "title": "App Note"
+          },
           "callback": {
             "description": "The address the service's app registration must allow to send people back to.",
             "title": "Callback",
             "type": "string"
+          },
+          "can_paste": {
+            "default": false,
+            "description": "The person can paste their own registration here (on this computer).",
+            "title": "Can Paste",
+            "type": "boolean"
           },
           "label": {
             "description": "What to call the service's sign-in on screen.",
@@ -5394,9 +5478,29 @@
             "title": "Name",
             "type": "string"
           },
+          "needs_secret": {
+            "default": false,
+            "description": "The service issues a client secret along with the client id.",
+            "title": "Needs Secret",
+            "type": "boolean"
+          },
+          "own_app_steps": {
+            "description": "How to make one's own registration with the service.",
+            "items": {
+              "$ref": "#/components/schemas/SignInStep"
+            },
+            "title": "Own App Steps",
+            "type": "array"
+          },
           "ready": {
             "description": "The add-on's app registration (its client id) is set, so signing in can start.",
             "title": "Ready",
+            "type": "boolean"
+          },
+          "set_aside": {
+            "default": false,
+            "description": "A pasted registration was set aside and can be brought back.",
+            "title": "Set Aside",
             "type": "boolean"
           },
           "status": {
@@ -10556,6 +10660,135 @@
           }
         },
         "summary": "Sign Out"
+      }
+    },
+    "/api/sign-ins/{name}/app": {
+      "post": {
+        "description": "Use the person's own app registration for this sign-in, kept on this computer. Signing in starts over.",
+        "operationId": "paste_app_api_sign_ins__name__app_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInApp"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Paste App"
+      }
+    },
+    "/api/sign-ins/{name}/app/bring-back": {
+      "post": {
+        "operationId": "bring_back_app_api_sign_ins__name__app_bring_back_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bring Back App"
+      }
+    },
+    "/api/sign-ins/{name}/app/set-aside": {
+      "post": {
+        "description": "Stop using the pasted registration (the add-on's own is used, if it has one); it can be brought back.",
+        "operationId": "set_aside_app_api_sign_ins__name__app_set_aside_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Aside App"
       }
     },
     "/api/sign-ins/{name}/start": {

@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.46"
+PLUGIN_API_VERSION = "0.3.47"
 
 
 class Settings(BaseModel):
@@ -906,8 +906,10 @@ class StageCheckResult:
 class Registrar:
     """A staging registry: the host installs it only after checking the manifest. `register(registrar)` may read
     `registrar.config` (the plugin's settings, already checked) to decide what to register; registration is fixed
-    until the app restarts, which it does by itself when settings change. Data the workspace adds later (its own
-    lists, profiles) is read per call, not at registration."""
+    until the app restarts. The app never restarts on its own: a change to a plugin's settings, or turning plugins on
+    or off, makes it say a restart is needed and hold new AI work until the person chooses "Restart now". Until then
+    the plugin keeps the settings it registered with and isn't told of the change. Data the workspace adds later (its
+    own lists, profiles) is read per call, not at registration."""
 
     def __init__(self, name: str, config: Settings, root: Path | None = None):
         self.name, self.config, self.root = name, config, root
@@ -1423,6 +1425,10 @@ class Registrar:
         allows: tuple[str, ...] | list[str] = (),
         account: Callable | None = None,
         revoke_url: str | None = None,
+        default_client_id: str | None = None,
+        default_client_secret: str | None = None,
+        default_app_note: str | None = None,
+        own_app_steps: Sequence[str | tuple[str, str]] = (),
     ) -> None:
         """A sign-in to a service through its own sign-in page, as the person (listed in `provides.sign_ins`):
         OAuth 2.0 authorization code with PKCE. `authorize_url` and `token_url` are the service's HTTPS addresses, on
@@ -1450,7 +1456,17 @@ class Registrar:
         `no_access` instead of being asked to sign in. `revoke_url` (HTTPS, on a declared host) is where signing out
         withdraws the access at the service (RFC 7009), best effort. When the service refuses to renew a sign-in, it
         shows "Sign in again" at once and the person is told once. The core adds a setup step per sign-in, done
-        while signed in."""
+        while signed in.
+
+        Which app registration is used: the workspace's references in `workspace.plugins.secrets` when it sets the
+        client id; else values the person pasted on the Sign-ins row (kept on this computer, readable by its owner
+        only); else the add-on's own, `default_client_id` (and `default_client_secret`), so people sign in without
+        registering anything. Ship a default only for a registration the service issues to apps on a person's
+        computer, whose secret the service doesn't treat as confidential, and which allows loopback addresses; a
+        hosted app sets its own. `default_app_note` says in plain words what using the add-on's registration means
+        (a warning page, how often to sign in again), shown while it is in use. `own_app_steps` is how a person
+        makes their own registration, shown as a numbered list beside the paste boxes and the address to allow: each
+        step is a line, or (line, https link) to open the service's page for it (up to 12)."""
         self._name(name)
         if name in self.sign_ins or not str(label).strip() or not scopes:
             raise ValueError("duplicate sign-in, or a sign-in without a label or scopes")
@@ -1460,6 +1476,22 @@ class Registrar:
             raise ValueError("allows lists up to 10 short lines of what the person is asked to allow")
         if account is not None and not callable(account):
             raise ValueError("account is a function")
+        if default_client_secret and not default_client_id:
+            raise ValueError("default_client_secret comes with default_client_id")
+        if default_client_id is not None and not str(default_client_id).strip():
+            raise ValueError("default_client_id is the add-on's client id, not empty")
+        if default_app_note is not None and not (str(default_app_note).strip() and len(default_app_note) <= 300):
+            raise ValueError("default_app_note is one or two short sentences")
+        steps: list[tuple[str, str | None]] = []
+        for step in own_app_steps:
+            text, link = (step, None) if isinstance(step, str) else tuple(step)
+            if not str(text).strip() or len(text) > 300:
+                raise ValueError("each of own_app_steps is a short line")
+            if link is not None and not str(link).startswith("https://"):
+                raise ValueError("a link in own_app_steps is an https address")
+            steps.append((" ".join(str(text).split()), link))
+        if len(steps) > 12:
+            raise ValueError("own_app_steps lists up to 12 steps")
         from engine.sign_in import SignIn
 
         self.sign_ins[name] = SignIn(
@@ -1475,6 +1507,10 @@ class Registrar:
             allows=tuple(" ".join(a.split()) for a in allows),
             account=account,
             revoke_url=revoke_url,
+            default_client_id=default_client_id.strip() if default_client_id else None,
+            default_client_secret=default_client_secret.strip() if default_client_secret else None,
+            default_app_note=" ".join(default_app_note.split()) if default_app_note else None,
+            own_app_steps=tuple(steps),
         )
 
     def triage_matcher(self, name: str, *, match: Callable) -> None:
