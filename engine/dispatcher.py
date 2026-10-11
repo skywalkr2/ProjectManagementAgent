@@ -226,7 +226,9 @@ def process(
         return needs_you(store, request_id, outcome.stop)
     changeset, problems, run_id = outcome.changeset, outcome.problems, outcome.run_id
     assert changeset is not None
-    cs_id = apply_changeset(changeset, problems, ctx, run=run_id, now=now)
+    cs_id = apply_changeset(
+        changeset, problems, ctx, run=run_id, now=now, all_or_nothing=getattr(kind, "all_or_nothing", False)
+    )
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
     return cs_id
 

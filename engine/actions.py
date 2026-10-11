@@ -30,6 +30,18 @@ ACTION_CORE_OPS = frozenset(OP_MODELS) - NEEDS_EVIDENCE - {"file.add", "text.acc
 _PLACEHOLDER = "$file:"
 
 
+def _estimator(store: Store, cfg: Config) -> Any:
+    """Prices a run of a task kind from token counts, as the request's go will."""
+    import os
+
+    from engine.ai.router import Router
+
+    def estimate(task: str, input_tokens: int, output_tokens: int | None) -> float | None:
+        return Router(cfg, store, env=os.environ).estimate_for(task, input_tokens, output_tokens)
+
+    return estimate
+
+
 class ActionFailed(StoreError):
     """The action couldn't produce a proposal; the reason is in plain words."""
 
@@ -162,7 +174,15 @@ def preview(
         "accepted_types": list(files.accepted_types),
     }
     context = store.plugins._with_files(
-        ActionContext(view, plugin, registrar.config, store.plugins.tool_box(plugin), limits, now=_workspace_now(cfg))
+        ActionContext(
+            view,
+            plugin,
+            registrar.config,
+            store.plugins.tool_box(plugin),
+            limits,
+            now=_workspace_now(cfg),
+            estimator=_estimator(store, cfg),
+        )
     )
     try:
         result = action.run(record, context, dict(choices))

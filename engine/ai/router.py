@@ -294,6 +294,24 @@ class Router:
         output = task.expected_output or self.typical_output(task.kind)
         return (estimate_tokens(task.size) * info.input_per_million + output * info.output_per_million) / 1e6
 
+    def estimate_for(
+        self, kind: str, input_tokens: int, output_tokens: int | None = None, *, data_level: str = "internal"
+    ) -> float | None:
+        """What a run of `kind` with this many tokens read (and written: by default its typical answer) would cost in
+        USD on the account it would use first, priced as the request's go will be; None when the price isn't known
+        or no account takes the work."""
+        try:
+            options = list(choices(self.cfg, kind, data_level))
+        except NoProvider:
+            return None
+        if not options:
+            return None
+        info = self.model_info(options[0])
+        if info.input_per_million is None or info.output_per_million is None:
+            return None
+        output = self.typical_output(kind) if output_tokens is None else output_tokens
+        return (max(0, input_tokens) * info.input_per_million + max(0, output) * info.output_per_million) / 1e6
+
     def typical_output(self, kind: str) -> int:
         """The average answer size of the last runs of this kind, or the kind's configured typical size."""
         sizes = [

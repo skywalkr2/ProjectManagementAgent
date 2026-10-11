@@ -110,6 +110,18 @@ EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
     "request.queued": ("AI work was queued.", {"id": "The request's id."}),
     "question.answered": ("A question was answered.", {"id": "The question's id."}),
     "changeset.applied": ("A changeset was applied (some of its ops may be held or refused).", {"id": "Its id."}),
+    "changeset.reviewed": (
+        "The person accepted the assistant's answer to a request, or sent it back with a note (which undoes it and "
+        "queues the work again). A draft the person accepts raises text.accepted instead.",
+        {
+            "id": "The changeset's id.",
+            "outcome": "accepted or sent_back.",
+            "request": "The request it answered.",
+            "task": "That request's kind of work.",
+            "part": "The part of a text that request named (as given to queue_request(part=)), or None.",
+            "about": "The record the request was about, as {kind, id}, or None.",
+        },
+    ),
     "changeset.undone": (
         "Ops of a changeset were undone.",
         {"id": "The changeset's id.", "ops": "The indexes of the ops undone."},

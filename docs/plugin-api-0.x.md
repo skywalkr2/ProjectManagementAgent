@@ -10,6 +10,21 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.45 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **`changeset.reviewed`:** an event when the person accepts the assistant's answer to a request (`outcome`
+  "accepted") or sends it back with a note ("sent_back"), with the changeset `id`, the `request`, its `task`, its
+  `part` and the record it was `about`. An accepted draft raises `text.accepted` as before.
+- **All-or-nothing answers:** `registrar.task_kind(..., all_or_nothing=True)` applies an answer's ops together: if
+  any is refused, none applies, and the changeset is recorded as refused with each op's reason.
+- **References deeper:** `RefTo` is honored six levels into a record (its own fields, then nested models), checked on
+  write and guarded on delete; deeper than that it is a plain id your own validator checks.
+- **Pricing inside an action:** `context.estimate(task, input_tokens, output_tokens=None)` gives what one run of a
+  core or own task kind would cost in USD, priced on the account it would use first, as the request's go will; None
+  when there's no listed price. Sum it over the runs an action queues.
+
 ## What 0.3.44 adds
 
 Manifests stay `'>=0.3,<0.4'`.

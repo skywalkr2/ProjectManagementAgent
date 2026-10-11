@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.44"
+PLUGIN_API_VERSION = "0.3.45"
 
 
 class Settings(BaseModel):
@@ -532,6 +532,7 @@ class ActionContext(ReadView):
         tools: Any,
         limits: dict[str, Any] | None = None,
         now: datetime | None = None,
+        estimator: Callable[..., float | None] | None = None,
     ):
         super().__init__(view, plugin)
         self.config = config.model_copy(deep=True)
@@ -539,6 +540,20 @@ class ActionContext(ReadView):
         self.limits = dict(limits or {})
         self.now = now or datetime.now(UTC)
         self.today = self.now.date()
+        self._estimator = estimator
+        self._own = plugin
+
+    def estimate(self, task: str, input_tokens: int, output_tokens: int | None = None) -> float | None:
+        """What one run of a task kind (core or this plugin's own) would cost in USD with this many tokens read (and
+        written: by default its typical answer), priced on the account it would use first, as the request's go will
+        price it. None when the price isn't known (a subscription or a local model) or no account takes the work.
+        Sum it over the runs an action queues to say what the whole series would cost; each run still waits for the
+        person's go."""
+        if "/" in task and not task.startswith(self._own + "/"):
+            raise PluginMisuse("an action estimates core work or its own plugin's")
+        if self._estimator is None:
+            return None
+        return self._estimator(task, int(input_tokens), None if output_tokens is None else int(output_tokens))
 
 
 @dataclass
@@ -1018,6 +1033,7 @@ class Registrar:
         max_output: int | None = None,
         expected_output: int | None = None,
         temperature: float | None = None,
+        all_or_nothing: bool = False,
     ) -> None:
         """Register AI work: the core or own ops its answer may use, and `label`, what to call it on screen.
 
@@ -1062,7 +1078,11 @@ class Registrar:
         material.
 
         `tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates
-        before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them."""
+        before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them.
+
+        `all_or_nothing=True` applies an answer's ops together: if any is refused, none applies, and the changeset is
+        recorded as refused with each op's reason, for ops that depend on each other (notes that summarize findings
+        made in the same answer). Ops held for the person still wait as usual."""
         from engine.config.schema import TaskSettings
 
         self._name(name)
@@ -1117,6 +1137,7 @@ class Registrar:
             where=narrowed,
             start_where=start_narrowed,
             role=role,
+            all_or_nothing=bool(all_or_nothing),
         )
 
     def _own_file(self, name: str, folder: str) -> Path | None:

@@ -189,6 +189,12 @@ class Tx:
                 special.append(("question.answered", {"id": rid}))
             if kind == "file" and field == "file_kind" and version == 1:
                 special.append(("file.added", {"id": rid, "kind": after}))
+            if kind == "changeset" and field == "reviewed" and after is True and before is False:
+                special.append(("changeset.reviewed", _reviewed(rid, "accepted", self)))
+            if kind == "signal" and field == "kind" and after == "sent_back" and version == 1:
+                sent = self.get("signal", rid)
+                for cs_id in (sent.data.get("refs") or [])[:1] if sent is not None else []:
+                    special.append(("changeset.reviewed", _reviewed(cs_id, "sent_back", self)))
             if kind == "text_version" and field == "status" and after == "accepted" and before != after:
                 accepted = self.get("text_version", rid)
                 if accepted is not None:
@@ -454,6 +460,22 @@ class Tx:
                 None if ctx.evidence is None else dumps(ctx.evidence),
             ),
         )
+
+
+def _reviewed(cs_id: str, outcome: str, view: Any) -> dict[str, Any]:
+    """The changeset.reviewed payload: which answer, to which request and part, and what the person did."""
+    cs = view.get("changeset", cs_id)
+    request = view.get("request", cs.data["request"]) if cs is not None else None
+    data = request.data if request is not None else {}
+    about = data.get("about")
+    return {
+        "id": cs_id,
+        "outcome": outcome,
+        "request": request.id if request is not None else None,
+        "task": data.get("task"),
+        "part": data.get("part"),
+        "about": {"kind": about["kind"], "id": about["id"]} if isinstance(about, dict) else None,
+    }
 
 
 def _text_accepted(version: Stored, view: Any) -> dict[str, Any]:

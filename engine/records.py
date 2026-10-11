@@ -60,7 +60,9 @@ class Record(BaseModel):
 
 @dataclass(frozen=True)
 class RefTo:
-    """Marks a field as holding the id of another record: `Annotated[str | None, RefTo("project")]`."""
+    """Marks a field as holding the id of another record: `Annotated[str | None, RefTo("project")]`. Honored up to six
+    levels into a record (its own fields, then models nested in them); a reference deeper than that is a plain id,
+    which the plugin's own validator must check."""
 
     kind: str
 
@@ -99,8 +101,15 @@ def list_fields(model: type[BaseModel]) -> list[tuple[str, str, bool]]:
     return found
 
 
+#: How many levels of nested models references are found in (a record's own fields are the first level).
+MAX_REF_DEPTH = 6
+
+
 def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> list[tuple[str, str]]:
-    """(path, kind it points to) for every field marked with RefTo: "field" for a single reference, "field[]" for a
+    """References are honored (checked on write, guarded on delete, rendered as names) up to MAX_REF_DEPTH levels into
+    a record: its own fields, models in them, and models in those, and so on.
+
+    (path, kind it points to) for every field marked with RefTo: "field" for a single reference, "field[]" for a
     list of references (`list[Annotated[str, RefTo("kind")]]`), optional or not, and paths into nested models such as
     "relations[].person" for a list of models whose `person` field is a reference."""
     from typing import Annotated, Union, get_args, get_origin
@@ -146,7 +155,7 @@ def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> li
         found += [
             (f"{path}[]", kind) for kind in in_list(info.annotation) if kind not in single_in_union(info.annotation)
         ]
-        if _depth < 3:
+        if _depth < MAX_REF_DEPTH - 1:
             for inner, many in nested(info.annotation):
                 found += ref_fields(inner, f"{path}[]." if many else f"{path}.", _depth + 1)
     return found
