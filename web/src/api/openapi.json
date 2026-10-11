@@ -96,6 +96,11 @@
             "title": "Label",
             "type": "string"
           },
+          "max_length": {
+            "default": 200,
+            "title": "Max Length",
+            "type": "integer"
+          },
           "options": {
             "description": "The values to pick from; none means on or off.",
             "items": {
@@ -103,6 +108,12 @@
             },
             "title": "Options",
             "type": "array"
+          },
+          "text": {
+            "default": false,
+            "description": "The person types the value, up to max_length characters.",
+            "title": "Text",
+            "type": "boolean"
           },
           "value": {
             "anyOf": [

@@ -172,6 +172,27 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: Plugin API 0.3.17: interface refinements and person-action needs
+
+**Decided by:** Claude (design), from plugin questions 62-68; the owner can override.
+
+**What:**
+- Interface items can be computed for one project.
+- Providers can raise interface events from event handlers.
+- A packet part can carry a data level that raises the run's.
+- `project.add` can move existing projects inside the new one.
+- Person actions get free-text choices, all-or-nothing proposals and the limits they work within.
+- Named interface calls with arguments were not added. Items cover the cases asked for so far.
+
+**Why:**
+- Content from another plugin can be more sensitive than the record a run is about. Routing has to see that, or
+  restricted text could reach an account not allowed it.
+- An import whose ops only make sense together must not apply halfway.
+
+**Impact:**
+- Changeset status `rejected` is now also used for an all-or-nothing proposal that was refused.
+- Choice views carry `text` and `max_length` for the review screen.
+
 ## 2026-10-12: Interfaces between plugins
 
 **Decided by:** Claude (design), building design 3.9; the owner can override.

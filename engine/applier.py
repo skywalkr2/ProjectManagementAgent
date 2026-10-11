@@ -216,6 +216,16 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"there is no project {op.parent}")
             if op.language is not None and not re.fullmatch(LANGUAGE_TAG, op.language):
                 refuse(i, "targets", f"{op.language} isn't a language tag such as en-US")
+            from engine.projects import chain
+
+            above = {p.id for p in chain(view, op.parent)} if op.parent else set()
+            for child in op.children:
+                if view.get("project", child) is None:
+                    refuse(i, "targets", f"there is no project {child}")
+                elif child in above:
+                    refuse(i, "targets", f"{child} can't go inside a project that is inside it")
+            if len(set(op.children)) != len(op.children):
+                refuse(i, "targets", "a project is named twice in children")
         # questions to other people
         if isinstance(op, QuestionAddOp):
             resolved = ctx.people.resolve(op.to)
@@ -438,8 +448,10 @@ def apply_changeset(
     run: str | None,
     now: datetime | None = None,
     extra: dict[str, Any] | None = None,
+    all_or_nothing: bool = False,
 ) -> str:
-    """Apply what passed, hold what needs the PM, record refusals. Returns the changeset id."""
+    """Apply what passed, hold what needs the PM, record refusals. Returns the changeset id. With `all_or_nothing`,
+    one refused op rolls everything back, and the changeset is recorded as rejected with every op refused."""
     now = now or datetime.now(UTC)
     # Recheck at the write boundary: callers cannot bypass plugin validators or tiers.
     problems = list(dict.fromkeys([*problems, *check(cs, ctx)]))
@@ -449,77 +461,111 @@ def apply_changeset(
         if p.op is not None:
             by_op.setdefault(p.op, []).append(p)
 
-    with ctx.store.transaction() as tx:
-        cs_id = tx.new_id("changeset")
-        outcomes: list[OpOutcome] = []
-        for i, op in enumerate(cs.ops):
-            mine = list(by_op.get(i, []))
-            known = {p.message for p in mine if p.check == "plugin-validator"}
-            mine += [
-                Problem("plugin-validator", "refuse", i, message)
-                for message in ctx.store.plugins.validators(op, view=tx, origin=origin_of(ctx))
-                if message not in known
-            ]
-            outcome = OpOutcome(
-                i,
-                op.model_dump(mode="json", exclude_none=True),
-                "applied",
-                op.group or f"op{i}",
-                problems=[asdict(p) for p in mine],
-                label=_label(op, tx, ctx.store),
-            )
-            if any(p.severity == "refuse" for p in mine):
-                outcome.status = "refused"
-                outcome.reason = "; ".join(p.message for p in mine if p.severity == "refuse")
-            elif any(p.severity == "hold" for p in mine) or _returned_to_someone_else(op, mine, ctx):
-                outcome.status = "held"
-                outcome.reason = "; ".join(p.message for p in mine if p.severity in ("hold", "return"))
-            else:
-                hold = _needs_person_choice(op, ctx)
-                if hold is not None:
+    try:
+        with ctx.store.transaction() as tx:
+            cs_id = tx.new_id("changeset")
+            outcomes: list[OpOutcome] = []
+            for i, op in enumerate(cs.ops):
+                mine = list(by_op.get(i, []))
+                known = {p.message for p in mine if p.check == "plugin-validator"}
+                mine += [
+                    Problem("plugin-validator", "refuse", i, message)
+                    for message in ctx.store.plugins.validators(op, view=tx, origin=origin_of(ctx))
+                    if message not in known
+                ]
+                outcome = OpOutcome(
+                    i,
+                    op.model_dump(mode="json", exclude_none=True),
+                    "applied",
+                    op.group or f"op{i}",
+                    problems=[asdict(p) for p in mine],
+                    label=_label(op, tx, ctx.store),
+                )
+                if any(p.severity == "refuse" for p in mine):
+                    outcome.status = "refused"
+                    outcome.reason = "; ".join(p.message for p in mine if p.severity == "refuse")
+                elif any(p.severity == "hold" for p in mine) or _returned_to_someone_else(op, mine, ctx):
                     outcome.status = "held"
-                    outcome.reason = hold
-            if outcome.status == "applied":
-                wctx = _wctx(ctx, cs_id, i, op)
-                # Each op in its own savepoint: one that fails is refused alone and leaves nothing behind.
-                tx.sql("SAVEPOINT plugin_op")
-                pending = len(tx.pending)
-                try:
-                    outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
-                    outcome.question = question
-                except NeedsPerson as err:
-                    tx.sql("ROLLBACK TO plugin_op")
-                    del tx.pending[pending:]
-                    outcome.status, outcome.reason = "held", str(err)
-                except StoreError as err:
-                    tx.sql("ROLLBACK TO plugin_op")
-                    del tx.pending[pending:]
-                    outcome.status, outcome.reason = "refused", str(err)
-                finally:
-                    tx.sql("RELEASE plugin_op")
-            elif outcome.status == "held" and outcome.reason and outcome.reason.startswith("who-is"):
-                outcome.question = _routing_question(tx, op, i, cs_id, ctx, outcome.reason)
-                outcome.reason = "Waiting for you to say who this is"
-            outcomes.append(outcome)
-        status = "held" if any(o.status == "held" for o in outcomes) else "applied"
-        tx.create(
-            "changeset",
-            {
-                "request": ctx.inputs.request,
-                "summary": cs.summary,
-                "ops": [asdict(o) for o in outcomes],
-                "status": status,
-                "problems": [asdict(p) for p in problems if p.op is None],
-                "trust": ctx.inputs.trust,
-                "run": run,
-                "created_at": now.isoformat(),
-                **(extra or {}),
-            },
-            WriteContext(actor="engine", trust="trusted", op="changeset.record"),
-            record_id=cs_id,
-        )
+                    outcome.reason = "; ".join(p.message for p in mine if p.severity in ("hold", "return"))
+                else:
+                    hold = _needs_person_choice(op, ctx)
+                    if hold is not None:
+                        outcome.status = "held"
+                        outcome.reason = hold
+                if outcome.status == "applied":
+                    wctx = _wctx(ctx, cs_id, i, op)
+                    # Each op in its own savepoint: one that fails is refused alone and leaves nothing behind.
+                    tx.sql("SAVEPOINT plugin_op")
+                    pending = len(tx.pending)
+                    try:
+                        outcome.records, question = _apply_op(tx, op, ctx, wctx, today)
+                        outcome.question = question
+                    except NeedsPerson as err:
+                        tx.sql("ROLLBACK TO plugin_op")
+                        del tx.pending[pending:]
+                        outcome.status, outcome.reason = "held", str(err)
+                    except StoreError as err:
+                        tx.sql("ROLLBACK TO plugin_op")
+                        del tx.pending[pending:]
+                        outcome.status, outcome.reason = "refused", str(err)
+                    finally:
+                        tx.sql("RELEASE plugin_op")
+                elif outcome.status == "held" and outcome.reason and outcome.reason.startswith("who-is"):
+                    outcome.question = _routing_question(tx, op, i, cs_id, ctx, outcome.reason)
+                    outcome.reason = "Waiting for you to say who this is"
+                outcomes.append(outcome)
+            status = "held" if any(o.status == "held" for o in outcomes) else "applied"
+            refused = [o for o in outcomes if o.status == "refused"]
+            if all_or_nothing and refused:
+                raise _AllOrNothing(outcomes)  # rolls back everything applied above
+            _record_changeset(tx, cs_id, cs, outcomes, status, problems, ctx, run, now, extra)
+    except _AllOrNothing as stopped:
+        why = "; ".join(o.reason for o in stopped.outcomes if o.status == "refused" and o.reason)
+        for outcome in stopped.outcomes:
+            if outcome.status != "refused":
+                outcome.status, outcome.records, outcome.question = "refused", [], None
+                outcome.reason = f"not applied, because another change in it was refused: {why}"
+        with ctx.store.transaction() as tx:
+            cs_id = tx.new_id("changeset")
+            _record_changeset(tx, cs_id, cs, stopped.outcomes, "rejected", problems, ctx, run, now, extra)
+        return cs_id
     ctx.store.plugins.publish("changeset.applied", {"id": cs_id})
     return cs_id
+
+
+class _AllOrNothing(Exception):
+    def __init__(self, outcomes: list[OpOutcome]):
+        self.outcomes = outcomes
+
+
+def _record_changeset(
+    tx: Tx,
+    cs_id: str,
+    cs: ChangesetIn,
+    outcomes: list[OpOutcome],
+    status: str,
+    problems: list[Problem],
+    ctx: Context,
+    run: str | None,
+    now: datetime,
+    extra: dict[str, Any] | None,
+) -> None:
+    tx.create(
+        "changeset",
+        {
+            "request": ctx.inputs.request,
+            "summary": cs.summary,
+            "ops": [asdict(o) for o in outcomes],
+            "status": status,
+            "problems": [asdict(p) for p in problems if p.op is None],
+            "trust": ctx.inputs.trust,
+            "run": run,
+            "created_at": now.isoformat(),
+            **(extra or {}),
+        },
+        WriteContext(actor="engine", trust="trusted", op="changeset.record"),
+        record_id=cs_id,
+    )
 
 
 def _returned_to_someone_else(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
@@ -668,7 +714,15 @@ def _apply_op(
         return [{"kind": "text_version", "id": op.version}], None
     if isinstance(op, ProjectAddOp):
         data = {"name": op.name.strip(), "summary": op.summary, "parent": op.parent, "language": op.language}
-        return [{"kind": "project", "id": tx.create("project", data, w).id}], None
+        made = tx.create("project", data, w)
+        moved = []
+        for child in op.children:
+            current = tx.get("project", child)
+            if current is None:
+                raise StoreError(f"there is no project {child}")
+            tx.update("project", child, {"parent": made.id}, w, read_version=current.version)
+            moved.append({"kind": "project", "id": child})
+        return [{"kind": "project", "id": made.id}, *moved], None
     if isinstance(op, FileAddOp):
         from engine.files import blob_matches, check_file
 

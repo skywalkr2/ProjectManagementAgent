@@ -116,6 +116,29 @@ def bad_items(target, context, choices):
 def bad_preview(target, context, choices):
     return Proposal("Show a page", previews=[Preview("page.html", "text/html", b"<b>hi</b>")])
 
+def named(target, context, choices):
+    title = choices.get("title", "Untitled")
+    return Proposal(
+        "Start " + title,
+        ops=[{"op": "p04/add-work", "title": title}],
+        choices=[Choice("title", "Title", title, text=True, max_length=40)],
+    )
+
+def together(target, context, choices):
+    return Proposal(
+        "Import two works and finish one",
+        ops=[
+            {"op": "p04/add-work", "title": "First"},
+            {"op": "p04/add-work", "title": "Second"},
+            {"op": "p04/set-status", "work": target.id, "status": "draft", "read_version": 99},
+        ],
+        all_or_nothing=True,
+    )
+
+def limits(target, context, choices):
+    first = context.limits["accepted_types"][0]
+    return Proposal("Up to " + str(context.limits["max_items"]) + " items, " + first)
+
 def register(registrar):
     registrar.record_type(Work)
     registrar.record_type(Build)
@@ -132,6 +155,9 @@ def register(registrar):
     registrar.action("p04/bad-preview", label="Bad preview", run=bad_preview)
     registrar.action("p04/batch", label="Batch", run=batch)
     registrar.action("p04/bad-items", label="Bad items", run=bad_items)
+    registrar.action("p04/named", label="Named", run=named)
+    registrar.action("p04/together", label="Together", run=together, on="p04/work")
+    registrar.action("p04/limits", label="Limits", run=limits)
 """
 
 PROGRAM = """
@@ -172,6 +198,9 @@ def env(tmp_path):
                 "p04/bad-preview",
                 "p04/batch",
                 "p04/bad-items",
+                "p04/named",
+                "p04/together",
+                "p04/limits",
             ],
         },
     }
@@ -427,3 +456,33 @@ def test_the_review_lists_items_and_what_applies_now(env):
     ).json()
     applied = client.post(f"{api}/plugin-actions/apply", json={"token": rerun["token"], "kept": {"alpha": False}})
     assert applied.json()["applied"] == 2
+
+
+def test_a_text_choice_takes_what_the_person_types(env):
+    from engine.actions import ActionFailed
+
+    pending = run(env, "p04/named", None, {"title": "Harbor Lights"})
+    assert pending.choices == {"title": "Harbor Lights"} and pending.choice_list[0]["text"]
+    with pytest.raises(ActionFailed, match="longer than 40"):
+        run(env, "p04/named", None, {"title": "x" * 41})
+
+
+def test_an_all_or_nothing_proposal_applies_nothing_when_one_op_is_refused(env):
+    from engine import actions
+
+    _, cfg, store = env
+    work = a_work(env)
+    before = len(store.read().list("p04/work"))
+    pending = run(env, "p04/together", work)
+    cs_id = actions.apply(store, cfg, pending.token, {})
+    changeset = store.read().get("changeset", cs_id)
+    assert changeset.data["status"] == "rejected"
+    assert all(o["status"] == "refused" for o in changeset.data["ops"])
+    assert "another change in it was refused" in changeset.data["ops"][0]["reason"]
+    assert len(store.read().list("p04/work")) == before
+
+
+def test_an_action_sees_the_limits_it_works_within(env):
+    _, cfg, _ = env
+    pending = run(env, "p04/limits")
+    assert pending.summary.startswith(f"Up to {cfg.workspace.plugins.actions.max_items} items")

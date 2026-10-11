@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.16"
+PLUGIN_API_VERSION = "0.3.17"
 
 
 class Settings(BaseModel):
@@ -381,6 +381,12 @@ class EventContext(ReadView):
             data["about"] = {"kind": kind, "id": record_id}
         self.commands.append(("request", data))
 
+    def emit(self, event: str, payload: dict[str, Any]) -> None:
+        """Raise an event of an interface this plugin provides ("<interface>.<event>"), after this handler returns,
+        to the plugins that use it (for an event that follows a core change such as a stage move). The payload is
+        checked against the interface's definition."""
+        self.commands.append(("emit", {"event": event, "payload": dict(payload)}))
+
     def file_question(self, title: str, text: str = "") -> None:
         """File a question for the configured PM; sending is never part of handling an event."""
         self.commands.append(("question", {"title": title, "text": text}))
@@ -398,12 +404,15 @@ class PacketContext(ReadView):
 
 class ActionContext(ReadView):
     """What a person action sees: core and own records, file bytes, the plugin's settings and its declared programs.
-    It changes nothing itself; it returns a Proposal the person reviews."""
+    It changes nothing itself; it returns a Proposal the person reviews. `limits` holds the workspace's limits a
+    proposal works within: max_items, max_previews, preview_mb, keep_minutes, max_file_mb, max_total_mb and
+    accepted_types (media types files may have)."""
 
-    def __init__(self, view: Any, plugin: str, config: Settings, tools: Any):
+    def __init__(self, view: Any, plugin: str, config: Settings, tools: Any, limits: dict[str, Any] | None = None):
         super().__init__(view, plugin)
         self.config = config.model_copy(deep=True)
         self.tools = tools
+        self.limits = dict(limits or {})
 
 
 @dataclass
@@ -411,7 +420,8 @@ class Choice:
     """A named choice the person can flip on the review; the action runs again with the new value before anything
     applies. `options` are (value, label) pairs; none means on or off. `value` is the value the action used: the
     choices it was given can name a choice it no longer offers (dropped) or a value it no longer offers (report the
-    value you fell back to)."""
+    value you fell back to). With `text=True` the person types the value (a name, a title), up to `max_length`
+    characters; `value` is the default, and the action runs again with what was typed."""
 
     id: str
     label: str
@@ -419,12 +429,16 @@ class Choice:
     options: list[tuple[str, str]] = field(default_factory=list)
     help: str = ""
     group: str | None = None  # the id of a Group in the proposal's groups
+    text: bool = False
+    max_length: int = 200
 
 
 @dataclass
 class Group:
     """A heading and a short explanation shared by the choices and items under it, so a long review reads as a few
-    groups with counts."""
+    groups with counts. A group has no value of its own: setting a whole group on screen sets each choice in it, and
+    the action runs again with every one of those choice ids in `choices` (for example {"tone-ch1": "plain",
+    "tone-ch2": "plain"}); keeping or dropping a whole group's items ticks each item, with no rerun."""
 
     id: str
     heading: str
@@ -481,6 +495,8 @@ class Proposal:
     notes: list[str] = field(default_factory=list)
     items: list[Item] = field(default_factory=list)  # applied only while kept
     groups: list[Group] = field(default_factory=list)
+    #: The ops only make sense together (an import): if any is refused when applied, none applies.
+    all_or_nothing: bool = False
 
 
 @dataclass
@@ -525,10 +541,15 @@ class WorkingCopyContext(ReadView):
 @dataclass(frozen=True)
 class InterfaceItem:
     """One item a provider offers through an interface: who provides it and its fields, as the definition shapes
-    them. Read-only: it is a copy, never the provider's record."""
+    them. Read-only: it is a copy, never the provider's record. Put it in a packet with
+    `Part(..., data_level=item.data_level)` so the run's account is allowed it."""
 
     provider: str
     data: dict[str, Any]
+
+    @property
+    def data_level(self) -> str:
+        return str(self.data.get("data_level") or "internal")
 
 
 @dataclass(frozen=True)
@@ -589,12 +610,15 @@ class Part:
     person's own words) is marked in the packet as material, never instructions, and any untrusted part makes the run's
     changeset untrusted, so its system ops wait for the person. A `reference_only` part informs the run but is marked
     not to be quoted or reproduced. Evidence may quote any part that isn't reference-only, and is cited as
-    "<kind>:<id>" of the record the run is about."""
+    "<kind>:<id>" of the record the run is about. `data_level` marks content more sensitive than the record the
+    run is about (an interface item's level, say): the run goes only to accounts allowed the highest level among
+    the record and its parts."""
 
     title: str
     text: str
     trusted: bool = False
     reference_only: bool = False
+    data_level: str | None = None
 
 
 @dataclass
@@ -698,7 +722,9 @@ class Registrar:
         """Check a core or own op before it applies: `fn(op, view, origin)` (or `fn(op, view)`; `origin` may also be
         keyword-only) returns a list of refusal messages, empty to let it through. The view is the changeset so far.
         `origin` is {"actor": "pm" | "assistant" | "rule", "trust": "trusted" | "untrusted", "via": "screen" | "note" |
-        "input" | "task" | "rule" | "action"}. Validators run more than once per op, so they must be pure and quick."""
+        "input" | "task" | "rule" | "action"}. Before anything applies, the core dry-runs the whole changeset in order
+        (text writes included) and rolls it back, so a validator sees what earlier ops in it created; with the check
+        at the write boundary, a validator usually runs about three times per op, so it must be pure and quick."""
         if not callable(fn):
             raise ValueError("validator must be callable")
         self.validators.setdefault(op_name, []).append(fn)
@@ -957,11 +983,13 @@ class Registrar:
 
     def provide_interface(self, interface: str, *, items: Callable, task_kinds: dict[str, str] | None = None) -> None:
         """Provide an interface ("<name>@<major>", listed in `interfaces.provides`), defined here or by another
-        plugin. `items(view, settings) -> list[dict]` returns everything this plugin offers through it, each item
-        checked against the definition when read; include `project` (an id) for items that belong to one, and
-        `data_level` when it isn't "internal". It must be quick and deterministic. `task_kinds` maps the interface's
-        task kind names to this plugin's own task kinds, so others can request them. Raise the interface's events
-        from an op with `writer.emit`. With no plugin defining the interface running, nothing reads it."""
+        plugin. `items(view, settings, project) -> list[dict]` returns what this plugin offers through it: for one
+        project when `project` is an id, everything when it is None (a function taking only `view, settings` is
+        called for everything and filtered). Each item is checked against the definition when read; include
+        `project` (an id) for items that belong to one, and `data_level` when it isn't "internal". It must be quick
+        and deterministic. `task_kinds` maps the interface's task kind names to this plugin's own task kinds, so
+        others can request them. Raise the interface's events from an op with `writer.emit`, or from an event handler
+        with `context.emit`. With no plugin defining the interface running, nothing reads it."""
         match = re.fullmatch(r"([a-z0-9-]+/[a-z0-9-]+)@([0-9]+)", interface)
         if match is None:
             raise ValueError('provide an interface as "<plugin>/<name>@<major>"')

@@ -169,3 +169,30 @@ def test_the_workspace_language_is_a_setting(workspace, tmp_path):
     ws = init_workspace(tmp_path / "ws", template=workspace, git=False)
     assert ws.config(env={}).workspace.language
     assert ws.config(env={}, flags={"workspace.language": "fr-CA"}).workspace.language == "fr-CA"
+
+
+def test_project_add_can_move_existing_projects_inside_it_and_undo_takes_both_back(env):  # noqa: F811
+    from engine.applier import undo
+
+    _, cfg, store = env
+    add(env, "Book One")
+    add(env, "Book Two")
+    one, two = projects(store)["Book One"], projects(store)["Book Two"]
+    cs_id, statuses = add(env, "The Lake Series", children=[one.id, two.id])
+    assert statuses == ["applied"]
+    series = projects(store)["The Lake Series"]
+    assert projects(store)["Book One"].data["parent"] == series.id
+    assert projects(store)["Book Two"].data["parent"] == series.id
+    undo(store, cs_id)
+    assert "The Lake Series" not in projects(store) and projects(store)["Book One"].data["parent"] is None
+
+
+def test_project_add_refuses_children_that_would_make_a_loop(env):  # noqa: F811
+    _, _, store = env
+    add(env, "Outer")
+    outer = projects(store)["Outer"]
+    add(env, "Inner", parent=outer.id)
+    inner = projects(store)["Inner"]
+    assert add(env, "Middle", parent=inner.id, children=[outer.id])[1] == ["refused"]
+    assert add(env, "Twice", children=[outer.id, outer.id])[1] == ["refused"]
+    assert add(env, "Missing", children=["PRJ-999"])[1] == ["refused"]

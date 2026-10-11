@@ -10,6 +10,32 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.17 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Interfaces:**
+  - `items(view, settings, project)` may take the project: an id when one project's items are asked for, None for
+    everything. A two-argument function still works.
+  - A provider can raise interface events from an event handler with `context.emit("<name>.<event>", payload)`, for
+    events that follow a core change such as a stage move.
+  - `InterfaceItem.data_level`.
+- **Data levels in packets:** `Part(..., data_level="restricted")`. A run goes only to accounts allowed the highest
+  level among the record it is about and its parts.
+- **`project.add` takes `children`:** ids of existing projects to move inside the new one, in the same op, so Undo
+  takes both back. A child that would make a loop is refused.
+- **Person actions:**
+  - `Choice(..., text=True, max_length=200)` is a value the person types.
+  - `Proposal(..., all_or_nothing=True)`: one refused op refuses every op, and the changeset is recorded as
+    `rejected`.
+  - `ActionContext.limits` holds max_items, max_previews, preview_mb, keep_minutes, max_file_mb, max_total_mb and
+    accepted_types.
+  - A `Group` has no value: setting a group sets each of its choices, and each reaches the action in `choices`.
+- **Documented:**
+  - the dry run that validators see;
+  - that op labels are made against the records before the changeset;
+  - that `text.accepted` always carries all three authorship kinds.
+
 ## What 0.3.16 adds
 
 Manifests stay `'>=0.3,<0.4'`. Interfaces between plugins (design 3.9):

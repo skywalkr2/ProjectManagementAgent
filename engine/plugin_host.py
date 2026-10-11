@@ -75,7 +75,7 @@ EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
             "version": "The number of the version now current.",
             "previous": "The number of the version it replaced (None for the first).",
             "source": "edit, draft, proposal, merge or import.",
-            "authorship": "Words by kind of author: {person, assistant, assistant_edit}.",
+            "authorship": "Words by kind of author: {person, assistant, assistant_edit}, all three always present.",
         },
     ),
     "request.queued": ("AI work was queued.", {"id": "The request's id."}),
@@ -260,8 +260,13 @@ class PluginHost:
         for provider in self.providers(name):
             registrar = self.registrars[provider]
             reader = self._with_files(ReadView(self.store.read(), provider))
+            fn = registrar.interface_provisions[name].items
+            wanted = project if project is not ANY else None
             try:
-                items = registrar.interface_provisions[name].items(reader, registrar.config.model_copy(deep=True))
+                if _positional_count(fn) >= 3:
+                    items = fn(reader, registrar.config.model_copy(deep=True), wanted)
+                else:
+                    items = fn(reader, registrar.config.model_copy(deep=True))
                 checked = [definition.item.model_validate(item).model_dump(mode="json") for item in items]
             except Exception as err:
                 self.disable(provider, f"its {name} items failed: {err}")
@@ -834,8 +839,15 @@ class PluginHost:
                 self._dispatching = False
 
     def _commands(self, name: str, commands: list, event: str = "", payload: dict | None = None) -> None:
-        if not commands:
-            return
+        emits = [data for kind, data in commands if kind == "emit"]
+        commands = [(kind, data) for kind, data in commands if kind != "emit"]
+        checked = [(e["event"], self._check_emit(name, e["event"], e["payload"])) for e in emits]
+        if commands:
+            self._write_commands(name, commands, event, payload)
+        for raised, data in checked:
+            self.publish(raised, data)
+
+    def _write_commands(self, name: str, commands: list, event: str = "", payload: dict | None = None) -> None:
         context = WriteContext(actor="plugin", trust="untrusted", op=f"{name}/event")
         with self.store.transaction() as tx:
             for kind, data in commands:
@@ -903,6 +915,19 @@ def check_about(view: Any, kind: Any, about: dict[str, str] | None) -> None:
         raise StoreError(f"there is no {about['kind']} {about['id']}")
     if not kind.offered_on(record):
         raise StoreError(f"{kind.label or kind.name} isn't for this {kind.on}")
+
+
+def _positional_count(fn: Any) -> int:
+    """How many positional arguments a plugin callback takes (several are optional, for callbacks written earlier)."""
+    import inspect
+
+    try:
+        params = list(inspect.signature(fn).parameters.values())
+    except (TypeError, ValueError):
+        return 0
+    if any(p.kind == p.VAR_POSITIONAL for p in params):
+        return 99
+    return len([p for p in params if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)])
 
 
 def _origin_parameter(fn: Any) -> str | None:

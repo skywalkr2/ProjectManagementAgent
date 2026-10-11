@@ -243,3 +243,55 @@ def test_the_manifest_must_match_what_is_registered(tmp_path):
         assert "interfaces.provides" in store.plugins.status["p17"].reason
     finally:
         store.close()
+
+
+def test_items_can_be_computed_for_one_project(tmp_path):
+    scoped = PROVIDER.replace(
+        "def items(view, settings):\n    return [",
+        "def items(view, settings, project):\n    return [",
+    ).replace(
+        'for w in view.list("p17/work")\n    ]',
+        'for w in view.list("p17/work") if project is None or w.data["project"] == project\n    ]',
+    )
+    assert scoped != PROVIDER
+    ws, cfg, store = workspace(tmp_path, code=scoped)
+    try:
+        project = a_project(cfg, store)
+        other = a_project(cfg, store, "Tide Tables")
+        apply(cfg, store, [{"op": "p17/add-work", "project": project.id, "title": "One"}])
+        apply(cfg, store, [{"op": "p17/add-work", "project": other.id, "title": "Two"}])
+        assert [i.data["title"] for i in store.plugins.read_interface("p16", "p16/source@1", project.id)] == ["One"]
+        assert len(store.plugins.read_interface("p16", "p16/source@1")) == 2
+    finally:
+        store.close()
+
+
+def test_a_provider_can_raise_an_event_from_a_handler(tmp_path):
+    handled = PROVIDER.replace('    writer.emit("p16/source.approved", payload)\n', "").replace(
+        "def register(registrar):\n",
+        "def on_changed(payload, context):\n"
+        "    work = context.get('p17/work', payload['id'])\n"
+        "    if work is not None and payload['version'] == 1:\n"
+        "        data = {'project': work.data['project'], 'title': work.data['title']}\n"
+        "        context.emit('p16/source.approved', data)\n\n"
+        "def register(registrar):\n    registrar.subscribe('record.changed', on_changed)\n",
+    )
+    manifest = {**PROVIDER_MANIFEST, "subscribes": [{"event": "record.changed", "kinds": ["p17/work"]}]}
+    ws, cfg, store = workspace(tmp_path, code=handled, provider=manifest)
+    try:
+        assert store.plugins.active("p17"), store.plugins.status["p17"].reason
+        project = a_project(cfg, store)
+        apply(cfg, store, [{"op": "p17/add-work", "project": project.id, "title": "From A Handler"}])
+        request = store.read().list("request")[-1]
+        assert request.data["task"] == "p17/blurb" and "From A Handler" in request.data["note"]
+    finally:
+        store.close()
+
+
+def test_a_part_with_a_higher_data_level_raises_the_runs_level():
+    from engine.packet import PacketRefused, _highest
+
+    assert _highest(["internal", "restricted", "open"]) == "restricted"
+    assert _highest([]) is None
+    with pytest.raises(PacketRefused, match="unknown data level"):
+        _highest(["secret"])

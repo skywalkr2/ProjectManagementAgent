@@ -29,7 +29,8 @@ class OpModel(BaseModel):
 
     def describe(self) -> str | None:
         """A one-line plain label for this op in review lists; plugin ops may override it. A plugin op may instead
-        define `describe(self, view)` to read records for the label (a read view of core and its own records)."""
+        define `describe(self, view)` to read records for the label (a read view of core and its own records). The
+        label is made against the records as they stand before the changeset applies."""
         return None
 
 
@@ -228,6 +229,10 @@ class ProjectAddOp(OpModel):
     parent: str | None = Field(None, description="The id of the project it belongs to, if any.")
     language: str | None = Field(
         None, description="Its language tag, if it differs from its parent's or the workspace's."
+    )
+    children: list[str] = Field(
+        default_factory=list,
+        description="Ids of existing projects to move inside the new one (books into a new series), in the same op.",
     )
 
     def describe(self) -> str | None:

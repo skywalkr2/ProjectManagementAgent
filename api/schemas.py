@@ -633,6 +633,8 @@ class ActionChoice(BaseModel):
     options: list[ChoiceOption] = Field(description="The values to pick from; none means on or off.")
     help: str = ""
     group: str | None = None
+    text: bool = Field(False, description="The person types the value, up to max_length characters.")
+    max_length: int = 200
 
 
 class ActionGroup(BaseModel):

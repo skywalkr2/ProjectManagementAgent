@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
-from engine.ai.router import BudgetReached, Independence, NoProvider, Router, escalation_tier, route
+from engine.ai.router import LEVELS, BudgetReached, Independence, NoProvider, Router, escalation_tier, route
 from engine.ai.task import AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.cleaning import quoted_messages
@@ -125,6 +125,8 @@ def process(
 
     previous_ops = _previous_ops(store, req.data.get("previous"))
     level = _data_level(store, req.data)
+    if packet.data_level and LEVELS.index(packet.data_level) > LEVELS.index(level):
+        level = packet.data_level
     tier = route(
         cfg,
         packet.task.kind,

@@ -48,6 +48,7 @@ class Packet:
     about: tuple[str, str] | None = None  # (kind, id) of the record the work is about
     draft_base: int | None = None  # for a draft, the number of the field's version it is made from
     anchor_units: list | None = None  # for an anchored draft, the base text's units the ids number
+    data_level: str | None = None  # the most sensitive level a part declares, when above the record's
 
     @property
     def input_chars(self) -> int:
@@ -226,7 +227,18 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         about=(target.kind, target.id) if target is not None else None,
         draft_base=base,
         anchor_units=anchor_units,
+        data_level=_highest([p.data_level for p in every if p.data_level]),
     )
+
+
+def _highest(levels: list[str]) -> str | None:
+    from engine.ai.router import LEVELS
+
+    known = [level for level in levels if level in LEVELS]
+    unknown = [level for level in levels if level not in LEVELS]
+    if unknown:
+        raise PacketRefused(f"a packet part names an unknown data level {unknown[0]}")
+    return max(known, key=LEVELS.index) if known else None
 
 
 def _field_format(store: Store, kind: str, field: str) -> str:

@@ -48,6 +48,7 @@ class Pending:
     notes: list[str]
     items: list[dict[str, Any]] = field(default_factory=list)  # id, label, group, kept, ops
     groups: list[dict[str, Any]] = field(default_factory=list)  # id, heading, explanation
+    all_or_nothing: bool = False
     created: float = field(default_factory=time.monotonic)
     expires_at: str = ""
 
@@ -137,7 +138,19 @@ def preview(
         if action.file_kinds and record.data.get("file_kind") not in action.file_kinds:
             raise StoreError(f"{action.label} doesn't work on this kind of file")
     registrar = store.plugins.registrars[plugin]
-    context = store.plugins._with_files(ActionContext(view, plugin, registrar.config, store.plugins.tool_box(plugin)))
+    actions, files = cfg.workspace.plugins.actions, cfg.storage.files
+    limits = {
+        "max_items": actions.max_items,
+        "max_previews": actions.max_previews,
+        "preview_mb": actions.preview_mb,
+        "keep_minutes": actions.keep_minutes,
+        "max_file_mb": files.max_file_mb,
+        "max_total_mb": files.max_total_mb,
+        "accepted_types": list(files.accepted_types),
+    }
+    context = store.plugins._with_files(
+        ActionContext(view, plugin, registrar.config, store.plugins.tool_box(plugin), limits)
+    )
     try:
         result = action.run(record, context, dict(choices))
     except (ToolError, StoreError) as err:
@@ -188,7 +201,16 @@ def _checked(
     for c in result.choices:
         options = [{"value": str(v), "label": str(label)} for v, label in c.options]
         choice_list.append(
-            {"id": c.id, "label": c.label, "value": c.value, "options": options, "help": c.help, "group": c.group}
+            {
+                "id": c.id,
+                "label": c.label,
+                "value": c.value,
+                "options": options,
+                "help": c.help,
+                "group": c.group,
+                "text": bool(c.text),
+                "max_length": int(c.max_length),
+            }
         )
     groups = []
     for g in result.groups:
@@ -206,6 +228,12 @@ def _checked(
     # The proposal's own choices are what stands: a choice the run no longer offers is dropped, and one whose earlier
     # value it no longer offers shows the value the action fell back to.
     for c in choice_list:
+        if c["text"]:
+            if c["options"] or not isinstance(c["value"], str):
+                raise StoreError(f"text choice {c['id']} has a text value and no options")
+            if not 1 <= c["max_length"] <= 2000 or len(c["value"]) > c["max_length"]:
+                raise StoreError(f"choice {c['id']} is longer than {c['max_length']} characters")
+            continue
         allowed = {o["value"] for o in c["options"]}
         if allowed and str(c["value"]) not in allowed:
             raise StoreError(f"choice {c['id']} is set to a value it doesn't offer")
@@ -296,6 +324,7 @@ def _checked(
         notes=[" ".join(str(n).split()) for n in result.notes],
         items=items,
         groups=groups,
+        all_or_nothing=bool(result.all_or_nothing),
         expires_at=datetime.fromtimestamp(time.time() + keep * 60, UTC).isoformat(),
     )
 
@@ -411,7 +440,14 @@ def apply(store: Store, cfg: Config, token: str, kept: dict[str, bool] | None = 
         "kept": [i["id"] for i in pending.items if i["kept"]],
         "dropped": [i["id"] for i in pending.items if not i["kept"]],
     }
-    cs_id = apply_changeset(changeset, [], ctx, run=None, extra={"action": action, "reviewed": True})
+    cs_id = apply_changeset(
+        changeset,
+        [],
+        ctx,
+        run=None,
+        extra={"action": action, "reviewed": True},
+        all_or_nothing=pending.all_or_nothing,
+    )
     with store.transaction() as tx:
         current = tx.get("request", request.id)
         tx.update(

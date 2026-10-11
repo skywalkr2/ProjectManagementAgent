@@ -418,6 +418,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     options=[ChoiceOption(**o) for o in c["options"]],
                     help=c["help"],
                     group=c["group"],
+                    text=c.get("text", False),
+                    max_length=c.get("max_length", 200),
                 )
                 for c in pending.choice_list
             ],

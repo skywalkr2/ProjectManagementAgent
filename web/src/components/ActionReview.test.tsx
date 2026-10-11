@@ -83,7 +83,7 @@ test("changing a choice asks again with every current value and keeps focus on t
         summary: `Make a note (${style})`,
         ops: [{ op: "note", label: count ? "Note with count" : "Note without count" }],
         choices: [
-          { id: "count", label: "Include the word count", value: count, options: [], help: "Adds how many words there are." },
+          { id: "count", label: "Include the word count", value: count, options: [], help: "Adds how many words there are.", text: false, max_length: 200 },
           {
             id: "style",
             label: "Style",
@@ -93,6 +93,8 @@ test("changing a choice asks again with every current value and keeps focus on t
               { value: "long", label: "Long" },
             ],
             help: "",
+            text: false,
+            max_length: 200,
           },
         ],
       });
