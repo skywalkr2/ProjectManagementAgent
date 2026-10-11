@@ -25,6 +25,7 @@ plugin_api: ">=1.0,<2"            # plugin API versions this plugin works with
 description: Track side projects with goals, next steps and a weekly review.
 depends_on: []                    # other plugins it cannot work without, with version ranges
 interfaces:                       # how it works with other plugins, only through the core (3.9)
+  defines: []                     # interfaces this plugin defines for others, e.g. [publishing/manuscript-source]
   provides: []                    # e.g. [publishing/title@1]
   uses: []                        # e.g. [{interface: publishing/title@1, optional: true}]
 subscribes: []                    # core and interface events it reacts to (3.4), e.g. [stage.moved]

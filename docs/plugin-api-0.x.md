@@ -10,6 +10,28 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.16 adds
+
+Manifests stay `'>=0.3,<0.4'`. Interfaces between plugins (design 3.9):
+
+- **Define:** `registrar.define_interface(name, version="1.0", item=Model, events={"approved": Payload},
+  task_kinds=("short-blurb",))`, listed in `interfaces.defines`. Within a major version, add only optional fields.
+- **Provide:** `registrar.provide_interface("<name>@<major>", items=fn, task_kinds={"short-blurb":
+  "<plugin>/<own task kind>"})`, listed in `interfaces.provides`. `items(view, settings) -> list[dict]` returns
+  everything offered. Each item is checked against the definition when read and may carry `project` and
+  `data_level`. Raise the interface's events from an op with `writer.emit("<name>.<event>", payload)`; the payload is
+  checked against the definition, and one that doesn't match turns the provider off.
+- **Use:** declare `interfaces.uses: [{interface: "<name>@<major>[.<minor>]", optional: true}]`.
+  - **Reading:** `view.interface("<name>@<major>", project=...)` returns `InterfaceItem(provider, data)` copies from
+    every running provider. Items above the user's data levels (`requires.data_levels`) are left out.
+  - **Events:** subscribe to `<name>.<event>`.
+  - **Requests:** in an event handler, `context.request_from("<name>@<major>", "<task>", note, about,
+    provider=None)` queues the provider's own task kind, with the usual estimate, go and review.
+- **Loading:**
+  - A required interface with no running definition and provider keeps the user off, with the reason.
+  - An optional one reads empty.
+  - A provider whose items don't fit the definition is turned off.
+
 ## What 0.3.15 adds
 
 Manifests stay `'>=0.3,<0.4'`.

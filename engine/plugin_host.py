@@ -138,6 +138,7 @@ class PluginHost:
                 update={"stages": stages, "moves": override.moves or (pack and pack.moves)}
             )
         self.stages.types = merged
+        self._check_interfaces()
         running = {name for name in self.status if self.active(name)}
         try:
             validate_rules(cfg.rules, self.stage_checks, running)
@@ -182,6 +183,137 @@ class PluginHost:
                 if ep.name in self.cfg.workspace.plugins.enabled:
                     self.disable(ep.name, str(err))
 
+    # ---- interfaces (design 3.9) ----------------------------------------------------------------------------------
+
+    def definition(self, name: str) -> Any | None:
+        """A running plugin's definition of an interface, by name."""
+        for plugin, registrar in self.registrars.items():
+            if self.active(plugin) and name in registrar.interface_definitions:
+                return registrar.interface_definitions[name]
+        return None
+
+    def providers(self, name: str) -> list[str]:
+        """Running plugins that provide an interface in the major version its running definition has."""
+        definition = self.definition(name)
+        if definition is None:
+            return []
+        return sorted(
+            plugin
+            for plugin, registrar in self.registrars.items()
+            if self.active(plugin)
+            and name in registrar.interface_provisions
+            and registrar.interface_provisions[name].major == definition.major
+        )
+
+    def _check_interfaces(self) -> None:
+        """Turn off plugins whose required interfaces nobody running provides, until nothing changes; note on the
+        others what they use or provide that isn't there."""
+        from engine.plugin_manifest import INTERFACE_USE
+
+        changed = True
+        while changed:
+            changed = False
+            for plugin, manifest in self.manifests.items():
+                if not self.active(plugin):
+                    continue
+                for use in manifest.interfaces.uses:
+                    name, major, minor = re.fullmatch(INTERFACE_USE, use.interface).groups()
+                    definition = self.definition(name)
+                    fits = (
+                        definition is not None
+                        and definition.major == int(major)
+                        and definition.minor >= int(minor or 0)
+                        and bool(self.providers(name))
+                    )
+                    if not fits and not use.optional:
+                        self.disable(plugin, f"it needs {use.interface}, which no running plugin provides")
+                        changed = True
+                        break
+        for plugin, registrar in self.registrars.items():
+            if not self.active(plugin):
+                continue
+            for name, provision in registrar.interface_provisions.items():
+                definition = self.definition(name)
+                if definition is not None and definition.major != provision.major:
+                    self.status[plugin].notes.append(
+                        f"it provides {name}@{provision.major}, but the running definition is version "
+                        f"{definition.version}, so nothing reads it"
+                    )
+
+    def _uses(self, plugin: str, name: str) -> bool:
+        manifest = self.manifests.get(plugin)
+        return manifest is not None and any(u.interface.split("@")[0] == name for u in manifest.interfaces.uses)
+
+    def read_interface(self, plugin: str | None, spec: str, project: Any = None) -> list[Any]:
+        from engine.plugin_api import ANY, InterfaceItem, PluginMisuse, ReadView
+        from engine.plugin_manifest import INTERFACE_USE
+
+        match = re.fullmatch(INTERFACE_USE, spec)
+        if match is None or plugin is None or not self._uses(plugin, match.group(1)):
+            raise PluginMisuse(f"read an interface this plugin declares in interfaces.uses, as <name>@<major>: {spec}")
+        name, major, minor = match.group(1), int(match.group(2)), int(match.group(3) or 0)
+        definition = self.definition(name)
+        if definition is None or definition.major != major or definition.minor < minor:
+            return []
+        allowed = {"open", "internal", *self.manifests[plugin].requires.data_levels}
+        found = []
+        for provider in self.providers(name):
+            registrar = self.registrars[provider]
+            reader = self._with_files(ReadView(self.store.read(), provider))
+            try:
+                items = registrar.interface_provisions[name].items(reader, registrar.config.model_copy(deep=True))
+                checked = [definition.item.model_validate(item).model_dump(mode="json") for item in items]
+            except Exception as err:
+                self.disable(provider, f"its {name} items failed: {err}")
+                continue
+            for item in checked:
+                if project is not ANY and project is not None and item.get("project") != project:
+                    continue
+                if item.get("data_level", "internal") not in allowed:
+                    continue
+                found.append(InterfaceItem(provider, item))
+        return found
+
+    def _check_emit(self, plugin: str, event: str, payload: dict[str, Any]) -> dict[str, Any]:
+        from engine.plugin_api import PluginMisuse
+
+        name, _, short = event.rpartition(".")
+        registrar = self.registrars[plugin]
+        if name not in registrar.interface_provisions:
+            raise PluginMisuse(f"{event} isn't an event of an interface this plugin provides")
+        definition = self.definition(name)
+        if definition is None:
+            return dict(payload)  # nobody defines it here, so nobody can be listening
+        if short not in definition.events:
+            raise PluginMisuse(f"{name} has no event {short}")
+        try:
+            return definition.events[short].model_validate(payload).model_dump(mode="json")
+        except ValueError as err:
+            raise PluginMisuse(f"{event} payload doesn't match the definition: {err}") from None
+
+    def _interface_request(self, plugin: str, data: dict[str, Any]) -> dict[str, Any]:
+        """The request for another plugin's task kind that an interface offers, as that plugin's own task."""
+        from engine.plugin_manifest import INTERFACE_USE
+
+        match = re.fullmatch(INTERFACE_USE, data["via"])
+        if match is None or not self._uses(plugin, match.group(1)):
+            raise StoreError(f"{plugin} doesn't use {data['via']}")
+        name = match.group(1)
+        offering = [
+            p
+            for p in self.providers(name)
+            if data["interface_task"] in self.registrars[p].interface_provisions[name].task_kinds
+        ]
+        if data.get("provider"):
+            offering = [p for p in offering if p == data["provider"]]
+        if len(offering) != 1:
+            raise StoreError(
+                f"{'no' if not offering else 'more than one'} running plugin offers {data['interface_task']} "
+                f"through {name}" + ("; name the provider" if offering else "")
+            )
+        task = self.registrars[offering[0]].interface_provisions[name].task_kinds[data["interface_task"]]
+        return {"task": task, "note": data["note"], **({"about": data["about"]} if data.get("about") else {})}
+
     def disable(self, name: str, reason: str) -> None:
         status = self.status.setdefault(name, PluginStatus(name, "disabled"))
         status.state, status.reason = "disabled", reason
@@ -218,8 +350,10 @@ class PluginHost:
                 if getattr(getattr(manifest, section), attribute):
                     raise ValueError(f"{key} is not available in plugin API {PLUGIN_API_VERSION} yet")
             self._check_tools(name, manifest)
-            if not set(manifest.events()) <= EVENTS:
-                raise ValueError("unsupported event subscription")
+            used = {u.interface.split("@")[0] for u in manifest.interfaces.uses}
+            for event in manifest.events():
+                if event not in EVENTS and event.rpartition(".")[0] not in used:
+                    raise ValueError(f"unsupported event subscription {event}; an interface's events need it in uses")
             for dep in manifest.depends_on:
                 if dep.name not in self.cfg.workspace.plugins.enabled:
                     raise ValueError(f"dependency {dep.name} is not enabled")
@@ -378,6 +512,11 @@ class PluginHost:
         ):
             if set(getattr(expected, key)) != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
+        if set(manifest.interfaces.defines) != set(registrar.interface_definitions):
+            raise ValueError("registered interface definitions do not match interfaces.defines exactly")
+        provided = {f"{p.interface}@{p.major}" for p in registrar.interface_provisions.values()}
+        if set(manifest.interfaces.provides) != provided:
+            raise ValueError("registered interface providers do not match interfaces.provides exactly")
         if set(manifest.events()) != set(registrar.handlers):
             raise ValueError("registered handlers do not match subscribes exactly")
         if len(manifest.events()) != len(set(manifest.events())):
@@ -544,6 +683,7 @@ class PluginHost:
         plugin = getattr(view, "_ReadView__plugin", None)
         view.data_layers = lambda project: self.data_layers(plugin, project)
         view.default_language = self.cfg.workspace.language
+        view.read_interface = lambda spec, project=None: self.read_interface(plugin, spec, project)
         return view
 
     def data_layers(self, plugin: str | None, project: str | None = None) -> list[Path]:
@@ -648,7 +788,7 @@ class PluginHost:
             store=self.store,
         )
         self._with_files(writer)
-        self._with_files(writer)
+        writer.check_emit = lambda event, payload: self._check_emit(name, event, payload)
         try:
             registration.apply(op.model_copy(deep=True), writer, self.registrars[name].config.model_copy(deep=True))
         except PluginMisuse as err:
@@ -663,6 +803,7 @@ class PluginHost:
         except Exception as err:
             self.disable(name, f"op callback failed: {err}")
             raise StoreError(f"plugin {name} op failed") from err
+        tx.emitted.extend(writer.emitted)
         return writer.touched
 
     def publish(self, event: str, data: dict[str, Any]) -> None:
@@ -698,12 +839,20 @@ class PluginHost:
         context = WriteContext(actor="plugin", trust="untrusted", op=f"{name}/event")
         with self.store.transaction() as tx:
             for kind, data in commands:
-                allowed_fields = {"request": {"task", "note", "about"}, "question": {"title", "text"}}
+                allowed_fields = {
+                    "request": {"task", "note", "about", "via", "interface_task", "provider"},
+                    "question": {"title", "text"},
+                }
                 if kind not in allowed_fields or not set(data) <= allowed_fields[kind]:
                     raise StoreError("event handlers may only queue requests or file questions")
+                via = kind == "request" and "via" in data
+                if via:
+                    data = self._interface_request(name, data)
+                elif kind == "request" and "task" not in data:
+                    raise StoreError("a request names a task kind")
                 if kind == "request":
                     task = data["task"]
-                    if "/" in task and not task.startswith(name + "/"):
+                    if "/" in task and not task.startswith(name + "/") and not via:
                         raise StoreError("requesting another plugin requires an interface")
                     check_about(tx, self.task_kind(task), data.get("about"))
                     data = {**data, "origin": "schedule", "created_at": datetime.now(UTC).isoformat()}

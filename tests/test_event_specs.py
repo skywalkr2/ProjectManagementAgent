@@ -27,7 +27,7 @@ def test_stage_moved_and_request_payloads_match_their_specs():
 
     class Fake(Tx):
         def __init__(self, pending):
-            self.pending = pending
+            self.pending, self.emitted = pending, []
 
     pending = [
         ("note", "NOTE-1", 2, "stage", None, "draft", "stage.move#0"),

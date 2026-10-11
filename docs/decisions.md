@@ -172,6 +172,27 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: Interfaces between plugins
+
+**Decided by:** Claude (design), building design 3.9; the owner can override.
+
+**What:**
+- Plugin API 0.3.16. A plugin defines a versioned interface (an item model, events, task kinds). Others provide it
+  (an items function, events raised from ops, their own task kinds mapped to the interface's) or use it.
+- Users read checked copies of the items, never the provider's records, filtered by their own data levels. They get
+  the events and can request a provider's task kinds through the interface.
+- Required uses keep a plugin off until something provides them. Optional ones read empty.
+- The manifest gains `interfaces.defines`.
+
+**Why:**
+- Packs must work together without importing each other or reading each other's tables, and each must work alone.
+- Checking items against the definition at read time puts a provider's mistake on the provider.
+
+**Impact:**
+- Design 3.9.
+- The "uses" notice before enabling a plugin comes with the UX pass.
+- A self-check case for required interfaces in the fictional workspaces comes with the first bundled pair.
+
 ## 2026-10-12: Outside edits, collections and generated files in the synced folder
 
 **Decided by:** Claude (design), building design 5.0 and from plugin questions 59-61; the owner can override.

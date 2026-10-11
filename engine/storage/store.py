@@ -166,6 +166,7 @@ class Tx:
         self._clock = clock
         self.models = REGISTRY if models is None else models
         self.pending: list[tuple] = []
+        self.emitted: list[tuple[str, dict[str, Any]]] = []  # interface events raised by ops in this transaction
 
     def events(self) -> list[tuple[str, dict[str, Any]]]:
         grouped = {}
@@ -191,7 +192,7 @@ class Tx:
                 accepted = self.get("text_version", rid)
                 if accepted is not None:
                     special.append(("text.accepted", _text_accepted(accepted)))
-        return [("record.changed", data) for data in grouped.values()] + special
+        return [("record.changed", data) for data in grouped.values()] + special + list(self.emitted)
 
     def sql(self, query: str, args: tuple[Any, ...] = ()) -> sqlite3.Cursor:
         """Run a statement in this transaction, for storage modules that own their own tables (leases)."""

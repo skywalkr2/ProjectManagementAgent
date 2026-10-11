@@ -3,6 +3,7 @@ unknown keys are errors, and what the code registers must match `provides` and `
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Literal
 
@@ -29,8 +30,6 @@ class Dependency(Strict):
 
 #: Manifest keys the host refuses until the extension point behind them exists (a non-empty value refuses the plugin).
 NOT_YET = {
-    "interfaces.provides": "versioned interfaces other plugins use",
-    "interfaces.uses": "versioned interfaces other plugins use",
     "requires.network": "network hosts a plugin may reach",
     "requires.secrets": "secrets a plugin may read",
     "provides.panels": "screens a plugin adds",
@@ -40,16 +39,29 @@ NOT_YET = {
 }
 
 
+INTERFACE_USE = r"([a-z0-9-]+/[a-z0-9-]+)@([0-9]+)(?:\.([0-9]+))?"
+
+
 class InterfaceUse(Strict):
-    interface: str = Field(description="The interface's name and version range.")
+    interface: str = Field(
+        description='The interface and the oldest version that works: "<name>@<major>" or "<name>@<major>.<minor>".'
+    )
     optional: bool = Field(False, description="The plugin still works when no enabled plugin provides it.")
+
+    @field_validator("interface")
+    @classmethod
+    def _shape(cls, value: str) -> str:
+        if not re.fullmatch(INTERFACE_USE, value):
+            raise ValueError('use an interface as "<plugin>/<name>@<major>" or "@<major>.<minor>"')
+        return value
 
 
 class Interfaces(Strict):
-    provides: list[str] = Field(default_factory=list, description="Interfaces this plugin provides. Not yet available.")
-    uses: list[InterfaceUse] = Field(
-        default_factory=list, description="Interfaces this plugin uses. Not yet available."
+    defines: list[str] = Field(default_factory=list, description="Interfaces this plugin defines, by name.")
+    provides: list[str] = Field(
+        default_factory=list, description='Interfaces this plugin provides, as "<plugin>/<name>@<major>".'
     )
+    uses: list[InterfaceUse] = Field(default_factory=list, description="Interfaces this plugin reads or requests.")
 
 
 class Tool(Strict):
@@ -114,7 +126,9 @@ class Manifest(Strict):
     plugin_api: str = Field(description="The plugin API versions it works with, e.g. '>=0.3,<0.4'.")
     description: str = Field(description="One line saying what the plugin is for.")
     depends_on: list[Dependency] = Field(default_factory=list, description="Plugins that must be enabled first.")
-    interfaces: Interfaces = Field(default_factory=Interfaces, description="Not yet available.")
+    interfaces: Interfaces = Field(
+        default_factory=Interfaces, description="How it works with other plugins, only through the core."
+    )
     subscribes: list[str | Subscription] = Field(
         default_factory=list, description="Events the plugin handles: a name, or {event, kinds}."
     )

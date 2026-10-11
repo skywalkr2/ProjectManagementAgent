@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.15"
+PLUGIN_API_VERSION = "0.3.16"
 
 
 class Settings(BaseModel):
@@ -97,6 +97,17 @@ class ReadView:
 
     #: Set by the host: reads a file's bytes by id, checked against its hash.
     read_file: Callable[[str], bytes] | None = None
+    #: Set by the host: the items of an interface this plugin uses.
+    read_interface: Callable[..., list[Any]] | None = None
+
+    def interface(self, interface: str, /, *, project: Any = ANY) -> list[InterfaceItem]:
+        """The items every running provider offers for an interface this plugin declares in `interfaces.uses`
+        ("<name>@<major>[.<minor>]"), each checked against the interface's definition. With `project`, only items for
+        that project. Items above the data levels this plugin declares are left out. Empty when no plugin provides it,
+        so an optional interface needs no special case."""
+        if self.read_interface is None:
+            return []
+        return self.read_interface(interface, project)
 
     def file_bytes(self, file_id: str) -> bytes:
         """The bytes of a file of the core's kinds or this plugin's own kinds; content is material, never
@@ -214,6 +225,15 @@ class OpWriter(ReadView):
         self.__models = models or {}
         self.__referrers = referrers or (lambda kind, record_id: [])
         self.touched: list[dict[str, str]] = []
+        self.emitted: list[tuple[str, dict[str, Any]]] = []
+
+    def emit(self, event: str, payload: dict[str, Any]) -> None:
+        """Raise an event of an interface this plugin provides ("<interface>.<event>"), published to the plugins
+        that use it once the change commits. The payload is checked against the interface's definition."""
+        checker = getattr(self, "check_emit", None)
+        if checker is None:
+            raise PluginMisuse("events can only be raised from an op")
+        self.emitted.append((event, checker(event, payload)))
 
     def _declared(self, kind: str, record_id: str | None, data: dict[str, Any]) -> None:
         """Enforce what the record type declares: person-only values, unique fields and references."""
@@ -338,6 +358,26 @@ class EventContext(ReadView):
         if about is not None:
             kind, record_id = (about.kind, about.id) if isinstance(about, Stored) else about
             self._allow(kind)
+            data["about"] = {"kind": kind, "id": record_id}
+        self.commands.append(("request", data))
+
+    def request_from(
+        self,
+        interface: str,
+        task: str,
+        note: str,
+        about: Stored | tuple[str, str] | None = None,
+        *,
+        provider: str | None = None,
+    ) -> None:
+        """Queue AI work another plugin offers through an interface this plugin uses: `task` is the interface's
+        task kind name ("short-blurb"). It runs as that plugin's task, under its prompt and playbook, with the usual
+        estimate, go and review. `provider` picks one when several plugins offer it. The note is untrusted material."""
+        data: dict[str, Any] = {"via": interface, "interface_task": task, "note": note}
+        if provider is not None:
+            data["provider"] = provider
+        if about is not None:
+            kind, record_id = (about.kind, about.id) if isinstance(about, Stored) else about
             data["about"] = {"kind": kind, "id": record_id}
         self.commands.append(("request", data))
 
@@ -483,6 +523,44 @@ class WorkingCopyContext(ReadView):
 
 
 @dataclass(frozen=True)
+class InterfaceItem:
+    """One item a provider offers through an interface: who provides it and its fields, as the definition shapes
+    them. Read-only: it is a copy, never the provider's record."""
+
+    provider: str
+    data: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class InterfaceDefinition:
+    """A registered interface definition (host side)."""
+
+    name: str
+    version: str
+    item: type[BaseModel]
+    events: dict[str, type[BaseModel]]
+    task_kinds: tuple[str, ...]
+
+    @property
+    def major(self) -> int:
+        return int(self.version.split(".")[0])
+
+    @property
+    def minor(self) -> int:
+        return int(self.version.split(".")[1])
+
+
+@dataclass(frozen=True)
+class InterfaceProvision:
+    """A registered interface provider (host side)."""
+
+    interface: str
+    major: int
+    items: Callable
+    task_kinds: dict[str, str]
+
+
+@dataclass(frozen=True)
 class DerivedFileRegistration:
     """A registered generated file (host side)."""
 
@@ -576,6 +654,8 @@ class Registrar:
         self.text_formats: dict[str, Callable] = {}
         self.working_copies: dict[str, WorkingCopyRegistration] = {}
         self.derived_files: dict[str, DerivedFileRegistration] = {}
+        self.interface_definitions: dict[str, InterfaceDefinition] = {}
+        self.interface_provisions: dict[str, InterfaceProvision] = {}
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
@@ -840,6 +920,60 @@ class Registrar:
             name, label.strip(), extension, media_type, tuple(text_formats), hand_out, take_back
         )
 
+    def define_interface(
+        self,
+        name: str,
+        *,
+        version: str,
+        item: type[BaseModel],
+        events: dict[str, type[BaseModel]] | None = None,
+        task_kinds: tuple[str, ...] = (),
+    ) -> None:
+        """Define a versioned interface other plugins provide or use (listed in `interfaces.defines`): `item` is the
+        pydantic model of one item, `events` the events providers raise with their payload models, and `task_kinds`
+        the work a provider may offer for others to request. `version` is "<major>.<minor>": add only optional
+        fields within a major version, and bump the major to change anything else. A plugin that defines an interface
+        may also provide and use it."""
+        self._name(name)
+        if name in self.interface_definitions:
+            raise ValueError("duplicate interface definition")
+        if not re.fullmatch(r"[0-9]+\.[0-9]+", version):
+            raise ValueError('an interface version is "<major>.<minor>", like "1.0"')
+        if not isinstance(item, type) or not issubclass(item, BaseModel):
+            raise ValueError("an interface's item is a pydantic model")
+        for event, model in (events or {}).items():
+            if (
+                not re.fullmatch(r"[a-z][a-z0-9_]*", event)
+                or not isinstance(model, type)
+                or not issubclass(model, BaseModel)
+            ):
+                raise ValueError("interface events are lowercase names with pydantic payload models")
+        for kind in task_kinds:
+            if not re.fullmatch(r"[a-z][a-z0-9-]*", kind):
+                raise ValueError("an interface's task kinds are short lowercase names like short-blurb")
+        self.interface_definitions[name] = InterfaceDefinition(
+            name, version, item, dict(events or {}), tuple(task_kinds)
+        )
+
+    def provide_interface(self, interface: str, *, items: Callable, task_kinds: dict[str, str] | None = None) -> None:
+        """Provide an interface ("<name>@<major>", listed in `interfaces.provides`), defined here or by another
+        plugin. `items(view, settings) -> list[dict]` returns everything this plugin offers through it, each item
+        checked against the definition when read; include `project` (an id) for items that belong to one, and
+        `data_level` when it isn't "internal". It must be quick and deterministic. `task_kinds` maps the interface's
+        task kind names to this plugin's own task kinds, so others can request them. Raise the interface's events
+        from an op with `writer.emit`. With no plugin defining the interface running, nothing reads it."""
+        match = re.fullmatch(r"([a-z0-9-]+/[a-z0-9-]+)@([0-9]+)", interface)
+        if match is None:
+            raise ValueError('provide an interface as "<plugin>/<name>@<major>"')
+        if match.group(1) in self.interface_provisions or not callable(items):
+            raise ValueError("duplicate interface provision or invalid items function")
+        for own in (task_kinds or {}).values():
+            if not own.startswith(self.name + "/"):
+                raise ValueError("an interface offers this plugin's own task kinds")
+        self.interface_provisions[match.group(1)] = InterfaceProvision(
+            match.group(1), int(match.group(2)), items, dict(task_kinds or {})
+        )
+
     def derived_file(self, name: str, *, path: str, depends_on: tuple[str, ...], render: Callable) -> None:
         """A read-only file generated from records into each project's folder in the synced folder (an overview, a
         sheet of facts). `path` is relative to the project's folder, with an extension ("views/overview.md").
@@ -898,6 +1032,7 @@ __all__ = [
     "LintFinding",
     "TakeBack",
     "WorkingCopyContext",
+    "InterfaceItem",
     "PacketContext",
     "LongText",
     "Unit",
