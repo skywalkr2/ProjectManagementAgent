@@ -34,7 +34,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.29"
+PLUGIN_API_VERSION = "0.3.30"
 
 
 class Settings(BaseModel):
@@ -467,8 +467,9 @@ class PacketContext(ReadView):
 class ActionContext(ReadView):
     """What a person action sees: core and own records, file bytes, the plugin's settings and its declared programs.
     It changes nothing itself; it returns a Proposal the person reviews. `limits` holds the workspace's limits a
-    proposal works within: max_items, max_previews, preview_mb, keep_minutes, max_file_mb, max_total_mb, room_mb
-    (what is left of max_total_mb for new files) and accepted_types (media types files may have). `now` (aware) and
+    proposal works within: max_items (items offered to keep or drop), max_requests (entries in `Proposal.requests`),
+    max_previews, preview_mb, keep_minutes, max_file_mb, max_total_mb, room_mb (what is left of max_total_mb for new
+    files) and accepted_types (media types files may have). `now` (aware) and
     `today` are the workspace's clock in its time zone, so an action that stamps a date stays deterministic in tests."""
 
     def __init__(
@@ -917,8 +918,12 @@ class Registrar:
         keyword-only) returns a list of refusal messages, empty to let it through. The view is the changeset so far.
         `origin` is {"actor": "pm" | "assistant" | "rule" | "plugin", "trust": "trusted" | "untrusted", "via":
         "screen" | "note" | "input" | "task" | "rule" | "action" | "handler" | "job", "task": the run's task kind,
-        "about": the record it works on as {"kind", "id"} or None}; ops a plugin's event handler or job staged with
-        `apply_op` have actor "plugin" and via "handler" or "job". Before anything applies, the core dry-runs the
+        "about": the record it works on as {"kind", "id"} or None, "request": the run's request id or None, "part":
+        the part of the record the request names (as given to `queue_request(part=)`) or None}; ops a plugin's event
+        handler or job staged with `apply_op` have actor "plugin" and via "handler" or "job". A validator with a
+        parameter named `settings` (or `**kwargs`) also gets the plugin's settings by keyword, so a check that
+        depends on a setting is a validator, and its refusal is fed back in a fix round like any other; a refusal
+        raised from an op's `apply` refuses the op without a fix round. Before anything applies, the core dry-runs the
         whole changeset in order (text writes included) and rolls it back, so a validator sees what earlier ops in it
         created; with the check at the write boundary, a validator usually runs about three times per op, so it must
         be pure and quick."""

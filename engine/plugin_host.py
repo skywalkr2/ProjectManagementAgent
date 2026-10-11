@@ -1234,9 +1234,15 @@ class PluginHost:
     def validators(self, op: Any, view: Any = None, origin: dict[str, str] | None = None) -> list[str]:
         """Plugin validators for one op. `view` is the changeset's own transaction when there is one, so a validator
         sees records earlier ops in the same changeset created; `origin` says who asked (passed to validators that
-        take a third argument)."""
+        take a third argument); a validator with a `settings` parameter gets the plugin's settings by keyword."""
         problems = []
-        origin = {"task": None, "about": None, **(origin or {"actor": "pm", "trust": "trusted", "via": "screen"})}
+        origin = {
+            "task": None,
+            "about": None,
+            "request": None,
+            "part": None,
+            **(origin or {"actor": "pm", "trust": "trusted", "via": "screen"}),
+        }
         owner = op.op.split("/")[0] if "/" in op.op else None
         if owner and not self.active(owner):
             problems.append("op plugin is disabled")
@@ -1248,12 +1254,13 @@ class PluginHost:
                 try:
                     read = self._with_files(ReadView(view if view is not None else self.store.read(), name))
                     takes = _origin_parameter(fn)
+                    extra = {"settings": registrar.config.model_copy(deep=True)} if _takes_settings(fn) else {}
                     if takes == "keyword":
-                        result = fn(op.model_copy(deep=True), read, origin=dict(origin))
+                        result = fn(op.model_copy(deep=True), read, origin=dict(origin), **extra)
                     elif takes == "positional":
-                        result = fn(op.model_copy(deep=True), read, dict(origin))
+                        result = fn(op.model_copy(deep=True), read, dict(origin), **extra)
                     else:
-                        result = fn(op.model_copy(deep=True), read)
+                        result = fn(op.model_copy(deep=True), read, **extra)
                     if not isinstance(result, (list, tuple)) or any(not isinstance(p, str) for p in result):
                         raise ValueError("validators return a list of refusal messages")
                     problems.extend(result)
@@ -1503,6 +1510,17 @@ def _positional_count(fn: Any) -> int:
     if any(p.kind == p.VAR_POSITIONAL for p in params):
         return 99
     return len([p for p in params if p.kind in (p.POSITIONAL_ONLY, p.POSITIONAL_OR_KEYWORD)])
+
+
+def _takes_settings(fn: Any) -> bool:
+    """Whether a validator takes the plugin's settings: a parameter named `settings`, or `**kwargs`."""
+    import inspect
+
+    try:
+        params = inspect.signature(fn).parameters.values()
+    except (TypeError, ValueError):
+        return False
+    return any(p.name == "settings" or p.kind == p.VAR_KEYWORD for p in params)
 
 
 def _origin_parameter(fn: Any) -> str | None:

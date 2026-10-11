@@ -10,6 +10,19 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.30 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Settings in validators:** a validator with a parameter named `settings` (or `**kwargs`) gets the plugin's settings
+  by keyword, beside `(op, view, origin)`. A check that depends on a setting belongs in a validator: its refusal goes
+  back to the run in a fix round. A refusal raised from an op's `apply` still refuses the op with no fix round.
+- **The run's request in `origin`:** `origin` gains `request` (the request's id, or None outside a run) and `part`
+  (the part of the record the request names, as given to `queue_request(part=)`, or None). The request's note is not
+  passed: name what a run works on with `part`, not in words.
+- **A limit for queued work:** an action's `Proposal.requests` is limited by `workspace.plugins.actions.max_requests`
+  (default 100), no longer by `max_items`; `context.limits["max_requests"]` gives it.
+
 ## What 0.3.29 adds
 
 Manifests stay `'>=0.3,<0.4'`.

@@ -16,6 +16,7 @@ plugins:
     preview_mb: 5
     max_previews: 20
     max_items: 2000
+    max_requests: 100
   tools:
     timeout_seconds: 120
     max_timeout_seconds: 1800

@@ -52,6 +52,9 @@ class ActionSettings(ConfigModel):
     max_items: int = Field(
         2000, ge=0, description="Most items one action may offer to keep or drop (a long file gives many)."
     )
+    max_requests: int = Field(
+        100, ge=0, description="Most pieces of follow-up work one action may queue for the assistant at once."
+    )
 
 
 class JobSettings(ConfigModel):

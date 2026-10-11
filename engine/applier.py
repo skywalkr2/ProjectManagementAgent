@@ -645,12 +645,14 @@ def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
 
 
 def origin_of(ctx: Context) -> dict[str, Any]:
-    """Who asked for a change, as plugin validators see it, with the run's `task` kind and the record it is `about`
-    ({kind, id} or None)."""
+    """Who asked for a change, as plugin validators see it, with the run's `task` kind, the record it is `about`
+    ({kind, id} or None), the `request` id and the `part` of the record the request names (or None)."""
     request = ctx.store.read().get("request", ctx.inputs.request) if ctx.inputs.request else None
     run = {
         "task": request.data.get("task") if request else None,
         "about": request.data.get("about") if request else None,
+        "request": request.id if request else None,
+        "part": request.data.get("part") if request else None,
     }
     if ctx.actor == "pm":
         return {"actor": "pm", "trust": "trusted", "via": "action", **run}

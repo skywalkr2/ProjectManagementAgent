@@ -152,6 +152,7 @@ def preview(
     actions, files = cfg.workspace.plugins.actions, cfg.storage.files
     limits = {
         "max_items": actions.max_items,
+        "max_requests": actions.max_requests,
         "max_previews": actions.max_previews,
         "preview_mb": actions.preview_mb,
         "keep_minutes": actions.keep_minutes,
@@ -467,6 +468,9 @@ def _requests_checked(
     from engine.plugin_host import check_about
     from engine.texts import check_part
 
+    limit = store.plugins.cfg.workspace.plugins.actions.max_requests
+    if len(requests) > limit:
+        raise StoreError(f"more than {limit} requests: an action may queue at most that many at once")
     checked = []
     view = store.read()
     for r in requests:
@@ -496,8 +500,6 @@ def _requests_checked(
             raise StoreError(str(err)) from None
         note = " ".join(str(r.get("note", "")).split())[:2000]
         checked.append({"task": task, "about": about, "note": note, "part": part})
-    if len(checked) > store.plugins.cfg.workspace.plugins.actions.max_items:
-        raise StoreError("more requests than an action may queue at once")
     return checked
 
 
