@@ -373,6 +373,7 @@ class PluginHost:
             ("actions", registrar.actions),
             ("lints", registrar.lints),
             ("text_formats", registrar.text_formats),
+            ("working_copies", registrar.working_copies),
         ):
             if set(getattr(expected, key)) != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")

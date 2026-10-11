@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.10"
+PLUGIN_API_VERSION = "0.3.11"
 
 
 class Settings(BaseModel):
@@ -452,6 +452,38 @@ class LintRegistration:
 
 
 @dataclass
+class TakeBack:
+    """What a working-copy format read back from a file: the whole text, and anything it couldn't map (a comment, a
+    style it doesn't know), in plain words, shown beside the proposal and never dropped silently."""
+
+    text: str
+    unmapped: list[str] = field(default_factory=list)
+
+
+class WorkingCopyContext(ReadView):
+    """What a working-copy format sees: the record, the field, the version handed out, the language, the plugin's
+    settings and its data files."""
+
+    def __init__(self, view: Any, plugin: str, config: Settings, record: Stored, field: str, version: int | None):
+        super().__init__(view, plugin)
+        self.config = config.model_copy(deep=True)
+        self.record, self.field, self.version = record, field, version
+
+
+@dataclass(frozen=True)
+class WorkingCopyRegistration:
+    """A registered working-copy format (host side)."""
+
+    name: str
+    label: str
+    extension: str
+    media_type: str
+    text_formats: tuple[str, ...]
+    hand_out: Callable
+    take_back: Callable
+
+
+@dataclass
 class Part:
     """One piece of what an AI run sees, in a task kind's packet. Untrusted content (the default; `trusted` only for the
     person's own words) is marked in the packet as material, never instructions, and any untrusted part makes the run's
@@ -520,6 +552,7 @@ class Registrar:
         self.actions: dict[str, ActionRegistration] = {}
         self.lints: dict[str, LintRegistration] = {}
         self.text_formats: dict[str, Callable] = {}
+        self.working_copies: dict[str, WorkingCopyRegistration] = {}
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
@@ -726,6 +759,34 @@ class Registrar:
             raise ValueError("duplicate text format or invalid callback")
         self.text_formats[name] = units
 
+    def working_copy(
+        self,
+        name: str,
+        *,
+        label: str,
+        extension: str,
+        media_type: str,
+        hand_out: Callable,
+        take_back: Callable,
+        text_formats: tuple[str, ...] = (),
+    ) -> None:
+        """A file format people edit long text in with their own tools. `hand_out(text, context) -> bytes` makes the
+        file from a version; `take_back(data, base_text, context) -> TakeBack` reads a file back, given the text of the
+        version it was handed out from. Both are deterministic, with no AI; anything take_back can't map goes in
+        `unmapped`, never dropped. Handing out an untouched file and taking it back must give the same text: the core
+        reads every file back as it hands it out, and refuses to hand out one that doesn't. A
+        returned file becomes a `text.propose` made from the handed-out version, so the review is three-way when the
+        text moved on. `text_formats` limits it to long text in those formats (empty: any). The media type must be
+        one the workspace accepts (storage.files.accepted_types)."""
+        self._name(name)
+        if name in self.working_copies or not callable(hand_out) or not callable(take_back) or not label.strip():
+            raise ValueError("duplicate working-copy format, missing label or invalid callback")
+        if not re.fullmatch(r"\.[a-z0-9]{1,8}", extension):
+            raise ValueError("a working-copy extension is like .docx")
+        self.working_copies[name] = WorkingCopyRegistration(
+            name, label.strip(), extension, media_type, tuple(text_formats), hand_out, take_back
+        )
+
     def lint(self, name: str, fn: Callable, *, ops: tuple[str, ...], severity: str = "warn") -> None:
         """A soft check on the assistant's proposals: `fn(op, view, settings) -> list[LintFinding]` runs on every op
         named in `ops` (core or own) before it applies. It must be deterministic and quick, and never call AI.
@@ -767,6 +828,8 @@ __all__ = [
     "EventContext",
     "ActionContext",
     "LintFinding",
+    "TakeBack",
+    "WorkingCopyContext",
     "LongText",
     "Unit",
     "Part",

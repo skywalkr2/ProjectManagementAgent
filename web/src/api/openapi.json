@@ -2994,6 +2994,42 @@
         "title": "Status",
         "type": "object"
       },
+      "TakenBack": {
+        "properties": {
+          "unchanged": {
+            "description": "The file came back untouched, so nothing was proposed.",
+            "title": "Unchanged",
+            "type": "boolean"
+          },
+          "unmapped": {
+            "description": "What couldn't be read back into the text.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmapped",
+            "type": "array"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The text version it became, to review.",
+            "title": "Version"
+          }
+        },
+        "required": [
+          "unchanged",
+          "version",
+          "unmapped"
+        ],
+        "title": "TakenBack",
+        "type": "object"
+      },
       "TaskKindView": {
         "description": "AI work the person can start, on a record of kind `on` or on the whole workspace.",
         "properties": {
@@ -3406,6 +3442,145 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WorkingCopyFormatView": {
+        "properties": {
+          "extension": {
+            "title": "Extension",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "extension"
+        ],
+        "title": "WorkingCopyFormatView",
+        "type": "object"
+      },
+      "WorkingCopyOut": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "format",
+          "kind",
+          "id",
+          "field"
+        ],
+        "title": "WorkingCopyOut",
+        "type": "object"
+      },
+      "WorkingCopyView": {
+        "description": "A long text field handed out as a file, and what came back.",
+        "properties": {
+          "base": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "file": {
+            "description": "The file handed out; download it from /files/<id>/content.",
+            "title": "File",
+            "type": "string"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "handed_at": {
+            "title": "Handed At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "proposal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal"
+          },
+          "returned_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returned At"
+          },
+          "stale": {
+            "description": "The text moved on since it was handed out; taking it back merges three ways.",
+            "title": "Stale",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "format",
+          "label",
+          "field",
+          "base",
+          "status",
+          "stale",
+          "file",
+          "proposal",
+          "handed_at",
+          "returned_at"
+        ],
+        "title": "WorkingCopyView",
         "type": "object"
       }
     }
@@ -5726,6 +5901,241 @@
           }
         },
         "summary": "Text Edit"
+      }
+    },
+    "/api/working-copies": {
+      "get": {
+        "operationId": "working_copies_api_working_copies_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkingCopyView"
+                  },
+                  "title": "Response Working Copies Api Working Copies Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Working Copies"
+      },
+      "post": {
+        "operationId": "working_copy_out_api_working_copies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkingCopyOut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkingCopyView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Working Copy Out"
+      }
+    },
+    "/api/working-copies/formats": {
+      "get": {
+        "operationId": "working_copy_formats_api_working_copies_formats_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "field",
+            "required": true,
+            "schema": {
+              "title": "Field",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WorkingCopyFormatView"
+                  },
+                  "title": "Response Working Copy Formats Api Working Copies Formats Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Working Copy Formats"
+      }
+    },
+    "/api/working-copies/{copy_id}/drop": {
+      "post": {
+        "operationId": "working_copy_drop_api_working_copies__copy_id__drop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "copy_id",
+            "required": true,
+            "schema": {
+              "title": "Copy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Working Copy Drop"
+      }
+    },
+    "/api/working-copies/{copy_id}/return": {
+      "post": {
+        "description": "Bring a working copy back: the request body is the file's bytes.",
+        "operationId": "working_copy_return_api_working_copies__copy_id__return_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "copy_id",
+            "required": true,
+            "schema": {
+              "title": "Copy Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Name"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakenBack"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Working Copy Return"
       }
     }
   }

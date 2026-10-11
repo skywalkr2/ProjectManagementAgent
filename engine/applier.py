@@ -582,6 +582,7 @@ def _apply_op(
             base=op.base if proposal else None,
             note=op.note if proposal else None,
             accept=not proposal,
+            unmapped=op.unmapped if proposal else None,
         )
         return [{"kind": op.record.kind, "id": op.record.id}, {"kind": "text_version", "id": version.id}], None
     if isinstance(op, TextDraftOp):

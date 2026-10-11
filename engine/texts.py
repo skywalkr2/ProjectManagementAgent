@@ -431,6 +431,7 @@ def new_version(
     accept: bool = False,
     authors: list[dict[str, Any]] | None = None,
     paragraph_map: list[dict[str, Any]] | None = None,
+    unmapped: list[str] | None = None,
 ) -> Any:
     """Write a version of a long text field: stored by hash, with authorship derived from its base (unchanged units
     keep theirs). An accepted version becomes the field's text; anything else waits for review."""
@@ -487,6 +488,7 @@ def new_version(
                 {**span, "words": words(text[span["start"] : span["end"]])} for span in spans_for(units, authors)
             ],
             "paragraph_map": list(paragraph_map or []),
+            "unmapped": list(unmapped or []),
             "note": note,
             "run": run,
             "created_at": store.clock(),

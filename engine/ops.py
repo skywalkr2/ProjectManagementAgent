@@ -257,6 +257,9 @@ class TextProposeOp(OpModel):
     text: str = Field(description="The whole proposed text.")
     base: int | None = Field(None, description="The number of the version it was made from.")
     note: str | None = Field(None, description="Where it came from, for the review.")
+    unmapped: list[str] = Field(
+        default_factory=list, description="What couldn't be mapped back into the text, shown beside the proposal."
+    )
 
     def describe(self) -> str | None:
         return f"Propose new text for {self.record.kind} {self.record.id}"

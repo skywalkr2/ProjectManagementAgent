@@ -539,6 +539,42 @@ class Applied(BaseModel):
     changeset: str
 
 
+class WorkingCopyFormatView(BaseModel):
+    name: str
+    label: str
+    extension: str
+
+
+class WorkingCopyOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    format: str
+    kind: str
+    id: str
+    field: str
+
+
+class WorkingCopyView(BaseModel):
+    """A long text field handed out as a file, and what came back."""
+
+    id: str
+    format: str
+    label: str
+    field: str
+    base: int | None
+    status: str
+    stale: bool = Field(description="The text moved on since it was handed out; taking it back merges three ways.")
+    file: str = Field(description="The file handed out; download it from /files/<id>/content.")
+    proposal: str | None
+    handed_at: str
+    returned_at: str | None
+
+
+class TakenBack(BaseModel):
+    unchanged: bool = Field(description="The file came back untouched, so nothing was proposed.")
+    version: str | None = Field(description="The text version it became, to review.")
+    unmapped: list[str] = Field(description="What couldn't be read back into the text.")
+
+
 class TaskKindView(BaseModel):
     """AI work the person can start, on a record of kind `on` or on the whole workspace."""
 

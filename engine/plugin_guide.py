@@ -160,7 +160,7 @@ def _join(*parts: str) -> str:
 
 def build() -> str:
     import engine.plugin_api as api
-    from engine import actions, plugin_host, plugin_manifest, texts, tools
+    from engine import actions, plugin_host, plugin_manifest, texts, tools, working
     from engine.config.schema import FileLimits, PluginSettings
     from engine.ops import OP_MODELS
     from engine.records import REGISTRY
@@ -289,6 +289,16 @@ def build() -> str:
             "with `view.authorship(record, field)`; write one of your own with `writer.set_text` in an op, or propose "
             "the core ops `text.edit` and `text.propose` from an action. The `text_version` record and the text ops "
             "are under Core records and Core ops.",
+        ),
+        _section(
+            "Working copies",
+            _para(_doc(working)),
+            "Registered with `registrar.working_copy` (see Registering). The `working_copy` record is under Core "
+            "records.",
+            _join("### TakeBack", _para(_doc(api.TakeBack)))
+            + "\n\n"
+            + _table(["Field", "Type", "Default"], _dataclass_rows(api.TakeBack)),
+            "### WorkingCopyContext\n\n" + _para(_doc(api.WorkingCopyContext)),
         ),
         _section(
             "Programs",

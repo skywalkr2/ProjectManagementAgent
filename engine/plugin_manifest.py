@@ -85,6 +85,7 @@ class Provides(Strict):
     actions: list[str] = Field(default_factory=list, description="Person actions the plugin registers.")
     lints: list[str] = Field(default_factory=list, description="Lints the plugin registers.")
     text_formats: list[str] = Field(default_factory=list, description="Long text formats the plugin registers.")
+    working_copies: list[str] = Field(default_factory=list, description="Working-copy formats the plugin registers.")
     panels: list[str] = Field(default_factory=list, description="Screens. Not yet available.")
     today: list[str] = Field(default_factory=list, description="Lines on Today. Not yet available.")
     jobs: list[str] = Field(default_factory=list, description="Scheduled work. Not yet available.")
@@ -154,6 +155,7 @@ class Manifest(Strict):
             "actions",
             "lints",
             "text_formats",
+            "working_copies",
             "panels",
             "today",
             "jobs",

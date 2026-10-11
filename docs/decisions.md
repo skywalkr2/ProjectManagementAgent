@@ -172,6 +172,24 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-11: Working copies: long text edited in the person's own tools
+
+**Decided by:** Claude (design), building the plugin API; the owner can override.
+
+**What:** Plugin API 0.3.11. A plugin may provide a working-copy format that turns a long text field into a file for
+another program and reads it back, both deterministically. The core keeps the file through the file channel, records
+each copy with the version and hash it went out with, and files a returned file as a pending proposal made from that
+version, so accepting it is the ordinary review, three-way when the text moved on. What the format couldn't read back
+is kept on the proposal, never dropped. A format must read its own untouched file back to the same text; the core
+checks this at every hand-out and refuses when it fails. Watching the working folder for edits waits for the synced
+folder.
+
+**Why:** People write in their own tools; the record stays the source, a file is only a copy, and nothing in a
+returned file changes the text without the person's review.
+
+**Impact:** New core record `working_copy`; `TextVersion.unmapped` and `text.propose.unmapped`; five routes under
+`/api/working-copies`. The screens to hand out and bring back come with the UX pass.
+
 ## 2026-10-11: Backups run on their own; a missing backup folder is never created
 
 **Decided by:** project owner (nobody should have to click backup); Claude (how).

@@ -10,6 +10,25 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.11 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Working-copy formats: `registrar.working_copy(name, label=, extension=, media_type=, hand_out=, take_back=,
+  text_formats=())`, listed in `provides.working_copies`. `hand_out(text, context) -> bytes` makes a file from a long
+  text field's current version; `take_back(data, base_text, context) -> TakeBack(text, unmapped)` reads a returned
+  file, given the text of the version it was made from. The context (`WorkingCopyContext`) is a read view with the
+  plugin's `config`, the `record`, the `field` and the `version` handed out. Both are deterministic, with no AI.
+- The core reads every file back as it hands it out and refuses to hand out one that wouldn't come back as the same
+  text. A file returned unchanged proposes nothing. A changed one becomes a pending `text.propose` version made from
+  the handed-out version (three-way review when the text moved on), with `unmapped` kept on the version
+  (`TextVersion.unmapped`, also on the `text.propose` op).
+- Each copy is a `working_copy` record (the format, the version handed out, the file, its hash, `out`, `returned` or
+  `dropped`, and the proposal it became). Routes: `GET /api/working-copies/formats?kind=&field=`,
+  `GET /api/working-copies?kind=&id=`, `POST /api/working-copies`, `POST /api/working-copies/<id>/return` (the file's
+  bytes as the body, `name` as a query parameter) and `POST /api/working-copies/<id>/drop`.
+- A format that raises is turned off with the reason, like any plugin callback.
+
 ## What 0.3.10 adds
 
 Manifests stay `'>=0.3,<0.4'`.

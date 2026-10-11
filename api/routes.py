@@ -74,6 +74,7 @@ from api.schemas import (
     StageRequestView,
     StageView,
     Status,
+    TakenBack,
     TaskKindView,
     TaskStart,
     TaskStarted,
@@ -86,6 +87,9 @@ from api.schemas import (
     UndoChoice,
     UndoReport,
     Unmark,
+    WorkingCopyFormatView,
+    WorkingCopyOut,
+    WorkingCopyView,
 )
 from engine import actions as person_actions
 from engine.ai.smoke import ai_state
@@ -292,6 +296,69 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         cs_id = guard(lambda: apply_as_person(store, cfg, [op], "Edited text"))
         changed()
         return Applied(changeset=cs_id)
+
+    def _copy_view(c: Any) -> WorkingCopyView:
+        from engine import working
+
+        try:
+            label = working._format(store, c.data["format"])[1].label
+        except StoreError:
+            label = c.data["format"]
+        return WorkingCopyView(
+            id=c.id,
+            format=c.data["format"],
+            label=label,
+            field=c.data["field"],
+            base=c.data.get("base"),
+            status=c.data["status"],
+            stale=working.stale(store, c),
+            file=c.data["file"],
+            proposal=c.data.get("proposal"),
+            handed_at=str(c.data["handed_at"]),
+            returned_at=str(c.data["returned_at"]) if c.data.get("returned_at") else None,
+        )
+
+    @r.get("/working-copies/formats")
+    def working_copy_formats(kind: str, field: str) -> list[WorkingCopyFormatView]:
+        from engine import working
+
+        return [
+            WorkingCopyFormatView(name=w.name, label=w.label, extension=w.extension)
+            for w in working.formats_for(store, kind, field)
+        ]
+
+    @r.get("/working-copies")
+    def working_copies(kind: str, id: str) -> list[WorkingCopyView]:
+        found = [
+            c for c in store.read().list("working_copy") if (c.data["owner_kind"], c.data["owner_id"]) == (kind, id)
+        ]
+        return [_copy_view(c) for c in sorted(found, key=lambda c: str(c.data["handed_at"]), reverse=True)]
+
+    @r.post("/working-copies")
+    def working_copy_out(body: WorkingCopyOut) -> WorkingCopyView:
+        from engine import working
+
+        copy = guard(lambda: working.hand_out(store, cfg, body.format, body.kind, body.id, body.field))
+        changed()
+        return _copy_view(copy)
+
+    @r.post("/working-copies/{copy_id}/return")
+    async def working_copy_return(copy_id: str, request: Request, name: str | None = None) -> TakenBack:
+        """Bring a working copy back: the request body is the file's bytes."""
+        from engine import working
+
+        data = await request.body()
+        result = guard(lambda: working.take_back(store, cfg, copy_id, data, name))
+        changed()
+        return TakenBack(**result)
+
+    @r.post("/working-copies/{copy_id}/drop")
+    def working_copy_drop(copy_id: str) -> Ok:
+        from engine import working
+
+        guard(lambda: working.drop(store, copy_id))
+        changed()
+        return Ok(ok=copy_id)
 
     @r.get("/plugin-actions")
     def plugin_actions(kind: str | None = None, id: str | None = None) -> list[PersonActionView]:

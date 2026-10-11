@@ -366,8 +366,36 @@ class TextVersion(Record):
         default_factory=list, description="For an anchored draft, which base units each new unit came from."
     )
     note: str | None = Field(None, description="Where it came from, in words, when that helps the review.")
+    unmapped: list[str] = Field(
+        default_factory=list,
+        description="For a version taken back from a working copy, what the format couldn't map, shown beside it.",
+    )
     run: str | None = Field(None, description="The AI run that wrote it, for a draft.")
     created_at: datetime = Field(description="When it was written.")
+
+
+class WorkingCopy(Record):
+    """A long text field handed out as a file for the person's own tool (a word processor), and what came back. The
+    host writes it when the person hands a field out or brings a file back."""
+
+    record_kind: ClassVar[str] = "working_copy"
+    prefix: ClassVar[str] = "WC"
+
+    owner_kind: str = Field(description="The kind of the record whose field was handed out.")
+    owner_id: str = Field(description="That record's id.")
+    field: str = Field(description="The long text field.")
+    format: str = Field(description="The working-copy format that made the file.")
+    base: int | None = Field(None, description="The number of the version handed out; none if the field was empty.")
+    file: str = Field(description="The id of the file handed out.")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$", description="Hash of the file handed out, to tell an untouched one.")
+    status: Literal["out", "returned", "dropped"] = Field(
+        "out",
+        description="out: handed out. returned: a file came back as a proposal. dropped: set aside by the person.",
+    )
+    returned_file: str | None = Field(None, description="The id of the last file brought back.")
+    proposal: str | None = Field(None, description="The id of the text version the last file back became.")
+    handed_at: datetime = Field(description="When it was handed out.")
+    returned_at: datetime | None = Field(None, description="When a file last came back.")
 
 
 class StageStart(BaseModel):
@@ -555,6 +583,7 @@ REGISTRY: dict[str, type[Record]] = {
         File,
         ToolRun,
         TextVersion,
+        WorkingCopy,
     )
 }
 
@@ -572,6 +601,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "note": [("project", "project"), ("source", "source")],
     "run": [("request", "request")],
     "file": [("project", "project"), ("replaces", "file")],
+    "working_copy": [("file", "file"), ("returned_file", "file"), ("proposal", "text_version")],
 }
 
 
