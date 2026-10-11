@@ -172,6 +172,32 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: Handing a workspace between computers
+
+**Decided by:** Claude (design), building design 5.0; the owner can override.
+
+**What:**
+- The folder's lease says which install holds the workspace. Opening compares the two ledgers entry by entry:
+  - the same: nothing to do;
+  - the folder continues this computer's history: back up and load the folder;
+  - this computer continues the folder's: write the folder;
+  - neither continues the other: refuse, until the person runs `cockpit sync keep --here` or `--folder`.
+- Loads read only manifest-listed files that match their hashes.
+- Storage and server settings stay per computer.
+- A running install stops writing once another holds the lease.
+
+**Why:**
+- Comparing whole ledgers can't mistake two different histories of the same length for one.
+- Hash-checked loads keep a half-synced folder or a sync service's conflict copy from ever being read.
+- Paths and ports differ between computers.
+
+**Impact:**
+- Design 5.0.
+- New setting `storage.sync.lease_stale_after_minutes`.
+- New commands `cockpit sync keep` and `cockpit init --sync`.
+- `cockpit serve` checks the folder before opening.
+- Plugin code isn't copied between computers: a plugin missing on the other computer stops the load with the reason.
+
 ## 2026-10-12: The synced folder holds a readable layout and a machine copy
 
 **Decided by:** Claude (design), building design 5.0; the owner can override.

@@ -89,12 +89,17 @@ repositories, so neither ever lives in the synced folder:
   files that still match, so the cockpit's own writes are never mistaken for outside edits. Outputs go to each project's
   `outputs/` folder; if one is changed or deleted outside, it shows as "changed outside the cockpit: rebuild or keep", never as
   a content edit, because outputs are built from the records, not the other way round.
-- **The lease lives in the folder too:** holder, computer, heartbeat and the last changeset written. Opening the workspace on
-  the other computer while the holder's heartbeat is fresh is refused, naming the computer. Once it is released or stale, the
-  opening install backs up its local database, loads the folder's newer state, and takes the lease.
+- **The lease lives in the folder too:** holder (this install's own id), computer, heartbeat and how far the folder's history
+  goes (`.cockpit/lease.json`). Opening the workspace on the other computer while the holder's heartbeat is fresh is refused,
+  naming the computer. Once it is released or stale, the opening install compares the two ledgers entry by entry: when the
+  folder's continues this computer's, it backs up its local database, loads the folder's newer state (config and plugin data
+  too; storage and server settings stay per computer), and takes the lease. A running install that finds the lease taken
+  by another stops writing to the folder. A new computer is set up with `cockpit init <path> --sync <folder>`.
+- **Only verified files load:** a load reads only files the manifest lists, each matching its recorded hash, so a folder
+  still bringing in changes is refused ("try again in a minute") rather than loaded half-synced.
 - **Never a silent merge:** if both computers worked while unable to sync and their histories diverged (the folder's last
   changeset is not one the local copy has seen, and the local copy has changes the folder lacks), nothing loads. The person
-  chooses which history to keep; the other is saved as a backup. Duplicate files a sync service creates on conflict are found,
+  chooses which history to keep (`cockpit sync keep --here` or `--folder`); the other is saved as a backup. Duplicate files a sync service creates on conflict are found,
   shown, and never loaded.
 - **Edits made outside:** the folder is watched (the local-folder connector). A long-text file changed in another editor comes
   back as a proposed version (`text.propose`, 6.7) for the person to review, marked as edited outside the cockpit, never

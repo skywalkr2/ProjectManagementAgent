@@ -163,6 +163,12 @@ class SyncSettings(ConfigModel):
         "workspace is written there, one folder per project, readable in any editor. Empty: off. The workspace "
         "itself must not be inside it.",
     )
+    lease_stale_after_minutes: int = Field(
+        10,
+        ge=1,
+        description="How long after the other computer was last seen the workspace can be opened here without it "
+        "closing first (when it went to sleep or lost power, say).",
+    )
 
 
 class StorageFile(FileModel):

@@ -7,6 +7,7 @@ import hashlib
 import logging
 import os
 import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -65,6 +66,8 @@ class Events:
 class Worker:
     #: How often the synced folder is checked for changes when nothing signals one.
     SYNC_CHECK_SECONDS = 10
+    #: How often this install's lease in the synced folder is renewed when nothing else is written.
+    HEARTBEAT_SECONDS = 60
 
     def __init__(
         self,
@@ -82,6 +85,8 @@ class Worker:
         self._backups: threading.Thread | None = None
         self._sync: threading.Thread | None = None
         self._synced_at: int | None = -1
+        self._beat = 0.0
+        self.sync_lost = False
         self.sync_result: Any = None
         self.sync_problem: str | None = None
         self._started_with = (config_fingerprint(ws), code_fingerprint())
@@ -122,6 +127,7 @@ class Worker:
         if self._sync:
             self.events.changed()
             self._sync.join(timeout=60)
+            self.release_folder()
 
     def poke(self) -> None:
         self._wake.set()
@@ -160,23 +166,53 @@ class Worker:
         return True
 
     def sync_if_changed(self) -> bool:
-        """Write the synced folder when anything changed since it was last written. Returns whether it wrote."""
-        from engine.sync import write_folder
+        """Write the synced folder when anything changed since it was last written, and keep this install's lease
+        fresh. Stops for good if another computer has taken the workspace over. Returns whether it wrote."""
+        from engine import handover
+        from engine.sync import folder_problem, write_folder
+
+        if not self.cfg.storage.sync.folder.strip() or self.sync_lost:
+            return False
+        problem = folder_problem(self.ws, self.cfg)
+        if problem:
+            self.sync_problem = problem
+            return False
+        other = handover.held_elsewhere(self.ws, self.cfg)
+        if other is not None:
+            self.sync_lost = True
+            self.sync_problem = (
+                f"The workspace was opened on {other.computer}, so this copy stopped writing to the synced folder. "
+                "Close it here; changes made here since then are kept on this computer."
+            )
+            return False
+        head, count = self.store.read().sql("SELECT max(seq), count(*) FROM ledger").fetchone()
+        wrote = False
+        if head != self._synced_at:
+            try:
+                self.sync_result = write_folder(self.store, self.ws, self.cfg)
+                self.sync_problem = None
+            except (OSError, ValueError) as err:
+                self.sync_problem = str(err)
+                return False
+            self._synced_at, wrote = head, True
+        if wrote or time.monotonic() - self._beat >= self.HEARTBEAT_SECONDS:
+            handover.take(self.ws, self.cfg, ledger=count)
+            self._beat = time.monotonic()
+        return wrote
+
+    def release_folder(self) -> None:
+        """On closing: a last write, then the lease marked released, so the other computer can open at once."""
+        from engine import handover
 
         if not self.cfg.storage.sync.folder.strip():
-            return False
-        row = self.store.read().sql("SELECT max(seq) FROM ledger").fetchone()
-        head = row[0] if row else None
-        if head == self._synced_at:
-            return False
+            return
         try:
-            self.sync_result = write_folder(self.store, self.ws, self.cfg)
-            self.sync_problem = None
-        except (OSError, ValueError) as err:
-            self.sync_problem = str(err)
-            return False
-        self._synced_at = head
-        return True
+            self.sync_if_changed()
+            if not self.sync_lost and self.sync_problem is None:
+                count = self.store.read().sql("SELECT count(*) FROM ledger").fetchone()[0]
+                handover.take(self.ws, self.cfg, ledger=count, released=True)
+        except Exception:  # closing must go on even if the folder can't be written
+            log.exception("releasing the synced folder failed")
 
     def _sync_loop(self) -> None:
         after = -1

@@ -11,6 +11,8 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from engine.config import ConfigError
 from engine.storage import Store, StoreError
 from engine.storage.export import commit_export, export_data, import_data
@@ -80,6 +82,9 @@ def _parser() -> argparse.ArgumentParser:
     sp.add_argument("--you", help="your full name: you become the first person and the workspace's user")
     sp.add_argument("--name", help="the workspace's display name")
     sp.add_argument("--assistant", help="the assistant's display name")
+    sp.add_argument(
+        "--sync", type=Path, help="a synced folder that already holds the workspace: set this computer up from it"
+    )
     sp.set_defaults(func=cmd_init)
 
     sp = sub.add_parser("serve", help="run the app on this computer")
@@ -100,6 +105,14 @@ def _parser() -> argparse.ArgumentParser:
         "data_dir", type=Path, nargs="?", help="export folder or synced folder (default: the workspace's data/)"
     )
     sp.set_defaults(func=cmd_import)
+
+    sp = sub.add_parser("sync", help="settle a workspace both computers changed while they couldn't sync")
+    ws_arg(sp)
+    sp.add_argument("action", choices=["keep"])
+    which = sp.add_mutually_exclusive_group(required=True)
+    which.add_argument("--here", action="store_true", help="keep this computer's copy; the folder's is backed up")
+    which.add_argument("--folder", action="store_true", help="keep the synced folder's copy; this one is backed up")
+    sp.set_defaults(func=cmd_sync)
 
     sp = sub.add_parser("config", help="show the effective configuration")
     ws_arg(sp)
@@ -140,9 +153,31 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def cmd_init(args: argparse.Namespace) -> int:
+    if args.sync is not None and (args.template or args.you or args.name or args.assistant):
+        print(
+            "cockpit: --sync takes everything from the synced folder; leave out --from and the names.", file=sys.stderr
+        )
+        return 1
     ws = init_workspace(
         args.path, template=args.template, git=not args.no_git, you=args.you, name=args.name, assistant=args.assistant
     )
+    if args.sync is not None:
+        from engine.handover import Refused, open_workspace
+
+        storage = yaml.safe_load((ws.config_dir / "storage.yaml").read_text(encoding="utf-8")) or {}
+        storage.setdefault("sync", {})["folder"] = str(args.sync.expanduser().resolve())
+        (ws.config_dir / "storage.yaml").write_text(yaml.safe_dump(storage, sort_keys=False), encoding="utf-8")
+        try:
+            opened = open_workspace(ws, ws.config())
+        except Refused as err:
+            print(f"cockpit: {err}", file=sys.stderr)
+            return 1
+        if opened.action not in ("loaded", "first"):
+            print(f"cockpit: the synced folder couldn't be loaded. {opened.message}", file=sys.stderr)
+            return 1
+        from engine.handover import release
+
+        release(ws, ws.config())
     store = Store(ws.db_path)
     try:
         count = sum(len(store.read().list(kind)) for kind in store.read().kinds())
@@ -168,6 +203,23 @@ def cmd_serve(args: argparse.Namespace) -> int:
     if cfg.server.mode == "hosted":
         print("cockpit: hosted mode isn't available yet; set server.mode to local.", file=sys.stderr)
         return 1
+    from engine.handover import Refused, open_workspace
+
+    try:
+        opened = open_workspace(ws, cfg)
+    except Refused as err:
+        print(f"cockpit: {err}", file=sys.stderr)
+        return 1
+    if opened.action == "loaded":
+        print(f"Loaded the newer copy from the synced folder (this computer's copy was saved to {opened.backup}).")
+    if opened.message:
+        print(f"Note: {opened.message}", file=sys.stderr)
+    if opened.conflict_copies:
+        print(
+            "Note: the synced folder has copies its sync service made on a conflict; they were not loaded:\n  "
+            + "\n  ".join(opened.conflict_copies),
+            file=sys.stderr,
+        )
     store = Store(ws.db_path)
     lease = Lease(store)
     lease.acquire()
@@ -239,6 +291,23 @@ def cmd_import(args: argparse.Namespace) -> int:
     finally:
         store.close()
     print(f"Loaded {count} records.")
+    return 0
+
+
+def cmd_sync(args: argparse.Namespace) -> int:
+    from engine.handover import Refused, keep
+
+    ws = resolve(args.workspace)
+    cfg = ws.config()
+    if not cfg.storage.sync.folder.strip():
+        print("cockpit: no synced folder is set (storage.sync.folder).", file=sys.stderr)
+        return 1
+    try:
+        saved = keep(ws, cfg, "here" if args.here else "folder")
+    except Refused as err:
+        print(f"cockpit: {err}", file=sys.stderr)
+        return 1
+    print(f"Kept {'this computer' if args.here else 'the synced folder'}'s copy. The other was saved to {saved}.")
     return 0
 
 
