@@ -41,14 +41,14 @@ const saved = (key: string, before: unknown, after: unknown): S["SettingsSaved"]
   restarts: false,
 });
 
-function open(asks: AskItem[], extra: Record<string, (b: unknown) => unknown> = {}, initial?: string) {
+function open(asks: AskItem[], extra: Record<string, (b: unknown) => unknown> = {}, initial?: string, feedbackTo?: string | null) {
   const calls = fakeApi({
     "GET asks": () => asks,
     "GET settings": () => ({ fingerprint: "fp-1", items: [setting("demo.thing", 5, "How many things")] }),
     ...extra,
   });
   const onClose = vi.fn();
-  renderApp(<Ask onClose={onClose} initial={initial} />);
+  renderApp(<Ask onClose={onClose} initial={initial} feedbackTo={feedbackTo} />);
   return { calls, onClose };
 }
 
@@ -222,6 +222,70 @@ test("Copy puts the draft report on the clipboard; Mark sent then records it", a
   await user.click(within(row).getByRole("button", { name: "Mark sent: A missing button" }));
   await waitFor(() => expect(sent(calls, "POST reports/rp1/sent")).toEqual({ read_version: 2 }));
   expect(await screen.findByText("Marked as sent.")).toBeInTheDocument();
+});
+
+const draft = (extra: Partial<S["ReportView"]> = {}): S["ReportView"] => ({
+  id: "rp1",
+  version: 2,
+  title: "A missing button",
+  text: "It would help\nto have one.",
+  status: "draft",
+  ...extra,
+});
+const withReport = (report: S["ReportView"], feedbackTo: string | null | undefined, extra: Record<string, (b: unknown) => unknown> = {}) =>
+  open([ask("a", { state: "done", answer: { text: "Not yet.", cites: [] }, reports: [report] })], extra, undefined, feedbackTo);
+
+test("with an address a report has a mail link with its title and text encoded, beside Copy", async () => {
+  withReport(draft(), "feedback@example.com");
+  const row = await item("Question a");
+  const link = within(row).getByRole("link", { name: "Open in your mail: A missing button" });
+  expect(link).toHaveAttribute(
+    "href",
+    `mailto:feedback@example.com?subject=${encodeURIComponent("A missing button")}&body=${encodeURIComponent("It would help\r\nto have one.")}`,
+  );
+  expect(link).toHaveClass("primary");
+  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).not.toHaveClass("primary");
+  expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).not.toHaveClass("primary");
+});
+
+test("without an address a report has no mail link and Copy stays the main action", async () => {
+  withReport(draft(), null);
+  const row = await item("Question a");
+  expect(within(row).queryByRole("link", { name: /Open in your mail/ })).toBeNull();
+  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).toHaveClass("primary");
+});
+
+test("a report too long for a mail link has none, and says to copy it", async () => {
+  withReport(draft({ text: "word ".repeat(600) }), "feedback@example.com");
+  const row = await item("Question a");
+  expect(within(row).queryByRole("link", { name: /Open in your mail/ })).toBeNull();
+  expect(within(row).getByText(/too long for a mail link/)).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "Copy: A missing button" })).toHaveClass("primary");
+});
+
+test("opening the report in the mail program makes Mark sent the main action, and Mark sent records it", async () => {
+  const { calls } = withReport(draft(), "feedback@example.com", { "POST reports/rp1/sent": () => ({ id: "rp1" }) });
+  const user = userEvent.setup();
+  const row = await item("Question a");
+  const link = within(row).getByRole("link", { name: "Open in your mail: A missing button" });
+  // The browser would follow the link; the test only checks what the page does about the click.
+  link.addEventListener("click", (e) => e.preventDefault());
+  await user.click(link);
+  expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).toHaveClass("primary");
+  expect(within(row).getByRole("link", { name: "Open in your mail: A missing button" })).not.toHaveClass("primary");
+  expect(calls.some((c) => c.route === "POST reports/rp1/sent")).toBe(false);
+  await user.click(within(row).getByRole("button", { name: "Mark sent: A missing button" }));
+  await waitFor(() => expect(sent(calls, "POST reports/rp1/sent")).toEqual({ read_version: 2 }));
+});
+
+test("copying a report with a mail link also makes Mark sent the main action", async () => {
+  withReport(draft(), "feedback@example.com");
+  const user = userEvent.setup();
+  const row = await item("Question a");
+  await user.click(within(row).getByRole("button", { name: "Copy: A missing button" }));
+  expect(await navigator.clipboard.readText()).toBe("A missing button\n\nIt would help\nto have one.");
+  expect(within(row).getByRole("button", { name: "Mark sent: A missing button" })).toHaveClass("primary");
+  expect(within(row).getByRole("link", { name: "Open in your mail: A missing button" })).toBeInTheDocument();
 });
 
 test("when copying is blocked the report is not marked sent", async () => {

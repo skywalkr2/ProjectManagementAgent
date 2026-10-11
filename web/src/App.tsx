@@ -1,7 +1,7 @@
 // The launch-slice home: one column with What changed and Follow-ups under the header (design 7.7).
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { S } from "./lib/api";
-import { useShortcuts, withAskKey } from "./lib/keys";
+import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
 import { RestartNotice, RestartProvider } from "./lib/restart";
 import { useToasts } from "./lib/toasts";
@@ -9,6 +9,8 @@ import { fromHash, parseView, recordView, toHash, type View } from "./lib/views"
 import { useWords } from "./lib/wording";
 import { Ask } from "./components/Ask";
 import { AssistantNotice } from "./components/AssistantNotice";
+import { DemoStrip } from "./components/DemoStrip";
+import { Feedback } from "./components/Feedback";
 import { Files } from "./components/Files";
 import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
@@ -32,6 +34,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   const { undoLast } = useToasts();
   const [handIn, setHandIn] = useState(false);
   const [help, setHelp] = useState(false);
+  const [feedback, setFeedback] = useState(false);
   // The Ask box, with the question it opens on when a screen suggests one.
   const [ask, setAsk] = useState<{ question?: string } | null>(null);
   const [view, setView] = useView();
@@ -52,7 +55,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
     () => ({ undo: undoLast, hand_in: () => setHandIn(true), ask: () => setAsk({}), help: () => setHelp(true) }),
     [undoLast],
   );
-  const keys = useMemo(() => withAskKey(props.rc.shortcuts), [props.rc.shortcuts]);
+  const keys = props.rc.shortcuts;
   useShortcuts(keys, handlers);
   useNarrow(props.rc.narrow_below_px);
   useEffect(() => {
@@ -64,6 +67,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
       <a href="#main" className="skip">
         {t("app.skip")}
       </a>
+      {props.rc.demo && <DemoStrip />}
       <Header
         workspace={props.rc.workspace_name}
         live={live}
@@ -109,14 +113,35 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
         ) : (
           <Setup />
         )}
-        <p className="footer">{t("app.footer", { key: props.rc.shortcuts.help ?? "?" })}</p>
+        <footer className="footer">
+          <p>{t("app.footer", { key: props.rc.shortcuts.help ?? "?" })}</p>
+          <p className="footer-feedback">
+            <button type="button" className="link-button" data-feedback-button onClick={() => setFeedback(true)}>
+              {t("feedback.open")}
+            </button>
+            <span aria-hidden="true">·</span>
+            <span>{t("app.version", { version: props.rc.version })}</span>
+          </p>
+        </footer>
       </main>
       {ask && (
         <Ask
           initial={ask.question}
+          feedbackTo={props.rc.feedback_to}
           onClose={() => {
             setAsk(null);
             restoreFocus(() => document.querySelector<HTMLElement>("[data-ask-button]"));
+          }}
+        />
+      )}
+      {feedback && (
+        <Feedback
+          view={view}
+          version={props.rc.version}
+          to={props.rc.feedback_to}
+          onClose={() => {
+            setFeedback(false);
+            restoreFocus(() => document.querySelector<HTMLElement>("[data-feedback-button]"));
           }}
         />
       )}

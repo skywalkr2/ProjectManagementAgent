@@ -65,6 +65,11 @@ budgets pause work when they are used up. Work whose cost can't be estimated (a 
 to always ask first. Which account does which kind of work is set by tiers: everyday work and harder work can use
 different accounts.
 
+Without an AI account, a stand-in does the reading so you can try the app (the demo uses it). It is no model: it
+follows plain rules. A line such as "Sam will send the quotes by 2030-03-08" becomes an action for Sam due that day; "We
+still need the page count" becomes an action waiting for you to pick an owner; "Decided: …" becomes a fact. Anything
+else is kept as a note. Asked a question, it quotes the closest passage of this guide.
+
 ## Asking the assistant
 
 You can ask the assistant about the app or about your work. It answers only from this guide, your settings (never your

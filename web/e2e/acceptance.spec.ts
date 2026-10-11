@@ -125,6 +125,35 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("button", { name: "Today" }).click();
   });
 
+  test("a demo workspace says so on every screen, and feedback is a mail draft the person sends", async ({ page }) => {
+    await signIn(page);
+    const strip = page.getByRole("complementary", { name: "Demo workspace" });
+    await expect(strip).toBeVisible();
+    await expect(strip).toContainText("Everything here is made up. Nothing you do here reaches anyone.");
+    await page.getByRole("button", { name: "Settings" }).click();
+    await expect(strip).toBeVisible();
+    // The strip never makes a phone-width page scroll sideways.
+    await page.setViewportSize({ width: 360, height: 740 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await checkAccessibility(page);
+
+    const open = page.getByRole("button", { name: "Send feedback" });
+    await expect(page.getByText(/^Version /)).toBeVisible();
+    await open.click();
+    const dialog = page.getByRole("dialog", { name: "Send feedback" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel("What happened, or what would help?").fill("The page was slow");
+    await expect(dialog.getByLabel("Subject")).toHaveValue("Feedback on PM Cockpit");
+    await expect(dialog.getByLabel("Message")).toHaveValue(/^The page was slow\n\nApp version: .+\nScreen: Settings$/);
+    await expect(dialog.getByRole("link", { name: "Open in your mail" })).toHaveAttribute("href", /^mailto:/);
+    await checkAccessibility(page);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(open).toBeFocused();
+    await page.getByRole("button", { name: "Today" }).click();
+  });
+
   test("1. meeting notes become actions with owners, and a shared first name becomes a question", async ({ page }) => {
     await signIn(page);
     const notes = byId("production-checkin");

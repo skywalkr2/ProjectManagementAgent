@@ -326,3 +326,10 @@ input:disabled, textarea:disabled, select:disabled { opacity: 0.7; cursor: not-a
 .ask-item { border-left: 3px solid var(--line); padding-left: 10px; }
 .ask-item .acts { flex-wrap: wrap; margin-top: 4px; }
 .text .sub .kind { margin-right: 6px; }
+
+/* Demo label and the feedback row in the footer */
+.demo-strip { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 10px; margin-inline: -16px; padding: 6px 16px; background: var(--warn-soft); color: var(--fg); border-bottom: 1px solid var(--warn); font-size: 13.5px; line-height: 1.35; text-align: center; overflow-wrap: anywhere; }
+.demo-tag { color: var(--warn); border: 1.5px solid var(--warn); border-radius: 999px; padding: 0 8px; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+.footer { display: grid; gap: 6px; }
+.footer-feedback { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 10px; }
+.footer-feedback .link-button { color: var(--accent); font-size: 14px; }

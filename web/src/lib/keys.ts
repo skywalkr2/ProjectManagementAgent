@@ -48,15 +48,6 @@ export interface GlobalHandlers {
   help: () => void;
 }
 
-/** The key that opens the Ask box when the configured shortcuts don't name one. */
-export const ASK_KEY = "/";
-
-/** The configured shortcuts, with the Ask box on its usual key when none is set and that key is free. */
-export function withAskKey(keys: Record<string, string>): Record<string, string> {
-  if (keys.ask || Object.values(keys).includes(ASK_KEY)) return keys;
-  return { ...keys, ask: ASK_KEY };
-}
-
 export function useShortcuts(keys: Record<string, string>, handlers: GlobalHandlers): void {
   useEffect(() => {
     const byKey = new Map(Object.entries(keys).map(([action, key]) => [key, action]));

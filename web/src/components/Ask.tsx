@@ -7,6 +7,7 @@ import { Heading } from "react-aria-components";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { whenText } from "../lib/dates";
+import { mailText, mailtoLink, tooLongForLink } from "../lib/mail";
 import { problemText } from "../lib/problem";
 import { formatValue, labelOf } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
@@ -18,7 +19,7 @@ import { SafeText } from "./SafeText";
 type AskItem = S["AskView"];
 const SHOWN = 10;
 
-export function Ask(props: { onClose: () => void; initial?: string }) {
+export function Ask(props: { onClose: () => void; initial?: string; feedbackTo?: string | null }) {
   const { t } = useWords();
   const act = useAct();
   const base = useId();
@@ -106,7 +107,7 @@ export function Ask(props: { onClose: () => void; initial?: string }) {
         ) : (
           <ul className="queue">
             {asks.data.slice(0, SHOWN).map((item) => (
-              <AskRow key={item.id} item={item} onApplied={props.onClose} />
+              <AskRow key={item.id} item={item} onApplied={props.onClose} mailTo={props.feedbackTo} />
             ))}
           </ul>
         )}
@@ -124,7 +125,7 @@ const PILL: Record<string, string> = {
   failed: "k-risk",
 };
 
-function AskRow(props: { item: AskItem; onApplied: () => void }) {
+function AskRow(props: { item: AskItem; onApplied: () => void; mailTo?: string | null }) {
   const { t } = useWords();
   const { item } = props;
   const titleId = `ask-${item.id}`;
@@ -168,7 +169,7 @@ function AskRow(props: { item: AskItem; onApplied: () => void }) {
             <Proposal key={p.id} proposal={p} onApplied={props.onApplied} />
           ))}
           {reports.map((r) => (
-            <Report key={r.id} report={r} />
+            <Report key={r.id} report={r} mailTo={props.mailTo} />
           ))}
         </div>
       )}
@@ -243,24 +244,27 @@ function Proposal(props: { proposal: S["SettingProposalView"]; onApplied: () => 
   );
 }
 
-function Report(props: { report: S["ReportView"] }) {
+function Report(props: { report: S["ReportView"]; mailTo?: string | null }) {
   const { t } = useWords();
   const act = useAct();
   const { push } = useToasts();
   const { report: r } = props;
   const draft = r.status === "draft";
 
-  const [copied, setCopied] = useState(false);
+  // Set once the person has copied the report or opened it in their mail program.
+  const [shared, setShared] = useState(false);
+  const mail = mailtoLink(props.mailTo, r.title, r.text);
+  const tooLong = tooLongForLink(props.mailTo, r.title, r.text);
 
   // Copying only puts the report on the clipboard; the person sends it outside the app, then marks it sent.
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(`${r.title}\n\n${r.text}`);
+      await navigator.clipboard.writeText(mailText(r.title, r.text));
     } catch {
       push({ message: t("ask.copy_blocked") });
       return;
     }
-    setCopied(true);
+    setShared(true);
     push({ message: t("ask.toast.copied") });
   };
   const markSent = () =>
@@ -274,6 +278,24 @@ function Report(props: { report: S["ReportView"] }) {
       () => ({ message: t("ask.toast.set_aside") }),
     );
 
+  const copyButton = (style: "primary" | "quiet", label: string) => (
+    <button key="copy" type="button" className={`btn ${style}`} aria-label={t("ask.copy_named", { title: r.title })} onClick={() => void copy()}>
+      {t(label)}
+    </button>
+  );
+  const markSentButton = (style: "primary" | "quiet") => (
+    <button key="sent" type="button" className={`btn ${style}`} aria-label={t("ask.mark_sent_named", { title: r.title })} onClick={markSent}>
+      {t("ask.mark_sent")}
+    </button>
+  );
+  // Opening the mail program counts as sharing it, as copying does: the person sends it there, then marks it sent.
+  const mailLink = (style: "primary" | "quiet") =>
+    mail && (
+      <a key="mail" className={`btn ${style}`} href={mail} aria-label={t("ask.mail_named", { title: r.title })} onClick={() => setShared(true)}>
+        {t("ask.mail")}
+      </a>
+    );
+
   return (
     <div className="ask-item">
       <span className="what">{t("ask.report")}</span>
@@ -282,26 +304,12 @@ function Report(props: { report: S["ReportView"] }) {
       {draft ? (
         <>
           <span className="hint">{t("ask.report_hint")}</span>
+          {tooLong && <span className="hint">{t("ask.report_too_long")}</span>}
           <div className="acts">
-            {copied ? (
-              <>
-                <button type="button" className="btn primary" aria-label={t("ask.mark_sent_named", { title: r.title })} onClick={markSent}>
-                  {t("ask.mark_sent")}
-                </button>
-                <button type="button" className="btn quiet" aria-label={t("ask.copy_named", { title: r.title })} onClick={() => void copy()}>
-                  {t("ask.copy_again")}
-                </button>
-              </>
-            ) : (
-              <>
-                <button type="button" className="btn primary" aria-label={t("ask.copy_named", { title: r.title })} onClick={() => void copy()}>
-                  {t("ask.copy")}
-                </button>
-                <button type="button" className="btn quiet" aria-label={t("ask.mark_sent_named", { title: r.title })} onClick={markSent}>
-                  {t("ask.mark_sent")}
-                </button>
-              </>
-            )}
+            {/* Keyed, so the control the person just used keeps its place (and the focus) when the order changes. */}
+            {shared
+              ? [markSentButton("primary"), mailLink("quiet"), copyButton("quiet", "ask.copy_again")]
+              : [mail ? mailLink("primary") : copyButton("primary", "ask.copy"), mail && copyButton("quiet", "ask.copy"), markSentButton("quiet")]}
             <button type="button" className="btn quiet" aria-label={t("ask.set_aside_named", { title: r.title })} onClick={setAside}>
               {t("ask.set_aside")}
             </button>

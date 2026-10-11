@@ -15,6 +15,12 @@ opening the browser. New settings: `workspace.demo` (the screens label made-up d
 `--open` and `--no-open`). Install and update are one script around `uv tool install --force`; a tag builds the package,
 checks that it installs and starts the demo, and attaches it to a release with the scripts and `docs/install.md`.
 
+The stand-in AI, with nothing scripting it, reads a hand-in by plain rules (`engine/ai/adapters/stand_in.py`): "<Name>
+will …" is an action for that name, "we still need …" an action waiting for an owner, "Decided: …" a fact, each citing
+its line; the rest is one note. It answers a question by quoting the first guide passage chosen for it. The demo's
+screens say it is a demo (`workspace.demo`), and a feedback button drafts an email to `ui.feedback_to`, else to the
+address a release build ships in `catalog/product.yaml` (empty in the repository); the app sends nothing itself.
+
 **Why:** Friends get a download, not the repository: no Node, no checkout, one command to try it.
 
 **Impact:** Roadmap "Friends' preview" (packaged install done; labeled demo screens and feedback button next). No change
