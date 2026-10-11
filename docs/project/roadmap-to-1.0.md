@@ -83,9 +83,8 @@ Last updated: 2026-10-12.
     background with a menu-bar or tray icon, and opens the setup guide in the browser on first run.
   - The app updates itself from new releases, with the previous version kept to go back to; workspaces are never
     touched by an install, an update or an uninstall.
-  - Add-ons install from the Add-ons screen with one click: the catalog says where each pack's release is, the app
-    downloads it, checks its signature or hash against the catalog, installs it beside itself and offers Turn on.
-    Private packs the person has access to install the same way.
+  - Add-ons install from the Add-ons screen with one click: moved forward, built before the freeze (decisions,
+    2026-10-11, "One-click install for add-ons comes before the freeze").
   - Owner's part: the signing certificates for macOS and Windows (yearly fees) and where releases are hosted.
 
 - [ ] **M1–2: rest of the core.** The parts the launch slice trimmed (13.1).

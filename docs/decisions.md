@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: One-click install for add-ons comes before the freeze
+
+**Decided by:** project owner (the package-file step "is a pain"; move the add-on part of M0 forward).
+
+**What:** The Add-ons screen gets an Install button. The catalog entry says where the pack's release file is and its
+checksum; the app downloads it, checks the checksum, installs it beside itself, and offers Turn on (with the usual
+restart ask). A private pack's release host takes a read token the person gives once, kept as a secret reference.
+Update and Remove work the same way. Only packs of pure Python whose needs the app already has are installed this way.
+The rest of the desktop installer stays in M0 after launch.
+
+**Why:** Installing an add-on meant downloading a build artifact and running a command in a terminal.
+
+**Impact:** the packs catalog format gains `release` (address and checksum) and the catalog repository follows; a new
+setting for release hosts' read tokens; `POST /api/packs/{id}/install`, `/remove`; the roadmap's M0 loses the add-on
+part. Built before 2026-10-30; no change to the launch scope otherwise.
+
 ## 2026-10-11: People install with no manual setup: a desktop installer, first thing after launch
 
 **Decided by:** project owner (a desktop installer, "right after launch"; asked that a deployment needing no manual
