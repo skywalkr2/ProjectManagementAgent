@@ -46,30 +46,46 @@ class RefTo:
     kind: str
 
 
-def ref_fields(model: type[BaseModel]) -> list[tuple[str, str]]:
+def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> list[tuple[str, str]]:
     """(path, kind it points to) for every field marked with RefTo: "field" for a single reference, "field[]" for a
-    list of references (`list[Annotated[str, RefTo("kind")]]`), optional or not."""
+    list of references (`list[Annotated[str, RefTo("kind")]]`), optional or not, and paths into nested models such as
+    "relations[].person" for a list of models whose `person` field is a reference."""
     from typing import Annotated, Union, get_args, get_origin
 
-    def in_list(annotation: Any) -> list[str]:
-        origin = get_origin(annotation)
-        if origin in (list, tuple, set):
-            return [m.kind for arg in get_args(annotation) for m in _ref_meta(arg)]
-        if origin is Union or type(annotation).__name__ == "UnionType":
-            return [k for arg in get_args(annotation) for k in in_list(arg)]
-        return []
-
-    def _ref_meta(annotation: Any) -> list[RefTo]:
+    def ref_meta(annotation: Any) -> list[RefTo]:
         if get_origin(annotation) is Annotated:
             return [m for m in annotation.__metadata__ if isinstance(m, RefTo)]
         return []
 
+    def in_list(annotation: Any) -> list[str]:
+        origin = get_origin(annotation)
+        if origin in (list, tuple, set):
+            return [m.kind for arg in get_args(annotation) for m in ref_meta(arg)]
+        if origin is Union or type(annotation).__name__ == "UnionType":
+            return [k for arg in get_args(annotation) for k in in_list(arg)]
+        return []
+
+    def nested(annotation: Any) -> list[tuple[type[BaseModel], bool]]:
+        """Models a field holds directly ("") or in a list ("[]")."""
+        origin = get_origin(annotation)
+        if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+            return [(annotation, False)]
+        if origin in (list, tuple, set):
+            return [(m, True) for arg in get_args(annotation) for m, _ in nested(arg)]
+        if origin is Union or type(annotation).__name__ == "UnionType" or origin is Annotated:
+            return [found for arg in get_args(annotation) for found in nested(arg)]
+        return []
+
     found = []
     for name, info in model.model_fields.items():
+        path = f"{_prefix}{name}"
         for meta in info.metadata:
             if isinstance(meta, RefTo):
-                found.append((name, meta.kind))
-        found += [(f"{name}[]", kind) for kind in in_list(info.annotation)]
+                found.append((path, meta.kind))
+        found += [(f"{path}[]", kind) for kind in in_list(info.annotation)]
+        if _depth < 3:
+            for inner, many in nested(info.annotation):
+                found += ref_fields(inner, f"{path}[]." if many else f"{path}.", _depth + 1)
     return found
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import logging
+import re
 import sys
 import threading
 import uuid
@@ -520,6 +521,7 @@ class PluginHost:
 
         view.read_file = lambda file_id: read_bytes(self.store, file_id)[1]
         view.read_text = lambda sha256: read_text(self.store, sha256)
+        view.read_source = lambda digest: _source_text(self.store, digest)
         view.default_language = self.cfg.workspace.language
         return view
 
@@ -696,6 +698,11 @@ class PluginHost:
         for key in list(sys.modules):
             if any(key == name or key.startswith(name + ".") for name in self._modules):
                 del sys.modules[key]
+
+
+def _source_text(store: Any, digest: str) -> str:
+    path = store.path.parent / "sources" / f"{digest}.txt"
+    return path.read_text(encoding="utf-8") if path.exists() and re.fullmatch(r"[0-9a-f]+", digest) else ""
 
 
 def check_about(view: Any, kind: Any, about: dict[str, str] | None) -> None:

@@ -10,6 +10,17 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.8 changes
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- `view.get`, `view.list` and `view.find` take the record kind positionally, so a field called `kind` can be matched.
+- Only the core's `EvidenceIn` is treated as evidence; a plugin op's own field called `evidence` is left alone.
+- `RefTo` is honored inside nested models (a model or a list of models), for checks on write and for delete
+  protection: paths such as `relationships[].person`.
+- `view.source_text(source_id)` reads a saved core source's text (untrusted material).
+- Documented: refusing stage checks' reasons are shown joined with "; ".
+
 ## What 0.3.7 adds
 
 Manifests stay `'>=0.3,<0.4'`.

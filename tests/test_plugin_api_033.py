@@ -111,3 +111,66 @@ def test_undo_still_refuses_when_a_later_change_stands(env):  # noqa: F811
     first, _ = apply(env, [{**op, "value": "First summary."}], pm=True)
     apply(env, [{**op, "value": "Second summary."}], pm=True)
     assert undo(store, first).skipped
+
+
+def test_a_field_called_kind_can_be_looked_up():
+    import inspect
+
+    from engine.plugin_api import ReadView
+
+    for name in ("get", "list", "find"):
+        first = list(inspect.signature(getattr(ReadView, name)).parameters.values())[1]
+        assert first.kind == first.POSITIONAL_ONLY, name
+
+
+def test_a_plugin_ops_own_evidence_field_is_left_alone():
+    from pydantic import BaseModel
+
+    from engine.applier import _evidence
+    from engine.ops import EvidenceIn, OpModel
+
+    class Theirs(BaseModel):
+        page: int
+
+    class PluginOp(OpModel):
+        op: str = "x/op"
+        evidence: Theirs
+
+    class CoreLike(OpModel):
+        op: str = "y/op"
+        evidence: EvidenceIn
+
+    assert _evidence(PluginOp(evidence=Theirs(page=3))) is None
+    assert _evidence(CoreLike(evidence=EvidenceIn(quote="the exact words"))).quote == "the exact words"
+
+
+def test_references_inside_nested_models_are_found():
+    from typing import Annotated, ClassVar
+
+    from pydantic import BaseModel
+
+    from engine.records import Record, RefTo, ref_fields
+
+    class Relationship(BaseModel):
+        person: Annotated[str, RefTo("person")]
+        note: str = ""
+
+    class Character(Record):
+        record_kind: ClassVar[str] = "x/character"
+        prefix: ClassVar[str] = "CHR"
+        relationships: list[Relationship] = []
+        mentor: Relationship | None = None
+
+    assert ("relationships[].person", "person") in ref_fields(Character)
+    assert ("mentor.person", "person") in ref_fields(Character)
+
+
+def test_a_view_reads_a_saved_sources_text(env):  # noqa: F811
+    from engine.intake import hand_in
+    from engine.plugin_api import ReadView
+
+    ws, _, store = env
+    handed = hand_in(ws, store, note="", pasted="The launch moves to spring.")
+    view = store.plugins._with_files(ReadView(store.read(), "p02"))
+    assert view.source_text(handed.source) == "The launch moves to spring."
+    assert view.source_text("SRC-999") == ""

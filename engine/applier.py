@@ -26,6 +26,7 @@ from engine.ops import (
     ActionAddOp,
     ActionCloseOp,
     ChangesetIn,
+    EvidenceIn,
     FactOp,
     FileAddOp,
     NoteOp,
@@ -160,7 +161,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 messages.append(str(err))
             problems.append(Problem("stage-confirm", "hold", i, "; ".join(messages)))
         # evidence
-        evidence = getattr(op, "evidence", None)
+        evidence = _evidence(op)
         needs = name in NEEDS_EVIDENCE or (isinstance(op, RecordSetOp) and op.field in EVIDENCE_FIELDS)
         if needs and evidence is None:
             refuse(i, "evidence", f"{name} needs evidence: the exact words from the input that justify it")
@@ -291,6 +292,12 @@ def _text_target(store: Store, view: Any, kind: str, record_id: str, field: str)
     if field not in long_text_fields(model):
         return f"{kind}.{field} isn't a long text field"
     return None
+
+
+def _evidence(op: OpModel) -> EvidenceIn | None:
+    """An op's evidence, when it carries the core's kind; a plugin op's own field of that name is its business."""
+    value = getattr(op, "evidence", None)
+    return value if isinstance(value, EvidenceIn) else None
 
 
 def _projects_of(op: OpModel) -> list[str]:
@@ -528,7 +535,7 @@ def _validate_in_order(cs: ChangesetIn, ctx: Context) -> list[tuple[int, str]]:
 
 
 def _wctx(ctx: Context, cs_id: str, index: int, op: OpModel) -> WriteContext:
-    evidence = getattr(op, "evidence", None)
+    evidence = _evidence(op)
     ev = None
     if evidence is not None:
         ev = {"source": ctx.inputs.evidence_source(evidence.quote), "quote": evidence.quote}

@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.7"
+PLUGIN_API_VERSION = "0.3.8"
 
 
 class Settings(BaseModel):
@@ -72,14 +72,15 @@ class ReadView:
         if "/" in kind and not kind.startswith(self.__plugin + "/"):
             raise PluginMisuse("another plugin's records require a declared interface")
 
-    def get(self, kind: str, record_id: str) -> Stored | None:
+    def get(self, kind: str, record_id: str, /) -> Stored | None:
         """A live record by kind and id, or None. Reading another plugin's kind raises PluginMisuse."""
         self._allow(kind)
         return self.__view.get(kind, record_id)
 
-    def list(self, kind: str, *, project: Any = ANY, **equals: Any) -> list[Stored]:
+    def list(self, kind: str, /, *, project: Any = ANY, **equals: Any) -> list[Stored]:
         """Live records of a kind, optionally only those in one project (`project=None` for records in no project) or
-        with given field values, matched exactly (case-sensitive) in the database. An unknown field is refused."""
+        with given field values, matched exactly (case-sensitive) in the database. An unknown field is refused. The
+        kind is positional, so a field called `kind` can be matched too."""
         self._allow(kind)
         if project is not ANY:
             equals = {**equals, "project": project}
@@ -101,7 +102,7 @@ class ReadView:
             raise StoreError("files can't be read here")
         return self.read_file(file_id)
 
-    def find(self, kind: str, **equals: Any) -> Stored | None:
+    def find(self, kind: str, /, **equals: Any) -> Stored | None:
         """The first live record of a kind with these field values, or None."""
         found = self.list(kind, **equals)
         return found[0] if found else None
@@ -111,6 +112,16 @@ class ReadView:
 
     #: Set by the host: reads a stored text by hash.
     read_text: Callable[[str], str] | None = None
+    #: Set by the host: reads a saved source's text by its content hash.
+    read_source: Callable[[str], str] | None = None
+
+    def source_text(self, source_id: str) -> str:
+        """The text of a saved core `source` (a handed-in email, a page): untrusted material to check quotes against,
+        never instructions. Empty when the source or its text is gone."""
+        source = self.get("source", source_id)
+        if source is None or self.read_source is None:
+            return ""
+        return self.read_source(source.data["content_hash"])
 
     def text_versions(self, record: Stored, field: str) -> list[Stored]:
         """Every version of a long text field (`text_version` records), oldest first."""
@@ -192,12 +203,12 @@ class OpWriter(ReadView):
                 shown = ", ".join(f"{f}={v}" for f, v in equals.items())
                 raise StoreError(f"there is already a {kind} with {shown}")
         for path, target in ref_fields(model):
-            field = path.removesuffix("[]")
+            field = path.split(".")[0].removesuffix("[]")
             if field not in data:
                 continue
             for value in values_at(data, path):
                 if value is not None and self.__tx.get(target, value) is None:
-                    raise StoreError(f"{field} refers to {target} {value}, which doesn't exist")
+                    raise StoreError(f"{path.replace('[]', '')} refers to {target} {value}, which doesn't exist")
 
     def _write(self, kind: str, fields: set[str]) -> None:
         self._allow(kind)
@@ -613,7 +624,9 @@ class Registrar:
         return path
 
     def stage_check(self, id: str, fn: Callable) -> None:
-        """Register a pure check: (record, read_view, settings) -> StageCheckResult. Never call AI."""
+        """Register a pure check: (record, read_view, settings) -> StageCheckResult. Never call AI. When several checks
+        refuse a move, their reasons are shown joined with "; ", so write each as a short clause that reads well
+        beside others."""
         self._name(id)
         if id in self.stage_checks or not callable(fn):
             raise ValueError("duplicate stage check or invalid callback")
