@@ -5,6 +5,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { dayAndTime, day } from "../lib/dates";
 import { useRowKeys } from "../lib/keys";
+import { showRow, useReveal } from "../lib/reveal";
 import { useEstimate } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
@@ -31,6 +32,18 @@ export function WhatChanged(props: { compact?: boolean }) {
   const [filter, setFilter] = useState<Filter>("attention");
   const [shown, setShown] = useState<Set<string> | null>(null);
   const [announce, setAnnounce] = useState("");
+  // A Today line asking for an answer to be looked at: the row (by request) opens, whatever the filter.
+  const [revealed, setRevealed] = useState<{ id: string; n: number } | null>(null);
+  const latest = useRef(changes.data);
+  latest.current = changes.data;
+  useReveal("changeset", (changeset) => {
+    const item = latest.current?.find((c) => c.changeset?.id === changeset);
+    if (!item) return false;
+    setFilter("all");
+    setShown((prev) => new Set([...(prev ?? []), item.id]));
+    setRevealed({ id: item.id, n: Date.now() });
+    return true;
+  });
 
   // Rows that arrive while the PM is reading wait behind "N new · Show" instead of moving the list,
   // except the PM's own hand-ins, which they expect to see.
@@ -102,7 +115,7 @@ export function WhatChanged(props: { compact?: boolean }) {
         <ol className="queue">
           {filter === "attention" && <StageTodayRows today={stageToday} />}
           {rows.map((item) => (
-            <ChangeRow key={item.id} item={item} />
+            <ChangeRow key={item.id} item={item} reveal={revealed?.id === item.id ? revealed.n : 0} />
           ))}
         </ol>
       )}
@@ -140,7 +153,7 @@ export function waitsForGo(c: S["ChangeItem"]): boolean {
   return c.approval === "required" && !c.stage_task && c.state === "needs_you" && !c.dismissed;
 }
 
-function ChangeRow(props: { item: S["ChangeItem"] }) {
+function ChangeRow(props: { item: S["ChangeItem"]; reveal: number }) {
   const { t, tn } = useWords();
   const act = useAct();
   const estimate = useEstimate();
@@ -153,6 +166,11 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
   const ref = useRef<HTMLLIElement>(null);
   const title = item.source_title || firstLine(item.note) || t("changes.untitled");
   const live = cs ? cs.ops.filter((o) => o.status === "applied" || o.status === "held") : [];
+  useEffect(() => {
+    if (!props.reveal) return;
+    setOpen(true);
+    showRow(ref.current);
+  }, [props.reveal]);
 
   const looksGood = () =>
     cs &&
@@ -218,7 +236,7 @@ function ChangeRow(props: { item: S["ChangeItem"] }) {
   });
 
   return (
-    <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={`t-${item.id}`}>
+    <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={`t-${item.id}`} data-changeset={cs?.id}>
       <div className="row">
         <span className={`kind ${PILL[item.state]}`}>
           {t(item.dismissed ? "changes.state.dismissed" : gated ? "changes.state.cost_go" : `changes.state.${item.state}`)}

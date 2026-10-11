@@ -508,3 +508,30 @@ describe("coming back from the service", () => {
     expect(window.location.search).toBe("?other=1");
   });
 });
+
+test("when the add-on's own registration can't be used at this address, the row says so and shows the paste form", async () => {
+  fakeApi({
+    ...settings,
+    "GET sign-ins": () => [
+      signIn("demo/three", { app: "none", ready: false, can_paste: true, default_unusable: true }),
+      signIn("demo/one", { status: "signed_in", app: "workspace" }),
+    ],
+  });
+  open();
+  await screen.findByText("Service demo/three");
+  const three = row("Service demo/three");
+  expect(
+    within(three).getByText(
+      "The add-on's own app registration doesn't work at this app's address, because the app is served under another path or is hosted. To sign in, use your own app registration.",
+    ),
+  ).toBeInTheDocument();
+  expect(within(three).getByRole("form", { name: "Your own app registration for Service demo/three" })).toBeInTheDocument();
+  expect(within(row("Service demo/one")).queryByText(/doesn't work at this app's address/)).toBeNull();
+});
+
+test("no such hint while the add-on's own registration works", async () => {
+  fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/three", { app: "add-on", app_note: "Uses the add-on's own." })] });
+  open();
+  await screen.findByText("Service demo/three");
+  expect(screen.queryByText(/doesn't work at this app's address/)).toBeNull();
+});

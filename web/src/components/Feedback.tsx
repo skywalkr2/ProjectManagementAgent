@@ -14,7 +14,7 @@ import { ModalPanel } from "./ModalPanel";
 /** The name of the screen as the person sees it: the tab's name, a plugin panel's title, or a general name for a record page. */
 export function useScreenLabel(view: View): string {
   const { t } = useWords();
-  const panels = useQuery({ queryKey: ["panels"], queryFn: api.panels });
+  const panels = useQuery({ queryKey: ["panels"], queryFn: () => api.panels() });
   const parsed = parseView(view);
   if (parsed.type === "panel") return panels.data?.find((p) => p.name === parsed.name)?.title ?? parsed.name;
   if (parsed.type === "record") return t("feedback.screen.record");

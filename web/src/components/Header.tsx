@@ -43,7 +43,7 @@ export function Header(props: {
   const restart = useRestart();
   const restartWhat = useRestartWhat();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
-  const panels = useQuery({ queryKey: ["panels"], queryFn: api.panels });
+  const panels = useQuery({ queryKey: ["panels"], queryFn: () => api.panels() });
   const workPanels = (panels.data ?? []).filter((p) => p.tab === "work");
   const b = status.data?.backup;
   const total = useTotal();

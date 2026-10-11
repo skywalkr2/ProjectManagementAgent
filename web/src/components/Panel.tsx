@@ -12,7 +12,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 
 export function Panel(props: { name: string; project?: string; onOpenRecord: (kind: string, id: string) => void }) {
   const { t, tn } = useWords();
-  const panels = useQuery({ queryKey: ["panels"], queryFn: api.panels });
+  const panels = useQuery({ queryKey: props.project ? ["panels", props.project] : ["panels"], queryFn: () => api.panels(props.project) });
   const rows = useQuery({
     queryKey: ["panel-rows", props.name, props.project ?? null],
     queryFn: () => api.panelRows(props.name, props.project),

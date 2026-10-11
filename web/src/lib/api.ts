@@ -158,7 +158,8 @@ export const api = {
   startTask: (name: string, about: S["RecordReference"] | null) =>
     call<S["TaskStarted"]>("POST", `task-kinds/${named(name)}/start`, { about, note: "" }),
 
-  panels: () => call<S["PanelView"][]>("GET", "panels"),
+  /** The screens plugins add; with a project, only those its add-on shows on that project. */
+  panels: (project?: string) => call<S["PanelView"][]>("GET", `panels${project ? `?project=${id(project)}` : ""}`),
   panelRows: (name: string, project?: string) =>
     call<S["PanelRow"][]>("GET", `panels/${named(name)}/rows${project ? `?project=${id(project)}` : ""}`),
   valueLists: () => call<S["ValueListView"][]>("GET", "lists"),

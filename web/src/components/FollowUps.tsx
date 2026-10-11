@@ -1,11 +1,12 @@
 // Follow-ups by person (design 7.5): the PM first (decisions and their own actions), then everyone A to Z, each with
 // one clean message to copy, then mark sent. The message can be edited where it is shown; what is marked sent is the box's text.
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { day } from "../lib/dates";
 import { useRowKeys } from "../lib/keys";
+import { showRow, useReveal } from "../lib/reveal";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
@@ -28,6 +29,16 @@ export function FollowUps(props: { compact?: boolean }) {
   const Heading = compact ? "h3" : "h2";
   const [filter, setFilter] = useState<Filter>("send");
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
+  // A Today line asking for a question to be answered: the PM's own questions show under "to send", so the row is there.
+  const [revealed, setRevealed] = useState<{ id: string; n: number } | null>(null);
+  const latest = useRef(followups.data);
+  latest.current = followups.data;
+  useReveal("question", (question) => {
+    if (!latest.current?.some((s) => s.is_pm && s.questions.some((q) => q.id === question))) return false;
+    setFilter("send");
+    setRevealed({ id: question, n: Date.now() });
+    return true;
+  });
   const sections = (followups.data ?? []).filter((s) => s.questions.length || (s.actions.length && !(compact && s.is_pm)));
   const shown = sections.filter((s) =>
     filter === "send" ? s.is_pm || s.to_send > 0 : !s.is_pm && waitingQuestions(s).length + waitingActions(s).length > 0,
@@ -61,7 +72,7 @@ export function FollowUps(props: { compact?: boolean }) {
         <ol className="queue">
           {shown.map((s) =>
             s.is_pm ? (
-              <YourSection key={s.person} section={s} compact={compact} />
+              <YourSection key={s.person} section={s} compact={compact} reveal={revealed} />
             ) : filter === "send" ? (
               <PersonSection key={s.person} section={s} />
             ) : (
@@ -74,7 +85,7 @@ export function FollowUps(props: { compact?: boolean }) {
   );
 }
 
-function YourSection(props: { section: S["FollowupSection"]; compact: boolean }) {
+function YourSection(props: { section: S["FollowupSection"]; compact: boolean; reveal: { id: string; n: number } | null }) {
   const { t, tn } = useWords();
   const s = props.section;
   const actions = props.compact ? [] : s.actions;
@@ -95,7 +106,7 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean })
         {s.questions.length > 0 && (
           <ul className="children">
             {s.questions.map((q) => (
-              <DecisionRow key={q.id} question={q} />
+              <DecisionRow key={q.id} question={q} reveal={props.reveal?.id === q.id ? props.reveal.n : 0} />
             ))}
           </ul>
         )}
@@ -111,13 +122,16 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean })
   );
 }
 
-function DecisionRow(props: { question: S["FollowupQuestion"] }) {
+function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number }) {
   const { t } = useWords();
   const act = useAct();
   const q = props.question;
   const ref = useRef<HTMLLIElement>(null);
   const [answer, setAnswer] = useState("");
   const who = q.about === "owner" || q.about === "held-op";
+  useEffect(() => {
+    if (props.reveal) showRow(ref.current, true);
+  }, [props.reveal]);
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div className="full">

@@ -221,3 +221,28 @@ test("a new action nobody offers is not shown", async () => {
   await screen.findByRole("table");
   expect(screen.queryByRole("button", { name: "Add a goal" })).toBeNull();
 });
+
+test("in the context of a project the panel is looked up for that project; without one, with none", async () => {
+  const withProject = fakeApi({
+    ...routes(panel()),
+    "GET panels?project=PRJ-1": () => [panel()],
+    "GET panels/demo/goals/rows?project=PRJ-1": () => rows,
+  });
+  const { unmount } = renderApp(<Panel name="demo/goals" project="PRJ-1" onOpenRecord={() => {}} />);
+  await screen.findByRole("table");
+  expect(withProject.map((c) => c.route)).toContain("GET panels?project=PRJ-1");
+  expect(withProject.map((c) => c.route)).not.toContain("GET panels");
+  unmount();
+
+  const without = fakeApi(routes(panel()));
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  await screen.findByRole("table");
+  expect(without.map((c) => c.route)).toContain("GET panels");
+  expect(without.map((c) => c.route).filter((r) => r.startsWith("GET panels?"))).toEqual([]);
+});
+
+test("a panel the project's add-on doesn't show there says the list didn't load, not an empty one", async () => {
+  fakeApi({ "GET panels?project=PRJ-1": () => [], "GET panels/demo/goals/rows?project=PRJ-1": () => rows });
+  renderApp(<Panel name="demo/goals" project="PRJ-1" onOpenRecord={() => {}} />);
+  expect(await screen.findByText("This list didn't load.")).toBeInTheDocument();
+});

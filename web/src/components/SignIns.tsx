@@ -173,6 +173,11 @@ function SignInRow(props: { item: SignIn }) {
             </div>
           )}
           {item.app === "add-on" && item.app_note && <p className="hint">{item.app_note}</p>}
+          {item.default_unusable && !pasted && (
+            <p className="hint" id={`${base}-unusable`}>
+              {t("sign_in.default_unusable")}
+            </p>
+          )}
           {pasted && <p className="hint">{t("sign_in.own.using")}</p>}
           {showHint && (
             <p className="hint" id={`${base}-not-ready`}>

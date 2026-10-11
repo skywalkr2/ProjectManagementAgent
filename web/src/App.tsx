@@ -98,7 +98,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
               workspace={props.rc.workspace_name}
               onOpenGuide={openGuide}
             />
-            <TodayBoard onView={setView} />
+            <TodayBoard onView={setView} onOpenRecord={openRecord} />
           </>
         ) : view === "stages" ? (
           <Stages />

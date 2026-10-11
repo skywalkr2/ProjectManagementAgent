@@ -33,14 +33,14 @@ function useFitsWindow() {
   }, []);
 }
 
-export function TodayBoard(props: { onView: (view: View) => void }) {
+export function TodayBoard(props: { onView: (view: View) => void; onOpenRecord?: (kind: string, id: string) => void }) {
   const { t } = useWords();
   useFitsWindow();
   return (
     <div className="today-board" role="group" aria-label={t("today.board.label")}>
       <AgendaColumn onView={props.onView} />
       <TodoColumn />
-      <NeedsColumn />
+      <NeedsColumn onOpenRecord={props.onOpenRecord} />
       <ArrivedColumn onView={props.onView} />
     </div>
   );
@@ -331,13 +331,13 @@ function useNeedsCount(): number {
   return work + stage.count + (lines.data?.length ?? 0) + messages;
 }
 
-function NeedsColumn() {
+function NeedsColumn(props: { onOpenRecord?: (kind: string, id: string) => void }) {
   const { t, tn } = useWords();
   const count = useNeedsCount();
   return (
     <Column id="needs" title={t("today.needs.title")} count={count} countText={tn("today.needs.count", count)}>
       <WhatChanged compact />
-      <PluginToday compact />
+      <PluginToday compact onOpenRecord={props.onOpenRecord} />
       <FollowUps compact />
     </Column>
   );
