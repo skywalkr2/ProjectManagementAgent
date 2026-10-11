@@ -70,6 +70,9 @@ from api.schemas import (
     StageRequestView,
     StageView,
     Status,
+    TaskKindView,
+    TaskStart,
+    TaskStarted,
     UndoChoice,
     UndoReport,
     Unmark,
@@ -84,6 +87,7 @@ from engine.followups import mark_sent, sections, unmark_sent
 from engine.intake import IntakeError, hand_in, source_text
 from engine.names import People
 from engine.ops import StageMoveOp
+from engine.plugin_host import check_about
 from engine.prompts import render
 from engine.records import referrers
 from engine.stages import approve_stage_request, record_status, stage_history
@@ -143,6 +147,50 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 )
             },
         )
+
+    @r.get("/task-kinds")
+    def task_kinds(kind: str | None = None) -> list[TaskKindView]:
+        """Plugin AI work the person can start on a record of `kind` (or on the workspace with no kind)."""
+        found = [
+            k
+            for name, k in store.plugins.tasks.items()
+            if "/" in name and store.plugins.active(name.split("/", 1)[0]) and k.on == kind
+        ]
+        return [
+            TaskKindView(
+                name=k.name, label=k.label or k.name.rsplit("/", 1)[-1].replace("-", " ").capitalize(), on=k.on
+            )
+            for k in sorted(found, key=lambda k: k.label or k.name)
+        ]
+
+    @r.post("/task-kinds/{name:path}/start")
+    def task_start(name: str, body: TaskStart) -> TaskStarted:
+        about = body.about.model_dump() if body.about else None
+
+        def start() -> str:
+            if "/" not in name:
+                raise StoreError("start a plugin's kind of work here; hand things in for the core's")
+            kind = store.plugins.task_kind(name)
+            with store.transaction() as tx:
+                check_about(tx, kind, about)
+                return tx.create(
+                    "request",
+                    {
+                        "task": name,
+                        "note": body.note.strip() or None,
+                        "about": about,
+                        "origin": "pm",
+                        "state": "queued",
+                        "waiting": "With the assistant, starting now",
+                        "created_at": store.clock(),
+                    },
+                    _PM,
+                ).id
+
+        request_id = guard(start)
+        worker.poke()
+        changed()
+        return TaskStarted(request=request_id)
 
     @r.get("/plugin-actions")
     def plugin_actions(kind: str | None = None, id: str | None = None) -> list[PersonActionView]:

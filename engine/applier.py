@@ -62,12 +62,14 @@ class Inputs:
     raw_input: str
     note: str
     trust: Literal["trusted", "untrusted"]
+    cites: str | None = None  # what the input is cited as when it isn't a saved source, e.g. "<kind>:<id>"
 
     def evidence_source(self, quote: str) -> str | None:
-        """The source id (or "note") that contains the quote, if any does."""
+        """The source id (or what the input is cited as, or "note") that contains the quote, if any does."""
         q = normalize(quote)
-        if self.source and q and q in normalize(self.raw_input):
-            return self.source
+        cited = self.source or self.cites
+        if cited and q and q in normalize(self.raw_input):
+            return cited
         if q and q in normalize(self.note):
             return "note"
         return None

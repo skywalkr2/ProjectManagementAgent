@@ -17,8 +17,9 @@ from engine.cleaning import quoted_messages
 from engine.config import Config
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
-from engine.packet import build
+from engine.packet import PacketRefused, build, target_of
 from engine.storage import Store, StoreError, WriteContext
+from engine.tasks import settings as task_settings
 from engine.workspace import Workspace
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="request.state")
@@ -99,7 +100,10 @@ def process(
         return needs_you(store, request_id, wording(cfg, "waiting"))
     _set(store, request_id, state="running", waiting="With the assistant now", attempts=req.data["attempts"] + 1)
 
-    packet = build(ws, store, cfg, request_id, now.date())
+    try:
+        packet = build(ws, store, cfg, request_id, now.date())
+    except PacketRefused as err:
+        return needs_you(store, request_id, str(err))
     if packet.too_long:
         return needs_you(
             store,
@@ -110,8 +114,9 @@ def process(
             ),
         )
     # Scheduled work (stage tasks, plugin requests) carries no words from the PM, so nothing in it is trusted.
-    trust = "untrusted" if req.data.get("source") or req.data["origin"] == "schedule" else "trusted"
-    inputs = Inputs(request_id, req.data.get("source"), packet.raw_input, packet.note, trust)
+    scheduled = req.data["origin"] == "schedule"
+    trust = "untrusted" if req.data.get("source") or scheduled or packet.untrusted_material else "trusted"
+    inputs = Inputs(request_id, req.data.get("source"), packet.raw_input, packet.note, trust, cites=packet.cites)
     ctx = Context(
         store, cfg, People(store, cfg), store.plugins.task_kind(req.data["task"]).ops, inputs, hidden_words(cfg)
     )
@@ -121,9 +126,10 @@ def process(
     tier = route(
         cfg,
         packet.task.kind,
-        input_chars=len(packet.cleaned.text),
+        input_chars=packet.input_chars,
         quoted_messages=quoted_messages(packet.cleaned.text),
         data_level=level,
+        default=task_settings(cfg, store.plugins.task_kind(req.data["task"])).tier,
     )
     estimate = router.estimate(packet.task, tier=tier, data_level=level)
     budgets = cfg.ai.budgets
@@ -169,9 +175,10 @@ def process(
 
 
 def _data_level(store: Store, request: dict) -> str:
-    """How sensitive the material in a request is: a stage task carries its record, at that record type's level."""
-    origin = request.get("stage_start")
-    model = store.plugins.records.get(origin["kind"]) if origin else None
+    """How sensitive the material in a request is: work on a record (named, or whose stage entry started it) carries
+    that record, at its record type's level."""
+    about = target_of(store, request)
+    model = store.plugins.records.get(about[0]) if about else None
     return model.data_level if model is not None else "internal"
 
 

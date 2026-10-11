@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -30,7 +31,7 @@ from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.1"
+PLUGIN_API_VERSION = "0.3.2"
 
 
 class Settings(BaseModel):
@@ -200,10 +201,16 @@ class EventContext(ReadView):
         self.config = config.model_copy(deep=True)
         self.commands: list[tuple[str, dict[str, Any]]] = []
 
-    def queue_request(self, task: str, note: str) -> None:
-        """Queue AI work of one of this plugin's task kinds (or a core one). The note reaches the assistant as
+    def queue_request(self, task: str, note: str, about: Stored | tuple[str, str] | None = None) -> None:
+        """Queue AI work of one of this plugin's task kinds (or a core one). `about` is the record it works on, as a
+        record or (kind, id), required for a task kind declared `on` a kind. The note reaches the assistant as
         untrusted material, and system ops from it wait for the person. After a stage move, it waits for the go."""
-        self.commands.append(("request", {"task": task, "note": note}))
+        data: dict[str, Any] = {"task": task, "note": note}
+        if about is not None:
+            kind, record_id = (about.kind, about.id) if isinstance(about, Stored) else about
+            self._allow(kind)
+            data["about"] = {"kind": kind, "id": record_id}
+        self.commands.append(("request", data))
 
     def file_question(self, title: str, text: str = "") -> None:
         """File a question for the configured PM; sending is never part of handling an event."""
@@ -294,6 +301,28 @@ class Proposal:
     groups: list[Group] = field(default_factory=list)
 
 
+@dataclass
+class Part:
+    """One piece of what an AI run sees. Content is untrusted unless it is the person's own words (`trusted`), and is
+    marked as material, never instructions. A `reference_only` part is there to inform the run and must not be quoted
+    or reproduced in its answer; evidence may not cite it."""
+
+    title: str
+    text: str
+    trusted: bool = False
+    reference_only: bool = False
+
+
+@dataclass
+class PacketParts:
+    """What a run of a plugin's task kind sees beyond its instructions. `stable` parts are the same on every run of the
+    kind for the same record (a style sheet, the summaries around a chapter) and go first, so providers can reuse a
+    cached prefix; `request` parts are this run's material (the chapter) and go last."""
+
+    stable: list[Part] = field(default_factory=list)
+    request: list[Part] = field(default_factory=list)
+
+
 @dataclass(frozen=True)
 class ActionRegistration:
     """A registered person action (host side)."""
@@ -326,8 +355,8 @@ class StageCheckResult:
 class Registrar:
     """A staging registry: the host installs it only after checking the manifest."""
 
-    def __init__(self, name: str, config: Settings):
-        self.name, self.config = name, config
+    def __init__(self, name: str, config: Settings, root: Path | None = None):
+        self.name, self.config, self.root = name, config, root
         self.records: dict[str, type[Record]] = {}
         self.ops: dict[str, OpRegistration] = {}
         self.validators: dict[str, list[Callable]] = {}
@@ -384,13 +413,79 @@ class Registrar:
             raise ValueError("validator must be callable")
         self.validators.setdefault(op_name, []).append(fn)
 
-    def task_kind(self, name: str, *, ops: tuple[str, ...], prompt: str = "notes", playbook: str = "notes") -> None:
-        """Register AI work the plugin can queue: the core or own ops its answer may use. The prompt and playbook are
-        the core's or the workspace's by name; a plugin's own prompts and playbook are not yet available."""
+    def task_kind(
+        self,
+        name: str,
+        *,
+        ops: tuple[str, ...],
+        label: str = "",
+        prompt: str = "notes",
+        playbook: str = "notes",
+        on: str | None = None,
+        packet: Callable | None = None,
+        tier: str | None = None,
+        max_output: int | None = None,
+        expected_output: int | None = None,
+        temperature: float | None = None,
+    ) -> None:
+        """Register AI work: the core or own ops its answer may use, and `label`, what to call it on screen.
+
+        `prompt` names the instructions: a core prompt ("notes") or the plugin's own, "<plugin>/<name>", read from
+        `prompts/<name>.md` in the plugin's folder. `playbook` names its guidance the same way, from
+        `guidance/<name>.md`.
+        The workspace overrides a plugin's prompt with `prompts/<plugin>/<name>.md`.
+
+        `on` is the record kind a run is about (core or own), when it works on one record: the request then carries that
+        record, and the person can start it from the record. `packet(target, view, settings, note) -> PacketParts` says
+        what the run sees (without it, the run sees what reading notes sees). It runs before every call, so it must be
+        deterministic and quick; raising StoreError stops the run with that message for the person.
+
+        `tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates
+        before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them."""
+        from engine.config.schema import TaskSettings
+
         self._name(name)
         if name in self.tasks or not ops:
             raise ValueError("duplicate task kind or empty op list")
-        self.tasks[name] = TaskKind(name, ops, prompt, playbook)
+        if packet is not None and not callable(packet):
+            raise ValueError("packet must be callable")
+        defaults = {
+            key: value
+            for key, value in (
+                ("tier", tier),
+                ("max_output", max_output),
+                ("expected_output", expected_output),
+                ("temperature", temperature),
+            )
+            if value is not None
+        }
+        TaskSettings.model_validate(defaults)
+        prompt_file = self._own_file(prompt, "prompts")
+        guidance_file = self._own_file(playbook, "guidance")
+        self.tasks[name] = TaskKind(
+            name,
+            tuple(ops),
+            prompt,
+            playbook,
+            label=label.strip(),
+            on=on,
+            packet=packet,
+            defaults=defaults,
+            prompt_file=prompt_file,
+            guidance_file=guidance_file,
+        )
+
+    def _own_file(self, name: str, folder: str) -> Path | None:
+        """The plugin's own prompt or guidance file for a namespaced name; None for a core name."""
+        if "/" not in name:
+            return None
+        self._name(name)
+        if self.root is None:
+            raise ValueError(f"{name} needs the plugin's folder")
+        path = self.root / folder / f"{name.split('/', 1)[1]}.md"
+        if not path.is_file():
+            raise ValueError(f"{folder}/{path.name} is missing from the plugin")
+        return path
 
     def stage_check(self, id: str, fn: Callable) -> None:
         """Register a pure check: (record, read_view, settings) -> StageCheckResult. Never call AI."""
@@ -468,6 +563,8 @@ __all__ = [
     "OpWriter",
     "EventContext",
     "ActionContext",
+    "Part",
+    "PacketParts",
     "Proposal",
     "NewFile",
     "Preview",

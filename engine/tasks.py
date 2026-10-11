@@ -1,8 +1,12 @@
-"""AI task kinds: what each kind of work may return and which prompt it uses."""
+"""AI task kinds: what each kind of work may return, which prompt and guidance it uses, what its runs see, and its
+default settings (the workspace's `ai.tasks.<kind>` overrides any of them)."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
 
 from engine.ops import OP_MODELS
 
@@ -16,6 +20,12 @@ class TaskKind:
     ops: tuple[str, ...]
     prompt: str
     playbook: str
+    label: str = ""
+    on: str | None = None  # the record kind a run is about, if any
+    packet: Callable[..., Any] | None = None  # (target, view, settings, note) -> PacketParts, from a plugin
+    defaults: dict[str, Any] = field(default_factory=dict)  # TaskSettings fields the plugin sets
+    prompt_file: Path | None = None  # a plugin's own prompt template
+    guidance_file: Path | None = None  # a plugin's own guidance
 
 
 TASKS: dict[str, TaskKind] = {
@@ -31,3 +41,15 @@ def task_kind(name: str) -> TaskKind:
         return TASKS[name]
     except KeyError:
         raise KeyError(f"unknown task kind {name!r}") from None
+
+
+def settings(cfg: Any, kind: TaskKind | None, name: str | None = None) -> Any:
+    """A task kind's settings: its own defaults, with whatever the workspace's ai.tasks.<kind> sets on top."""
+    from engine.config.schema import TaskSettings
+
+    key = kind.name if kind is not None else name
+    configured = cfg.ai.tasks.get(key) if key else None
+    values = dict(kind.defaults) if kind is not None else {}
+    if configured is not None:
+        values.update({f: getattr(configured, f) for f in configured.model_fields_set})
+    return TaskSettings.model_validate(values)

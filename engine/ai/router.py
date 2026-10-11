@@ -70,7 +70,9 @@ def estimate_tokens(chars: int) -> int:
     return -(-chars // 4)
 
 
-def route(cfg: Config, task_kind: str, *, input_chars: int, quoted_messages: int, data_level: str) -> str:
+def route(
+    cfg: Config, task_kind: str, *, input_chars: int, quoted_messages: int, data_level: str, default: str | None = None
+) -> str:
     """The tier for one request: the first routing rule that matches, otherwise the task's own tier.
     Decided from measurable facts about the request, before any call."""
     for rule in cfg.ai.routing:
@@ -84,6 +86,8 @@ def route(cfg: Config, task_kind: str, *, input_chars: int, quoted_messages: int
         if when.data_level is not None and when.data_level != data_level:
             continue
         return rule.tier
+    if default is not None:
+        return default
     task = cfg.ai.tasks.get(task_kind)
     return task.tier if task else "routine"
 
@@ -208,8 +212,9 @@ class Router:
         ][-20:]
         if sizes:
             return round(sum(sizes) / len(sizes))
-        settings = self.cfg.ai.tasks.get(kind)
-        return settings.expected_output if settings else 800
+        from engine.tasks import settings
+
+        return settings(self.cfg, self.store.plugins.tasks.get(kind), kind).expected_output
 
     def spent_on(self, kind: str) -> tuple[float, float]:
         """USD spent today and this month (UTC) on one kind of work."""

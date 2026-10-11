@@ -19,17 +19,29 @@ from engine.names import People
 from engine.ops import reference_for, schema_for
 from engine.playbook import guidance
 from engine.prompts import render
-from engine.storage import Store
+from engine.storage import Store, Stored, StoreError
+from engine.tasks import TaskKind, settings
 from engine.workspace import Workspace
 
 
 @dataclass(frozen=True)
 class Packet:
     task: AiTask
-    raw_input: str
+    raw_input: str  # what evidence may quote
     cleaned: Cleaned
     note: str
     too_long: bool
+    untrusted_material: bool = False  # a plugin's packet carried content that isn't the person's own words
+    cites: str | None = None  # what quotes from raw_input are cited as, when it isn't a saved source
+    about: tuple[str, str] | None = None  # (kind, id) of the record the work is about
+
+    @property
+    def input_chars(self) -> int:
+        return len(self.cleaned.text) if self.cleaned.text else len(self.raw_input)
+
+
+class PacketRefused(Exception):
+    """A plugin's packet couldn't be built; the message is for the person."""
 
 
 def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date) -> Packet:
@@ -37,17 +49,19 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     if req is None:
         raise KeyError(request_id)
     kind = store.plugins.task_kind(req.data["task"])
+    if kind.packet is not None:
+        return _plugin_packet(ws, store, cfg, req, kind, today)
     raw = source_text(ws, store, req.data.get("source"))
     known = _known_texts(ws, store, exclude=req.data.get("source"))
     cleaned = clean(raw, cfg.dispatch.cleaning, known)
     note = req.data.get("note") or ""
 
-    instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root)
+    instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
     stable = "\n\n".join(
         part
         for part in (
             "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
-            "# Practice\n" + guidance(kind.playbook),
+            "# Practice\n" + _guidance(kind),
             "# Open actions\n" + _open_actions(store, People(store, cfg)),
             "# Open questions\n" + _open_questions(store, People(store, cfg)),
             "# People\n" + _people(store, cfg),
@@ -75,17 +89,111 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         src = req.data.get("source") or ""
         request_parts.append(f'<untrusted source="{src}">\n{cleaned.text}\n</untrusted>')
     request = "\n\n".join(request_parts)
-    task_cfg = cfg.ai.tasks.get(kind.name)
-    task = AiTask(
+    task = _task(cfg, store, kind, instructions, stable, request)
+    return Packet(task, raw, cleaned, note, too_long=len(cleaned.text) > cfg.dispatch.max_input_chars)
+
+
+def _task(cfg: Config, store: Store, kind: TaskKind, instructions: str, stable: str, request: str) -> AiTask:
+    chosen = settings(cfg, kind)
+    return AiTask(
         kind=kind.name,
         instructions=instructions,
         stable=stable,
         request=request,
         output_schema=schema_for(list(kind.ops), store.plugins.ops),
-        temperature=task_cfg.temperature if task_cfg else 0.0,
-        max_output=task_cfg.max_output if task_cfg else 4000,
+        temperature=chosen.temperature,
+        max_output=chosen.max_output,
     )
-    return Packet(task, raw, cleaned, note, too_long=len(cleaned.text) > cfg.dispatch.max_input_chars)
+
+
+def _guidance(kind: TaskKind) -> str:
+    if kind.guidance_file is not None:
+        return kind.guidance_file.read_text(encoding="utf-8").strip()
+    return guidance(kind.playbook)
+
+
+REFERENCE_RULE = (
+    'Parts marked <reference quote="no"> are there to inform the work. Never quote or reproduce their words in your '
+    "answer, and never cite them as evidence."
+)
+
+
+def target_of(store: Store, request: dict) -> tuple[str, str] | None:
+    """(kind, id) of the record a request is about: the one it names, or the one whose stage entry started it."""
+    if request.get("about"):
+        return request["about"]["kind"], request["about"]["id"]
+    if request.get("stage_start"):
+        return request["stage_start"]["kind"], request["stage_start"]["record"]
+    return None
+
+
+def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: TaskKind, today: date) -> Packet:
+    """A run of a plugin's task kind sees its instructions, the op reference, its guidance and the parts the plugin's
+    packet function returns: stable parts first, this run's parts last. Content is marked by trust; reference-only
+    parts are marked not to be quoted."""
+    from engine.plugin_api import PacketParts, ReadView
+
+    plugin = kind.name.split("/", 1)[0]
+    about = target_of(store, req.data)
+    target = store.read().get(*about) if about else None
+    if kind.on is not None and (target is None or target.kind != kind.on):
+        raise PacketRefused(f"this work needs a {kind.on} to work on, and the one it was asked for is gone")
+    note = req.data.get("note") or ""
+    view = store.plugins._with_files(ReadView(store.read(), plugin))
+    config = store.plugins.registrars[plugin].config.model_copy(deep=True)
+    try:
+        parts = kind.packet(target, view, config, note)
+    except StoreError as err:
+        raise PacketRefused(str(err)) from None
+    except Exception as err:
+        store.plugins.disable(plugin, f"packet for {kind.name} failed: {err}")
+        raise PacketRefused("the add-on this work belongs to failed, and was turned off") from None
+    if not isinstance(parts, PacketParts):
+        store.plugins.disable(plugin, f"packet for {kind.name} returned something other than PacketParts")
+        raise PacketRefused("the add-on this work belongs to failed, and was turned off")
+    every = [*parts.stable, *parts.request]
+    instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
+    stable_parts = [
+        "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
+        "# Practice\n" + _guidance(kind),
+        REFERENCE_RULE if any(p.reference_only for p in every) else "",
+        *(_render_part(p) for p in parts.stable),
+    ]
+    request_parts = [f"Today is {today.isoformat()} ({today.strftime('%A')})."]
+    if note and req.data["origin"] == "schedule":
+        request_parts.append(f'<untrusted source="note">\n{note}\n</untrusted>')
+    elif note:
+        request_parts.append(f"<note>\n{note}\n</note>")
+    request_parts += [_render_part(p) for p in parts.request]
+    task = _task(
+        cfg,
+        store,
+        kind,
+        instructions,
+        "\n\n".join(p for p in stable_parts if p.strip()),
+        "\n\n".join(request_parts),
+    )
+    quotable = "\n\n".join(p.text for p in every if not p.reference_only)
+    empty = Cleaned("", 0, 0, False, 0)
+    return Packet(
+        task,
+        quotable,
+        empty,
+        note,
+        too_long=False,
+        untrusted_material=any(not p.trusted for p in every),
+        cites=f"{target.kind}:{target.id}" if target is not None else kind.name,
+        about=(target.kind, target.id) if target is not None else None,
+    )
+
+
+def _render_part(part: object) -> str:
+    title = " ".join(str(part.title).split()).replace('"', "'")
+    if part.reference_only:
+        return f'<reference quote="no" source="{title}">\n{part.text}\n</reference>'
+    if not part.trusted:
+        return f'<untrusted source="{title}">\n{part.text}\n</untrusted>'
+    return f"# {title}\n{part.text}"
 
 
 def _known_texts(ws: Workspace, store: Store, exclude: str | None) -> list[str]:

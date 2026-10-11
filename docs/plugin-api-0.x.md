@@ -10,6 +10,21 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.2 adds
+
+Manifests stay `'>=0.3,<0.4'`. Plugin task kinds can now do real work (see "Registering" in the guide):
+
+- `task_kind(..., label=, prompt="<plugin>/<name>", playbook="<plugin>/<name>", on=, packet=, tier=, max_output=,
+  expected_output=, temperature=)`: the plugin's own prompt (`prompts/<name>.md`, which the workspace overrides with
+  `prompts/<plugin>/<name>.md`) and guidance (`guidance/<name>.md`); the record kind a run works on; what the run sees,
+  as `PacketParts(stable, request)` of `Part(title, text, trusted, reference_only)`; and defaults the workspace's
+  `ai.tasks.<kind>` overrides field by field.
+- A request carries the record it is about (`Request.about`). `context.queue_request(task, note, about=)` and the
+  person (`POST /api/task-kinds/<name>/start`) start work on a record; `GET /api/task-kinds?kind=` lists what can be
+  started on a kind.
+- A run with a packet sees only its instructions, the op reference, its guidance and its parts. Untrusted parts make
+  the changeset untrusted; evidence may quote any part that isn't reference-only, cited as `<kind>:<id>`.
+
 ## What 0.3.1 adds
 
 Manifests stay `'>=0.3,<0.4'`.

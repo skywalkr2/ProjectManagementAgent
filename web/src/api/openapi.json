@@ -2765,6 +2765,73 @@
         "title": "Status",
         "type": "object"
       },
+      "TaskKindView": {
+        "description": "AI work the person can start, on a record of kind `on` or on the whole workspace.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "on"
+        ],
+        "title": "TaskKindView",
+        "type": "object"
+      },
+      "TaskStart": {
+        "additionalProperties": false,
+        "properties": {
+          "about": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "default": "",
+            "description": "Anything the person wants to say about this run; their own words.",
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "title": "TaskStart",
+        "type": "object"
+      },
+      "TaskStarted": {
+        "properties": {
+          "request": {
+            "title": "Request",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "TaskStarted",
+        "type": "object"
+      },
       "UndoChoice": {
         "properties": {
           "ops": {
@@ -4793,6 +4860,106 @@
           }
         },
         "summary": "Status"
+      }
+    },
+    "/api/task-kinds": {
+      "get": {
+        "description": "Plugin AI work the person can start on a record of `kind` (or on the workspace with no kind).",
+        "operationId": "task_kinds_api_task_kinds_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TaskKindView"
+                  },
+                  "title": "Response Task Kinds Api Task Kinds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Task Kinds"
+      }
+    },
+    "/api/task-kinds/{name}/start": {
+      "post": {
+        "operationId": "task_start_api_task_kinds__name__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Task Start"
       }
     }
   }

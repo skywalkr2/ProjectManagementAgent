@@ -302,6 +302,14 @@ class StageStart(BaseModel):
     changeset: str | None = Field(None, description="The id of the changeset that made the move, if known.")
 
 
+class About(BaseModel):
+    """The record a request's work is about, as it was when the work was asked for."""
+
+    model_config = ConfigDict(extra="forbid")
+    kind: str = Field(description="The record's kind.")
+    id: str = Field(description="The record's id.")
+
+
 class Request(Record):
     """A unit of work for the assistant. The engine creates it when something is handed in, a stage starts a task or
     a schedule fires, and moves it through its states; the person can send back or dismiss it."""
@@ -311,6 +319,7 @@ class Request(Record):
 
     task: str = Field(description="The kind of work to do, as an AI task kind id.")
     stage_start: StageStart | None = Field(None, description="The stage entry that requested this task.")
+    about: About | None = Field(None, description="The record the work is about, for a task kind that works on one.")
     approval: Literal["required", "granted"] | None = Field(
         None,
         description="Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm.",

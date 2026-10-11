@@ -446,6 +446,24 @@ class FileView(BaseModel):
     added_at: str
 
 
+class TaskKindView(BaseModel):
+    """AI work the person can start, on a record of kind `on` or on the whole workspace."""
+
+    name: str
+    label: str
+    on: str | None
+
+
+class TaskStart(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    about: RecordReference | None = None
+    note: str = Field("", description="Anything the person wants to say about this run; their own words.")
+
+
+class TaskStarted(BaseModel):
+    request: str
+
+
 class PersonActionView(BaseModel):
     """Something a person can start on a record, a file or the workspace."""
 

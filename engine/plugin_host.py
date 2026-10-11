@@ -209,7 +209,7 @@ class PluginHost:
             config_path = self.store.path.parent / "config" / "plugins" / f"{name}.yaml"
             raw = yaml.safe_load(config_path.read_text()) if config_path.exists() else {}
             config = schema.model_validate({} if raw is None else raw)
-            registrar = Registrar(name, config)
+            registrar = Registrar(name, config, path.parent)
             symbols(manifest.entry)(registrar)
             self._validate(manifest, registrar)
             self.registrars[name] = registrar
@@ -381,6 +381,11 @@ class PluginHost:
                 raise ValueError("task may use only core or own ops")
             if "file.add" in task.ops:
                 raise ValueError("file.add is made only by person actions, never by a task")
+            if task.on is not None and task.on not in REGISTRY and task.on not in registrar.records:
+                raise ValueError(f"task {task.name} is on an unknown record kind {task.on}")
+            for name in (task.prompt, task.playbook):
+                if "/" in name and not name.startswith(registrar.name + "/"):
+                    raise ValueError("a task's prompt and guidance are core ones or the plugin's own")
         for model in registrar.records.values():
             if "stage" in vars(model).get("__annotations__", {}):
                 raise ValueError("the stage field belongs to the core; record types may not redefine it")
@@ -550,14 +555,14 @@ class PluginHost:
         context = WriteContext(actor="plugin", trust="untrusted", op=f"{name}/event")
         with self.store.transaction() as tx:
             for kind, data in commands:
-                allowed_fields = {"request": {"task", "note"}, "question": {"title", "text"}}
+                allowed_fields = {"request": {"task", "note", "about"}, "question": {"title", "text"}}
                 if kind not in allowed_fields or not set(data) <= allowed_fields[kind]:
                     raise StoreError("event handlers may only queue requests or file questions")
                 if kind == "request":
                     task = data["task"]
                     if "/" in task and not task.startswith(name + "/"):
                         raise StoreError("requesting another plugin requires an interface")
-                    self.task_kind(task)
+                    check_about(tx, self.task_kind(task), data.get("about"))
                     data = {**data, "origin": "schedule", "created_at": datetime.now(UTC).isoformat()}
                     if event == "stage.moved" and payload and payload.get("to"):
                         from engine.stages import wording
@@ -585,6 +590,18 @@ class PluginHost:
         for key in list(sys.modules):
             if any(key == name or key.startswith(name + ".") for name in self._modules):
                 del sys.modules[key]
+
+
+def check_about(view: Any, kind: Any, about: dict[str, str] | None) -> None:
+    """A request for a task kind declared `on` a record kind must name a live record of that kind; others name none."""
+    if kind.on is None:
+        if about is not None:
+            raise StoreError(f"{kind.name} doesn't work on a record")
+        return
+    if about is None or about.get("kind") != kind.on:
+        raise StoreError(f"{kind.name} works on a {kind.on}")
+    if view.get(about["kind"], about["id"]) is None:
+        raise StoreError(f"there is no {about['kind']} {about['id']}")
 
 
 def _origin_parameter(fn: Any) -> str | None:
