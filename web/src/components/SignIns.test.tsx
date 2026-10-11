@@ -42,12 +42,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("the section is hidden when no add-on signs in to a service", async () => {
+test("with no sign-ins, the section says when they appear and offers to open Add-ons", async () => {
+  const user = userEvent.setup();
+  const onOpenAddons = vi.fn();
   const calls = fakeApi({ ...settings, "GET sign-ins": () => [] });
-  open();
+  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} />);
   await waitFor(() => expect(calls.some((c) => c.route === "GET sign-ins")).toBe(true));
-  await screen.findByText("No settings match.");
-  expect(screen.queryByRole("heading", { name: "Sign-ins" })).toBeNull();
+  const section = (await screen.findByRole("heading", { name: "Sign-ins" })).closest("section") as HTMLElement;
+  expect(section).toHaveTextContent("Sign-ins appear here once an add-on that signs in (mail, calendar) is turned on.");
+  await user.click(within(section).getByRole("button", { name: "Open Add-ons" }));
+  expect(onOpenAddons).toHaveBeenCalledTimes(1);
 });
 
 test("each status is in words, with one action per row", async () => {

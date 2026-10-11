@@ -21,6 +21,7 @@ const account = (name: string, extra: Partial<S["AiAccountView"]> = {}): S["AiAc
   used_for: [],
   has_key: true,
   key_state: extra.has_key === false ? "none" : "saved",
+  key_where: null,
   ...extra,
 });
 
@@ -84,28 +85,60 @@ test("no accounts says so, and a list that didn't load says so quietly", async (
   expect(screen.queryByRole("heading", { name: "Your AI accounts" })).toBeNull();
 });
 
-test("Test runs the connection test and lists what this account did", async () => {
+test("Test calls the account's own test and shows its one result line", async () => {
   const user = userEvent.setup();
   const calls = api({
-    "POST ai/test": () => [
-      { tier: "routine", account: "main", main: true, ok: true, detail: "answered" },
-      { tier: "deep", account: "main", main: true, ok: false, detail: "The key was refused." },
-      { tier: "routine", account: "other", main: false, ok: true, detail: "answered" },
-    ],
+    "POST ai/accounts/main/test": () => [{ tier: "account", account: "main", main: true, ok: true, detail: "answered" }],
   });
   open();
   await user.click(within(await row("main")).getByRole("button", { name: "Test main" }));
-  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/test")).toBe(true));
-  const lines = await within(await row("main")).findAllByRole("listitem");
-  expect(lines.map((l) => l.textContent)).toEqual(["Everyday work: answered ✓", "Harder work: didn't answer: The key was refused. ✗"]);
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/accounts/main/test")).toBe(true));
+  expect(calls.some((c) => c.route === "POST ai/test")).toBe(false);
+  expect(await within(await row("main")).findByText("Answered")).toBeInTheDocument();
+  expect(await row("main")).toHaveTextContent("Answered ✓");
 });
 
-test("testing an account that does no work yet says there was nothing to test", async () => {
+test("an account that does no work yet can be tested, and a failure shows the detail", async () => {
   const user = userEvent.setup();
-  api({ "POST ai/test": () => [] });
+  api({
+    "POST ai/accounts/spare/test": () => [{ tier: "account", account: "spare", main: false, ok: false, detail: "The key was refused." }],
+  });
   open();
   await user.click(within(await row("spare")).getByRole("button", { name: "Test spare" }));
-  expect(await screen.findByText("spare isn't used for any work yet, so there was nothing to test.")).toBeInTheDocument();
+  expect(await within(await row("spare")).findByText(/Didn't answer: The key was refused\./)).toBeInTheDocument();
+  expect(await row("spare")).toHaveTextContent("✗");
+  expect(screen.queryByText(/nothing to test/)).toBeNull();
+});
+
+test("a key that isn't there says where it was looked for, in words and with a mark", async () => {
+  api({
+    "GET ai/accounts": () => [
+      account("lost", { has_key: true, key_state: "missing", key_where: "the environment variable NAME", used_for: ["routine"] }),
+      account("plain", { has_key: false, key_state: "none" }),
+    ],
+  });
+  open();
+  const lost = await row("lost");
+  expect(lost).toHaveTextContent("Key not found: the environment variable NAME");
+  expect(lost).not.toHaveTextContent("Key saved");
+  expect(lost.querySelector(".key-missing")).toHaveTextContent("! Key not found");
+  expect(await row("plain")).toHaveTextContent("No key");
+  expect(await row("plain")).not.toHaveTextContent("Key not found");
+});
+
+test("accounts that work come first; one with a missing key or no work follows", async () => {
+  api({
+    "GET ai/accounts": () => [
+      account("idle"),
+      account("lost", { key_state: "missing", key_where: "somewhere", used_for: ["routine"] }),
+      account("busy", { used_for: ["routine"] }),
+      account("also-busy", { used_for: ["deep"] }),
+    ],
+  });
+  open();
+  await row("busy");
+  const names = Array.from(document.querySelectorAll("li[data-row] strong")).map((n) => n.textContent);
+  expect(names).toEqual(["busy", "also-busy", "idle", "lost"]);
 });
 
 test("Remove acts at once, reads back with Undo, and Undo posts the change back to the settings", async () => {

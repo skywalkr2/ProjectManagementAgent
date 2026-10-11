@@ -38,7 +38,7 @@ const ITEMS = [
   setting("workspace.user.timezone", "UTC"),
 ];
 
-const CORE = ["workspace", "template", "ai", "backup", "people", "first_note"];
+const CORE = ["workspace", "template", "ai", "backup", "people", "first_note", "addons"];
 
 function api(steps: S["SetupStepView"][], extra: Record<string, (body: unknown) => unknown> = {}) {
   return fakeApi({
@@ -66,9 +66,10 @@ function api(steps: S["SetupStepView"][], extra: Record<string, (body: unknown) 
 
 const open = (props: Partial<Parameters<typeof Welcome>[0]> = {}) => {
   const onOpenPeople = vi.fn();
+  const onOpenAddons = vi.fn();
   const onHandIn = vi.fn();
-  const view = renderApp(<Welcome focusStep={null} onOpenPeople={onOpenPeople} onHandIn={onHandIn} {...props} />);
-  return { onOpenPeople, onHandIn, ...view };
+  const view = renderApp(<Welcome focusStep={null} onOpenPeople={onOpenPeople} onOpenAddons={onOpenAddons} onHandIn={onHandIn} {...props} />);
+  return { onOpenPeople, onOpenAddons, onHandIn, ...view };
 };
 
 const section = (id: string) => document.querySelector(`[data-step="${id}"]`) as HTMLElement;
@@ -178,7 +179,7 @@ test("the template step applies one template and asks before the app restarts", 
   renderApp(
     <RestartProvider hellos={1}>
       <RestartNotice />
-      <Welcome focusStep={null} onOpenPeople={() => undefined} onHandIn={() => undefined} />
+      <Welcome focusStep={null} onOpenPeople={() => undefined} onOpenAddons={() => undefined} onHandIn={() => undefined} />
     </RestartProvider>,
   );
   expect(await screen.findByText("Chapters and drafts.")).toBeInTheDocument();
@@ -360,4 +361,36 @@ test("the step says plainly that applying turns on item types and may need a res
   api([step("template")]);
   open();
   expect(await screen.findByText(/Applying one turns on the item types it lists and may need a restart; the app asks you first\./)).toBeInTheDocument();
+});
+
+const installed = (name: string, enabled: boolean): S["InstalledPackView"] =>
+  ({ name, enabled, state: enabled ? "enabled" : "disabled", description: "", reason: null, version: "1.0.0" }) as S["InstalledPackView"];
+
+test("the add-ons step says what add-ons do, names the ones installed but off, and opens the Add-ons screen", async () => {
+  const user = userEvent.setup();
+  api([step("addons")], {
+    "GET packs": () => ({
+      enabled: true,
+      feeds: [],
+      available: [],
+      installed: [installed("mail-sample", false), installed("calendar-sample", true), installed("notes-sample", false)],
+    }),
+  });
+  const { onOpenAddons } = open();
+  const addons = await screen.findByRole("heading", { name: "Turn on your add-ons" });
+  expect(addons).toBeInTheDocument();
+  expect(section("addons")).toHaveTextContent(
+    "Add-ons connect the assistant to your mail, calendar and other tools. Turn on the ones you installed, then sign in to them.",
+  );
+  const off = await within(section("addons")).findByRole("list", { name: "Installed but turned off" });
+  expect(within(off).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Mail sample", "Notes sample"]);
+  await user.click(within(section("addons")).getByRole("button", { name: "Open Add-ons" }));
+  expect(onOpenAddons).toHaveBeenCalledTimes(1);
+});
+
+test("the add-ons step still has its button when nothing is installed or the list didn't load", async () => {
+  api([step("addons")]);
+  open();
+  expect(await screen.findByRole("button", { name: "Open Add-ons" })).toBeInTheDocument();
+  expect(screen.queryByText("Installed but turned off")).toBeNull();
 });

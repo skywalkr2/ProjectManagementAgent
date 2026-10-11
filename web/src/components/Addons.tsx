@@ -6,7 +6,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
 import { Heading, Tab, TabList, TabPanel, Tabs } from "react-aria-components";
-import { api, type S } from "../lib/api";
+import { api, ApiError, type S } from "../lib/api";
 import { whenText as when } from "../lib/dates";
 import { useSmallMoney, useTotal } from "../lib/money";
 import {
@@ -20,6 +20,7 @@ import {
   type Summary,
 } from "../lib/packs";
 import { problemText } from "../lib/problem";
+import { useAfterSave } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
@@ -60,6 +61,50 @@ export function Addons(props: { onBack: () => void }) {
         </TabPanel>
       </Tabs>
     </section>
+  );
+}
+
+/** Turning an add-on on or off: acts at once and reads back with Undo, then the restart question if one is needed (never a
+ * restart by itself). A refusal is kept for the row to show in the server's own words. */
+function useSwitch(name: string, label: string) {
+  const { t } = useWords();
+  const client = useQueryClient();
+  const afterSave = useAfterSave();
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+  const run = async (on: boolean) => {
+    setBusy(true);
+    setProblem("");
+    try {
+      // The settings as they are now, so a change made meanwhile is noticed rather than overwritten.
+      const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+      const saved = await (on ? api.packOn : api.packOff)(name, current.fingerprint);
+      await afterSave(saved, { message: t(on ? "addons.switched_on" : "addons.switched_off", { name: label }) });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return { busy, problem, run };
+}
+
+/** The row's one primary action for an installed add-on: Turn on when it is off, Turn off when it is on. */
+function SwitchButton(props: { on: boolean; label: string; busy: boolean; id?: string; onRun: () => void }) {
+  const { t } = useWords();
+  return (
+    <button
+      type="button"
+      id={props.id}
+      className="btn primary"
+      data-key="primary"
+      disabled={props.busy}
+      aria-label={t(props.on ? "addons.switch_off_named" : "addons.switch_on_named", { name: props.label })}
+      onClick={props.onRun}
+    >
+      {t(props.on ? "addons.switch_off" : "addons.switch_on")}
+    </button>
   );
 }
 
@@ -168,6 +213,7 @@ function PackRow(props: { pack: Pack; index: number; onGet: () => void }) {
   ].filter(Boolean);
   const safeHomepage = pack.homepage && pack.homepage_domain && domainOf(pack.homepage) ? pack.homepage : null;
   const size = (n: number) => n.toLocaleString();
+  const power = useSwitch(pack.id, pack.name);
 
   const actions: MenuAction[] = [];
   if (installed && update) actions.push({ id: "update", label: t("addons.get_update"), run: props.onGet });
@@ -212,7 +258,11 @@ function PackRow(props: { pack: Pack; index: number; onGet: () => void }) {
               {t("addons.update", { from: pack.installed_version ?? "", to: pack.version })}
             </p>
           )}
-          {installed && !pack.enabled && <p className="hint">{t("addons.turn_on", { id: pack.id })}</p>}
+          {power.problem && (
+            <p className="problem-note" role="alert">
+              {power.problem}
+            </p>
+          )}
           {safeHomepage && (
             <span className="sub">{t("addons.homepage_line", { domain: pack.homepage_domain ?? "" })}</span>
           )}
@@ -229,6 +279,9 @@ function PackRow(props: { pack: Pack; index: number; onGet: () => void }) {
             >
               {t("addons.get")}
             </button>
+          )}
+          {installed && !pack.enabled && (
+            <SwitchButton on={false} label={pack.name} busy={power.busy} id={`pack-switch-${index}`} onRun={() => void power.run(true)} />
           )}
           <RowMenu label={pack.name} actions={actions} />
         </div>
@@ -376,6 +429,8 @@ function InstalledRow(props: { item: Installed; index: number }) {
   const { t } = useWords();
   const { item } = props;
   const base = `installed-${props.index}`;
+  const power = useSwitch(item.name, item.name);
+  const isOn = item.enabled;
   const status =
     item.state === "enabled"
       ? t("addons.state.running")
@@ -384,13 +439,21 @@ function InstalledRow(props: { item: Installed; index: number }) {
         : t("addons.state.off");
   return (
     <li className="line" data-row tabIndex={-1} aria-labelledby={`${base}-name`}>
-      <div className="row single">
+      <div className="row pair">
         <div className="text pack">
           <strong id={`${base}-name`}>{item.name}</strong>
           {item.version && <span className="sub">{t("addons.version", { version: item.version })}</span>}
           {item.description && <p className="pack-summary">{item.description}</p>}
           <p className="sub">{status}</p>
+          {power.problem && (
+            <p className="problem-note" role="alert">
+              {power.problem}
+            </p>
+          )}
           <WhatLines what={item.what} base={base} />
+        </div>
+        <div className="acts">
+          <SwitchButton on={isOn} label={item.name} busy={power.busy} onRun={() => void power.run(!isOn)} />
         </div>
       </div>
     </li>

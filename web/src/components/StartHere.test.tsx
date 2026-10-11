@@ -16,7 +16,7 @@ const step = (id: string, extra: Partial<S["SetupStepView"]> = {}): S["SetupStep
   ...extra,
 });
 
-const CORE = ["workspace", "template", "ai", "backup", "people", "first_note"];
+const CORE = ["workspace", "template", "ai", "backup", "people", "first_note", "addons"];
 
 function api(steps: S["SetupStepView"][], finished = false) {
   return fakeApi({ "GET setup": () => ({ steps, finished, local: true }) });
@@ -38,6 +38,15 @@ test("a new workspace lists every step still to do, each saying in words that it
   for (const item of steps) expect(item).toHaveTextContent("Not done yet");
   expect(steps[0]).toHaveTextContent("Name the workspace and say who you are");
   expect(steps[2]).toHaveTextContent("Add an AI account and test it");
+  expect(steps[steps.length - 1]).toHaveTextContent("Turn on your add-ons");
+});
+
+test("the add-ons step opens the guide at its own step", async () => {
+  const user = userEvent.setup();
+  api([step("addons")]);
+  const { onOpenGuide } = open();
+  await user.click(await screen.findByRole("button", { name: "Set up: Turn on your add-ons" }));
+  expect(onOpenGuide).toHaveBeenLastCalledWith("addons");
 });
 
 test("steps that are done or skipped are not listed", async () => {

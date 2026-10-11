@@ -8,7 +8,7 @@ import { useAct } from "../lib/act";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
 import { useStartSignIn } from "../lib/sign-in-start";
-import { formatValue, labelOf } from "../lib/settings";
+import { addonLabel, formatValue, labelOf } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
@@ -25,7 +25,12 @@ export interface FocusStep {
   n: number;
 }
 
-export function Welcome(props: { focusStep: FocusStep | null; onOpenPeople: () => void; onHandIn: () => void }) {
+export function Welcome(props: {
+  focusStep: FocusStep | null;
+  onOpenPeople: () => void;
+  onOpenAddons: () => void;
+  onHandIn: () => void;
+}) {
   const { t, has } = useWords();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   const { start, review } = useActionReview();
@@ -83,6 +88,8 @@ export function Welcome(props: { focusStep: FocusStep | null; onOpenPeople: () =
                       {t("welcome.people.open")}
                     </button>
                   </div>
+                ) : step.id === "addons" ? (
+                  <AddonsStep onOpen={props.onOpenAddons} />
                 ) : step.id === "first_note" ? (
                   <div className="row-end">
                     <button type="button" className="btn" onClick={props.onHandIn}>
@@ -136,6 +143,34 @@ function SignInStep(props: { name: string; label: string; done: boolean }) {
           onClick={() => void start()}
         >
           {busy ? t("sign_in.working") : t("sign_in.sign_in")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+/** The add-ons installed here and turned off, by name, with one button that opens the Add-ons screen. */
+function AddonsStep(props: { onOpen: () => void }) {
+  const { t, has } = useWords();
+  const packs = useQuery({ queryKey: ["packs"], queryFn: api.packs });
+  const off = (packs.data?.installed ?? []).filter((p) => !p.enabled);
+  return (
+    <>
+      {off.length > 0 && (
+        <div className="field">
+          <span className="what" id="guide-addons-off">
+            {t("welcome.addons.off_title")}
+          </span>
+          <ul className="plain-list" aria-labelledby="guide-addons-off">
+            {off.map((p) => (
+              <li key={p.name}>{addonLabel(p.name, t, has)}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="row-end">
+        <button type="button" className="btn" onClick={props.onOpen}>
+          {t("welcome.addons.open")}
         </button>
       </div>
     </>

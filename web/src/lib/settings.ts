@@ -84,10 +84,22 @@ export function groupLabel(group: string, t: T, has: Has): string {
   return words ? words[0].toUpperCase() + words.slice(1) : group;
 }
 
-/** What to call a setting by its key: the label its screen shows, else its group's, else a general phrase. */
+/** The words that end a name: dots, ellipses and spaces, so a sentence built around the name ends in exactly one period. */
+const trimEnd = (text: string) => text.replace(/[\s.…]+$/u, "");
+
+/** A setting's short name for use in a sentence: the wording sheet's label, otherwise the first sentence of its
+ * description without its closing period, otherwise its key. */
+export function shortLabel(item: Pick<Item, "key" | "description">, t: T, has: Has): string {
+  const key = `settings.key.${item.key}`;
+  if (has(key)) return trimEnd(t(key)) || item.key;
+  const first = (item.description ?? "").trim().split(/(?<=[.!?])\s+/u)[0] ?? "";
+  return trimEnd(first) || item.key;
+}
+
+/** What to call a setting by its key: the label its screen shows (shortened to a name), else its group's, else a general phrase. */
 export function labelForKey(key: string, items: Item[], t: T, has: Has): string {
   const item = items.find((i) => i.key === key);
-  if (item) return labelOf(item, t, has);
+  if (item) return shortLabel(item, t, has);
   if (has(`settings.key.${key}`)) return t(`settings.key.${key}`);
   const parts = key.split(".");
   for (let n = parts.length - 1; n >= 1; n -= 1) {
@@ -110,7 +122,7 @@ export function restartWhat(keys: string[], items: Item[], t: T, has: Has): stri
   if (!names.length) return "";
   const shown = names.slice(0, RESTART_SHOWN).join(", ");
   const list = names.length > RESTART_SHOWN ? t("restart.for_more", { list: shown, n: names.length - RESTART_SHOWN }) : shown;
-  return t("restart.for", { what: list });
+  return t("restart.for", { what: trimEnd(list) });
 }
 
 export interface Group {

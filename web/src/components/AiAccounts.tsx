@@ -19,6 +19,12 @@ type Mode = "key" | "models" | null;
 const EVERYDAY = "everyday";
 const HARDER = "harder";
 
+/** Accounts that work come first; one whose key is missing, or that does no work yet, follows. Otherwise the order is kept. */
+function inOrder(list: Account[]): Account[] {
+  const working = (a: Account) => a.key_state !== "missing" && a.used_for.length > 0;
+  return [...list.filter(working), ...list.filter((a) => !working(a))];
+}
+
 export function AiAccounts(props: {
   /** Whether keys can be pasted here; read from the setup when not given. */
   local?: boolean;
@@ -44,7 +50,7 @@ export function AiAccounts(props: {
         <>
           <p className="hint">{t("ai_accounts.intro")}</p>
           <ul className="queue">
-            {accounts.data.map((account) => (
+            {inOrder(accounts.data).map((account) => (
               <AccountRow
                 key={account.name}
                 account={account}
@@ -69,7 +75,7 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [testing, setTesting] = useState(false);
-  const [results, setResults] = useState<S["AiTestResult"][] | null>(null);
+  const [result, setResult] = useState<S["AiTestResult"] | null>(null);
   const [key, setKey] = useState("");
   const [models, setModels] = useState<Record<string, string>>({});
   const [harder, setHarder] = useState("");
@@ -77,11 +83,18 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
   const firstField = useRef<HTMLInputElement>(null);
 
   const workName = (tier: string) => (has(`welcome.ai.tier.${tier}`) ? t(`welcome.ai.tier.${tier}`) : tier);
-  const status = account.has_key
-    ? t("ai_accounts.key_saved")
-    : kind && !kind.needs_key
-      ? t("ai_accounts.no_key_needed")
-      : t("ai_accounts.no_key");
+  const keyState = account.key_state ?? (account.has_key ? "saved" : "none");
+  const missing = keyState === "missing";
+  const status =
+    keyState === "saved"
+      ? t("ai_accounts.key_saved")
+      : missing
+        ? account.key_where
+          ? t("ai_accounts.key_missing", { where: account.key_where })
+          : t("ai_accounts.key_missing_plain")
+        : kind && !kind.needs_key
+          ? t("ai_accounts.no_key_needed")
+          : t("ai_accounts.no_key");
   const doing = account.used_for.length ? t("ai_accounts.used_for", { work: account.used_for.map(workName).join(", ") }) : t("ai_accounts.unused");
 
   const open = (next: Exclude<Mode, null>) => {
@@ -150,10 +163,11 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
   const test = async () => {
     setTesting(true);
     setProblem("");
-    setResults(null);
+    setResult(null);
     try {
-      const all = await api.testAi();
-      setResults(all.filter((r) => r.account === account.name));
+      const answer = await api.testAccount(account.name);
+      // One answer for the account; a list is read by its first entry.
+      setResult((Array.isArray(answer) ? answer[0] : answer) ?? null);
     } catch (err) {
       fail(err);
     } finally {
@@ -173,14 +187,13 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
     harder.trim() !== "" || Object.entries(models).some(([short, id]) => id.trim() !== (account.models[short] ?? ""));
   const modelsBlank = Object.values(models).some((id) => id.trim() === "");
   const examplesId = `${base}-examples`;
-  const lines = (results ?? []).map((r) => ({
-    key: `${r.tier}:${r.main}`,
-    ok: r.ok,
-    text: t("ai_accounts.test_line", {
-      work: workName(r.tier),
-      outcome: r.ok ? t("welcome.ai.answered") : r.detail ? t("welcome.ai.failed", { detail: r.detail }) : t("welcome.ai.failed_plain"),
-    }),
-  }));
+  const resultText = result
+    ? result.ok
+      ? t("ai_accounts.test_ok")
+      : result.detail
+        ? t("ai_accounts.test_failed", { detail: result.detail })
+        : t("ai_accounts.test_failed_plain")
+    : "";
 
   return (
     <li className="line" data-row tabIndex={-1} aria-labelledby={`${base}-title`}>
@@ -188,8 +201,8 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
         <div className="text">
           <strong id={`${base}-title`}>{account.name}</strong>
           {kind && kind.name !== account.name && <span className="sub">{t("ai_accounts.service", { service: kind.name })}</span>}
-          <span className="sub">
-            <span aria-hidden="true">{account.has_key ? "✓ " : "– "}</span>
+          <span className={missing ? "sub key-missing" : "sub"}>
+            <span aria-hidden="true">{keyState === "saved" ? "✓ " : missing ? "! " : "– "}</span>
             {status}
           </span>
           <span className="sub">{doing}</span>
@@ -288,16 +301,11 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
           )}
           <div role="status" aria-live="polite">
             {testing && <p className="hint">{t("ai_accounts.testing")}</p>}
-            {results && lines.length === 0 && <p className="hint">{t("ai_accounts.test_nothing", { name: account.name })}</p>}
-            {lines.length > 0 && (
-              <ul className="plain-list test-results">
-                {lines.map((l) => (
-                  <li key={l.key} className={l.ok ? "result-ok" : "result-bad"}>
-                    {l.text}
-                    <span aria-hidden="true">{l.ok ? " ✓" : " ✗"}</span>
-                  </li>
-                ))}
-              </ul>
+            {result && (
+              <p className={result.ok ? "result-ok" : "result-bad"}>
+                {resultText}
+                <span aria-hidden="true">{result.ok ? " ✓" : " ✗"}</span>
+              </p>
             )}
           </div>
         </div>

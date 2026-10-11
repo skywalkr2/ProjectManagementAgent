@@ -196,6 +196,11 @@ export const api = {
 
   packs: () => call<S["PacksView"]>("GET", "packs"),
   refreshPacks: () => call<S["PacksView"]>("POST", "packs/refresh"),
+  /** Adds an installed add-on to the ones that run; its code runs after the restart the person chooses. With Undo. */
+  packOn: (name: string, fingerprint: string) =>
+    call<S["SettingsSaved"]>("POST", `packs/${id(name)}/on`, { fingerprint } satisfies S["FingerprintIn"]),
+  packOff: (name: string, fingerprint: string) =>
+    call<S["SettingsSaved"]>("POST", `packs/${id(name)}/off`, { fingerprint } satisfies S["FingerprintIn"]),
 
   signIns: () => call<S["SignInView"][]>("GET", "sign-ins"),
   startSignIn: (name: string) => call<S["SignInStarted"]>("POST", `sign-ins/${named(name)}/start`),
@@ -228,6 +233,8 @@ export const api = {
   removeAccount: (name: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}/remove`, { fingerprint } satisfies S["FingerprintIn"]),
   testAi: () => call<S["AiTestResult"][]>("POST", "ai/test"),
+  /** Tests one account on its first model, whether or not any work uses it. */
+  testAccount: (name: string) => call<S["AiTestResult"][]>("POST", `ai/accounts/${id(name)}/test`),
 };
 
 export const EVENTS_PATH = "api/events";

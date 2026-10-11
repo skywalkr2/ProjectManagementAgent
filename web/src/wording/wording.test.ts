@@ -51,7 +51,7 @@ test("key families built at run time are complete", () => {
     "changes.second.same_account",
     ...["ok", "failed"].map((x) => `setup.job_${x}`),
     "setup.job_other",
-    ...["workspace", "template", "ai", "backup", "people", "first_note"].flatMap((x) => [`setup_step.${x}`, `setup_step.${x}.explanation`]),
+    ...["workspace", "template", "ai", "backup", "people", "first_note", "addons"].flatMap((x) => [`setup_step.${x}`, `setup_step.${x}.explanation`]),
     ...["stdin", "file"].map((x) => `welcome.ai.packet_via.${x}`),
     ...["stdout", "outbox"].map((x) => `welcome.ai.output_via.${x}`),
     ...["open", "internal", "restricted"].map((x) => `welcome.ai.data.${x}`),

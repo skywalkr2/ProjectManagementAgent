@@ -599,10 +599,13 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
-  test("Add-ons opens from Settings, lists the bundled add-on under Installed, and passes the accessibility checks", async ({ page }) => {
+  test("Add-ons opens from the views and from Settings, lists the bundled add-on under Installed, and passes the accessibility checks", async ({ page }) => {
     await signIn(page);
-    await page.getByRole("button", { name: "Settings" }).click();
-    await page.getByRole("button", { name: "Add-ons" }).click();
+    await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("main").getByRole("button", { name: "Add-ons" }).click();
+    await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
+    await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Today" }).click();
+    await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Add-ons" }).click();
     await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Available" })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByText(/This copy of the app doesn't list a catalog/)).toBeVisible();
@@ -613,13 +616,41 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
-  test("on a wide screen the Hand something in button stays on one line beside the views", async ({ page }) => {
+  test("on a wide screen the name, views and buttons share one row, with the status under it", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await signIn(page);
-    const box = await page.getByRole("button", { name: "Hand something in" }).first().boundingBox();
-    const tabs = await page.getByRole("navigation", { name: "Views" }).boundingBox();
-    expect(box!.height).toBeLessThan(50);
-    expect(Math.abs(box!.y - tabs!.y)).toBeLessThan(20);
+    const header = page.getByRole("banner");
+    const handIn = await header.getByRole("button", { name: "Hand something in" }).boundingBox();
+    const tabs = await header.getByRole("navigation", { name: "Views" }).boundingBox();
+    const brand = await header.locator(".brand").boundingBox();
+    const status = await header.locator(".top-meta").boundingBox();
+    expect(handIn!.height).toBeLessThan(50);
+    expect(Math.abs(handIn!.y - tabs!.y)).toBeLessThan(20);
+    expect(Math.abs(brand!.y - tabs!.y)).toBeLessThan(30);
+    // The buttons sit at the end of the row, after the views, and the status row is below all of them.
+    expect(handIn!.x).toBeGreaterThan(tabs!.x + tabs!.width - 1);
+    expect(status!.y).toBeGreaterThanOrEqual(Math.max(handIn!.y + handIn!.height, tabs!.y + tabs!.height) - 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await checkAccessibility(page);
+  });
+
+  test("on a phone the name and buttons stay on top, the views follow as a strip, and the page never scrolls sideways", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 800 });
+    await signIn(page);
+    const header = page.getByRole("banner");
+    const handIn = await header.getByRole("button", { name: "Hand something in" }).boundingBox();
+    const brand = await header.locator(".brand").boundingBox();
+    const tabs = await header.getByRole("navigation", { name: "Views" }).boundingBox();
+    expect(Math.abs(handIn!.y - brand!.y)).toBeLessThan(30);
+    expect(tabs!.y).toBeGreaterThanOrEqual(brand!.y + brand!.height - 1);
+    expect(tabs!.x + tabs!.width).toBeLessThanOrEqual(390);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    // A view past the edge of the strip can still be reached by keyboard.
+    await header.getByRole("button", { name: "Add-ons" }).focus();
+    await header.getByRole("button", { name: "Add-ons" }).press("Enter");
+    await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await checkAccessibility(page);
   });
 
   test("nothing broke the content security policy or threw", async () => {

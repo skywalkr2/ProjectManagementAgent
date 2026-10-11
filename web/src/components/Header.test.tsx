@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { RestartNotice, RestartProvider } from "../lib/restart";
+import { RestartNotice, RestartProvider, useRestart } from "../lib/restart";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { Header } from "./Header";
 
@@ -69,7 +69,7 @@ test("Files is one of the views beside Today, Stages and People & projects", asy
     <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="files" onView={onView} onHandIn={() => {}} onAsk={() => {}} onHelp={() => {}} />,
   );
   const views = screen.getByRole("navigation", { name: "Views" });
-  expect(Array.from(views.querySelectorAll("button")).map((b) => b.textContent)).toEqual(["Today", "Stages", "Files", "Sources", "People & projects", "Settings"]);
+  expect(Array.from(views.querySelectorAll("button")).map((b) => b.textContent)).toEqual(["Today", "Stages", "Files", "Sources", "People & projects", "Settings", "Add-ons"]);
   expect(screen.getByRole("button", { name: "Files" })).toHaveAttribute("aria-current", "page");
   screen.getByRole("button", { name: "Stages" }).click();
   expect(onView).toHaveBeenCalledWith("stages");
@@ -129,6 +129,7 @@ test("panels on the work tab are views of their own; other tabs' panels are not"
     "Goals",
     "People & projects",
     "Settings",
+    "Add-ons",
   ]);
   await user.click(screen.getByRole("button", { name: "Settings" }));
   expect(onView).toHaveBeenCalledWith("settings");
@@ -205,35 +206,132 @@ function waiting(keys: string[], items: S["SettingItem"][]) {
 
 test("the restart line names what waits by the labels Settings shows, never the keys", async () => {
   waiting(
-    ["storage.backups.keep", "workspace.plugins.enabled"],
+    ["ui.toast_seconds", "workspace.plugins.enabled"],
     [
-      settingItem("storage.backups.keep", "How many backups stay."),
+      settingItem("ui.toast_seconds", "How long a message stays."),
       settingItem("workspace.plugins.enabled", "Which add-ons are on", { type: "list", value: [], default: [] }),
     ],
   );
-  const line = await screen.findByText("Restart to use: Backups to keep in each folder, Which add-ons are on.");
+  const line = await screen.findByText("Restart to use: Seconds a message stays on screen, Which add-ons are on.");
   expect(line).toBeInTheDocument();
-  expect(document.body).not.toHaveTextContent("storage.backups.keep");
+  expect(document.body).not.toHaveTextContent("ui.toast_seconds");
   expect(document.body).not.toHaveTextContent("workspace.plugins");
+});
+
+test("a setting with no short label is named by the first sentence of its description, ending in exactly one period", async () => {
+  waiting(
+    ["demo.long", "demo.dotted", "demo.bare"],
+    [
+      settingItem("demo.long", "Where the copies go. Use at least one folder outside the workspace so a lost computer loses nothing."),
+      settingItem("demo.dotted", "Which things to keep.."),
+      settingItem("demo.bare", ""),
+    ],
+  );
+  const line = await screen.findByText("Restart to use: Where the copies go, Which things to keep, demo.bare.");
+  expect(line).toBeInTheDocument();
+  expect(line.textContent).not.toMatch(/\.\./);
 });
 
 test("an update to the app is named as one, and only three things are listed before 'and N more'", async () => {
   waiting(
-    ["code", "storage.backups.keep", "storage.backups.every_hours", "storage.sync.folder", "ui.toast_seconds"],
+    ["code", "ui.toast_seconds", "ai.budgets.per_day_usd", "workspace.language", "workspace.name"],
     [
-      settingItem("storage.backups.keep", "A"),
-      settingItem("storage.backups.every_hours", "B"),
-      settingItem("storage.sync.folder", "C"),
-      settingItem("ui.toast_seconds", "D"),
+      settingItem("ui.toast_seconds", "A"),
+      settingItem("ai.budgets.per_day_usd", "B"),
+      settingItem("workspace.language", "C"),
+      settingItem("workspace.name", "D"),
     ],
   );
   expect(
-    await screen.findByText("Restart to use: an update to the app, Backups to keep in each folder, Hours between backups and 2 more."),
+    await screen.findByText(
+      "Restart to use: an update to the app, Seconds a message stays on screen, Most to spend in a day (USD) and 2 more.",
+    ),
   ).toBeInTheDocument();
   expect(document.querySelector(".restart-slot")).toBeInTheDocument();
 });
 
 test("a key with no known label is named by its group, or as other settings", async () => {
-  waiting(["storage.backups.unknown_thing", "mystery.thing"], []);
-  expect(await screen.findByText("Restart to use: Backups, other settings.")).toBeInTheDocument();
+  waiting(["ai.budgets.unknown_thing", "mystery.thing"], []);
+  expect(await screen.findByText("Restart to use: AI spending, other settings.")).toBeInTheDocument();
+});
+
+function Asker() {
+  const restart = useRestart();
+  return (
+    <button type="button" onClick={restart.offer}>
+      Ask about restarting
+    </button>
+  );
+}
+
+test("the restart need is said once: the header's line hides while the page asks, and returns as the reminder after Later", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    "GET status": () => status({}, { restart_needed: "A setting changed.", can_restart: true, restart_for: ["code"] }),
+    "GET runtime-config": () => ({ instance: null }),
+  });
+  renderApp(
+    <RestartProvider hellos={1}>
+      <RestartNotice />
+      <Asker />
+      <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="home" onView={() => {}} onHandIn={() => {}} onAsk={() => {}} onHelp={() => {}} />
+    </RestartProvider>,
+  );
+  const header = screen.getByRole("banner");
+  // Before the page asks, the header's line is the one notice.
+  expect(await within(header).findByText(NEEDED, { exact: false })).toBeInTheDocument();
+  expect(document.querySelector(".restart-slot")).toBeEmptyDOMElement();
+  await user.click(screen.getByRole("button", { name: "Ask about restarting" }));
+  expect(document.querySelector(".restart-slot")).toHaveTextContent("This change needs the app to restart.");
+  expect(within(header).queryByText(NEEDED, { exact: false })).toBeNull();
+  expect(within(header).queryByRole("button", { name: "Restart now" })).toBeNull();
+  expect(screen.getAllByRole("button", { name: "Restart now" })).toHaveLength(1);
+  await user.click(screen.getByRole("button", { name: "Later" }));
+  expect(await within(header).findByText(NEEDED, { exact: false })).toBeInTheDocument();
+  expect(within(header).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+  expect(document.querySelector(".restart-slot")).toBeEmptyDOMElement();
+});
+
+test("the main row holds the name, the views and the buttons; the status row sits under it", async () => {
+  fakeApi({ "GET status": () => status({}, { restart_needed: "A setting changed.", can_restart: true }), "GET runtime-config": () => ({ instance: null }) });
+  renderApp(
+    <RestartProvider hellos={1}>
+      <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="home" onView={() => {}} onHandIn={() => {}} onAsk={() => {}} onHelp={() => {}} />
+    </RestartProvider>,
+  );
+  const header = screen.getByRole("banner");
+  await within(header).findByText("No off-device backup");
+  const main = header.querySelector(".top-main") as HTMLElement;
+  const statusRow = header.querySelector(".top-meta") as HTMLElement;
+  expect(main).not.toBeNull();
+  expect(statusRow).not.toBeNull();
+  // Name, views and the three buttons share the main row, in that order.
+  expect(within(main).getByText("Workspace")).toBeInTheDocument();
+  expect(within(main).getByRole("navigation", { name: "Views" })).toBeInTheDocument();
+  const buttons = ["Hand something in", "Ask", "Keyboard shortcuts"].map((name) => within(main).queryByRole("button", { name }));
+  expect(buttons.every(Boolean)).toBe(true);
+  const order = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(order(main.querySelector(".brand")!, main.querySelector("nav")!)).toBe(true);
+  expect(order(main.querySelector("nav")!, main.querySelector(".top-acts")!)).toBe(true);
+  // The main row has none of the status; the status row has none of the buttons or views.
+  expect(within(main).queryByText("No off-device backup")).toBeNull();
+  expect(within(main).queryByRole("button", { name: "Restart now" })).toBeNull();
+  expect(order(main, statusRow)).toBe(true);
+  expect(within(statusRow).getByText("No off-device backup")).toBeInTheDocument();
+  expect(within(statusRow).getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+  expect(within(statusRow).queryByRole("navigation")).toBeNull();
+  expect(within(statusRow).queryByRole("button", { name: "Hand something in" })).toBeNull();
+});
+
+test("Add-ons is a view of its own, next to Settings", async () => {
+  const user = userEvent.setup();
+  const onView = vi.fn();
+  fakeApi({ "GET status": () => status() });
+  renderApp(<Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="addons" onView={onView} onHandIn={() => {}} onAsk={() => {}} onHelp={() => {}} />);
+  const addons = screen.getByRole("button", { name: "Add-ons" });
+  expect(addons).toHaveAttribute("aria-current", "page");
+  expect(addons.previousElementSibling).toHaveTextContent("Settings");
+  await user.click(addons);
+  expect(onView).toHaveBeenCalledWith("addons");
+  await screen.findByText("No off-device backup");
 });

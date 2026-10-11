@@ -107,7 +107,12 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
         ) : view === "sources" ? (
           <Sources onAsk={(question) => setAsk({ question })} />
         ) : view === "welcome" ? (
-          <Welcome focusStep={guideStep} onOpenPeople={() => setView("setup")} onHandIn={() => setHandIn(true)} />
+          <Welcome
+            focusStep={guideStep}
+            onOpenPeople={() => setView("setup")}
+            onOpenAddons={() => setView("addons")}
+            onHandIn={() => setHandIn(true)}
+          />
         ) : view === "settings" ? (
           <Settings onOpenGuide={() => openGuide()} onOpenAddons={() => setView("addons")} />
         ) : view === "addons" ? (

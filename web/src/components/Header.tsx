@@ -1,4 +1,6 @@
-// The header: workspace name, live status, backup age (with a nag when there is no off-device backup), hand in, help.
+// The header: one main row (workspace name, the views, and hand in / ask / help), and under it one quiet status row
+// (live state, backup age with a nag when there is no off-device backup, spend, and a restart reminder). On a narrow
+// screen the name and actions stay on top and the views follow as a strip that scrolls sideways inside itself.
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
@@ -42,6 +44,8 @@ export function Header(props: {
   const act = useAct();
   const restart = useRestart();
   const restartWhat = useRestartWhat();
+  // While the page is asking about the restart (or doing it), that notice says it; the header only reminds afterwards.
+  const remind = restart.phase !== "asking" && restart.phase !== "waiting";
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const panels = useQuery({ queryKey: ["panels"], queryFn: () => api.panels() });
   const workPanels = (panels.data ?? []).filter((p) => p.tab === "work");
@@ -52,37 +56,53 @@ export function Header(props: {
   return (
     <header className="top">
       <div className="top-inner">
-        <div className="brand">
-          <b>{props.workspace}</b>
+        <div className="top-main">
+          <div className="brand">
+            <b title={props.workspace}>{props.workspace}</b>
+          </div>
+          <nav className="tabs" aria-label={t("nav.label")}>
+            {(["home", "stages", "files", "sources"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-current={props.view === v ? "page" : undefined}
+                onClick={() => props.onView(v)}
+              >
+                {t(`nav.${v}`)}
+              </button>
+            ))}
+            {workPanels.map((p) => (
+              <button
+                key={p.name}
+                type="button"
+                aria-current={props.view === panelView(p.name) ? "page" : undefined}
+                onClick={() => props.onView(panelView(p.name))}
+              >
+                {p.title}
+              </button>
+            ))}
+            <button type="button" aria-current={props.view === "setup" ? "page" : undefined} onClick={() => props.onView("setup")}>
+              {t("nav.setup")}
+            </button>
+            <button type="button" aria-current={props.view === "settings" ? "page" : undefined} onClick={() => props.onView("settings")}>
+              {t("nav.settings")}
+            </button>
+            <button type="button" aria-current={props.view === "addons" ? "page" : undefined} onClick={() => props.onView("addons")}>
+              {t("nav.addons")}
+            </button>
+          </nav>
+          <div className="top-acts">
+            <button type="button" className="btn primary" onClick={props.onHandIn}>
+              {t("handin.open")}
+            </button>
+            <button type="button" className="btn" data-ask-button onClick={props.onAsk}>
+              {t("ask.open")}
+            </button>
+            <button type="button" className="btn quiet" onClick={props.onHelp} aria-label={t("help.open")}>
+              ?
+            </button>
+          </div>
         </div>
-        <nav className="tabs" aria-label={t("nav.label")}>
-          {(["home", "stages", "files", "sources"] as const).map((v) => (
-            <button
-              key={v}
-              type="button"
-              aria-current={props.view === v ? "page" : undefined}
-              onClick={() => props.onView(v)}
-            >
-              {t(`nav.${v}`)}
-            </button>
-          ))}
-          {workPanels.map((p) => (
-            <button
-              key={p.name}
-              type="button"
-              aria-current={props.view === panelView(p.name) ? "page" : undefined}
-              onClick={() => props.onView(panelView(p.name))}
-            >
-              {p.title}
-            </button>
-          ))}
-          <button type="button" aria-current={props.view === "setup" ? "page" : undefined} onClick={() => props.onView("setup")}>
-            {t("nav.setup")}
-          </button>
-          <button type="button" aria-current={props.view === "settings" ? "page" : undefined} onClick={() => props.onView("settings")}>
-            {t("nav.settings")}
-          </button>
-        </nav>
         <div className="top-meta">
           <span className={`live live-${props.live.state}`}>
             <i className="dot" aria-hidden="true" />
@@ -90,7 +110,7 @@ export function Header(props: {
               ? t("live.on", { time: time(props.live.lastUpdate) })
               : t(`live.${props.live.state}`)}
           </span>
-          {status.data?.restart_needed && (
+          {status.data?.restart_needed && remind && (
             <span className="backup attention" role="status">
               <span className="mark" aria-hidden="true">
                 !
@@ -130,17 +150,6 @@ export function Header(props: {
               {!b.configured && <span className="hint">{t("backup.how")}</span>}
             </span>
           )}
-        </div>
-        <div className="top-acts">
-          <button type="button" className="btn primary" onClick={props.onHandIn}>
-            {t("handin.open")}
-          </button>
-          <button type="button" className="btn" data-ask-button onClick={props.onAsk}>
-            {t("ask.open")}
-          </button>
-          <button type="button" className="btn quiet" onClick={props.onHelp} aria-label={t("help.open")}>
-            ?
-          </button>
         </div>
       </div>
     </header>

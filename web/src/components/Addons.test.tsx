@@ -3,7 +3,8 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { wordsOfWork } from "../lib/packs";
-import { fakeApi, renderApp } from "../test-utils";
+import { RestartNotice, RestartProvider } from "../lib/restart";
+import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { Addons } from "./Addons";
 
 type Pack = S["PackView"];
@@ -297,7 +298,8 @@ test("an installed pack that is off says how to turn it on, and a newer version 
   );
   const off = await row("Name of off");
   expect(off).toHaveTextContent("Installed (version 1.0.0) and off");
-  expect(off).toHaveTextContent("Turn on in Settings");
+  expect(within(off).getByRole("button", { name: "Turn on Name of off" })).toBeInTheDocument();
+  expect(off).not.toHaveTextContent("Turn on in Settings");
   expect(within(off).queryByRole("button", { name: /How to get/ })).toBeNull();
 
   const old = await row("Name of old");
@@ -312,6 +314,7 @@ test("an installed pack that is off says how to turn it on, and a newer version 
   const current = await row("Name of current");
   expect(current).toHaveTextContent("Installed (version 1.0.0) and on");
   expect(current).not.toHaveTextContent("Update available");
+  expect(within(current).queryByRole("button", { name: /^Turn / })).toBeNull();
   expect(within(current).queryByRole("button")).toBeNull();
 });
 
@@ -449,4 +452,82 @@ test("the screen says when the add-ons can't be loaded and tries again", async (
   renderApp(<Addons onBack={() => undefined} />);
   expect(await screen.findByText(/The add-ons couldn't be loaded\./)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+});
+
+const SAVED = (needsRestart: boolean) => ({
+  changes: [{ key: "workspace.plugins.enabled", before: [], after: ["beta"], was_default: true, is_default: false }],
+  fingerprint: "fp-2",
+  needs_restart: needsRestart,
+});
+const installedRows = (enabled: boolean): Packs["installed"] => [
+  { name: "beta", version: "1.0.0", description: "", enabled, state: enabled ? "enabled" : "off", reason: null, what: summary() },
+];
+
+test("an installed add-on that is off has Turn on as its one action: it acts at once with the fingerprint, and reads back with Undo", async () => {
+  const calls = open(view({ installed: installedRows(false) }), {
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST packs/beta/on": () => SAVED(true),
+    "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
+  });
+  await calls.user.click(await screen.findByRole("tab", { name: "Installed" }));
+  const beta = await row("beta");
+  expect(within(beta).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Turn on beta"]);
+  await calls.user.click(within(beta).getByRole("button", { name: "Turn on beta" }));
+  await waitFor(() => expect(calls.calls.find((c) => c.route === "POST packs/beta/on")?.body).toEqual({ fingerprint: "fp-1" }));
+  expect(await screen.findByText("Turned on beta.")).toBeInTheDocument();
+  await calls.user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.calls.some((c) => c.route === "POST settings")).toBe(true));
+  // Nothing restarts by itself.
+  expect(calls.calls.some((c) => c.route === "POST restart")).toBe(false);
+});
+
+test("a turned-on add-on offers Turn off, and a catalog row that is installed but off has the button instead of the hint", async () => {
+  const calls = open(
+    view({ installed: installedRows(true), available: [pack("off", { installed_version: "1.0.0", enabled: false })] }),
+    {
+      "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+      "POST packs/beta/off": () => SAVED(false),
+      "POST packs/off/on": () => SAVED(false),
+    },
+  );
+  const off = await row("Name of off");
+  await calls.user.click(within(off).getByRole("button", { name: "Turn on Name of off" }));
+  await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/off/on")).toBe(true));
+  await calls.user.click(await screen.findByRole("tab", { name: "Installed" }));
+  await calls.user.click(within(await row("beta")).getByRole("button", { name: "Turn off beta" }));
+  await waitFor(() => expect(calls.calls.find((c) => c.route === "POST packs/beta/off")?.body).toEqual({ fingerprint: "fp-1" }));
+  expect(await screen.findByText("Turned off beta.")).toBeInTheDocument();
+});
+
+test("a refusal shows the server's words on the row", async () => {
+  const calls = open(view({ installed: installedRows(false) }), {
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST packs/beta/on": () => new Refuse(409, "The settings changed. Try again."),
+  });
+  await calls.user.click(await screen.findByRole("tab", { name: "Installed" }));
+  const beta = await row("beta");
+  await calls.user.click(within(beta).getByRole("button", { name: "Turn on beta" }));
+  expect(await within(beta).findByRole("alert")).toHaveTextContent("The settings changed. Try again.");
+  expect(within(beta).getByRole("button", { name: "Turn on beta" })).toBeEnabled();
+});
+
+test("turning an add-on on that needs a restart asks first, and never restarts by itself", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET packs": () => view({ installed: installedRows(false) }),
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST packs/beta/on": () => SAVED(true),
+    "POST restart": () => ({ restarting: true }),
+  });
+  renderApp(
+    <RestartProvider hellos={1}>
+      <RestartNotice />
+      <Addons onBack={() => undefined} />
+    </RestartProvider>,
+  );
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  await user.click(within(await row("beta")).getByRole("button", { name: "Turn on beta" }));
+  await waitFor(() => expect(document.querySelector(".restart-slot")).toHaveTextContent("This change needs the app to restart."));
+  expect(screen.getByRole("button", { name: "Restart now" })).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST restart")).toBe(false);
 });

@@ -15,13 +15,28 @@ import { SafeLink } from "./SafeText";
 
 type SignIn = S["SignInView"];
 
-export function SignIns() {
+export function SignIns(props: { onOpenAddons: () => void }) {
   const { t } = useWords();
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
-  // Nothing is shown until an add-on signs in to a service; a list that didn't load says so quietly.
+  // A list that didn't load says so quietly.
   if (signIns.isPending) return null;
   if (signIns.isError) return <p className="hint">{t("sign_in.load_failed")}</p>;
-  if (signIns.data.length === 0) return null;
+  // Until an add-on signs in to a service there is nothing to list; the way to turn one on is offered instead.
+  if (signIns.data.length === 0) {
+    return (
+      <section className="panel-section" aria-labelledby="sign-ins-title">
+        <div className="heading">
+          <h3 id="sign-ins-title">{t("sign_in.title")}</h3>
+        </div>
+        <p className="hint">{t("sign_in.none")}</p>
+        <div className="row-end">
+          <button type="button" className="btn" onClick={props.onOpenAddons}>
+            {t("sign_in.open_addons")}
+          </button>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="panel-section" aria-labelledby="sign-ins-title">
       <div className="heading">

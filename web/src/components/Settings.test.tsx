@@ -131,7 +131,7 @@ test("Save sends only what changed, with the fingerprint, then reads it back", a
   await user.click(save);
   await waitFor(() => expect(posted(calls)).toHaveLength(1));
   expect(posted(calls)[0]).toEqual({ changes: { "demo.title": "Harbor" }, reset: [], fingerprint: "fp-1" });
-  expect(await screen.findByText("Saved. The display name.: Harbor")).toBeInTheDocument();
+  expect(await screen.findByText("Saved. The display name: Harbor")).toBeInTheDocument();
 });
 
 test("a number that isn't one is refused on screen before anything is sent", async () => {

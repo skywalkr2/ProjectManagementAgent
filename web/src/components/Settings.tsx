@@ -175,7 +175,7 @@ export function Settings(props: { onOpenGuide: () => void; onOpenAddons: () => v
       </div>
       <AiAccounts />
       <ValueLists />
-      <SignIns />
+      <SignIns onOpenAddons={props.onOpenAddons} />
     </section>
   );
 }

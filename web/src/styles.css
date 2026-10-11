@@ -34,13 +34,26 @@ button, input, textarea, select { font: inherit; color: inherit; }
 p { margin: 0; }
 
 /* Header */
-.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); margin-inline: -16px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
-.top-inner { max-width: var(--column); margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.brand b { font-family: var(--display); font-size: 20px; font-weight: 600; }
-/* Name and views on the first row with the buttons at its end (never wrapped); the status line has its own row below and wraps within it. */
-.top-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 13px; color: var(--muted); flex: 1 1 100%; order: 3; min-width: 0; }
-.top-acts { display: flex; gap: 6px; flex: none; margin-left: auto; white-space: nowrap; order: 2; }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); margin-inline: -16px; padding: 8px 16px 6px; border-bottom: 1px solid var(--line); }
+.top-inner { max-width: var(--column); margin: 0 auto; display: grid; gap: 4px; min-width: 0; }
+/* One main row: the name, the views (which wrap inside their own area when they don't fit) and the buttons at the end. */
+.top-main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "brand nav acts"; align-items: center; gap: 6px 14px; min-width: 0; }
+.brand { grid-area: brand; display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.brand b { font-family: var(--display); font-size: 20px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.top-main .tabs { grid-area: nav; justify-self: start; min-width: 0; max-width: 100%; }
+.top-main .tabs button { white-space: nowrap; flex: none; }
+.top-acts { grid-area: acts; display: flex; gap: 6px; flex: none; white-space: nowrap; }
+/* Below it, one slim, quiet status row that wraps within itself. */
+.top-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0 14px; font-size: 12.5px; line-height: 1.4; color: var(--muted); min-width: 0; }
+.top-meta .btn.small { min-height: 24px; padding: 0 6px; font-size: 12px; }
+/* On a narrow screen the name and buttons stay on top and the views follow as a strip that scrolls sideways inside itself. */
+[data-narrow] .top-main { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand acts" "nav nav"; }
+[data-narrow] .top-main { gap: 4px 8px; }
+[data-narrow] .brand b { font-size: 18px; }
+[data-narrow] .top-acts { gap: 2px; }
+[data-narrow] .top-acts .btn { padding-inline: 9px; }
+[data-narrow] .top-acts .btn.quiet { padding-inline: 8px; }
+[data-narrow] .top-main .tabs { justify-self: stretch; flex-wrap: nowrap; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 6px; }
 .live-live .dot { background: var(--ok); }
 .live-offline .dot { background: var(--warn); }
@@ -308,6 +321,7 @@ input[type="radio"] { width: 18px; height: 18px; padding: 0; flex: none; accent-
 .test-results { list-style: none; padding-left: 0; }
 .result-ok { color: var(--ok); font-weight: 600; }
 .result-bad { color: var(--risk); font-weight: 600; }
+.key-missing { color: var(--warn); font-weight: 600; }
 .folder-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow: auto; }
 .folder-list li { padding: 4px 0; }
 .settings-tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
