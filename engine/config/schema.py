@@ -117,6 +117,13 @@ class BackupSettings(ConfigModel):
     targets: list[BackupTarget] = Field(default_factory=list, description="Where full backups go. Use at least one.")
     every_hours: int = Field(24, ge=1, description="How often a full backup is made.")
     keep: int = Field(14, ge=1, description="How many backups to keep in each target.")
+    automatic: bool = Field(
+        True,
+        description="Make backups on schedule while the app runs, with nothing to click; off means only on request.",
+    )
+    retry_minutes: int = Field(
+        60, ge=5, description="After a failed backup (a drive not connected, say), how long before trying again."
+    )
 
 
 class FileLimits(ConfigModel):

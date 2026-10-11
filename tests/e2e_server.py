@@ -36,12 +36,15 @@ def main() -> None:
 
     tmp = Path(tempfile.mkdtemp(prefix="cockpit-e2e-"))
     ws = init_workspace(tmp / "ws", template=DEMO_B, git=False)
+    (tmp / "offsite").mkdir(exist_ok=True)
     flags = {
         "server.base_path": args.base_path,
         "server.port": args.port,
         "ai.tiers.routine.use": "stub/default",
         "ai.tiers.routine.fallback": [],
         "storage.backups.targets": [{"path": str(tmp / "offsite"), "label": "test folder"}],
+        # Backups only on request, so the browser tests see the state before the first one.
+        "storage.backups.automatic": False,
         # A stage that starts work when entered, so the browser tests can exercise waiting for the go.
         "stages.types.project.stages": [
             {"id": "planned", "label": "Planned"},

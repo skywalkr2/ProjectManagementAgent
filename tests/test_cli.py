@@ -90,6 +90,8 @@ def test_backup_needs_a_target_then_copies(tmp_path, demo, capsys, monkeypatch):
     monkeypatch.setenv("COCKPIT__STORAGE__BACKUPS__TARGETS", "[]")
     assert main(["backup", "-w", str(ws)]) == 1
     monkeypatch.setenv("COCKPIT__STORAGE__BACKUPS__TARGETS", f'[{{"path": "{tmp_path / "offsite"}"}}]')
+    assert main(["backup", "-w", str(ws)]) == 1  # the folder isn't there: never created on this computer's disk
+    (tmp_path / "offsite").mkdir()
     assert main(["backup", "-w", str(ws)]) == 0
     assert len(list((tmp_path / "offsite").iterdir())) == 1
     assert "Backed up" in capsys.readouterr().out

@@ -1,8 +1,10 @@
-"""The background worker: processes queued requests one at a time and tells listeners when anything changes."""
+"""The background worker: processes queued requests one at a time, makes scheduled backups, and tells listeners when
+anything changes."""
 
 from __future__ import annotations
 
 import hashlib
+import logging
 import os
 import threading
 from collections.abc import Callable
@@ -15,6 +17,7 @@ from engine.storage import Store, WriteContext
 from engine.workspace import Workspace
 
 CODE_ROOTS = (Path(__file__).resolve().parent, Path(__file__).resolve().parents[1] / "api")
+log = logging.getLogger(__name__)
 RESTART_NEEDED = "Settings or code changed since the cockpit started; restart it to use them."
 
 
@@ -72,6 +75,7 @@ class Worker:
         self._wake = threading.Event()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._backups: threading.Thread | None = None
         self._started_with = (config_fingerprint(ws), code_fingerprint())
         self.restart_needed: str | None = None
 
@@ -95,12 +99,16 @@ class Worker:
     def start(self) -> None:
         self._thread = threading.Thread(target=self._loop, name="cockpit-worker", daemon=True)
         self._thread.start()
+        self._backups = threading.Thread(target=self._backup_loop, name="cockpit-backups", daemon=True)
+        self._backups.start()
 
     def stop(self) -> None:
         self._stop.set()
         self._wake.set()
         if self._thread:
             self._thread.join(timeout=10)
+        if self._backups:
+            self._backups.join(timeout=60)
 
     def poke(self) -> None:
         self._wake.set()
@@ -127,6 +135,24 @@ class Worker:
             if move_ready_records(self.store):
                 self.events.changed()
         return done
+
+    def backup_if_due(self) -> bool:
+        """Make a scheduled backup when one is due. On its own thread, so a large copy never holds up other work."""
+        from engine.backup import due, run_backup
+
+        if not due(self.ws, self.cfg):
+            return False
+        run_backup(self.ws, self.cfg)
+        self.events.changed()
+        return True
+
+    def _backup_loop(self) -> None:
+        while not self._stop.is_set():
+            try:
+                self.backup_if_due()
+            except Exception:  # a failed backup is recorded by run_backup; nothing here may stop the thread
+                log.exception("scheduled backup failed")
+            self._stop.wait(timeout=60)
 
     def _loop(self) -> None:
         while not self._stop.is_set():

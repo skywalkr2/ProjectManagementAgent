@@ -103,6 +103,7 @@ def test_no_target_means_a_nag(env):
 def test_a_backup_copies_the_database_and_reports_its_age(env, tmp_path):
     ws, _, store = env
     target = tmp_path / "offsite"
+    target.mkdir()
     cfg = ws.config(env={}, flags={"storage.backups.targets": [{"path": str(target), "label": "test"}]})
     assert state(ws, cfg, NOW).needs_attention
     run_backup(ws, cfg, NOW)
@@ -126,6 +127,7 @@ def test_a_target_inside_the_workspace_is_refused(env):
 def test_old_backups_are_pruned(env, tmp_path):
     ws, _, _ = env
     target = tmp_path / "offsite"
+    target.mkdir()
     cfg = ws.config(env={}, flags={"storage.backups.targets": [{"path": str(target)}], "storage.backups.keep": 2})
     for hours in range(3):
         run_backup(ws, cfg, NOW + timedelta(hours=hours))
@@ -178,3 +180,47 @@ def test_a_failed_case_shows_what_the_model_produced():
 
     report = Report("acct", 1, [RunResult("a", 0, False, missing=["op=question.add"], got=["note() applied"])])
     assert "got: note() applied" in report.text()
+
+
+def test_a_missing_backup_folder_is_never_created(env, tmp_path):
+    from engine.backup import run_backup
+
+    ws, _, _ = env
+    target = tmp_path / "drive-not-connected" / "cockpit"
+    cfg = ws.config(env={}, flags={"storage.backups.targets": [{"path": str(target)}]})
+    status = run_backup(ws, cfg)
+    assert not target.exists() and "isn't there" in status[str(target)]["last_error"]
+
+
+def test_scheduled_backups_run_when_due_and_retry_after_a_wait(env, tmp_path):
+    from datetime import UTC, datetime, timedelta
+
+    from engine.backup import due, run_backup
+
+    ws, _, _ = env
+    target = tmp_path / "offsite"
+    flags = {"storage.backups.targets": [{"path": str(target)}], "storage.backups.every_hours": 24}
+    cfg = ws.config(env={}, flags=flags)
+    now = datetime.now(UTC)
+    assert due(ws, cfg, now)  # never backed up
+    run_backup(ws, cfg, now)  # the folder isn't there yet: a failed try
+    assert not due(ws, cfg, now + timedelta(minutes=10))  # waits before retrying
+    assert due(ws, cfg, now + timedelta(minutes=61))
+    target.mkdir()
+    run_backup(ws, cfg, now + timedelta(minutes=61))
+    assert not due(ws, cfg, now + timedelta(hours=23))
+    assert due(ws, cfg, now + timedelta(hours=26))  # a computer waking after a day catches up at once
+    off = ws.config(env={}, flags={**flags, "storage.backups.automatic": False})
+    assert not due(ws, off, now + timedelta(hours=26))
+
+
+def test_the_worker_makes_a_due_backup_on_its_own(env, tmp_path):
+    from engine.worker import Events, Worker
+
+    ws, _, store = env
+    target = tmp_path / "offsite"
+    target.mkdir()
+    cfg = ws.config(env={}, flags={"storage.backups.targets": [{"path": str(target)}]})
+    worker = Worker(ws, store, cfg, Events())
+    assert worker.backup_if_due() and list(target.iterdir())
+    assert not worker.backup_if_due()

@@ -81,6 +81,21 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-11: Backups run on their own; a missing backup folder is never created
+
+**Decided by:** project owner (nobody should have to click backup); Claude (how).
+
+**What:** While the app runs, a background thread makes a backup whenever one is due (`storage.backups.every_hours`),
+including right after the computer wakes, and tries again after `retry_minutes` when one fails. `automatic: false`
+leaves only backups on request. A target folder that doesn't exist is refused with the reason, never created. Choosing
+the off-device folder once stays part of setup, and the header keeps saying when none is set or the last one failed.
+
+**Why:** Backups that depend on remembering to click don't happen. Creating a missing folder would put the "backup" on
+this computer's own disk when a drive isn't connected, which looks like a backup and isn't one.
+
+**Impact:** Design 4.15 already called for scheduled backups; this builds them. New settings `automatic` and
+`retry_minutes` under `storage.backups`.
+
 ## 2026-10-11: The plugin developer guide is generated from the code and is the contract
 
 **Decided by:** project owner (the guide before the rest of the API); Claude (how it is made).

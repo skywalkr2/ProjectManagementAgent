@@ -28,7 +28,12 @@ def by_role(role: str) -> dict:
 @pytest.fixture(params=["/", "/admin"])
 def api(request, tmp_path):
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
-    flags = {"server.base_path": request.param, "storage.backups.targets": [{"path": str(tmp_path / "offsite")}]}
+    (tmp_path / "offsite").mkdir()
+    flags = {
+        "server.base_path": request.param,
+        "storage.backups.targets": [{"path": str(tmp_path / "offsite")}],
+        "storage.backups.automatic": False,
+    }
     cfg = ws.config(env={}, flags=flags)
     app = create_app(ws, cfg, TOKEN, ui_dist=tmp_path / "no-ui")
     prefix = "" if request.param == "/" else request.param
@@ -459,6 +464,7 @@ def gated(tmp_path):
     flags = {
         "server.base_path": "/",
         "storage.backups.targets": [{"path": str(tmp_path / "offsite")}],
+        "storage.backups.automatic": False,
         "ai.prices.stub/default": {"input_per_million": 50.0, "output_per_million": 50.0},
         "ai.budgets.confirm_above_usd": 0.001,
         "ai.budgets.per_run_usd": 10.0,

@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import shutil
 import sqlite3
+import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -19,6 +20,8 @@ from engine.config import Config
 from engine.workspace import Workspace
 
 STATUS_FILE = "backups.json"
+#: One backup at a time per process, whether started on schedule or on request.
+_RUNNING = threading.Lock()
 
 
 @dataclass(frozen=True)
@@ -32,7 +35,35 @@ class BackupState:
 
 
 def run_backup(ws: Workspace, cfg: Config, now: datetime | None = None) -> dict[str, Any]:
+    with _RUNNING:
+        return _run(ws, cfg, now or datetime.now(UTC))
+
+
+def due(ws: Workspace, cfg: Config, now: datetime | None = None) -> bool:
+    """Whether a scheduled backup should run now: some target's last success is older than `every_hours` (or there is
+    none), and its last try is older than `retry_minutes`. Wall-clock based, so a computer waking from sleep catches up
+    at once."""
+    settings = cfg.storage.backups
+    if not settings.automatic or not settings.targets:
+        return False
     now = now or datetime.now(UTC)
+    status = _load(ws)
+    for target in settings.targets:
+        entry = status.get(target.path, {})
+        success, attempt = entry.get("last_success"), entry.get("last_attempt")
+        if success and _hours(now, success) < settings.every_hours:
+            continue
+        if attempt and _hours(now, attempt) * 60 < settings.retry_minutes:
+            continue
+        return True
+    return False
+
+
+def _hours(now: datetime, stamp: str) -> float:
+    return (now - datetime.fromisoformat(stamp)).total_seconds() / 3600
+
+
+def _run(ws: Workspace, cfg: Config, now: datetime) -> dict[str, Any]:
     stamp = now.strftime("%Y%m%d-%H%M%S")
     status = _load(ws)
     for target in cfg.storage.backups.targets:
@@ -41,8 +72,11 @@ def run_backup(ws: Workspace, cfg: Config, now: datetime | None = None) -> dict[
             base = Path(target.path).expanduser()
             if base.resolve().is_relative_to(ws.root.resolve()):
                 raise ValueError("the backup folder is inside the workspace, so it isn't a copy somewhere else")
+            if not base.is_dir():
+                # Never create it: a drive that isn't connected would otherwise get a folder on this computer's disk.
+                raise ValueError(f"{base} isn't there; connect the drive or check the folder")
             dest = base / f"{ws.root.name}-{stamp}"
-            dest.mkdir(parents=True, exist_ok=False)
+            dest.mkdir(exist_ok=False)
             src = sqlite3.connect(ws.db_path)
             dst = sqlite3.connect(dest / "cockpit.db")
             with dst:
@@ -53,10 +87,20 @@ def run_backup(ws: Workspace, cfg: Config, now: datetime | None = None) -> dict[
                 if (ws.root / name).is_dir():
                     shutil.copytree(ws.root / name, dest / name)
             _prune(base, ws.root.name, cfg.storage.backups.keep)
-            status[key] = {"last_success": now.isoformat(), "last_error": None, "label": target.label}
+            status[key] = {
+                "last_success": now.isoformat(),
+                "last_attempt": now.isoformat(),
+                "last_error": None,
+                "label": target.label,
+            }
         except (OSError, ValueError, sqlite3.Error) as err:
             prev = status.get(key, {})
-            status[key] = {"last_success": prev.get("last_success"), "last_error": str(err), "label": target.label}
+            status[key] = {
+                "last_success": prev.get("last_success"),
+                "last_attempt": now.isoformat(),
+                "last_error": str(err),
+                "label": target.label,
+            }
     _save(ws, status)
     return status
 

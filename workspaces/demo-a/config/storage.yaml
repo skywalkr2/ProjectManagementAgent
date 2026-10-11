@@ -9,6 +9,8 @@ backups:
       label: external drive
   every_hours: 24
   keep: 14
+  automatic: true
+  retry_minutes: 60
 files:
   max_file_mb: 50
   max_total_mb: 2000
