@@ -270,7 +270,7 @@ function Preview(props: { item: S["ActionPreviewItem"] }) {
   if (IMAGE_TYPES.has(item.media_type)) {
     return (
       <figure className="preview">
-        <img src={`data:${item.media_type};base64,${item.data_base64}`} alt={label} />
+        <img src={`data:${item.media_type};base64,${item.data_base64}`} alt={item.alt || label} />
         {item.caption && <figcaption aria-hidden="true">{item.caption}</figcaption>}
       </figure>
     );

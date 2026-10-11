@@ -85,7 +85,7 @@ class FactOp(OpModel):
 
 class RecordSetOp(OpModel):
     """Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent
-    (the id of the project it belongs to) and language (a tag such as en-US);
+    (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id);
     action text, due and notes; question title and text; person role, org and why_they_matter. The new value must
     be valid for the field. Evidence is required for due, status, owners, target and owner."""
 
@@ -388,7 +388,7 @@ EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner"}
 
 #: Fields record.set may change, per kind.
 SETTABLE: dict[str, set[str]] = {
-    "project": {"status", "phase", "target", "priority", "summary", "parent", "language"},
+    "project": {"status", "phase", "target", "priority", "summary", "parent", "language", "owner"},
     "action": {"text", "due", "notes"},
     "question": {"title", "text"},
     "person": {"role", "org", "why_they_matter"},

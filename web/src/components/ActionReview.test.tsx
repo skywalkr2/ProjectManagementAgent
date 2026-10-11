@@ -48,9 +48,9 @@ test("it shows what it will change, the files it adds, previews and notes", asyn
         ],
         files: [{ name: "result.txt", media_type: "text/plain", size: 1536, file_kind: "attachment" }],
         previews: [
-          { name: "page.png", media_type: "image/png", caption: "First page", data_base64: png },
-          { name: "page.txt", media_type: "text/plain", caption: "", data_base64: btoa("Line one\nLine two <b>not bold</b>") },
-          { name: "page.html", media_type: "text/html", caption: "Hidden", data_base64: btoa("<b>never shown</b>") },
+          { name: "page.png", media_type: "image/png", caption: "First page", alt: "", data_base64: png },
+          { name: "page.txt", media_type: "text/plain", caption: "", alt: "", data_base64: btoa("Line one\nLine two <b>not bold</b>") },
+          { name: "page.html", media_type: "text/html", caption: "Hidden", alt: "", data_base64: btoa("<b>never shown</b>") },
         ],
         notes: ["Only the first line is used."],
       }),

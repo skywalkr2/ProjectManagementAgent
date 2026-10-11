@@ -204,6 +204,12 @@
       },
       "ActionPreviewItem": {
         "properties": {
+          "alt": {
+            "default": "",
+            "description": "What an image shows, for people who can't see it.",
+            "title": "Alt",
+            "type": "string"
+          },
           "caption": {
             "default": "",
             "title": "Caption",

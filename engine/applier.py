@@ -164,7 +164,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         # evidence
         evidence = _evidence(op)
         needs = name in NEEDS_EVIDENCE or (isinstance(op, RecordSetOp) and op.field in EVIDENCE_FIELDS)
-        if needs and evidence is None:
+        # Evidence backs claims taken from inputs; the person's own change (actor pm) isn't one.
+        if needs and evidence is None and ctx.actor != "pm":
             refuse(i, "evidence", f"{name} needs evidence: the exact words from the input that justify it")
         if evidence is not None and ctx.inputs.evidence_source(evidence.quote) is None:
             refuse(i, "evidence", f"the quote {evidence.quote!r} isn't in the input; copy the words exactly")

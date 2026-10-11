@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.18"
+PLUGIN_API_VERSION = "0.3.19"
 
 
 class Settings(BaseModel):
@@ -99,6 +99,14 @@ class ReadView:
     read_file: Callable[[str], bytes] | None = None
     #: Set by the host: the items of an interface this plugin uses.
     read_interface: Callable[..., list[Any]] | None = None
+    #: Set by the host: the id of the person this workspace belongs to (the PM), when set up.
+    user: str | None = None
+
+    def person_name(self, person_id: str | None = None) -> str:
+        """A person's display name (the workspace's own person when no id is given), for a byline or a signature;
+        empty when there is no such person."""
+        person = self.get("person", person_id or self.user or "")
+        return person.data["full_name"] if person is not None else ""
 
     def interface(self, interface: str, /, *, project: Any = ANY) -> list[InterfaceItem]:
         """The items every running provider offers for an interface this plugin declares in `interfaces.uses`
@@ -381,6 +389,13 @@ class EventContext(ReadView):
             data["about"] = {"kind": kind, "id": record_id}
         self.commands.append(("request", data))
 
+    def apply_op(self, op: dict[str, Any]) -> None:
+        """Stage one of this plugin's own ops (a dict, as in a Proposal), applied through the applier after this
+        handler or job returns, as a changeset from the plugin the person sees and can undo: a check result, a
+        record that something ran. It is treated like work from outside content: a system op, a person-only value
+        or anything a validator refuses waits for the person or is refused; core ops can't be staged this way."""
+        self.commands.append(("op", dict(op)))
+
     def emit(self, event: str, payload: dict[str, Any]) -> None:
         """Raise an event of an interface this plugin provides ("<interface>.<event>"), after this handler returns,
         to the plugins that use it (for an event that follows a core change such as a stage move). The payload is
@@ -461,12 +476,14 @@ class Item:
 
 @dataclass
 class Preview:
-    """Something to look at on the review (an image the plugin rendered, or plain text). Shown, never saved or sent."""
+    """Something to look at on the review (an image the plugin rendered, or plain text). Shown, never saved or sent.
+    `alt` describes an image for people who can't see it; without it, the caption is used."""
 
     name: str
     media_type: str
     data: bytes
     caption: str = ""
+    alt: str = ""
 
 
 @dataclass
@@ -678,6 +695,19 @@ class PacketParts:
     request: list[Part] = field(default_factory=list)
 
 
+def _narrowed(where: dict[str, Any] | None, on: str | None) -> dict[str, tuple[Any, ...]]:
+    """A `where` filter as {field: (values...)}, checked to be plain values on a record kind."""
+    if where is not None and (on is None or not where):
+        raise ValueError("where narrows the records of kind `on`; it needs `on` and at least one field")
+    narrowed = {}
+    for key, value in (where or {}).items():
+        values = tuple(value) if isinstance(value, (list, tuple, set, frozenset)) else (value,)
+        if not values or not all(v is None or isinstance(v, (str, int, float, bool)) for v in values):
+            raise ValueError("where matches fields against plain values")
+        narrowed[str(key)] = values
+    return narrowed
+
+
 @dataclass(frozen=True)
 class ActionRegistration:
     """A registered person action (host side)."""
@@ -687,6 +717,11 @@ class ActionRegistration:
     on: str | None
     run: Callable
     file_kinds: tuple[str, ...] = ()
+    where: dict[str, tuple[Any, ...]] = field(default_factory=dict)
+
+    def offered_on(self, record: Any) -> bool:
+        """Whether this action applies to a record (of kind `on`): every `where` field holds one of its values."""
+        return all(record.data.get(key) in values for key, values in self.where.items())
 
 
 @dataclass(frozen=True)
@@ -845,14 +880,7 @@ class Registrar:
             raise ValueError('a task kind\'s role is "write", "check" or "research"')
         if not isinstance(questions, int) or not 0 <= questions <= 20:
             raise ValueError("questions is how many a draft may ask, from 0 to 20")
-        if where is not None and (on is None or not where):
-            raise ValueError("where narrows the records of kind `on`; it needs `on` and at least one field")
-        narrowed = {}
-        for key, value in (where or {}).items():
-            values = tuple(value) if isinstance(value, (list, tuple, set, frozenset)) else (value,)
-            if not values or not all(v is None or isinstance(v, (str, int, float, bool)) for v in values):
-                raise ValueError("where matches fields against plain values")
-            narrowed[str(key)] = values
+        narrowed = _narrowed(where, on)
         if output == "draft":
             if on is None or not field or ops:
                 raise ValueError(
@@ -945,19 +973,27 @@ class Registrar:
         self.file_kinds[name] = FileKind(name, details or AnyDetails, tuple(accept), max_mb, label)
 
     def action(
-        self, name: str, *, label: str, run: Callable, on: str | None = None, file_kinds: tuple[str, ...] = ()
+        self,
+        name: str,
+        *,
+        label: str,
+        run: Callable,
+        on: str | None = None,
+        file_kinds: tuple[str, ...] = (),
+        where: dict[str, Any] | None = None,
     ) -> None:
         """Something the person starts: on a record of kind `on` (core or own; "file" with optional `file_kinds`), or
-        on the workspace when `on` is None. `run(target, context, choices) -> Proposal` is deterministic work (it may
-        run declared programs through `context.tools`); the person reviews the proposal, and what they approve
-        applies as theirs. Raising StoreError or ToolError shows its message to the person; any other exception turns
-        the plugin off."""
+        on the workspace when `on` is None. `where` narrows the records of kind `on` it is offered on and may run on,
+        as for task kinds: {field: value} or {field: (value, ...)}, every field matching. `run(target, context,
+        choices) -> Proposal` is deterministic work (it may run declared programs through `context.tools`); the person
+        reviews the proposal, and what they approve applies as theirs. Raising StoreError or ToolError shows its
+        message to the person; any other exception turns the plugin off."""
         self._name(name)
         if name in self.actions or not callable(run) or not label.strip():
             raise ValueError("duplicate action, missing label or invalid callback")
         if file_kinds and on != "file":
             raise ValueError("file_kinds applies only to actions on files")
-        self.actions[name] = ActionRegistration(name, label.strip(), on, run, tuple(file_kinds))
+        self.actions[name] = ActionRegistration(name, label.strip(), on, run, tuple(file_kinds), _narrowed(where, on))
 
     def text_format(self, name: str, units: Callable) -> None:
         """A long text format: `units(text) -> list[Unit]`, spans that cover the text exactly, in order, each with a
@@ -1093,9 +1129,9 @@ class Registrar:
     def job(self, name: str, *, every_minutes: int, run: Callable) -> None:
         """Work on a schedule (listed in `provides.jobs`): `run(context)` with an `EventContext`, every
         `every_minutes` by default; the workspace changes it or turns the job off in
-        `workspace.plugins.jobs.<name>`. Like an event handler it reads, queues requests, files questions and raises
-        interface events; it never writes records itself and never calls AI directly. It runs only while the app
-        runs, and each run is recorded."""
+        `workspace.plugins.jobs.<name>`. Like an event handler it reads, queues requests, files questions, raises
+        interface events and stages its own ops; it never writes records directly and never calls AI itself. It runs
+        only while the app runs, and each run is recorded."""
         self._name(name)
         if name in self.jobs or not callable(run) or not isinstance(every_minutes, int) or every_minutes < 5:
             raise ValueError("duplicate job, invalid run function, or a schedule under 5 minutes")

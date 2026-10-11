@@ -702,6 +702,7 @@ class ActionPreviewItem(BaseModel):
     name: str
     media_type: str
     caption: str = ""
+    alt: str = Field("", description="What an image shows, for people who can't see it.")
     data_base64: str = Field(description="The preview's bytes; pictures or plain text only.")
 
 

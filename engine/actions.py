@@ -94,6 +94,8 @@ def available(store: Store, kind: str | None = None, record_id: str | None = Non
                 continue
             if action.file_kinds and (target is None or target.data.get("file_kind") not in action.file_kinds):
                 continue
+            if action.where and (target is None or not action.offered_on(target)):
+                continue
             found.append(action)
     return sorted(found, key=lambda a: a.label)
 
@@ -137,6 +139,8 @@ def preview(
             raise StoreError(f"there is no {action.on} {target['id']}")
         if action.file_kinds and record.data.get("file_kind") not in action.file_kinds:
             raise StoreError(f"{action.label} doesn't work on this kind of file")
+        if not action.offered_on(record):
+            raise StoreError(f"{action.label} isn't for this {action.on}")
     registrar = store.plugins.registrars[plugin]
     actions, files = cfg.workspace.plugins.actions, cfg.storage.files
     limits = {
@@ -247,7 +251,15 @@ def _checked(
             raise StoreError(f"previews can't be {p.media_type}")
         if not isinstance(p.data, bytes) or len(p.data) > limits.preview_mb * 1024 * 1024:
             raise StoreError(f"preview {p.name} is larger than {limits.preview_mb:g} MB")
-        previews.append({"name": p.name, "media_type": p.media_type, "data": p.data, "caption": p.caption})
+        previews.append(
+            {
+                "name": p.name,
+                "media_type": p.media_type,
+                "data": p.data,
+                "caption": p.caption,
+                "alt": p.alt or p.caption,
+            }
+        )
     view = store.read()
     files = []
     own_kinds = {"attachment", *store.plugins.registrars[plugin].file_kinds}

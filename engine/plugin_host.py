@@ -708,6 +708,12 @@ class PluginHost:
             for name in (task.prompt, task.playbook):
                 if "/" in name and not name.startswith(registrar.name + "/"):
                     raise ValueError("a task's prompt and guidance are core ones or the plugin's own")
+        for action in registrar.actions.values():
+            if action.where:
+                model = registrar.records.get(action.on) or REGISTRY.get(action.on)
+                unknown = sorted(set(action.where) - set(model.model_fields)) if model is not None else []
+                if model is None or unknown:
+                    raise ValueError(f"action {action.name} narrows {action.on} by a field it doesn't have")
         for panel in registrar.panels.values():
             model = registrar.records.get(panel.kind) or REGISTRY.get(panel.kind)
             if model is None:
@@ -805,6 +811,7 @@ class PluginHost:
         view.data_layers = lambda project: self.data_layers(plugin, project)
         view.default_language = self.cfg.workspace.language
         view.read_interface = lambda spec, project=None: self.read_interface(plugin, spec, project)
+        view.user = self.cfg.workspace.user.person
         return view
 
     def data_layers(self, plugin: str | None, project: str | None = None) -> list[Path]:
@@ -956,12 +963,45 @@ class PluginHost:
 
     def _commands(self, name: str, commands: list, event: str = "", payload: dict | None = None) -> None:
         emits = [data for kind, data in commands if kind == "emit"]
-        commands = [(kind, data) for kind, data in commands if kind != "emit"]
+        ops = [data for kind, data in commands if kind == "op"]
+        commands = [(kind, data) for kind, data in commands if kind not in ("emit", "op")]
         checked = [(e["event"], self._check_emit(name, e["event"], e["payload"])) for e in emits]
         if commands:
             self._write_commands(name, commands, event, payload)
+        if ops:
+            self._apply_own_ops(name, ops, event)
         for raised, data in checked:
             self.publish(raised, data)
+
+    def _apply_own_ops(self, plugin: str, ops: list[dict[str, Any]], event: str) -> str:
+        """Apply ops a handler or job staged, as a changeset from the plugin: only its own ops, treated like work
+        from outside content (system ops and person-only values wait for the person)."""
+        from engine.applier import Context, Inputs, apply_changeset
+        from engine.names import People
+        from engine.ops import CHANGESET
+
+        own = tuple(sorted(self.registrars[plugin].ops))
+        for op in ops:
+            if op.get("op") not in own:
+                raise StoreError(f"{op.get('op')} isn't one of {plugin}'s own ops")
+        summary = f"{plugin}: {event}" if event else plugin
+        changeset = CHANGESET.validate_python({"summary": summary, "ops": ops}, context={"op_models": self.ops})
+        with self.store.transaction() as tx:
+            request = tx.create(
+                "request",
+                {
+                    "task": "notes",
+                    "origin": "schedule",
+                    "state": "done",
+                    "note": summary,
+                    "created_at": datetime.now(UTC).isoformat(),
+                },
+                WriteContext(actor="plugin", trust="untrusted", op=f"{plugin}/stage"),
+            )
+        ctx = Context(
+            self.store, self.cfg, People(self.store, self.cfg), own, Inputs(request.id, None, "", "", "untrusted")
+        )
+        return apply_changeset(changeset, [], ctx, run=None)
 
     def _write_commands(self, name: str, commands: list, event: str = "", payload: dict | None = None) -> None:
         context = WriteContext(actor="plugin", trust="untrusted", op=f"{name}/event")

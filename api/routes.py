@@ -483,6 +483,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     name=p["name"],
                     media_type=p["media_type"],
                     caption=p["caption"],
+                    alt=p.get("alt") or p["caption"],
                     data_base64=base64.b64encode(p["data"]).decode("ascii"),
                 )
                 for p in pending.previews

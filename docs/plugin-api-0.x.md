@@ -10,6 +10,21 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.19 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **`registrar.action(..., where={field: value})`** narrows the records an action is offered on and may run on, as for
+  task kinds. Checked at load.
+- **`context.apply_op(op)`** in an event handler or a job stages one of the plugin's own ops. It applies through the
+  applier after the handler returns, as a changeset from the plugin the person can see and undo, treated like work
+  from outside content: system ops and person-only values wait for the person. Staging a core op turns the plugin off.
+- **`view.user`** is the workspace person's id, and `view.person_name(person_id=None)` their display name (yours when
+  no id is given), for a byline.
+- **`record.set` can set a project's `owner`**, a person id. Evidence for `record.set` fields is required only for
+  changes that aren't the person's own.
+- **`Preview(..., alt="")`** describes an image for people who can't see it; the caption is used when it's empty.
+
 ## What 0.3.18 adds
 
 Manifests stay `'>=0.3,<0.4'`. `provides.panels`, `provides.today` and `provides.jobs` are now available.

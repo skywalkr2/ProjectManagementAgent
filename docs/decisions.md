@@ -172,6 +172,30 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: Plugin API 0.3.19, and evidence only for claims
+
+**Decided by:** Claude (design), from plugin questions 69-72; the owner can override.
+
+**What:**
+- Plugin API 0.3.19.
+  - Actions can be narrowed with `where`.
+  - Event handlers and jobs can stage the plugin's own ops through the applier, as a changeset treated like work from
+    outside content.
+  - Plugins can read the workspace person's name.
+  - Previews carry alt text.
+  - `record.set` can set a project's owner.
+- Evidence for `record.set` fields is now required only when the change isn't the person's own.
+
+**Why:**
+- A deterministic check needs somewhere to record what it checked, and going through the applier keeps the ledger,
+  validators, tiers and Undo.
+- Evidence exists so claims taken from inputs can be checked. A change the person makes on screen or approves in an
+  action is not a claim.
+
+**Impact:**
+- Design 6.7's evidence rule now reads "claims from inputs".
+- Screens show the alt text on previews.
+
 ## 2026-10-12: Plugin Today lines, panels and jobs
 
 **Decided by:** Claude (design), building design 3.x and 7.2; the owner can override.
