@@ -160,7 +160,7 @@ def _join(*parts: str) -> str:
 
 def build() -> str:
     import engine.plugin_api as api
-    from engine import actions, plugin_host, plugin_manifest, tools
+    from engine import actions, plugin_host, plugin_manifest, texts, tools
     from engine.config.schema import FileLimits, PluginSettings
     from engine.ops import OP_MODELS
     from engine.records import REGISTRY
@@ -256,6 +256,39 @@ def build() -> str:
             ),
             "Previews may be: " + ", ".join(f"`{t}`" for t in sorted(actions.PREVIEW_TYPES)) + ".",
             "Core ops an action may propose: " + ", ".join(f"`{o}`" for o in sorted(actions.ACTION_CORE_OPS)) + ".",
+        ),
+        _section(
+            "AI task kinds",
+            "Registered with `registrar.task_kind` (see Registering). A task kind with a `packet` function returns "
+            "what each run sees:",
+            "\n\n".join(
+                _join(f"### {cls.__name__}", _para(_doc(cls)))
+                + "\n\n"
+                + _table(["Field", "Type", "Default"], _dataclass_rows(cls))
+                for cls in (api.PacketParts, api.Part)
+            ),
+        ),
+        _section(
+            "Lints",
+            "Registered with `registrar.lint` (see Registering).",
+            _join("### LintFinding", _para(_doc(api.LintFinding)))
+            + "\n\n"
+            + _table(["Field", "Type", "Default"], _dataclass_rows(api.LintFinding)),
+        ),
+        _section(
+            "Long text",
+            _para(_doc(texts)),
+            _join("### LongText", _para(_doc(api.LongText)))
+            + "\n\n"
+            + _table(["Field", "Type", "Default"], _dataclass_rows(api.LongText)),
+            _join("### Unit", _para(_doc(api.Unit)))
+            + "\n\n"
+            + _table(["Field", "Type", "Default"], _dataclass_rows(api.Unit)),
+            "Core formats: " + ", ".join(f"`{f}`" for f in texts.CORE_FORMATS) + ". Read a field with "
+            "`view.text(record, field)`, its versions with `view.text_versions(record, field)` and who wrote what "
+            "with `view.authorship(record, field)`; write one of your own with `writer.set_text` in an op, or propose "
+            "the core ops `text.edit` and `text.propose` from an action. The `text_version` record and the text ops "
+            "are under Core records and Core ops.",
         ),
         _section(
             "Programs",

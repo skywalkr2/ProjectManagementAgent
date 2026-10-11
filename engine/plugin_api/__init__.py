@@ -29,9 +29,10 @@ from engine.ops import EvidenceIn, OpModel, Tier
 from engine.records import Record, RefTo, ref_fields, values_at
 from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
+from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.5"
+PLUGIN_API_VERSION = "0.3.6"
 
 
 class Settings(BaseModel):
@@ -108,6 +109,38 @@ class ReadView:
     #: Set by the host: the workspace's language tag.
     default_language: str = "en-US"
 
+    #: Set by the host: reads a stored text by hash.
+    read_text: Callable[[str], str] | None = None
+
+    def text_versions(self, record: Stored, field: str) -> list[Stored]:
+        """Every version of a long text field (`text_version` records), oldest first."""
+        from engine.texts import versions
+
+        self._allow(record.kind)
+        return versions(self.__view, record.kind, record.id, field)
+
+    def text(self, record: Stored, field: str, version: int | None = None) -> str:
+        """A long text field's current text, or the text of version `version`; empty when it has none."""
+        found = self._text_version(record, field, version)
+        if found is None or self.read_text is None:
+            return ""
+        return self.read_text(found.data["sha256"])
+
+    def authorship(self, record: Stored, field: str, version: int | None = None) -> list[dict[str, Any]]:
+        """Who wrote each passage of a long text field's current text (or of version `version`): spans of
+        {start, end, kind, run, words}, kind "person", "assistant" (drafted) or "assistant_edit" (the person's text
+        changed by the assistant)."""
+        found = self._text_version(record, field, version)
+        return [dict(span) for span in found.data["authorship"]] if found else []
+
+    def _text_version(self, record: Stored, field: str, version: int | None) -> Stored | None:
+        from engine.texts import current
+
+        self._allow(record.kind)
+        if version is None:
+            return current(self.__view, record.kind, record.id, field)
+        return next((v for v in self.text_versions(record, field) if v.data["number"] == version), None)
+
     def language(self, record: Stored) -> str:
         """The language tag work on a record is written in: its project's (a project's own for a project), else the
         nearest parent project's, else the workspace's."""
@@ -127,8 +160,10 @@ class OpWriter(ReadView):
         context: WriteContext,
         models: dict[str, type[Record]] | None = None,
         referrers: Callable[[str, str], list[tuple[str, str]]] | None = None,
+        store: Any = None,
     ):
         super().__init__(tx, plugin)
+        self.__store = store
         self.__tx, self.__writes, self.__context = tx, writes, context
         self.__models = models or {}
         self.__referrers = referrers or (lambda kind, record_id: [])
@@ -178,19 +213,52 @@ class OpWriter(ReadView):
         if data.get("stage") is not None:
             raise PluginMisuse("stage changes require stage.move")
         self._write(kind, {"*"})
+        self._no_long_text(kind, data)
         self._declared(kind, None, data)
         result = self.__tx.create(kind, data, self.__context)
         self.touched.append({"kind": kind, "id": result.id})
         return result
 
+    def _no_long_text(self, kind: str, data: dict[str, Any]) -> None:
+        from engine.texts import long_text_fields
+
+        model = self.__models.get(kind)
+        written = set(long_text_fields(model)) & {k for k, v in data.items() if v is not None} if model else set()
+        if written:
+            raise PluginMisuse(f"{', '.join(sorted(written))} is long text: write it with writer.set_text")
+
+    def set_text(self, kind: str, record_id: str, field: str, text: str) -> Stored:
+        """Write a new version of one of this plugin's long text fields (the op declares the field in `writes`). From
+        the person (their own action) it becomes the field's text at once, written by the person; from anyone else it
+        is a draft waiting for the person's review, written by the assistant. Returns the `text_version` record."""
+        from engine.texts import new_version
+
+        self._write(kind, {field})
+        person = self.__context.actor == "pm"
+        version = new_version(
+            self.__store,
+            self.__tx,
+            self.__context,
+            kind,
+            record_id,
+            field,
+            text,
+            source="import" if person else "draft",
+            by="person" if person else "assistant",
+            accept=person,
+        )
+        self.touched.append({"kind": kind, "id": record_id})
+        return version
+
     def update(self, kind: str, record_id: str, changes: dict[str, Any], *, read_version: int) -> Stored:
         """Change fields of one of this plugin's records, stating the version that was read; a newer version refuses
-        the op. Only fields the op declares in `writes` may change."""
+        the op. Only fields the op declares in `writes` may change; long text fields change with `set_text`."""
         if kind == "request" and {"approval", "stage_start"} & set(changes):
             raise PluginMisuse("stage task approval belongs to the core")
         if "stage" in changes:
             raise PluginMisuse("stage changes require stage.move")
         self._write(kind, set(changes))
+        self._no_long_text(kind, changes)
         self._declared(kind, record_id, changes)
         result = self.__tx.update(kind, record_id, changes, self.__context, read_version=read_version)
         self.touched.append({"kind": kind, "id": result.id})
@@ -339,9 +407,11 @@ class LintRegistration:
 
 @dataclass
 class Part:
-    """One piece of what an AI run sees. Content is untrusted unless it is the person's own words (`trusted`), and is
-    marked as material, never instructions. A `reference_only` part is there to inform the run and must not be quoted
-    or reproduced in its answer; evidence may not cite it."""
+    """One piece of what an AI run sees, in a task kind's packet. Untrusted content (the default; `trusted` only for the
+    person's own words) is marked in the packet as material, never instructions, and any untrusted part makes the run's
+    changeset untrusted, so its system ops wait for the person. A `reference_only` part informs the run but is marked
+    not to be quoted or reproduced. Evidence may quote any part that isn't reference-only, and is cited as
+    "<kind>:<id>" of the record the run is about."""
 
     title: str
     text: str
@@ -403,6 +473,7 @@ class Registrar:
         self.file_kinds: dict[str, Any] = {}
         self.actions: dict[str, ActionRegistration] = {}
         self.lints: dict[str, LintRegistration] = {}
+        self.text_formats: dict[str, Callable] = {}
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
@@ -574,6 +645,15 @@ class Registrar:
             raise ValueError("file_kinds applies only to actions on files")
         self.actions[name] = ActionRegistration(name, label.strip(), on, run, tuple(file_kinds))
 
+    def text_format(self, name: str, units: Callable) -> None:
+        """A long text format: `units(text) -> list[Unit]`, spans that cover the text exactly, in order, each with a
+        kind and whether it is atomic (never split or merged). Pure and deterministic; the core checks the coverage.
+        The core ships "plain" (blank-line paragraphs) and "markdown" (its blocks)."""
+        self._name(name)
+        if name in self.text_formats or not callable(units):
+            raise ValueError("duplicate text format or invalid callback")
+        self.text_formats[name] = units
+
     def lint(self, name: str, fn: Callable, *, ops: tuple[str, ...], severity: str = "warn") -> None:
         """A soft check on the assistant's proposals: `fn(op, view, settings) -> list[LintFinding]` runs on every op
         named in `ops` (core or own) before it applies. It must be deterministic and quick, and never call AI.
@@ -615,6 +695,8 @@ __all__ = [
     "EventContext",
     "ActionContext",
     "LintFinding",
+    "LongText",
+    "Unit",
     "Part",
     "PacketParts",
     "Proposal",

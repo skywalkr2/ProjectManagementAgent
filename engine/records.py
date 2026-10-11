@@ -315,6 +315,45 @@ class ToolRun(Record):
     ran_at: datetime = Field(description="When it was run.")
 
 
+class TextVersion(Record):
+    """One version of a long text field: its text (stored once by hash in the workspace's texts folder), where it came
+    from, whether it is waiting for review, and who wrote each passage. Written by the text ops and `writer.set_text`;
+    the person accepts or discards pending ones."""
+
+    record_kind: ClassVar[str] = "text_version"
+    prefix: ClassVar[str] = "TXT"
+
+    owner_kind: str = Field(description="The kind of the record whose field this is a version of.")
+    owner_id: str = Field(description="The id of that record.")
+    field: str = Field(description="The long text field.")
+    number: int = Field(ge=1, description="The version's number for this field: 1, 2, 3...; never reused.")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$", description="Hash of the text; also where it is stored.")
+    format: str = Field(description="The text format its units come from.")
+    words: int = Field(0, ge=0, description="How many words it has.")
+    source: Literal["edit", "draft", "proposal", "merge", "import"] = Field(
+        description="edit: the person wrote it here. draft: the assistant wrote it. proposal: the person's own work "
+        "arriving from outside (a working copy, a file). merge: the result of accepting changes. import: loaded by a "
+        "person's action."
+    )
+    status: Literal["pending", "accepted", "merged", "discarded"] = Field(
+        description="pending: waiting for review. accepted: it became the field's text. merged: some of its changes "
+        "were accepted into a newer version. discarded: set aside."
+    )
+    base: int | None = Field(None, description="The number of the version it was made from.")
+    replaces: int | None = Field(None, description="For an accepted version, the number of the one it replaced.")
+    authorship: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Who wrote each passage: {start, end, kind, run}, kind person, assistant (drafted) or "
+        "assistant_edit (the person's text changed by the assistant), with the AI run for the assistant's.",
+    )
+    paragraph_map: list[dict[str, Any]] = Field(
+        default_factory=list, description="For an anchored draft, which base units each new unit came from."
+    )
+    note: str | None = Field(None, description="Where it came from, in words, when that helps the review.")
+    run: str | None = Field(None, description="The AI run that wrote it, for a draft.")
+    created_at: datetime = Field(description="When it was written.")
+
+
 class StageStart(BaseModel):
     """Which stage entry asked for a task."""
 
@@ -499,6 +538,7 @@ REGISTRY: dict[str, type[Record]] = {
         Signal,
         File,
         ToolRun,
+        TextVersion,
     )
 }
 

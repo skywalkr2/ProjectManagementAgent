@@ -81,6 +81,22 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-12: Long text is versioned, reviewed change by change, and the assistant's text is always a draft
+
+**Decided by:** Claude (design 5.0, 6.7 as built), the owner can override.
+
+**What:** Long text fields keep every version (stored once by hash) with authorship by passage in three kinds. A
+plugin writes them only with `writer.set_text`: from the person's own action the text is accepted and theirs; from
+anyone else it is a pending draft. Accepting a pending version is change by change; when the current text moved on
+since the version's base (a working copy handed back late), the merge is three-way: changes only in the current text
+are kept, changes only in the proposal are offered, and a passage both changed is the person's pick. The export writes
+texts as plain files beside the records.
+
+**Why:** The assistant's prose must never become a book's text unreviewed, and a writer's own edits made elsewhere must
+never silently undo what was accepted in the meantime.
+
+**Impact:** Plugin API 0.3.6. Drafts as task output, anchored drafts and the compare routes come next.
+
 ## 2026-10-12: Plugins add lints; lints never refuse by default
 
 **Decided by:** Claude (design), from the plugin's needs; the owner can override.

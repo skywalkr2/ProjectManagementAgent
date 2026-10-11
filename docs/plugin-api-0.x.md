@@ -10,6 +10,24 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.6 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Long text: mark a field `Annotated[str | None, LongText("plain" | "markdown" | "<plugin>/<format>")]`. Every version
+  is a `text_version` record with its number, status (pending, accepted, merged, discarded), source and authorship by
+  passage (person, assistant, assistant_edit); the text is stored once by hash. `registrar.text_format(name, units)`
+  adds a format (listed in `provides.text_formats`); the core checks its units cover the text exactly.
+- Writing: `writer.set_text(kind, id, field, text)` in an op (accepted and written by the person when the person runs
+  it, a pending draft from anyone else); never the field directly. Core ops: `text.edit` (person only, current at
+  once), `text.propose` (pending, from the person's work outside), `text.accept` (person only, change by change,
+  three-way when the text moved on since the base), `text.discard` (person only). Undo restores the earlier text.
+- Reading: `view.text(record, field, version=None)`, `view.text_versions(...)`, `view.authorship(...)`.
+- Event `text.accepted` (filterable by the owner's kind) with version, previous, source and words per author.
+- The export writes each text as `data/texts/<hash>.txt` and import loads them back; backups include them.
+- The guide now documents `Part`, `PacketParts`, `LintFinding`, `LongText` and `Unit`; the self-check's network scan
+  lists reaching submodules (`urllib.request`, `http.client`) so pure helpers such as `urllib.parse` pass.
+
 ## What 0.3.5 adds
 
 Manifests stay `'>=0.3,<0.4'`.

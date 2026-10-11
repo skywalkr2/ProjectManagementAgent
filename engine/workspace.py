@@ -18,7 +18,7 @@ from engine.storage import Store
 from engine.storage.export import commit_export, export_data, import_data
 
 ENV_WORKSPACE = "COCKPIT_WORKSPACE"
-WORKSPACE_GITIGNORE = "cockpit.db\ncockpit.db-*\n.cockpit/\nsources/\n"
+WORKSPACE_GITIGNORE = "cockpit.db\ncockpit.db-*\n.cockpit/\nsources/\ntexts/\n"
 
 
 class WorkspaceError(Exception):

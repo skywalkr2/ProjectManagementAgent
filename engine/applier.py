@@ -21,6 +21,7 @@ from engine.names import People
 from engine.ops import (
     EVIDENCE_FIELDS,
     NEEDS_EVIDENCE,
+    PERSON_ONLY_OPS,
     SETTABLE,
     ActionAddOp,
     ActionCloseOp,
@@ -37,6 +38,10 @@ from engine.ops import (
     RecordLogOp,
     RecordSetOp,
     StageMoveOp,
+    TextAcceptOp,
+    TextDiscardOp,
+    TextEditOp,
+    TextProposeOp,
 )
 from engine.plugin_api import NeedsPerson
 from engine.records import model_for
@@ -114,6 +119,22 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         if name not in ctx.allowed_ops:
             refuse(i, "allowed-ops", f"{name} isn't an op this task may use")
             continue
+        if name in PERSON_ONLY_OPS and ctx.actor != "pm":
+            refuse(i, "person-only", f"only the person can {name.split('.', 1)[1]} text")
+            continue
+        if isinstance(op, (TextEditOp, TextProposeOp)):
+            why = _text_target(ctx.store, view, op.record.kind, op.record.id, op.field)
+            if why:
+                refuse(i, "targets", why)
+                continue
+        if isinstance(op, (TextAcceptOp, TextDiscardOp)):
+            pending = view.get("text_version", op.version)
+            if pending is None or pending.data["status"] != "pending":
+                refuse(i, "targets", f"{op.version} isn't a version waiting for review")
+                continue
+            if pending.version != op.read_version:
+                refuse(i, "record-changed", f"{op.version} changed since it was reviewed")
+                continue
         if isinstance(op, RecordDeleteOp):
             target = view.get(op.record.kind, op.record.id)
             if target is None or target.version != op.read_version:
@@ -256,6 +277,18 @@ def parent_problem(view: Any, project: str | None, parent: str) -> str | None:
         seen.add(current.id)
         up = current.data.get("parent")
         current = view.get("project", up) if up else None
+    return None
+
+
+def _text_target(store: Store, view: Any, kind: str, record_id: str, field: str) -> str | None:
+    """Why a record's field can't take text, or None."""
+    from engine.texts import long_text_fields
+
+    model = store.plugins.records.get(kind)
+    if model is None or view.get(kind, record_id) is None:
+        return f"there is no {kind} {record_id}"
+    if field not in long_text_fields(model):
+        return f"{kind}.{field} isn't a long text field"
     return None
 
 
@@ -524,6 +557,35 @@ def _apply_op(
             raise StoreError(f"{kind} {rid} is still referred to by {users[0][0]} {users[0][1]}")
         tx.delete(kind, rid, w, read_version=op.read_version)
         return [{"kind": kind, "id": rid}], None
+    if isinstance(op, (TextEditOp, TextProposeOp)):
+        from engine.texts import new_version
+
+        proposal = isinstance(op, TextProposeOp)
+        version = new_version(
+            ctx.store,
+            tx,
+            w,
+            op.record.kind,
+            op.record.id,
+            op.field,
+            op.text,
+            source="proposal" if proposal else "edit",
+            by="person",
+            base=op.base if proposal else None,
+            note=op.note if proposal else None,
+            accept=not proposal,
+        )
+        return [{"kind": op.record.kind, "id": op.record.id}, {"kind": "text_version", "id": version.id}], None
+    if isinstance(op, TextAcceptOp):
+        from engine.texts import accept
+
+        version = accept(ctx.store, tx, w, op.version, op.read_version, dict(op.choices))
+        return [{"kind": "text_version", "id": op.version}, {"kind": "text_version", "id": version.id}], None
+    if isinstance(op, TextDiscardOp):
+        from engine.texts import discard
+
+        discard(tx, w, op.version, op.read_version)
+        return [{"kind": "text_version", "id": op.version}], None
     if isinstance(op, ProjectAddOp):
         data = {"name": op.name.strip(), "summary": op.summary, "parent": op.parent, "language": op.language}
         return [{"kind": "project", "id": tx.create("project", data, w).id}], None

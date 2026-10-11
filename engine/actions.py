@@ -25,7 +25,7 @@ from engine.storage import Store, StoreError, WriteContext
 PREVIEW_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "text/plain"}
 #: Core ops an action may propose. Ops that must cite evidence need an input to quote, which an action doesn't have;
 #: file.add is the host's own, made from the proposal's files.
-ACTION_CORE_OPS = frozenset(OP_MODELS) - NEEDS_EVIDENCE - {"file.add"}
+ACTION_CORE_OPS = frozenset(OP_MODELS) - NEEDS_EVIDENCE - {"file.add", "text.accept", "text.discard"}
 _PLACEHOLDER = "$file:"
 
 

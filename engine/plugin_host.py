@@ -65,6 +65,18 @@ EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
         },
     ),
     "file.added": ("A file was added.", {"id": "The file's id.", "kind": "The file's kind."}),
+    "text.accepted": (
+        "A long text field got a new current version: the person's edit, an accepted draft or proposal, or a merge.",
+        {
+            "kind": "The kind of the record the field is on.",
+            "id": "That record's id.",
+            "field": "The long text field.",
+            "version": "The number of the version now current.",
+            "previous": "The number of the version it replaced (None for the first).",
+            "source": "edit, draft, proposal, merge or import.",
+            "authorship": "Words by kind of author: {person, assistant, assistant_edit}.",
+        },
+    ),
     "request.queued": ("AI work was queued.", {"id": "The request's id."}),
     "question.answered": ("A question was answered.", {"id": "The question's id."}),
     "changeset.applied": ("A changeset was applied (some of its ops may be held or refused).", {"id": "Its id."}),
@@ -75,7 +87,7 @@ EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
 }
 EVENTS = set(EVENT_SPECS)
 #: Events whose payload names a kind, so a subscription can be limited to kinds (file kinds for file.added).
-EVENTS_WITH_KIND = {"record.changed", "stage.moved", "file.added"}
+EVENTS_WITH_KIND = {"record.changed", "stage.moved", "file.added", "text.accepted"}
 log = logging.getLogger(__name__)
 
 
@@ -355,6 +367,7 @@ class PluginHost:
             ("file_kinds", registrar.file_kinds),
             ("actions", registrar.actions),
             ("lints", registrar.lints),
+            ("text_formats", registrar.text_formats),
         ):
             if set(getattr(expected, key)) != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
@@ -385,6 +398,11 @@ class PluginHost:
             fields = set(model.model_fields)
             if not set(model.person_only) <= fields or any(not set(group) <= fields for group in model.unique):
                 raise ValueError("person_only and unique may name only the record type's own fields")
+            from engine.texts import CORE_FORMATS, long_text_fields
+
+            for field_name, fmt in long_text_fields(model).items():
+                if fmt not in CORE_FORMATS and fmt not in registrar.text_formats:
+                    raise ValueError(f"{model.record_kind}.{field_name} uses an unknown text format {fmt}")
             levels = model.content_levels_field
             if levels is not None and (
                 levels not in fields or "list[str]" not in str(model.model_fields[levels].annotation)
@@ -492,10 +510,22 @@ class PluginHost:
 
     def _with_files(self, view: Any) -> Any:
         from engine.files import read_bytes
+        from engine.texts import read_text
 
         view.read_file = lambda file_id: read_bytes(self.store, file_id)[1]
+        view.read_text = lambda sha256: read_text(self.store, sha256)
         view.default_language = self.cfg.workspace.language
         return view
+
+    def text_formats(self) -> dict[str, Any]:
+        """The core's long text formats and those of running plugins."""
+        from engine.texts import CORE_FORMATS
+
+        formats = dict(CORE_FORMATS)
+        for name, registrar in self.registrars.items():
+            if self.active(name):
+                formats.update(registrar.text_formats)
+        return formats
 
     def file_kinds(self) -> dict[str, Any]:
         """The core's file kinds and those of running plugins."""
@@ -565,7 +595,16 @@ class PluginHost:
         if not self.active(name):
             raise StoreError("op plugin is disabled")
         registration = self.registrars[name].ops[op.op]
-        writer = OpWriter(tx, name, registration.writes, context, models=self.records, referrers=self._referrers(tx))
+        writer = OpWriter(
+            tx,
+            name,
+            registration.writes,
+            context,
+            models=self.records,
+            referrers=self._referrers(tx),
+            store=self.store,
+        )
+        self._with_files(writer)
         self._with_files(writer)
         try:
             registration.apply(op.model_copy(deep=True), writer, self.registrars[name].config.model_copy(deep=True))

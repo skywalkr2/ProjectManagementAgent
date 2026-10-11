@@ -176,6 +176,10 @@ class Tx:
                 special.append(("question.answered", {"id": rid}))
             if kind == "file" and field == "file_kind" and version == 1:
                 special.append(("file.added", {"id": rid, "kind": after}))
+            if kind == "text_version" and field == "status" and after == "accepted" and before != after:
+                accepted = self.get("text_version", rid)
+                if accepted is not None:
+                    special.append(("text.accepted", _text_accepted(accepted)))
         return [("record.changed", data) for data in grouped.values()] + special
 
     def sql(self, query: str, args: tuple[Any, ...] = ()) -> sqlite3.Cursor:
@@ -405,6 +409,22 @@ class Tx:
                 None if ctx.evidence is None else dumps(ctx.evidence),
             ),
         )
+
+
+def _text_accepted(version: Stored) -> dict[str, Any]:
+    """The text.accepted payload: which field got which version, from what, and its authorship in words."""
+    counts = {"person": 0, "assistant": 0, "assistant_edit": 0}
+    for span in version.data.get("authorship", []):
+        counts[span["kind"]] = counts.get(span["kind"], 0) + int(span.get("words", 0))
+    return {
+        "kind": version.data["owner_kind"],
+        "id": version.data["owner_id"],
+        "field": version.data["field"],
+        "version": version.data["number"],
+        "previous": version.data.get("replaces"),
+        "source": version.data["source"],
+        "authorship": counts,
+    }
 
 
 def _validate(model: type, data: dict[str, Any]) -> dict[str, Any]:

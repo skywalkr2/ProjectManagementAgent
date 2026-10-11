@@ -97,3 +97,11 @@ def test_core_must_not_import_plugins_and_plugins_only_the_api(tmp_path):
     )
     found = sorted((f.path, f.line) for f in scan_boundary(root=root))
     assert found == [("engine/core.py", 1), ("plugins/p/bad.py", 1), ("plugins/p/bad.py", 2)]
+
+
+def test_the_network_scan_flags_reaching_modules_not_pure_helpers():
+    from engine.selfcheck.scans import reaches_network
+
+    assert reaches_network("urllib.parse") is None and reaches_network("http") is None
+    assert reaches_network("urllib.request") == "urllib.request" and reaches_network("http.client") == "http.client"
+    assert reaches_network("httpx") == "httpx" and reaches_network("subprocess") == "subprocess"

@@ -234,6 +234,60 @@ class ProjectAddOp(OpModel):
         return f"Start the project {self.name}"
 
 
+class TextEditOp(OpModel):
+    """The person's own new text for a long text field, written here: it becomes the field's text at once, with the
+    person as author of every passage it changes. Only the person (an edit on screen or their own action) uses it."""
+
+    op: Literal["text.edit"] = "text.edit"
+    record: RecordRef = Field(description="The record whose field it is.")
+    field: str = Field(description="The long text field.")
+    text: str = Field(description="The whole new text.")
+
+    def describe(self) -> str | None:
+        return f"Change the text of {self.record.kind} {self.record.id}"
+
+
+class TextProposeOp(OpModel):
+    """The person's own work on a long text field arriving from outside (a working copy handed back, a file edited
+    elsewhere): a pending version for review, made from version `base` (the current one if unset)."""
+
+    op: Literal["text.propose"] = "text.propose"
+    record: RecordRef = Field(description="The record whose field it is.")
+    field: str = Field(description="The long text field.")
+    text: str = Field(description="The whole proposed text.")
+    base: int | None = Field(None, description="The number of the version it was made from.")
+    note: str | None = Field(None, description="Where it came from, for the review.")
+
+    def describe(self) -> str | None:
+        return f"Propose new text for {self.record.kind} {self.record.id}"
+
+
+class TextAcceptOp(OpModel):
+    """Accept a pending version, change by change: the result becomes the field's text, with authorship following the
+    choices. Changes not listed are accepted; rejecting every change discards it. Only the person uses it."""
+
+    op: Literal["text.accept"] = "text.accept"
+    version: str = Field(description="The id of the pending text version.")
+    read_version: int = Field(ge=1, description="The version of that record that was reviewed.")
+    choices: dict[str, Literal["accept", "reject"]] = Field(
+        default_factory=dict, description="Per change id (c1, c2, ...): accept or reject."
+    )
+
+    def describe(self) -> str | None:
+        return f"Accept text version {self.version}"
+
+
+class TextDiscardOp(OpModel):
+    """Set a pending version aside without changing the field. Only the person uses it."""
+
+    op: Literal["text.discard"] = "text.discard"
+    version: str = Field(description="The id of the pending text version.")
+    read_version: int = Field(ge=1, description="The version of that record that was reviewed.")
+
+    def describe(self) -> str | None:
+        return f"Set aside text version {self.version}"
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -247,7 +301,11 @@ Op = Annotated[
     | StageMoveOp
     | RecordDeleteOp
     | FileAddOp
-    | ProjectAddOp,
+    | ProjectAddOp
+    | TextEditOp
+    | TextProposeOp
+    | TextAcceptOp
+    | TextDiscardOp,
     Field(discriminator="op"),
 ]
 
@@ -265,7 +323,14 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "record.delete": RecordDeleteOp,
     "file.add": FileAddOp,
     "project.add": ProjectAddOp,
+    "text.edit": TextEditOp,
+    "text.propose": TextProposeOp,
+    "text.accept": TextAcceptOp,
+    "text.discard": TextDiscardOp,
 }
+
+#: Ops only the person makes: from anyone else they are refused, never held.
+PERSON_ONLY_OPS = {"text.edit", "text.accept", "text.discard"}
 
 TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {"record.delete": "system", "project.add": "system"}
 

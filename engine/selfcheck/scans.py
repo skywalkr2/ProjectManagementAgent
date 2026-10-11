@@ -35,7 +35,35 @@ DATED_COMMENT = [
     re.compile(r"\bper [A-Z][a-z]+"),
     re.compile(r"\b[A-Z][a-z]+ (said|asked|wants|decided)\b"),
 ]
-NETWORK_MODULES = {"requests", "httpx", "urllib", "socket", "subprocess", "http"}
+#: Modules that reach the network or start processes; a name covers its submodules too. Packages that also hold pure
+#: helpers (urllib.parse, http.HTTPStatus) are listed by their reaching submodules only.
+NETWORK_MODULES = {
+    "requests",
+    "httpx",
+    "urllib3",
+    "aiohttp",
+    "socket",
+    "ssl",
+    "subprocess",
+    "ftplib",
+    "smtplib",
+    "telnetlib",
+    "xmlrpc",
+    "urllib.request",
+    "http.client",
+    "http.server",
+    "http.cookiejar",
+}
+
+
+def reaches_network(module: str) -> str | None:
+    """The listed module an import reaches, if any: the module itself or a package above it."""
+    parts = module.split(".")
+    for end in range(len(parts), 0, -1):
+        name = ".".join(parts[:end])
+        if name in NETWORK_MODULES:
+            return name
+    return None
 
 
 @dataclass(frozen=True)
@@ -214,9 +242,16 @@ def scan_boundary(root: Path = REPO) -> list[Finding]:
                                 "plugins may import only engine.plugin_api from the engine",
                             )
                         )
-                    if head in NETWORK_MODULES:
+                    # `from urllib import request` reaches urllib.request: an imported name counts as a submodule.
+                    names = [a.name for a in node.names] if isinstance(node, ast.ImportFrom) else []
+                    reached = next(
+                        (r for r in map(reaches_network, [module, *(f"{module}.{n}" for n in names)]) if r), None
+                    )
+                    if reached:
                         findings.append(
-                            Finding("boundary", rel, node.lineno, f"bundled plugins use the core's clients, not {head}")
+                            Finding(
+                                "boundary", rel, node.lineno, f"bundled plugins use the core's clients, not {reached}"
+                            )
                         )
     return findings
 

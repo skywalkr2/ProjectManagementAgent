@@ -6,6 +6,9 @@ again gives byte-identical files: that round trip is what makes git history a wo
 
 A folder of records with no ledger (the fictional fixtures) can be imported too: each record gets one ledger entry per
 field, as if it had been created by an import.
+
+Long text is written beside the records as plain files, `texts/<hash>.txt`, one per distinct text a version holds, and
+loaded back into the workspace's text store on import.
 """
 
 from __future__ import annotations
@@ -19,6 +22,7 @@ from engine.records import REGISTRY
 from engine.storage.store import Store, Stored, StoreError, WriteContext, dumps, id_number
 
 LEDGER_FILE = "ledger.jsonl"
+TEXTS_DIR = "texts"
 SEQUENCES_FILE = "_sequences.json"
 _IMPORT = WriteContext(actor="import", trust="trusted", op="import")
 
@@ -44,6 +48,7 @@ def export_data(store: Store, data_dir: Path) -> list[Path]:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(_json(items), encoding="utf-8")
         written.append(path)
+    written += _export_texts(store, view, data_dir / TEXTS_DIR)
     seq = data_dir / SEQUENCES_FILE
     seq.write_text(_json(view.sequences()), encoding="utf-8")
     written.append(seq)
@@ -67,7 +72,9 @@ def import_data(store: Store, data_dir: Path) -> int:
     unknown = [
         p.relative_to(data_dir).as_posix()[:-5]
         for p in data_dir.rglob("*.json")
-        if p.name != SEQUENCES_FILE and p.relative_to(data_dir).as_posix()[:-5] not in known
+        if p.name != SEQUENCES_FILE
+        and p.relative_to(data_dir).parts[0] != TEXTS_DIR
+        and p.relative_to(data_dir).as_posix()[:-5] not in known
     ]
     if unknown:
         raise StoreError("enable the record plugins before importing: " + ", ".join(unknown))
@@ -94,7 +101,35 @@ def import_data(store: Store, data_dir: Path) -> int:
         if seq_path.exists():
             for kind, next_value in json.loads(seq_path.read_text(encoding="utf-8")).items():
                 tx.set_sequence(kind, int(next_value))
+    _import_texts(store, data_dir / TEXTS_DIR)
     return count
+
+
+def _export_texts(store: Store, view: Any, folder: Path) -> list[Path]:
+    """Every distinct text a version holds, as a plain file named by its hash; files no version needs are removed."""
+    from engine.texts import read_text
+
+    wanted = {v.data["sha256"] for v in view.list("text_version", include_deleted=True)}
+    written = []
+    for digest in sorted(wanted):
+        path = folder / f"{digest}.txt"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(read_text(store, digest), encoding="utf-8", newline="")
+        written.append(path)
+    if folder.exists():
+        for stale in folder.glob("*.txt"):
+            if stale.stem not in wanted:
+                stale.unlink()
+    return written
+
+
+def _import_texts(store: Store, folder: Path) -> None:
+    """Load exported texts into the text store, checking each against the hash it is named by."""
+    from engine.texts import store_text
+
+    for path in sorted(folder.glob("*.txt")) if folder.exists() else []:
+        if store_text(store, path.read_bytes().decode("utf-8")) != path.stem:
+            raise StoreError(f"{TEXTS_DIR}/{path.name} doesn't match its name; it was changed after the export")
 
 
 def commit_export(workspace_root: Path, message: str) -> bool:
