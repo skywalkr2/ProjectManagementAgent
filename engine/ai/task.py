@@ -6,7 +6,9 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-ErrorKind = Literal["rate_limited", "quota", "auth", "no_key", "timeout", "invalid_output", "provider_down", "other"]
+ErrorKind = Literal[
+    "rate_limited", "quota", "auth", "no_key", "timeout", "invalid_output", "provider_down", "refused", "other"
+]
 
 
 @dataclass(frozen=True)
@@ -37,6 +39,9 @@ class AiResult:
     extra: dict[str, Any] = field(default_factory=dict)
     truncated: bool = False  # the provider stopped at the output limit, so the text is incomplete
     cached_input_tokens: int | None = None  # input tokens the provider served from its prompt cache
+    # The provider said it refused the work under its own policy (a stop reason or refusal field, never the text).
+    refused: bool = False
+    refusal: str | None = None  # the provider's own reason, if it gave one
 
 
 @dataclass

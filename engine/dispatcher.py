@@ -131,7 +131,8 @@ def process(
         data_level=level,
         default=task_settings(cfg, store.plugins.task_kind(req.data["task"])).tier,
     )
-    estimate = router.estimate(packet.task, tier=tier, data_level=level)
+    use = req.data.get("use")
+    estimate = router.estimate(packet.task, tier=tier, data_level=level, use=use)
     budgets = cfg.ai.budgets
     if estimate is not None and estimate > budgets.per_run_usd:
         return needs_you(
@@ -151,9 +152,10 @@ def process(
             waiting=f"About ${estimate:.2f}. Waiting for your go.",
         )
         return None
-    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level)
+    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use)
     outcome = first
-    stronger = escalation_tier(cfg, tier)
+    # The person's pick of account is theirs: no escalation away from it.
+    stronger = escalation_tier(cfg, tier) if use is None else None
     second_estimate = (
         router.estimate(packet.task, tier=stronger, data_level=level) if first.escalate and stronger else None
     )
@@ -201,18 +203,25 @@ def _rounds(
     ctx: Context,
     previous_ops: list | None,
     data_level: str = "internal",
+    use: str | None = None,
 ) -> _Outcome:
-    """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong."""
+    """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong. A refusal
+    stops at once: no fix round, no other account, no escalation."""
     task = base
     out = _Outcome()
     for attempt in range(cfg.dispatch.fix_rounds + 1):
         last = attempt == cfg.dispatch.fix_rounds
         try:
-            result, _choice, out.run_id = router.call(task, request_id=request_id, tier=tier, data_level=data_level)
+            result, _choice, out.run_id = router.call(
+                task, request_id=request_id, tier=tier, data_level=data_level, use=use
+            )
         except (BudgetReached, NoProvider) as err:
             return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=str(err))
         except AiError as err:
-            return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=_ai_failure(err))
+            stop = _refused(store, None, err.detail) if err.kind == "refused" else _ai_failure(err)
+            return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=stop)
+        if result.refused:
+            return _Outcome(run_id=out.run_id, stop=_refused(store, out.run_id, result.refusal or ""))
         try:
             changeset = parse(result.text, store.plugins.ops)
         except Unreadable as err:
@@ -268,6 +277,19 @@ def _previous_ops(store: Store, previous: str | None) -> str | None:
     return json.dumps([o["op"] for o in cs.data["ops"]], sort_keys=True)
 
 
+REFUSED = "The AI account refused this under its own rules"
+
+
+def _refused(store: Store, run_id: str | None, reason: str) -> str:
+    """Why a refused request waits: the provider's reason and what the refused run cost, and what the person can do."""
+    run = store.read().get("run", run_id) if run_id else None
+    cost = run.data.get("cost_usd") if run else 0.0
+    said = provider_reason(reason)
+    why = f" ({said})" if said else ""
+    spent = f" It cost ${cost:.2f}." if cost else ""
+    return f"{REFUSED}{why}.{spent} Pick another account to try it, change the request, or set it aside."
+
+
 def _ai_failure(err: AiError) -> str:
     plain = {
         "rate_limited": "The AI account is rate limited",
@@ -294,8 +316,16 @@ def needs_you(store: Store, request_id: str, why: str) -> None:
     return None
 
 
-def retry(store: Store, request_id: str) -> None:
-    """Queue a request that stopped (an AI account problem, an unreadable answer) to be processed again."""
+def retry(store: Store, request_id: str, use: str | None = None) -> None:
+    """Queue a request that stopped (an AI account problem, an unreadable answer, a refusal) to be processed again,
+    optionally on an account the person picked (`use`, a "provider/model" from the AI settings)."""
+    if use is not None:
+        from engine.ai.router import accounts
+
+        cfg = store.plugins.cfg
+        req = store.read().get("request", request_id)
+        if req is None or use not in accounts(cfg, _data_level(store, req.data)):
+            raise ValueError(f"{use} isn't an account set up for this kind of material")
     with store.transaction() as tx:
         cur = tx.get("request", request_id)
         if cur.data.get("approval") == "required":
@@ -304,13 +334,10 @@ def retry(store: Store, request_id: str) -> None:
             raise ValueError(wording(store.plugins.cfg, "retry_blocked"))
         if cur.data["state"] not in ("needs_you", "failed"):
             raise ValueError("this isn't waiting on you")
-        tx.update(
-            "request",
-            request_id,
-            {"state": "queued", "waiting": "With the assistant, next in line"},
-            _ENGINE,
-            read_version=cur.version,
-        )
+        changes: dict[str, object] = {"state": "queued", "waiting": "With the assistant, next in line"}
+        if use is not None:
+            changes["use"] = use
+        tx.update("request", request_id, changes, _ENGINE, read_version=cur.version)
 
 
 _PM_DISMISS = WriteContext(actor="pm", trust="trusted", op="request.dismiss")

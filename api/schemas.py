@@ -446,6 +446,18 @@ class FileView(BaseModel):
     added_at: str
 
 
+class RetryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    use: str | None = Field(None, description='Another account to try, as "provider/model" from the AI settings.')
+
+
+class AccountChoice(BaseModel):
+    """An AI account the person may send this request to; named as in their settings, never by model."""
+
+    use: str
+    label: str
+
+
 class TaskKindView(BaseModel):
     """AI work the person can start, on a record of kind `on` or on the whole workspace."""
 

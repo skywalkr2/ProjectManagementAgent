@@ -318,3 +318,75 @@ def test_the_person_starts_a_task_kind_on_a_record_through_the_api(env):
     assert started.status_code == 200, started.text
     refused = client.post(f"{api}/task-kinds/p05/review/start", json={})
     assert refused.status_code == 409 and "works on a p05/chapter" in refused.json()["detail"]
+
+
+# ---- refusals --------------------------------------------------------------------------------------------------------
+
+
+def test_a_refusal_waits_for_the_person_and_is_never_retried_or_escalated(env, monkeypatch):
+    from engine.ai.adapters import stub
+    from engine.ai.task import AiResult
+
+    _, _, store = env
+    record = chapter(env)
+    calls = []
+
+    def run_refused(self, task, model):
+        calls.append(task)
+        return AiResult(text="", model_served="stub", seconds=0.0, refused=True, refusal="Declined under policy 4.")
+
+    monkeypatch.setattr(stub.StubAdapter, "run", run_refused)
+    request_id = start(env, record)
+    assert run(env, request_id) is None
+    assert len(calls) == 1  # no fix round, no fallback account, no stronger tier
+    request = store.read().get("request", request_id).data
+    assert request["state"] == "needs_you"
+    assert request["waiting"].startswith("The AI account refused this under its own rules (Declined under policy 4)")
+    runs = [r.data for r in store.read().list("run") if r.data["request"] == request_id]
+    assert runs[-1]["outcome"] == "refused" and runs[-1]["error_detail"] == "Declined under policy 4."
+
+
+def test_the_adapter_reads_refusals_from_the_provider_signal_only():
+    import sys
+
+    import httpx
+
+    from engine.ai.adapters import ADAPTERS
+
+    http_adapter = next(cls for name, cls in ADAPTERS.items() if name != "stub")
+    classify_http_error = sys.modules[http_adapter.__module__].classify_http_error
+
+    body = {"error": {"code": "content_policy_violation", "message": "No."}}
+    assert classify_http_error(httpx.Response(400, json=body)).kind == "refused"
+    worded = {"error": {"code": "bad_request", "message": "content policy violation"}}
+    assert classify_http_error(httpx.Response(400, json=worded)).kind == "other"  # words alone never decide
+
+
+def test_after_a_refusal_the_person_sends_it_to_another_account(env, monkeypatch):
+    from engine.ai.router import accounts
+    from engine.dispatcher import retry
+
+    ws, cfg, store = env
+    record = chapter(env)
+    request_id = start(env, record)
+    with store.transaction() as tx:
+        from engine.storage import WriteContext
+
+        cur = tx.get("request", request_id)
+        tx.update(
+            "request",
+            request_id,
+            {"state": "needs_you"},
+            WriteContext("engine", "trusted", "x"),
+            read_version=cur.version,
+        )
+    options = accounts(cfg, "internal")
+    assert options
+    with pytest.raises(ValueError, match="isn't an account"):
+        retry(store, request_id, use="nowhere/nothing")
+    retry(store, request_id, use=options[0])
+    assert store.read().get("request", request_id).data["use"] == options[0]
+    asked = answer(finding(record, "Nobody on the pier waved"))
+    assert run(env, request_id) is not None and asked
+    runs = [r.data for r in store.read().list("run") if r.data["request"] == request_id]
+    assert runs[-1]["provider"] == options[0].partition("/")[0]

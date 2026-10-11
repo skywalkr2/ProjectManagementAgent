@@ -36,20 +36,23 @@ class BudgetReached(Exception):
     """A spending limit stops new runs. The message says which and until when."""
 
 
-def choices(cfg: Config, task_kind: str, data_level: str, *, tier: str | None = None) -> list[Choice]:
-    """The main choice for the task's tier, then its fallbacks, keeping only accounts allowed to see this data."""
+def choices(
+    cfg: Config, task_kind: str, data_level: str, *, tier: str | None = None, use: str | None = None
+) -> list[Choice]:
+    """The main choice for the task's tier, then its fallbacks, keeping only accounts allowed to see this data. `use`
+    (a "provider/model" the person picked for this request) replaces the tier's list."""
     task = cfg.ai.tasks.get(task_kind)
     tier_name = tier or (task.tier if task else "routine")
     tier_cfg = cfg.ai.tiers.get(tier_name)
-    if tier_cfg is None:
+    if use is None and tier_cfg is None:
         raise NoProvider(f"the {tier_name!r} tier isn't set up in ai.yaml")
-    if not tier_cfg.use:
+    if use is None and not tier_cfg.use:
         raise NoProvider(
             f"no AI account is set up for the {tier_name!r} tier; add one to ai.yaml and set tiers.{tier_name}.use"
         )
     picked: list[Choice] = []
     refused: list[str] = []
-    for ref in [tier_cfg.use, *tier_cfg.fallback]:
+    for ref in [use] if use is not None else [tier_cfg.use, *tier_cfg.fallback]:
         provider_name, _, model_key = ref.partition("/")
         provider = cfg.ai.providers.get(provider_name)
         if provider is None:
@@ -92,6 +95,25 @@ def route(
     return task.tier if task else "routine"
 
 
+def accounts(cfg: Config, data_level: str) -> list[str]:
+    """Every "provider/model" set up for any tier that may see material at this level, in tier order, once each."""
+    found: list[str] = []
+    for tier in cfg.ai.tiers.values():
+        for ref in [tier.use, *tier.fallback]:
+            provider = cfg.ai.providers.get(ref.partition("/")[0]) if ref else None
+            if provider is None or ref in found:
+                continue
+            if LEVELS.index(data_level) <= max(LEVELS.index(lvl) for lvl in provider.allowed_data):
+                found.append(ref)
+    return found
+
+
+def _outcome(result: AiResult | None, error: AiError | None) -> str:
+    if (error is not None and error.kind == "refused") or (result is not None and result.refused):
+        return "refused"
+    return "ok" if error is None else "error"
+
+
 def escalation_tier(cfg: Config, tier: str) -> str | None:
     tier_cfg = cfg.ai.tiers.get(tier)
     return tier_cfg.escalate_to if tier_cfg else None
@@ -122,12 +144,19 @@ class Router:
         self.now = now
 
     def call(
-        self, task: AiTask, *, request_id: str, data_level: str = "internal", tier: str | None = None
+        self,
+        task: AiTask,
+        *,
+        request_id: str,
+        data_level: str = "internal",
+        tier: str | None = None,
+        use: str | None = None,
     ) -> tuple[AiResult, Choice, str]:
-        """Run the task on the first account that can serve it. Returns the result, the choice and the Run id."""
+        """Run the task on the first account that can serve it. Returns the result, the choice and the Run id. A
+        refusal is returned like an answer (marked refused), never handed to the next account."""
         self._check_budget(task.kind)
         last: AiError | None = None
-        options = self._that_fit(task, list(choices(self.cfg, task.kind, data_level, tier=tier)))
+        options = self._that_fit(task, list(choices(self.cfg, task.kind, data_level, tier=tier, use=use)))
         for position, choice in enumerate(options):
             settings = self.cfg.ai.providers[choice.provider]
             started = self.now()
@@ -190,11 +219,13 @@ class Router:
                     day += cost
         return day, month
 
-    def estimate(self, task: AiTask, *, tier: str | None = None, data_level: str = "internal") -> float | None:
+    def estimate(
+        self, task: AiTask, *, tier: str | None = None, data_level: str = "internal", use: str | None = None
+    ) -> float | None:
         """What a run would cost in USD on the account it would use, or None when the price isn't known.
         Input from the packet's size; output from past runs of this kind, or its configured typical size."""
         try:
-            choice = self._that_fit(task, list(choices(self.cfg, task.kind, data_level, tier=tier)))[0]
+            choice = self._that_fit(task, list(choices(self.cfg, task.kind, data_level, tier=tier, use=use)))[0]
         except NoProvider:
             return None
         info = self.model_info(choice)
@@ -322,9 +353,9 @@ class Router:
             "cached_input_tokens": result.cached_input_tokens if result else None,
             "cost_usd": self._cost(choice, result),
             "seconds": round(seconds, 3),
-            "outcome": "ok" if error is None else "error",
-            "error_kind": error.kind if error else None,
-            "error_detail": error.detail if error else None,
+            "outcome": _outcome(result, error),
+            "error_kind": error.kind if error else ("refused" if result and result.refused else None),
+            "error_detail": error.detail if error else (result.refusal if result and result.refused else None),
             "started_at": started.isoformat(),
         }
         with self.store.transaction() as tx:

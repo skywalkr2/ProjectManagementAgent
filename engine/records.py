@@ -320,6 +320,9 @@ class Request(Record):
     task: str = Field(description="The kind of work to do, as an AI task kind id.")
     stage_start: StageStart | None = Field(None, description="The stage entry that requested this task.")
     about: About | None = Field(None, description="The record the work is about, for a task kind that works on one.")
+    use: str | None = Field(
+        None, description='The account the person picked for this request ("provider/model"), in place of its tier.'
+    )
     approval: Literal["required", "granted"] | None = Field(
         None,
         description="Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm.",
@@ -429,9 +432,10 @@ class Run(Record):
     cached_input_tokens: int | None = Field(None, description="Tokens sent that were read from the provider's cache.")
     cost_usd: float | None = Field(None, description="What the call cost in US dollars; none when it can't be told.")
     seconds: float = Field(0.0, description="How long the call took, in seconds.")
-    outcome: Literal["ok", "invalid_output", "error"] = Field(
+    outcome: Literal["ok", "invalid_output", "error", "refused"] = Field(
         description="ok: an answer came back. invalid_output: the answer wasn't in the expected shape. error: the "
-        "call failed."
+        "call failed. refused: the provider said it refused the work under its own policy (its reason is in "
+        "error_detail)."
     )
     error_kind: str | None = Field(None, description="How the call failed, from the runner's own error; none if ok.")
     error_detail: str | None = Field(None, description="The error's own text, for diagnosing a failure.")

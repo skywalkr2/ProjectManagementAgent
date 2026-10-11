@@ -55,8 +55,11 @@ class OpenAICompatibleAdapter:
             raise classify_http_error(response)
         try:
             data = response.json()
-            text = data["choices"][0]["message"]["content"] or ""
-            truncated = data["choices"][0].get("finish_reason") == "length"
+            message = data["choices"][0]["message"]
+            text = message.get("content") or ""
+            finish = data["choices"][0].get("finish_reason")
+            truncated = finish == "length"
+            refusal = message.get("refusal") if isinstance(message.get("refusal"), str) else None
         except (ValueError, KeyError, IndexError, TypeError):
             raise AiError("invalid_output", "the response wasn't in the expected format") from None
         usage = data.get("usage") or {}
@@ -69,6 +72,8 @@ class OpenAICompatibleAdapter:
             output_tokens=usage.get("completion_tokens"),
             upstream=data.get("provider"),
             truncated=truncated,
+            refused=bool(refusal and refusal.strip()) or finish in REFUSAL_STOPS,
+            refusal=(refusal or "").strip() or (REFUSAL_STOPS.get(finish) if finish else None),
             cached_input_tokens=details.get("cached_tokens") if isinstance(details, dict) else None,
         )
 
@@ -118,11 +123,37 @@ def _per_million(value: Any) -> float | None:
     return round(per_token * 1_000_000, 6) if per_token >= 0 else None
 
 
+#: Stop reasons that mean the provider's own filter stopped the answer, with what to tell the person.
+REFUSAL_STOPS = {"content_filter": "the provider's content filter stopped the answer"}
+#: Error codes or types in a provider's error body that mean it refused the request under its own policy.
+REFUSAL_CODES = {
+    "content_filter",
+    "content_policy_violation",
+    "moderation",
+    "safety",
+    "responsible_ai_policy_violation",
+}
+
+
+def _refusal_code(response: httpx.Response) -> bool:
+    try:
+        body = response.json()
+    except ValueError:
+        return False
+    error = body.get("error") if isinstance(body, dict) else None
+    if not isinstance(error, dict):
+        return False
+    return any(str(error.get(key, "")).lower() in REFUSAL_CODES for key in ("code", "type"))
+
+
 def classify_http_error(response: httpx.Response) -> AiError:
-    """Turn an HTTP error into an error kind from the status code and headers only."""
+    """Turn an HTTP error into an error kind from the status code, headers and the error body's own code, never from
+    its wording."""
     status = response.status_code
     detail = f"HTTP {status}: {response.text[:500]}"
     retry_after = _retry_after(response)
+    if status in (400, 403) and _refusal_code(response):
+        return AiError("refused", detail)
     if status in (401, 403):
         return AiError("auth", detail)
     if status == 402:

@@ -1,6 +1,25 @@
 {
   "components": {
     "schemas": {
+      "AccountChoice": {
+        "description": "An AI account the person may send this request to; named as in their settings, never by model.",
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "use": {
+            "title": "Use",
+            "type": "string"
+          }
+        },
+        "required": [
+          "use",
+          "label"
+        ],
+        "title": "AccountChoice",
+        "type": "object"
+      },
       "ActionApplied": {
         "properties": {
           "applied": {
@@ -2138,6 +2157,25 @@
           "request"
         ],
         "title": "Requeued",
+        "type": "object"
+      },
+      "RetryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "use": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Another account to try, as \"provider/model\" from the AI settings.",
+            "title": "Use"
+          }
+        },
+        "title": "RetryRequest",
         "type": "object"
       },
       "RuntimeConfig": {
@@ -4496,6 +4534,50 @@
         "summary": "Record Stage History"
       }
     },
+    "/api/requests/{request_id}/accounts": {
+      "get": {
+        "description": "The accounts that may take this request's material, for sending it somewhere else after a refusal.",
+        "operationId": "request_accounts_api_requests__request_id__accounts_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountChoice"
+                  },
+                  "title": "Response Request Accounts Api Requests  Request Id  Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Accounts"
+      }
+    },
     "/api/requests/{request_id}/dismiss": {
       "post": {
         "operationId": "dismiss_request_api_requests__request_id__dismiss_post",
@@ -4608,6 +4690,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RetryRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {

@@ -81,6 +81,22 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-12: A refusal is its own outcome, and the person decides what happens next
+
+**Decided by:** Claude (design), from a plugin question; the owner can override.
+
+**What:** An adapter reports a refusal only from the provider's own signal: a content-filter stop, a refusal field in
+the answer, or a content-policy code in an error body. Never from the answer's words. The run is recorded as refused,
+with its cost and the provider's reason. A refused request is never retried, sent to the next account or escalated; it
+waits for the person with the reason and the cost, and the person may send it to another account allowed to see the
+material (`Request.use`). Accounts are offered by their names in the AI settings, never by model.
+
+**Why:** Fiction, medicine, security and law touch material one account refuses and another accepts; which account sees
+the text and what it costs stay the person's choice.
+
+**Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
+which route around refusals before they happen, come next.
+
 ## 2026-10-11: Backups run on their own; a missing backup folder is never created
 
 **Decided by:** project owner (nobody should have to click backup); Claude (how).

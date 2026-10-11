@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 
 from api.schemas import (
+    AccountChoice,
     ActionApplied,
     ActionApply,
     ActionChoice,
@@ -59,6 +60,7 @@ from api.schemas import (
     RequestChanged,
     RequestCounts,
     Requeued,
+    RetryRequest,
     SendBack,
     SentCounts,
     SentText,
@@ -613,10 +615,24 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         return Ok(ok=action_id)
 
-    @r.post("/requests/{request_id}/retry")
-    def retry_request(request_id: str) -> Ok:
+    @r.get("/requests/{request_id}/accounts")
+    def request_accounts(request_id: str) -> list[AccountChoice]:
+        """The accounts that may take this request's material, for sending it somewhere else after a refusal."""
+        from engine.ai.router import accounts
+        from engine.dispatcher import _data_level
+
         need("request", request_id)
-        guard(lambda: retry(store, request_id))
+        req = store.read().get("request", request_id)
+        tiers = {ref: name for name, t in cfg.ai.tiers.items() for ref in [t.use, *t.fallback] if ref}
+        return [
+            AccountChoice(use=ref, label=f"{ref.partition('/')[0]} ({tiers.get(ref, '')})".replace(" ()", ""))
+            for ref in accounts(cfg, _data_level(store, req.data))
+        ]
+
+    @r.post("/requests/{request_id}/retry")
+    def retry_request(request_id: str, body: RetryRequest | None = None) -> Ok:
+        need("request", request_id)
+        guard(lambda: retry(store, request_id, body.use if body else None))
         changed()
         worker.poke()
         return Ok(ok=request_id)

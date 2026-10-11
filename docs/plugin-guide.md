@@ -607,6 +607,7 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `about` | About \| None | see below | The record the work is about, for a task kind that works on one. |
 | `about.kind` | str | required | The record's kind. |
 | `about.id` | str | required | The record's id. |
+| `use` | str \| None | `None` | The account the person picked for this request ("provider/model"), in place of its tier. |
 | `approval` | Optional[Literal['required', 'granted']] | `None` | Needs the person's go before dispatch: stage tasks, and runs above the amount to confirm. |
 | `estimate_usd` | float \| None | `None` | What the run was estimated to cost when it asked for a go. |
 | `note` | str \| None | `None` | The person's own words that came with the request. |
@@ -681,7 +682,7 @@ One call to an AI provider. The engine writes it after each call, for usage and 
 | `cached_input_tokens` | int \| None | `None` | Tokens sent that were read from the provider's cache. |
 | `cost_usd` | float \| None | `None` | What the call cost in US dollars; none when it can't be told. |
 | `seconds` | float | `0.0` | How long the call took, in seconds. |
-| `outcome` | Literal['ok', 'invalid_output', 'error'] | required | ok: an answer came back. invalid_output: the answer wasn't in the expected shape. error: the call failed. |
+| `outcome` | Literal['ok', 'invalid_output', 'error', 'refused'] | required | ok: an answer came back. invalid_output: the answer wasn't in the expected shape. error: the call failed. refused: the provider said it refused the work under its own policy (its reason is in error_detail). |
 | `error_kind` | str \| None | `None` | How the call failed, from the runner's own error; none if ok. |
 | `error_detail` | str \| None | `None` | The error's own text, for diagnosing a failure. |
 | `started_at` | datetime | required | When the call started. |
