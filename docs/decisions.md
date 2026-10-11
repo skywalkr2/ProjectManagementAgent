@@ -81,6 +81,18 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-12: Plugins add lints; lints never refuse by default
+
+**Decided by:** Claude (design), from the plugin's needs; the owner can override.
+
+**What:** A plugin registers soft checks on the assistant's proposals. Each finding names the passage and how to fix
+it; on "return" both go back to the assistant for its fix round. The plugin sets a default severity of return, warn or
+off, never refuse; the workspace's `checks.yaml` overrides it per lint like the core's own.
+
+**Why:** Voice and style rules are judgments: they belong with lints the person can tune, not with invariants.
+
+**Impact:** Plugin API 0.3.5. Lints on long text and drafts come with long text.
+
 ## 2026-10-12: Projects inside projects, a language per project, and a budget per project
 
 **Decided by:** Claude (design), from the plugin's needs; the owner can override.

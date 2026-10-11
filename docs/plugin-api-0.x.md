@@ -10,6 +10,16 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.5 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Lints: `registrar.lint(name, fn, ops=(...), severity="warn")`, listed in `provides.lints`.
+  `fn(op, view, settings) -> list[LintFinding(message, passage, guidance)]` runs on the named core or own ops before
+  they apply. "return" sends the passage and guidance back for the assistant's fix round, "warn" shows them on the
+  review, "off" skips; `config/checks.yaml` overrides the default per lint. A lint can't default to refusing, and one
+  that raises turns its plugin off while the work goes on.
+
 ## What 0.3.4 adds
 
 Manifests stay `'>=0.3,<0.4'`.

@@ -31,7 +31,7 @@ from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.4"
+PLUGIN_API_VERSION = "0.3.5"
 
 
 class Settings(BaseModel):
@@ -318,6 +318,26 @@ class Proposal:
 
 
 @dataclass
+class LintFinding:
+    """One problem a lint found in an op: what is wrong, the exact passage it is about (when it is about one), and how
+    to fix it. On a "return" severity the guidance goes back to the assistant for its fix round."""
+
+    message: str
+    passage: str | None = None
+    guidance: str | None = None
+
+
+@dataclass(frozen=True)
+class LintRegistration:
+    """A registered lint (host side)."""
+
+    name: str
+    fn: Callable
+    ops: tuple[str, ...]
+    severity: str
+
+
+@dataclass
 class Part:
     """One piece of what an AI run sees. Content is untrusted unless it is the person's own words (`trusted`), and is
     marked as material, never instructions. A `reference_only` part is there to inform the run and must not be quoted
@@ -382,6 +402,7 @@ class Registrar:
         self.stage_defaults: dict[str, TypeStages] = {}
         self.file_kinds: dict[str, Any] = {}
         self.actions: dict[str, ActionRegistration] = {}
+        self.lints: dict[str, LintRegistration] = {}
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
@@ -553,6 +574,20 @@ class Registrar:
             raise ValueError("file_kinds applies only to actions on files")
         self.actions[name] = ActionRegistration(name, label.strip(), on, run, tuple(file_kinds))
 
+    def lint(self, name: str, fn: Callable, *, ops: tuple[str, ...], severity: str = "warn") -> None:
+        """A soft check on the assistant's proposals: `fn(op, view, settings) -> list[LintFinding]` runs on every op
+        named in `ops` (core or own) before it applies. It must be deterministic and quick, and never call AI.
+        `severity` is the default: "return" sends the findings back to the assistant for its fix round (one more try,
+        then a stronger tier), "warn" shows them on the review, "off" skips it; the workspace's
+        `config/checks.yaml` (`lints: {<plugin>/<name>: ...}`) overrides it. A lint never refuses: refusing is for
+        invariants, which are validators."""
+        self._name(name)
+        if name in self.lints or not callable(fn) or not ops:
+            raise ValueError("duplicate lint, invalid callback or no ops to check")
+        if severity not in ("return", "warn", "off"):
+            raise ValueError('a lint\'s default severity is "return", "warn" or "off"')
+        self.lints[name] = LintRegistration(name, fn, tuple(ops), severity)
+
     def subscribe(self, event: str, fn: Callable) -> None:
         """Handle an event after the change behind it is committed: `fn(payload, context)` with an `EventContext`.
         One handler per event; route by `payload["kind"]` when it handles several kinds."""
@@ -579,6 +614,7 @@ __all__ = [
     "OpWriter",
     "EventContext",
     "ActionContext",
+    "LintFinding",
     "Part",
     "PacketParts",
     "Proposal",

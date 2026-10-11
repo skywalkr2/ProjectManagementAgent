@@ -52,6 +52,8 @@ class Problem:
     severity: Severity
     op: int | None
     message: str
+    passage: str | None = None  # the exact words it is about, when a lint names them
+    guidance: str | None = None  # how to fix it
 
 
 @dataclass
@@ -205,6 +207,11 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 if _similar(op.text, existing.data["text"]) >= 0.8:
                     lint(i, "near-duplicate-action", f"looks like open action {existing.id}: {existing.data['text']}")
                     break
+        # plugins' lints: soft checks, with the severity the workspace sets (never a refusal by default)
+        for name, default, found in ctx.store.plugins.lint_findings(op, view):
+            severity = lints.get(name, default)
+            if severity != "off":
+                problems.append(Problem(name, severity, i, found.message, found.passage, found.guidance))
         # never shown
         text = " ".join(_texts(op)).lower()
         for word in ctx.hidden_words:
@@ -287,7 +294,9 @@ def needs_another_round(problems: list[Problem]) -> bool:
 
 def feedback(problems: list[Problem]) -> str:
     lines = [
-        f"- op {p.op}: {p.message}" if p.op is not None else f"- {p.message}"
+        (f"- op {p.op}: {p.message}" if p.op is not None else f"- {p.message}")
+        + (f' (the passage: "{p.passage}")' if p.passage else "")
+        + (f" {p.guidance}" if p.guidance else "")
         for p in problems
         if p.severity in ("refuse", "return")
     ]

@@ -83,6 +83,7 @@ class Provides(Strict):
     ai_task_kinds: list[str] = Field(default_factory=list, description="AI task kinds the plugin registers.")
     file_kinds: list[str] = Field(default_factory=list, description="File kinds the plugin registers.")
     actions: list[str] = Field(default_factory=list, description="Person actions the plugin registers.")
+    lints: list[str] = Field(default_factory=list, description="Lints the plugin registers.")
     panels: list[str] = Field(default_factory=list, description="Screens. Not yet available.")
     today: list[str] = Field(default_factory=list, description="Lines on Today. Not yet available.")
     jobs: list[str] = Field(default_factory=list, description="Scheduled work. Not yet available.")
@@ -145,6 +146,7 @@ class Manifest(Strict):
             "ai_task_kinds",
             "file_kinds",
             "actions",
+            "lints",
             "panels",
             "today",
             "jobs",

@@ -354,6 +354,7 @@ class PluginHost:
             ("ai_task_kinds", registrar.tasks),
             ("file_kinds", registrar.file_kinds),
             ("actions", registrar.actions),
+            ("lints", registrar.lints),
         ):
             if set(getattr(expected, key)) != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
@@ -409,6 +410,9 @@ class PluginHost:
         allowed_ops = set(OP_MODELS) | set(registrar.ops)
         if not set(registrar.validators) <= allowed_ops:
             raise ValueError("validators may target only core or own ops")
+        for lint in registrar.lints.values():
+            if not set(lint.ops) <= allowed_ops:
+                raise ValueError(f"lint {lint.name} may check only core or own ops")
         for task in registrar.tasks.values():
             if not set(task.ops) <= allowed_ops:
                 raise ValueError("task may use only core or own ops")
@@ -457,6 +461,29 @@ class PluginHost:
         except Exception as err:
             self.disable(owner, f"stage check failed: {err}")
             return StageCheckResult(False, wording(self.cfg, "check_failed"))
+
+    def lint_findings(self, op: Any, view: Any) -> list[tuple[str, str, Any]]:
+        """(lint name, default severity, finding) for every running plugin's lint on this op. A lint that raises or
+        returns something else turns its plugin off and finds nothing."""
+        from engine.plugin_api import LintFinding
+
+        found = []
+        for name, registrar in self.registrars.items():
+            if not self.active(name):
+                continue
+            for lint in registrar.lints.values():
+                if op.op not in lint.ops:
+                    continue
+                try:
+                    read = self._with_files(ReadView(view, name))
+                    result = lint.fn(op.model_copy(deep=True), read, registrar.config.model_copy(deep=True))
+                    if not isinstance(result, list) or any(not isinstance(f, LintFinding) for f in result):
+                        raise ValueError("lints return a list of LintFinding")
+                    found += [(lint.name, lint.severity, f) for f in result]
+                except Exception as err:
+                    self.disable(name, f"lint {lint.name} failed: {err}")
+                    break
+        return found
 
     def task_kind(self, name: str):
         if "/" in name and not self.active(name.split("/")[0]):
