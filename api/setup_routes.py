@@ -9,12 +9,16 @@ from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     AiAccountAdd,
+    AiModelsAsk,
+    AiModelsView,
+    AiModelView,
     AiTestResult,
     BackupFolderAdd,
     EndpointView,
     FingerprintIn,
     FolderCheckView,
     FolderListView,
+    LocalServerView,
     MeIn,
     MeView,
     Ok,
@@ -235,7 +239,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(
                 status_code=400, detail="On a hosted app, keys come from the environment: give env:NAME instead."
             )
+        kind = setup.endpoint(body.endpoint) if body.endpoint else None
+        if body.endpoint and kind is None:
+            raise HTTPException(status_code=400, detail=f"There is no kind of account called {body.endpoint}.")
         provider: dict[str, Any] = {
+            **(kind["settings"] if kind else {}),
             "adapter": body.adapter,
             "models": body.models,
             "allowed_data": list(body.allowed_data),
@@ -257,6 +265,10 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         changes: dict[str, Any] = {f"ai.providers.{body.name}": provider}
         for tier in body.use_for:
             changes[f"ai.tiers.{tier}.use"] = f"{body.name}/{first}"
+        for tier, short in body.use.items():
+            if short not in body.models:
+                raise HTTPException(status_code=400, detail=f"{short} isn't one of this account's models.")
+            changes[f"ai.tiers.{tier}.use"] = f"{body.name}/{short}"
         try:
             result = save(changes, [], body.fingerprint, allow=("ai.providers.", "ai.tiers."))
         except HTTPException:
@@ -264,6 +276,57 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 (ws.private_dir / "keys" / body.name).unlink(missing_ok=True)
             raise
         return saved(result)
+
+    @r.post("/ai/models")
+    def ai_models(body: AiModelsAsk) -> AiModelsView:
+        """The models a service offers, read with a key that isn't saved, so the person picks from a list."""
+        from engine.secrets import SecretError, resolve_secret
+
+        kind = setup.endpoint(body.endpoint)
+        if kind is None:
+            raise HTTPException(status_code=400, detail=f"There is no kind of account called {body.endpoint}.")
+        base_url = kind["base_url"] or (body.base_url or "").strip()
+        if not kind["base_url"] and not local:
+            raise HTTPException(status_code=400, detail="On a hosted app, models are listed only for known services.")
+        if not base_url:
+            return AiModelsView(problem="Enter the service's address first.")
+        if body.key and body.key_ref:
+            raise HTTPException(status_code=400, detail="Paste a key or give where it is, not both.")
+        if body.key and not local:
+            raise HTTPException(
+                status_code=400, detail="On a hosted app, keys come from the environment: give env:NAME instead."
+            )
+        try:
+            key = body.key.strip() if body.key else resolve_secret(body.key_ref)
+        except SecretError as err:
+            return AiModelsView(problem=str(err))
+        models, problem = setup.list_models(kind, base_url, key)
+        return AiModelsView(
+            models=[
+                AiModelView(
+                    id=name,
+                    context_tokens=info.context_tokens,
+                    input_per_million=info.input_per_million,
+                    output_per_million=info.output_per_million,
+                )
+                for name, info in models
+            ],
+            problem=problem,
+        )
+
+    @r.get("/ai/local")
+    def ai_local() -> list[LocalServerView]:
+        """Model servers running on this computer now, with their models; none on a hosted app."""
+        if not local:
+            return []
+        found = []
+        for kind in setup.known_endpoints():
+            if not kind["local"] or not kind["base_url"]:
+                continue
+            models, problem = setup.list_models(kind, kind["base_url"], None)
+            if problem is None and models:
+                found.append(LocalServerView(endpoint=kind["id"], name=kind["name"], models=[m for m, _ in models]))
+        return found
 
     @r.post("/ai/test")
     def ai_test() -> list[AiTestResult]:

@@ -6,6 +6,7 @@ Models carry data, not wording: the UI words everything through its wording shee
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -658,6 +659,38 @@ class SyncView(BaseModel):
     conflict_copies: list[str]
 
 
+class AgendaItemView(BaseModel):
+    """An event from a watched calendar, on today or the next configured days."""
+
+    snapshot: str
+    source: str = Field(description="The watched source's id; its label is in GET /api/sources.")
+    title: str
+    start: str = Field(description="ISO 8601: a date-time with its offset, or a date for an all-day event.")
+    end: str | None = None
+    all_day: bool
+    where: str | None = None
+    link: str | None = Field(None, description="Where to open it; untrusted, so show its real domain.")
+    cancelled: bool = Field(description="The organizer called it off.")
+    days: list[date] = Field(description="The days it falls on, in the person's time zone.")
+
+
+class ArrivedView(BaseModel):
+    """A message from a watched mailbox, received within the configured hours."""
+
+    snapshot: str
+    source: str
+    title: str
+    sender: str | None = None
+    received: str = Field(description="ISO 8601 date-time with its offset.")
+    unread: bool | None = None
+    link: str | None = None
+
+
+class InboxView(BaseModel):
+    items: list[ArrivedView]
+    left_out: int = Field(description="Messages in the same hours that a triage rule closed (newsletters, say).")
+
+
 class TodayLineView(BaseModel):
     """A line a plugin adds to Today."""
 
@@ -969,10 +1002,50 @@ class BackupFolderAdd(BaseModel):
 
 class EndpointView(BaseModel):
     id: str
-    name: str
+    name: str = Field(description="The service's name, as the person knows it.")
     adapter: str = Field(description="The adapter to send when adding an account of this kind.")
-    base_url: str
+    base_url: str = Field(description="Its address; empty when the person enters it.")
+    key_url: str = Field("", description="Where the person makes a key, to open in a new tab; empty when none.")
+    needs_key: bool = False
+    local: bool = Field(False, description="A server on this computer: nothing leaves it.")
+    allowed_data: list[Literal["open", "internal", "restricted"]] = Field(
+        default_factory=lambda: ["open"], description="The data levels offered by default for an account of this kind."
+    )
+    settings: dict[str, Any] = Field(
+        default_factory=dict, description="Provider settings a new account of this kind starts with."
+    )
     note: str = ""
+
+
+class AiModelsAsk(BaseModel):
+    """Ask a service for its models before the account is saved, with the key the person just pasted."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    endpoint: str = Field(description="The kind of account, from GET /api/ai/endpoints.")
+    base_url: str | None = Field(None, description="Its address, for a kind whose address the person enters.")
+    key: str | None = Field(None, description="A pasted key; used for this request only and never kept.")
+    key_ref: str | None = Field(None, description="Or where the key is: env:NAME or file:/path.")
+
+
+class AiModelView(BaseModel):
+    id: str
+    context_tokens: int | None = None
+    input_per_million: float | None = Field(None, description="Its price per million tokens read, when listed.")
+    output_per_million: float | None = Field(None, description="Its price per million tokens written, when listed.")
+
+
+class AiModelsView(BaseModel):
+    models: list[AiModelView] = Field(default_factory=list)
+    problem: str | None = Field(None, description="Why the list couldn't be read, in plain words.")
+
+
+class LocalServerView(BaseModel):
+    """A model server found running on this computer."""
+
+    endpoint: str = Field(description="Its kind of account, from GET /api/ai/endpoints.")
+    name: str
+    models: list[str]
 
 
 class AiAccountAdd(BaseModel):
@@ -982,6 +1055,9 @@ class AiAccountAdd(BaseModel):
 
     name: str = Field(description="The account's short name in ai.yaml: lowercase letters, digits and dashes.")
     adapter: str = Field(description="The adapter of the kind of account chosen, from GET /api/ai/endpoints.")
+    endpoint: str | None = Field(
+        None, description="The kind of account chosen; its starting provider settings are added to the account's."
+    )
     base_url: str | None = None
     key: str | None = Field(None, description="A key pasted on the screen; kept in this computer's private folder.")
     key_ref: str | None = Field(None, description="Or a reference: env:NAME or file:/path.")
@@ -990,6 +1066,11 @@ class AiAccountAdd(BaseModel):
     agent: dict[str, Any] | None = Field(None, description="For a command-line agent: its `agent` settings.")
     use_for: list[str] = Field(
         default_factory=list, description='Tiers this account\'s first model should do ("routine", "deep").'
+    )
+    use: dict[str, str] = Field(
+        default_factory=dict,
+        description="Tiers to one of this account's models by its short name, such as an everyday model for "
+        "routine and a stronger one for deep; it wins over use_for for the tiers it names.",
     )
     fingerprint: str
 

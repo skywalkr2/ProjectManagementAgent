@@ -5,18 +5,62 @@ import type { S } from "../lib/api";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { WelcomeAi } from "./WelcomeAi";
 
-// The adapter names are made up here: the screen must send whatever the chosen entry says, never a name of its own.
+/** Made-up addresses are built from this, so no address is written out whole. */
+const WEB = "https" + "://";
+
+// The names and adapters are made up here: the screen must send whatever the chosen entry says, never a name of its own.
 const KINDS: S["EndpointView"][] = [
-  { id: "local-box", name: "A server on this computer", adapter: "adapter-one", base_url: "http://localhost:1234/v1", note: "Nothing leaves this computer." },
-  { id: "other", name: "Another service", adapter: "adapter-one", base_url: "", note: "Enter its address." },
-  { id: "runner", name: "A command-line program", adapter: "adapter-two", base_url: "", note: "Give the command that starts it." },
+  {
+    id: "service-a",
+    name: "Service A",
+    adapter: "adapter-one",
+    base_url: `${WEB}api.service-a.example.com/v1`,
+    key_url: `${WEB}console.service-a.example.com/keys`,
+    needs_key: true,
+    local: false,
+    note: "Pay as you go.",
+    allowed_data: ["open", "internal"],
+  },
+  {
+    id: "service-b",
+    name: "Service B",
+    adapter: "adapter-one",
+    base_url: `${WEB}api.service-b.example.com/v1`,
+    key_url: "",
+    needs_key: true,
+    local: false,
+    note: "Many models.",
+    allowed_data: ["open"],
+  },
+  {
+    id: "local-box",
+    name: "A server on this computer",
+    adapter: "adapter-one",
+    base_url: "http://localhost:1234/v1",
+    key_url: "",
+    needs_key: false,
+    local: true,
+    note: "Nothing leaves this computer.",
+    allowed_data: ["open", "internal", "restricted"],
+  },
+  { id: "other", name: "Another service", adapter: "adapter-one", base_url: "", key_url: "", needs_key: false, local: false, note: "Enter its address." },
+  { id: "runner", name: "A command-line program", adapter: "adapter-two", base_url: "", key_url: "", needs_key: false, local: false, note: "Give the command that starts it." },
+];
+
+const MODELS: S["AiModelView"][] = [
+  { id: "model-a", context_tokens: 200000, input_per_million: 3, output_per_million: 15 },
+  { id: "model-b" },
+  { id: "model-c", input_per_million: 0.25 },
 ];
 
 function api(extra: Record<string, (body: unknown) => unknown> = {}) {
   return fakeApi({
     "GET ai/endpoints": () => KINDS,
+    "GET ai/local": () => [],
     "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST ai/models": () => ({ models: MODELS }),
     "POST ai/accounts": () => ({ changes: [], fingerprint: "fp-2", restarts: false }),
+    "POST ai/test": () => [],
     ...extra,
   });
 }
@@ -25,84 +69,297 @@ const open = (props: { local?: boolean; done?: boolean } = {}) =>
   renderApp(<WelcomeAi local={props.local ?? true} done={props.done ?? false} />);
 
 const body = (calls: ReturnType<typeof fakeApi>) => calls.find((c) => c.route === "POST ai/accounts")?.body as S["AiAccountAdd"];
+const modelsAsked = (calls: ReturnType<typeof fakeApi>) => calls.filter((c) => c.route === "POST ai/models");
 
 async function pick(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole("radio", { name: new RegExp(name) }));
 }
 
-test("the kinds are a list of radios showing each one's name and note", async () => {
+/** Choose a service, paste its key and check it. */
+async function keyed(user: ReturnType<typeof userEvent.setup>, service = "Service A") {
+  await pick(user, service);
+  await user.type(screen.getByLabelText("Key"), "secret-value");
+  await user.click(screen.getByRole("button", { name: "Check" }));
+  await screen.findByLabelText("Model for everyday work");
+}
+
+test("services that need a key are large choices with their notes; the rest wait under More options", async () => {
   api();
   open();
-  expect(await screen.findByRole("radio", { name: /A server on this computer/ })).toBeInTheDocument();
-  expect(screen.getByText("Enter its address.")).toBeInTheDocument();
-  expect(screen.queryByLabelText("Name for this account")).toBeNull();
+  expect(await screen.findByRole("radio", { name: /Service A/ })).toBeInTheDocument();
+  expect(screen.getByText("Pay as you go.")).toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: /Service B/ })).toBeInTheDocument();
+  expect(screen.getByRole("group", { name: "Which AI should Helper use?" })).toBeInTheDocument();
+  const more = screen.getByText("More options").closest("details")!;
+  expect(more).not.toHaveAttribute("open");
+  expect(within(more).getByRole("radio", { name: /A server on this computer/, hidden: true })).toBeInTheDocument();
+  expect(within(more).getByRole("radio", { name: /Another service/, hidden: true })).toBeInTheDocument();
+  expect(within(more).getByRole("radio", { name: /A command-line program/, hidden: true })).toBeInTheDocument();
+  expect(screen.queryByLabelText("Key")).toBeNull();
 });
 
-test("a kind with an address starts from it, suggests a name, and sends its own adapter with the key", async () => {
+test("choosing a service shows where to make a key, with its real domain, and a hidden key field", async () => {
   const user = userEvent.setup();
-  const calls = api();
+  api();
   open();
-  await pick(user, "A server on this computer");
-  expect(screen.getByLabelText("Name for this account")).toHaveValue("local-box");
-  expect(screen.getByLabelText("Address")).toHaveValue("http://localhost:1234/v1");
+  await pick(user, "Service A");
+  const link = screen.getByRole("link", { name: "Open console.service-a.example.com and make a key" });
+  expect(link).toHaveAttribute("href", `${WEB}console.service-a.example.com/keys`);
+  expect(link).toHaveAttribute("target", "_blank");
+  expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  expect(screen.getByText("Paste it here")).toBeInTheDocument();
   const key = screen.getByLabelText("Key");
   expect(key).toHaveAttribute("type", "password");
   expect(key).toHaveAttribute("autocomplete", "off");
-  await user.type(key, "secret-value");
-  expect(screen.getByLabelText("Or where the key is")).toBeDisabled();
-  await user.type(screen.getByLabelText("Model name"), "small-1");
+  await user.click(screen.getByRole("button", { name: "Show" }));
+  expect(key).toHaveAttribute("type", "text");
+  await user.click(screen.getByRole("button", { name: "Hide" }));
+  expect(key).toHaveAttribute("type", "password");
+  // Without a page for making keys there is no link to open.
+  await pick(user, "Service B");
+  expect(screen.queryByRole("link")).toBeNull();
+  expect(screen.getByText("Make a key on the service's own website")).toBeInTheDocument();
+});
+
+test("Check lists the service's models, and the selects fill with what each costs", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "Service A");
+  const check = screen.getByRole("button", { name: "Check" });
+  expect(check).toBeDisabled();
+  await user.type(screen.getByLabelText("Key"), "secret-value");
+  await user.click(check);
+  const everyday = await screen.findByLabelText("Model for everyday work");
+  expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key: "secret-value" });
+  expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(["model-a", "model-b", "model-c"]);
+  expect(everyday).toHaveValue("model-a");
+  expect(screen.getByText(/Takes in about 200,000 tokens at a time\. Costs \$3\.00 per million tokens read and \$15\.00 per million tokens written\./)).toBeInTheDocument();
+  const harder = screen.getByLabelText("Model for harder work (optional)");
+  expect(within(harder).getAllByRole("option").map((o) => o.textContent)).toEqual(["Same as the everyday model", "model-a", "model-b", "model-c"]);
+  expect(harder).toHaveValue("");
+  await user.selectOptions(everyday, "model-c");
+  expect(screen.getByText("Costs $0.25 per million tokens read.")).toBeInTheDocument();
+});
+
+test("pasting a key into the empty field checks it at once", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "Service A");
+  await user.click(screen.getByLabelText("Key"));
+  await user.paste("pasted-key");
+  await screen.findByLabelText("Model for everyday work");
+  expect(modelsAsked(calls)).toHaveLength(1);
+  expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key: "pasted-key" });
+});
+
+test("a problem listing the models is shown in an alert, with no list to pick from", async () => {
+  const user = userEvent.setup();
+  api({ "POST ai/models": () => ({ models: [], problem: "That key was not accepted." }) });
+  open();
+  await pick(user, "Service A");
+  await user.type(screen.getByLabelText("Key"), "wrong");
+  await user.click(screen.getByRole("button", { name: "Check" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("That key was not accepted.");
+  expect(screen.queryByLabelText("Model for everyday work")).toBeNull();
+  expect(screen.queryByLabelText("Model name")).toBeNull();
+  expect(screen.getByRole("button", { name: "Add account" })).toBeDisabled();
+});
+
+test("a service that lists no models asks for the model's name instead", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "POST ai/models": () => ({ models: [] }) });
+  open();
+  await pick(user, "Service A");
+  await user.type(screen.getByLabelText("Key"), "secret-value");
+  await user.click(screen.getByRole("button", { name: "Check" }));
+  await user.type(await screen.findByLabelText("Model name"), "typed-model");
+  expect(screen.getByText(/Copy the name from the service's own page/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).models).toEqual({ everyday: "typed-model" });
+});
+
+test("a long list can be narrowed by typing", async () => {
+  const user = userEvent.setup();
+  const many = Array.from({ length: 20 }, (_, i) => ({ id: `model-${String(i).padStart(2, "0")}` }));
+  api({ "POST ai/models": () => ({ models: many }) });
+  open();
+  await keyed(user);
+  await user.type(screen.getByLabelText("Find a model"), "model-1");
+  const everyday = screen.getByLabelText("Model for everyday work");
+  expect(within(everyday).getAllByRole("option")).toHaveLength(11);
+  await user.type(screen.getByLabelText("Find a model"), "9x");
+  expect(screen.getByText("No model matches.")).toBeInTheDocument();
+});
+
+test("adding sends the kind, both models, the data levels the kind allows and what to use them for", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await keyed(user);
+  expect(screen.getByLabelText("Open material")).toBeChecked();
+  expect(screen.getByLabelText("Internal material")).toBeChecked();
+  expect(screen.getByLabelText("Restricted material")).not.toBeChecked();
+  expect(screen.getByLabelText("Use it for my work")).toBeChecked();
+  await user.selectOptions(screen.getByLabelText("Model for harder work (optional)"), "model-b");
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls)).toEqual({
+    name: "service-a",
+    adapter: "adapter-one",
+    endpoint: "service-a",
+    base_url: `${WEB}api.service-a.example.com/v1`,
+    key: "secret-value",
+    models: { everyday: "model-a", harder: "model-b" },
+    allowed_data: ["open", "internal"],
+    use: { routine: "everyday", deep: "harder" },
+    fingerprint: "fp-1",
+  });
+  expect(await screen.findByText("Added the account service-a. Testing it now.")).toBeInTheDocument();
+  // The pasted key is not left on screen after it was sent.
+  expect(screen.getByLabelText("Key")).toHaveValue("");
+});
+
+test("with one model chosen, both kinds of work use it; with the box off, nothing is switched over", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await keyed(user);
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).models).toEqual({ everyday: "model-a" });
+  expect(body(calls).use).toEqual({ routine: "everyday", deep: "everyday" });
+});
+
+test("when the guide step was already done, using it for my work starts unticked and sends no use", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open({ done: true });
+  await keyed(user);
+  expect(screen.getByLabelText("Use it for my work")).not.toBeChecked();
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).use).toBeUndefined();
+});
+
+test("the account name gets -2 when an account of that name exists, and can be changed under Advanced", async () => {
+  const user = userEvent.setup();
+  const calls = api({
+    "GET settings": () => ({
+      fingerprint: "fp-1",
+      items: [{ key: "ai.providers.service-a.adapter" }, { key: "ai.providers.service-a-2.adapter" }, { key: "ai.tiers.routine.use" }],
+    }),
+  });
+  open();
+  await keyed(user);
+  const advanced = screen.getByText("Advanced").closest("details")!;
+  expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("service-a-3");
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).name).toBe("service-a-3");
+});
+
+test("Advanced holds the account name, the fixed address read-only and the key's other home", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "Service A");
+  const advanced = screen.getByText("Advanced").closest("details")!;
+  expect(advanced).not.toHaveAttribute("open");
+  const address = within(advanced).getByLabelText("Address", { selector: "input", exact: true });
+  expect(address).toHaveValue(`${WEB}api.service-a.example.com/v1`);
+  expect(address).toHaveAttribute("readonly");
+  await user.type(within(advanced).getByLabelText("Or where the key is"), "env:MODEL_KEY");
+  expect(screen.getByLabelText("Key")).toBeDisabled();
+  await user.click(screen.getByRole("button", { name: "Check" }));
+  await screen.findByLabelText("Model for everyday work");
+  expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key_ref: "env:MODEL_KEY" });
+  await user.clear(within(advanced).getByLabelText("Account name", { selector: "input" }));
+  await user.type(within(advanced).getByLabelText("Account name", { selector: "input" }), "Bad Name");
+  expect(screen.getByRole("button", { name: "Add account" })).toBeDisabled();
+});
+
+test("no level at all stops the button", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await keyed(user, "Service B");
+  const add = screen.getByRole("button", { name: "Add account" });
+  expect(add).toBeEnabled();
+  await user.click(screen.getByLabelText("Open material"));
+  expect(add).toBeDisabled();
+});
+
+test("a server found on this computer is offered first and is added without a key", async () => {
+  const user = userEvent.setup();
+  const calls = api({
+    "GET ai/local": () => [{ endpoint: "local-box", name: "A server on this computer", models: ["small-1", "small-2"] }],
+  });
+  open();
+  expect(await screen.findByText("Found A server on this computer on this computer with 2 models. Nothing leaves this computer.")).toBeInTheDocument();
+  // The kind found running is not listed a second time.
+  expect(screen.queryByRole("radio", { name: /A server on this computer/, hidden: true })).toBeNull();
+  const use = screen.getByRole("button", { name: "Use it" });
+  expect(use).toHaveAttribute("aria-pressed", "false");
+  await user.click(use);
+  expect(use).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByText("Chosen")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Key")).toBeNull();
+  const everyday = screen.getByLabelText("Model for everyday work");
+  expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(["small-1", "small-2"]);
+  expect(modelsAsked(calls)).toHaveLength(0);
+  expect(screen.getByLabelText("Restricted material")).toBeChecked();
   await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
   expect(body(calls)).toEqual({
     name: "local-box",
     adapter: "adapter-one",
+    endpoint: "local-box",
     base_url: "http://localhost:1234/v1",
-    key: "secret-value",
-    models: { main: "small-1" },
-    allowed_data: ["open"],
-    use_for: ["routine", "deep"],
+    models: { everyday: "small-1" },
+    allowed_data: ["open", "internal", "restricted"],
+    use: { routine: "everyday", deep: "everyday" },
     fingerprint: "fp-1",
   });
-  expect(await screen.findByText("Added the account local-box. Test it next.")).toBeInTheDocument();
-  // The pasted key is not left on screen after it was sent.
-  expect(screen.getByLabelText("Key")).toHaveValue("");
 });
 
-test("where the key is can be given instead of the key, and the levels and everyday use follow the boxes", async () => {
+test("a computer-local kind that isn't running is under More options and lists its models with no key", async () => {
   const user = userEvent.setup();
   const calls = api();
-  open({ done: true });
+  open();
+  await pick(user, "A server on this computer");
+  expect(await screen.findByLabelText("Model for everyday work")).toBeInTheDocument();
+  expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "local-box" });
+  expect(screen.queryByLabelText("Key")).toBeNull();
+});
+
+test("another service asks for its address first, then lists models, with an optional key", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
   await pick(user, "Another service");
-  expect(screen.getByLabelText("Address")).toHaveValue("");
-  const add = screen.getByRole("button", { name: "Add account" });
-  expect(add).toBeDisabled();
+  const check = screen.getByRole("button", { name: "Check" });
+  expect(check).toBeDisabled();
   await user.type(screen.getByLabelText("Address"), "http://model-host:8080/v1");
-  await user.type(screen.getByLabelText("Or where the key is"), "env:MODEL_KEY");
-  expect(screen.getByLabelText("Key")).toBeDisabled();
-  await user.type(screen.getByLabelText("Model name"), "big-2");
-  await user.click(screen.getByLabelText("Restricted material"));
-  // The step was already done, so using this account for everyday work is not ticked for the person.
-  expect(screen.getByLabelText("Use it for everyday work")).not.toBeChecked();
-  await user.click(add);
+  await user.click(check);
+  await screen.findByLabelText("Model for everyday work");
+  expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "other", base_url: "http://model-host:8080/v1" });
+  await user.click(screen.getByRole("button", { name: "Add account" }));
   await waitFor(() => expect(body(calls)).toBeDefined());
-  expect(body(calls)).toMatchObject({
-    name: "other",
-    adapter: "adapter-one",
-    base_url: "http://model-host:8080/v1",
-    key_ref: "env:MODEL_KEY",
-    allowed_data: ["open", "restricted"],
-    use_for: [],
-  });
+  expect(body(calls)).toMatchObject({ name: "other", endpoint: "other", base_url: "http://model-host:8080/v1" });
   expect(body(calls).key).toBeUndefined();
 });
 
-test("a kind without an address asks for a command and how it is fed, and sends its own adapter", async () => {
+test("a command-line program asks for a command and how it is fed, and sends its own adapter", async () => {
   const user = userEvent.setup();
   const calls = api();
   open();
   await pick(user, "A command-line program");
   expect(screen.queryByLabelText("Address")).toBeNull();
   expect(screen.queryByLabelText("Key")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Check" })).toBeNull();
   expect(screen.getByRole("radio", { name: "On its input" })).toBeChecked();
   expect(screen.getByRole("radio", { name: "On its output" })).toBeChecked();
   await user.type(screen.getByLabelText("Command"), "runner --locked  --model {{model}");
@@ -114,76 +371,71 @@ test("a kind without an address asks for a command and how it is fed, and sends 
   expect(body(calls)).toEqual({
     name: "runner",
     adapter: "adapter-two",
-    models: { main: "std" },
+    endpoint: "runner",
+    models: { everyday: "std" },
     allowed_data: ["open"],
     agent: { command: ["runner", "--locked", "--model", "{model}"], packet_via: "file", output_via: "outbox" },
-    use_for: ["routine", "deep"],
+    use: { routine: "everyday", deep: "everyday" },
     fingerprint: "fp-1",
   });
+  expect(modelsAsked(calls)).toHaveLength(0);
 });
 
-test("an app that is not on this computer takes no pasted key", async () => {
+test("an app that is not on this computer asks where the key is and sends a reference, never a key", async () => {
   const user = userEvent.setup();
-  api();
+  const calls = api();
   open({ local: false });
-  await pick(user, "A server on this computer");
+  await pick(user, "Service A");
   expect(screen.queryByLabelText("Key")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Show" })).toBeNull();
+  const where = screen.getByLabelText("Where the key is");
   expect(screen.getByText(/takes keys only from its environment/)).toBeInTheDocument();
-});
-
-test("a name that isn't lowercase letters, digits and dashes, or no level at all, stops the button", async () => {
-  const user = userEvent.setup();
-  api();
-  open();
-  await pick(user, "A server on this computer");
-  await user.type(screen.getByLabelText("Model name"), "small-1");
-  const add = screen.getByRole("button", { name: "Add account" });
-  expect(add).toBeEnabled();
-  await user.clear(screen.getByLabelText("Name for this account"));
-  await user.type(screen.getByLabelText("Name for this account"), "Bad Name");
-  expect(add).toBeDisabled();
-  await user.clear(screen.getByLabelText("Name for this account"));
-  await user.type(screen.getByLabelText("Name for this account"), "good-name");
-  expect(add).toBeEnabled();
-  await user.click(screen.getByLabelText("Open material"));
-  expect(add).toBeDisabled();
+  const check = screen.getByRole("button", { name: "Check" });
+  expect(check).toBeDisabled();
+  await user.type(where, "env:MODEL_KEY");
+  await user.click(check);
+  await screen.findByLabelText("Model for everyday work");
+  expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key_ref: "env:MODEL_KEY" });
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).key_ref).toBe("env:MODEL_KEY");
+  expect(body(calls).key).toBeUndefined();
 });
 
 test("a refusal shows the server's words and keeps what was typed", async () => {
   const user = userEvent.setup();
-  api({ "POST ai/accounts": () => new Refuse(409, "There is already an account called local-box.") });
+  api({ "POST ai/accounts": () => new Refuse(409, "There is already an account called service-a.") });
   open();
-  await pick(user, "A server on this computer");
-  await user.type(screen.getByLabelText("Model name"), "small-1");
+  await keyed(user);
   await user.click(screen.getByRole("button", { name: "Add account" }));
-  expect(await screen.findByRole("alert")).toHaveTextContent("There is already an account called local-box.");
-  expect(screen.getByLabelText("Model name")).toHaveValue("small-1");
-  expect(screen.getByLabelText("Name for this account")).toHaveValue("local-box");
+  expect(await screen.findByRole("alert")).toHaveTextContent("There is already an account called service-a.");
+  expect(screen.getByLabelText("Key")).toHaveValue("secret-value");
+  expect(screen.getByLabelText("Model for everyday work")).toHaveValue("model-a");
 });
 
-test("after adding, focus goes to Test, and the results are listed in words", async () => {
+test("after adding, focus goes to Test again, the test runs by itself, and the results are listed in words", async () => {
   const user = userEvent.setup();
   const calls = api({
     "POST ai/test": () => [
-      { tier: "routine", account: "local-box", main: true, ok: true, detail: "" },
-      { tier: "deep", account: "local-box", main: false, ok: true, detail: "" },
+      { tier: "routine", account: "service-a", main: true, ok: true, detail: "" },
+      { tier: "deep", account: "service-a", main: false, ok: true, detail: "" },
       { tier: "routine", account: "second", main: false, ok: false, detail: "The key was refused." },
     ],
   });
   open();
-  await pick(user, "A server on this computer");
-  await user.type(screen.getByLabelText("Model name"), "small-1");
+  await keyed(user);
   await user.click(screen.getByRole("button", { name: "Add account" }));
-  const test = screen.getByRole("button", { name: "Test the connection" });
+  const test = await screen.findByRole("button", { name: "Test again" });
   await waitFor(() => expect(test).toHaveFocus());
-  await user.click(test);
-  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/test")).toBe(true));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST ai/test")).toHaveLength(1));
   const rows = await screen.findAllByRole("listitem");
   const results = rows.filter((r) => r.closest(".test-results"));
   expect(results).toHaveLength(2);
-  expect(results[0]).toHaveTextContent("local-box: ✓ Answered");
+  expect(results[0]).toHaveTextContent("service-a: ✓ Answered");
   expect(results[1]).toHaveTextContent("second: ✗ Didn't answer: The key was refused.");
   expect(within(results[1]).queryByText("routine")).toBeNull();
+  await user.click(test);
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST ai/test")).toHaveLength(2));
 });
 
 test("testing with nothing to test says so", async () => {

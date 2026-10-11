@@ -28,6 +28,18 @@ def test_events_in_the_window_become_items_with_readable_text():
     assert "(all day)" in found["Print slot"].text and "Repeats: FREQ=WEEKLY" in found["Weekly sync"].text
 
 
+def test_events_say_when_and_where_for_the_agenda():
+    from engine.connectors import Poll, checked_poll
+
+    found = {i.title: i for i in items(ICS, NOW, days_back=1, days_ahead=30)}
+    review = found["Floor plan review"].event
+    assert review is not None and not review.all_day and review.where == "Room 4, second floor"
+    assert datetime.fromisoformat(review.start).tzinfo is not None and review.end > review.start
+    assert found["Print slot"].event.all_day and len(found["Print slot"].event.start) == 10
+    assert found["Weekly sync"].event.repeats.startswith("FREQ=WEEKLY")
+    checked_poll(Poll(list(found.values())))
+
+
 def test_the_calendar_address_is_a_secret_and_read_through_the_web_client(tmp_path, monkeypatch):
     import engine.net
 
@@ -51,6 +63,8 @@ def test_a_message_becomes_an_item_with_its_plain_text():
     assert item.key == "<msg-1@mail.example.com>" and item.title == "Revised floor plan"
     assert item.text.startswith("From: ") and "send the vendor quotes by Friday" in item.text
     assert "<b>" not in item.text
+    assert item.message is not None and item.message.sender == item.author
+    assert datetime.fromisoformat(item.message.received) == datetime(2030, 3, 5, 9, 15, tzinfo=UTC)
 
 
 class FakeImap:

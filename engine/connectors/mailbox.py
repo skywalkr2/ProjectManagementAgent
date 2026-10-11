@@ -20,7 +20,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from engine.connectors import ConnectorContext, ConnectorError, Poll, SourceItem
+from engine.connectors import ConnectorContext, ConnectorError, MessageDetails, Poll, SourceItem
 from engine.connectors.feed import plain
 
 #: The longest message text kept; the rest is cut with a note.
@@ -60,7 +60,22 @@ def message_item(raw: bytes) -> SourceItem | None:
     )
     if attached:
         lines += ["", "Attached: " + ", ".join(attached)]
-    return SourceItem(key, subject[:200], "\n".join(lines).strip(), sender, str(message.get("Date") or "") or None)
+    received = _received(str(message.get("Date") or ""))
+    details = MessageDetails(sender=sender, received=received)
+    return SourceItem(
+        key, subject[:200], "\n".join(lines).strip(), sender, str(message.get("Date") or "") or None, message=details
+    )
+
+
+def _received(header: str) -> str | None:
+    """A Date header as an ISO 8601 date-time with its offset; None when it can't be read or has no zone."""
+    from email.utils import parsedate_to_datetime
+
+    try:
+        when = parsedate_to_datetime(header)
+    except (TypeError, ValueError, IndexError):
+        return None
+    return when.isoformat() if when is not None and when.tzinfo is not None else None
 
 
 def body_text(message: EmailMessage) -> str:

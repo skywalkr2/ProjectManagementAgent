@@ -116,7 +116,10 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { name: "Set up", exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Add an AI account and test it" })).toBeVisible();
     await page.getByRole("radio").first().check();
-    await expect(page.getByLabel("Name for this account")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Get a key" })).toBeVisible();
+    await expect(page.getByLabel("Key", { exact: true })).toBeVisible();
+    await page.getByText("Advanced", { exact: true }).click();
+    await expect(page.getByLabel("Account name")).toBeVisible();
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Choose…" }).click();
     await expect(page.getByRole("dialog", { name: "Choose a folder" })).toBeVisible();

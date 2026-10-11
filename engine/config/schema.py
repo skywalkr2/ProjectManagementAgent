@@ -622,6 +622,16 @@ DEFAULT_SHORTCUTS = {
 }
 
 
+class TodaySettings(ConfigModel):
+    mail_hours: int = Field(
+        24, ge=1, le=336, description="How far back, in hours, Today's list of what came in reaches."
+    )
+    mail_max: int = Field(50, ge=1, le=500, description="The most messages Today lists at once.")
+    agenda_days_ahead: int = Field(
+        1, ge=0, le=14, description="How many days after today the agenda also shows (0: today only)."
+    )
+
+
 class UiFile(FileModel):
     wording: dict[str, str] = Field(
         default_factory=dict,
@@ -638,6 +648,9 @@ class UiFile(FileModel):
         pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
         description="The address the feedback button writes its email to. Empty uses the address the app was "
         "packaged with, if any; with neither, feedback is drafted to copy.",
+    )
+    today: TodaySettings = Field(
+        default_factory=TodaySettings, description="What Today's agenda and its list of what came in cover."
     )
 
     @field_validator("shortcuts")

@@ -23,6 +23,7 @@ from pydantic import ValidationError
 
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
 from engine.storage import StoreError, WriteContext
+from engine.triage import first_match
 
 _WATCHER = WriteContext(actor="watcher", trust="untrusted", op="watch.read")
 #: Lines of unchanged text shown around each change in a diff.
@@ -153,9 +154,17 @@ def _compare(ws: Any, store: Any, cfg: Any, source: Any, poll: Any, now: datetim
         listed.add(item.key)
         digest = _keep_text(ws, item.text)
         before = seen.get(item.key)
+        details = _details(item)
         if before is not None and before.data["content_hash"] == digest:
+            if any(before.data.get(k) != v for k, v in details.items()):
+                # Only what it is changed (a message was opened, say): kept for Today, nothing to read again.
+                with store.transaction() as tx:
+                    tx.update("snapshot", before.id, details, _WATCHER, read_version=before.version)
             continue
         change = "new" if before is None else "changed"
+        old = _read_text(ws, before.data["content_hash"]) if before is not None else None
+        facts = _change(cfg, source, item, change, old)
+        closed = first_match(store, cfg, facts)
         with store.transaction() as tx:
             data = {
                 "source": source.id,
@@ -164,6 +173,8 @@ def _compare(ws: Any, store: Any, cfg: Any, source: Any, poll: Any, now: datetim
                 "content_hash": digest,
                 "author": item.author,
                 "seen_at": now.isoformat(),
+                **details,
+                "closed_by": closed["rule"] if closed else None,
             }
             if before is None:
                 tx.create("snapshot", data, _WATCHER)
@@ -171,10 +182,8 @@ def _compare(ws: Any, store: Any, cfg: Any, source: Any, poll: Any, now: datetim
                 tx.update("snapshot", before.id, data, _WATCHER, read_version=before.version)
             if baseline:
                 continue
-            old = _read_text(ws, before.data["content_hash"]) if before is not None else None
-            facts = _change(cfg, source, item, change, old)
             text = _input_text(source, item, change, old)
-            request = _hand_in(ws, store, tx, cfg, source, item, change, text, now, facts)
+            request = _hand_in(ws, store, tx, cfg, source, item, change, text, now, closed)
         if not baseline:
             (result.new if change == "new" else result.changed).append(request)
     gone_keys = [k for k in seen if k not in listed] if poll.complete else [k for k in poll.removed if k in seen]
@@ -187,7 +196,8 @@ def _compare(ws: Any, store: Any, cfg: Any, source: Any, poll: Any, now: datetim
             gone = SourceItem(key, snapshot.data["title"], "", author=None)
             text = f"{snapshot.data['title']} is no longer in {source.label or source.id}."
             facts = _change(cfg, source, gone, "removed", _read_text(ws, snapshot.data["content_hash"]))
-            result.removed.append(_hand_in(ws, store, tx, cfg, source, gone, "removed", text, now, facts))
+            closed = first_match(store, cfg, facts)
+            result.removed.append(_hand_in(ws, store, tx, cfg, source, gone, "removed", text, now, closed))
     return result
 
 
@@ -200,6 +210,17 @@ def _input_text(source: Any, item: SourceItem, change: str, old: str | None) -> 
     )
     shown = "\n".join(list(diff)[2:])
     return f"Changed in {where}: {item.title}\n\nWhat changed:\n{shown}\n\nIt now reads:\n{item.text}"
+
+
+def _details(item: SourceItem) -> dict[str, Any]:
+    """What a calendar or mail item is, as the snapshot keeps it."""
+    from dataclasses import asdict
+
+    return {
+        "link": item.link,
+        "event": asdict(item.event) if item.event is not None else None,
+        "message": asdict(item.message) if item.message is not None else None,
+    }
 
 
 def _change(cfg: Any, source: Any, item: SourceItem, change: str, old: str | None) -> dict[str, Any]:
@@ -230,14 +251,11 @@ def _hand_in(
     change: str,
     text: str,
     now: datetime,
-    facts: dict[str, Any],
+    closed: dict[str, Any] | None,
 ) -> str:
     """Save the input's text and queue it for the assistant, as outside content: closed at once when a triage rule
     matches, and with any older change to the same item that is still waiting folded in, so they are read once, in
     order."""
-    from engine.triage import first_match
-
-    closed = first_match(store, cfg, facts)
     folded = [] if closed else _waiting_for(tx, source.id, item.key)
     if folded:
         earlier = [_read_text(ws, tx.get("source", r.data["source"]).data["content_hash"]) for r in folded]

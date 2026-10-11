@@ -1,20 +1,99 @@
-# Kinds of AI account the Add account screen offers before the person types an address. Each needs an id, a name shown
-# on screen, the adapter that talks to it, the base address of its endpoint where it has one, and an optional note.
-# Which public services to list is the owner's decision (decisions.md); until then only kinds that name no service
-# are here.
+# Kinds of AI account the Add account screen offers, so a person picks a service by name instead of typing addresses.
+# Naming public services here (and only here, in data) is a product decision (decisions.md). Each entry:
+#   id, name           shown on screen; the id is also the new account's suggested short name
+#   adapter            the adapter that talks to it
+#   base_url           the base address of its endpoint ("" when the person enters it)
+#   key_url            where the person makes a key ("" when it needs none)
+#   needs_key          whether a key is asked for
+#   local              a server on this computer: nothing leaves it, and the screen can look for it
+#   allowed_data       the data levels a new account of this kind is offered by default (the person can change them)
+#   settings           provider settings a new account of this kind starts with (see ai.yaml's providers)
+#   note               one line shown with it
+# Model ids are never listed here: the screen asks the service for its models with the person's key.
 endpoints:
+  - id: openai
+    name: OpenAI
+    adapter: openai-compatible
+    base_url: https://api.openai.com/v1
+    key_url: https://platform.openai.com/api-keys
+    needs_key: true
+    note: Pay as you go on your own OpenAI account.
+  - id: anthropic
+    name: Anthropic
+    adapter: openai-compatible
+    base_url: https://api.anthropic.com/v1
+    key_url: https://console.anthropic.com/settings/keys
+    needs_key: true
+    settings:
+      json_mode: false
+    note: Pay as you go on your own Anthropic account.
+  - id: google
+    name: Google AI Studio
+    adapter: openai-compatible
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+    key_url: https://aistudio.google.com/apikey
+    needs_key: true
+    note: Has a free tier with lower limits; check what it allows the service to keep.
+  - id: openrouter
+    name: OpenRouter
+    adapter: openai-compatible
+    base_url: https://openrouter.ai/api/v1
+    key_url: https://openrouter.ai/settings/keys
+    needs_key: true
+    note: One key for models from many companies, with prices listed per model.
+  - id: mistral
+    name: Mistral
+    adapter: openai-compatible
+    base_url: https://api.mistral.ai/v1
+    key_url: https://console.mistral.ai/api-keys
+    needs_key: true
+    note: Pay as you go on your own Mistral account.
+  - id: groq
+    name: Groq
+    adapter: openai-compatible
+    base_url: https://api.groq.com/openai/v1
+    key_url: https://console.groq.com/keys
+    needs_key: true
+    note: Fast answers from open models.
+  - id: deepseek
+    name: DeepSeek
+    adapter: openai-compatible
+    base_url: https://api.deepseek.com/v1
+    key_url: https://platform.deepseek.com/api_keys
+    needs_key: true
+    note: Low prices; check where it keeps what you send.
+  - id: xai
+    name: xAI
+    adapter: openai-compatible
+    base_url: https://api.x.ai/v1
+    key_url: https://console.x.ai
+    needs_key: true
+    note: Pay as you go on your own xAI account.
   - id: local
-    name: A model server on this computer
+    name: Ollama on this computer
     adapter: openai-compatible
     base_url: http://localhost:11434/v1
-    note: Nothing leaves this computer. Start the model server first, then press Test.
+    needs_key: false
+    local: true
+    allowed_data: [open, internal, restricted]
+    note: Nothing leaves this computer. Start Ollama first.
+  - id: lm-studio
+    name: LM Studio on this computer
+    adapter: openai-compatible
+    base_url: http://localhost:1234/v1
+    needs_key: false
+    local: true
+    allowed_data: [open, internal, restricted]
+    note: Nothing leaves this computer. Start LM Studio's server first.
   - id: other
     name: Another service that speaks the common chat format
     adapter: openai-compatible
     base_url: ""
+    needs_key: true
     note: Enter its address from the service's own documentation.
   - id: agent
     name: A command-line agent signed in as you
     adapter: cli-agent
     base_url: ""
+    needs_key: false
     note: Give the command that starts it with its locked-down options; Test also checks the lockdown.

@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from engine.connectors import ConnectorContext, ConnectorError, Poll, SourceItem
+from engine.connectors import ConnectorContext, ConnectorError, EventDetails, Poll, SourceItem
 
 _ESCAPES = {"\\n": "\n", "\\N": "\n", "\\,": ",", "\\;": ";", "\\\\": "\\"}
 
@@ -106,6 +106,27 @@ def _shown(when: datetime | date | None) -> str:
     return when.isoformat() + " (all day)"
 
 
+def _details(event: dict[str, Any], begins: datetime | date | None) -> EventDetails | None:
+    """When and where, for the agenda; None when the start can't be read."""
+    if begins is None:
+        return None
+    all_day = not isinstance(begins, datetime)
+    ends = parse_when(*event["DTEND"]) if "DTEND" in event else None
+    if ends is not None and isinstance(ends, datetime) == all_day:
+        ends = None  # a start and an end of different kinds can't be compared
+    if ends is not None and ends < begins:
+        ends = None
+    where = _value(event.get("LOCATION", ("", {}))[0]).strip() or None
+    return EventDetails(
+        start=begins.isoformat(),
+        end=ends.isoformat() if ends is not None else None,
+        all_day=all_day,
+        where=where,
+        cancelled=event.get("STATUS", ("", {}))[0].strip().upper() == "CANCELLED",
+        repeats=event["RRULE"][0] if "RRULE" in event else None,
+    )
+
+
 def items(text: str, now: datetime, days_back: int, days_ahead: int) -> list[SourceItem]:
     start, end = now - timedelta(days=days_back), now + timedelta(days=days_ahead)
     found = []
@@ -141,7 +162,7 @@ def items(text: str, now: datetime, days_back: int, days_ahead: int) -> list[Sou
         if description:
             lines += ["", description]
         changed = event.get("LAST-MODIFIED", event.get("DTSTAMP", ("", {})))[0] or None
-        found.append(SourceItem(key, title[:200], "\n".join(lines), who, changed, None))
+        found.append(SourceItem(key, title[:200], "\n".join(lines), who, changed, None, event=_details(event, begins)))
     return found
 
 

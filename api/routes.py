@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
@@ -25,9 +25,11 @@ from api.schemas import (
     ActionRequestView,
     ActionRun,
     ActionState,
+    AgendaItemView,
     AiState,
     Answer,
     Applied,
+    ArrivedView,
     Ask,
     AuthorSpan,
     BackupStatus,
@@ -44,6 +46,7 @@ from api.schemas import (
     GenericRecordView,
     Handed,
     HandIn,
+    InboxView,
     JobView,
     KindView,
     NoteView,
@@ -321,6 +324,21 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             outside_edits=edits,
             conflict_copies=copies,
         )
+
+    @r.get("/today/agenda")
+    def today_agenda() -> list[AgendaItemView]:
+        """Events from watched calendars on today and the next configured days, in the person's time zone."""
+        from engine import today
+
+        return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, datetime.now(UTC))]
+
+    @r.get("/today/arrived")
+    def today_arrived() -> InboxView:
+        """Messages from watched mailboxes received within the configured hours, newest first."""
+        from engine import today
+
+        inbox = today.arrived(store, cfg, datetime.now(UTC))
+        return InboxView(items=[ArrivedView(**vars(a)) for a in inbox.items], left_out=inbox.left_out)
 
     @r.get("/plugin-today")
     def plugin_today() -> list[TodayLineView]:

@@ -6,3 +6,4 @@ shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, un
 narrow_below_px: 900
 toast_seconds: 7
 feedback_to: feedback@example.com   # where the feedback button writes
+today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1}   # what Today's agenda and what came in cover

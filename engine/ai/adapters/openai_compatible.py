@@ -78,20 +78,31 @@ class OpenAICompatibleAdapter:
         )
 
     def catalog(self) -> dict[str, ModelInfo]:
-        """The account's model list, with context size and prices where the endpoint publishes them.
+        """The account's model list, with context size and prices where the endpoint publishes them; empty when it
+        can't be read.
 
         Endpoints that list models without prices still give their ids; prices then come from config. Per-token prices
         in the listing are turned into prices per million tokens."""
         try:
+            return self.list_models()
+        except AiError:
+            return {}
+
+    def list_models(self) -> dict[str, ModelInfo]:
+        """The model list, raising `AiError` with the kind of failure (a key not accepted, the service down or not
+        there) instead of returning nothing, so a setup screen can say what went wrong."""
+        try:
             response = self._client.get("/models")
-        except httpx.HTTPError:
-            return {}
+        except httpx.TimeoutException as err:
+            raise AiError("timeout", str(err)) from None
+        except httpx.TransportError as err:
+            raise AiError("provider_down", str(err)) from None
         if response.status_code >= 400:
-            return {}
+            raise classify_http_error(response)
         try:
             items = response.json().get("data") or []
-        except ValueError:
-            return {}
+        except (ValueError, AttributeError):
+            raise AiError("invalid_output", "the model list wasn't in the expected format") from None
         out: dict[str, ModelInfo] = {}
         for item in items if isinstance(items, list) else []:
             if not isinstance(item, dict) or not isinstance(item.get("id"), str):

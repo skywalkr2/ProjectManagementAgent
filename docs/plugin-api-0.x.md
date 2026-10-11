@@ -10,6 +10,22 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.41 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **What an item is, for Today:** `SourceItem` takes `event=EventDetails(start, end, all_day, where, cancelled,
+  repeats)` for a calendar item or `message=MessageDetails(sender, received, unread)` for a mail item (at most one).
+  Times are ISO 8601 with their offset, or plain dates for all-day events; a read with an unreadable time, an end
+  before its start, or both details is refused like any malformed read. The watcher keeps them on the item's
+  snapshot, and Today shows the day's agenda (`GET /api/today/agenda`) and what came in (`GET /api/today/arrived`,
+  leaving out what a triage rule closed). The text still carries everything the assistant reads.
+- **A change in details alone** (a message opened, so `unread` turns false) updates what Today shows without handing
+  the item in again.
+- **Series:** an event that stands for a repeating series the connector didn't expand carries `repeats`; the agenda
+  places only what it can date, so a connector whose service can list occurrences should list them.
+- The core's calendar and mailbox connectors fill these.
+
 ## What 0.3.40 adds
 
 Manifests stay `'>=0.3,<0.4'`.

@@ -201,6 +201,8 @@ export const api = {
   folders: (path?: string) => call<S["FolderListView"]>("GET", `setup/folders${path ? `?path=${id(path)}` : ""}`),
   saveBackupFolder: (body: S["BackupFolderAdd"]) => call<S["SettingsSaved"]>("POST", "setup/backup-folder", body),
   endpoints: () => call<S["EndpointView"][]>("GET", "ai/endpoints"),
+  aiModels: (body: S["AiModelsAsk"]) => call<S["AiModelsView"]>("POST", "ai/models", body),
+  aiLocal: () => call<S["LocalServerView"][]>("GET", "ai/local"),
   addAccount: (body: S["AiAccountAdd"]) => call<S["SettingsSaved"]>("POST", "ai/accounts", body),
   testAi: () => call<S["AiTestResult"][]>("POST", "ai/test"),
 };

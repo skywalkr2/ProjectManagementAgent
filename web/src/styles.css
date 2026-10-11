@@ -362,3 +362,20 @@ input:disabled, textarea:disabled, select:disabled { opacity: 0.7; cursor: not-a
 .feed { overflow-wrap: anywhere; }
 .feed-notes { font-size: 12.5px; color: var(--muted); }
 .feed-notes summary { cursor: pointer; }
+
+/* The AI step: large choices, the key how-to and the found-on-this-computer card */
+.kind-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 8px; }
+.kind-card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--surface); cursor: pointer; }
+.kind-grid .kind-card { min-height: 64px; }
+.kind-card:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.found-local { border: 2px solid var(--accent); border-radius: 10px; padding: 12px; margin-bottom: 10px; background: var(--accent-soft); display: grid; gap: 8px; }
+.found-local p { margin: 0; font-weight: 600; }
+.more-options { margin: 4px 0 10px; }
+.more-options > summary { cursor: pointer; font-weight: 600; font-size: 13.5px; min-height: 32px; display: flex; align-items: center; }
+.key-step { display: grid; gap: 8px; margin-bottom: 10px; }
+.key-step h4 { margin: 0; font-size: 14px; }
+.key-steps { list-style: decimal; }
+.check-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
+.check-row .problem-note { flex: 1 1 100%; margin: 0; }
+.level-list { flex-direction: column; }
+.level-hint { margin: 0 0 6px 28px; }

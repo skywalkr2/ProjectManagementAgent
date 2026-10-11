@@ -417,6 +417,29 @@ class Report(Record):
     )
 
 
+class SnapshotEvent(BaseModel):
+    """A calendar item's details as its source gave them (see EventDetails in the connectors)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start: str
+    end: str | None = None
+    all_day: bool = False
+    where: str | None = None
+    cancelled: bool = False
+    repeats: str | None = None
+
+
+class SnapshotMessage(BaseModel):
+    """A mail item's details as its source gave them (see MessageDetails in the connectors)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    sender: str | None = None
+    received: str | None = None
+    unread: bool | None = None
+
+
 class Snapshot(Record):
     """What a watched item looked like when last read: its text is kept in the sources folder by hash. The watcher
     writes it; nothing else changes it."""
@@ -431,6 +454,12 @@ class Snapshot(Record):
     author: str | None = Field(None, description="Who changed it last, as the source said.")
     seen_at: datetime = Field(description="When this version was first seen.")
     gone: bool = Field(False, description="It was no longer in the source at the last complete read.")
+    link: str | None = Field(None, description="Where the person can open it, as the source gave it.")
+    event: SnapshotEvent | None = Field(None, description="For a calendar item: when and where, for the agenda.")
+    message: SnapshotMessage | None = Field(None, description="For a mail item: from whom and when.")
+    closed_by: str | None = Field(
+        None, description="The triage rule that closed its latest change, so Today leaves it out (a newsletter, say)."
+    )
 
 
 class WatchRun(Record):

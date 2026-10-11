@@ -182,7 +182,7 @@ def test_a_backup_folder_is_checked_then_added(tmp_path):
 def test_an_ai_account_keeps_a_pasted_key_on_this_computer(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
-    assert [e["id"] for e in c.get(f"{api}/ai/endpoints").json()] == ["local", "other", "agent"]
+    assert [e["id"] for e in c.get(f"{api}/ai/endpoints").json()] == [e["id"] for e in known_endpoints()]
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
     account = {
         "name": "my-account",
@@ -340,3 +340,99 @@ def test_the_person_the_app_is_for_is_named_on_their_record(tmp_path):
     finally:
         store.close()
     assert c.post(f"{api}/me", json={"full_name": "robin other"}).status_code == 409
+
+
+# ---- choosing a service and its models -------------------------------------------------------------------------------
+
+
+def a_service(models=("model-b", "model-a"), status=200, seen=None):
+    """The common adapter, answered by a fake service instead of the network."""
+    import httpx
+
+    from engine.ai import adapters
+
+    def answer(request):
+        if seen is not None:
+            seen.append(request)
+        if status != 200:
+            return httpx.Response(status, json={"error": {"code": "invalid_api_key"}})
+        data = [{"id": m, "context_length": 32000, "pricing": {"prompt": "0.000001"}} for m in models]
+        return httpx.Response(200, json={"data": data})
+
+    base = adapters.ADAPTERS[COMMON]
+
+    class Faked(base):
+        def __init__(self, settings, secret=None):
+            super().__init__(settings, secret, transport=httpx.MockTransport(answer))
+
+    return Faked
+
+
+def test_a_service_is_picked_by_name_and_its_models_listed_with_an_unsaved_key(tmp_path, monkeypatch):
+    from engine.ai import adapters
+
+    seen = []
+    monkeypatch.setitem(adapters.ADAPTERS, COMMON, a_service(seen=seen))
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    kinds = c.get(f"{api}/ai/endpoints").json()
+    service = next(k for k in kinds if k["needs_key"] and k["base_url"] and k["key_url"])
+    assert all(k["local"] is False for k in kinds if k["needs_key"])
+    listed = c.post(f"{api}/ai/models", json={"endpoint": service["id"], "key": "not-a-real-key"}).json()
+    assert [m["id"] for m in listed["models"]] == ["model-a", "model-b"] and listed["problem"] is None
+    assert listed["models"][0]["input_per_million"] == 1 and listed["models"][0]["context_tokens"] == 32000
+    assert seen[0].headers["authorization"] == "Bearer not-a-real-key"
+    assert not (ws.private_dir / "keys").exists()  # nothing kept until the account is added
+    unkeyed = c.post(f"{api}/ai/models", json={"endpoint": service["id"]}).json()
+    assert unkeyed["models"] == [] and "needs a key" in unkeyed["problem"]
+    assert c.post(f"{api}/ai/models", json={"endpoint": "no-such-kind"}).status_code == 400
+
+
+def test_a_key_the_service_refuses_is_said_in_plain_words(tmp_path, monkeypatch):
+    from engine.ai import adapters
+
+    monkeypatch.setitem(adapters.ADAPTERS, COMMON, a_service(status=401))
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    service = next(k for k in c.get(f"{api}/ai/endpoints").json() if k["needs_key"] and k["base_url"])
+    listed = c.post(f"{api}/ai/models", json={"endpoint": service["id"], "key": "wrong"}).json()
+    assert listed["models"] == [] and "didn't accept the key" in listed["problem"]
+
+
+def test_a_model_server_on_this_computer_is_found_without_a_key(tmp_path, monkeypatch):
+    from engine.ai import adapters
+
+    monkeypatch.setitem(adapters.ADAPTERS, COMMON, a_service(models=("local-model",)))
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    found = c.get(f"{api}/ai/local").json()
+    local = [k for k in known_endpoints() if k["local"] and k["adapter"] == COMMON]
+    assert [f["endpoint"] for f in found] == [k["id"] for k in local] and found[0]["models"] == ["local-model"]
+    assert all("restricted" in k["allowed_data"] for k in local)
+
+
+def test_an_account_of_a_known_kind_starts_with_its_settings(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    kind = next((k for k in known_endpoints() if k["settings"]), None)
+    assert kind is not None
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    done = c.post(
+        f"{api}/ai/accounts",
+        json={
+            "name": "picked",
+            "adapter": kind["adapter"],
+            "endpoint": kind["id"],
+            "base_url": kind["base_url"],
+            "key": "not-a-real-key",
+            "models": {"everyday": "some-model", "harder": "bigger-model"},
+            "use": {"routine": "everyday", "deep": "harder"},
+            "fingerprint": fingerprint,
+        },
+    )
+    assert done.status_code == 200, done.text
+    loaded = load_config(ws.config_dir, env={})
+    assert loaded.ai.tiers["routine"].use == "picked/everyday" and loaded.ai.tiers["deep"].use == "picked/harder"
+    provider = loaded.ai.providers["picked"]
+    for key, value in kind["settings"].items():
+        assert getattr(provider, key) == value

@@ -493,6 +493,92 @@
         "title": "ActionState",
         "type": "object"
       },
+      "AgendaItemView": {
+        "description": "An event from a watched calendar, on today or the next configured days.",
+        "properties": {
+          "all_day": {
+            "title": "All Day",
+            "type": "boolean"
+          },
+          "cancelled": {
+            "description": "The organizer called it off.",
+            "title": "Cancelled",
+            "type": "boolean"
+          },
+          "days": {
+            "description": "The days it falls on, in the person's time zone.",
+            "items": {
+              "format": "date",
+              "type": "string"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End"
+          },
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where to open it; untrusted, so show its real domain.",
+            "title": "Link"
+          },
+          "snapshot": {
+            "title": "Snapshot",
+            "type": "string"
+          },
+          "source": {
+            "description": "The watched source's id; its label is in GET /api/sources.",
+            "title": "Source",
+            "type": "string"
+          },
+          "start": {
+            "description": "ISO 8601: a date-time with its offset, or a date for an all-day event.",
+            "title": "Start",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "where": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Where"
+          }
+        },
+        "required": [
+          "snapshot",
+          "source",
+          "title",
+          "start",
+          "all_day",
+          "cancelled",
+          "days"
+        ],
+        "title": "AgendaItemView",
+        "type": "object"
+      },
       "AiAccountAdd": {
         "additionalProperties": false,
         "description": "A new AI account from the Add account screen. A pasted key is kept on this computer, never in ai.yaml.",
@@ -538,6 +624,18 @@
             ],
             "title": "Base Url"
           },
+          "endpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The kind of account chosen; its starting provider settings are added to the account's.",
+            "title": "Endpoint"
+          },
           "fingerprint": {
             "title": "Fingerprint",
             "type": "string"
@@ -579,6 +677,14 @@
             "title": "Name",
             "type": "string"
           },
+          "use": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Tiers to one of this account's models by its short name, such as an everyday model for routine and a stronger one for deep; it wins over use_for for the tiers it names.",
+            "title": "Use",
+            "type": "object"
+          },
           "use_for": {
             "description": "Tiers this account's first model should do (\"routine\", \"deep\").",
             "items": {
@@ -595,6 +701,131 @@
           "fingerprint"
         ],
         "title": "AiAccountAdd",
+        "type": "object"
+      },
+      "AiModelView": {
+        "properties": {
+          "context_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Tokens"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "input_per_million": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its price per million tokens read, when listed.",
+            "title": "Input Per Million"
+          },
+          "output_per_million": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its price per million tokens written, when listed.",
+            "title": "Output Per Million"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AiModelView",
+        "type": "object"
+      },
+      "AiModelsAsk": {
+        "additionalProperties": false,
+        "description": "Ask a service for its models before the account is saved, with the key the person just pasted.",
+        "properties": {
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its address, for a kind whose address the person enters.",
+            "title": "Base Url"
+          },
+          "endpoint": {
+            "description": "The kind of account, from GET /api/ai/endpoints.",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A pasted key; used for this request only and never kept.",
+            "title": "Key"
+          },
+          "key_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Or where the key is: env:NAME or file:/path.",
+            "title": "Key Ref"
+          }
+        },
+        "required": [
+          "endpoint"
+        ],
+        "title": "AiModelsAsk",
+        "type": "object"
+      },
+      "AiModelsView": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/AiModelView"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the list couldn't be read, in plain words.",
+            "title": "Problem"
+          }
+        },
+        "title": "AiModelsView",
         "type": "object"
       },
       "AiState": {
@@ -725,6 +956,69 @@
           "changeset"
         ],
         "title": "Applied",
+        "type": "object"
+      },
+      "ArrivedView": {
+        "description": "A message from a watched mailbox, received within the configured hours.",
+        "properties": {
+          "link": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link"
+          },
+          "received": {
+            "description": "ISO 8601 date-time with its offset.",
+            "title": "Received",
+            "type": "string"
+          },
+          "sender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender"
+          },
+          "snapshot": {
+            "title": "Snapshot",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "unread": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unread"
+          }
+        },
+        "required": [
+          "snapshot",
+          "source",
+          "title",
+          "received"
+        ],
+        "title": "ArrivedView",
         "type": "object"
       },
       "Ask": {
@@ -1324,7 +1618,21 @@
             "title": "Adapter",
             "type": "string"
           },
+          "allowed_data": {
+            "description": "The data levels offered by default for an account of this kind.",
+            "items": {
+              "enum": [
+                "open",
+                "internal",
+                "restricted"
+              ],
+              "type": "string"
+            },
+            "title": "Allowed Data",
+            "type": "array"
+          },
           "base_url": {
+            "description": "Its address; empty when the person enters it.",
             "title": "Base Url",
             "type": "string"
           },
@@ -1332,14 +1640,38 @@
             "title": "Id",
             "type": "string"
           },
+          "key_url": {
+            "default": "",
+            "description": "Where the person makes a key, to open in a new tab; empty when none.",
+            "title": "Key Url",
+            "type": "string"
+          },
+          "local": {
+            "default": false,
+            "description": "A server on this computer: nothing leaves it.",
+            "title": "Local",
+            "type": "boolean"
+          },
           "name": {
+            "description": "The service's name, as the person knows it.",
             "title": "Name",
             "type": "string"
+          },
+          "needs_key": {
+            "default": false,
+            "title": "Needs Key",
+            "type": "boolean"
           },
           "note": {
             "default": "",
             "title": "Note",
             "type": "string"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "description": "Provider settings a new account of this kind starts with.",
+            "title": "Settings",
+            "type": "object"
           }
         },
         "required": [
@@ -1973,6 +2305,28 @@
         "title": "Handed",
         "type": "object"
       },
+      "InboxView": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ArrivedView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "left_out": {
+            "description": "Messages in the same hours that a triage rule closed (newsletters, say).",
+            "title": "Left Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "left_out"
+        ],
+        "title": "InboxView",
+        "type": "object"
+      },
       "InstalledPackView": {
         "properties": {
           "description": {
@@ -2132,6 +2486,34 @@
           "url"
         ],
         "title": "Link",
+        "type": "object"
+      },
+      "LocalServerView": {
+        "description": "A model server found running on this computer.",
+        "properties": {
+          "endpoint": {
+            "description": "Its kind of account, from GET /api/ai/endpoints.",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "models": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "endpoint",
+          "name",
+          "models"
+        ],
+        "title": "LocalServerView",
         "type": "object"
       },
       "MeIn": {
@@ -6192,6 +6574,68 @@
         "summary": "Endpoints"
       }
     },
+    "/api/ai/local": {
+      "get": {
+        "description": "Model servers running on this computer now, with their models; none on a hosted app.",
+        "operationId": "ai_local_api_ai_local_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/LocalServerView"
+                  },
+                  "title": "Response Ai Local Api Ai Local Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ai Local"
+      }
+    },
+    "/api/ai/models": {
+      "post": {
+        "description": "The models a service offers, read with a key that isn't saved, so the person picks from a list.",
+        "operationId": "ai_models_api_ai_models_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiModelsAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiModelsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Models"
+      }
+    },
     "/api/ai/test": {
       "post": {
         "operationId": "ai_test_api_ai_test_post",
@@ -9664,6 +10108,48 @@
           }
         },
         "summary": "Text Edit"
+      }
+    },
+    "/api/today/agenda": {
+      "get": {
+        "description": "Events from watched calendars on today and the next configured days, in the person's time zone.",
+        "operationId": "today_agenda_api_today_agenda_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AgendaItemView"
+                  },
+                  "title": "Response Today Agenda Api Today Agenda Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Today Agenda"
+      }
+    },
+    "/api/today/arrived": {
+      "get": {
+        "description": "Messages from watched mailboxes received within the configured hours, newest first.",
+        "operationId": "today_arrived_api_today_arrived_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Today Arrived"
       }
     },
     "/api/watch": {

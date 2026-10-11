@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.40"
+PLUGIN_API_VERSION = "0.3.41"
 
 
 class Settings(BaseModel):
@@ -1491,7 +1491,13 @@ class Registrar:
         self.handlers[event] = fn
 
 
-from engine.connectors import ConnectorError, Poll, SourceItem  # noqa: E402 - part of the plugin API
+from engine.connectors import (  # noqa: E402 - part of the plugin API
+    ConnectorError,
+    EventDetails,
+    MessageDetails,
+    Poll,
+    SourceItem,
+)
 from engine.net import retry_after  # noqa: E402 - part of the plugin API
 
 __all__ = [
@@ -1499,6 +1505,8 @@ __all__ = [
     "retry_after",
     "Poll",
     "SourceItem",
+    "EventDetails",
+    "MessageDetails",
     "PLUGIN_API_VERSION",
     "Settings",
     "Record",

@@ -68,6 +68,11 @@ metadata for order, dependencies and pickers. Named services in `catalog/ai-endp
 question "May catalogs list public AI services and addresses?" (yes, in data). Plugin API: lists and the one-source
 rule join the contract.
 
+**Update (same day):** the shipped list names services, their addresses and where to make a key, but no model ids:
+those go stale within months. The screen lists the models the service itself reports (`POST /api/ai/models`, with a
+key that isn't kept) and the person picks one for everyday work and, optionally, one for harder work. Suggesting
+models waits until it can rest on what a service publishes (prices, context size) rather than on names.
+
 ## 2026-10-11: Every plugin repository has its own autonomous builder, with a written brief and a question channel
 
 **Decided by:** project owner.

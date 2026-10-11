@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -19,12 +20,40 @@ ErrorKind = Literal["auth", "no_access", "not_found", "outage", "offline", "thro
 
 
 @dataclass(frozen=True)
+class EventDetails:
+    """What a calendar item is, for the day's agenda. `start` and `end`: ISO 8601 date-times with their offset
+    (`2026-03-02T09:30:00+01:00` or `...Z`), or plain dates (`2026-03-02`) with `all_day`; an all-day `end` is the day
+    after the last day, as calendars write it. `where`: the place or the meeting address, as the service says.
+    `cancelled`: the organizer called it off. `repeats`: the repeat rule as the service wrote it, for an item that
+    stands for a series the connector didn't expand into its occurrences (the agenda can't place those)."""
+
+    start: str
+    end: str | None = None
+    all_day: bool = False
+    where: str | None = None
+    cancelled: bool = False
+    repeats: str | None = None
+
+
+@dataclass(frozen=True)
+class MessageDetails:
+    """What a mail item is, for the day's inbox. `sender`: who it is from, as the service names them. `received`: an
+    ISO 8601 date-time with its offset. `unread`: whether the person hasn't opened it yet, when the service says."""
+
+    sender: str | None = None
+    received: str | None = None
+    unread: bool | None = None
+
+
+@dataclass(frozen=True)
 class SourceItem:
     """One thing a source holds. `key`: stable within the source (a message or event id), so the same thing read
     again is compared with what was seen. `title`: one line naming it. `text`: everything the assistant should read
     about it now, as plain text; a change is a change in this text. `author`: who changed it last, as the service
     names them (triage rules compare it with `workspace.our_accounts`). `changed_at`: when, as the service says it.
-    `link`: where the person can open it."""
+    `link`: where the person can open it. `event` or `message` (at most one): what it is, for a calendar item or a
+    mail item, so Today can show the day's agenda and what came in; the text still says everything the assistant
+    reads."""
 
     key: str
     title: str
@@ -32,6 +61,8 @@ class SourceItem:
     author: str | None = None
     changed_at: str | None = None
     link: str | None = None
+    event: EventDetails | None = None
+    message: MessageDetails | None = None
 
 
 @dataclass
@@ -92,6 +123,7 @@ def checked_poll(poll: Any) -> Poll:
             raise ValueError("a Poll's items are SourceItems")
         if not all(isinstance(v, str) for v in (item.key, item.title, item.text)) or not item.key:
             raise ValueError("a SourceItem has a key, a title and its text, all text")
+        _check_details(item)
     if not isinstance(poll.state, dict):
         raise ValueError("a Poll's state is a dict")
     if not all(isinstance(k, str) and k for k in poll.removed):
@@ -102,6 +134,44 @@ def checked_poll(poll: Any) -> Poll:
     if len(keys) != len(set(keys)):
         raise ValueError("a Poll lists each key once")
     return poll
+
+
+def moment(value: str, *, all_day: bool = False) -> datetime | date:
+    """An ISO 8601 date-time with its offset, or with `all_day` a plain date. Raises ValueError otherwise."""
+    if all_day:
+        return date.fromisoformat(value[:10]) if len(value) == 10 else _aware(value).date()
+    return _aware(value)
+
+
+def _aware(value: str) -> datetime:
+    when = datetime.fromisoformat(value.replace("Z", "+00:00") if value.endswith("Z") else value)
+    if when.tzinfo is None:
+        raise ValueError(f"{value!r} has no offset; write it as 2026-03-02T09:30:00+01:00 or ...Z")
+    return when
+
+
+def _check_details(item: SourceItem) -> None:
+    if item.event is not None and item.message is not None:
+        raise ValueError(f"item {item.key!r} is an event or a message, not both")
+    if item.event is not None:
+        event = item.event
+        if not isinstance(event, EventDetails):
+            raise ValueError("a SourceItem's event is an EventDetails")
+        try:
+            start = moment(event.start, all_day=event.all_day)
+            end = moment(event.end, all_day=event.all_day) if event.end else None
+        except (TypeError, ValueError) as err:
+            raise ValueError(f"event {item.key!r}: {err}") from None
+        if end is not None and end < start:
+            raise ValueError(f"event {item.key!r} ends before it starts")
+    if item.message is not None:
+        if not isinstance(item.message, MessageDetails):
+            raise ValueError("a SourceItem's message is a MessageDetails")
+        if item.message.received:
+            try:
+                _aware(item.message.received)
+            except (TypeError, ValueError) as err:
+                raise ValueError(f"message {item.key!r}: {err}") from None
 
 
 @dataclass(frozen=True)
@@ -172,7 +242,9 @@ def _read_folder(settings: FolderSettings, state: dict[str, Any], context: Conne
 class FakeSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    items: list[dict[str, Any]] = Field(default_factory=list, description="What the source holds: key, title, text.")
+    items: list[dict[str, Any]] = Field(
+        default_factory=list, description="What the source holds: key, title, text, and event or message details."
+    )
     error: ErrorKind | None = Field(None, description="Fail every read with this kind of error.")
 
 
@@ -180,7 +252,18 @@ def _read_fake(settings: FakeSettings, state: dict[str, Any], context: Connector
     if settings.error:
         raise ConnectorError(settings.error, "the stand-in source is set to fail")
     reads = int(state.get("reads", 0)) + 1
-    return Poll([SourceItem(**item) for item in settings.items], {"reads": reads}, complete=True)
+    items = []
+    for raw in settings.items:
+        item = dict(raw)
+        event, message = item.pop("event", None), item.pop("message", None)
+        items.append(
+            SourceItem(
+                **item,
+                event=EventDetails(**event) if event else None,
+                message=MessageDetails(**message) if message else None,
+            )
+        )
+    return Poll(items, {"reads": reads}, complete=True)
 
 
 def _core() -> dict[str, Connector]:
