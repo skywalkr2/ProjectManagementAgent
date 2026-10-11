@@ -21,6 +21,15 @@ _SYSTEM = WriteContext(actor="engine", trust="trusted", op="run.record")
 
 
 @dataclass(frozen=True)
+class Independence:
+    """What a check must be independent of: the accounts that wrote the work, and whether the person accepts one of
+    them (as a fresh run) when no other account can take it."""
+
+    avoid: frozenset[str]
+    same_account: bool = False
+
+
+@dataclass(frozen=True)
 class Choice:
     tier: str
     provider: str
@@ -44,9 +53,11 @@ def choices(
     tier: str | None = None,
     use: str | None = None,
     content: frozenset[str] = frozenset(),
+    independent: Independence | None = None,
 ) -> list[Choice]:
     """The main choice for the task's tier, then its fallbacks, keeping only accounts allowed to see this data. `use`
-    (a "provider/model" the person picked for this request) replaces the tier's list."""
+    (a "provider/model" the person picked for this request) replaces the tier's list. For a check, accounts that wrote
+    the work are left out, or put last when the person accepts the same account; the person's own pick stands."""
     task = cfg.ai.tasks.get(task_kind)
     tier_name = tier or (task.tier if task else "routine")
     tier_cfg = cfg.ai.tiers.get(tier_name)
@@ -74,6 +85,17 @@ def choices(
         picked.append(Choice(tier_name, provider_name, model_key, model_id))
     if not picked:
         raise NoProvider("no AI account can take this: " + "; ".join(refused))
+    if independent is not None and use is None:
+        others = [c for c in picked if c.provider not in independent.avoid]
+        same = [c for c in picked if c.provider in independent.avoid]
+        if not others and not independent.same_account:
+            wrote = ", ".join(sorted({c.provider for c in same}))
+            raise NoProvider(
+                f"this check needs an account other than the one that wrote the work ({wrote}). Add another account "
+                f"to the {tier_name!r} tier, or accept the same account for checks (roles.check.same_account in "
+                "ai.yaml)"
+            )
+        picked = others + (same if independent.same_account else [])
     return picked
 
 
@@ -167,14 +189,14 @@ class Router:
         tier: str | None = None,
         use: str | None = None,
         content: frozenset[str] = frozenset(),
+        independent: Independence | None = None,
     ) -> tuple[AiResult, Choice, str]:
         """Run the task on the first account that can serve it. Returns the result, the choice and the Run id. A
         refusal is returned like an answer (marked refused), never handed to the next account."""
         self._check_budget(task.kind)
         last: AiError | None = None
-        options = self._that_fit(
-            task, list(choices(self.cfg, task.kind, data_level, tier=tier, use=use, content=content))
-        )
+        picked = choices(self.cfg, task.kind, data_level, tier=tier, use=use, content=content, independent=independent)
+        options = self._that_fit(task, list(picked))
         for position, choice in enumerate(options):
             settings = self.cfg.ai.providers[choice.provider]
             started = self.now()
@@ -184,23 +206,33 @@ class Router:
                 adapter = self.adapter_factory(settings.adapter, settings, secret)
                 # Wait out a rate limit only on the last account in line; otherwise the next one is faster.
                 last_in_line = position == len(options) - 1
-                result = self._run_paced(adapter, task, choice, request_id, last_in_line)
+                result = self._run_paced(adapter, task, choice, request_id, last_in_line, independent)
             except SecretError as err:
                 last = AiError("no_key", str(err))
-                self._record(task, request_id, choice, started, time.monotonic() - clock, None, last)
+                self._record(task, request_id, choice, started, time.monotonic() - clock, None, last, independent)
                 continue
             except AiError as err:
                 last = err
-                self._record(task, request_id, choice, started, time.monotonic() - clock, None, err)
+                self._record(task, request_id, choice, started, time.monotonic() - clock, None, err, independent)
                 if err.kind in FALLBACK_ON:
                     continue
                 raise
-            run_id = self._record(task, request_id, choice, started, time.monotonic() - clock, result, None)
+            run_id = self._record(
+                task, request_id, choice, started, time.monotonic() - clock, result, None, independent
+            )
             return result, choice, run_id
         assert last is not None
         raise last
 
-    def _run_paced(self, adapter: Adapter, task: AiTask, choice: Choice, request_id: str, wait: bool) -> AiResult:
+    def _run_paced(
+        self,
+        adapter: Adapter,
+        task: AiTask,
+        choice: Choice,
+        request_id: str,
+        wait: bool,
+        independent: Independence | None = None,
+    ) -> AiResult:
         """Run on one account, waiting and trying again while it says to slow down, within the configured limits."""
         limits = self.cfg.ai.rate_limits
         for attempt in range(limits.tries if wait else 1):
@@ -216,7 +248,7 @@ class Router:
                     or pause > limits.max_wait_seconds
                 ):
                     raise
-                self._record(task, request_id, choice, started, time.monotonic() - clock, None, err)
+                self._record(task, request_id, choice, started, time.monotonic() - clock, None, err, independent)
                 if self.on_wait is not None:
                     self.on_wait(pause)
                 self.sleep(pause)
@@ -245,11 +277,14 @@ class Router:
         data_level: str = "internal",
         use: str | None = None,
         content: frozenset[str] = frozenset(),
+        independent: Independence | None = None,
     ) -> float | None:
         """What a run would cost in USD on the account it would use, or None when the price isn't known.
         Input from the packet's size; output from past runs of this kind, or its configured typical size."""
         try:
-            options = choices(self.cfg, task.kind, data_level, tier=tier, use=use, content=content)
+            options = choices(
+                self.cfg, task.kind, data_level, tier=tier, use=use, content=content, independent=independent
+            )
             choice = self._that_fit(task, list(options))[0]
         except NoProvider:
             return None
@@ -364,6 +399,7 @@ class Router:
         seconds: float,
         result: AiResult | None,
         error: AiError | None,
+        independent: Independence | None = None,
     ) -> str:
         data: dict[str, Any] = {
             "request": request_id,
@@ -379,6 +415,11 @@ class Router:
             "cost_usd": self._cost(choice, result),
             "seconds": round(seconds, 3),
             "outcome": _outcome(result, error),
+            "independence": (
+                None
+                if independent is None
+                else ("same_account" if choice.provider in independent.avoid else "other_account")
+            ),
             "error_kind": error.kind if error else ("refused" if result and result.refused else None),
             "error_detail": error.detail if error else (result.refusal if result and result.refused else None),
             "started_at": started.isoformat(),

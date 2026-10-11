@@ -189,7 +189,9 @@ tasks:                         # tier and parameters per AI task kind (defaults 
   ask: deep                    # ad hoc requests to the assistant (6.25)
   agenda: routine
   # a pack's drafting kinds, for example: {tier: deep, temperature: 0.5, output: draft}
-  # and its reviews: {tier: review, independent: true}   (never the account that wrote the input, 6.16)
+  # and its reviews: {tier: review}   (a check never uses the account that wrote the work, 6.16)
+roles:                         # tiers by the role a kind of work declares: write, check or research
+  check: {tier: review, same_account: false}   # true: one account is enough, as a fresh run (6.16)
 budgets:
   per_run_usd: 0.25            # across all accounts; per-provider optional
   per_day_usd: 2

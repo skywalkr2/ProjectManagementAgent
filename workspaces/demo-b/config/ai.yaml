@@ -23,6 +23,9 @@ tiers:
   deep: {use: stub/default}
 tasks:
   notes: {tier: routine, temperature: 0, max_output: 3000, expected_output: 800}
+roles:
+  check: {tier: deep, same_account: true}
+  research: {tier: routine}
 budgets:
   per_run_usd: 0.25
   confirm_above_usd: 0.10

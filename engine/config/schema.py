@@ -213,6 +213,31 @@ class TaskSettings(ConfigModel):
     expected_output: int = Field(
         800, ge=1, description="Typical answer size in tokens, for estimates until there are past runs to go by."
     )
+    same_account: bool | None = Field(
+        None,
+        description="For a check: accept a run on an account that wrote the work, as a fresh run that sees only its "
+        "packet, when no other account can take it. Unset follows roles.check.same_account.",
+    )
+
+
+class RoleSettings(ConfigModel):
+    tier: str | None = Field(
+        None, description="The tier for every kind of work in this role, unless tasks.<kind>.tier says otherwise."
+    )
+    same_account: bool = Field(
+        False,
+        description="For checks: accept a run on an account that wrote the work, as a fresh run that sees only its "
+        "packet, when no other account can take it. The check then says it came from the same account.",
+    )
+
+
+class Roles(ConfigModel):
+    write: RoleSettings = Field(default_factory=RoleSettings, description="Work that writes or changes things.")
+    check: RoleSettings = Field(
+        default_factory=RoleSettings,
+        description="Independent second opinions on work already done, on an account other than the one that did it.",
+    )
+    research: RoleSettings = Field(default_factory=RoleSettings, description="Work that gathers from sources.")
 
 
 class TaskBudget(ConfigModel):
@@ -291,6 +316,9 @@ class AiFile(FileModel):
     )
     tiers: dict[str, TierSettings] = Field(default_factory=_default_tiers, description="What the work needs.")
     tasks: dict[str, TaskSettings] = Field(default_factory=_default_tasks, description="Tier and settings per task.")
+    roles: Roles = Field(
+        default_factory=Roles, description="Tiers by the role a kind of work plays: write, check or research."
+    )
     budgets: Budgets = Field(default_factory=Budgets, description="Spending limits across all accounts.")
     prices: dict[str, Price] = Field(
         default_factory=dict, description="Prices by provider/model, for models whose provider doesn't publish them."
@@ -334,6 +362,10 @@ class AiFile(FileModel):
         for kind, task in self.tasks.items():
             if task.tier not in self.tiers:
                 problems.append(f"tasks.{kind}.tier names {task.tier!r}, which isn't a tier")
+        for role in Roles.model_fields:
+            tier = getattr(self.roles, role).tier
+            if tier is not None and tier not in self.tiers:
+                problems.append(f"roles.{role}.tier names {tier!r}, which isn't a tier")
         if problems:
             raise ValueError("; ".join(problems))
         return self

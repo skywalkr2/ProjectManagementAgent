@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.12"
+PLUGIN_API_VERSION = "0.3.13"
 
 
 class Settings(BaseModel):
@@ -623,6 +623,7 @@ class Registrar:
         anchored: bool = False,
         questions: int = 0,
         where: dict[str, Any] | None = None,
+        role: str = "write",
         prompt: str = "notes",
         playbook: str = "notes",
         on: str | None = None,
@@ -656,6 +657,14 @@ class Registrar:
         `questions=N` lets a draft end with up to N questions for the person, in a `<questions>` block the core takes
         off the text and keeps on the version (`questions`), shown beside it; more than N gets a fix round.
 
+        `role` is "write" (the default: work that writes or changes things), "check" (an independent second opinion on
+        work already done) or "research" (gathering from sources). The workspace maps roles to tiers (`ai.roles`). A
+        check never runs on an account that wrote the record it is about (its accepted and pending text versions and
+        the changes AI runs made to it), unless the person accepts the same account for checks; the run then records
+        which kind of independence it had (`Run.independence`). With no account to take it, the check waits for the
+        person and says why. The packet decides what a check sees: give it the work, never the writing run's own
+        material.
+
         `tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates
         before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them."""
         from engine.config.schema import TaskSettings
@@ -665,6 +674,8 @@ class Registrar:
             raise ValueError('a task kind\'s output is "ops" or "draft"')
         if (anchored or questions) and output != "draft":
             raise ValueError("only a draft task kind is anchored or asks questions")
+        if role not in ("write", "check", "research"):
+            raise ValueError('a task kind\'s role is "write", "check" or "research"')
         if not isinstance(questions, int) or not 0 <= questions <= 20:
             raise ValueError("questions is how many a draft may ask, from 0 to 20")
         if where is not None and (on is None or not where):
@@ -714,6 +725,7 @@ class Registrar:
             anchored=anchored,
             questions=questions,
             where=narrowed,
+            role=role,
         )
 
     def _own_file(self, name: str, folder: str) -> Path | None:

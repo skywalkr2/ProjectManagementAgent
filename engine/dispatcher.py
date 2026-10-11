@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
-from engine.ai.router import BudgetReached, NoProvider, Router, escalation_tier, route
+from engine.ai.router import BudgetReached, Independence, NoProvider, Router, escalation_tier, route
 from engine.ai.task import AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.cleaning import quoted_messages
@@ -135,7 +135,10 @@ def process(
     )
     use = req.data.get("use")
     content = content_levels(store, req.data)
-    estimate = router.estimate(packet.task, tier=tier, data_level=level, use=use, content=content)
+    independent = independence(store, cfg, req.data)
+    estimate = router.estimate(
+        packet.task, tier=tier, data_level=level, use=use, content=content, independent=independent
+    )
     budgets = cfg.ai.budgets
     if estimate is not None and estimate > budgets.per_run_usd:
         return needs_you(
@@ -169,12 +172,14 @@ def process(
             "anchors": packet.anchor_units if kind.anchored else None,
             "questions": kind.questions,
         }
-    first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use, content, draft)
+    first = _rounds(
+        store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use, content, draft, independent
+    )
     outcome = first
     # The person's pick of account is theirs: no escalation away from it.
     stronger = escalation_tier(cfg, tier) if use is None else None
     second_estimate = (
-        router.estimate(packet.task, tier=stronger, data_level=level, content=content)
+        router.estimate(packet.task, tier=stronger, data_level=level, content=content, independent=independent)
         if first.escalate and stronger
         else None
     )
@@ -182,7 +187,19 @@ def process(
     if first.escalate and stronger and stronger != tier and within:
         # One re-run on the stronger tier when checks still fail; it counts toward budgets like any run.
         second = _rounds(
-            store, cfg, router, packet.task, stronger, request_id, ctx, previous_ops, level, None, content, draft
+            store,
+            cfg,
+            router,
+            packet.task,
+            stronger,
+            request_id,
+            ctx,
+            previous_ops,
+            level,
+            None,
+            content,
+            draft,
+            independent,
         )
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
@@ -223,6 +240,39 @@ def content_levels(store: Store, request: dict) -> frozenset[str]:
     return frozenset(found)
 
 
+def independence(store: Store, cfg: Config, request: dict) -> Independence | None:
+    """For a check, what it must be independent of: the accounts of the AI runs that wrote the record it is about (its
+    accepted, merged and pending text versions, and changes AI runs applied to it, other checks aside), and whether the
+    person accepts one of them. None for other work."""
+    kind = store.plugins.task_kind(request["task"])
+    if kind.role != "check":
+        return None
+    configured = cfg.ai.tasks.get(kind.name)
+    same = configured.same_account if configured is not None and configured.same_account is not None else None
+    if same is None:
+        same = cfg.ai.roles.check.same_account
+    about = target_of(store, request)
+    if about is None:
+        return Independence(frozenset(), same)
+    view = store.read()
+    runs: set[str] = set()
+    for version in view.find("text_version", {"owner_kind": about[0], "owner_id": about[1]}):
+        if version.data.get("run") and version.data["status"] != "discarded":
+            runs.add(version.data["run"])
+    target = {"kind": about[0], "id": about[1]}
+    for changeset in view.list("changeset"):
+        if changeset.data.get("run") and any(
+            o["status"] == "applied" and target in o.get("records", []) for o in changeset.data["ops"]
+        ):
+            runs.add(changeset.data["run"])
+    accounts = set()
+    for run in (view.get("run", r) for r in runs):
+        writer = store.plugins.tasks.get(run.data["task"]) if run is not None else None
+        if run is not None and (writer is None or writer.role != "check"):
+            accounts.add(run.data["provider"])
+    return Independence(frozenset(accounts), same)
+
+
 @dataclass
 class _Outcome:
     changeset: ChangesetIn | None = None
@@ -245,6 +295,7 @@ def _rounds(
     use: str | None = None,
     content: frozenset[str] = frozenset(),
     draft: dict | None = None,
+    independent: Independence | None = None,
 ) -> _Outcome:
     """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong. A refusal
     stops at once: no fix round, no other account, no escalation."""
@@ -254,7 +305,13 @@ def _rounds(
         last = attempt == cfg.dispatch.fix_rounds
         try:
             result, _choice, out.run_id = router.call(
-                task, request_id=request_id, tier=tier, data_level=data_level, use=use, content=content
+                task,
+                request_id=request_id,
+                tier=tier,
+                data_level=data_level,
+                use=use,
+                content=content,
+                independent=independent,
             )
         except (BudgetReached, NoProvider) as err:
             return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=str(err))
@@ -264,7 +321,7 @@ def _rounds(
         if result.refused:
             return _Outcome(run_id=out.run_id, stop=_refused(store, out.run_id, result.refusal or ""))
         if draft is not None:
-            text, stop = _drafted(router, task, result, request_id, tier, data_level, use, content)
+            text, stop = _drafted(router, task, result, request_id, tier, data_level, use, content, independent)
             if stop:
                 return _Outcome(run_id=out.run_id, stop=stop)
             from engine.texts import AnchorProblem, parse_anchored, split_questions
@@ -344,6 +401,7 @@ def _drafted(
     data_level: str,
     use: str | None,
     content: frozenset[str],
+    independent: Independence | None = None,
 ) -> tuple[str, str | None]:
     """A draft's text from a prose answer: one surrounding code fence removed, and an answer cut off at the output
     limit continued once. Returns the text and, when it can't be finished, why the person is needed."""
@@ -354,7 +412,13 @@ def _drafted(
         more_task = replace(task, request=task.request + "\n\n" + CONTINUE.format(text=text))
         try:
             more, _choice, _run = router.call(
-                more_task, request_id=request_id, tier=tier, data_level=data_level, use=use, content=content
+                more_task,
+                request_id=request_id,
+                tier=tier,
+                data_level=data_level,
+                use=use,
+                content=content,
+                independent=independent,
             )
         except (AiError, BudgetReached, NoProvider) as err:
             return text, f"The draft was cut off at the output limit and couldn't be continued ({err})."

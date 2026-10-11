@@ -10,6 +10,23 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.13 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Roles: `task_kind(..., role="write" | "check" | "research")`, default `"write"`. The workspace maps roles to tiers in
+  `ai.roles.<role>.tier`. Which tier a kind uses: `ai.tasks.<kind>.tier` if set, then its role's tier, then the
+  plugin's default, then `routine`.
+- Independent second opinions: a `"check"` run never uses an account whose AI runs wrote the record it is about. That
+  covers its accepted, merged and pending text versions, and changes AI runs applied to the record; other checks don't
+  count.
+  - **The same account:** a person with one account can accept it with `ai.roles.check.same_account: true` (or
+    `ai.tasks.<kind>.same_account`). Other accounts are still tried first. A check then runs as a fresh run that sees
+    only its packet.
+  - **No account left:** the check waits for the person and says why.
+  - **The record:** each run records `independence` (`other_account` or `same_account`; none for other roles).
+  - **The person's pick:** an account the person picks for the request (`use`) stands.
+
 ## What 0.3.12 adds
 
 Manifests stay `'>=0.3,<0.4'`.

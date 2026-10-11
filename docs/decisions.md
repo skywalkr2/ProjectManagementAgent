@@ -172,6 +172,27 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: Roles, and second opinions on one account
+
+**Decided by:** Claude (design), from plugin questions; the owner can override.
+
+**What:**
+- Plugin API 0.3.13. Every task kind has a role: write, check or research. The workspace maps roles to tiers.
+- A check never runs on an account whose AI runs wrote the record it checks.
+- A person can accept the same account for checks. The check is then a fresh run that sees only its packet, and the
+  run records that it came from the same account.
+- This replaces the design's `independent: true` per task.
+
+**Why:**
+- Many people have one subscription. Without this, a check would either wait forever or quietly reuse the writer's
+  account.
+- Marking which kind of independence each check had keeps the choice visible.
+
+**Impact:**
+- Design 4.8 and 6.16.
+- New settings `ai.roles` and `ai.tasks.<kind>.same_account`; `Run.independence`.
+- The review screen shows a check's independence in the UX pass.
+
 ## 2026-10-12: Plugin API 0.3.12: who started a run, where work starts, questions from drafts
 
 **Decided by:** Claude (design), from plugin questions; the owner can override.

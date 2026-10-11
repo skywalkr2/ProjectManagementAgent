@@ -22,6 +22,8 @@ tiers:
   deep: {use: stub/default}
 tasks:
   notes: {tier: routine, temperature: 0, max_output: 4000, expected_output: 800}
+roles:
+  check: {tier: deep}
 budgets:
   per_run_usd: 0.5
   confirm_above_usd: 0.10

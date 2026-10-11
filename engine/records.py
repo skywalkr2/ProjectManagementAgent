@@ -546,6 +546,11 @@ class Run(Record):
         "call failed. refused: the provider said it refused the work under its own policy (its reason is in "
         "error_detail)."
     )
+    independence: Literal["other_account", "same_account"] | None = Field(
+        None,
+        description="For a check: other_account, run on an account that didn't write the work; same_account, on one "
+        "that did, as a fresh run the person accepted. None for other work.",
+    )
     error_kind: str | None = Field(None, description="How the call failed, from the runner's own error; none if ok.")
     error_detail: str | None = Field(None, description="The error's own text, for diagnosing a failure.")
     started_at: datetime = Field(description="When the call started.")

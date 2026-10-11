@@ -41,6 +41,7 @@ class TaskKind:
     field: str | None = None
     anchored: bool = False  # a draft that revises the current text, paragraph by paragraph, with ids
     questions: int = 0  # how many questions for the person a draft may end with
+    role: str = "write"  # write, check (an independent second opinion) or research
     where: dict[str, tuple[Any, ...]] = _field(default_factory=dict)  # field values a record of kind `on` must have
 
     def offered_on(self, record: Any) -> bool:
@@ -64,12 +65,16 @@ def task_kind(name: str) -> TaskKind:
 
 
 def settings(cfg: Any, kind: TaskKind | None, name: str | None = None) -> Any:
-    """A task kind's settings: its own defaults, with whatever the workspace's ai.tasks.<kind> sets on top."""
+    """A task kind's settings: its own defaults, then the tier its role maps to (ai.roles), then whatever the
+    workspace's ai.tasks.<kind> sets."""
     from engine.config.schema import TaskSettings
 
     key = kind.name if kind is not None else name
     configured = cfg.ai.tasks.get(key) if key else None
     values = dict(kind.defaults) if kind is not None else {}
+    role_tier = getattr(cfg.ai.roles, kind.role).tier if kind is not None else None
+    if role_tier is not None:
+        values["tier"] = role_tier
     if configured is not None:
         values.update({f: getattr(configured, f) for f in configured.model_fields_set})
     return TaskSettings.model_validate(values)

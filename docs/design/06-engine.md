@@ -499,11 +499,15 @@ unresolved names, a truncated packet), never the model's own confidence. Each `R
 answer, so the quality panel (6.20) shows where the cheap model is enough. A config that maps a task kind to a provider that
 lacks a required capability fails the self-check.
 
-**Independent second opinion.** A task kind can ask for a review that is independent of the work under review: the router
-then picks an account (and, where the tiers allow, a vendor) different from the run that produced it (`independent: true` on
-a task, 4.8). Its findings are lints the person decides on, never automatic rewrites. Packs that draft long documents use it
-on each one; the core can use it to check a draft before it reaches another person. If no independent account is configured, the
-review waits for the person and says why, instead of quietly reviewing with the same model.
+**Independent second opinion.** Every task kind has a role: `write`, `check` or `research`, and the workspace maps roles to
+tiers (`ai.roles`, 4.8). A `check` is a review independent of the work under review: the router leaves out every account
+whose AI runs wrote the record it is about (its text versions and the changes runs applied to it). Its findings are
+suggestions the person decides on, never automatic rewrites. Packs that draft long documents use it on each one; the core
+can use it to check a draft before it reaches another person. If no other account can take it, the check waits for the
+person and says why, instead of quietly reviewing with the same model. A person with one account can accept the same
+account for checks (`ai.roles.check.same_account`, or per kind). The check is then a fresh run that sees only its packet,
+never the writing run's history, and the run records `independence` (`other_account` or `same_account`) so the review says
+which kind it was.
 
 **No silent provider.** Which account runs work is never a default. A tier naming an account that isn't in
 `config/ai.yaml` is a config error: start-up and the self-check fail and name the tier. A tier with no account yet leaves its
