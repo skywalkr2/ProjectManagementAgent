@@ -504,6 +504,9 @@ def _ai_failure(err: AiError) -> str:
     when = f"; it can try again in {int(err.retry_after)} seconds" if err.retry_after else ""
     reason = provider_reason(err.detail)
     why = f" ({reason})" if reason else ""
+    if err.hint:
+        signed_out = "The AI account isn't signed in" if err.kind == "auth" else plain
+        return f"{signed_out}{when}{why}. {err.hint.rstrip('.')}, then try again."
     return f"{plain}{when}{why}. Check the account in ai.yaml, then try again."
 
 

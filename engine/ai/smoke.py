@@ -54,6 +54,7 @@ def smoke_test(
     adapter_factory: Callable[[str, Any, str | None], Any] = make_adapter,
 ) -> list[SmokeResult]:
     results: list[SmokeResult] = []
+    locked: set[str] = set()
     for tier_name, tier in cfg.ai.tiers.items():
         if not tier.use:
             results.append(SmokeResult(tier_name, "", True, False, "no AI account is set up for this tier"))
@@ -76,6 +77,8 @@ def smoke_test(
                 except AiError as err:
                     reason = provider_reason(err.detail)
                     ok, detail = False, f"{err.kind}: {reason}" if reason else err.kind
+                    if err.hint:
+                        detail += f". {err.hint}"
                     if err.kind in ("auth", "no_key"):
                         key_source = describe_secret(settings.auth)
                 except ValueError as err:
@@ -84,7 +87,32 @@ def smoke_test(
                 results.append(
                     SmokeResult(tier_name, label, position == 0, ok, detail, time.monotonic() - start, key_source)
                 )
+            if ref not in locked:
+                locked.add(ref)
+                results.extend(_lockdown(tier_name, ref, position == 0, settings, model_id, env, adapter_factory))
     return results
+
+
+def _lockdown(
+    tier: str,
+    ref: str,
+    main: bool,
+    settings: Any,
+    model_id: str,
+    env: Mapping[str, str],
+    adapter_factory: Callable[[str, Any, str | None], Any],
+) -> list[SmokeResult]:
+    """For an agent account, its lockdown test: one result per probe (design 6.16). Other accounts have none."""
+    try:
+        adapter = adapter_factory(settings.adapter, settings, resolve_secret(settings.auth, env))
+    except (SecretError, AiError, ValueError):
+        return []  # the connection test above already says why
+    if not hasattr(adapter, "lockdown_test"):
+        return []
+    start = time.monotonic()
+    checks = adapter.lockdown_test(model_id)
+    seconds = time.monotonic() - start
+    return [SmokeResult(tier, f"{ref} (lockdown: {c.name})", main, c.ok, c.detail, seconds) for c in checks]
 
 
 def _is_ok(text: str) -> bool:

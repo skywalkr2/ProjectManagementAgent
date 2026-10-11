@@ -17,6 +17,24 @@ providers:
     base_url: http://localhost:11434/v1
     models: {small: local-small-model}
     allowed_data: [open, internal, restricted]
+  coding-agent:
+    adapter: cli-agent
+    models: {default: agent-default-model}
+    allowed_data: [open, internal]
+    timeout_seconds: 300
+    agent:
+      command: [example-agent, --print, --no-tools, --model, "{model}"]
+      packet_via: stdin
+      output_via: stdout
+      output_json: true
+      output_fields: {text: result, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens, cost_usd: cost}
+      pass_env: [EXAMPLE_AGENT_CONFIG]
+      errors:
+        auth: ["not signed in", "sign in again"]
+        rate_limited: ["too many requests"]
+        quota: ["usage limit"]
+        exit_codes: {3: auth}
+      sign_in_hint: Run example-agent login in a terminal
 tiers:
   routine: {use: stub/default, fallback: [], escalate_to: deep}
   deep: {use: stub/default}

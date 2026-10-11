@@ -172,9 +172,18 @@ providers:                       # every AI account the workspace may use; names
     models: {small: <model name>}
     allowed_data: [open, internal, restricted]   # never leaves the machine
   coding-agent:
-    adapter: cli-agent           # any command-line agent: start command, args, how to pass the packet, where it writes
-    command: <path to the agent CLI>
+    adapter: cli-agent           # any command-line agent, signed in as the PM, run locked down in its own folder (6.16)
+    models: {default: <model id the agent takes>}
     allowed_data: [open, internal]
+    agent:
+      command: [<agent program>, <its locked-down flags>, --model, "{model}"]   # also {packet}, {outbox}, {scratch}
+      packet_via: stdin          # or file: the packet is written to {packet}
+      output_via: stdout         # or outbox: the answer is a file in {outbox}
+      output_json: true          # the agent prints JSON; output_fields says where the answer, usage and cost are
+      output_fields: {text: result, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens}
+      pass_env: []               # variables it may see besides PATH, HOME and the language settings
+      errors: {auth: ["<its not-signed-in message>"], quota: ["<its usage-limit message>"], exit_codes: {}}
+      sign_in_hint: <its login command>
 tiers:                           # what the work needs, mapped to provider/model; any mix of accounts
   routine:  {use: my-anthropic/small, fallback: [router/small, local/small], escalate_to: deep}
   deep:     {use: my-anthropic/large, fallback: [my-openai/large]}

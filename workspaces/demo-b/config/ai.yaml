@@ -18,6 +18,18 @@ providers:
     auth: env:ROUTER_AI_KEY
     models: {strong: vendor/strong-model-id}
     allowed_data: [open]
+  coding-agent:
+    adapter: cli-agent
+    models: {default: agent-default-model}
+    allowed_data: [open]
+    agent:
+      command: [example-agent, run, --sandbox, "{scratch}", --write-only, "{outbox}", --packet, "{packet}"]
+      packet_via: file
+      output_via: outbox
+      key_env: EXAMPLE_AGENT_KEY
+      errors: {auth: ["invalid key"], exit_codes: {4: rate_limited}}
+      sign_in_hint: Check the key in the account's settings
+    auth: env:EXAMPLE_AGENT_KEY
 tiers:
   routine: {use: stub/default, fallback: [], escalate_to: deep}
   deep: {use: stub/default}

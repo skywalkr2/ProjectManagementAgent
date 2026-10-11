@@ -378,6 +378,8 @@ class Router:
         return info
 
     def _cost(self, choice: Choice, result: AiResult | None) -> float | None:
+        if result is not None and result.cost_usd is not None:
+            return result.cost_usd
         if result is None or result.input_tokens is None or result.output_tokens is None:
             return None
         info = self.model_info(choice)

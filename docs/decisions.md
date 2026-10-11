@@ -3,6 +3,28 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Agent accounts are a command run locked down, described entirely in settings
+
+**Decided by:** project lead, following design 6.16 (agent mode).
+
+**What:** A `cli-agent` adapter runs any command-line agent as a program. The account's `agent:` settings say how to
+start it (`command`, with `{model}`, `{packet}`, `{outbox}` and `{scratch}` placeholders, locked-down flags included),
+how the packet goes in (`stdin` or a file), where the answer comes out (its output or a file in the outbox), where usage
+and cost are in its JSON output, which environment variables it may see (`pass_env`, `key_env`), how to read its exit
+codes and error stream (`errors`), and what to tell the person when it isn't signed in (`sign_in_hint`). Each run gets a
+fresh folder in the system's temporary space, outside the workspace, and only PATH, HOME and the language settings
+besides the listed variables. A cost the agent reports is used as the run's cost. The smoke test runs
+`lockdown_test()` once per agent account: writing to its outbox must work; writing elsewhere and starting a shell must
+not.
+
+**Why:** Agents differ in flags, output shapes and error text from vendor to vendor and release to release; settings keep
+every one of those out of the code, and the lockdown test catches flags that don't hold.
+
+**Impact:** New `agent` settings under each provider in `ai.yaml` (schema, defaults, descriptions, demo accounts in both
+workspaces). `AiError` gains a `hint`, shown in the waiting reason for a sign-in failure; `AiResult` gains `cost_usd`.
+The lockdown is only as strong as the agent's own flags; the core can't sandbox a program by itself on every system, so
+the test is the check. No change to scope.
+
 ## 2026-10-10: The core is complete on its own; the free version is "define your own"; industry packs are add-ons
 
 **Decided by:** project owner.

@@ -43,6 +43,7 @@ class AiResult:
     # The provider said it refused the work under its own policy (a stop reason or refusal field, never the text).
     refused: bool = False
     refusal: str | None = None  # the provider's own reason, if it gave one
+    cost_usd: float | None = None  # what the provider itself reports the call cost, when it does
 
 
 @dataclass
@@ -59,10 +60,11 @@ class ModelInfo:
 class AiError(Exception):
     """A provider call failed. `kind` comes only from the call itself (status, transport), never from model text."""
 
-    def __init__(self, kind: ErrorKind, detail: str = "", *, retry_after: float | None = None):
+    def __init__(self, kind: ErrorKind, detail: str = "", *, retry_after: float | None = None, hint: str | None = None):
         self.kind = kind
         self.detail = detail[:2000]
         self.retry_after = retry_after
+        self.hint = hint  # what the person can do about it, from the account's settings (a sign-in command)
         super().__init__(f"{kind}: {self.detail}" if self.detail else kind)
 
 

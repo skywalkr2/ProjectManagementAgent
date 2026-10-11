@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
+from engine.ai.adapters.cli_agent import CliAgentAdapter
 from engine.ai.adapters.openai_compatible import OpenAICompatibleAdapter
 from engine.ai.adapters.stub import StubAdapter
 from engine.ai.task import AiResult, AiTask
@@ -18,6 +19,7 @@ class Adapter(Protocol):
 ADAPTERS: dict[str, type[Any]] = {
     StubAdapter.name: StubAdapter,
     OpenAICompatibleAdapter.name: OpenAICompatibleAdapter,
+    CliAgentAdapter.name: CliAgentAdapter,
 }
 
 

@@ -199,6 +199,60 @@ class StorageFile(FileModel):
 DataLevel = Literal["open", "internal", "restricted"]
 
 
+class AgentOutputFields(ConfigModel):
+    text: str = Field("", description="Dotted path to the answer in the agent's JSON output; empty: the whole output.")
+    input_tokens: str = Field("", description="Dotted path to the input token count, if the agent reports it.")
+    output_tokens: str = Field("", description="Dotted path to the output token count, if the agent reports it.")
+    cached_input_tokens: str = Field("", description="Dotted path to the cached input token count, if reported.")
+    cost_usd: str = Field("", description="Dotted path to the cost the agent reports for the run, if any.")
+    model: str = Field("", description="Dotted path to the model the agent says it used, if any.")
+
+
+class AgentErrorPatterns(ConfigModel):
+    auth: list[str] = Field(default_factory=list, description="Patterns in the error stream meaning: not signed in.")
+    rate_limited: list[str] = Field(
+        default_factory=list, description="Patterns in the error stream meaning: too many requests, try later."
+    )
+    quota: list[str] = Field(
+        default_factory=list, description="Patterns in the error stream meaning: the plan's usage limit is reached."
+    )
+    exit_codes: dict[int, Literal["auth", "rate_limited", "quota", "provider_down"]] = Field(
+        default_factory=dict, description="Exit codes the agent documents, mapped to what they mean."
+    )
+
+
+class AgentSettings(ConfigModel):
+    command: list[str] = Field(
+        default_factory=list,
+        description="The program and its arguments, locked-down flags included. Placeholders: {model}, {packet} "
+        "(the packet file), {outbox} (the folder for the answer), {scratch} (the run's folder).",
+    )
+    packet_via: Literal["stdin", "file"] = Field(
+        "stdin", description="How the agent gets the packet: on its input, or as a file named by {packet}."
+    )
+    output_via: Literal["stdout", "outbox"] = Field(
+        "stdout", description="Where the agent puts its answer: its output, or a file in {outbox}."
+    )
+    output_json: bool = Field(False, description="The agent prints JSON; output_fields says where the answer is.")
+    output_fields: AgentOutputFields = Field(
+        default_factory=AgentOutputFields, description="Where the answer and usage are in the agent's JSON output."
+    )
+    pass_env: list[str] = Field(
+        default_factory=list,
+        description="Environment variables the agent may see besides PATH, HOME and the language settings.",
+    )
+    key_env: str | None = Field(
+        None, description="The environment variable the agent reads its key from, when the account uses a key."
+    )
+    errors: AgentErrorPatterns = Field(
+        default_factory=AgentErrorPatterns,
+        description="How to read the agent's exit code and error stream (never its answer).",
+    )
+    sign_in_hint: str = Field(
+        "", description="What to do when the agent isn't signed in, such as its login command; shown with the question."
+    )
+
+
 class ProviderSettings(ConfigModel):
     adapter: str = Field("stub", description="Which installed adapter talks to this account.")
     base_url: str | None = Field(None, description="The API address, for adapters that need one.")
@@ -225,6 +279,9 @@ class ProviderSettings(ConfigModel):
     )
     timeout_seconds: int = Field(90, ge=5, description="How long to wait for an answer.")
     json_mode: bool = Field(True, description="Ask the provider for JSON output when it supports that.")
+    agent: AgentSettings | None = Field(
+        None, description="For a command-line agent account: how to start it, pass the packet and read its answer."
+    )
 
 
 class TierSettings(ConfigModel):
