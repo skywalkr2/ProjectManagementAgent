@@ -65,7 +65,7 @@ test("Files is one of the views beside Today, Stages and People & projects", asy
     <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="files" onView={onView} onHandIn={() => {}} onHelp={() => {}} />,
   );
   const views = screen.getByRole("navigation", { name: "Views" });
-  expect(Array.from(views.querySelectorAll("button")).map((b) => b.textContent)).toEqual(["Today", "Stages", "Files", "People & projects"]);
+  expect(Array.from(views.querySelectorAll("button")).map((b) => b.textContent)).toEqual(["Today", "Stages", "Files", "People & projects", "Settings"]);
   expect(screen.getByRole("button", { name: "Files" })).toHaveAttribute("aria-current", "page");
   screen.getByRole("button", { name: "Stages" }).click();
   expect(onView).toHaveBeenCalledWith("stages");
@@ -108,7 +108,10 @@ test("panels on the work tab are views of their own; other tabs' panels are not"
     "Files",
     "Goals",
     "People & projects",
+    "Settings",
   ]);
+  await user.click(screen.getByRole("button", { name: "Settings" }));
+  expect(onView).toHaveBeenCalledWith("settings");
   await user.click(screen.getByRole("button", { name: "Today" }));
   expect(onView).toHaveBeenCalledWith("home");
   await user.click(goals);

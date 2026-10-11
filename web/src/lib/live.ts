@@ -5,15 +5,18 @@ import { EVENTS_PATH } from "./api";
 
 export type LiveState = "connecting" | "live" | "offline";
 
-export function useLive(): { state: LiveState; lastUpdate: Date | null } {
+/** `hellos` counts how many times the stream has (re)connected, so a caller can wait for the next one. */
+export function useLive(): { state: LiveState; lastUpdate: Date | null; hellos: number } {
   const client = useQueryClient();
   const [state, setState] = useState<LiveState>("connecting");
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [hellos, setHellos] = useState(0);
   useEffect(() => {
     if (typeof EventSource === "undefined") return;
     const source = new EventSource(EVENTS_PATH);
     source.addEventListener("hello", () => {
       setState("live");
+      setHellos((n) => n + 1);
       setLastUpdate(new Date());
       void client.invalidateQueries();
     });
@@ -24,5 +27,5 @@ export function useLive(): { state: LiveState; lastUpdate: Date | null } {
     source.onerror = () => setState("offline");
     return () => source.close();
   }, [client]);
-  return { state, lastUpdate };
+  return { state, lastUpdate, hellos };
 }

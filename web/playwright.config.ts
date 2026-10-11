@@ -19,6 +19,8 @@ export default defineConfig({
     ...devices["Desktop Chrome"],
     launchOptions: { executablePath },
     permissions: ["clipboard-read", "clipboard-write"],
+    // No entry animations, so accessibility checks never catch a toast half faded in.
+    reducedMotion: "reduce",
   },
   projects: servers.map((s) => ({
     name: s.name,

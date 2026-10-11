@@ -81,11 +81,15 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByText("The assistant is a stand-in for trying the app")).toBeVisible();
     await expect(page.getByText("Add an account in your AI settings, then run the connection test: cockpit ai test")).toBeVisible();
     await checkAccessibility(page);
-    await card.getByRole("button", { name: "Hand something in" }).click();
+    // Each step opens the setup guide at that step, with focus on its heading.
+    await card.getByRole("button", { name: "Set up: Hand in a first note" }).click();
+    await expect(page.getByRole("heading", { name: "Hand in a first note" })).toBeFocused();
+    await checkAccessibility(page);
+    await page.locator('[data-step="first_note"]').getByRole("button", { name: "Hand something in" }).click();
     await expect(page.getByLabel("Paste or type it here")).toBeFocused();
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Cancel" }).click();
-    await card.getByRole("button", { name: "Open People & projects" }).click();
+    await page.locator('[data-step="people"]').getByRole("button", { name: "Open People & projects" }).click();
     await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Today" }).click();
     await card.getByRole("button", { name: "Hide this" }).click();
@@ -93,6 +97,32 @@ test.describe.serial("acceptance scenario", () => {
     await page.reload();
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Start here" })).toHaveCount(0);
+  });
+
+  test("the setup guide and Settings are screens of their own, and pass the accessibility checks", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("button", { name: "Settings" }).click();
+    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Workspace name" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Seconds a message stays on screen" })).toBeVisible();
+    await checkAccessibility(page);
+    await page.getByRole("button", { name: "More settings" }).click();
+    await expect(page.getByRole("button", { name: "Fewer settings" })).toHaveAttribute("aria-expanded", "true");
+    await checkAccessibility(page);
+    await page.getByRole("searchbox", { name: "Search settings" }).fill("backup");
+    await expect(page.getByRole("textbox", { name: "Hours between backups" })).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Workspace name" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Open the setup guide" }).click();
+    await expect(page.getByRole("heading", { name: "Set up", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Add an AI account and test it" })).toBeVisible();
+    await page.getByRole("radio").first().check();
+    await expect(page.getByLabel("Name for this account")).toBeVisible();
+    await checkAccessibility(page);
+    await page.getByRole("button", { name: "Choose…" }).click();
+    await expect(page.getByRole("dialog", { name: "Choose a folder" })).toBeVisible();
+    await checkAccessibility(page);
+    await page.getByRole("button", { name: "Cancel" }).click();
+    await page.getByRole("button", { name: "Today" }).click();
   });
 
   test("1. meeting notes become actions with owners, and a shared first name becomes a question", async ({ page }) => {
@@ -198,10 +228,10 @@ test.describe.serial("acceptance scenario", () => {
 
   test("the keyboard drives the review loop", async ({ page }) => {
     await signIn(page);
-    const first = page.locator("[data-row]").first();
-    await expect(first).toBeVisible();
+    await expect(page.locator("[data-row]").first()).toBeVisible();
     await page.keyboard.press("j");
-    await expect(first).toBeFocused();
+    // Lists load in their own time, so which row is first can change; what matters is that j put focus on a row.
+    await expect(page.locator("[data-row]:focus")).toHaveCount(1);
     await page.keyboard.press("?");
     await expect(page.getByRole("dialog", { name: "Keyboard shortcuts" })).toBeVisible();
     await checkAccessibility(page);

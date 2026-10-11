@@ -157,6 +157,20 @@ export const api = {
       body: file,
     }),
   dropCopy: (copy: string) => call<S["Ok"]>("POST", `working-copies/${id(copy)}/drop`),
+
+  settings: () => call<S["SettingsView"]>("GET", "settings"),
+  saveSettings: (body: S["SettingsSave"]) => call<S["SettingsSaved"]>("POST", "settings", body),
+  setup: () => call<S["SetupView"]>("GET", "setup"),
+  skipStep: (step: string) => call<S["Ok"]>("POST", `setup/${named(step)}/skip`),
+  reopenStep: (step: string) => call<S["Ok"]>("POST", `setup/${named(step)}/reopen`),
+  templates: () => call<S["TemplateView"][]>("GET", "templates"),
+  applyTemplate: (template: string) => call<S["TemplateApplied"]>("POST", "templates/apply", { id: template }),
+  folderCheck: (path: string) => call<S["FolderCheckView"]>("GET", `setup/folder-check?path=${id(path)}`),
+  folders: (path?: string) => call<S["FolderListView"]>("GET", `setup/folders${path ? `?path=${id(path)}` : ""}`),
+  saveBackupFolder: (body: S["BackupFolderAdd"]) => call<S["SettingsSaved"]>("POST", "setup/backup-folder", body),
+  endpoints: () => call<S["EndpointView"][]>("GET", "ai/endpoints"),
+  addAccount: (body: S["AiAccountAdd"]) => call<S["SettingsSaved"]>("POST", "ai/accounts", body),
+  testAi: () => call<S["AiTestResult"][]>("POST", "ai/test"),
 };
 
 export const EVENTS_PATH = "api/events";

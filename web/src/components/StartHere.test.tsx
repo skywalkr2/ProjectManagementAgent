@@ -5,86 +5,80 @@ import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
 import { StartHere } from "./StartHere";
 
-const person = (id: string): S["PersonView"] => ({
+const step = (id: string, extra: Partial<S["SetupStepView"]> = {}): S["SetupStepView"] => ({
   id,
-  name: `Person ${id}`,
-  role: null,
-  org: null,
-  aliases: [],
-  status: "active",
-  is_pm: id === "1",
+  done: false,
+  skipped: false,
+  label: "",
+  explanation: "",
+  action: null,
+  plugin: null,
+  ...extra,
 });
 
-function api(opts: { ai?: S["AiState"]["state"]; people?: number; handed?: boolean }) {
-  return fakeApi({
-    "GET status": () => ({
-      backup: { configured: false, last_success: null, age_hours: null, needs_attention: false, last_error: null },
-      ai: { state: opts.ai ?? "untested", detail: null },
-      spend: { today_usd: 0, month_usd: 0, per_day_usd: 2, per_month_usd: 30, warn: false, warn_today: false, warn_month: false },
-      requests: { queued: 0, running: 0, review: 0, needs_you: 0 },
-      version: 1,
-      restart_needed: null,
-    }),
-    "GET people": () => Array.from({ length: opts.people ?? 1 }, (_, i) => person(String(i + 1))),
-    "GET changes": () =>
-      opts.handed
-        ? [{ id: "REQ-1", version: 1, dismissed: false, state: "done", waiting: null, created_at: "2026-10-09T14:00:00Z", note: "hello", source: null, source_title: null, changeset: null }]
-        : [],
-  });
+const CORE = ["workspace", "template", "ai", "backup", "people", "first_note"];
+
+function api(steps: S["SetupStepView"][], finished = false) {
+  return fakeApi({ "GET setup": () => ({ steps, finished, local: true }) });
 }
 
 const open = () => {
-  const onHandIn = vi.fn();
-  const onOpenSetup = vi.fn();
-  renderApp(<StartHere workspace="Test" onHandIn={onHandIn} onOpenSetup={onOpenSetup} />);
-  return { onHandIn, onOpenSetup };
+  const onOpenGuide = vi.fn();
+  renderApp(<StartHere workspace="Test" onOpenGuide={onOpenGuide} />);
+  return { onOpenGuide };
 };
 
 beforeEach(() => window.localStorage.clear());
 
-test("a new workspace shows three steps, each saying in words whether it is done", async () => {
-  api({ ai: "untested", people: 1 });
+test("a new workspace lists every step still to do, each saying in words that it is not done", async () => {
+  api(CORE.map((id) => step(id)));
   open();
   const steps = within(await screen.findByRole("list")).getAllByRole("listitem");
-  expect(steps).toHaveLength(3);
-  for (const step of steps) expect(step).toHaveTextContent("Not done yet");
+  expect(steps).toHaveLength(CORE.length);
+  for (const item of steps) expect(item).toHaveTextContent("Not done yet");
+  expect(steps[0]).toHaveTextContent("Name the workspace and say who you are");
+  expect(steps[2]).toHaveTextContent("Add an AI account and test it");
 });
 
-test("the steps turn to done as the setup progresses", async () => {
-  api({ ai: "ok", people: 3 });
+test("steps that are done or skipped are not listed", async () => {
+  api([step("workspace", { done: true }), step("template", { skipped: true }), step("ai"), step("backup")]);
   open();
   const steps = within(await screen.findByRole("list")).getAllByRole("listitem");
-  expect(steps[0]).toHaveTextContent("Done");
-  expect(steps[1]).toHaveTextContent("Done");
-  expect(steps[2]).toHaveTextContent("Not done yet");
+  expect(steps.map((s) => s.getAttribute("data-step"))).toEqual(["ai", "backup"]);
 });
 
-test("the buttons open People & projects and the hand-in", async () => {
+test("a plugin's step shows its own words", async () => {
+  api([step("plugin/tidy", { label: "Connect the tidy-up tool", plugin: "plugin" })]);
+  open();
+  expect(await screen.findByText("Connect the tidy-up tool")).toBeInTheDocument();
+});
+
+test("each button opens the guide at its own step", async () => {
   const user = userEvent.setup();
-  api({});
-  const { onHandIn, onOpenSetup } = open();
-  await user.click(await screen.findByRole("button", { name: "Open People & projects" }));
-  await user.click(screen.getByRole("button", { name: "Hand something in" }));
-  expect(onOpenSetup).toHaveBeenCalledTimes(1);
-  expect(onHandIn).toHaveBeenCalledTimes(1);
+  api([step("ai"), step("backup")]);
+  const { onOpenGuide } = open();
+  await user.click(await screen.findByRole("button", { name: "Set up: Choose a backup folder" }));
+  expect(onOpenGuide).toHaveBeenLastCalledWith("backup");
+  await user.click(screen.getByRole("button", { name: "Set up: Add an AI account and test it" }));
+  expect(onOpenGuide).toHaveBeenLastCalledWith("ai");
 });
 
-test("once something was handed in the card is gone", async () => {
-  const calls = api({ handed: true });
+test("once every step is done or skipped the card is gone", async () => {
+  const calls = api([step("workspace", { done: true }), step("template", { skipped: true })], true);
   open();
-  await vi.waitFor(() => expect(calls.filter((c) => c.route === "GET changes").length).toBeGreaterThan(0));
+  await vi.waitFor(() => expect(calls.filter((c) => c.route === "GET setup").length).toBeGreaterThan(0));
   await new Promise((r) => setTimeout(r, 20));
   expect(screen.queryByRole("heading", { name: "Start here" })).not.toBeInTheDocument();
 });
 
 test("hiding the card is remembered in this browser", async () => {
   const user = userEvent.setup();
-  api({});
+  api([step("ai")]);
   open();
   await user.click(await screen.findByRole("button", { name: "Hide this" }));
   expect(screen.queryByRole("heading", { name: "Start here" })).not.toBeInTheDocument();
   document.body.innerHTML = "";
-  api({});
+  api([step("ai")]);
   open();
   await new Promise((r) => setTimeout(r, 20));
   expect(screen.queryByRole("heading", { name: "Start here" })).not.toBeInTheDocument();
@@ -94,7 +88,7 @@ test("a browser that blocks storage still shows the card", async () => {
   vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
     throw new Error("blocked");
   });
-  api({});
+  api([step("ai")]);
   open();
   expect(await screen.findByRole("heading", { name: "Start here" })).toBeInTheDocument();
   vi.restoreAllMocks();

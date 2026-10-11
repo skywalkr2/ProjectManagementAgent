@@ -33,6 +33,9 @@ from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
+#: Keys the guided steps write that no form shows: an AI account, the tiers it does, the backup folders.
+GUIDED = ("ai.providers.", "ai.tiers.", "storage.backups.targets")
+
 
 def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
@@ -81,7 +84,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.post("/settings")
     def settings_save(body: SettingsSave) -> SettingsSaved:
-        return saved(save(body.changes, body.reset, body.fingerprint))
+        # The keys the guided steps write are accepted here too, so their Undo (the values from before) works.
+        return saved(save(body.changes, body.reset, body.fingerprint, allow=GUIDED))
 
     # ---- setup steps ---------------------------------------------------------------------------------------------
 

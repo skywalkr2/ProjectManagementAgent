@@ -74,6 +74,9 @@ export function Header(props: {
           <button type="button" aria-current={props.view === "setup" ? "page" : undefined} onClick={() => props.onView("setup")}>
             {t("nav.setup")}
           </button>
+          <button type="button" aria-current={props.view === "settings" ? "page" : undefined} onClick={() => props.onView("settings")}>
+            {t("nav.settings")}
+          </button>
         </nav>
         <div className="top-meta">
           <span className={`live live-${props.live.state}`}>

@@ -183,6 +183,16 @@ def test_an_ai_account_keeps_a_pasted_key_on_this_computer(tmp_path):
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
     twice = c.post(f"{api}/ai/accounts", json={**account, "fingerprint": fingerprint})
     assert twice.status_code == 409
+    # Undo posts the values from before: the account goes and the tier gets its old account back.
+    undo = {"changes": {}, "reset": [], "fingerprint": fingerprint}
+    for change in done.json()["changes"]:
+        if change["was_default"]:
+            undo["reset"].append(change["key"])
+        else:
+            undo["changes"][change["key"]] = change["before"]
+    undone = c.post(f"{api}/settings", json=undo)
+    assert undone.status_code == 200, undone.text
+    assert "my-account" not in load_config(ws.config_dir, env={}).ai.providers
 
 
 def test_a_template_is_listed_and_applied(tmp_path):

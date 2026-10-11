@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
+import { RestartNotice, RestartProvider } from "./lib/restart";
 import { useToasts } from "./lib/toasts";
 import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
 import { useWords } from "./lib/wording";
@@ -14,10 +15,12 @@ import { Panel } from "./components/Panel";
 import { PluginToday } from "./components/PluginToday";
 import { RecordPage } from "./components/RecordPage";
 import { Header } from "./components/Header";
+import { Settings } from "./components/Settings";
 import { Setup } from "./components/Setup";
 import { StartHere } from "./components/StartHere";
 import { Stages } from "./components/Stages";
 import { ShortcutHelp } from "./components/ShortcutHelp";
+import { Welcome, type FocusStep } from "./components/Welcome";
 import { WhatChanged } from "./components/WhatChanged";
 
 export function App(props: { rc: S["RuntimeConfig"] }) {
@@ -27,6 +30,12 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   const [handIn, setHandIn] = useState(false);
   const [help, setHelp] = useState(false);
   const [view, setView] = useView();
+  // The setup guide opens at a step when Today's card sends the person to one.
+  const [guideStep, setGuideStep] = useState<FocusStep | null>(null);
+  const openGuide = (step?: string) => {
+    setGuideStep(step ? { id: step, n: Date.now() } : null);
+    setView("welcome");
+  };
   // Where a record's page goes back to: the screen it was opened from.
   const origin = useRef<View>("home");
   const openRecord = (kind: string, id: string) => {
@@ -45,7 +54,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   }, [props.rc.workspace_name]);
 
   return (
-    <>
+    <RestartProvider hellos={live.hellos}>
       <a href="#main" className="skip">
         {t("app.skip")}
       </a>
@@ -57,6 +66,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
         onHandIn={() => setHandIn(true)}
         onHelp={() => setHelp(true)}
       />
+      <RestartNotice />
       <main id="main" tabIndex={-1}>
         {handIn && <HandIn onClose={() => setHandIn(false)} />}
         {shown.type === "panel" ? (
@@ -73,8 +83,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
             <AssistantNotice />
             <StartHere
               workspace={props.rc.workspace_name}
-              onHandIn={() => setHandIn(true)}
-              onOpenSetup={() => setView("setup")}
+              onOpenGuide={openGuide}
             />
             <WhatChanged />
             <PluginToday />
@@ -84,13 +93,17 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
           <Stages />
         ) : view === "files" ? (
           <Files />
+        ) : view === "welcome" ? (
+          <Welcome focusStep={guideStep} onOpenPeople={() => setView("setup")} onHandIn={() => setHandIn(true)} />
+        ) : view === "settings" ? (
+          <Settings onOpenGuide={() => openGuide()} />
         ) : (
           <Setup />
         )}
         <p className="footer">{t("app.footer", { key: props.rc.shortcuts.help ?? "?" })}</p>
       </main>
       <ShortcutHelp open={help} onClose={() => setHelp(false)} keys={props.rc.shortcuts} />
-    </>
+    </RestartProvider>
   );
 }
 
