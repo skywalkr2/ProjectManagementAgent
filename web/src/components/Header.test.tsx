@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
 import { Header } from "./Header";
@@ -69,4 +70,47 @@ test("Files is one of the views beside Today, Stages and People & projects", asy
   screen.getByRole("button", { name: "Stages" }).click();
   expect(onView).toHaveBeenCalledWith("stages");
   await screen.findByText("No off-device backup");
+});
+
+test("panels on the work tab are views of their own; other tabs' panels are not", async () => {
+  const user = userEvent.setup();
+  const onView = vi.fn();
+  const panel = (name: string, tab: string, title: string): S["PanelView"] => ({
+    name,
+    title,
+    tab,
+    kind: "demo/goal",
+    view: "table",
+    columns: ["title"],
+    primary_action: null,
+    row_actions: [],
+  });
+  fakeApi({
+    "GET status": () => status(),
+    "GET panels": () => [panel("demo/goals", "work", "Goals"), panel("demo/admin", "admin", "Admin things")],
+  });
+  renderApp(
+    <Header
+      workspace="Workspace"
+      live={{ state: "live", lastUpdate: null }}
+      view="panel:demo/goals"
+      onView={onView}
+      onHandIn={() => {}}
+      onHelp={() => {}}
+    />,
+  );
+  const goals = await screen.findByRole("button", { name: "Goals" });
+  expect(goals).toHaveAttribute("aria-current", "page");
+  expect(screen.queryByRole("button", { name: "Admin things" })).toBeNull();
+  expect(within(screen.getByRole("navigation", { name: "Views" })).getAllByRole("button").map((b) => b.textContent)).toEqual([
+    "Today",
+    "Stages",
+    "Files",
+    "Goals",
+    "People & projects",
+  ]);
+  await user.click(screen.getByRole("button", { name: "Today" }));
+  expect(onView).toHaveBeenCalledWith("home");
+  await user.click(goals);
+  expect(onView).toHaveBeenLastCalledWith("panel:demo/goals");
 });

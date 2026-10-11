@@ -115,6 +115,41 @@ export const api = {
   actionPreview: (name: string, body: S["ActionRun"]) =>
     call<S["ActionProposalView"]>("POST", `plugin-actions/${named(name)}/preview`, body),
   actionApply: (token: string) => call<S["ActionApplied"]>("POST", "plugin-actions/apply", { token }),
+
+  pluginToday: () => call<S["TodayLineView"][]>("GET", "plugin-today"),
+  taskKinds: (kind?: string, record?: string) =>
+    call<S["TaskKindView"][]>("GET", kind && record ? `task-kinds?kind=${id(kind)}&id=${id(record)}` : "task-kinds"),
+  startTask: (name: string, about: S["RecordReference"] | null) =>
+    call<S["TaskStarted"]>("POST", `task-kinds/${named(name)}/start`, { about, note: "" }),
+
+  panels: () => call<S["PanelView"][]>("GET", "panels"),
+  panelRows: (name: string, project?: string) =>
+    call<S["PanelRow"][]>("GET", `panels/${named(name)}/rows${project ? `?project=${id(project)}` : ""}`),
+  kindView: (kind: string) => call<S["KindView"]>("GET", `kinds/${named(kind)}`),
+  record: (kind: string, record: string) =>
+    call<S["GenericRecordView"]>("GET", `record?kind=${id(kind)}&id=${id(record)}`),
+
+  text: (kind: string, record: string, field: string) =>
+    call<S["TextFieldView"]>("GET", `texts?kind=${id(kind)}&id=${id(record)}&field=${id(field)}`),
+  editText: (body: S["TextEdit"]) => call<S["Applied"]>("POST", "texts/edit", body),
+  textReview: (version: string) => call<S["TextReview"]>("GET", `text-versions/${id(version)}/review`),
+  acceptText: (version: string, body: S["TextChoices"]) =>
+    call<S["Applied"]>("POST", `text-versions/${id(version)}/accept`, body),
+  discardText: (version: string, body: S["TextChoices"]) =>
+    call<S["Applied"]>("POST", `text-versions/${id(version)}/discard`, body),
+
+  workingCopyFormats: (kind: string, field: string) =>
+    call<S["WorkingCopyFormatView"][]>("GET", `working-copies/formats?kind=${id(kind)}&field=${id(field)}`),
+  workingCopies: (kind: string, record: string) =>
+    call<S["WorkingCopyView"][]>("GET", `working-copies?kind=${id(kind)}&id=${id(record)}`),
+  handOut: (body: S["WorkingCopyOut"]) => call<S["WorkingCopyView"]>("POST", "working-copies", body),
+  /** The file's own bytes are the request body; its name goes in the address. */
+  returnCopy: (copy: string, file: Blob & { name: string }) =>
+    send<S["TakenBack"]>("POST", `working-copies/${id(copy)}/return?name=${id(file.name)}`, {
+      headers: { "content-type": file.type || "application/octet-stream" },
+      body: file,
+    }),
+  dropCopy: (copy: string) => call<S["Ok"]>("POST", `working-copies/${id(copy)}/drop`),
 };
 
 export const EVENTS_PATH = "api/events";

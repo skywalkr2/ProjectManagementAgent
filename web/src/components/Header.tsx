@@ -4,7 +4,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { time } from "../lib/dates";
 import type { LiveState } from "../lib/live";
-import type { View } from "../App";
+import { panelView, type View } from "../lib/views";
 import { useTotal } from "../lib/money";
 import { useWords } from "../lib/wording";
 
@@ -38,6 +38,8 @@ export function Header(props: {
   const { t } = useWords();
   const act = useAct();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const panels = useQuery({ queryKey: ["panels"], queryFn: api.panels });
+  const workPanels = (panels.data ?? []).filter((p) => p.tab === "work");
   const b = status.data?.backup;
   const total = useTotal();
   const spend = status.data ? spendText(status.data.spend, t, total) : null;
@@ -49,7 +51,7 @@ export function Header(props: {
           <b>{props.workspace}</b>
         </div>
         <nav className="tabs" aria-label={t("nav.label")}>
-          {(["home", "stages", "files", "setup"] as const).map((v) => (
+          {(["home", "stages", "files"] as const).map((v) => (
             <button
               key={v}
               type="button"
@@ -59,6 +61,19 @@ export function Header(props: {
               {t(`nav.${v}`)}
             </button>
           ))}
+          {workPanels.map((p) => (
+            <button
+              key={p.name}
+              type="button"
+              aria-current={props.view === panelView(p.name) ? "page" : undefined}
+              onClick={() => props.onView(panelView(p.name))}
+            >
+              {p.title}
+            </button>
+          ))}
+          <button type="button" aria-current={props.view === "setup" ? "page" : undefined} onClick={() => props.onView("setup")}>
+            {t("nav.setup")}
+          </button>
         </nav>
         <div className="top-meta">
           <span className={`live live-${props.live.state}`}>

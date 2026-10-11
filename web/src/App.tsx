@@ -1,14 +1,18 @@
 // The launch-slice home: one column with What changed and Follow-ups under the header (design 7.7).
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
 import { useToasts } from "./lib/toasts";
+import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
 import { useWords } from "./lib/wording";
 import { AssistantNotice } from "./components/AssistantNotice";
 import { Files } from "./components/Files";
 import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
+import { Panel } from "./components/Panel";
+import { PluginToday } from "./components/PluginToday";
+import { RecordPage } from "./components/RecordPage";
 import { Header } from "./components/Header";
 import { Setup } from "./components/Setup";
 import { StartHere } from "./components/StartHere";
@@ -23,6 +27,13 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   const [handIn, setHandIn] = useState(false);
   const [help, setHelp] = useState(false);
   const [view, setView] = useView();
+  // Where a record's page goes back to: the screen it was opened from.
+  const origin = useRef<View>("home");
+  const openRecord = (kind: string, id: string) => {
+    if (parseView(view).type !== "record") origin.current = view;
+    setView(recordView(kind, id));
+  };
+  const shown = parseView(view);
   const handlers = useMemo(
     () => ({ undo: undoLast, hand_in: () => setHandIn(true), help: () => setHelp(true) }),
     [undoLast],
@@ -48,7 +59,16 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
       />
       <main id="main" tabIndex={-1}>
         {handIn && <HandIn onClose={() => setHandIn(false)} />}
-        {view === "home" ? (
+        {shown.type === "panel" ? (
+          <Panel key={shown.name} name={shown.name} onOpenRecord={openRecord} />
+        ) : shown.type === "record" ? (
+          <RecordPage
+            key={`${shown.kind}:${shown.id}`}
+            kind={shown.kind}
+            id={shown.id}
+            onBack={() => setView(origin.current)}
+          />
+        ) : view === "home" ? (
           <>
             <AssistantNotice />
             <StartHere
@@ -57,6 +77,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
               onOpenSetup={() => setView("setup")}
             />
             <WhatChanged />
+            <PluginToday />
             <FollowUps />
           </>
         ) : view === "stages" ? (
@@ -85,22 +106,18 @@ function useNarrow(px: number) {
   }, [px]);
 }
 
-export type View = "home" | "stages" | "files" | "setup";
+export type { View } from "./lib/views";
 
 /** Which view is showing, kept in the address's #fragment so a refresh or the back button keeps it. */
 function useView(): [View, (v: View) => void] {
-  const read = (): View => {
-    const hash = window.location.hash.slice(1);
-    return hash === "setup" || hash === "stages" || hash === "files" ? hash : "home";
-  };
-  const [view, setViewState] = useState<View>(read);
+  const [view, setViewState] = useState<View>(() => fromHash(window.location.hash));
   useEffect(() => {
-    const onHash = () => setViewState(read());
+    const onHash = () => setViewState(fromHash(window.location.hash));
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
   const setView = (v: View) => {
-    window.location.hash = v === "home" ? "" : v;
+    window.location.hash = toHash(v);
     setViewState(v);
   };
   return [view, setView];

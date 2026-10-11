@@ -231,3 +231,40 @@ fieldset.details legend { padding: 0 6px; font-weight: 600; font-size: 13.5px; }
 .preview img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
 .preview-text { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--bg); font-size: 13.5px; overflow-wrap: anywhere; }
 .preview figcaption { font-size: 12.5px; color: var(--muted); }
+
+/* Plugin panels, record pages, text review and working copies */
+.tabs { flex-wrap: wrap; }
+.heading h3 { font-family: var(--display); font-weight: 600; font-size: 20px; line-height: 1.2; margin: 0; }
+.link-button { border: 0; background: none; padding: 0; color: var(--accent); font: inherit; font-weight: 650; text-align: left; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.panel-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.panel-table th, .panel-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+.panel-table thead th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+.panel-table tbody tr:last-child th, .panel-table tbody tr:last-child td { border-bottom: 0; }
+.panel-table td:last-child { white-space: nowrap; }
+.facts { margin: 4px 0 0; display: grid; gap: 2px; font-size: 13.5px; color: var(--muted); }
+.facts div { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.facts dt { font-weight: 600; }
+.facts dt::after { content: ":"; }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; align-items: start; }
+.board-column { display: grid; gap: 8px; min-width: 0; }
+.board .row.pair { grid-template-columns: minmax(0, 1fr); }
+.details-list { margin: 8px 0 0; display: grid; gap: 10px; }
+.detail { display: grid; grid-template-columns: minmax(120px, 200px) minmax(0, 1fr); gap: 2px 14px; }
+.detail dt { font-weight: 600; font-size: 13.5px; }
+.detail dd { margin: 0; overflow-wrap: anywhere; display: grid; gap: 2px; }
+.text-section { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 14px; }
+.text-body { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; max-height: 480px; overflow: auto; overflow-wrap: anywhere; }
+.copies { display: grid; gap: 8px; }
+.dialog-panel:has(.review-wide) { width: min(780px, 100%); }
+.changes { display: grid; gap: 12px; }
+.change { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin: 0; min-width: 0; display: grid; gap: 8px; }
+.change[data-conflict="true"] { border-color: var(--risk); border-width: 2px; }
+.change legend { padding: 0 6px; font-weight: 600; font-size: 13.5px; }
+.passage { display: grid; gap: 2px; border-left: 3px solid var(--line); padding-left: 10px; overflow-wrap: anywhere; }
+.choice-row { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+input[type="radio"] { width: 18px; height: 18px; padding: 0; flex: none; accent-color: var(--accent); }
+@media (max-width: 600px) {
+  .detail { grid-template-columns: minmax(0, 1fr); }
+}
