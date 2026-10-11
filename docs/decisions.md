@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Every plugin repository has its own autonomous builder, with a written brief and a question channel
+
+**Decided by:** project owner.
+
+**What:** A plugin kept in its own repository is built by its own autonomous session, not from this one, so its
+feedback on the plugin API is independent. Whenever this project suggests a new plugin repository, it also gives the
+owner a kickoff brief: what is built there and in what order, the rules it follows, the contract (the generated
+plugin guide), what the owner sets up, and how the two sessions talk. Questions to the host come in numbered rounds
+in that repository's `docs/host-questions.md`, written generically, announced by a short session message; the host
+answers by building a plugin API version and messaging back. A friction log records where the guide was unclear or
+needed a workaround. Neither session writes to the other's repository.
+
+**Why:** Clean feedback from builders who don't share this session's assumptions.
+
+**Impact:** Applies to the mail and calendar plugins now, and every plugin repository after.
+
 ## 2026-10-11: Packs are found on an Add-ons screen, from catalog feeds, with costs priced on the person's accounts
 
 **Decided by:** project owner (direction, maintainers' packs only in the default catalog, prices shown, the catalog as
