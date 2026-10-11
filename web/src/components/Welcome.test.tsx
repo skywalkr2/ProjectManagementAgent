@@ -68,8 +68,11 @@ const open = (props: Partial<Parameters<typeof Welcome>[0]> = {}) => {
   const onOpenPeople = vi.fn();
   const onOpenAddons = vi.fn();
   const onHandIn = vi.fn();
-  const view = renderApp(<Welcome focusStep={null} onOpenPeople={onOpenPeople} onOpenAddons={onOpenAddons} onHandIn={onHandIn} {...props} />);
-  return { onOpenPeople, onOpenAddons, onHandIn, ...view };
+  const onChooseSource = vi.fn();
+  const view = renderApp(
+    <Welcome focusStep={null} onOpenPeople={onOpenPeople} onOpenAddons={onOpenAddons} onHandIn={onHandIn} onChooseSource={onChooseSource} {...props} />,
+  );
+  return { onOpenPeople, onOpenAddons, onHandIn, onChooseSource, ...view };
 };
 
 const section = (id: string) => document.querySelector(`[data-step="${id}"]`) as HTMLElement;
@@ -179,7 +182,7 @@ test("the template step applies one template and asks before the app restarts", 
   renderApp(
     <RestartProvider hellos={1}>
       <RestartNotice />
-      <Welcome focusStep={null} onOpenPeople={() => undefined} onOpenAddons={() => undefined} onHandIn={() => undefined} />
+      <Welcome focusStep={null} onOpenPeople={() => undefined} onOpenAddons={() => undefined} onHandIn={() => undefined} onChooseSource={() => undefined} />
     </RestartProvider>,
   );
   expect(await screen.findByText("Chapters and drafts.")).toBeInTheDocument();
@@ -333,10 +336,40 @@ describe("a sign-in's step", () => {
     open();
     await screen.findByRole("heading", { name: "Sign in to Demo Mail" });
     expect(section("demo/mail")).toHaveTextContent("Done");
-    expect(within(section("demo/mail")).queryByRole("button")).toBeNull();
+    expect(within(section("demo/mail")).queryByRole("button", { name: "Sign in to Demo Mail" })).toBeNull();
     expect(section("demo/other")).toHaveTextContent("Skipped");
     expect(within(section("demo/other")).getByRole("button", { name: "Sign in to Demo Other" })).toBeInTheDocument();
     expect(within(section("demo/other")).getByRole("button", { name: /^Do it now/ })).toBeInTheDocument();
+  });
+});
+
+describe("a sign-in step that is done", () => {
+  const done = { sign_in: "demo/mail", label: "Demo Mail", plugin: "demo", done: true };
+  const signedIn = (): S["SignInView"] => ({
+    name: "demo/mail",
+    label: "Demo Mail",
+    status: "signed_in",
+    ready: true,
+    callback: "http://localhost:8080/auth/demo/mail/callback",
+    app: "workspace",
+    account: "pat@example.com",
+    can_paste: false,
+    needs_secret: false,
+    set_aside: false,
+    default_unusable: false,
+  });
+
+  test("still shows the sign-in row's actions: choose what to read, sign out and sign in again", async () => {
+    const user = userEvent.setup();
+    api([step("demo/mail", done)], { "GET sign-ins": () => [signedIn()] });
+    const { onChooseSource } = open();
+    await screen.findByRole("heading", { name: "Sign in to Demo Mail" });
+    const mine = section("demo/mail");
+    expect(await within(mine).findByText("Signed in as pat@example.com")).toBeInTheDocument();
+    await user.click(within(mine).getByRole("button", { name: "Choose what to read from Demo Mail" }));
+    expect(onChooseSource).toHaveBeenCalledWith("demo");
+    await user.click(within(mine).getByRole("button", { name: "More actions for Demo Mail" }));
+    expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Sign out", "Sign in again"]);
   });
 });
 
@@ -386,6 +419,33 @@ test("the add-ons step says what add-ons do, names the ones installed but off, a
   expect(within(off).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["Mail sample", "Notes sample"]);
   await user.click(within(section("addons")).getByRole("button", { name: "Open Add-ons" }));
   expect(onOpenAddons).toHaveBeenCalledTimes(1);
+});
+
+test("Leave the rest off keeps the installed add-ons off, says so, and refreshes the guide", async () => {
+  const user = userEvent.setup();
+  let left = false;
+  const calls = api([step("addons", { done: left })], {
+    "GET packs": () => ({ enabled: true, feeds: [], available: [], installed: [installed("mail-sample", false), installed("calendar-sample", true)] }),
+    "POST setup/addons/leave-off": () => {
+      left = true;
+      return { ok: true };
+    },
+  });
+  open();
+  await user.click(await screen.findByRole("button", { name: "Leave the rest off" }));
+  expect(await screen.findByText("Left the rest off. You can turn them on any time in Add-ons.")).toBeInTheDocument();
+  expect(calls.filter((c) => c.route === "POST setup/addons/leave-off")).toHaveLength(1);
+  // The guide is read again after it.
+  await waitFor(() => expect(calls.filter((c) => c.route === "GET setup").length).toBeGreaterThan(1));
+});
+
+test("the add-ons step has no Leave the rest off when nothing is waiting to be turned on", async () => {
+  api([step("addons")], {
+    "GET packs": () => ({ enabled: true, feeds: [], available: [], installed: [installed("calendar-sample", true)] }),
+  });
+  open();
+  await screen.findByRole("button", { name: "Open Add-ons" });
+  expect(screen.queryByRole("button", { name: "Leave the rest off" })).toBeNull();
 });
 
 test("the add-ons step still has its button when nothing is installed or the list didn't load", async () => {

@@ -61,6 +61,7 @@ test("key families built at run time are complete", () => {
     ...(s.SettingProposalView.properties.status.enum ?? []).filter((x) => x !== "open").map((x) => `ask.proposal.${x}`),
     ...(s.ReportView.properties.status.enum ?? []).filter((x) => x !== "draft").map((x) => `ask.report_status.${x}`),
     ...(s.SignInView.properties.status.enum ?? []).map((x) => `sign_in.status.${x}`),
+    ...(s.DataFile.properties.layer.enum ?? []).map((x) => `dataform.layer.${x}`),
     ...["done", "failed", "refused", "expired"].map((x) => `sign_in.return.${x}`),
     "op.note.under",
     "op.note.none",

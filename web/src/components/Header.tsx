@@ -1,4 +1,5 @@
-// The header: one main row (workspace name, the views, and hand in / ask / help), and under it one quiet status row
+// The header, as wide as the window: one main row (workspace name, which goes to Today, the views, and hand in / ask /
+// help), and under it one quiet status row
 // (live state, backup age with a nag when there is no off-device backup, spend, and a restart reminder). On a narrow
 // screen the name and actions stay on top and the views follow as a strip that scrolls sideways inside itself.
 import { useQuery } from "@tanstack/react-query";
@@ -58,7 +59,15 @@ export function Header(props: {
       <div className="top-inner">
         <div className="top-main">
           <div className="brand">
-            <b title={props.workspace}>{props.workspace}</b>
+            <button
+              type="button"
+              className="brand-link"
+              title={props.workspace}
+              aria-label={t("nav.brand_named", { name: props.workspace })}
+              onClick={() => props.onView("home")}
+            >
+              {props.workspace}
+            </button>
           </div>
           <nav className="tabs" aria-label={t("nav.label")}>
             {(["home", "stages", "files", "sources"] as const).map((v) => (

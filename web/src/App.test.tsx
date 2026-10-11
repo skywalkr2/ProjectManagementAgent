@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "./lib/api";
 import { fakeApi, renderApp } from "./test-utils";
@@ -44,4 +44,43 @@ test("the Ask key comes from the configured shortcuts", async () => {
   expect(screen.queryByRole("dialog")).toBeNull();
   await user.keyboard("g");
   expect(await screen.findByRole("dialog", { name: "Ask Helper" })).toBeInTheDocument();
+});
+
+const today = {
+  "GET panels": () => [],
+  "GET asks": () => [],
+  "GET today/agenda": () => [],
+  "GET today/todo": () => [],
+  "GET today/arrived": () => ({ items: [], left_out: 0 }),
+  "GET watch": () => [],
+  "GET watch/kinds": () => [
+    { name: "demo/feed", label: "A feed", plugin: "demo", items: [] },
+    { name: "folder", label: "A folder", plugin: null, items: [] },
+  ],
+  "GET projects": () => [],
+};
+
+test("Connect on Today's empty card opens Sources with the add form open, and only that time", async () => {
+  fakeApi(today);
+  renderApp(<App rc={rc()} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Connect a calendar" }));
+  expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
+  expect(await screen.findByRole("form", { name: "Add a source" })).toBeInTheDocument();
+  // Going away and coming back by the views doesn't open it again.
+  await user.click(screen.getByRole("button", { name: "Workspace, go to Today" }));
+  expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("button", { name: "Sources" }));
+  expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
+  expect(screen.queryByRole("form", { name: "Add a source" })).toBeNull();
+});
+
+test("the workspace name goes to Today from any screen", async () => {
+  fakeApi(today);
+  renderApp(<App rc={rc()} />);
+  const user = userEvent.setup();
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("button", { name: "Sources" }));
+  expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Workspace, go to Today" }));
+  expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
 });

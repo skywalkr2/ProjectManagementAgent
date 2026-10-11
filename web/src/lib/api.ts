@@ -54,6 +54,12 @@ export const api = {
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
 
   watchSources: () => call<S["WatchSourceView"][]>("GET", "watch"),
+  watchKinds: () => call<S["WatchKindView"][]>("GET", "watch/kinds"),
+  addSource: (body: S["WatchSourceIn"]) => call<S["SettingsSaved"]>("POST", "watch/sources", body),
+  changeSource: (src: string, body: S["WatchSourceChange"]) =>
+    call<S["SettingsSaved"]>("POST", `watch/sources/${id(src)}`, body),
+  removeSource: (src: string, fingerprint: string) =>
+    call<S["SettingsSaved"]>("POST", `watch/sources/${id(src)}/remove`, { fingerprint } satisfies S["FingerprintIn"]),
   readSource: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/read`),
   autoClosed: () => call<S["AutoClosedView"][]>("GET", "auto-closed"),
   closerLook: (req: string, readVersion: number) =>
@@ -204,6 +210,25 @@ export const api = {
     call<S["SettingsSaved"]>("POST", `packs/${id(name)}/on`, { fingerprint } satisfies S["FingerprintIn"]),
   packOff: (name: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `packs/${id(name)}/off`, { fingerprint } satisfies S["FingerprintIn"]),
+
+  /** Leaves the add-ons that are installed and off as they are, so the setup guide stops asking about them. */
+  leaveAddonsOff: () => call<S["Ok"]>("POST", "setup/addons/leave-off"),
+
+  dataForms: () => call<S["DataFormView"][]>("GET", "data-forms"),
+  dataFiles: (form: string, project?: string) =>
+    call<S["DataFile"][]>("GET", `data-forms/${named(form)}/files${project ? `?project=${id(project)}` : ""}`),
+  dataFile: (form: string, path: string, project?: string) =>
+    call<S["DataFileView"]>(
+      "GET",
+      `data-forms/${named(form)}/file?path=${id(path)}${project ? `&project=${id(project)}` : ""}`,
+    ),
+  saveDataFile: (form: string, body: S["DataFileChange"]) =>
+    call<S["DataFileSaved"]>("POST", `data-forms/${named(form)}/file`, body),
+  removeDataFile: (form: string, body: S["DataFileChange"]) =>
+    call<S["DataFileSaved"]>("POST", `data-forms/${named(form)}/remove`, body),
+  /** Undo for a save or a removal: the layer's copy as it was (`before`), or none. */
+  restoreDataFile: (form: string, body: S["DataFileRestore"]) =>
+    call<S["DataFileSaved"]>("POST", `data-forms/${named(form)}/restore`, body),
 
   signIns: () => call<S["SignInView"][]>("GET", "sign-ins"),
   startSignIn: (name: string) => call<S["SignInStarted"]>("POST", `sign-ins/${named(name)}/start`),

@@ -1,5 +1,20 @@
 import type { S } from "./api";
-import { formatValue, fromDraft, groupItems, groupLabel, labelForKey, labelOf, restartWhat, toDraft, undoBody } from "./settings";
+import {
+  changedValues,
+  formatValue,
+  formValues,
+  fromDraft,
+  groupItems,
+  groupLabel,
+  labelForKey,
+  labelOf,
+  nest,
+  prefill,
+  restartWhat,
+  toDraft,
+  undoBody,
+  valueAt,
+} from "./settings";
 
 const t = (key: string, vars: Record<string, string | number> = {}) =>
   ({ "settings.empty": "(empty)", "settings.yes": "Yes", "settings.no": "No" })[key] ?? `${key}${JSON.stringify(vars)}`;
@@ -117,4 +132,44 @@ test("what waits for a restart lists up to three names without repeats, then how
   expect(restartWhat(["demo.known", "demo.a", "code", "plugins/p.q", "mystery.thing"], [], tw, hasWord)).toBe(
     "Restart to use: Known setting, Demo group, an update to the app and 2 more.",
   );
+});
+
+test("dotted keys become nested values and can be read back by key", () => {
+  expect(nest({ a: 1, "b.c": 2, "b.d.e": [3] })).toEqual({ a: 1, b: { c: 2, d: { e: [3] } } });
+  expect(valueAt({ b: { c: 2 } }, "b.c")).toBe(2);
+  expect(valueAt({ b: { c: 2 } }, "b.x")).toBeUndefined();
+  expect(valueAt({ b: [1] }, "b.0")).toBeUndefined();
+  expect(valueAt(undefined, "a")).toBeUndefined();
+});
+
+test("a form is filled from a nested settings object where it has a value, and keeps the item's own where it hasn't", () => {
+  const items = [item({ key: "a", value: "x" }), item({ key: "b.c", value: 1, type: "integer" })];
+  const filled = prefill(items, { b: { c: 5 } });
+  expect(filled.map((i) => i.value)).toEqual(["x", 5]);
+  expect(prefill(items, undefined).map((i) => i.value)).toEqual(["x", 1]);
+});
+
+test("a form sends only what differs from the defaults, and names what can't be sent", () => {
+  const items = [
+    item({ key: "path", default: null, value: null }),
+    item({ key: "days", type: "integer", default: 30, value: 30 }),
+    item({ key: "on", type: "yes_no", default: false, value: false }),
+    item({ key: "tags", type: "list", default: [], value: [] }),
+    item({ key: "fixed", default: "x", value: "x", editable: false }),
+    item({ key: "raw", type: "other", default: [], value: [] }),
+  ];
+  expect(formValues(items, {}).values).toEqual({});
+  const sent = formValues(items, { path: " inbox ", days: "7", on: true, tags: "a\nb", fixed: "changed", raw: "ignored" });
+  expect(sent.values).toEqual({ path: "inbox", days: 7, on: true, tags: ["a", "b"] });
+  expect(sent.bad).toEqual([]);
+  // A value equal to the default isn't sent, and a number that isn't a number is named.
+  expect(formValues(items, { days: "30" }).values).toEqual({});
+  expect(formValues(items, { days: "soon" }).bad).toEqual(["days"]);
+});
+
+test("a data file save sends only the fields changed on screen", () => {
+  const items = [item({ key: "title", value: "A" }), item({ key: "sizes.body", type: "integer", value: 11 }), item({ key: "locked", value: "x", locked: true })];
+  expect(changedValues(items, {}).changes).toEqual({});
+  expect(changedValues(items, { title: "A", "sizes.body": "12", locked: "y" })).toEqual({ changes: { "sizes.body": 12 }, bad: [] });
+  expect(changedValues(items, { "sizes.body": "big" }).bad).toEqual(["sizes.body"]);
 });

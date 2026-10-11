@@ -20,6 +20,7 @@ import {
   type Summary,
 } from "../lib/packs";
 import { problemText } from "../lib/problem";
+import { useRestart } from "../lib/restart";
 import { useAfterSave } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
@@ -80,6 +81,8 @@ function useSwitch(name: string, label: string) {
       const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
       const saved = await (on ? api.packOn : api.packOff)(name, current.fingerprint);
       await afterSave(saved, { message: t(on ? "addons.switched_on" : "addons.switched_off", { name: label }) });
+      // The list reads which add-ons are on from the saved settings: read it again so the row says what was just saved.
+      await client.refetchQueries({ queryKey: ["packs"] });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
@@ -146,7 +149,13 @@ function Available(props: { view: S["PacksView"] }) {
       ) : (
         <ul className="queue">
           {view.available.map((pack, i) => (
-            <PackRow key={`${pack.id}-${i}`} pack={pack} index={i} onGet={() => setGetting(i)} />
+            <PackRow
+              key={`${pack.id}-${i}`}
+              pack={pack}
+              index={i}
+              restartNeeded={restartNeeded(pack, view.installed)}
+              onGet={() => setGetting(i)}
+            />
           ))}
         </ul>
       )}
@@ -194,7 +203,7 @@ function WhatLines(props: { what: Summary; base: string }) {
   );
 }
 
-function PackRow(props: { pack: Pack; index: number; onGet: () => void }) {
+function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onGet: () => void }) {
   const { t } = useWords();
   const total = useTotal();
   const small = useSmallMoney();
@@ -248,7 +257,7 @@ function PackRow(props: { pack: Pack; index: number; onGet: () => void }) {
           )}
           {installed && (
             <p className="sub" id={`${base}-state`}>
-              {t(pack.enabled ? "addons.state.on_version" : "addons.state.off_version", {
+              {t(props.restartNeeded ? "addons.state.restart_version" : pack.enabled ? "addons.state.on_version" : "addons.state.off_version", {
                 version: pack.installed_version ?? "",
               })}
             </p>
@@ -413,6 +422,16 @@ function FeedLine(props: { feed: Feed }) {
   );
 }
 
+/** An add-on whose saved setting and running state differ without a reason given: one just turned on isn't running yet,
+ * one just turned off still is, and either changes at the next restart. */
+const waitsForRestart = (item: Installed) => (item.enabled ? item.state !== "enabled" && !item.reason : item.state === "enabled");
+
+/** The same for a pack in the Available list, read from the installed add-on of that name. */
+const restartNeeded = (pack: Pack, installed: Installed[]) => {
+  const running = installed.find((i) => i.name === pack.id);
+  return pack.enabled && running !== undefined && waitsForRestart(running);
+};
+
 function InstalledList(props: { items: Installed[] }) {
   const { t } = useWords();
   if (props.items.length === 0) return <p className="empty">{t("addons.installed.empty")}</p>;
@@ -431,8 +450,12 @@ function InstalledRow(props: { item: Installed; index: number }) {
   const base = `installed-${props.index}`;
   const power = useSwitch(item.name, item.name);
   const isOn = item.enabled;
-  const status =
-    item.state === "enabled"
+  const restart = useRestart();
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  const pending = waitsForRestart(item);
+  const statusText = pending
+    ? t(isOn ? "addons.state.after_restart" : "addons.state.off_after_restart")
+    : item.state === "enabled"
       ? t("addons.state.running")
       : item.reason
         ? t("addons.state.because", { reason: item.reason })
@@ -444,7 +467,17 @@ function InstalledRow(props: { item: Installed; index: number }) {
           <strong id={`${base}-name`}>{item.name}</strong>
           {item.version && <span className="sub">{t("addons.version", { version: item.version })}</span>}
           {item.description && <p className="pack-summary">{item.description}</p>}
-          <p className="sub">{status}</p>
+          <p className="sub">
+            {statusText}
+            {pending && status.data?.can_restart && (
+              <>
+                {" "}
+                <button type="button" className="btn quiet small" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+                  {t("restart.now")}
+                </button>
+              </>
+            )}
+          </p>
           {power.problem && (
             <p className="problem-note" role="alert">
               {power.problem}

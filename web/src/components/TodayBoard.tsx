@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { addDays, day, localDate, time, wallTime, weekday } from "../lib/dates";
+import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
+import { anyReading, latestRead } from "../lib/sources";
 import type { View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { FollowUps } from "./FollowUps";
@@ -33,15 +34,21 @@ function useFitsWindow() {
   }, []);
 }
 
-export function TodayBoard(props: { onView: (view: View) => void; onOpenRecord?: (kind: string, id: string) => void }) {
+export function TodayBoard(props: {
+  onView: (view: View) => void;
+  /** Opens Sources with the add form open. */
+  onAddSource?: () => void;
+  onOpenRecord?: (kind: string, id: string) => void;
+}) {
   const { t } = useWords();
   useFitsWindow();
+  const add = props.onAddSource ?? (() => props.onView("sources"));
   return (
     <div className="today-board" role="group" aria-label={t("today.board.label")}>
-      <AgendaColumn onView={props.onView} />
+      <AgendaColumn onAddSource={add} />
       <TodoColumn />
       <NeedsColumn onOpenRecord={props.onOpenRecord} />
-      <ArrivedColumn onView={props.onView} />
+      <ArrivedColumn onView={props.onView} onAddSource={add} />
     </div>
   );
 }
@@ -75,10 +82,11 @@ function Column(props: {
   );
 }
 
-function Empty(props: { text: string; button?: { label: string; run: () => void } }) {
+function Empty(props: { text: string; note?: string; button?: { label: string; run: () => void } }) {
   return (
     <div className="tb-empty">
       <p>{props.text}</p>
+      {props.note && <p className="hint">{props.note}</p>}
       {props.button && (
         <button type="button" className="btn" onClick={props.button.run}>
           {props.button.label}
@@ -98,6 +106,17 @@ function Failed(props: { text: string; retry: () => void }) {
       </button>
     </p>
   );
+}
+
+/** What an empty card says about its sources: a button to connect one while none is set up or reading, otherwise when the
+ * sources were last read, so an empty card is known to be up to date rather than unconnected. */
+function useSourceState(onAdd: (() => void) | undefined, label: string): { button?: { label: string; run: () => void }; note?: string } {
+  const { t } = useWords();
+  const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
+  if (!watch.data) return {};
+  if (!anyReading(watch.data)) return onAdd ? { button: { label, run: onAdd } } : {};
+  const last = latestRead(watch.data);
+  return { note: last ? t("today.checked", { when: when(last) }) : t("today.not_checked") };
 }
 
 /** Source names are only worth showing when rows come from more than one source. */
@@ -146,8 +165,9 @@ function whenText(event: Event, date: string, t: T): string {
     : wallTime(event.start);
 }
 
-function AgendaColumn(props: { onView: (view: View) => void }) {
+function AgendaColumn(props: { onAddSource?: () => void }) {
   const { t, tn } = useWords();
+  const sourceState = useSourceState(props.onAddSource, t("today.agenda.connect"));
   const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
   const now = useNow();
   const today = localDate(now);
@@ -166,10 +186,7 @@ function AgendaColumn(props: { onView: (view: View) => void }) {
       ) : agenda.isError ? (
         <Failed text={t("today.agenda.load_failed")} retry={() => void agenda.refetch()} />
       ) : groups.length === 0 ? (
-        <Empty
-          text={t("today.agenda.empty")}
-          button={{ label: t("today.agenda.connect"), run: () => props.onView("sources") }}
-        />
+        <Empty text={t("today.agenda.empty")} note={sourceState.note} button={sourceState.button} />
       ) : (
         groups.map((group) => {
           const headId = `agenda-day-${group.date}`;
@@ -345,8 +362,9 @@ function NeedsColumn(props: { onOpenRecord?: (kind: string, id: string) => void 
 
 // ---------------------------------------------------------------- Came in
 
-function ArrivedColumn(props: { onView: (view: View) => void }) {
+function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () => void }) {
   const { t, tn } = useWords();
+  const sourceState = useSourceState(props.onAddSource, t("today.arrived.connect"));
   const arrived = useQuery({ queryKey: ["today", "arrived"], queryFn: api.arrived });
   const now = useNow();
   const today = localDate(now);
@@ -374,10 +392,7 @@ function ArrivedColumn(props: { onView: (view: View) => void }) {
       ) : arrived.isError ? (
         <Failed text={t("today.arrived.load_failed")} retry={() => void arrived.refetch()} />
       ) : items.length === 0 ? (
-        <Empty
-          text={t("today.arrived.empty")}
-          button={{ label: t("today.arrived.connect"), run: () => props.onView("sources") }}
-        />
+        <Empty text={t("today.arrived.empty")} note={sourceState.note} button={sourceState.button} />
       ) : (
         <ul className="tb-list">
           {items.map((message, i) => {

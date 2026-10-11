@@ -531,3 +531,72 @@ test("turning an add-on on that needs a restart asks first, and never restarts b
   expect(screen.getByRole("button", { name: "Restart now" })).toBeInTheDocument();
   expect(calls.some((c) => c.route === "POST restart")).toBe(false);
 });
+
+test("after Turn on the row says the add-on is on, and 'On after a restart' while it isn't running, with a way to restart", async () => {
+  const user = userEvent.setup();
+  let on = false;
+  const calls = fakeApi({
+    // The list reads which add-ons are on from the saved settings; the add-on isn't running until the restart.
+    "GET packs": () => view({ installed: [{ ...installedRows(on)[0], state: "off" }] }),
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "GET status": () => ({ restart_needed: on ? "settings" : null, can_restart: true }),
+    "POST packs/beta/on": () => {
+      on = true;
+      return SAVED(true);
+    },
+    "POST restart": () => ({ restarting: true }),
+  });
+  renderApp(
+    <RestartProvider hellos={1}>
+      <Addons onBack={() => undefined} />
+    </RestartProvider>,
+  );
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  const beta = await row("beta");
+  expect(beta).toHaveTextContent("Off");
+  await user.click(within(beta).getByRole("button", { name: "Turn on beta" }));
+  await waitFor(() => expect(within(beta).getByRole("button", { name: "Turn off beta" })).toBeInTheDocument());
+  expect(beta).toHaveTextContent("On after a restart");
+  // Asking to restart is the person's choice; nothing restarted by itself.
+  expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+  await user.click(within(beta).getByRole("button", { name: "Restart now" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
+});
+
+test("an add-on that is on and running says so, and one that is on but refused keeps its reason", async () => {
+  const user = userEvent.setup();
+  open(
+    view({
+      installed: [
+        { ...installedRows(true)[0], name: "running" },
+        { ...installedRows(true)[0], name: "refused", state: "disabled", reason: "it needs a newer version of the app" },
+      ],
+    }),
+  );
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  expect(await row("running")).toHaveTextContent("On and running");
+  expect(await row("refused")).toHaveTextContent("Turned off because: it needs a newer version of the app");
+  expect(await row("refused")).not.toHaveTextContent("On after a restart");
+});
+
+test("a catalog row for an add-on that is on but not running yet says it is on after a restart", async () => {
+  open(
+    view({
+      installed: [{ ...installedRows(true)[0], state: "off" }],
+      available: [pack("beta", { installed_version: "1.0.0", enabled: true })],
+    }),
+  );
+  expect(await row("Name of beta")).toHaveTextContent("Installed (version 1.0.0) and on after a restart");
+});
+
+test("turning on refetches the add-ons list so the row reads what was saved", async () => {
+  const user = userEvent.setup();
+  const calls = open(view({ installed: installedRows(false) }), {
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST packs/beta/on": () => SAVED(false),
+  });
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  const before = calls.calls.filter((c) => c.route === "GET packs").length;
+  await user.click(within(await row("beta")).getByRole("button", { name: "Turn on beta" }));
+  await waitFor(() => expect(calls.calls.filter((c) => c.route === "GET packs").length).toBeGreaterThan(before));
+});

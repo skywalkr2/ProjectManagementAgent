@@ -58,6 +58,28 @@ async function checkAccessibility(page: Page) {
   expect(found).toEqual([]);
 }
 
+/** Where to save screenshots, when asked for with E2E_SHOTS (a folder); otherwise none are taken. */
+async function shoot(page: Page, name: string) {
+  const folder = process.env.E2E_SHOTS;
+  if (folder) await page.screenshot({ path: `${folder}/${name}.png` });
+}
+
+/** The header spans the window with the page's side padding, and the views are on one line. */
+async function expectFullWidthHeader(page: Page, width: number) {
+  const header = page.getByRole("banner");
+  const inner = await header.locator(".top-inner").boundingBox();
+  expect(inner!.x).toBeLessThanOrEqual(24);
+  expect(inner!.x + inner!.width).toBeGreaterThanOrEqual(width - 24);
+  const buttons = await header.getByRole("navigation", { name: "Views" }).getByRole("button").all();
+  const tops = await Promise.all(buttons.map(async (b) => Math.round((await b.boundingBox())!.y)));
+  expect(new Set(tops).size).toBe(1);
+  // The name sits at the start of the row and the buttons at its end.
+  const brand = await header.locator(".brand-link").boundingBox();
+  const acts = await header.locator(".top-acts").boundingBox();
+  expect(brand!.x).toBeLessThanOrEqual(24);
+  expect(acts!.x + acts!.width).toBeGreaterThanOrEqual(width - 24);
+}
+
 test.describe.serial("acceptance scenario", () => {
   test.beforeAll(async ({ request, baseURL }) => {
     const origin = new URL(baseURL!).origin;
@@ -92,7 +114,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("button", { name: "Cancel" }).click();
     await page.locator('[data-step="people"]').getByRole("button", { name: "Open People & projects" }).click();
     await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByRole("button", { name: "Today", exact: true }).click();
     await card.getByRole("button", { name: "Hide this" }).click();
     await expect(card).toHaveCount(0);
     await page.reload();
@@ -126,7 +148,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("dialog", { name: "Choose a folder" })).toBeVisible();
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Cancel" }).click();
-    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByRole("button", { name: "Today", exact: true }).click();
   });
 
   test("a demo workspace says so on every screen, and feedback is a mail draft the person sends", async ({ page }) => {
@@ -155,7 +177,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
     await expect(open).toBeFocused();
-    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByRole("button", { name: "Today", exact: true }).click();
   });
 
   test("1. meeting notes become actions with owners, and a shared first name becomes a question", async ({ page }) => {
@@ -274,6 +296,41 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByLabel("Paste or type it here")).toBeFocused();
   });
 
+  test("Sources shows how often each source is read, and adding or changing one opens a form that passes the accessibility checks", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("button", { name: "Sources" }).click();
+    const sources = page.getByRole("main").locator("ul.queue").first();
+    // One row per source, each saying it reads by itself and when it last did.
+    await expect(sources.getByRole("listitem").first()).toContainText(/Read every \d+ minutes · /);
+    await page.getByRole("button", { name: "Add a source" }).click();
+    const form = page.getByRole("form", { name: "Add a source" });
+    await expect(form).toBeVisible();
+    await expect(form.getByRole("heading", { name: "Add a source" })).toBeFocused();
+    await form.getByRole("radio").first().check();
+    await expect(form.getByLabel("Name", { exact: true })).toBeVisible();
+    await expect(form.getByLabel("How often to read")).toBeVisible();
+    await checkAccessibility(page);
+    await form.getByRole("button", { name: "Cancel" }).click();
+    await expect(page.getByRole("button", { name: "Add a source" })).toBeFocused();
+    // A row's menu: read now, change, turn off or on, remove; Change opens the same form filled in.
+    const first = sources.getByRole("listitem").first();
+    await first.getByRole("button", { name: /^More actions for / }).click();
+    await expect(page.getByRole("menuitem")).toHaveText(["Read now", "Change", /^Turn o(ff|n)$/, "Remove"]);
+    await page.getByRole("menuitem", { name: "Change" }).click();
+    const change = page.getByRole("form", { name: /^Change / });
+    await expect(change).toBeVisible();
+    await expect(change.getByLabel("Name", { exact: true })).not.toHaveValue("");
+    await checkAccessibility(page);
+    await change.getByRole("button", { name: "Cancel" }).click();
+    await expect(change).toHaveCount(0);
+  });
+
+  test("Today's empty cards say they were checked once a source is set up, and offer no Connect button", async ({ page }) => {
+    await signIn(page);
+    await expect(page.getByRole("button", { name: "Connect a calendar" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Connect a mailbox" })).toHaveCount(0);
+  });
+
   test("Sources and the Ask box pass the accessibility checks, and the Ask box opens from the keyboard", async ({ page }) => {
     await signIn(page);
     await page.getByRole("button", { name: "Sources" }).click();
@@ -298,7 +355,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(dialog.getByLabel("Your question")).toHaveValue("a/b");
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByRole("button", { name: "Today", exact: true }).click();
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
   });
 
@@ -377,7 +434,7 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
     await page.reload();
     await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
-    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByRole("button", { name: "Today", exact: true }).click();
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
   });
 
@@ -487,14 +544,14 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
 
     // Not started yet: Stages offers the first stage, Today stays quiet about it.
-    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByRole("button", { name: "Today", exact: true }).click();
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
     await expect(page.locator("li.line", { hasText: `${item.title} is ready for` })).toHaveCount(0);
     await page.getByRole("button", { name: "Stages" }).click();
     await row.getByRole("button", { name: `Move to ${item.next!.label}` }).click();
     await expect(row.locator(".kind")).toHaveText(item.next!.label);
 
-    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByRole("button", { name: "Today", exact: true }).click();
     const ready = page.locator("li.line", { hasText: `${item.title} is ready for ${following.label}` });
     await expect(ready).toBeVisible();
     await ready.getByRole("button", { name: `Move to ${following.label}` }).click();
@@ -533,7 +590,7 @@ test.describe.serial("acceptance scenario", () => {
     await here.getByRole("button", { name: "Go", exact: true }).click();
     await expect(page.getByText(/Approved\./)).toBeVisible();
     await expect(here.getByRole("list", { name: "Waiting for your go" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Today" }).click();
+    await page.getByRole("button", { name: "Today", exact: true }).click();
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
     await expect(page.locator("li.line", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for your go" })).toHaveCount(0);
   });
@@ -602,7 +659,7 @@ test.describe.serial("acceptance scenario", () => {
   test("Add-ons opens from the views and from Settings, lists the bundled add-on under Installed, and passes the accessibility checks", async ({ page }) => {
     await signIn(page);
     await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Settings" }).click();
-    await page.getByRole("main").getByRole("button", { name: "Add-ons" }).click();
+    await page.getByRole("main").getByRole("button", { name: "Add-ons", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
     await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Today" }).click();
     await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Add-ons" }).click();
@@ -631,7 +688,35 @@ test.describe.serial("acceptance scenario", () => {
     expect(handIn!.x).toBeGreaterThan(tabs!.x + tabs!.width - 1);
     expect(status!.y).toBeGreaterThanOrEqual(Math.max(handIn!.y + handIn!.height, tabs!.y + tabs!.height) - 1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    // The header uses the whole window, not the content column, so the views fit on one line.
+    await expectFullWidthHeader(page, 1280);
+    await shoot(page, "header-1280");
     await checkAccessibility(page);
+  });
+
+  test("on a wider screen the header still spans the window while the content keeps its column", async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 900 });
+    await signIn(page);
+    await expectFullWidthHeader(page, 1600);
+    await shoot(page, "header-1600");
+    // A screen that isn't Today keeps its own column under the wide header.
+    await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Settings" }).click();
+    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+    const main = await page.getByRole("main").boundingBox();
+    expect(main!.width).toBeLessThanOrEqual(900);
+    await expectFullWidthHeader(page, 1600);
+    await checkAccessibility(page);
+  });
+
+  test("the workspace name goes to Today", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Settings" }).click();
+    await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
+    const brand = page.getByRole("banner").locator(".brand-link");
+    await expect(brand).toHaveAccessibleName(/, go to Today$/);
+    await brand.click();
+    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Views" }).getByRole("button", { name: "Today" })).toHaveAttribute("aria-current", "page");
   });
 
   test("on a phone the name and buttons stay on top, the views follow as a strip, and the page never scrolls sideways", async ({ page }) => {
@@ -645,6 +730,7 @@ test.describe.serial("acceptance scenario", () => {
     expect(tabs!.y).toBeGreaterThanOrEqual(brand!.y + brand!.height - 1);
     expect(tabs!.x + tabs!.width).toBeLessThanOrEqual(390);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await shoot(page, "header-390");
     // A view past the edge of the strip can still be reached by keyboard.
     await header.getByRole("button", { name: "Add-ons" }).focus();
     await header.getByRole("button", { name: "Add-ons" }).press("Enter");

@@ -178,3 +178,73 @@ export function undoBody(changes: S["SettingChangeView"][], fingerprint: string)
   }
   return body;
 }
+
+/** Dotted keys as nested objects: {"a.b": 1} becomes {a: {b: 1}}. */
+export function nest(flat: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(flat)) {
+    const parts = key.split(".");
+    let at = out;
+    for (const part of parts.slice(0, -1)) {
+      const next = at[part];
+      at = (typeof next === "object" && next !== null && !Array.isArray(next) ? next : (at[part] = {})) as Record<string, unknown>;
+    }
+    at[parts[parts.length - 1]] = value;
+  }
+  return out;
+}
+
+/** The value at a dotted key in a nested object, or undefined when it isn't there. */
+export function valueAt(values: unknown, key: string): unknown {
+  let at: unknown = values;
+  for (const part of key.split(".")) {
+    if (typeof at !== "object" || at === null || Array.isArray(at) || !(part in at)) return undefined;
+    at = (at as Record<string, unknown>)[part];
+  }
+  return at;
+}
+
+/** The items with the values a nested settings object holds, where it holds one; the rest keep theirs. */
+export function prefill(items: Item[], values: unknown): Item[] {
+  return items.map((item) => {
+    const value = valueAt(values, item.key);
+    return value === undefined ? item : { ...item, value };
+  });
+}
+
+/** Whether a setting is on screen as its default: an empty box and no default are the same thing. */
+function isDefault(item: Item, value: unknown): boolean {
+  const norm = (v: unknown) => (v === null || v === undefined ? (item.type === "yes_no" ? false : item.type === "list" ? [] : "") : v);
+  return JSON.stringify(norm(value)) === JSON.stringify(norm(item.default));
+}
+
+/** Whether a control can be edited in a form of items: the item itself says so. */
+export const editableItem = (item: Item) => item.editable && !item.locked && item.type !== "other";
+
+/** What a form of items sends: the editable settings whose value on screen differs from their default, by dotted key,
+ * and the keys that hold something that can't be sent. */
+export function formValues(items: Item[], edits: Record<string, Draft>): { values: Record<string, unknown>; bad: string[] } {
+  const values: Record<string, unknown> = {};
+  const bad: string[] = [];
+  for (const item of items) {
+    if (!editableItem(item)) continue;
+    const draft = item.key in edits ? edits[item.key] : toDraft(item);
+    const parsed = fromDraft(item, draft);
+    if (!parsed.ok) bad.push(item.key);
+    else if (!isDefault(item, parsed.value)) values[item.key] = parsed.value;
+  }
+  return { values, bad };
+}
+
+/** What a save of an add-on's data file sends: only what was changed on screen, by dotted key. */
+export function changedValues(items: Item[], edits: Record<string, Draft>): { changes: Record<string, unknown>; bad: string[] } {
+  const changes: Record<string, unknown> = {};
+  const bad: string[] = [];
+  for (const item of items) {
+    if (!(item.key in edits) || !editableItem(item) || edits[item.key] === toDraft(item)) continue;
+    const parsed = fromDraft(item, edits[item.key]);
+    if (parsed.ok) changes[item.key] = parsed.value;
+    else bad.push(item.key);
+  }
+  return { changes, bad };
+}

@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { whenText } from "../lib/dates";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
 import { TodayBoard } from "./TodayBoard";
 
@@ -78,9 +79,9 @@ function routes(extra: Routes = {}): Routes {
   };
 }
 
-function open(extra: Routes = {}, onView = vi.fn()) {
+function open(extra: Routes = {}, onView = vi.fn(), onAddSource?: () => void) {
   const calls = fakeApi(routes(extra));
-  renderApp(<TodayBoard onView={onView} />);
+  renderApp(<TodayBoard onView={onView} onAddSource={onAddSource} />);
   return { calls, onView };
 }
 
@@ -227,6 +228,75 @@ test("empty agenda, list and mail each say so, and the buttons go to Sources", a
   await user.click(screen.getByRole("button", { name: "Connect a mailbox" }));
   expect(onView).toHaveBeenCalledTimes(2);
   expect(onView).toHaveBeenLastCalledWith("sources");
+});
+
+function watched(id: string, extra: Partial<S["WatchSourceView"]> = {}): S["WatchSourceView"] {
+  return {
+    id,
+    label: `Source ${id}`,
+    connector: "kind-a",
+    connector_label: "A kind",
+    enabled: true,
+    every_minutes: 15,
+    items: 0,
+    last: { outcome: "ok", started_at: at(TODAY, 11, 30), new: 0, changed: 0, removed: 0 },
+    failures: 0,
+    problem: null,
+    ...extra,
+  };
+}
+
+const EMPTY: Routes = {
+  "GET today/agenda": () => [],
+  "GET today/todo": () => [],
+  "GET today/arrived": () => ({ items: [], left_out: 0 }),
+};
+
+test("with no source set up, the empty cards offer Connect, which opens Sources on the add form", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  const onAddSource = vi.fn();
+  const { onView } = open(EMPTY, vi.fn(), onAddSource);
+  await user.click(await screen.findByRole("button", { name: "Connect a calendar" }));
+  expect(onAddSource).toHaveBeenCalledTimes(1);
+  await user.click(screen.getByRole("button", { name: "Connect a mailbox" }));
+  expect(onAddSource).toHaveBeenCalledTimes(2);
+  expect(onView).not.toHaveBeenCalled();
+});
+
+test("when every source is off, the cards still offer Connect", async () => {
+  open({ ...EMPTY, "GET watch": () => [watched("a", { enabled: false }), watched("b", { enabled: false })] });
+  expect(await screen.findByRole("button", { name: "Connect a calendar" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
+  expect(screen.queryByText(/^Checked /)).toBeNull();
+});
+
+test("with sources set up, the empty cards say they were checked, with the latest read across sources, and have no button", async () => {
+  open({
+    ...EMPTY,
+    "GET watch": () => [
+      watched("a", { last: { outcome: "ok", started_at: at(TODAY, 8, 5), new: 0, changed: 0, removed: 0 } }),
+      watched("b", { last: { outcome: "ok", started_at: at(TODAY, 11, 40), new: 0, changed: 0, removed: 0 } }),
+      watched("c", { last: null }),
+    ],
+  });
+  expect(await screen.findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
+  expect(await screen.findByText("No mail has come in lately.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getAllByText(`Checked ${whenText(at(TODAY, 11, 40))}`)).toHaveLength(2));
+  expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Connect a mailbox" })).toBeNull();
+});
+
+test("a source that hasn't been read yet says the cards are not checked yet", async () => {
+  open({ ...EMPTY, "GET watch": () => [watched("a", { last: null })] });
+  await waitFor(() => expect(screen.getAllByText("Not checked yet")).toHaveLength(2));
+  expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
+});
+
+test("cards that have rows show no connect button or checked line", async () => {
+  open({ "GET watch": () => [] });
+  await within(await column("Agenda")).findByText("Standup");
+  expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
+  expect(screen.queryByText(/^Checked /)).toBeNull();
 });
 
 test("a column that can't load says so and offers Try again without hiding the others", async () => {

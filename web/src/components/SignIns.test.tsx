@@ -30,7 +30,8 @@ const LIST = [
 ];
 
 const settings = { "GET settings": () => ({ fingerprint: "fp", items: [] }) };
-const open = () => renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} />);
+const open = (onChooseSource: (plugin: string | null) => void = () => undefined) =>
+  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={onChooseSource} />);
 const row = (label: string) => screen.getByText(label).closest("li") as HTMLElement;
 
 let assign: ReturnType<typeof vi.fn>;
@@ -46,7 +47,7 @@ test("with no sign-ins, the section says when they appear and offers to open Add
   const user = userEvent.setup();
   const onOpenAddons = vi.fn();
   const calls = fakeApi({ ...settings, "GET sign-ins": () => [] });
-  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} />);
+  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} onChooseSource={() => undefined} />);
   await waitFor(() => expect(calls.some((c) => c.route === "GET sign-ins")).toBe(true));
   const section = (await screen.findByRole("heading", { name: "Sign-ins" })).closest("section") as HTMLElement;
   expect(section).toHaveTextContent("Sign-ins appear here once an add-on that signs in (mail, calendar) is turned on.");
@@ -60,8 +61,11 @@ test("each status is in words, with one action per row", async () => {
   expect(await screen.findByRole("heading", { name: "Sign-ins" })).toBeInTheDocument();
   const one = row("Service demo/one");
   expect(within(one).getByText("Signed in")).toBeInTheDocument();
-  expect(within(one).getAllByRole("button")).toHaveLength(1);
-  expect(within(one).getByRole("button", { name: "Sign out of Service demo/one" })).toHaveTextContent("Sign out");
+  // Once signed in, choosing what to read is the next step and the row's one primary action; the rest is in its menu.
+  expect(within(one).getAllByRole("button")).toHaveLength(2);
+  const choose = within(one).getByRole("button", { name: "Choose what to read from Service demo/one" });
+  expect(choose).toHaveTextContent("Choose what to read");
+  expect(choose).toHaveClass("primary");
   const two = row("Service demo/two");
   expect(within(two).getByText("Sign-in ran out")).toBeInTheDocument();
   expect(within(two).getByRole("button", { name: "Sign in again to Service demo/two" })).toHaveTextContent("Sign in again");
@@ -121,8 +125,8 @@ test("a permission that wasn't allowed is named, with Sign in again as a seconda
   const note = within(one).getByText(
     "Permissions not allowed: Mail.Read, Calendars.Read. Sign in again and allow them to use everything.",
   );
-  // Sign out stays the row's one primary action.
-  expect(within(one).getByRole("button", { name: "Sign out of Service demo/one" })).toHaveClass("primary");
+  // Choosing what to read stays the row's one primary action.
+  expect(within(one).getByRole("button", { name: "Choose what to read from Service demo/one" })).toHaveClass("primary");
   const again = within(one).getByRole("button", { name: "Sign in again to Service demo/one" });
   expect(again).not.toHaveClass("primary");
   expect(again).toHaveAccessibleDescription(note.textContent ?? "");
@@ -211,11 +215,38 @@ test("Sign out signs out at once and says so, with no undo", async () => {
     },
   });
   open();
-  await user.click(await screen.findByRole("button", { name: "Sign out of Service demo/one" }));
+  await user.click(await screen.findByRole("button", { name: "More actions for Service demo/one" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
   expect(await screen.findByText("Signed out of Service demo/one.")).toBeInTheDocument();
   expect(calls.filter((c) => c.route === "DELETE sign-ins/demo/one")).toHaveLength(1);
   expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
   expect(await screen.findByText("Not signed in")).toBeInTheDocument();
+});
+
+test("Choose what to read opens the form that adds a source, on the kinds of that sign-in's add-on", async () => {
+  const user = userEvent.setup();
+  const onChooseSource = vi.fn();
+  fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/one", { status: "signed_in" }), signIn("plain", { status: "signed_in" })] });
+  open(onChooseSource);
+  await user.click(await screen.findByRole("button", { name: "Choose what to read from Service demo/one" }));
+  expect(onChooseSource).toHaveBeenLastCalledWith("demo");
+  // A sign-in whose name has no add-on part offers every kind.
+  await user.click(screen.getByRole("button", { name: "Choose what to read from Service plain" }));
+  expect(onChooseSource).toHaveBeenLastCalledWith(null);
+});
+
+test("a signed-in row's menu has Sign out and Sign in again; Sign in again starts the sign-in", async () => {
+  const user = userEvent.setup();
+  fakeApi({
+    ...settings,
+    "GET sign-ins": () => [signIn("demo/one", { status: "signed_in" })],
+    "POST sign-ins/demo/one/start": () => ({ url: "http://localhost:9090/login?again=1" }),
+  });
+  open();
+  await user.click(await screen.findByRole("button", { name: "More actions for Service demo/one" }));
+  expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Sign out", "Sign in again"]);
+  await user.click(screen.getByRole("menuitem", { name: "Sign in again" }));
+  await waitFor(() => expect(assign).toHaveBeenCalledWith("http://localhost:9090/login?again=1"));
 });
 
 const WEB = "https" + "://";

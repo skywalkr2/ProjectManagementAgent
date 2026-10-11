@@ -335,3 +335,20 @@ test("Add-ons is a view of its own, next to Settings", async () => {
   expect(onView).toHaveBeenCalledWith("addons");
   await screen.findByText("No off-device backup");
 });
+
+test("the workspace name is a button that goes to Today, named for what it does", async () => {
+  const user = userEvent.setup();
+  const onView = vi.fn();
+  fakeApi({ "GET status": () => status() });
+  renderApp(
+    <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="settings" onView={onView} onHandIn={() => {}} onAsk={() => {}} onHelp={() => {}} />,
+  );
+  const brand = screen.getByRole("button", { name: "Workspace, go to Today" });
+  expect(brand).toHaveTextContent("Workspace");
+  expect(brand).not.toHaveClass("btn");
+  await user.click(brand);
+  expect(onView).toHaveBeenCalledWith("home");
+  // It is not one of the views, so the strip of views is as before.
+  expect(within(screen.getByRole("navigation", { name: "Views" })).queryByRole("button", { name: /go to Today/ })).toBeNull();
+  await screen.findByText("No off-device backup");
+});

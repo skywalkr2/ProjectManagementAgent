@@ -21,7 +21,7 @@ import { restoreFocus } from "./components/ModalPanel";
 import { RecordPage } from "./components/RecordPage";
 import { Header } from "./components/Header";
 import { Settings } from "./components/Settings";
-import { Sources } from "./components/Sources";
+import { Sources, type AddRequest } from "./components/Sources";
 import { Setup } from "./components/Setup";
 import { StartHere } from "./components/StartHere";
 import { TodayBoard } from "./components/TodayBoard";
@@ -42,6 +42,12 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   const [view, setView] = useView();
   // The setup guide opens at a step when Today's card sends the person to one.
   const [guideStep, setGuideStep] = useState<FocusStep | null>(null);
+  // Sources opens on the form that adds one when Today or a sign-in sends the person there.
+  const [addSource, setAddSource] = useState<AddRequest | null>(null);
+  const openAddSource = (plugin: string | null = null) => {
+    setAddSource({ plugin, n: Date.now() });
+    setView("sources");
+  };
   const openGuide = (step?: string) => {
     setGuideStep(step ? { id: step, n: Date.now() } : null);
     setView("welcome");
@@ -98,23 +104,24 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
               workspace={props.rc.workspace_name}
               onOpenGuide={openGuide}
             />
-            <TodayBoard onView={setView} onOpenRecord={openRecord} />
+            <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} />
           </>
         ) : view === "stages" ? (
           <Stages />
         ) : view === "files" ? (
           <Files />
         ) : view === "sources" ? (
-          <Sources onAsk={(question) => setAsk({ question })} />
+          <Sources onAsk={(question) => setAsk({ question })} add={addSource} onAddOpened={() => setAddSource(null)} />
         ) : view === "welcome" ? (
           <Welcome
             focusStep={guideStep}
             onOpenPeople={() => setView("setup")}
             onOpenAddons={() => setView("addons")}
             onHandIn={() => setHandIn(true)}
+            onChooseSource={openAddSource}
           />
         ) : view === "settings" ? (
-          <Settings onOpenGuide={() => openGuide()} onOpenAddons={() => setView("addons")} />
+          <Settings onOpenGuide={() => openGuide()} onOpenAddons={() => setView("addons")} onChooseSource={openAddSource} />
         ) : view === "addons" ? (
           <Addons onBack={() => setView("settings")} />
         ) : (

@@ -44,3 +44,12 @@ export function useAfterSave() {
     [client, push, t, has, restart],
   );
 }
+
+/** The fingerprint of the settings as they are now, read fresh, so a change made meanwhile is noticed, not overwritten. */
+export function useFreshFingerprint() {
+  const client = useQueryClient();
+  return useCallback(
+    async () => (await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 })).fingerprint,
+    [client],
+  );
+}

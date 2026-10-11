@@ -54,7 +54,7 @@ function api(items = ITEMS, extra: Record<string, (body: unknown) => unknown> = 
   });
 }
 
-const open = () => renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} />);
+const open = () => renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />);
 const posted = (calls: ReturnType<typeof fakeApi>) => calls.filter((c) => c.route === "POST settings").map((c) => c.body);
 
 test("basic settings show first and More settings reveals the rest", async () => {
@@ -237,7 +237,7 @@ function RestartHarness() {
       <button type="button" onClick={() => setHellos(hellos + 1)}>
         reconnect
       </button>
-      <Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} />
+      <Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} />
     </RestartProvider>
   );
 }
@@ -399,7 +399,7 @@ test("Add-ons opens the add-ons screen", async () => {
   api();
   const onOpenAddons = vi.fn();
   const user = userEvent.setup();
-  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} />);
+  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} onChooseSource={() => undefined} />);
   await user.click(screen.getByRole("button", { name: "Add-ons" }));
   expect(onOpenAddons).toHaveBeenCalled();
 });
@@ -503,4 +503,21 @@ test("the AI section lists the accounts that are set up, one row each, with a Te
   expect(row).toHaveTextContent("Key saved");
   expect(within(row).getByRole("button", { name: "Test main" })).toBeInTheDocument();
   expect(within(row).getByRole("button", { name: "More actions for main" })).toBeInTheDocument();
+});
+
+test("an add-on's data files are listed in an Add-on files section, and the section is absent when no add-on has any", async () => {
+  api(ITEMS, {
+    "GET data-forms": () => [{ name: "demo/template", plugin: "demo", label: "Templates", description: "" }],
+    "GET data-forms/demo/template/files": () => [{ file: "classic.yaml", layers: ["shipped"], layer: "shipped", problem: null }],
+  });
+  open();
+  expect(await screen.findByRole("heading", { name: "Add-on files" })).toBeInTheDocument();
+  expect(await screen.findByRole("listitem", { name: "classic.yaml" })).toHaveTextContent("Comes with the add-on");
+});
+
+test("with no add-on data files there is no Add-on files section", async () => {
+  api(ITEMS, { "GET data-forms": () => [] });
+  open();
+  await screen.findByLabelText("The display name.");
+  expect(screen.queryByRole("heading", { name: "Add-on files" })).toBeNull();
 });

@@ -12,6 +12,7 @@ import { addonLabel, formatValue, labelOf } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
+import { SignInRow } from "./SignIns";
 import { WelcomeAi } from "./WelcomeAi";
 import { WelcomeBackup } from "./WelcomeBackup";
 
@@ -30,6 +31,7 @@ export function Welcome(props: {
   onOpenPeople: () => void;
   onOpenAddons: () => void;
   onHandIn: () => void;
+  onChooseSource: (plugin: string | null) => void;
 }) {
   const { t, has } = useWords();
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
@@ -73,7 +75,7 @@ export function Welcome(props: {
             return (
               <StepSection key={step.id} step={step} label={label} explanation={why}>
                 {step.sign_in ? (
-                  <SignInStep name={step.sign_in} label={step.label || step.sign_in} done={step.done} />
+                  <SignInStep name={step.sign_in} label={step.label || step.sign_in} done={step.done} onChooseSource={props.onChooseSource} />
                 ) : step.id === "workspace" ? (
                   <WorkspaceStep />
                 ) : step.id === "template" ? (
@@ -122,11 +124,20 @@ export function Welcome(props: {
   );
 }
 
-/** A sign-in's step: one button that starts the sign-in, as the Sign-ins row does. Nothing to do once signed in. */
-function SignInStep(props: { name: string; label: string; done: boolean }) {
+/** A sign-in's step: one button that starts the sign-in, as the Sign-ins row does. Once signed in, the row itself, with
+ * the actions it has there (choose what to read, sign out, sign in again). */
+function SignInStep(props: { name: string; label: string; done: boolean; onChooseSource: (plugin: string | null) => void }) {
   const { t } = useWords();
   const { start, busy, problem } = useStartSignIn(props.name);
-  if (props.done) return null;
+  const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns, enabled: props.done });
+  if (props.done) {
+    const row = signIns.data?.find((item) => item.name === props.name);
+    return row ? (
+      <ul className="queue">
+        <SignInRow item={row} onChooseSource={props.onChooseSource} />
+      </ul>
+    ) : null;
+  }
   return (
     <>
       {problem && (
@@ -152,6 +163,16 @@ function SignInStep(props: { name: string; label: string; done: boolean }) {
 /** The add-ons installed here and turned off, by name, with one button that opens the Add-ons screen. */
 function AddonsStep(props: { onOpen: () => void }) {
   const { t, has } = useWords();
+  const act = useAct();
+  const [busy, setBusy] = useState(false);
+  const leaveOff = async () => {
+    setBusy(true);
+    await act(
+      () => api.leaveAddonsOff(),
+      () => ({ message: t("welcome.addons.left_off_toast") }),
+    );
+    setBusy(false);
+  };
   const packs = useQuery({ queryKey: ["packs"], queryFn: api.packs });
   const off = (packs.data?.installed ?? []).filter((p) => !p.enabled);
   return (
@@ -169,6 +190,11 @@ function AddonsStep(props: { onOpen: () => void }) {
         </div>
       )}
       <div className="row-end">
+        {off.length > 0 && (
+          <button type="button" className="btn" disabled={busy} onClick={() => void leaveOff()}>
+            {t("welcome.addons.leave_off")}
+          </button>
+        )}
         <button type="button" className="btn" onClick={props.onOpen}>
           {t("welcome.addons.open")}
         </button>

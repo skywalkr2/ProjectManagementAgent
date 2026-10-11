@@ -35,11 +35,12 @@ p { margin: 0; }
 
 /* Header */
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: var(--bg); margin-inline: -16px; padding: 8px 16px 6px; border-bottom: 1px solid var(--line); }
-.top-inner { max-width: var(--column); margin: 0 auto; display: grid; gap: 4px; min-width: 0; }
+.top-inner { display: grid; gap: 4px; min-width: 0; }
 /* One main row: the name, the views (which wrap inside their own area when they don't fit) and the buttons at the end. */
 .top-main { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "brand nav acts"; align-items: center; gap: 6px 14px; min-width: 0; }
 .brand { grid-area: brand; display: flex; align-items: baseline; gap: 8px; min-width: 0; }
-.brand b { font-family: var(--display); font-size: 20px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.brand-link { border: 0; background: none; padding: 0; margin: 0; font-family: var(--display); font-size: 20px; font-weight: 600; line-height: 1.5; color: var(--fg); text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.brand-link:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .top-main .tabs { grid-area: nav; justify-self: start; min-width: 0; max-width: 100%; }
 .top-main .tabs button { white-space: nowrap; flex: none; }
 .top-acts { grid-area: acts; display: flex; gap: 6px; flex: none; white-space: nowrap; }
@@ -49,7 +50,7 @@ p { margin: 0; }
 /* On a narrow screen the name and buttons stay on top and the views follow as a strip that scrolls sideways inside itself. */
 [data-narrow] .top-main { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "brand acts" "nav nav"; }
 [data-narrow] .top-main { gap: 4px 8px; }
-[data-narrow] .brand b { font-size: 18px; }
+[data-narrow] .brand-link { font-size: 18px; }
 [data-narrow] .top-acts { gap: 2px; }
 [data-narrow] .top-acts .btn { padding-inline: 9px; }
 [data-narrow] .top-acts .btn.quiet { padding-inline: 8px; }
@@ -474,3 +475,15 @@ html[data-today]:not([data-narrow]) .footer { display: flex; flex-wrap: wrap; ju
 .list-retired { display: grid; gap: 8px; justify-items: start; }
 .list-retired > div { display: grid; gap: 8px; justify-self: stretch; }
 .list-add { margin-top: 2px; }
+
+/* Forms built from setting items: a source's (added or changed from the Sources screen) and an add-on's data file. */
+.source-form, .data-file-form { box-shadow: none; }
+.line > .source-form, .line > .data-file-form { margin: 0 14px 14px 16px; background: var(--bg); }
+.source-form h3, .data-file-form h5 { font-family: var(--display); font-weight: 600; font-size: 18px; line-height: 1.25; margin: 0; }
+.data-file-form h5 { font-size: 16px; }
+.source-form h3:focus, .data-file-form h5:focus { outline: none; }
+.source-form h3:focus-visible, .data-file-form h5:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.source-form fieldset.details .setting:first-of-type { border-top: 0; padding-top: 0; }
+.data-forms-kind { display: grid; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.data-forms-kind h4 { font-family: var(--display); font-weight: 600; font-size: 17px; margin: 0; }
+.brand-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }

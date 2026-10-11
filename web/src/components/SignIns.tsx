@@ -15,7 +15,14 @@ import { SafeLink } from "./SafeText";
 
 type SignIn = S["SignInView"];
 
-export function SignIns(props: { onOpenAddons: () => void }) {
+/** The add-on a sign-in belongs to: the part of its name before the "/", or none when the name has no such part. */
+export const addonOfSignIn = (name: string): string | null => (name.includes("/") ? name.split("/", 1)[0] : null);
+
+export function SignIns(props: {
+  onOpenAddons: () => void;
+  /** Opens the form that adds a source, on the kinds of this add-on (null: all kinds). */
+  onChooseSource: (plugin: string | null) => void;
+}) {
   const { t } = useWords();
   const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
   // A list that didn't load says so quietly.
@@ -45,14 +52,16 @@ export function SignIns(props: { onOpenAddons: () => void }) {
       <p className="hint">{t("sign_in.intro")}</p>
       <ul className="queue">
         {signIns.data.map((item) => (
-          <SignInRow key={item.name} item={item} />
+          <SignInRow key={item.name} item={item} onChooseSource={props.onChooseSource} />
         ))}
       </ul>
     </section>
   );
 }
 
-function SignInRow(props: { item: SignIn }) {
+/** One sign-in: where it stands in words, with its actions. Once signed in, the next step is the primary action
+ * (choosing what to read); signing out and signing in again are in the menu. */
+export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string | null) => void }) {
   const { t } = useWords();
   const act = useAct();
   const [signingOut, setSigningOut] = useState(false);
@@ -79,12 +88,12 @@ function SignInRow(props: { item: SignIn }) {
 
   const again = item.status === "expired";
   const label = signedIn
-    ? t("sign_in.sign_out")
+    ? t("sign_in.choose_source")
     : busy
       ? t("sign_in.working")
       : t(again ? "sign_in.sign_in_again" : "sign_in.sign_in");
   const named = signedIn
-    ? t("sign_in.sign_out_named", { label: item.label })
+    ? t("sign_in.choose_source_named", { label: item.label })
     : t(again ? "sign_in.sign_in_again_named" : "sign_in.sign_in_named", { label: item.label });
   const notReady = !signedIn && !item.ready;
   const formOpen = item.can_paste && (formChoice ?? item.app === "none");
@@ -123,6 +132,10 @@ function SignInRow(props: { item: SignIn }) {
     );
 
   const actions: MenuAction[] = [];
+  if (signedIn) {
+    actions.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => void signOut(), disabled: busy });
+    actions.push({ id: "sign-in-again", label: t("sign_in.sign_in_again"), run: () => void start(), disabled: busy || !item.ready });
+  }
   if (item.can_paste && !formOpen && !pasted && (item.app === "add-on" || item.app === "none")) {
     actions.push({ id: "use-own", label: t("sign_in.own.use"), run: openForm, disabled: busy });
   }
@@ -226,7 +239,7 @@ function SignInRow(props: { item: SignIn }) {
             disabled={busy || notReady}
             aria-label={named}
             aria-describedby={describedBy || undefined}
-            onClick={() => void (signedIn ? signOut() : start())}
+            onClick={() => (signedIn ? props.onChooseSource(addonOfSignIn(item.name)) : void start())}
           >
             {label}
           </button>

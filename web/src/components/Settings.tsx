@@ -1,35 +1,26 @@
 // Settings (design 7.9): every setting the config schemas describe, as a form. Basic settings come first and the rest
 // sit behind a toggle; the search looks at all of them. A save sends only what changed, reads it back and offers Undo.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { api, ApiError } from "../lib/api";
 import { problemText } from "../lib/problem";
-import {
-  fileName,
-  formatValue,
-  fromDraft,
-  groupItems,
-  groupLabel,
-  isOff,
-  labelOf,
-  depthOf,
-  switchOf,
-  toDraft,
-  type Draft,
-  type Group,
-  type Item,
-} from "../lib/settings";
+import { fromDraft, groupItems, groupLabel, isOff, depthOf, switchOf, toDraft, type Draft, type Group, type Item } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
-import { FolderPicker, useFolderListing } from "./FolderPicker";
-import { restoreFocus } from "./ModalPanel";
+import { DataForms } from "./DataForms";
+import { useFolderListing } from "./FolderPicker";
+import { SettingRow } from "./SettingRow";
 import { SignIns } from "./SignIns";
 import { ValueLists } from "./ValueLists";
 
 type Edits = Record<string, Draft>;
 
-export function Settings(props: { onOpenGuide: () => void; onOpenAddons: () => void }) {
+export function Settings(props: {
+  onOpenGuide: () => void;
+  onOpenAddons: () => void;
+  onChooseSource: (plugin: string | null) => void;
+}) {
   const { t, tn, has } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
@@ -173,198 +164,10 @@ export function Settings(props: { onOpenGuide: () => void; onOpenAddons: () => v
           })
         )}
       </div>
+      <DataForms />
       <AiAccounts />
       <ValueLists />
-      <SignIns onOpenAddons={props.onOpenAddons} />
+      <SignIns onOpenAddons={props.onOpenAddons} onChooseSource={props.onChooseSource} />
     </section>
-  );
-}
-
-function SettingRow(props: {
-  item: Item;
-  draft: Draft;
-  onChange: (draft: Draft) => void;
-  onReset: () => void;
-  disabled: boolean;
-  depth: number;
-  /** The switch this setting depends on, when it is off. */
-  gate: Item | null;
-  canList: boolean;
-}) {
-  const { t, has } = useWords();
-  const [picking, setPicking] = useState(false);
-  const chooser = useRef<HTMLButtonElement>(null);
-  const { item, draft } = props;
-  const id = `setting-${item.key}`;
-  const label = labelOf(item, t, has);
-  const readOnly = item.type === "other" || (!item.locked && !item.editable);
-  const note = item.locked
-    ? t(item.source === "env" ? "settings.locked_env" : "settings.locked_flag")
-    : readOnly
-      ? item.plugin
-        ? t("settings.changed_in_addon")
-        : t("settings.changed_in", { file: fileName(item) })
-      : null;
-  const hint = label !== item.description ? item.description : null;
-  const parsed = !readOnly && !item.locked && draft !== toDraft(item) ? fromDraft(item, draft) : null;
-  const invalid = parsed && !parsed.ok ? t(`settings.invalid.${parsed.problem}`) : null;
-  const waiting = props.gate ? t(props.gate.type === "yes_no" ? "settings.needs_on" : "settings.needs_value", { label: labelOf(props.gate, t, has) }) : null;
-  const describedBy = [hint && `${id}-hint`, waiting && `${id}-waiting`, item.type === "list" && `${id}-list`, invalid && `${id}-bad`, note && `${id}-note`, `${id}-default`]
-    .filter(Boolean)
-    .join(" ");
-  const off = item.locked || props.disabled || props.gate !== null;
-  const option = (o: string) => (has(`settings.option.${item.key}.${o}`) ? t(`settings.option.${item.key}.${o}`) : o);
-
-  let control;
-  if (readOnly) {
-    control = (
-      <p className="setting-value" id={id}>
-        {formatValue(item.value, t)}
-      </p>
-    );
-  } else if (item.type === "yes_no") {
-    control = (
-      <input
-        id={id}
-        type="checkbox"
-        checked={draft === true}
-        disabled={off}
-        aria-describedby={describedBy}
-        onChange={(e) => props.onChange(e.target.checked)}
-      />
-    );
-  } else if (item.type === "choice") {
-    control = (
-      <select id={id} value={String(draft)} disabled={off} aria-describedby={describedBy} onChange={(e) => props.onChange(e.target.value)}>
-        {(item.options ?? []).map((o) => (
-          <option key={o} value={o}>
-            {option(o)}
-          </option>
-        ))}
-      </select>
-    );
-  } else if (item.type === "list") {
-    control = (
-      <textarea
-        id={id}
-        className="short"
-        value={String(draft)}
-        disabled={off}
-        aria-describedby={describedBy}
-        onChange={(e) => props.onChange(e.target.value)}
-      />
-    );
-  } else {
-    const input = (
-      <input
-        id={id}
-        type="text"
-        inputMode={item.type === "text" ? undefined : "decimal"}
-        value={String(draft)}
-        disabled={off}
-        aria-invalid={invalid ? true : undefined}
-        aria-describedby={describedBy}
-        onChange={(e) => props.onChange(e.target.value)}
-      />
-    );
-    // A folder can be picked from a list where the app can list folders; otherwise it is typed, with no fuss.
-    control =
-      item.picker === "folder" && props.canList ? (
-        <div className="inline-field">
-          {input}
-          <button type="button" className="btn primary" ref={chooser} disabled={off} onClick={() => setPicking(true)}>
-            {t("settings.choose_folder")}
-            <span className="sr"> {label}</span>
-          </button>
-          {String(draft) !== "" && (
-            <button type="button" className="btn quiet" disabled={off} onClick={() => props.onChange("")}>
-              {t("settings.clear_value")}
-              <span className="sr"> {label}</span>
-            </button>
-          )}
-        </div>
-      ) : (
-        input
-      );
-  }
-
-  const checkbox = item.type === "yes_no" && !readOnly;
-  return (
-    <div
-      className={`setting${props.depth ? " dependent" : ""}${props.gate ? " waiting" : ""}`}
-      data-key={item.key}
-      style={props.depth ? { marginInlineStart: `${Math.min(props.depth, 3) * 20}px` } : undefined}
-    >
-      {checkbox ? (
-        <label className="check-line" htmlFor={id}>
-          {control}
-          <span>{label}</span>
-        </label>
-      ) : readOnly ? (
-        <span className="setting-label">{label}</span>
-      ) : (
-        <label className="setting-label" htmlFor={id}>
-          {label}
-        </label>
-      )}
-      {checkbox ? null : control}
-      {hint && (
-        <p className="hint" id={`${id}-hint`}>
-          {hint}
-        </p>
-      )}
-      {waiting && (
-        <p className="hint" id={`${id}-waiting`}>
-          {waiting}
-        </p>
-      )}
-      {item.type === "list" && !readOnly && (
-        <p className="hint" id={`${id}-list`}>
-          {t("settings.list_hint")}
-        </p>
-      )}
-      {invalid && (
-        <p className="problem-note" id={`${id}-bad`}>
-          {invalid}
-        </p>
-      )}
-      {note && (
-        <p className="hint" id={`${id}-note`}>
-          {note}
-        </p>
-      )}
-      <div className="setting-foot">
-        {item.type !== "other" && (
-          <p className="hint" id={`${id}-default`}>
-            {t("settings.default", { value: formatValue(item.default, t) })}
-          </p>
-        )}
-        {item.source === "file" && item.editable && !item.locked && (
-          <button
-            type="button"
-            className="btn quiet small"
-            disabled={props.disabled}
-            aria-label={t("settings.back_to_default_named", { label })}
-            onClick={props.onReset}
-          >
-            {t("settings.back_to_default")}
-          </button>
-        )}
-      </div>
-      {picking && (
-        <FolderPicker
-          start={String(draft) || undefined}
-          onClose={() => {
-            setPicking(false);
-            restoreFocus(() => chooser.current);
-          }}
-          onPick={(picked) => {
-            setPicking(false);
-            props.onChange(picked);
-            restoreFocus(() => chooser.current);
-          }}
-        />
-      )}
-    </div>
   );
 }
