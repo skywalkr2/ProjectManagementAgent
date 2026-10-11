@@ -189,6 +189,30 @@ class PluginHost:
                 if ep.name in self.cfg.workspace.plugins.enabled:
                     self.disable(ep.name, str(err))
 
+    def note_candidates(self, allowed: tuple[str, ...]) -> str:
+        """The records offered ops may name, for the notes packet: one block per op that lists them."""
+        from engine.plugin_api import ReadView
+
+        blocks = []
+        for plugin, registrar in sorted(self.registrars.items()):
+            if not self.active(plugin):
+                continue
+            for name, op in sorted(registrar.ops.items()):
+                if name not in allowed or op.candidates is None:
+                    continue
+                reader = self._with_files(ReadView(self.store.read(), plugin))
+                where = f"candidates for {name}"
+                try:
+                    found = list(op.candidates(reader, registrar.config.model_copy(deep=True)))[:50]
+                    lines = [f"- {str(i)}: {' '.join(str(n).split())[:120]}" for i, n in found]
+                except Exception as err:
+                    self.failed(plugin, where, err)
+                    continue
+                self.succeeded(plugin, where)
+                if lines:
+                    blocks.append(f"Records {name} may name, by id:\n" + "\n".join(lines))
+        return "\n\n".join(blocks)
+
     def _offer_to_notes(self) -> None:
         """Add running plugins' ops registered with notes=True to what reading notes may use."""
         from dataclasses import replace as _replace
@@ -284,15 +308,30 @@ class PluginHost:
             fn = registrar.interface_provisions[name].items
             wanted = project if project is not ANY else None
             where = f"its {name} items"
+            per_project = _positional_count(fn) >= 3
             try:
-                if _positional_count(fn) >= 3:
+                if per_project:
                     items = list(fn(reader, registrar.config.model_copy(deep=True), wanted))
                 else:
                     items = list(fn(reader, registrar.config.model_copy(deep=True)))
             except Exception as err:
-                self.failed(provider, where, err)
-                continue
-            self.succeeded(provider, where)
+                if not per_project or wanted is not None:
+                    self.failed(provider, where, err)
+                    continue
+                # Reading everything failed: ask project by project, so one project's failure leaves out only its
+                # items.
+                items = []
+                failures = []
+                for each in self.store.read().list("project"):
+                    try:
+                        items += list(fn(reader, registrar.config.model_copy(deep=True), each.id))
+                    except Exception as inner:
+                        failures.append(f"{each.id}: {inner}")
+                self.failed(provider, where, f"{err}; left out the items of {', '.join(failures) or 'no project'}")
+                if not items:
+                    continue
+            else:
+                self.succeeded(provider, where)
             checked, declared = [], set(definition.item.model_fields)
             for item in items:
                 try:
@@ -324,7 +363,27 @@ class PluginHost:
         self._items[key] = (provider, name, raw)
         return key
 
-    def _item_about(self, plugin: str, name: str, key: str) -> dict[str, str]:
+    def interface_about(self, plugin: str | None, item: Any, task: str) -> tuple[str, str] | None:
+        """For a using plugin: the record a request for `task` about an item would work on, or None."""
+        if plugin is None or not getattr(item, "key", ""):
+            return None
+        for candidate in self._used(plugin):
+            if self.definition(candidate) is None:
+                continue
+            data = {"via": self._use_spec(plugin, candidate), "interface_task": task, "note": "", "item": item.key}
+            try:
+                resolved = self._interface_request(plugin, data)
+                check_about(self.store.read(), self.task_kind(resolved["task"]), resolved.get("about"), self.store)
+            except (StoreError, KeyError):
+                continue
+            about = resolved.get("about")
+            return (about["kind"], about["id"]) if about else None
+        return None
+
+    def _used(self, plugin: str) -> list[str]:
+        return [u.interface.split("@")[0] for u in self.manifests[plugin].interfaces.uses]
+
+    def _item_about(self, plugin: str, name: str, key: str, task: str = "") -> dict[str, str]:
         """The provider's record an item stands for, by the item's key; the provider's items are read again when the
         key isn't remembered (after a restart)."""
         from engine.plugin_api import ANY, ReadView, Stored
@@ -339,7 +398,10 @@ class PluginHost:
             raise StoreError(f"{provider} doesn't say which of its records an item of {name} stands for")
         reader = self._with_files(ReadView(self.store.read(), provider))
         try:
-            found = provision.about(reader, self.registrars[provider].config.model_copy(deep=True), deepcopy(raw))
+            args = [reader, self.registrars[provider].config.model_copy(deep=True), deepcopy(raw)]
+            if _positional_count(provision.about) >= 4:
+                args.append(task)
+            found = provision.about(*args)
         except Exception as err:
             self.failed(provider, f"its {name} about", err)
             raise StoreError(f"{provider} couldn't say which record that item stands for") from None
@@ -392,7 +454,7 @@ class PluginHost:
         task = self.registrars[offering[0]].interface_provisions[name].task_kinds[data["interface_task"]]
         about = data.get("about")
         if data.get("item"):
-            about = self._item_about(plugin, name, data["item"])
+            about = self._item_about(plugin, name, data["item"], data["interface_task"])
             if self._items[data["item"]][0] != offering[0]:
                 raise StoreError("the item comes from another provider than the one offering that work")
         return {"task": task, "note": data["note"], **({"about": about} if about else {})}
@@ -1045,9 +1107,12 @@ class PluginHost:
             self.disable(owner, f"stage check failed: {err}")
             return StageCheckResult(False, wording(self.cfg, "check_failed"))
 
-    def lint_findings(self, op: Any, view: Any) -> list[tuple[str, str, Any]]:
-        """(lint name, default severity, finding) for every running plugin's lint on this op. A lint that raises or
-        returns something else turns its plugin off and finds nothing."""
+    def lint_findings(
+        self, op: Any, view: Any, severity: Any = None, origin: dict[str, Any] | None = None
+    ) -> list[tuple[str, str, Any]]:
+        """(lint name, severity, finding) for every running plugin's lint on this op. `severity(name, default)` gives
+        the workspace's severity; a lint switched off isn't called. A lint taking a fourth argument gets the run's
+        `origin`. A lint that raises or returns something else turns its plugin off and finds nothing."""
         from engine.plugin_api import LintFinding
 
         found = []
@@ -1057,12 +1122,18 @@ class PluginHost:
             for lint in registrar.lints.values():
                 if op.op not in lint.ops:
                     continue
+                level = severity(lint.name, lint.severity) if severity is not None else lint.severity
+                if level == "off":
+                    continue
                 try:
                     read = self._with_files(ReadView(view, name))
-                    result = lint.fn(op.model_copy(deep=True), read, registrar.config.model_copy(deep=True))
+                    args = [op.model_copy(deep=True), read, registrar.config.model_copy(deep=True)]
+                    if _positional_count(lint.fn) >= 4:
+                        args.append(dict(origin or {}))
+                    result = lint.fn(*args)
                     if not isinstance(result, list) or any(not isinstance(f, LintFinding) for f in result):
                         raise ValueError("lints return a list of LintFinding")
-                    found += [(lint.name, lint.severity, f) for f in result]
+                    found += [(lint.name, level, f) for f in result]
                 except Exception as err:
                     self.disable(name, f"lint {lint.name} failed: {err}")
                     break
@@ -1084,8 +1155,25 @@ class PluginHost:
         view.data_layers = lambda project: self.data_layers(plugin, project)
         view.default_language = self.cfg.workspace.language
         view.read_interface = lambda spec, project=None: self.read_interface(plugin, spec, project)
+        view.find_interface_about = lambda item, task: self.interface_about(plugin, item, task)
         view.user = self.cfg.workspace.user.person
         return view
+
+    def help_sections(self) -> list[Any]:
+        """Every running plugin's help, one section per `##` heading, titled "<plugin>: <heading>"."""
+        from engine.help import Section, guide_sections
+
+        found = []
+        for plugin in sorted(self.manifests):
+            if not self.active(plugin):
+                continue
+            for relative in self.manifests[plugin].provides.help:
+                path = self.candidates[plugin].parent / relative
+                if not path.is_file():
+                    self._note(plugin, f"its help file {relative} isn't there")
+                    continue
+                found += [Section(f"{plugin}: {s.title}", s.text) for s in guide_sections(path)]
+        return found
 
     def data_layers(self, plugin: str | None, project: str | None = None) -> list[Path]:
         """A plugin's data folders, least specific first: what it ships, the workspace's, then the project's."""
@@ -1280,9 +1368,34 @@ class PluginHost:
                 WriteContext(actor="plugin", trust="untrusted", op=f"{plugin}/stage"),
             )
         ctx = Context(
-            self.store, self.cfg, People(self.store, self.cfg), own, Inputs(request.id, None, "", "", "untrusted")
+            self.store,
+            self.cfg,
+            People(self.store, self.cfg),
+            own,
+            Inputs(request.id, None, "", "", "untrusted"),
+            via="job" if event.startswith("job:") else "handler",
         )
         return apply_changeset(changeset, [], ctx, run=None)
+
+    def _checked_request(self, name: str, tx: Any, data: dict[str, Any]) -> dict[str, Any]:
+        """A request a handler or job queued, resolved (through an interface) and checked; StoreError says why not."""
+        via = "via" in data
+        if via:
+            data = self._interface_request(name, data)
+        elif "task" not in data:
+            raise StoreError("a request names a task kind")
+        task = data["task"]
+        if "/" in task and not task.startswith(name + "/") and not via:
+            raise StoreError("requesting another plugin requires an interface")
+        check_about(tx, self.task_kind(task), data.get("about"), self.store)
+        if data.get("part") is not None:
+            from engine.texts import check_part
+
+            try:
+                data["part"] = check_part(self.task_kind(task), data["part"])
+            except ValueError as err:
+                raise StoreError(str(err)) from None
+        return data
 
     def _write_commands(self, name: str, commands: list, event: str = "", payload: dict | None = None) -> None:
         context = WriteContext(actor="plugin", trust="untrusted", op=f"{name}/event")
@@ -1304,24 +1417,16 @@ class PluginHost:
                 }
                 if kind not in allowed_fields or not set(data) <= allowed_fields[kind]:
                     raise PluginMisuse("event handlers may only queue requests or file questions")
-                via = kind == "request" and "via" in data
                 needs_go = bool(data.pop("needs_go", False)) if kind == "request" else False
-                if via:
-                    data = self._interface_request(name, data)
-                elif kind == "request" and "task" not in data:
-                    raise StoreError("a request names a task kind")
                 if kind == "request":
-                    task = data["task"]
-                    if "/" in task and not task.startswith(name + "/") and not via:
-                        raise StoreError("requesting another plugin requires an interface")
-                    check_about(tx, self.task_kind(task), data.get("about"), self.store)
-                    if data.get("part") is not None:
-                        from engine.texts import check_part
-
-                        try:
-                            data["part"] = check_part(self.task_kind(task), data["part"])
-                        except ValueError as err:
-                            raise StoreError(str(err)) from None
+                    try:
+                        data = self._checked_request(name, tx, data)
+                    except PluginMisuse:
+                        raise
+                    except StoreError as err:
+                        # One refused request is skipped and noted; the handler's other work still goes ahead.
+                        self._note(name, f"a request it queued was skipped: {err}")
+                        continue
                     data = {**data, "origin": "schedule", "created_at": datetime.now(UTC).isoformat()}
                     if self._follows:
                         data["follows"] = self._follows

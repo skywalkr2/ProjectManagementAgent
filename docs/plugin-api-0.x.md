@@ -10,6 +10,40 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.29 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Lints:** a lint taking a fourth argument gets the run's `origin`. Plugin lints check the assistant's proposals
+  only, never the person's own changes. A lint the workspace switched off isn't called. `checks.yaml` `projects:
+  {<project id>: {<lint>: <severity>}}` sets severities for one project's work (the project of the op, or of the
+  record the run is about).
+- **An action's clock:** `context.now` (aware, the workspace's time zone) and `context.today`.
+- **Requests about records a proposal creates:** in `Proposal.requests`, `"about": {"op": i}` (an op of the
+  proposal's own `ops`) or `{"item": "<id>"}` resolves to the record of the task kind's `on` kind that op or item
+  created, when the proposal applies. A dropped item's request is dropped; so is one whose op didn't apply.
+- **Interface items:** `about(view, settings, item, task)` may take the interface's task name being requested.
+  `view.interface_about(item, task)` returns the (kind, id) a request would be about, or None, so a handler can check
+  first. A request a handler or job queues that is refused is skipped and noted on the plugin; the rest of its work
+  goes ahead.
+- **Staged ops say where they came from:** ops staged with `apply_op` have origin actor "plugin" and via "handler" or
+  "job".
+- **Items per project:** when reading every project's items fails, the provider is read project by project, and only
+  the failing projects' items are left out.
+- **Notes and confidential work:** a hand-in may carry a `sensitivity` (the person says how sensitive it is), which
+  only raises the run's level. A plugin op offered to notes is offered only when the note's level covers every record
+  type it writes. `registrar.op(..., notes=True, candidates=fn)`: `fn(view, settings) -> [(id, name)]` lists records
+  the op may name (at most 50), shown to that run.
+- **Help for asks:** `provides.help: ["help/guide.md", ...]` ships help files (Markdown, one section per `##`
+  heading); asks read and cite them like the user guide.
+- **Setup steps suggest settings:** `registrar.setup_step(..., settings={"ai.budgets.confirm_unpriced": True})` shows
+  the suggestion with Apply, saved like any settings change (checked, with Undo). A step can't suggest accounts,
+  tiers, secrets, which plugins are on, or the server's settings.
+- **Agent accounts:** `agent.home: fresh` gives each run an empty home folder with only `agent.home_files` copied in;
+  the lockdown test then checks that nothing a run writes there reaches the next run.
+- **Stated in the guide:** registration may read settings and is fixed until restart; a check in `applies_if` needn't
+  also be an entry check.
+
 ## What 0.3.28 adds
 
 Manifests stay `'>=0.3,<0.4'`.

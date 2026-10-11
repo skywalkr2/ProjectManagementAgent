@@ -1526,6 +1526,20 @@
         "title": "FileView",
         "type": "object"
       },
+      "FingerprintIn": {
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "FingerprintIn",
+        "type": "object"
+      },
       "FolderCheckView": {
         "properties": {
           "free_mb": {
@@ -1848,6 +1862,23 @@
       },
       "HandIn": {
         "properties": {
+          "data_level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "open",
+                  "internal",
+                  "restricted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How sensitive it is, when the person says it is more than the usual.",
+            "title": "Data Level"
+          },
           "note": {
             "default": "",
             "title": "Note",
@@ -3809,6 +3840,12 @@
               }
             ],
             "title": "Plugin"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "description": "Core settings a plugin step suggests, applied with the step's Apply.",
+            "title": "Settings",
+            "type": "object"
           },
           "skipped": {
             "title": "Skipped",
@@ -7974,6 +8011,55 @@
           }
         },
         "summary": "Folders"
+      }
+    },
+    "/api/setup/{step}/apply-settings": {
+      "post": {
+        "operationId": "setup_apply_settings_api_setup__step__apply_settings_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "step",
+            "required": true,
+            "schema": {
+              "title": "Step",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FingerprintIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Setup Apply Settings"
       }
     },
     "/api/setup/{step}/reopen": {

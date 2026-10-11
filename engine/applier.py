@@ -100,6 +100,7 @@ class Context:
     hidden_words: list[str] = field(default_factory=list)
     confirmed_by_pm: bool = False
     actor: Literal["assistant", "pm"] = "assistant"  # "pm" for a person action, whose exact proposal the person saw
+    via: str | None = None  # "handler" or "job" for ops a plugin staged; otherwise worked out from the inputs
 
 
 # ---- checks ----------------------------------------------------------------------------------------------------------
@@ -112,6 +113,14 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     view = ctx.store.read()
     lints = ctx.cfg.checks.lints
     open_actions = [a for a in view.list("action") if a.data["status"] != "done"]
+    origin = origin_of(ctx)
+    about = origin.get("about") or {}
+    about_record = view.get(about["kind"], about["id"]) if about.get("kind") and about.get("id") else None
+    about_project = (
+        about_record.id
+        if about_record is not None and about_record.kind == "project"
+        else (about_record.data.get("project") if about_record is not None else None)
+    )
 
     def refuse(i: int, check_name: str, message: str) -> None:
         problems.append(Problem(check_name, "refuse", i, message))
@@ -258,11 +267,17 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 if _similar(op.text, existing.data["text"]) >= 0.8:
                     lint(i, "near-duplicate-action", f"looks like open action {existing.id}: {existing.data['text']}")
                     break
-        # plugins' lints: soft checks, with the severity the workspace sets (never a refusal by default)
-        for name, default, found in ctx.store.plugins.lint_findings(op, view):
-            severity = lints.get(name, default)
-            if severity != "off":
-                problems.append(Problem(name, severity, i, found.message, found.passage, found.guidance))
+        # plugins' lints: soft checks on the assistant's proposals (never the person's own changes), with the
+        # severity the workspace sets, or sets for this project's work (never a refusal by default)
+        if ctx.actor != "pm":
+            own = _projects_of(op) or ([about_project] if about_project else [])
+            per_project = ctx.cfg.checks.projects.get(own[0], {}) if own else {}
+
+            def severity(name: str, default: str, per_project: dict = per_project) -> str:
+                return per_project.get(name) or lints.get(name, default)
+
+            for name, level, found in ctx.store.plugins.lint_findings(op, view, severity, origin):
+                problems.append(Problem(name, level, i, found.message, found.passage, found.guidance))
         # never shown
         text = " ".join(_texts(op)).lower()
         for word in ctx.hidden_words:
@@ -641,8 +656,9 @@ def origin_of(ctx: Context) -> dict[str, Any]:
         return {"actor": "pm", "trust": "trusted", "via": "action", **run}
     if ctx.confirmed_by_pm:
         return {"actor": "pm", "trust": "trusted", "via": "screen", **run}
-    via = "input" if ctx.inputs.source else "task" if ctx.inputs.trust == "untrusted" else "note"
-    return {"actor": "assistant", "trust": ctx.inputs.trust, "via": via, **run}
+    via = ctx.via or ("input" if ctx.inputs.source else "task" if ctx.inputs.trust == "untrusted" else "note")
+    actor = "plugin" if ctx.via in ("handler", "job") else "assistant"
+    return {"actor": actor, "trust": ctx.inputs.trust, "via": via, **run}
 
 
 class _DryRun(Exception):

@@ -266,6 +266,16 @@ class AgentSettings(ConfigModel):
     sign_in_hint: str = Field(
         "", description="What to do when the agent isn't signed in, such as its login command; shown with the question."
     )
+    home: Literal["shared", "fresh"] = Field(
+        "shared",
+        description="shared: the agent uses this user's home folder, where it may keep memory between runs. fresh: "
+        "each run gets an empty home folder with only home_files copied in, so nothing one run keeps reaches the next.",
+    )
+    home_files: list[str] = Field(
+        default_factory=list,
+        description="With a fresh home: the files or folders, relative to this user's home, the agent needs to stay "
+        "signed in (its credentials), copied into each run's home.",
+    )
 
 
 class ProviderSettings(ConfigModel):
@@ -516,6 +526,11 @@ def _default_lints() -> dict[str, Severity]:
 
 class ChecksFile(FileModel):
     lints: dict[str, Severity] = Field(default_factory=_default_lints, description="How strict each soft check is.")
+    projects: dict[str, dict[str, Severity]] = Field(
+        default_factory=dict,
+        description="Severities for one project's work, by project id then check, over the ones above (a rule "
+        "switched off for one piece of work only).",
+    )
 
 
 class MessageSettings(ConfigModel):
@@ -603,7 +618,8 @@ class StageDefinition(ConfigModel):
     applies_if: list[str] = Field(
         default_factory=list,
         description="Check or standing rule ids that must all pass for this stage to apply to a record; moves pass "
-        "over a stage that doesn't apply. Empty: it applies to every record.",
+        "over a stage that doesn't apply, so a check here needn't also be an entry check. Empty: it applies to every "
+        "record.",
     )
 
 

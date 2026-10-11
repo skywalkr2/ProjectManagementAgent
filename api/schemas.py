@@ -16,6 +16,9 @@ from pydantic import BaseModel, ConfigDict, Field
 class HandIn(BaseModel):
     note: str = ""
     pasted: str = ""
+    data_level: Literal["open", "internal", "restricted"] | None = Field(
+        None, description="How sensitive it is, when the person says it is more than the usual."
+    )
 
 
 class SendBack(BaseModel):
@@ -893,6 +896,9 @@ class SetupStepView(BaseModel):
     explanation: str = ""
     action: str | None = Field(None, description="A plugin step's person action, if it has one.")
     plugin: str | None = None
+    settings: dict[str, Any] = Field(
+        default_factory=dict, description="Core settings a plugin step suggests, applied with the step's Apply."
+    )
 
 
 class SetupView(BaseModel):
@@ -1067,3 +1073,9 @@ class AutoClosedView(BaseModel):
     rule: str
     reason: str
     created_at: str
+
+
+class FingerprintIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fingerprint: str

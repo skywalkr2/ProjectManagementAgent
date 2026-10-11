@@ -161,7 +161,7 @@ def preview(
         "accepted_types": list(files.accepted_types),
     }
     context = store.plugins._with_files(
-        ActionContext(view, plugin, registrar.config, store.plugins.tool_box(plugin), limits)
+        ActionContext(view, plugin, registrar.config, store.plugins.tool_box(plugin), limits, now=_workspace_now(cfg))
     )
     try:
         result = action.run(record, context, dict(choices))
@@ -227,6 +227,17 @@ def _person_context(store: Store, cfg: Config, plugin: str, request_id: str) -> 
         confirmed_by_pm=True,
         actor="pm",
     )
+
+
+def _workspace_now(cfg: Config) -> datetime:
+    """Now, in the workspace's time zone (UTC when it names none this computer knows)."""
+    from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+    try:
+        zone = ZoneInfo(cfg.workspace.user.timezone)
+    except (ZoneInfoNotFoundError, ValueError):
+        zone = UTC
+    return datetime.now(zone)
 
 
 def _tick(pending: Pending, kept: dict[str, bool]) -> None:
@@ -387,9 +398,43 @@ def _checked(
         items=items,
         groups=groups,
         all_or_nothing=bool(result.all_or_nothing),
-        requests=_requests_checked(store, plugin, result.requests),
+        requests=_requests_checked(store, plugin, result.requests, ops, {i["id"] for i in items}),
         expires_at=datetime.fromtimestamp(time.time() + keep * 60, UTC).isoformat(),
     )
+
+
+def _resolved(store: Store, pending: Pending, cs_id: str) -> list[dict[str, Any]]:
+    """The proposal's requests with any about a record it created pointing at that record; one whose op wasn't
+    applied, or whose item was dropped, is left out."""
+    outcomes = store.read().get("changeset", cs_id).data["ops"]
+    first_item_op, at = {}, len(pending.files) + len(pending.ops)
+    for item in pending.items:
+        if item["kept"]:
+            first_item_op[item["id"]] = (at, at + len(item["ops"]))
+            at += len(item["ops"])
+    found = []
+    for request in pending.requests:
+        about = request["about"]
+        if not about or ("op" not in about and "item" not in about):
+            found.append(request)
+            continue
+        if "op" in about:
+            span = (len(pending.files) + about["op"], len(pending.files) + about["op"] + 1)
+        elif about["item"] in first_item_op:
+            span = first_item_op[about["item"]]
+        else:
+            continue
+        on = store.plugins.task_kind(request["task"]).on
+        made = [
+            record
+            for outcome in outcomes[span[0] : span[1]]
+            if outcome["status"] == "applied"
+            for record in outcome.get("records", [])
+            if record["kind"] == on
+        ]
+        if made:
+            found.append({**request, "about": {"kind": made[0]["kind"], "id": made[0]["id"]}})
+    return found
 
 
 def _queue(store: Store, cfg: Config, requests: list[dict[str, Any]]) -> None:
@@ -415,7 +460,9 @@ def _queue(store: Store, cfg: Config, requests: list[dict[str, Any]]) -> None:
             )
 
 
-def _requests_checked(store: Store, plugin: str, requests: list[Any]) -> list[dict[str, Any]]:
+def _requests_checked(
+    store: Store, plugin: str, requests: list[Any], ops: list[Any] = (), items: set[str] = frozenset()
+) -> list[dict[str, Any]]:
     """A proposal's requests, each naming one of the plugin's own task kinds and a record it may work on."""
     from engine.plugin_host import check_about
     from engine.texts import check_part
@@ -431,7 +478,18 @@ def _requests_checked(store: Store, plugin: str, requests: list[Any]) -> list[di
         about = r.get("about")
         if isinstance(about, (list, tuple)):
             about = {"kind": about[0], "id": about[1]}
-        check_about(view, store.plugins.task_kind(task), about, store)
+        kind = store.plugins.task_kind(task)
+        if isinstance(about, dict) and ("op" in about or "item" in about):
+            # A record this proposal creates: resolved when it applies, and dropped with its item.
+            if kind.on is None:
+                raise StoreError(f"{task} doesn't work on a record")
+            if "op" in about and not (isinstance(about["op"], int) and 0 <= about["op"] < len(ops)):
+                raise StoreError(f"a request names op {about.get('op')}, which the proposal doesn't have")
+            if "item" in about and about["item"] not in items:
+                raise StoreError(f"a request names item {about.get('item')}, which the proposal doesn't have")
+            about = {k: about[k] for k in ("op", "item") if k in about}
+        else:
+            check_about(view, kind, about, store)
         try:
             part = check_part(store.plugins.task_kind(task), r.get("part"))
         except ValueError as err:
@@ -553,7 +611,7 @@ def apply(store: Store, cfg: Config, token: str, kept: dict[str, bool] | None = 
         all_or_nothing=pending.all_or_nothing,
     )
     if pending.requests and store.read().get("changeset", cs_id).data["status"] != "rejected":
-        _queue(store, cfg, pending.requests)
+        _queue(store, cfg, _resolved(store, pending, cs_id))
     with store.transaction() as tx:
         current = tx.get("request", request.id)
         tx.update(

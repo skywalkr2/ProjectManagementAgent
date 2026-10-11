@@ -45,8 +45,16 @@ def guide_sections(path: Path = GUIDE) -> list[Section]:
     return found
 
 
+def _stem(word: str) -> str:
+    """A word without a common ending, so "closing", "closed" and "closes" match "close"."""
+    for ending in ("ing", "ed", "es", "s", "e"):
+        if word.endswith(ending) and len(word) - len(ending) >= 3:
+            return word[: -len(ending)]
+    return word
+
+
 def _words(text: str) -> set[str]:
-    return {w for w in _WORD.findall(text.lower()) if w not in _COMMON and len(w) > 2}
+    return {_stem(w) for w in _WORD.findall(text.lower()) if w not in _COMMON and len(w) > 2}
 
 
 def chosen_sections(question: str, limit: int = 4, sections: list[Section] | None = None) -> list[Section]:

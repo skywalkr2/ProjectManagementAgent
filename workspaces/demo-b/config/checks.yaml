@@ -1,2 +1,3 @@
 version: 1
 lints: {blocked-wording: return, run-on-list: warn, near-duplicate-action: warn, evidence-fit: return}
+projects: {}   # per project, e.g. {PRJ-2: {plugin/lint-name: off}}: a check switched off for one piece of work

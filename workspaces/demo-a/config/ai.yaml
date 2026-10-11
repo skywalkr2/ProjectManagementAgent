@@ -35,6 +35,8 @@ providers:
         quota: ["usage limit"]
         exit_codes: {3: auth}
       sign_in_hint: Run example-agent login in a terminal
+      home: fresh                          # each run starts with an empty home folder, so no memory carries over
+      home_files: [.config/example-agent/credentials.json]   # all it needs to stay signed in
 tiers:
   routine: {use: stub/default, fallback: [], escalate_to: deep}
   deep: {use: stub/default}

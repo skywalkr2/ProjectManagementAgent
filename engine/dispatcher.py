@@ -119,9 +119,10 @@ def process(
     scheduled = req.data["origin"] != "pm"
     trust = "untrusted" if req.data.get("source") or scheduled or packet.untrusted_material else "trusted"
     inputs = Inputs(request_id, req.data.get("source"), packet.raw_input, packet.note, trust, cites=packet.cites)
-    ctx = Context(
-        store, cfg, People(store, cfg), store.plugins.task_kind(req.data["task"]).ops, inputs, hidden_words(cfg)
-    )
+    allowed = store.plugins.task_kind(req.data["task"]).ops
+    if req.data["task"] == "notes":
+        allowed = ops_for_level(store, allowed, _data_level(store, req.data))
+    ctx = Context(store, cfg, People(store, cfg), allowed, inputs, hidden_words(cfg))
 
     previous_ops = _previous_ops(store, req.data.get("previous"))
     level = _data_level(store, req.data)
@@ -235,7 +236,21 @@ def _data_level(store: Store, request: dict) -> str:
     that record, at its record type's level."""
     about = target_of(store, request)
     model = store.plugins.records.get(about[0]) if about else None
-    return model.data_level if model is not None else "internal"
+    level = model.data_level if model is not None else "internal"
+    said = request.get("sensitivity")
+    return said if said in LEVELS and LEVELS.index(said) > LEVELS.index(level) else level
+
+
+def ops_for_level(store: Store, ops: tuple[str, ...], level: str) -> tuple[str, ...]:
+    """The ops a run at this data level may use: an op that writes a record type more sensitive than the run's
+    material isn't offered, so a note handed in as internal never feeds restricted records."""
+    allowed = []
+    for name in ops:
+        writes = getattr(store.plugins.ops.get(name), "writes", {}) or {}
+        levels = [getattr(store.plugins.records.get(kind), "data_level", "internal") for kind in writes]
+        if all(lv not in LEVELS or LEVELS.index(lv) <= LEVELS.index(level) for lv in levels):
+            allowed.append(name)
+    return tuple(allowed)
 
 
 def content_levels(store: Store, request: dict) -> frozenset[str]:

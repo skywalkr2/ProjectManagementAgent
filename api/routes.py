@@ -621,7 +621,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 ActionRequestView(
                     task=r["task"],
                     label=store.plugins.task_kind(r["task"]).label or r["task"],
-                    about=RecordReference(**r["about"]) if r["about"] else None,
+                    about=RecordReference(**r["about"]) if r["about"] and "kind" in r["about"] else None,
                     note=r["note"],
                 )
                 for r in pending.requests
@@ -880,7 +880,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.post("/handin")
     def handin(body: HandIn) -> Handed:
-        handed = guard(lambda: hand_in(ws, store, note=body.note, pasted=body.pasted))
+        handed = guard(lambda: hand_in(ws, store, note=body.note, pasted=body.pasted, data_level=body.data_level))
         changed()
         worker.poke()
         return Handed(request=handed.request, source=handed.source)

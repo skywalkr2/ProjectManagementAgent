@@ -81,10 +81,15 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     note = req.data.get("note") or ""
 
     instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
+    from engine.dispatcher import _data_level, ops_for_level
+
+    offered = ops_for_level(store, kind.ops, _data_level(store, req.data)) if kind.name == "notes" else kind.ops
+    candidates = store.plugins.note_candidates(offered) if kind.name == "notes" else ""
     stable = "\n\n".join(
         part
         for part in (
-            "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
+            "# Op reference\n" + reference_for(list(offered), store.plugins.ops),
+            "# Records you may name\n" + candidates if candidates else "",
             "# Practice\n" + _guidance(kind),
             "# Open actions\n" + _open_actions(store, People(store, cfg)),
             "# Open questions\n" + _open_questions(store, People(store, cfg)),
@@ -137,7 +142,10 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
     )
     install = "\n".join(capability_lines(store))
     configured = "\n".join(settings_lines(cfg))
-    sections = "\n\n".join(f"## {s.title}\n{s.text}" for s in chosen_sections(question))
+    from engine.help import guide_sections
+
+    every = [*guide_sections(), *store.plugins.help_sections()]
+    sections = "\n\n".join(f"## {s.title}\n{s.text}" for s in chosen_sections(question, sections=every))
     instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
     stable = "\n\n".join(
         (

@@ -29,6 +29,7 @@ providers:
       key_env: EXAMPLE_AGENT_KEY
       errors: {auth: ["invalid key"], exit_codes: {4: rate_limited}}
       sign_in_hint: Check the key in the account's settings
+      home: shared                         # signed in with a key, so the home folder holds nothing it needs
     auth: env:EXAMPLE_AGENT_KEY
 tiers:
   routine: {use: stub/default, fallback: [], escalate_to: deep}

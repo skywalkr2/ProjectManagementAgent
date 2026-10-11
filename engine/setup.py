@@ -34,6 +34,7 @@ class Step:
     explanation: str = ""
     action: str | None = None  # a plugin step's person action, if it has one
     plugin: str | None = None
+    settings: dict[str, Any] = field(default_factory=dict)  # core settings a plugin step suggests
 
 
 @dataclass
@@ -95,6 +96,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
                 explanation=step.explanation,
                 action=step.action,
                 plugin=plugin,
+                settings=dict(step.settings),
             )
         )
     return found

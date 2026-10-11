@@ -130,6 +130,20 @@ class Provides(Strict):
     setup_steps: list[str] = Field(default_factory=list, description="Steps added to the first-run setup.")
     connectors: list[str] = Field(default_factory=list, description="Places the assistant can keep reading.")
     triage_matchers: list[str] = Field(default_factory=list, description="Rule kinds for triaging watched changes.")
+    help: list[str] = Field(
+        default_factory=list,
+        description="Help files the plugin ships (Markdown, one section per ## heading, paths relative to its "
+        "manifest) that asking the assistant reads and cites, like the user guide.",
+    )
+
+    @field_validator("help")
+    @classmethod
+    def _help_paths(cls, value: list[str]) -> list[str]:
+        for path in value:
+            if path.startswith("/") or ".." in Path(path).parts or not path.endswith(".md"):
+                raise ValueError(f"{path!r}: a help file is a .md path inside the plugin")
+        return value
+
     playbook: str | None = Field(None, description="The plugin's own playbook. Not yet available.")
     data: str | None = Field(
         None,

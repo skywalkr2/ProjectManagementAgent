@@ -602,6 +602,9 @@ class Request(Record):
     follows: str | None = Field(
         None, description="The change (a changeset id) whose event a plugin answered with this work, if any."
     )
+    sensitivity: Literal["open", "internal", "restricted"] | None = Field(
+        None, description="How sensitive the person said what they handed in is; it only ever raises the level."
+    )
     part: dict[str, Any] | None = Field(
         None,
         description="For a draft of part of a long text: {first, last} paragraphs (by number) an anchored draft "

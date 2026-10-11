@@ -77,9 +77,10 @@ class CliAgentAdapter:
     def _start(self, prompt: str, model: str, scratch: Path, outbox: Path) -> tuple[subprocess.CompletedProcess, float]:
         packet = scratch / "packet.md"
         packet.write_text(prompt, encoding="utf-8")
+        home = self._fresh_home(scratch) if self.agent.home == "fresh" else None
         values = {"model": model, "packet": str(packet), "outbox": str(outbox), "scratch": str(scratch)}
         args = [_fill(part, values) for part in self.agent.command]
-        if shutil.which(args[0], path=self._env().get("PATH")) is None and not Path(args[0]).is_file():
+        if shutil.which(args[0], path=self._env(home).get("PATH")) is None and not Path(args[0]).is_file():
             raise AiError("provider_down", f"the agent program {args[0]} isn't installed on this computer")
         started = time.monotonic()
         try:
@@ -87,7 +88,7 @@ class CliAgentAdapter:
                 args,
                 input=prompt if self.agent.packet_via == "stdin" else "",
                 cwd=scratch,
-                env=self._env(),
+                env=self._env(home),
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
@@ -100,11 +101,30 @@ class CliAgentAdapter:
             raise AiError("provider_down", f"the agent program couldn't start: {err}") from None
         return done, time.monotonic() - started
 
-    def _env(self) -> dict[str, str]:
+    def _env(self, home: Path | None = None) -> dict[str, str]:
         env = {name: os.environ[name] for name in (*BASE_ENV, *self.agent.pass_env) if name in os.environ}
         if self.agent.key_env and self.secret:
             env[self.agent.key_env] = self.secret
+        if home is not None:
+            env["HOME"] = env["USERPROFILE"] = str(home)
         return env
+
+    def _fresh_home(self, scratch: Path) -> Path:
+        """An empty home folder for one run, with only the sign-in files the account lists copied in."""
+        home = scratch / "home"
+        home.mkdir(exist_ok=True)
+        real = Path(os.environ.get("HOME") or Path.home())
+        for relative in self.agent.home_files:
+            source = (real / relative).resolve()
+            if not source.is_relative_to(real.resolve()) or not source.exists():
+                continue
+            target = home / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if source.is_dir():
+                shutil.copytree(source, target, dirs_exist_ok=True)
+            else:
+                shutil.copy2(source, target)
+        return home
 
     def _result(self, stdout: str, answer: str | None, model: str, seconds: float) -> AiResult:
         fields = self.agent.output_fields
@@ -189,7 +209,27 @@ class CliAgentAdapter:
             )
             ran = shell.exists()
             checks.append(LockdownCheck("shell", not ran, "started a shell" if ran else "starting a shell was refused"))
+            if self.agent.home == "fresh":
+                checks.append(self._memory_check(model))
             return checks
+
+    def _memory_check(self, model: str) -> LockdownCheck:
+        """With a fresh home: a file the agent writes in its home must not be in this user's home afterwards."""
+        real = Path(os.environ.get("HOME") or Path.home())
+        probe = ".cockpit-memory-probe"
+        existed = (real / probe).exists()
+        with _scratch() as scratch:
+            outbox = scratch / "outbox"
+            outbox.mkdir()
+            try:
+                self._start(render("agent-memory", {"name": probe}), model, scratch, outbox)
+            except AiError as err:
+                return LockdownCheck("memory", False, f"the agent couldn't run: {err}")
+        leaked = not existed and (real / probe).exists()
+        if leaked:
+            (real / probe).unlink(missing_ok=True)
+        detail = "it wrote to this user's home folder" if leaked else "nothing it keeps reaches the next run"
+        return LockdownCheck("memory", not leaked, detail)
 
 
 class _scratch:

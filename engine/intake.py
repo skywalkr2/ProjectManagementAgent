@@ -26,7 +26,15 @@ class HandedIn:
     source: str | None
 
 
-def hand_in(ws: Workspace, store: Store, *, note: str = "", pasted: str = "", now: datetime | None = None) -> HandedIn:
+def hand_in(
+    ws: Workspace,
+    store: Store,
+    *,
+    note: str = "",
+    pasted: str = "",
+    now: datetime | None = None,
+    data_level: str | None = None,
+) -> HandedIn:
     note, pasted = note.strip(), pasted.strip()
     if not note and not pasted:
         raise IntakeError("Nothing to hand in: add a note or paste something.")
@@ -61,6 +69,7 @@ def hand_in(ws: Workspace, store: Store, *, note: str = "", pasted: str = "", no
                 "state": "queued",
                 "waiting": "With the assistant, starting now",
                 "created_at": now.isoformat(),
+                **({"sensitivity": data_level} if data_level else {}),
             },
             _PM,
         )

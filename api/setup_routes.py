@@ -12,6 +12,7 @@ from api.schemas import (
     AiTestResult,
     BackupFolderAdd,
     EndpointView,
+    FingerprintIn,
     FolderCheckView,
     FolderListView,
     Ok,
@@ -33,6 +34,8 @@ from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
+#: Settings an add-on's setup step may never suggest: where keys come from and which accounts get the work.
+NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "workspace.plugins.enabled", "server.")
 #: Keys the guided steps write that no form shows: an AI account, the tiers it does, the backup folders.
 GUIDED = ("ai.providers.", "ai.tiers.", "storage.backups.targets")
 
@@ -97,6 +100,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             finished=all(s.done or s.skipped for s in steps),
             local=local,
         )
+
+    @r.post("/setup/{step:path}/apply-settings")
+    def setup_apply_settings(step: str, body: FingerprintIn) -> SettingsSaved:
+        found = next((s for s in setup.steps(ws, current(), store) if s.id == step), None)
+        if found is None or not found.settings:
+            raise HTTPException(status_code=404, detail="That step suggests no settings.")
+        barred = [k for k in found.settings if k.startswith(NEVER_SUGGESTED)]
+        if barred:
+            raise HTTPException(status_code=400, detail=f"An add-on can't suggest {', '.join(barred)}.")
+        return saved(save(dict(found.settings), [], body.fingerprint, allow=("",)))
 
     @r.post("/setup/{step:path}/skip")
     def setup_skip(step: str) -> Ok:

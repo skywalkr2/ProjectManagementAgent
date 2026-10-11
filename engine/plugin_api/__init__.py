@@ -20,6 +20,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
 
@@ -33,7 +34,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.28"
+PLUGIN_API_VERSION = "0.3.29"
 
 
 class Settings(BaseModel):
@@ -100,6 +101,7 @@ class ReadView:
     read_file: Callable[[str], bytes] | None = None
     #: Set by the host: the items of an interface this plugin uses.
     read_interface: Callable[..., list[Any]] | None = None
+    find_interface_about: Callable[..., Any] | None = None
     #: Set by the host: the id of the person this workspace belongs to (the PM), when set up.
     user: str | None = None
 
@@ -117,6 +119,14 @@ class ReadView:
         if self.read_interface is None:
             return []
         return self.read_interface(interface, project)
+
+    def interface_about(self, item: Any, task: str) -> tuple[str, str] | None:
+        """The record a request for `task` (the interface's task name) about this InterfaceItem would work on, as
+        (kind, id), or None when its provider has none or the work isn't offered on it; check before
+        `request_from(..., item=item)` to avoid a refusal."""
+        if self.find_interface_about is None:
+            return None
+        return self.find_interface_about(item, task)
 
     def file_bytes(self, file_id: str) -> bytes:
         """The bytes of a file of the core's kinds or this plugin's own kinds; content is material, never
@@ -458,13 +468,24 @@ class ActionContext(ReadView):
     """What a person action sees: core and own records, file bytes, the plugin's settings and its declared programs.
     It changes nothing itself; it returns a Proposal the person reviews. `limits` holds the workspace's limits a
     proposal works within: max_items, max_previews, preview_mb, keep_minutes, max_file_mb, max_total_mb, room_mb
-    (what is left of max_total_mb for new files) and accepted_types (media types files may have)."""
+    (what is left of max_total_mb for new files) and accepted_types (media types files may have). `now` (aware) and
+    `today` are the workspace's clock in its time zone, so an action that stamps a date stays deterministic in tests."""
 
-    def __init__(self, view: Any, plugin: str, config: Settings, tools: Any, limits: dict[str, Any] | None = None):
+    def __init__(
+        self,
+        view: Any,
+        plugin: str,
+        config: Settings,
+        tools: Any,
+        limits: dict[str, Any] | None = None,
+        now: datetime | None = None,
+    ):
         super().__init__(view, plugin)
         self.config = config.model_copy(deep=True)
         self.tools = tools
         self.limits = dict(limits or {})
+        self.now = now or datetime.now(UTC)
+        self.today = self.now.date()
 
 
 @dataclass
@@ -652,6 +673,7 @@ class SetupStepRegistration:
     explanation: str
     done: Callable
     action: str | None
+    settings: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -797,6 +819,7 @@ class OpRegistration:
     apply: Callable
     writes: dict[str, tuple[str, ...]]
     notes: bool = False
+    candidates: Callable | None = None
 
 
 @dataclass(frozen=True)
@@ -851,13 +874,24 @@ class Registrar:
             raise ValueError("duplicate record kind or invalid id prefix")
         self.records[model.record_kind] = model
 
-    def op(self, model: type[OpModel], tier: Tier, apply: Callable, *, notes: bool = False) -> None:
+    def op(
+        self,
+        model: type[OpModel],
+        tier: Tier,
+        apply: Callable,
+        *,
+        notes: bool = False,
+        candidates: Callable | None = None,
+    ) -> None:
         """Register an op: an `OpModel` subclass with a single literal `op` id and a `writes` class variable mapping
         own record kinds to the fields it may change (`("*",)` to create or delete). `tier` is "data" or "system"
         (system ops from the assistant wait for the person). `apply(op, writer, settings)` makes the change through
         the `OpWriter`; raising StoreError refuses this op only. With `notes=True` the op is also offered to the
         core's reading of notes, so the assistant can use it on what the person hands in: give it an `EvidenceIn`
-        field, which the core checks against the input, for anything it claims."""
+        field, which the core checks against the input, for anything it claims. It is offered only when the note's
+        data level covers every record type the op writes, so a note handed in as internal never writes restricted
+        records. `candidates(view, settings) -> list[(id, name)]` lists records such an op may name, shown to the run
+        (at most 50, at the level of the record types the op writes), so it can refer to an existing one by id."""
         if not issubclass(model, OpModel) or "op" not in model.model_fields:
             raise ValueError("op requires an OpModel with a literal op identifier")
         annotation = model.model_fields["op"].annotation
@@ -874,16 +908,20 @@ class Registrar:
         for kind in writes:
             if "/" in kind:
                 self._name(kind)
-        self.ops[name] = OpRegistration(model, tier, apply, writes, bool(notes))
+        if candidates is not None and (not notes or not callable(candidates)):
+            raise ValueError("candidates is a function, for an op offered to notes")
+        self.ops[name] = OpRegistration(model, tier, apply, writes, bool(notes), candidates)
 
     def op_validator(self, op_name: str, fn: Callable) -> None:
         """Check a core or own op before it applies: `fn(op, view, origin)` (or `fn(op, view)`; `origin` may also be
         keyword-only) returns a list of refusal messages, empty to let it through. The view is the changeset so far.
-        `origin` is {"actor": "pm" | "assistant" | "rule", "trust": "trusted" | "untrusted", "via": "screen" | "note" |
-        "input" | "task" | "rule" | "action", "task": the run's task kind, "about": the record it works on as
-        {"kind", "id"} or None}. Before anything applies, the core dry-runs the whole changeset in order
-        (text writes included) and rolls it back, so a validator sees what earlier ops in it created; with the check
-        at the write boundary, a validator usually runs about three times per op, so it must be pure and quick."""
+        `origin` is {"actor": "pm" | "assistant" | "rule" | "plugin", "trust": "trusted" | "untrusted", "via":
+        "screen" | "note" | "input" | "task" | "rule" | "action" | "handler" | "job", "task": the run's task kind,
+        "about": the record it works on as {"kind", "id"} or None}; ops a plugin's event handler or job staged with
+        `apply_op` have actor "plugin" and via "handler" or "job". Before anything applies, the core dry-runs the
+        whole changeset in order (text writes included) and rolls it back, so a validator sees what earlier ops in it
+        created; with the check at the write boundary, a validator usually runs about three times per op, so it must
+        be pure and quick."""
         if not callable(fn):
             raise ValueError("validator must be callable")
         self.validators.setdefault(op_name, []).append(fn)
@@ -1163,9 +1201,10 @@ class Registrar:
         and deterministic. `task_kinds` maps the interface's task kind names to this plugin's own task kinds, so
         others can request them. `about(view, settings, item) -> record | (kind, id) | None` says which of this
         plugin's records an item (as `items` returned it) stands for, so a user can request work on the item itself;
-        the record must be of the kind the requested task kind is `on`. Raise the interface's events from an op with
-        `writer.emit`, or from an event handler with `context.emit`. With no plugin defining the interface running,
-        nothing reads it."""
+        the record must be of the kind the requested task kind is `on`. A function taking a fourth argument also gets
+        the interface's task name being requested, so different task kinds can work on different records. Raise the
+        interface's events from an op with `writer.emit`, or from an event handler with `context.emit`. With no
+        plugin defining the interface running, nothing reads it."""
         match = re.fullmatch(r"([a-z0-9-]+/[a-z0-9-]+)@([0-9]+)", interface)
         if match is None:
             raise ValueError('provide an interface as "<plugin>/<name>@<major>"')
@@ -1275,18 +1314,32 @@ class Registrar:
         self.triage_matchers[name] = match
 
     def setup_step(
-        self, name: str, *, label: str, done: Callable, explanation: str = "", action: str | None = None
+        self,
+        name: str,
+        *,
+        label: str,
+        done: Callable,
+        explanation: str = "",
+        action: str | None = None,
+        settings: dict[str, Any] | None = None,
     ) -> None:
         """A step of the first-run setup (listed in `provides.setup_steps`), shown after the core's steps: `label` says
         what to do in a few words, `explanation` why, and `done(view, settings) -> bool` whether it is done, called
         whenever setup is shown, so it must be quick and deterministic. `action` is one of this plugin's person
         actions on the workspace, offered as the step's button; without one, the step points to the plugin's
-        settings. The person can skip it and come back to it later."""
+        settings. `settings` suggests core settings the plugin needs ({"ai.budgets.confirm_unpriced": True}): the
+        step shows them with an Apply button that saves them like any settings change (checked, with Undo); the
+        plugin never changes them itself. The person can skip it and come back to it later."""
         self._name(name)
         label = " ".join(str(label).split())
         if name in self.setup_steps or not callable(done) or not label or len(label) > 80:
             raise ValueError("duplicate setup step, invalid done function, or a label that isn't one short line")
-        self.setup_steps[name] = SetupStepRegistration(name, label, " ".join(str(explanation).split()), done, action)
+        suggested = dict(settings or {})
+        if any(not isinstance(k, str) or "." not in k or "/" in k for k in suggested):
+            raise ValueError("a setup step suggests core settings by their dotted keys")
+        self.setup_steps[name] = SetupStepRegistration(
+            name, label, " ".join(str(explanation).split()), done, action, suggested
+        )
 
     def derived_file(self, name: str, *, path: str, depends_on: tuple[str, ...], render: Callable) -> None:
         """A read-only file generated from records into each project's folder in the synced folder (an overview, a
