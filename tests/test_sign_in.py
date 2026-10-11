@@ -30,6 +30,16 @@ SIGNING = FIXTURE.replace(
 )
 
 
+def landing(response):
+    """Where the callback's page takes the person back to, in the app."""
+    import html
+    import re
+
+    found = re.search(r'url=([^"]+)"', response.text)
+    assert response.status_code == 200 and found, response.text
+    return html.unescape(found.group(1))
+
+
 @pytest.fixture
 def signing(tmp_path, monkeypatch):
     ws, cfg, store = workspace(tmp_path, SIGNING)
@@ -76,13 +86,13 @@ def test_the_person_signs_in_and_the_connector_gets_a_token(signing):
     assert query["code_challenge_method"] == ["S256"] and query["scope"] == ["read offline"]
     assert query["access_type"] == ["offline"]
     back = c.get(f"{api}/sign-ins/callback", params={"state": query["state"][0], "code": "good"})
-    assert back.status_code == 303 and "sign_in=done" in back.headers["location"]
+    assert "sign_in=done" in landing(back)
     assert asked[-1]["code_verifier"] and asked[-1]["redirect_uri"] == query["redirect_uri"]
     kept = ws.root / ".cockpit" / "keys" / "p18" / "sign-in-service.json"
     assert json.loads(kept.read_text())["refresh_token"] == "r1" and oct(kept.stat().st_mode)[-3:] == "600"
     assert c.get(f"{api}/sign-ins").json()[0]["status"] == "signed_in"
     again = c.get(f"{api}/sign-ins/callback", params={"state": query["state"][0], "code": "good"})
-    assert "sign_in=expired" in again.headers["location"]  # a state is used once
+    assert "sign_in=expired" in landing(again)  # a state is used once
 
     context = store.plugins.connector_context("p18", ws.root)
     assert context.access_token("p18/service") == "first"
@@ -117,3 +127,22 @@ def test_a_sign_in_must_use_declared_https_hosts_and_secrets(tmp_path):
         check_addresses(s, [N["auth_host"]])
     with pytest.raises(ValueError):
         check_addresses(SignIn("p", "p/x", "X", f"{AUTH}/a", f"{AUTH}/t", ("read",), "client-id"), [N["other_host"]])
+
+
+def test_the_service_sends_the_person_back_without_the_apps_cookie(signing):
+    """The browser leaves the app's strict cookie off on the way back from the service's page: the callback works
+    without it, by its state alone, and its page takes the person back into the app."""
+    from api.app import create_app
+
+    ws, cfg, store, _ = signing
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False), follow_redirects=False)
+    c.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    query = parse_qs(urlsplit(c.post(f"{api}/sign-ins/p18/service/start").json()["url"]).query)
+    bare = TestClient(create_app(ws, cfg, "t", start_worker=False), follow_redirects=False)
+    back = bare.get(f"{api}/sign-ins/callback", params={"state": query["state"][0], "code": "good"})
+    assert landing(back).startswith(cfg.server.base_path.rstrip("/") + "/?sign_in=done")
+    assert c.get(f"{api}/sign-ins").json()[0]["status"] == "signed_in"
+    forged = bare.get(f"{api}/sign-ins/callback", params={"state": "made-up", "code": "good"})
+    assert "sign_in=expired" in landing(forged)
+    assert bare.get(f"{api}/sign-ins").status_code == 401  # everything else still needs the cookie

@@ -4,10 +4,11 @@ signing out."""
 
 from __future__ import annotations
 
+from html import escape
 from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse
 
 from api.schemas import Ok, SignInApp, SignInStarted, SignInStep, SignInView
 from engine import sign_in as flow
@@ -98,19 +99,32 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
             raise HTTPException(status_code=409, detail=str(err)) from None
         return SignInStarted(url=url)
 
+    def back(query: str) -> HTMLResponse:
+        """A page that takes the person back into the app. A navigation that starts on this site carries the
+        person's cookie, which a redirect from the service's page would not."""
+        target = escape(f"{prefix}/?{query}", quote=True)
+        page = (
+            '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            f'<meta http-equiv="refresh" content="0;url={target}"><title>Back to the app</title></head>'
+            f'<body><p><a href="{target}">Back to the app</a></p></body></html>'
+        )
+        return HTMLResponse(page, headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
+
     @r.get("/sign-ins/callback", include_in_schema=False)
-    def callback(state: str = "", code: str = "", error: str = "", error_description: str = "") -> RedirectResponse:
+    def callback(state: str = "", code: str = "", error: str = "", error_description: str = "") -> HTMLResponse:
         """The service sends the person back here; the screen then says how it went, with the service's own code
-        and words when it refused (shown as text)."""
+        and words when it refused (shown as text). Served without the person's cookie (see OPEN_PATHS): only a
+        state this app issued, unexpired and unused, does anything."""
         s = flow.pending_sign_in(state)
         if error:
-            flow.drop_pending(state)
+            if s is not None:
+                flow.drop_pending(state)
             words = urlencode(
                 {"sign_in": "refused", "error": error[:80], "detail": " ".join(error_description.split())[:300]}
             )
-            return RedirectResponse(f"{prefix}/?{words}", status_code=303)
+            return back(words)
         if s is None or not code:
-            return RedirectResponse(f"{prefix}/?sign_in=expired", status_code=303)
+            return back("sign_in=expired")
         from engine.net import WebClient
 
         web = WebClient(list(host.manifests[s.plugin].requires.network))
@@ -119,11 +133,11 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
             done, tokens = flow.finish(state, code, web, client_id or "", client_secret)
             flow.keep(keys(done.plugin), done, tokens)
         except (flow.SignInError, ConnectorError):
-            return RedirectResponse(f"{prefix}/?sign_in=failed&name={quote(s.name)}", status_code=303)
+            return back(f"sign_in=failed&name={quote(s.name)}")
         finally:
             web.close()
         host.signed_in(done, ws.root)
-        return RedirectResponse(f"{prefix}/?sign_in=done&name={quote(s.name)}", status_code=303)
+        return back(f"sign_in=done&name={quote(s.name)}")
 
     @r.delete("/sign-ins/{name:path}")
     def sign_out(name: str) -> Ok:

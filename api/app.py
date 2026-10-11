@@ -38,7 +38,10 @@ from engine.workspace import Workspace
 UI_DIST = shipped("web")
 
 COOKIE = "cockpit_token"
-OPEN_PATHS = {"/api/health"}
+#: Paths served without the person's cookie. The sign-in callback is reached from the service's own page, so the
+#: browser leaves the strict cookie off; it is protected instead by the single-use state only this app issued (with
+#: PKCE), and it answers with a page that takes the person back into the app from this site, where the cookie is sent.
+OPEN_PATHS = {"/api/health", "/api/sign-ins/callback"}
 
 # The UI loads nothing from elsewhere and runs no inline script, so the policy can be strict (design 12.5). The UI's
 # component library adds two fixed style rules (touch handling for pressable elements, and scroll locking on touch

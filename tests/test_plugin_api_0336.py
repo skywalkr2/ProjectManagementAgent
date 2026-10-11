@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 
 import engine.net
 from tests.test_plugin_api_0329 import reopen
+from tests.test_sign_in import landing
 from tests.test_today_panels_jobs import FIXTURE, workspace
 
 N = yaml.safe_load((Path(__file__).parent / "fixtures" / "network" / "network.yaml").read_text())
@@ -91,7 +92,7 @@ def test_the_row_says_what_is_asked_names_the_account_and_what_was_not_allowed(s
     assert row["allows"] == ["Read your goals"] and row["account"] is None and row["missing"] == []
     step = next(s for s in setup.steps(ws, cfg, store) if s.sign_in == "p18/service")
     assert not step.done and step.explanation == "Read your goals"
-    assert "sign_in=done" in sign_in(c, api).headers["location"]
+    assert "sign_in=done" in landing(sign_in(c, api))
     row = c.get(f"{api}/sign-ins").json()[0]
     assert row["account"] == "Pat at example" and row["missing"] == ["offline"]
     assert next(s for s in setup.steps(ws, cfg, store) if s.sign_in == "p18/service").done
@@ -138,6 +139,6 @@ def test_the_services_refusal_code_comes_back_to_the_screen(signing):
         f"{api}/sign-ins/callback",
         params={"state": state, "error": "consent_required", "error_description": "An administrator must approve."},
     )
-    query = parse_qs(urlsplit(back.headers["location"]).query)
+    query = parse_qs(urlsplit(landing(back)).query)
     assert query["sign_in"] == ["refused"] and query["error"] == ["consent_required"]
     assert query["detail"] == ["An administrator must approve."]

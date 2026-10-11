@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 import engine.net
 from tests.test_plugin_api_0329 import reopen
+from tests.test_sign_in import landing
 from tests.test_today_panels_jobs import FIXTURE, workspace
 
 N = yaml.safe_load((Path(__file__).parent / "fixtures" / "network" / "network.yaml").read_text())
@@ -65,7 +66,7 @@ def _sign_in(c, api):
     url = c.post(f"{api}/sign-ins/p18/service/start").json()["url"]
     query = parse_qs(urlsplit(url).query)
     back = c.get(f"{api}/sign-ins/callback", params={"state": query["state"][0], "code": "good"})
-    assert "sign_in=done" in back.headers["location"]
+    assert "sign_in=done" in landing(back)
     return query
 
 
