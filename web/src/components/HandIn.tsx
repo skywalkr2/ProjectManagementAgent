@@ -32,6 +32,8 @@ export function useAddOwnRequest(): (id: string) => void {
 const TEXT_FILE = /^text\/|\/(json|xml)$|message\/rfc822/;
 
 type Whose = "others" | "mine";
+/** How sensitive the person says it is: the usual sends nothing, so the workspace's own rules decide. */
+type Sensitivity = "" | "internal" | "restricted";
 
 export function HandIn(props: { onClose: () => void }) {
   const { t } = useWords();
@@ -40,6 +42,7 @@ export function HandIn(props: { onClose: () => void }) {
   const [text, setText] = useState("");
   const [whose, setWhose] = useState<Whose>("others");
   const [todo, setTodo] = useState("");
+  const [sensitivity, setSensitivity] = useState<Sensitivity>("");
   const [dropProblem, setDropProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const first = useRef<HTMLTextAreaElement>(null);
@@ -48,7 +51,8 @@ export function HandIn(props: { onClose: () => void }) {
   const submit = async () => {
     setBusy(true);
     // Someone else's words are always material (pasted); only the PM's own words are ever sent as the note.
-    const body = whose === "mine" ? { note: text, pasted: "" } : { note: todo, pasted: text };
+    const words = whose === "mine" ? { note: text, pasted: "" } : { note: todo, pasted: text };
+    const body = sensitivity ? { ...words, data_level: sensitivity } : words;
     const handed = await act(
       () => api.handIn(body),
       () => ({ message: t("toast.handed_in") }),
@@ -132,6 +136,22 @@ export function HandIn(props: { onClose: () => void }) {
             />
           </div>
         )}
+        <div className="field">
+          <label htmlFor="handin-sensitivity">{t("handin.sensitivity")}</label>
+          <select
+            id="handin-sensitivity"
+            value={sensitivity}
+            aria-describedby="handin-sensitivity-hint"
+            onChange={(e) => setSensitivity(e.target.value as Sensitivity)}
+          >
+            <option value="">{t("handin.sensitivity.usual")}</option>
+            <option value="internal">{t("handin.sensitivity.internal")}</option>
+            <option value="restricted">{t("handin.sensitivity.restricted")}</option>
+          </select>
+          <span id="handin-sensitivity-hint" className="hint">
+            {t("handin.sensitivity_hint")}
+          </span>
+        </div>
         <div className="row-end">
           <button type="button" className="btn quiet" onClick={props.onClose}>
             {t("action.cancel")}

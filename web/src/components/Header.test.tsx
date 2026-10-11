@@ -33,6 +33,7 @@ function show(spend: Partial<S["SpendStatus"]>) {
       view="home"
       onView={() => {}}
       onHandIn={() => {}}
+      onAsk={() => {}}
       onHelp={() => {}}
     />,
   );
@@ -62,13 +63,27 @@ test("Files is one of the views beside Today, Stages and People & projects", asy
   const onView = vi.fn();
   fakeApi({ "GET status": () => status() });
   renderApp(
-    <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="files" onView={onView} onHandIn={() => {}} onHelp={() => {}} />,
+    <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="files" onView={onView} onHandIn={() => {}} onAsk={() => {}} onHelp={() => {}} />,
   );
   const views = screen.getByRole("navigation", { name: "Views" });
-  expect(Array.from(views.querySelectorAll("button")).map((b) => b.textContent)).toEqual(["Today", "Stages", "Files", "People & projects", "Settings"]);
+  expect(Array.from(views.querySelectorAll("button")).map((b) => b.textContent)).toEqual(["Today", "Stages", "Files", "Sources", "People & projects", "Settings"]);
   expect(screen.getByRole("button", { name: "Files" })).toHaveAttribute("aria-current", "page");
   screen.getByRole("button", { name: "Stages" }).click();
   expect(onView).toHaveBeenCalledWith("stages");
+  screen.getByRole("button", { name: "Sources" }).click();
+  expect(onView).toHaveBeenCalledWith("sources");
+  await screen.findByText("No off-device backup");
+});
+
+test("the Ask button opens the Ask box", async () => {
+  const user = userEvent.setup();
+  const onAsk = vi.fn();
+  fakeApi({ "GET status": () => status() });
+  renderApp(
+    <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="home" onView={() => {}} onHandIn={() => {}} onAsk={onAsk} onHelp={() => {}} />,
+  );
+  await user.click(screen.getByRole("button", { name: "Ask" }));
+  expect(onAsk).toHaveBeenCalledTimes(1);
   await screen.findByText("No off-device backup");
 });
 
@@ -96,6 +111,7 @@ test("panels on the work tab are views of their own; other tabs' panels are not"
       view="panel:demo/goals"
       onView={onView}
       onHandIn={() => {}}
+      onAsk={() => {}}
       onHelp={() => {}}
     />,
   );
@@ -106,6 +122,7 @@ test("panels on the work tab are views of their own; other tabs' panels are not"
     "Today",
     "Stages",
     "Files",
+    "Sources",
     "Goals",
     "People & projects",
     "Settings",

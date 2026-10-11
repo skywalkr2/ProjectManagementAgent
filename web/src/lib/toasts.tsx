@@ -68,7 +68,8 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {props.children}
-      <section className="toasts" aria-label={t("toast.region")}>
+      {/* Marked as a top layer so a dialog that is open keeps these messages in the page's reading order for screen readers. */}
+      <section className="toasts" aria-label={t("toast.region")} data-react-aria-top-layer="">
         <div aria-live="polite" className="toast-stack">
           {toasts.map((toast) => (
             <ToastView

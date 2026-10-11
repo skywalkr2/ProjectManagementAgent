@@ -4,6 +4,8 @@ test("core views round trip, and home has no fragment", () => {
   expect(toHash("home")).toBe("");
   expect(toHash("files")).toBe("files");
   expect(fromHash("#files")).toBe("files");
+  expect(toHash("sources")).toBe("sources");
+  expect(fromHash("#sources")).toBe("sources");
   expect(toHash("welcome")).toBe("welcome");
   expect(fromHash("#welcome")).toBe("welcome");
   expect(fromHash("#settings")).toBe("settings");

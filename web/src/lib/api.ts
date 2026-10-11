@@ -51,6 +51,23 @@ export const api = {
   changes: () => call<S["ChangeItem"][]>("GET", "changes"),
   source: (src: string) => call<S["SourceView"]>("GET", `sources/${id(src)}`),
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
+
+  watchSources: () => call<S["WatchSourceView"][]>("GET", "watch"),
+  readSource: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/read`),
+  autoClosed: () => call<S["AutoClosedView"][]>("GET", "auto-closed"),
+  closerLook: (req: string, readVersion: number) =>
+    call<S["Created"]>("POST", `requests/${id(req)}/closer-look`, { read_version: readVersion }),
+
+  ask: (question: string) => call<S["Created"]>("POST", "ask", { question }),
+  asks: () => call<S["AskView"][]>("GET", "asks"),
+  applyProposal: (proposal: string, body: S["ProposalApply"]) =>
+    call<S["SettingsSaved"]>("POST", `setting-proposals/${id(proposal)}/apply`, body),
+  dismissProposal: (proposal: string, readVersion: number) =>
+    call<S["Created"]>("POST", `setting-proposals/${id(proposal)}/dismiss`, { read_version: readVersion }),
+  reportSent: (report: string, readVersion: number) =>
+    call<S["Created"]>("POST", `reports/${id(report)}/sent`, { read_version: readVersion }),
+  dismissReport: (report: string, readVersion: number) =>
+    call<S["Created"]>("POST", `reports/${id(report)}/dismiss`, { read_version: readVersion }),
   people: () => call<S["PersonView"][]>("GET", "people"),
 
   stageRecords: () => call<S["StageView"][]>("GET", "stages/records"),
@@ -161,6 +178,8 @@ export const api = {
   settings: () => call<S["SettingsView"]>("GET", "settings"),
   saveSettings: (body: S["SettingsSave"]) => call<S["SettingsSaved"]>("POST", "settings", body),
   setup: () => call<S["SetupView"]>("GET", "setup"),
+  applyStepSettings: (step: string, fingerprint: string) =>
+    call<S["SettingsSaved"]>("POST", `setup/${named(step)}/apply-settings`, { fingerprint }),
   skipStep: (step: string) => call<S["Ok"]>("POST", `setup/${named(step)}/skip`),
   reopenStep: (step: string) => call<S["Ok"]>("POST", `setup/${named(step)}/reopen`),
   templates: () => call<S["TemplateView"][]>("GET", "templates"),

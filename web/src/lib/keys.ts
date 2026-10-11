@@ -44,7 +44,17 @@ export function sendRowKey(key: RowKey): boolean {
 export interface GlobalHandlers {
   undo: () => void;
   hand_in: () => void;
+  ask: () => void;
   help: () => void;
+}
+
+/** The key that opens the Ask box when the configured shortcuts don't name one. */
+export const ASK_KEY = "/";
+
+/** The configured shortcuts, with the Ask box on its usual key when none is set and that key is free. */
+export function withAskKey(keys: Record<string, string>): Record<string, string> {
+  if (keys.ask || Object.values(keys).includes(ASK_KEY)) return keys;
+  return { ...keys, ask: ASK_KEY };
 }
 
 export function useShortcuts(keys: Record<string, string>, handlers: GlobalHandlers): void {
@@ -78,6 +88,9 @@ export function useShortcuts(keys: Record<string, string>, handlers: GlobalHandl
           break;
         case "hand_in":
           handlers.hand_in();
+          break;
+        case "ask":
+          handlers.ask();
           break;
         case "help":
           handlers.help();

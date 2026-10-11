@@ -2,7 +2,7 @@
 import { Dialog, Heading, Modal, ModalOverlay } from "react-aria-components";
 import { useWords } from "../lib/wording";
 
-const ORDER = ["next", "previous", "primary", "send_back", "copy", "edit", "undo", "hand_in", "help"];
+const ORDER = ["next", "previous", "primary", "send_back", "copy", "edit", "undo", "hand_in", "ask", "help"];
 
 export function ShortcutHelp(props: { open: boolean; onClose: () => void; keys: Record<string, string> }) {
   const { t } = useWords();

@@ -241,6 +241,34 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByLabel("Paste or type it here")).toBeFocused();
   });
 
+  test("Sources and the Ask box pass the accessibility checks, and the Ask box opens from the keyboard", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("button", { name: "Sources" }).click();
+    await expect(page.getByRole("heading", { name: "Sources", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Auto-closed" })).toBeVisible();
+    await checkAccessibility(page);
+    // The Ask box: focus goes to the question, Escape closes it, and focus returns to the button that opens it.
+    const opener = page.getByRole("button", { name: "Ask", exact: true });
+    await opener.click();
+    const dialog = page.getByRole("dialog", { name: /^Ask / });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByLabel("Your question")).toBeFocused();
+    await expect(dialog.getByRole("button", { name: "Ask", exact: true })).toBeDisabled();
+    await checkAccessibility(page);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(opener).toBeFocused();
+    // The shortcut opens it too, but not while typing in a field.
+    await page.keyboard.press("/");
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel("Your question").fill("a/b");
+    await expect(dialog.getByLabel("Your question")).toHaveValue("a/b");
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await page.getByRole("button", { name: "Today" }).click();
+    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+  });
+
   test("a phone-sized screen has one column and no sideways scrolling", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await signIn(page);

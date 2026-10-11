@@ -7,6 +7,7 @@ import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
+import { formatValue, labelOf } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
@@ -78,17 +79,22 @@ export function Welcome(props: { focusStep: FocusStep | null; onOpenPeople: () =
                       {t("handin.open")}
                     </button>
                   </div>
-                ) : step.action ? (
-                  <div className="row-end">
-                    <button
-                      type="button"
-                      className="btn"
-                      onClick={() => start({ name: step.action!, label, on: null }, null)}
-                    >
-                      {label}
-                    </button>
-                  </div>
-                ) : null}
+                ) : (
+                  <>
+                    {hasSettings(step) && <SuggestedSettings step={step} />}
+                    {step.action && (
+                      <div className="row-end">
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={() => start({ name: step.action!, label, on: null }, null)}
+                        >
+                          {label}
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
               </StepSection>
             );
           })}
@@ -96,6 +102,61 @@ export function Welcome(props: { focusStep: FocusStep | null; onOpenPeople: () =
       )}
       {review}
     </section>
+  );
+}
+
+const hasSettings = (step: Step) => Object.keys(step.settings ?? {}).length > 0;
+
+/** The settings a step suggests, in words, with one button that applies them all and reads the result back. */
+function SuggestedSettings(props: { step: Step }) {
+  const { t, has } = useWords();
+  const client = useQueryClient();
+  const afterSave = useAfterSave();
+  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+  const { step } = props;
+  const label = (key: string) => {
+    const item = settings.data?.items.find((i) => i.key === key);
+    return item ? labelOf(item, t, has) : has(`settings.key.${key}`) ? t(`settings.key.${key}`) : key;
+  };
+
+  const apply = async () => {
+    setBusy(true);
+    setProblem("");
+    try {
+      // The fingerprint of the settings as they are now, so a change made meanwhile is noticed rather than overwritten.
+      const current = await client.fetchQuery({ queryKey: ["settings"], queryFn: api.settings, staleTime: 0 });
+      const saved = await api.applyStepSettings(step.id, current.fingerprint);
+      await afterSave(saved);
+    } catch (err) {
+      setProblem(problemText(err, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="field">
+      <span className="what" id={`${stepSlug(step.id)}-settings`}>
+        {t("welcome.settings.title")}
+      </span>
+      <ul className="plain-list" aria-labelledby={`${stepSlug(step.id)}-settings`}>
+        {Object.entries(step.settings ?? {}).map(([key, value]) => (
+          <li key={key}>{t("welcome.settings.line", { label: label(key), value: formatValue(value, t) })}</li>
+        ))}
+      </ul>
+      {problem && (
+        <p className="problem-note" role="alert">
+          {problem}
+        </p>
+      )}
+      <div className="row-end">
+        <button type="button" className="btn" disabled={busy} onClick={() => void apply()}>
+          {t("welcome.settings.apply")}
+        </button>
+      </div>
+    </div>
   );
 }
 

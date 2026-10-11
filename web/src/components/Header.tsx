@@ -33,6 +33,7 @@ export function Header(props: {
   view: View;
   onView: (view: View) => void;
   onHandIn: () => void;
+  onAsk: () => void;
   onHelp: () => void;
 }) {
   const { t } = useWords();
@@ -51,7 +52,7 @@ export function Header(props: {
           <b>{props.workspace}</b>
         </div>
         <nav className="tabs" aria-label={t("nav.label")}>
-          {(["home", "stages", "files"] as const).map((v) => (
+          {(["home", "stages", "files", "sources"] as const).map((v) => (
             <button
               key={v}
               type="button"
@@ -123,6 +124,9 @@ export function Header(props: {
         <div className="top-acts">
           <button type="button" className="btn primary" onClick={props.onHandIn}>
             {t("handin.open")}
+          </button>
+          <button type="button" className="btn" data-ask-button onClick={props.onAsk}>
+            {t("ask.open")}
           </button>
           <button type="button" className="btn quiet" onClick={props.onHelp} aria-label={t("help.open")}>
             ?

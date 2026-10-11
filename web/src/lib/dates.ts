@@ -16,3 +16,10 @@ export function dayAndTime(iso: string): string {
 export function time(when: Date): string {
   return timeFormat.format(when);
 }
+
+/** A time the server wrote as an ISO string, day and time in the reader's locale; empty if it can't be read. */
+export function whenText(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const parsed = new Date(iso.replace(" ", "T"));
+  return Number.isNaN(parsed.getTime()) ? "" : dayAndTime(parsed.toISOString());
+}

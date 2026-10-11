@@ -216,3 +216,51 @@ test("opening the guide at a step puts focus on that step's heading", async () =
   const heading = await screen.findByRole("heading", { name: "Choose a backup folder" });
   await waitFor(() => expect(heading).toHaveFocus());
 });
+
+test("a plugin's step shows the settings it suggests in words, and Apply sends the current fingerprint", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    [
+      step("plugin/tidy", {
+        label: "Connect the tidy-up tool",
+        plugin: "plugin",
+        settings: { "workspace.name": "Harbor", "storage.backups.automatic": true },
+      }),
+    ],
+    {
+      "POST setup/plugin/tidy/apply-settings": () => ({
+        changes: [{ key: "workspace.name", before: "Workspace", after: "Harbor", was_default: true, is_default: false }],
+        fingerprint: "fp-2",
+        restarts: false,
+      }),
+    },
+  );
+  open();
+  const suggested = await screen.findByRole("list", { name: "Suggested settings" });
+  expect(within(suggested).getByText("Workspace name: Harbor")).toBeInTheDocument();
+  expect(within(suggested).getByText("Back up on a schedule: Yes")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Apply these settings" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST setup/plugin/tidy/apply-settings")?.body).toEqual({ fingerprint: "fp-1" }),
+  );
+  // The read-back with Undo, as after any saved setting.
+  expect(await screen.findByText("Saved. Workspace name: Harbor")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+});
+
+test("a refused apply is said in words and nothing is read back", async () => {
+  const user = userEvent.setup();
+  api([step("plugin/tidy", { label: "Connect the tidy-up tool", plugin: "plugin", settings: { "workspace.name": "Harbor" } })], {
+    "POST setup/plugin/tidy/apply-settings": () => new Refuse(409, "The settings changed since you looked."),
+  });
+  open();
+  await user.click(await screen.findByRole("button", { name: "Apply these settings" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("The settings changed since you looked.");
+});
+
+test("a step that suggests nothing shows no settings", async () => {
+  api([step("plugin/tidy", { label: "Connect the tidy-up tool", plugin: "plugin", settings: {} })]);
+  open();
+  await screen.findByRole("heading", { name: "Connect the tidy-up tool" });
+  expect(screen.queryByRole("button", { name: "Apply these settings" })).toBeNull();
+});

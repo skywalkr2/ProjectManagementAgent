@@ -1,21 +1,24 @@
 // The launch-slice home: one column with What changed and Follow-ups under the header (design 7.7).
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { S } from "./lib/api";
-import { useShortcuts } from "./lib/keys";
+import { useShortcuts, withAskKey } from "./lib/keys";
 import { useLive } from "./lib/live";
 import { RestartNotice, RestartProvider } from "./lib/restart";
 import { useToasts } from "./lib/toasts";
 import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
 import { useWords } from "./lib/wording";
+import { Ask } from "./components/Ask";
 import { AssistantNotice } from "./components/AssistantNotice";
 import { Files } from "./components/Files";
 import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Panel } from "./components/Panel";
+import { restoreFocus } from "./components/ModalPanel";
 import { PluginToday } from "./components/PluginToday";
 import { RecordPage } from "./components/RecordPage";
 import { Header } from "./components/Header";
 import { Settings } from "./components/Settings";
+import { Sources } from "./components/Sources";
 import { Setup } from "./components/Setup";
 import { StartHere } from "./components/StartHere";
 import { Stages } from "./components/Stages";
@@ -29,6 +32,8 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   const { undoLast } = useToasts();
   const [handIn, setHandIn] = useState(false);
   const [help, setHelp] = useState(false);
+  // The Ask box, with the question it opens on when a screen suggests one.
+  const [ask, setAsk] = useState<{ question?: string } | null>(null);
   const [view, setView] = useView();
   // The setup guide opens at a step when Today's card sends the person to one.
   const [guideStep, setGuideStep] = useState<FocusStep | null>(null);
@@ -44,10 +49,11 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   };
   const shown = parseView(view);
   const handlers = useMemo(
-    () => ({ undo: undoLast, hand_in: () => setHandIn(true), help: () => setHelp(true) }),
+    () => ({ undo: undoLast, hand_in: () => setHandIn(true), ask: () => setAsk({}), help: () => setHelp(true) }),
     [undoLast],
   );
-  useShortcuts(props.rc.shortcuts, handlers);
+  const keys = useMemo(() => withAskKey(props.rc.shortcuts), [props.rc.shortcuts]);
+  useShortcuts(keys, handlers);
   useNarrow(props.rc.narrow_below_px);
   useEffect(() => {
     document.title = props.rc.workspace_name;
@@ -64,6 +70,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
         view={view}
         onView={setView}
         onHandIn={() => setHandIn(true)}
+        onAsk={() => setAsk({})}
         onHelp={() => setHelp(true)}
       />
       <RestartNotice />
@@ -93,6 +100,8 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
           <Stages />
         ) : view === "files" ? (
           <Files />
+        ) : view === "sources" ? (
+          <Sources onAsk={(question) => setAsk({ question })} />
         ) : view === "welcome" ? (
           <Welcome focusStep={guideStep} onOpenPeople={() => setView("setup")} onHandIn={() => setHandIn(true)} />
         ) : view === "settings" ? (
@@ -102,7 +111,16 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
         )}
         <p className="footer">{t("app.footer", { key: props.rc.shortcuts.help ?? "?" })}</p>
       </main>
-      <ShortcutHelp open={help} onClose={() => setHelp(false)} keys={props.rc.shortcuts} />
+      {ask && (
+        <Ask
+          initial={ask.question}
+          onClose={() => {
+            setAsk(null);
+            restoreFocus(() => document.querySelector<HTMLElement>("[data-ask-button]"));
+          }}
+        />
+      )}
+      <ShortcutHelp open={help} onClose={() => setHelp(false)} keys={keys} />
     </RestartProvider>
   );
 }
