@@ -701,6 +701,12 @@
             ],
             "title": "Note"
           },
+          "refused": {
+            "default": false,
+            "description": "The account declined it under its own policy; it can be sent to another account.",
+            "title": "Refused",
+            "type": "boolean"
+          },
           "source": {
             "anyOf": [
               {

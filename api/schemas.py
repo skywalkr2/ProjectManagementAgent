@@ -187,6 +187,9 @@ class ChangeItem(BaseModel):
     )
     stage_task: bool = Field(False, description="The request was started by a stage, so the stage views show its go.")
     estimate_usd: float | None = Field(None, description="What the run was estimated to cost when it asked for a go.")
+    refused: bool = Field(
+        False, description="The account declined it under its own policy; it can be sent to another account."
+    )
     changeset: ChangesetView | None
 
 

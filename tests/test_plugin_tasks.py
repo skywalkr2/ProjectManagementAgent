@@ -344,6 +344,16 @@ def test_a_refusal_waits_for_the_person_and_is_never_retried_or_escalated(env, m
     assert request["waiting"].startswith("The AI account refused this under its own rules (Declined under policy 4)")
     runs = [r.data for r in store.read().list("run") if r.data["request"] == request_id]
     assert runs[-1]["outcome"] == "refused" and runs[-1]["error_detail"] == "Declined under policy 4."
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+
+    ws, cfg, _ = env
+    store.close()
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+    changes = c.get(cfg.server.base_path.rstrip("/") + "/api/changes").json()
+    assert next(item for item in changes if item["id"] == request_id)["refused"] is True
 
 
 def test_the_adapter_reads_refusals_from_the_provider_signal_only():

@@ -203,6 +203,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             },
         )
 
+    def _last_refused(request_id: str) -> bool:
+        runs = store.read().find("run", {"request": request_id})
+        return bool(runs) and runs[-1].data["outcome"] == "refused"
+
     def _independence(cs: Any) -> str | None:
         run = store.read().get("run", cs.data["run"]) if cs.data.get("run") else None
         return run.data.get("independence") if run is not None else None
@@ -908,6 +912,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     approval=d.get("approval"),
                     stage_task=bool(d.get("stage_start")),
                     estimate_usd=d.get("estimate_usd"),
+                    refused=d["state"] == "needs_you" and _last_refused(req.id),
                     changeset=view,
                 )
             )
