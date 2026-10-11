@@ -1,8 +1,10 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { fakeApi, renderApp, type Routes } from "../test-utils";
+import { fakeApi, Refuse, renderApp, type Routes } from "../test-utils";
 import { Panel } from "./Panel";
+
+const WEB = "https" + "://";
 
 const KIND = "demo/goal";
 
@@ -245,4 +247,109 @@ test("a panel the project's add-on doesn't show there says the list didn't load,
   fakeApi({ "GET panels?project=PRJ-1": () => [], "GET panels/demo/goals/rows?project=PRJ-1": () => rows });
   renderApp(<Panel name="demo/goals" project="PRJ-1" onOpenRecord={() => {}} />);
   expect(await screen.findByText("This list didn't load.")).toBeInTheDocument();
+});
+
+function documentPanel(): S["PanelView"] {
+  return panel({ view: "document", kind: "", columns: [], primary_action: null, row_actions: [] });
+}
+
+function documentRoutes(input: BlockIn[] | null, extra: Routes = {}): Routes {
+  return { "GET panels": () => [documentPanel()], "GET panels/demo/goals/document": () => ({ blocks: input && filled(input) }), ...extra };
+}
+
+const plain = (text: string, more: Partial<S["DocumentInline"]> = {}): S["DocumentInline"] => ({
+  text,
+  strong: false,
+  em: false,
+  code: false,
+  ...more,
+});
+type BlockIn = Partial<S["DocumentBlock"]> & Pick<S["DocumentBlock"], "type">;
+const filled = (blocks: BlockIn[]): S["DocumentBlock"][] => blocks.map((b) => ({ ordered: false, ...b }));
+
+test("a document draws every kind of block as its own elements under the panel's heading", async () => {
+  const outside = `${WEB}docs.example.com/guide`;
+  fakeApi(
+    documentRoutes([
+      { type: "heading", level: 1, inlines: [plain("First")] },
+      { type: "paragraph", inlines: [plain("Plain "), plain("bold", { strong: true }), plain(" "), plain("slanted", { em: true }), plain(" "), plain("mono", { code: true })] },
+      { type: "heading", level: 2, inlines: [plain("Second")] },
+      { type: "list", ordered: false, items: [[plain("apple")], [plain("pear")]] },
+      { type: "heading", level: 3, inlines: [plain("Third")] },
+      { type: "list", ordered: true, items: [[plain("one")], [plain("two")]] },
+      { type: "table", header: [[plain("Name")], [plain("Size")]], rows: [[[plain("small")], [plain("S")]], [[plain("large")], [plain("L")]]] },
+      { type: "rule" },
+      { type: "paragraph", inlines: [plain("See "), plain("the guide", { url: outside, domain: "docs.example.com" })] },
+    ]),
+  );
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  expect(await screen.findByRole("heading", { level: 3, name: "First" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 2, name: "Goals" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 4, name: "Second" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 5, name: "Third" })).toBeInTheDocument();
+  expect(screen.getByText("bold").tagName).toBe("STRONG");
+  expect(screen.getByText("slanted").tagName).toBe("EM");
+  expect(screen.getByText("mono").tagName).toBe("CODE");
+  const lists = screen.getAllByRole("list");
+  expect(lists.map((l) => l.tagName)).toEqual(["UL", "OL"]);
+  expect(within(lists[0]).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["apple", "pear"]);
+  const table = screen.getByRole("table");
+  expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Name", "Size"]);
+  expect(within(table).getAllByRole("columnheader").every((h) => h.getAttribute("scope") === "col")).toBe(true);
+  expect(within(table).getAllByRole("row")).toHaveLength(3);
+  expect(within(table).getByRole("cell", { name: "large" })).toBeInTheDocument();
+  expect(table.closest(".table-wrap")).not.toBeNull();
+  expect(screen.getByRole("separator")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "the guide" })).toHaveAttribute("href", outside);
+});
+
+test("an outside link in a document opens in a new tab safely and shows its real domain", async () => {
+  const outside = `${WEB}docs.example.com/guide`;
+  fakeApi(documentRoutes([{ type: "paragraph", inlines: [plain("the guide", { url: outside, domain: "docs.example.com" })] }]));
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  const link = await screen.findByRole("link", { name: "the guide" });
+  expect(link).toHaveAttribute("target", "_blank");
+  expect(link.getAttribute("rel")).toContain("noopener");
+  expect(screen.getByText("(docs.example.com)")).toBeInTheDocument();
+});
+
+test("a record link in a document opens that record's page", async () => {
+  const user = userEvent.setup();
+  const open = vi.fn();
+  fakeApi(documentRoutes([{ type: "paragraph", inlines: [plain("Open "), plain("the goal", { record: { kind: KIND, id: "G-2" } })] }]));
+  renderApp(<Panel name="demo/goals" onOpenRecord={open} />);
+  await user.click(await screen.findByRole("button", { name: "the goal" }));
+  expect(open).toHaveBeenCalledWith(KIND, "G-2");
+});
+
+test("markup in a document's text stays text", async () => {
+  fakeApi(documentRoutes([{ type: "paragraph", inlines: [plain("<script>alert(1)</script> and <b>bold</b>")] }]));
+  const { container } = renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  expect(await screen.findByText("<script>alert(1)</script> and <b>bold</b>")).toBeInTheDocument();
+  expect(container.querySelector("script")).toBeNull();
+  expect(container.querySelector("b")).toBeNull();
+});
+
+test("a document with nothing to show says so, and does not ask for rows", async () => {
+  const calls = fakeApi(documentRoutes(null));
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  expect(await screen.findByText("Nothing to show here yet.")).toBeInTheDocument();
+  expect(calls.some((c) => c.route.includes("/rows"))).toBe(false);
+});
+
+test("a document the server refuses shows the server's words as the panel's problem", async () => {
+  fakeApi(documentRoutes(null, { "GET panels/demo/goals/document": () => new Refuse(409, "The add-on is not running.") }));
+  renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
+  expect(await screen.findByText(/The add-on is not running\./)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+});
+
+test("a document is looked up for the project in view", async () => {
+  const calls = fakeApi({
+    "GET panels?project=PRJ-1": () => [documentPanel()],
+    "GET panels/demo/goals/document?project=PRJ-1": () => ({ blocks: filled([{ type: "paragraph", inlines: [plain("For the project")] }]) }),
+  });
+  renderApp(<Panel name="demo/goals" project="PRJ-1" onOpenRecord={() => {}} />);
+  expect(await screen.findByText("For the project")).toBeInTheDocument();
+  expect(calls.map((c) => c.route)).toContain("GET panels/demo/goals/document?project=PRJ-1");
 });

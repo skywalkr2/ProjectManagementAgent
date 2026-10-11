@@ -424,6 +424,7 @@
   "task.started": "Started: {what}",
   "panel.load_failed": "This list didn't load.",
   "panel.empty": "Nothing here yet.",
+  "panel.document_empty": "Nothing to show here yet.",
   "panel.count.one": "{n} item",
   "panel.count.other": "{n} items",
   "panel.blank": "—",

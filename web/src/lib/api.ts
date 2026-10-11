@@ -162,6 +162,9 @@ export const api = {
   panels: (project?: string) => call<S["PanelView"][]>("GET", `panels${project ? `?project=${id(project)}` : ""}`),
   panelRows: (name: string, project?: string) =>
     call<S["PanelRow"][]>("GET", `panels/${named(name)}/rows${project ? `?project=${id(project)}` : ""}`),
+  /** A document panel's blocks for the project in view, or the workspace; null when there is nothing to show yet. */
+  panelDocument: (name: string, project?: string) =>
+    call<S["DocumentView"]>("GET", `panels/${named(name)}/document${project ? `?project=${id(project)}` : ""}`),
   valueLists: () => call<S["ValueListView"][]>("GET", "lists"),
   listAdd: (list: string, value: string) => call<S["Applied"]>("POST", `lists/${named(list)}/add`, { value }),
   listRename: (list: string, value: string, to: string) =>

@@ -1,49 +1,66 @@
 // A plugin's panel (design 7.2): its records as a table, a list or a board. The first column opens the record's page;
 // each row has one primary action and the rest in its menu. A person action opens its review; a kind of AI work starts
-// at once. Every row looks the same whichever view the plugin chose.
+// at once. Every row looks the same whichever view the plugin chose. A document panel is read-only text the plugin
+// builds (headings, paragraphs, lists, tables, rules), drawn as our own elements, never as HTML.
 import { useQuery } from "@tanstack/react-query";
-import { useRef } from "react";
-import { api, type S } from "../lib/api";
+import { Fragment, useRef, type ReactNode } from "react";
+import { api, ApiError, type S } from "../lib/api";
 import { resolveOffers, usePluginActions, useTaskKinds, type Offer } from "../lib/plugin-actions";
 import { usePluginRun } from "../lib/plugin-run";
 import { readable, useValueLines } from "../lib/records";
 import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { SafeLink } from "./SafeText";
 
 export function Panel(props: { name: string; project?: string; onOpenRecord: (kind: string, id: string) => void }) {
   const { t, tn } = useWords();
   const panels = useQuery({ queryKey: props.project ? ["panels", props.project] : ["panels"], queryFn: () => api.panels(props.project) });
+  const panel = panels.data?.find((p) => p.name === props.name);
+  const isDocument = panel?.view === "document";
   const rows = useQuery({
     queryKey: ["panel-rows", props.name, props.project ?? null],
     queryFn: () => api.panelRows(props.name, props.project),
+    enabled: !!panel && !isDocument,
+  });
+  const document = useQuery({
+    queryKey: ["panel-document", props.name, props.project ?? null],
+    queryFn: () => api.panelDocument(props.name, props.project),
+    enabled: isDocument,
   });
   const { run, review } = usePluginRun();
-  const panel = panels.data?.find((p) => p.name === props.name);
   const workspaceActions = usePluginActions(undefined, undefined, !!panel?.new_action);
   const newAction = panel?.new_action ? workspaceActions.data?.find((a) => a.name === panel.new_action) : undefined;
   const newButton = useRef<HTMLButtonElement>(null);
   const title = panel?.title ?? readable(props.name.slice(props.name.lastIndexOf("/") + 1));
   const headingId = "panel-title";
 
+  const content = isDocument ? document : rows;
+  const failure = panels.error ?? content.error;
   let body;
-  if (panels.isPending || rows.isPending) body = <p className="empty">{t("loading")}</p>;
-  else if (panels.isError || rows.isError || !panel) {
+  if (panels.isPending || (!!panel && content.isPending)) body = <p className="empty">{t("loading")}</p>;
+  else if (panels.isError || content.isError || !panel) {
     body = (
-      <p className="empty">
-        {t("panel.load_failed")}{" "}
+      <p className="empty" role="alert">
+        {failure instanceof ApiError && failure.detail ? failure.detail : t("panel.load_failed")}{" "}
         <button
           type="button"
           className="btn"
           onClick={() => {
             void panels.refetch();
-            void rows.refetch();
+            void content.refetch();
           }}
         >
           {t("action.try_again")}
         </button>
       </p>
     );
-  } else if (rows.data.length === 0) body = <p className="empty">{t("panel.empty")}</p>;
+  } else if (isDocument) {
+    body = document.data?.blocks ? (
+      <Document blocks={document.data.blocks} onOpenRecord={props.onOpenRecord} />
+    ) : (
+      <p className="empty">{t("panel.document_empty")}</p>
+    );
+  } else if (!rows.data || rows.data.length === 0) body = <p className="empty">{t("panel.empty")}</p>;
   else {
     const shared = { panel, rows: rows.data, run, onOpenRecord: props.onOpenRecord };
     body =
@@ -54,7 +71,7 @@ export function Panel(props: { name: string; project?: string; onOpenRecord: (ki
     <section className="panel-section" aria-labelledby={headingId}>
       <div className="heading">
         <h2 id={headingId}>{title}</h2>
-        {rows.data && rows.data.length > 0 && <span className="hint">{tn("panel.count", rows.data.length)}</span>}
+        {!isDocument && rows.data && rows.data.length > 0 && <span className="hint">{tn("panel.count", rows.data.length)}</span>}
       </div>
       {newAction && (
         <div className="panel-new">
@@ -251,6 +268,115 @@ function Board(props: ViewProps) {
           </ul>
         </section>
       ))}
+    </div>
+  );
+}
+
+type Inline = S["DocumentInline"];
+type Block = S["DocumentBlock"];
+
+/** One run of text: plain text, never markup. A record link opens the record's page; an outside link shows its domain. */
+function Run(props: { inline: Inline; onOpenRecord: (kind: string, id: string) => void }) {
+  const { inline, onOpenRecord } = props;
+  const record = inline.record;
+  if (record) {
+    return (
+      <button type="button" className="link-button" onClick={() => onOpenRecord(record.kind, record.id)}>
+        {styled(inline)}
+      </button>
+    );
+  }
+  if (inline.url) return <SafeLink label={inline.text} url={inline.url} />;
+  return <>{styled(inline)}</>;
+}
+
+function styled(inline: Inline): ReactNode {
+  let node: ReactNode = inline.text;
+  if (inline.code) node = <code>{node}</code>;
+  if (inline.em) node = <em>{node}</em>;
+  if (inline.strong) node = <strong>{node}</strong>;
+  return node;
+}
+
+function Runs(props: { inlines: Inline[]; onOpenRecord: (kind: string, id: string) => void }) {
+  return (
+    <>
+      {props.inlines.map((inline, i) => (
+        <Run key={i} inline={inline} onOpenRecord={props.onOpenRecord} />
+      ))}
+    </>
+  );
+}
+
+/** A document's headings sit under the panel's own h2: levels 1 to 3 are h3 to h5. */
+const HEADINGS = ["h3", "h4", "h5"] as const;
+
+function Document(props: { blocks: Block[]; onOpenRecord: (kind: string, id: string) => void }) {
+  const { onOpenRecord } = props;
+  return (
+    <div className="document">
+      {props.blocks.map((block, i) => {
+        const key = `b${i}`;
+        switch (block.type) {
+          case "heading": {
+            const Tag = HEADINGS[Math.min(Math.max(block.level ?? 1, 1), 3) - 1];
+            return (
+              <Tag key={key}>
+                <Runs inlines={block.inlines ?? []} onOpenRecord={onOpenRecord} />
+              </Tag>
+            );
+          }
+          case "paragraph":
+            return (
+              <p key={key}>
+                <Runs inlines={block.inlines ?? []} onOpenRecord={onOpenRecord} />
+              </p>
+            );
+          case "list": {
+            const Tag = block.ordered ? "ol" : "ul";
+            return (
+              <Tag key={key}>
+                {(block.items ?? []).map((item, j) => (
+                  <li key={j}>
+                    <Runs inlines={item} onOpenRecord={onOpenRecord} />
+                  </li>
+                ))}
+              </Tag>
+            );
+          }
+          case "table":
+            return (
+              <div key={key} className="table-wrap" tabIndex={0} role="region" aria-labelledby="panel-title">
+                <table className="panel-table">
+                  <thead>
+                    <tr>
+                      {(block.header ?? []).map((cell, j) => (
+                        <th key={j} scope="col">
+                          <Runs inlines={cell} onOpenRecord={onOpenRecord} />
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(block.rows ?? []).map((row, j) => (
+                      <tr key={j}>
+                        {row.map((cell, k) => (
+                          <td key={k}>
+                            <Runs inlines={cell} onOpenRecord={onOpenRecord} />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          case "rule":
+            return <hr key={key} />;
+          default:
+            return <Fragment key={key} />;
+        }
+      })}
     </div>
   );
 }
