@@ -107,7 +107,10 @@ MAX_RETRY_AFTER = 24 * 3600
 
 
 def retry_after(headers: dict[str, str], now: float | None = None) -> float | None:
-    """A Retry-After header in seconds from now: a number of seconds, or a date. None when absent or unreadable."""
+    """A Retry-After header in seconds from now: a number of seconds, or an HTTP date. None when absent or
+    unreadable; never more than the host's longest wait. For a connector that raises `ConnectorError("throttled",
+    ..., retry_after=retry_after(headers))` itself (a service that says "slow down" with another status, say); the
+    web client already does this for 429 and for a 503 with Retry-After."""
     import time
     from email.utils import parsedate_to_datetime
 

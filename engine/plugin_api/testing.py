@@ -12,10 +12,14 @@
     poll = read(my_poll, MySettings(), {}, context)
 
 `service(asked)` answers every request the connector makes through `context.web`: `asked` has the method, url,
-path, query (a dict), headers and body (text, and `form` / `json()` parsed). Only hosts in `network` are reached, over
+path (decoded; `raw_path` as sent), query (a dict of lists, blank values kept; `param(name)` gives the first value),
+headers and body (text, and `form` / `json()` parsed). A `Reply()` with neither `json` nor `text` has an empty body;
+answer `Reply(json={})` for a service that answers an empty JSON object. Only hosts in `network` are reached, over
 HTTPS, as in the app. `secrets` answers `context.secret(name)` and records `context.keep_secret`; `tokens` answers
 `context.access_token(name)`, and a sign-in missing from it raises `ConnectorError("auth")` as an expired sign-in
-does. `read` runs `poll` and checks its answer the way the watcher does.
+does; `granted` answers `context.granted(name)` with each sign-in's allowed scopes (left out, `context.granted` is
+None, as for a connector of a plugin with no sign-ins). `read` runs `poll` and checks its answer the way the
+watcher does.
 """
 
 from __future__ import annotations
@@ -25,7 +29,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 import httpx
 
@@ -44,11 +48,17 @@ class Asked:
     query: dict[str, list[str]]
     headers: dict[str, str]
     body: str
+    raw_path: str = ""
+
+    def param(self, name: str, default: str | None = None) -> str | None:
+        """The first value of a query parameter, or `default` when it isn't there."""
+        values = self.query.get(name)
+        return values[0] if values else default
 
     @property
     def form(self) -> dict[str, list[str]]:
-        """A form body, parsed."""
-        return parse_qs(self.body)
+        """A form body, parsed, blank values kept."""
+        return parse_qs(self.body, keep_blank_values=True)
 
     def json(self) -> Any:
         return jsonlib.loads(self.body) if self.body else None
@@ -70,23 +80,26 @@ def connector_context(
     network: list[str],
     secrets: dict[str, str] | None = None,
     tokens: dict[str, str] | None = None,
+    granted: dict[str, set[str]] | None = None,
     workspace_root: Path | str = ".",
 ) -> ConnectorContext:
     """A connector's context whose web client is answered by `service`. `kept` secrets land in `secrets`."""
     from engine.net import WebClient
 
     kept = secrets if secrets is not None else {}
-    granted = dict(tokens or {})
+    signed_in = dict(tokens or {})
+    allowed = {name: set(scopes) for name, scopes in (granted or {}).items()}
 
     def answer(request: httpx.Request) -> httpx.Response:
         parts = urlsplit(str(request.url))
         asked = Asked(
             request.method,
             str(request.url),
-            parts.path,
-            parse_qs(parts.query),
+            unquote(parts.path),
+            parse_qs(parts.query, keep_blank_values=True),
             dict(request.headers),
             request.content.decode("utf-8", errors="replace"),
+            parts.path,
         )
         reply = service(asked)
         if not isinstance(reply, Reply):
@@ -96,9 +109,9 @@ def connector_context(
         return httpx.Response(reply.status, text=reply.text or "", headers=reply.headers)
 
     def access_token(name: str) -> str:
-        if name not in granted:
+        if name not in signed_in:
             raise ConnectorError("auth", f"Sign in to {name} first.")
-        return granted[name]
+        return signed_in[name]
 
     return ConnectorContext(
         workspace_root=Path(workspace_root),
@@ -106,6 +119,7 @@ def connector_context(
         secret=kept.get,
         keep_secret=kept.__setitem__,
         access_token=access_token,
+        granted=(lambda name: set(allowed.get(name, set()))) if granted is not None else None,
     )
 
 

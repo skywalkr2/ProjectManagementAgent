@@ -10,6 +10,23 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.40 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **`retry_after(headers)`** is part of the plugin API: a Retry-After header (seconds or an HTTP date) in seconds
+  from now, capped at the host's longest wait, for a connector that raises `throttled` itself.
+- **Testing connectors:** `Asked.path` is decoded (`Asked.raw_path` is as sent), `query` and `form` keep blank
+  values, `Asked.param(name, default)` gives a parameter's first value, and `connector_context(granted={sign-in:
+  scopes})` answers `context.granted`. Left out, `context.granted` stays None as before. `Reply()` with neither `json`
+  nor `text` is an empty body; `Reply(json={})` is an empty JSON object.
+- **Said in the guide:** `context.granted` is empty while signed out, so ask for the token first; an `account=`
+  function's `ConnectorError` is quiet and anything else counts as the plugin failing; what a triage matcher's
+  `before`, `now`, `added` and `removed` hold for new, changed and removed items; only `##` sections of a help file
+  are read; and how a 404 and a 410 change marker differ.
+- **Unchanged on purpose:** a 410 still comes back as a response (released connectors check for it), and a
+  read-only plugin host for scripts is on the list for later.
+
 ## What 0.3.39 adds
 
 Manifests stay `'>=0.3,<0.4'`.

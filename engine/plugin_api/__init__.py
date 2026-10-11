@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.39"
+PLUGIN_API_VERSION = "0.3.40"
 
 
 class Settings(BaseModel):
@@ -1325,8 +1325,10 @@ class Registrar:
         `content`, `.text` and `.json()`, and raise `ConnectorError` for no connection (offline), timeouts and 5xx
         (outage), 401 (auth), 403 (no_access), 404 (not_found), and 429 or 503 with a Retry-After (throttled, with
         the wait). Those errors carry the answer's `status`, `headers` and `body` (`err.json()`), so a connector can
-        read the service's own error code and raise a better kind: a 403 that means "slow down" is `throttled`.
-        Every other status (410, say) comes back as a response to read. A throttled read isn't counted as a failure,
+        read the service's own error code and raise a better kind: a 403 that means "slow down" is `throttled`, with
+        `retry_after=retry_after(err.headers)`. Every other status (410, say) comes back as a response to read, so a
+        service whose expired change marker is a 404 is caught as `not_found` and one whose marker is a 410 is a
+        status to check; both mean "start over with a full read". A throttled read isn't counted as a failure,
         and the source isn't read again before its wait ends. `context.secret(name)` reads a secret named in
         `requires.secrets` (None when it isn't set), `context.keep_secret(name, value)` keeps one on this computer,
         and `context.access_token(name)` gives a current token for one of the plugin's sign-ins. Test a connector
@@ -1373,9 +1375,12 @@ class Registrar:
         `allows` says in plain words what the person is asked to allow ("Read your mail"), shown on the Sign-ins
         row and the setup step before they leave for the service's page. `account(context) -> str`, when given, is
         called once after signing in, with a context like a connector's (`context.web`, `context.access_token`), and
-        names the signed-in account ("Signed in as …"); a failure leaves it unnamed. `context.granted(name)` is the
-        set of scopes the person allowed (the service's answer, or everything asked when it doesn't say); the row
-        names any scope asked for and not granted. `revoke_url` (HTTPS, on a declared host) is where signing out
+        names the signed-in account ("Signed in as …"); a failure leaves it unnamed: a `ConnectorError` quietly, and
+        anything else also counts as the plugin failing (failure containment). `context.granted(name)` is the set of
+        scopes the person allowed (the service's answer, or everything asked when it doesn't say); the row names
+        any scope asked for and not granted. It is empty while signed out, so ask `context.access_token(name)` first
+        (which raises `ConnectorError("auth")` then) and check `granted` after, or a signed-out person reads as
+        `no_access` instead of being asked to sign in. `revoke_url` (HTTPS, on a declared host) is where signing out
         withdraws the access at the service (RFC 7009), best effort. When the service refuses to renew a sign-in, it
         shows "Sign in again" at once and the person is told once. The core adds a setup step per sign-in, done
         while signed in."""
@@ -1409,7 +1414,10 @@ class Registrar:
         """A rule kind for triage in `watch.yaml` (listed in `provides.triage_matchers`): `match(change, params) ->
         reason | None` closes a watched change before the assistant reads it when it returns a reason in plain words.
         `change` has source, key, title, change (new, changed or removed), author, before, now, added and removed
-        (lines) and our_accounts; `params` are the rule's own. Deterministic and quick; it never calls AI. The person
+        and our_accounts; `params` are the rule's own. `before` is the text last read ("" for a new item) and `now`
+        the text read this time ("" for a removed item, whose author is None). For a changed item, `added` and
+        `removed` are the lines that appeared and disappeared (a line diff of `before` and `now`); for a new or
+        removed item both are empty, so read `now` or `before`. Deterministic and quick; it never calls AI. The person
         sees what it closed and why, and can take a closer look."""
         self._name(name)
         if name in self.triage_matchers or not callable(match):
@@ -1484,9 +1492,11 @@ class Registrar:
 
 
 from engine.connectors import ConnectorError, Poll, SourceItem  # noqa: E402 - part of the plugin API
+from engine.net import retry_after  # noqa: E402 - part of the plugin API
 
 __all__ = [
     "ConnectorError",
+    "retry_after",
     "Poll",
     "SourceItem",
     "PLUGIN_API_VERSION",

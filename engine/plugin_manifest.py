@@ -136,7 +136,8 @@ class Provides(Strict):
     help: list[str] = Field(
         default_factory=list,
         description="Help files the plugin ships (Markdown, one section per ## heading, paths relative to its "
-        "manifest) that asking the assistant reads and cites, like the user guide.",
+        "manifest) that asking the assistant reads and cites, like the user guide. Only ## sections are read: text "
+        "before the first ## heading is left out.",
     )
 
     wording: list[str] = Field(
