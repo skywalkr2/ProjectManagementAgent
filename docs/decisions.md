@@ -3,6 +3,33 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: The UI redesign: a full-width shell, Today as a ranked queue with a detail pane and a context rail
+
+**Decided by:** project owner (handed over the UI/UX review in `reviews/ui-ux-2026-10/` to be carried out in full).
+
+**What:**
+- **Today** is a ranked queue (Needs you) in the widest pane, an inspector for the selected line from 1680px, and a
+  context rail (Agenda, Your to-dos, Came in) sized to its content. This replaces both the single-column queue of the
+  first design and the four equal columns of "Today as a dashboard" (below): the dashboard's goal (nothing hidden below
+  the fold on a laptop) stands; the queue gets the width and the informational panels stay visible in the rail. Held
+  items and decisions are always top-level lines.
+- **The shell:** a left sidebar (Today; Work; Records; then Sources, Add-ons, Settings) with real links, a one-row 56px
+  header with a status chip, no footer and no banners; a bottom bar on phones. Plugins add sidebar entries only under
+  Work or Records (the navigation budget).
+- **The screen is used in full:** panes are added as the window grows (7.13); only prose is limited to 72ch.
+- **A visual system** (7.12) from the review's tokens, with shared components, a style guide, stylelint and screen-space
+  checks; settings as nav | form | help; record pages as activity | details; forms in drawers; the title rule (7.14).
+- New settings: `ui.brand.color`, `ui.brand.logo`, `ui.theme` and `ui.density`.
+
+**Why:** the review measured 39–66% of wide screens left empty, about 230px of chrome above the work, the queue in a
+quarter-width scroll box, decisions four levels deep, rows titled "Hi team,", ids on record pages and no visual system.
+
+**Impact:** Design 7.0, 7.1, 7.3, 7.5, 7.7–7.11 rewritten and 7.12–7.14 added; `prototypes/today.html` replaced; 3.3
+and 10.2 note the navigation budget and the new checks. The web client is rebuilt in the review's order (foundation,
+shell, Today, records, settings, then Waiting to go out, the Stages board and the phone review mode). The engine gains the
+title rule. No change to the ops, the API's meaning or the plugin API; a panel's `tab` maps to the sidebar group.
+Deviations from the review are listed in the hand-off and below as they arise.
+
 ## 2026-10-11: One-click install for add-ons comes before the freeze
 
 **Decided by:** project owner (the package-file step "is a pain"; move the add-on part of M0 forward).

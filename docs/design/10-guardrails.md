@@ -45,7 +45,11 @@ plugin system adds a second failure to prevent: the core growing special cases f
    (scans 1 and 3), so a source or name written into a prompt or a playbook fails the same way as one written into code.
 9. **UI labels and accessibility:** user-visible text comes from the wording sheet and config, never hard-coded in components
    (a scan checks JSX for literal text); a test renders the UI against both fictional workspaces; the end-to-end runs include
-   axe accessibility checks (7.10).
+   axe accessibility checks (7.10) in light and dark at phone, laptop and desktop widths. The **visual system** (7.12) is
+   enforced too: stylelint fails on a raw color outside the token file, a font size, spacing or radius not taken from a
+   token, uppercase text and opacity on disabled controls; the end-to-end suite checks **screen use** (7.13: content covers
+   at least 90% of the width beside the sidebar at 1440 and 1920, chrome above content at most 56px) and that no default
+   screen shows an id, a raw enum value, a command line or a config path.
 10. **Deployment:** hosting platform names appear only in `deploy/` and docs; every recipe's profile passes the deploy checks
     (11.5); the UI and API tests run under the root path and under a nested base path.
 

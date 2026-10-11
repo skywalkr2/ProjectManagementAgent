@@ -1,0 +1,144 @@
+/* Proposed design tokens for the cockpit UI (review companion to visual-spec.md).
+   Three layers: primitives (raw values), semantic roles (what a value is for), component tokens (where it is used).
+   Components read only semantic and component tokens; config/ui.yaml branding overrides the --brand-* primitives.
+   Every text pair below was checked against WCAG 2.2 AA in light and dark (see visual-spec.md §2.4). */
+
+:root {
+  /* ---------- 1. Primitives ---------- */
+  /* Neutrals: cool grey, 12 steps */
+  --gray-0: #ffffff;  --gray-25: #f8f9fa; --gray-50: #f3f4f6; --gray-100: #eef0f3; --gray-150: #e1e4e9;
+  --gray-300: #c4c9d2; --gray-450: #878f9d; --gray-550: #636b7b; --gray-650: #525a69; --gray-800: #2a2f39;
+  --gray-900: #171a20; --gray-950: #0e1014;
+
+  /* Brand (overridable from config/ui.yaml: ui.brand.color). Default: indigo */
+  --brand-600: #3446b5; --brand-700: #28388f; --brand-650: #2e3fa6; --brand-50: #eceffc;
+  --brand-300: #8b98ff; --brand-200: #a9b3ff; --brand-900: #232a52;
+
+  /* Status hues */
+  --amber-700: #8a4f00; --amber-50: #fff3dc; --amber-300: #f2b65c; --amber-950: #33260f;
+  --red-700: #b3261e;   --red-50: #fdecea;   --red-300: #ff8a80;   --red-950: #3a1a18;
+  --green-700: #1b6b44; --green-50: #e6f4ec; --green-300: #7fd3a5; --green-950: #132c1e;
+  --yellow-200: #ffe58f;
+
+  /* Type: system UI stack; tabular numbers for dates and counts */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: var(--font-ui);          /* one family; set a serif here only for brand page titles */
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --text-xs: 12px;   --lh-xs: 16px;      /* meta, pills, captions */
+  --text-sm: 14px;   --lh-sm: 20px;      /* secondary text, buttons, inputs */
+  --text-md: 15px;   --lh-md: 22px;      /* body, row titles */
+  --text-lg: 18px;   --lh-lg: 24px;      /* section titles, dialog titles */
+  --text-xl: 22px;   --lh-xl: 28px;      /* page titles */
+  --text-2xl: 28px;  --lh-2xl: 34px;     /* Today greeting only */
+  --weight-regular: 400; --weight-medium: 500; --weight-semibold: 600;
+
+  /* Space: 4-point scale */
+  --space-0: 0; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-5: 20px;
+  --space-6: 24px; --space-8: 32px; --space-10: 40px; --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 4px;   /* pills, kbd, small inputs */
+  --radius-md: 8px;   /* buttons, inputs, menus */
+  --radius-lg: 12px;  /* cards, dialogs, panels */
+  --radius-full: 999px;
+
+  /* Elevation: only floating things get shadows */
+  --elev-0: none;
+  --elev-1: 0 1px 2px rgb(16 20 28 / 0.06);                                        /* queue cards on hover */
+  --elev-2: 0 4px 12px rgb(16 20 28 / 0.10), 0 1px 3px rgb(16 20 28 / 0.08);       /* menus, popovers */
+  --elev-3: 0 16px 40px rgb(16 20 28 / 0.18), 0 2px 6px rgb(16 20 28 / 0.10);      /* dialogs, drawers, toasts */
+
+  /* Motion */
+  --dur-fast: 120ms; --dur-base: 180ms; --dur-slow: 260ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Layout: the app fills the window at every width. Panes are added as width grows; nothing is centered in a
+     fixed column with empty margins. Only running prose is limited, by --measure, inside its pane. */
+  --header-h: 56px;
+  --sidebar-w: 232px;          /* left navigation, expanded (>= 1280px) */
+  --sidebar-w-collapsed: 64px; /* icons only (1024-1279px, or collapsed by the person) */
+  --gutter: 24px;              /* between panes and grid columns; 16px under 1024px */
+  --page-pad: 24px;            /* inside the content area; 16px on phones */
+  --rail-w: clamp(300px, 18vw, 420px);     /* Today context rail, list detail panes */
+  --detail-w: clamp(420px, 26vw, 600px);   /* inspector pane (>= 1680px) and side drawers */
+  --settings-nav-w: 220px;
+  --field-max: 560px;          /* one text input; forms lay out in 2 columns of these when wide */
+  --measure: 72ch;             /* max line length for paragraphs, messages and pasted text */
+  /* Breakpoints (media queries use the literals): phone < 640 · tablet 640-1023 · laptop 1024-1439 ·
+     desktop 1440-1919 · wide 1920-2559 · ultra >= 2560 */
+  --tap-min: 44px;             /* touch target on coarse pointers */
+
+  /* ---------- 2. Semantic roles (light) ---------- */
+  --canvas: var(--gray-50);          /* page background */
+  --surface: var(--gray-0);          /* cards, header, inputs */
+  --surface-sunk: var(--gray-100);   /* wells, code, expanded detail */
+  --surface-hover: var(--gray-25);
+  --border: var(--gray-150);         /* decorative dividers and card edges */
+  --border-strong: var(--gray-450);  /* input and control boundaries: 3.26:1 on surface */
+  --text: #14171f;
+  --text-muted: var(--gray-650);     /* 6.9:1 on surface */
+  --text-subtle: var(--gray-550);    /* 4.7:1 on sunk; meta only */
+  --text-on-accent: #ffffff;
+
+  --accent: var(--brand-600);        /* primary buttons, selected nav, links */
+  --accent-hover: var(--brand-700);
+  --accent-text: var(--brand-650);   /* links and accent words on surface/soft */
+  --accent-soft: var(--brand-50);    /* selected rows, "needs you" pill */
+
+  --warn: var(--amber-700);   --warn-soft: var(--amber-50);
+  --danger: var(--red-700);   --danger-soft: var(--red-50);
+  --ok: var(--green-700);     --ok-soft: var(--green-50);
+  --mark: var(--yellow-200);  --mark-text: #14171f;     /* evidence highlight */
+
+  --focus-gap: var(--surface);
+  --focus-ring: var(--accent);
+  --overlay: rgb(14 16 20 / 0.40);
+
+  /* ---------- 3. Component tokens ---------- */
+  --btn-h: 36px; --btn-h-sm: 30px; --btn-px: 14px; --btn-px-sm: 10px;
+  --input-h: 40px;
+  --row-py: var(--space-3); --row-px: var(--space-4); --row-gap: var(--space-3);
+  --pill-h: 22px; --pill-px: 8px;
+  --card-p: var(--space-4);
+  color-scheme: light;
+}
+
+/* ---------- Dark ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: var(--gray-950);
+    --surface: var(--gray-900);
+    --surface-sunk: #1d2129;
+    --surface-hover: #1b1f26;
+    --border: var(--gray-800);
+    --border-strong: #6f7788;        /* 3.9:1 on surface */
+    --text: #e8ebf1;
+    --text-muted: #a7afbd;
+    --text-subtle: #8d95a5;
+    --text-on-accent: #0c0f22;
+    --accent: var(--brand-300);
+    --accent-hover: var(--brand-200);
+    --accent-text: var(--brand-200);
+    --accent-soft: var(--brand-900);
+    --warn: var(--amber-300);   --warn-soft: var(--amber-950);
+    --danger: var(--red-300);   --danger-soft: var(--red-950);
+    --ok: var(--green-300);     --ok-soft: var(--green-950);
+    --mark: #5e5016; --mark-text: #f4ecc8;
+    --overlay: rgb(0 0 0 / 0.55);
+    --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --elev-2: 0 6px 16px rgb(0 0 0 / 0.45);
+    --elev-3: 0 18px 48px rgb(0 0 0 / 0.6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] { /* same values as the media block, for an in-app toggle */ }
+
+/* ---------- Global rules ---------- */
+@media (pointer: coarse) { :root { --btn-h: var(--tap-min); --btn-h-sm: 40px; --input-h: var(--tap-min); } }
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; --dur-slow: 0ms; } }
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring);   /* visible on primary buttons too */
+}

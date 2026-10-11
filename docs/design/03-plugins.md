@@ -69,7 +69,7 @@ where it came from.
 | Renderer | how records become content for a channel | template files, optional render function | 1.0 |
 | Lookup | a fact the AI can ask the engine to fetch | `lookup(query) -> result` | 1.0 |
 | Stages | the steps a record type moves through | ordered stages with entry checks and what each starts (6.26), defaults for `config/stages.yaml` | 1.0 |
-| Panel | a UI view | declarative view spec (7.2); bundled plugins may also ship a React component | 1.0 |
+| Panel | a UI view, listed under Work or Records in the sidebar (never a top-level entry: the navigation budget, 7.1) | declarative view spec (7.2); bundled plugins may also ship a React component | 1.0 |
 | Today contributor | lines on the Today list | `lines(workspace) -> [TodayLine]` | 1.0 |
 | Job | scheduled work | name, default schedule, needs network, `run()` | 1.0 |
 | Interface | a versioned contract other plugins can use: record fields to read, events, task kinds to request (3.9) | declared in the manifest; the shape is a schema checked by the host | 1.0 |
