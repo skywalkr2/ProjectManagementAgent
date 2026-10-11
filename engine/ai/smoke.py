@@ -195,3 +195,23 @@ def stand_in(cfg: Config) -> bool:
 def _accounts_in_use(cfg: Config) -> list[str]:
     """Every provider/model a tier uses or falls back to."""
     return [ref for tier in cfg.ai.tiers.values() for ref in ([tier.use] if tier.use else []) + list(tier.fallback)]
+
+
+def account_test(
+    cfg: Config,
+    env: Mapping[str, str],
+    name: str,
+    adapter_factory: Callable[[str, Any, str | None], Any] = make_adapter,
+) -> list[SmokeResult]:
+    """Test one account on its first model, whether or not any kind of work uses it yet: one small call (and the
+    lockdown check for a command-line agent), reported under the tier name "account"."""
+    from dataclasses import replace
+
+    from engine.config.schema import TierSettings
+
+    provider = cfg.ai.providers.get(name)
+    if provider is None or not provider.models:
+        return [SmokeResult("account", name, True, False, "this account has no model to test")]
+    first = next(iter(provider.models))
+    ai = cfg.ai.model_copy(update={"tiers": {"account": TierSettings(use=f"{name}/{first}")}})
+    return smoke_test(replace(cfg, files={**cfg.files, "ai": ai}), env, adapter_factory)

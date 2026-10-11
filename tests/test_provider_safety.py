@@ -106,7 +106,7 @@ def test_changed_settings_stop_new_work_until_restart(env):
     path.write_text(path.read_text() + "\n# edited while running\n")
     assert worker.restart_needed is None and not worker.needs_restart()  # AI settings are taken in live
     path = ws.config_dir / "storage.yaml"
-    path.write_text(set_key(path.read_text(), ["backups", "keep"], 3))  # this one waits for a restart
+    path.write_text(set_key(path.read_text(), ["export", "every_minutes"], 7))  # this one waits for a restart
     req = hand_in(ws, store, note="file this", now=NOW).request
     assert worker.run_pending() == 0
     assert worker.restart_needed == RESTART_NEEDED

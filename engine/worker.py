@@ -25,8 +25,17 @@ RESTART_NEEDED = "Settings or code changed since the cockpit started; restart it
 
 #: Settings the running app takes in at once, without a restart: everything that reads them reads the shared config
 #: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
-#: each request). Any other change waits for a restart the person chooses.
-LIVE_KEYS = ("ai.", "ui.", "workspace.user.", "workspace.name", "workspace.assistant_name", "workspace.our_accounts")
+#: each request; where and how often backups go, for each backup). Any other change waits for a restart the person
+#: chooses.
+LIVE_KEYS = (
+    "ai.",
+    "ui.",
+    "workspace.user.",
+    "workspace.name",
+    "workspace.assistant_name",
+    "workspace.our_accounts",
+    "storage.backups.",
+)
 
 
 def config_fingerprint(ws: Workspace) -> str:

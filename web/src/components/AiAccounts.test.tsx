@@ -20,6 +20,7 @@ const account = (name: string, extra: Partial<S["AiAccountView"]> = {}): S["AiAc
   models: { everyday: "model-a" },
   used_for: [],
   has_key: true,
+  key_state: extra.has_key === false ? "none" : "saved",
   ...extra,
 });
 

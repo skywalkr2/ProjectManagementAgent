@@ -1124,6 +1124,12 @@ class AiAccountView(BaseModel):
     models: dict[str, str]
     used_for: list[str] = Field(description="The tiers whose main account it is.")
     has_key: bool = Field(description="A key or a reference to one is set.")
+    key_state: Literal["saved", "missing", "none"] = Field(
+        "none",
+        description="saved: its key is there to use. missing: it refers to a key that isn't there (an environment "
+        "variable not set, a file not found). none: no key is set.",
+    )
+    key_where: str | None = Field(None, description="Where a missing key is looked for, in plain words; never a key.")
 
 
 class AiAccountChange(BaseModel):

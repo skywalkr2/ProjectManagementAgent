@@ -266,7 +266,7 @@ def test_person_override_and_restart_stop_rule_moves(stage_workspace):
     settings.moves = "rule"
     storage = store.path.parent / "config" / "storage.yaml"
     text = storage.read_text() if storage.exists() else "version: 1\n"
-    storage.write_text(set_key(text, ["backups", "keep"], 3))  # a change that waits for a restart
+    storage.write_text(set_key(text, ["export", "every_minutes"], 7))  # a change that waits for a restart
     worker.run_pending()
     assert worker.restart_needed
     assert store.read().get(record.kind, record.id).data["stage"] is None

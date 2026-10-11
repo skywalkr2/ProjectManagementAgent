@@ -150,7 +150,7 @@ def test_steps_say_what_is_done_and_can_be_skipped(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
     steps = {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}
-    assert list(steps)[:6] == ["workspace", "template", "ai", "backup", "people", "first_note"]
+    assert list(steps)[:7] == ["workspace", "template", "ai", "backup", "people", "first_note", "addons"]
     assert not steps["first_note"]["done"]
     assert c.post(f"{api}/setup/first_note/skip").status_code == 200
     view = c.get(f"{api}/setup").json()
@@ -301,9 +301,9 @@ def test_the_app_restarts_only_when_the_person_asks(tmp_path):
     try:
         assert not worker.restart_due() and not worker.needs_restart()
         text = (ws.config_dir / "storage.yaml").read_text()
-        (ws.config_dir / "storage.yaml").write_text(set_key(text, ["backups", "keep"], 3))
+        (ws.config_dir / "storage.yaml").write_text(set_key(text, ["export", "commit"], not cfg.storage.export.commit))
         assert worker.needs_restart() and not worker.restart_due() and asked == []  # shown, never on its own
-        assert worker.restart_for == ["storage.backups.keep"]  # and says what waits for it
+        assert worker.restart_for == ["storage.export.commit"]  # and says what waits for it
         worker.request_restart()
         assert worker.restart_due() and asked == [True]
         assert not worker.restart_due() and asked == [True]
@@ -326,8 +326,27 @@ def test_live_settings_are_taken_in_at_once_and_a_mixed_change_waits(tmp_path):
         text = (ws.config_dir / "workspace.yaml").read_text()
         storage = (ws.config_dir / "storage.yaml").read_text()
         (ws.config_dir / "workspace.yaml").write_text(set_key(text, ["name"], "Again"))
-        (ws.config_dir / "storage.yaml").write_text(set_key(storage, ["backups", "keep"], 3))
+        (ws.config_dir / "storage.yaml").write_text(
+            set_key(storage, ["export", "commit"], not cfg.storage.export.commit)
+        )
         assert worker.needs_restart() is True and cfg.workspace.name == "Changed"  # nothing half taken in
+    finally:
+        store.close()
+
+
+def test_a_backup_folder_is_taken_in_without_a_restart(tmp_path):
+    from engine.worker import Events, Worker
+
+    ws, cfg, store = make(tmp_path)
+    worker = Worker(ws, store, cfg, Events(), on_restart=lambda: None)
+    try:
+        folder = tmp_path / "drive"
+        folder.mkdir()
+        storage = (ws.config_dir / "storage.yaml").read_text()
+        targets = [{"path": str(folder)}]
+        (ws.config_dir / "storage.yaml").write_text(set_key(storage, ["backups", "targets"], targets))
+        assert worker.needs_restart() is False
+        assert [t.path for t in cfg.storage.backups.targets] == [str(folder)]
     finally:
         store.close()
 
@@ -641,3 +660,60 @@ def test_built_in_agents_start_with_their_tools_off_and_say_if_installed(tmp_pat
     saved = load_config(ws.config_dir, env={})
     assert list(saved.ai.providers["agent-two"].models) == ["default"]
     assert saved.ai.tiers["routine"].use.startswith("agent-two/")
+
+
+def test_an_account_says_whether_its_key_is_there_and_can_be_tested_before_it_does_work(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    stand_in = next(name for name, p in cfg.ai.providers.items() if p.adapter == "stub")
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    kinds = c.get(f"{api}/ai/endpoints").json()
+    service = next(k for k in kinds if k["needs_key"] and k["base_url"])
+    made = c.post(
+        f"{api}/ai/accounts",
+        json={
+            "name": "unset-key",
+            "adapter": service["adapter"],
+            "endpoint": service["id"],
+            "key_ref": "env:COCKPIT_TEST_KEY_NOT_SET",
+            "models": {"everyday": "model-x"},
+            "fingerprint": fingerprint,
+        },
+    )
+    assert made.status_code == 200, made.text
+    accounts = {a["name"]: a for a in c.get(f"{api}/ai/accounts").json()}
+    assert accounts["unset-key"]["key_state"] == "missing"
+    assert "COCKPIT_TEST_KEY_NOT_SET" in accounts["unset-key"]["key_where"]
+    assert accounts[stand_in]["key_state"] == "none"
+    tested = c.post(f"{api}/ai/accounts/{stand_in}/test").json()
+    assert tested == [{"tier": "account", "account": stand_in, "main": True, "ok": True, "detail": "answered"}]
+    missing = c.post(f"{api}/ai/accounts/unset-key/test").json()
+    assert not missing[0]["ok"] and "COCKPIT_TEST_KEY_NOT_SET" in missing[0]["detail"]
+    assert c.post(f"{api}/ai/accounts/nobody/test").status_code == 404
+
+
+@pytest.mark.skipif(os.environ.get("COCKPIT_TEST_CORE_ONLY") == "1", reason="the bundled add-ons are off in this run")
+def test_the_add_ons_step_is_done_until_an_installed_add_on_is_off(tmp_path):
+    from engine import setup
+
+    ws, cfg, store = make(tmp_path)
+    try:
+        assert {s.id: s for s in setup.steps(ws, cfg, store)}["addons"].done
+        folder = ws.root / "plugins" / "spare"
+        folder.mkdir(parents=True)
+        (folder / "plugin.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "name": "spare",
+                    "version": "0.1.0",
+                    "plugin_api": ">=0.3,<0.4",
+                    "description": "An add-on left off",
+                    "entry": "spare:register",
+                    "config_schema": "spare:Config",
+                }
+            )
+        )
+        assert setup.addons_off(ws, cfg) == ["spare"]
+        assert not {s.id: s for s in setup.steps(ws, cfg, store)}["addons"].done
+    finally:
+        store.close()

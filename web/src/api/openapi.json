@@ -788,6 +788,29 @@
             "title": "Has Key",
             "type": "boolean"
           },
+          "key_state": {
+            "default": "none",
+            "description": "saved: its key is there to use. missing: it refers to a key that isn't there (an environment variable not set, a file not found). none: no key is set.",
+            "enum": [
+              "saved",
+              "missing",
+              "none"
+            ],
+            "title": "Key State",
+            "type": "string"
+          },
+          "key_where": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where a missing key is looked for, in plain words; never a key.",
+            "title": "Key Where"
+          },
           "kind": {
             "anyOf": [
               {
@@ -7356,6 +7379,50 @@
           }
         },
         "summary": "Ai Account Remove"
+      }
+    },
+    "/api/ai/accounts/{name}/test": {
+      "post": {
+        "description": "Test one account on its first model, whether or not any kind of work uses it yet.",
+        "operationId": "ai_account_test_api_ai_accounts__name__test_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AiTestResult"
+                  },
+                  "title": "Response Ai Account Test Api Ai Accounts  Name  Test Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Account Test"
       }
     },
     "/api/ai/endpoints": {

@@ -22,7 +22,7 @@ from engine.shipped import shipped
 from engine.storage import StoreError
 
 STATE_FILE = "setup.json"
-CORE_STEPS = ("workspace", "template", "ai", "backup", "people", "first_note")
+CORE_STEPS = ("workspace", "template", "ai", "backup", "people", "first_note", "addons")
 CATALOG = shipped("catalog") / "ai-endpoints.yaml"
 
 
@@ -85,6 +85,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
         "backup": bool(cfg.storage.backups.targets),
         "people": len(people) >= 2,
         "first_note": any(r.data.get("origin") == "pm" for r in view.list("request")),
+        "addons": not addons_off(ws, cfg),
     }
     found = [Step(step, done[step], step in skipped and not done[step]) for step in CORE_STEPS]
     for plugin, step in store.plugins.setup_steps():
@@ -117,6 +118,18 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
             )
         )
     return found
+
+
+def addons_off(ws: Any, cfg: Any) -> list[str]:
+    """Add-ons installed on this computer (in the workspace's plugins folder or as packages) that aren't turned on."""
+    from engine.plugin_manifest import declared_plugins
+
+    enabled = set(cfg.workspace.plugins.enabled)
+    try:
+        installed = {m.name for m in declared_plugins(ws.config_dir, None)}
+    except Exception:  # an add-on whose manifest doesn't read is listed on the Add-ons screen, not here
+        return []
+    return sorted(installed - enabled)
 
 
 def _template_in_use(ws: Any, cfg: Any) -> bool:

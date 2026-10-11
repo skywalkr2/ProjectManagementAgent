@@ -266,19 +266,53 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.get("/ai/accounts")
     def ai_accounts() -> list[AiAccountView]:
         """The AI accounts in the settings, as they are on disk now; never a key."""
+        from engine.secrets import SecretError, describe_secret, resolve_secret
+
         ai = current().ai
-        return [
-            AiAccountView(
-                name=name,
-                kind=p.kind,
-                adapter=p.adapter,
-                base_url=p.base_url,
-                models=dict(p.models),
-                used_for=[t for t, tier in ai.tiers.items() if (tier.use or "").split("/", 1)[0] == name],
-                has_key=bool(p.auth),
+
+        def key_state(ref: str | None) -> tuple[str, str | None]:
+            if not ref:
+                return "none", None
+            try:
+                return ("saved", None) if resolve_secret(ref) else ("missing", describe_secret(ref))
+            except SecretError:
+                return "missing", describe_secret(ref)
+
+        found = []
+        for name, p in ai.providers.items():
+            state, where = key_state(p.auth)
+            found.append(
+                AiAccountView(
+                    name=name,
+                    kind=p.kind,
+                    adapter=p.adapter,
+                    base_url=p.base_url,
+                    models=dict(p.models),
+                    used_for=[t for t, tier in ai.tiers.items() if (tier.use or "").split("/", 1)[0] == name],
+                    has_key=bool(p.auth),
+                    key_state=state,
+                    key_where=where,
+                )
             )
-            for name, p in ai.providers.items()
-        ]
+        return found
+
+    @r.post("/ai/accounts/{name}/test")
+    def ai_account_test(name: str) -> list[AiTestResult]:
+        """Test one account on its first model, whether or not any kind of work uses it yet."""
+        from engine.ai.smoke import account_test
+
+        try:
+            now = load_config(ws.config_dir)
+        except ConfigError as err:
+            raise HTTPException(status_code=400, detail=str(err)) from None
+        if name not in now.ai.providers:
+            raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
+        results = account_test(now, os.environ, name)
+        line = AiTestResult(tier="account", account=name, main=True, ok=True, detail="answered")
+        for x in results:
+            if not x.ok and line.ok:
+                line.ok, line.detail = False, x.detail
+        return [line]
 
     @r.post("/ai/accounts/{name}")
     def ai_account_change(name: str, body: AiAccountChange) -> SettingsSaved:
