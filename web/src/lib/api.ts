@@ -13,7 +13,7 @@ export class ApiError extends Error {
   }
 }
 
-async function send<T>(method: "GET" | "POST", path: string, init: RequestInit): Promise<T> {
+async function send<T>(method: "GET" | "POST" | "DELETE", path: string, init: RequestInit): Promise<T> {
   const response = await fetch(`api/${path}`, { method, credentials: "same-origin", ...init });
   if (!response.ok) {
     let detail = "";
@@ -28,7 +28,7 @@ async function send<T>(method: "GET" | "POST", path: string, init: RequestInit):
   return (await response.json()) as T;
 }
 
-async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+async function call<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown): Promise<T> {
   if (body === undefined) return send<T>(method, path, { headers: {} });
   return send<T>(method, path, { headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 }
@@ -174,6 +174,10 @@ export const api = {
       body: file,
     }),
   dropCopy: (copy: string) => call<S["Ok"]>("POST", `working-copies/${id(copy)}/drop`),
+
+  signIns: () => call<S["SignInView"][]>("GET", "sign-ins"),
+  startSignIn: (name: string) => call<S["SignInStarted"]>("POST", `sign-ins/${named(name)}/start`),
+  signOut: (name: string) => call<S["Ok"]>("DELETE", `sign-ins/${named(name)}`),
 
   settings: () => call<S["SettingsView"]>("GET", "settings"),
   saveSettings: (body: S["SettingsSave"]) => call<S["SettingsSaved"]>("POST", "settings", body),

@@ -60,6 +60,8 @@ test("key families built at run time are complete", () => {
     ...(s.AutoClosedView.properties.change.enum ?? []).map((x) => `sources.closed.change.${x}`),
     ...(s.SettingProposalView.properties.status.enum ?? []).filter((x) => x !== "open").map((x) => `ask.proposal.${x}`),
     ...(s.ReportView.properties.status.enum ?? []).filter((x) => x !== "draft").map((x) => `ask.report_status.${x}`),
+    ...(s.SignInView.properties.status.enum ?? []).map((x) => `sign_in.status.${x}`),
+    ...["done", "failed", "refused", "expired"].map((x) => `sign_in.return.${x}`),
     "op.note.under",
     "op.note.none",
     ...(s.AiState.properties.state.enum ?? []).filter((x) => x !== "ok").flatMap((x) => ["title", "todo"].map((y) => `ai.${x}.${y}`)),

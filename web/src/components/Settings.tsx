@@ -18,6 +18,7 @@ import {
 } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
+import { SignIns } from "./SignIns";
 
 type Edits = Record<string, Draft>;
 
@@ -151,6 +152,7 @@ export function Settings(props: { onOpenGuide: () => void }) {
           })
         )}
       </div>
+      <SignIns />
     </section>
   );
 }

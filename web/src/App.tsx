@@ -4,6 +4,7 @@ import type { S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
 import { RestartNotice, RestartProvider } from "./lib/restart";
+import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
 import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
 import { useWords } from "./lib/wording";
@@ -32,6 +33,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
   const { t } = useWords();
   const live = useLive();
   const { undoLast } = useToasts();
+  useSignInReturn();
   const [handIn, setHandIn] = useState(false);
   const [help, setHelp] = useState(false);
   const [feedback, setFeedback] = useState(false);
