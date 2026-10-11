@@ -10,6 +10,25 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.18 adds
+
+Manifests stay `'>=0.3,<0.4'`. `provides.panels`, `provides.today` and `provides.jobs` are now available.
+
+- **Today lines:** `registrar.today(name, lines=fn)`, where `fn(view, settings) -> list[TodayLine(id, text, about,
+  action, why, until)]` is called whenever Today is shown.
+  - A line's `action` is one of the plugin's person actions or task kinds.
+  - `GET /api/plugin-today` lists them, each saying whether its action is a person action or AI work.
+- **Panels:** `registrar.panel(name, title=, kind=, columns=, view="table", filter={}, primary_action=None,
+  row_actions=(), tab="work")` is a screen described as data (design 7.2).
+  - **Checked at load:** the columns and filter must be fields of the kind, and the actions must be the plugin's own
+    actions or task kinds on that kind.
+  - **Routes:** `GET /api/panels` and `GET /api/panels/<name>/rows?project=`.
+- **Jobs:** `registrar.job(name, every_minutes=, run=fn)`, where `fn(context)` gets an `EventContext`. It reads,
+  queues requests, files questions and raises interface events.
+  - **When:** it runs while the app runs, when due. `workspace.plugins.jobs.<name>` turns it off or changes how often.
+  - **Records:** each run is a `job_run` record. A job that raises is recorded as failed and turns the plugin off.
+  - **Route:** `GET /api/jobs`.
+
 ## What 0.3.17 adds
 
 Manifests stay `'>=0.3,<0.4'`.

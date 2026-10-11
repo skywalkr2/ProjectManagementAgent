@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.17"
+PLUGIN_API_VERSION = "0.3.18"
 
 
 class Settings(BaseModel):
@@ -538,6 +538,53 @@ class WorkingCopyContext(ReadView):
         self.record, self.field, self.version = record, field, version
 
 
+@dataclass
+class TodayLine:
+    """One line a plugin adds to Today: `text` is one plain line for the person (no internal terms); `about` is the
+    record it is about, as (kind, id); `action` is the one thing to do from it, a person action or a task kind of
+    this plugin's, on that record or the workspace; `why` and `until` say why it is waiting and until when, when it
+    is. `id` is stable across calls, so the same line isn't shown twice."""
+
+    id: str
+    text: str
+    about: tuple[str, str] | None = None
+    action: str | None = None
+    why: str = ""
+    until: str | None = None  # an ISO date
+
+
+@dataclass(frozen=True)
+class TodayRegistration:
+    """A registered Today contributor (host side)."""
+
+    name: str
+    lines: Callable
+
+
+@dataclass(frozen=True)
+class PanelRegistration:
+    """A registered panel (host side)."""
+
+    name: str
+    title: str
+    kind: str
+    view: str
+    columns: tuple[str, ...]
+    filter: dict[str, Any]
+    primary_action: str | None
+    row_actions: tuple[str, ...]
+    tab: str
+
+
+@dataclass(frozen=True)
+class JobRegistration:
+    """A registered job (host side)."""
+
+    name: str
+    every_minutes: int
+    run: Callable
+
+
 @dataclass(frozen=True)
 class InterfaceItem:
     """One item a provider offers through an interface: who provides it and its fields, as the definition shapes
@@ -679,6 +726,9 @@ class Registrar:
         self.working_copies: dict[str, WorkingCopyRegistration] = {}
         self.derived_files: dict[str, DerivedFileRegistration] = {}
         self.interface_definitions: dict[str, InterfaceDefinition] = {}
+        self.today_lines: dict[str, TodayRegistration] = {}
+        self.panels: dict[str, PanelRegistration] = {}
+        self.jobs: dict[str, JobRegistration] = {}
         self.interface_provisions: dict[str, InterfaceProvision] = {}
 
     def _name(self, name: str) -> None:
@@ -1002,6 +1052,55 @@ class Registrar:
             match.group(1), int(match.group(2)), items, dict(task_kinds or {})
         )
 
+    def today(self, name: str, *, lines: Callable) -> None:
+        """Lines for the Today list (listed in `provides.today`): `lines(view, settings) -> list[TodayLine]`, called
+        whenever Today is shown, so it must be quick and deterministic and never call AI. A line's `action` must be
+        one of this plugin's person actions or task kinds."""
+        self._name(name)
+        if name in self.today_lines or not callable(lines):
+            raise ValueError("duplicate Today contributor or invalid lines function")
+        self.today_lines[name] = TodayRegistration(name, lines)
+
+    def panel(
+        self,
+        name: str,
+        *,
+        title: str,
+        kind: str,
+        columns: tuple[str, ...],
+        view: str = "table",
+        filter: dict[str, Any] | None = None,
+        primary_action: str | None = None,
+        row_actions: tuple[str, ...] = (),
+        tab: str = "work",
+    ) -> None:
+        """A screen listing records (listed in `provides.panels`), described as data so it looks and behaves like
+        the core's (design 7.2): the records of `kind` (core or own) whose fields equal `filter`, shown as `view`
+        ("list", "table" or "board"; a board groups by the first column) with `columns` (fields of the kind).
+        `primary_action` is the one action on a row and `row_actions` the rest, in its menu: this plugin's person
+        actions or task kinds on that kind. Rows are read through the core, and actions run as they always do."""
+        self._name(name)
+        if name in self.panels or not title.strip() or not columns:
+            raise ValueError("duplicate panel, missing title or no columns")
+        if view not in ("list", "table", "board"):
+            raise ValueError('a panel view is "list", "table" or "board"')
+        if tab not in ("today", "work", "people", "settings"):
+            raise ValueError('a panel tab is "today", "work", "people" or "settings"')
+        self.panels[name] = PanelRegistration(
+            name, title.strip(), kind, view, tuple(columns), dict(filter or {}), primary_action, tuple(row_actions), tab
+        )
+
+    def job(self, name: str, *, every_minutes: int, run: Callable) -> None:
+        """Work on a schedule (listed in `provides.jobs`): `run(context)` with an `EventContext`, every
+        `every_minutes` by default; the workspace changes it or turns the job off in
+        `workspace.plugins.jobs.<name>`. Like an event handler it reads, queues requests, files questions and raises
+        interface events; it never writes records itself and never calls AI directly. It runs only while the app
+        runs, and each run is recorded."""
+        self._name(name)
+        if name in self.jobs or not callable(run) or not isinstance(every_minutes, int) or every_minutes < 5:
+            raise ValueError("duplicate job, invalid run function, or a schedule under 5 minutes")
+        self.jobs[name] = JobRegistration(name, every_minutes, run)
+
     def derived_file(self, name: str, *, path: str, depends_on: tuple[str, ...], render: Callable) -> None:
         """A read-only file generated from records into each project's folder in the synced folder (an overview, a
         sheet of facts). `path` is relative to the project's folder, with an extension ("views/overview.md").
@@ -1061,6 +1160,7 @@ __all__ = [
     "TakeBack",
     "WorkingCopyContext",
     "InterfaceItem",
+    "TodayLine",
     "PacketContext",
     "LongText",
     "Unit",

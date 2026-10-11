@@ -32,9 +32,6 @@ class Dependency(Strict):
 NOT_YET = {
     "requires.network": "network hosts a plugin may reach",
     "requires.secrets": "secrets a plugin may read",
-    "provides.panels": "screens a plugin adds",
-    "provides.today": "lines a plugin adds to Today",
-    "provides.jobs": "work a plugin runs on a schedule",
     "provides.playbook": "a plugin's own playbook",
 }
 
@@ -101,9 +98,9 @@ class Provides(Strict):
     derived_files: list[str] = Field(
         default_factory=list, description="Files the plugin generates from its records into each project's folder."
     )
-    panels: list[str] = Field(default_factory=list, description="Screens. Not yet available.")
-    today: list[str] = Field(default_factory=list, description="Lines on Today. Not yet available.")
-    jobs: list[str] = Field(default_factory=list, description="Scheduled work. Not yet available.")
+    panels: list[str] = Field(default_factory=list, description="Screens listing records, described as data.")
+    today: list[str] = Field(default_factory=list, description="Contributors of lines on Today.")
+    jobs: list[str] = Field(default_factory=list, description="Work run on a schedule while the app runs.")
     playbook: str | None = Field(None, description="The plugin's own playbook. Not yet available.")
     data: str | None = Field(
         None,

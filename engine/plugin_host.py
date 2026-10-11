@@ -13,7 +13,7 @@ from collections import deque
 from copy import deepcopy
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Any
@@ -319,6 +319,108 @@ class PluginHost:
         task = self.registrars[offering[0]].interface_provisions[name].task_kinds[data["interface_task"]]
         return {"task": task, "note": data["note"], **({"about": data["about"]} if data.get("about") else {})}
 
+    # ---- Today lines, panels and jobs -----------------------------------------------------------------------------
+
+    def today(self) -> list[tuple[str, Any]]:
+        """(plugin, TodayLine) from every running plugin's Today contributors, each checked."""
+        from engine.plugin_api import ReadView, TodayLine
+
+        found = []
+        for plugin, registrar in sorted(self.registrars.items()):
+            if not self.active(plugin):
+                continue
+            for name, contributor in sorted(registrar.today_lines.items()):
+                reader = self._with_files(ReadView(self.store.read(), plugin))
+                try:
+                    lines = contributor.lines(reader, registrar.config.model_copy(deep=True))
+                    for line in lines:
+                        if not isinstance(line, TodayLine):
+                            raise ValueError("lines must be TodayLine objects")
+                        if not line.text.strip() or "\n" in line.text or len(line.text) > 300:
+                            raise ValueError("a Today line is one line of up to 300 characters")
+                        if line.action is not None and line.action not in registrar.actions | registrar.tasks:
+                            raise ValueError(f"{line.action} isn't one of this plugin's actions or task kinds")
+                        if line.about is not None and "/" in line.about[0] and not line.about[0].startswith(plugin):
+                            raise ValueError("a Today line is about a core record or one of the plugin's own")
+                except Exception as err:
+                    self.disable(plugin, f"Today lines {name} failed: {err}")
+                    break
+                found += [(plugin, line) for line in lines]
+        return found
+
+    def panel(self, name: str) -> Any | None:
+        plugin = name.split("/", 1)[0]
+        registrar = self.registrars.get(plugin)
+        return registrar.panels.get(name) if registrar and self.active(plugin) else None
+
+    def panel_rows(self, name: str, project: str | None = None) -> list[dict[str, Any]]:
+        """The rows of a running plugin's panel: records of its kind matching its filter, with its columns."""
+        panel = self.panel(name)
+        if panel is None:
+            raise StoreError(f"there is no panel {name} running now")
+        view = self.store.read()
+        equals = dict(panel.filter) | ({"project": project} if project else {})
+        records = view.find(panel.kind, equals) if equals else view.list(panel.kind)
+        return [{"id": r.id, "values": {c: r.data.get(c) for c in panel.columns}} for r in records]
+
+    def job_settings(self, name: str) -> tuple[bool, int]:
+        """Whether a job runs and how often, from the workspace's settings and the plugin's default."""
+        plugin = name.split("/", 1)[0]
+        job = self.registrars[plugin].jobs[name]
+        settings = self.cfg.workspace.plugins.jobs.get(name)
+        enabled = settings.enabled if settings is not None else True
+        every = settings.every_minutes if settings is not None and settings.every_minutes else job.every_minutes
+        return enabled, every
+
+    def last_job_run(self, name: str) -> Any | None:
+        plugin, _, _ = name.partition("/")
+        runs = self.store.read().find("job_run", {"plugin": plugin, "job": name})
+        return runs[-1] if runs else None
+
+    def due_jobs(self, now: datetime) -> list[str]:
+        """Jobs of running plugins that are on and whose time has come."""
+        due = []
+        for plugin, registrar in sorted(self.registrars.items()):
+            if not self.active(plugin):
+                continue
+            for name in sorted(registrar.jobs):
+                enabled, every = self.job_settings(name)
+                last = self.last_job_run(name)
+                started = datetime.fromisoformat(str(last.data["started_at"])) if last else None
+                if enabled and (started is None or now - started >= timedelta(minutes=every)):
+                    due.append(name)
+        return due
+
+    def run_job(self, name: str, now: datetime | None = None) -> str:
+        """Run one job now and record it. Returns the outcome."""
+        import time
+
+        plugin = name.split("/", 1)[0]
+        registrar = self.registrars[plugin]
+        started, clock = now or datetime.now(UTC), time.monotonic()
+        context = self._with_files(EventContext(self.store.read(), plugin, registrar.config))
+        outcome, error = "ok", None
+        try:
+            registrar.jobs[name].run(context)
+            self._commands(plugin, context.commands, f"job:{name}", {})
+        except Exception as err:
+            outcome, error = "failed", str(err) or type(err).__name__
+            self.disable(plugin, f"job {name} failed: {error}")
+        with self.store.transaction() as tx:
+            tx.create(
+                "job_run",
+                {
+                    "plugin": plugin,
+                    "job": name,
+                    "started_at": started.isoformat(),
+                    "seconds": round(time.monotonic() - clock, 3),
+                    "outcome": outcome,
+                    "error": error,
+                },
+                WriteContext(actor="engine", trust="trusted", op="job.run"),
+            )
+        return outcome
+
     def disable(self, name: str, reason: str) -> None:
         status = self.status.setdefault(name, PluginStatus(name, "disabled"))
         status.state, status.reason = "disabled", reason
@@ -514,6 +616,9 @@ class PluginHost:
             ("text_formats", registrar.text_formats),
             ("working_copies", registrar.working_copies),
             ("derived_files", registrar.derived_files),
+            ("panels", registrar.panels),
+            ("today", registrar.today_lines),
+            ("jobs", registrar.jobs),
         ):
             if set(getattr(expected, key)) != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
@@ -603,6 +708,17 @@ class PluginHost:
             for name in (task.prompt, task.playbook):
                 if "/" in name and not name.startswith(registrar.name + "/"):
                     raise ValueError("a task's prompt and guidance are core ones or the plugin's own")
+        for panel in registrar.panels.values():
+            model = registrar.records.get(panel.kind) or REGISTRY.get(panel.kind)
+            if model is None:
+                raise ValueError(f"panel {panel.name} lists {panel.kind}, which is neither core nor the plugin's own")
+            for field_name in (*panel.columns, *panel.filter):
+                if field_name not in model.model_fields:
+                    raise ValueError(f"panel {panel.name}: {panel.kind} has no field {field_name}")
+            for action in (*([panel.primary_action] if panel.primary_action else []), *panel.row_actions):
+                target = registrar.actions.get(action) or registrar.tasks.get(action)
+                if target is None or getattr(target, "on", None) != panel.kind:
+                    raise ValueError(f"panel {panel.name}: {action} isn't this plugin's action or task on {panel.kind}")
         for derived in registrar.derived_files.values():
             unknown = [k for k in derived.depends_on if k not in REGISTRY and k not in registrar.records]
             if unknown:

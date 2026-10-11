@@ -23,3 +23,4 @@ plugins:
     output_kb: 512
     collect_file_mb: 25
     collect_total_mb: 100
+  jobs: {}   # e.g. {example/tidy: {every_minutes: 120}}

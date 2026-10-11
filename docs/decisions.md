@@ -172,6 +172,29 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: Plugin Today lines, panels and jobs
+
+**Decided by:** Claude (design), building design 3.x and 7.2; the owner can override.
+
+**What:**
+- Plugin API 0.3.18.
+- **Today lines:** a function returning lines, each with one action that is the plugin's own action or task kind.
+- **Panels:** declarative specs (kind, filter, columns, view, actions), checked at load. Rows are read through the
+  core.
+- **Jobs:**
+  - A run function on a schedule. It may do what an event handler may, never write records or call AI itself.
+  - It runs while the app runs, configurable per job, with a `job_run` record for each run.
+
+**Why:**
+- Plugins need a place on the home screen and their own lists without front-end code.
+- Regular work, such as a weekly review, shouldn't need the person to start it.
+
+**Impact:**
+- New core record `job_run`.
+- New setting `workspace.plugins.jobs`.
+- The screens that show plugin Today lines and panels come with the UX pass. Until then the routes are there for
+  them.
+
 ## 2026-10-12: Plugin API 0.3.17: interface refinements and person-action needs
 
 **Decided by:** Claude (design), from plugin questions 62-68; the owner can override.

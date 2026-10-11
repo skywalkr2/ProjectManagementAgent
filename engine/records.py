@@ -327,6 +327,22 @@ class File(Record):
     added_at: datetime = Field(description="When the record was added.")
 
 
+class JobRun(Record):
+    """One run of a plugin's scheduled job. The engine writes it after each run; nothing changes it."""
+
+    record_kind: ClassVar[str] = "job_run"
+    prefix: ClassVar[str] = "JOBRUN"
+
+    plugin: str = Field(description="The plugin the job belongs to.")
+    job: str = Field(description="The job's name.")
+    started_at: datetime = Field(description="When the run started.")
+    seconds: float = Field(0.0, description="How long it took.")
+    outcome: Literal["ok", "failed"] = Field(
+        description="ok: it finished. failed: it raised, and the plugin was turned off."
+    )
+    error: str | None = Field(None, description="What went wrong, for a failed run.")
+
+
 class ToolRun(Record):
     """One run of an outside program a plugin declared: what ran, how it ended and what it returned. The engine writes
     it after each run; nothing changes it."""
@@ -610,6 +626,7 @@ REGISTRY: dict[str, type[Record]] = {
         Signal,
         File,
         ToolRun,
+        JobRun,
         TextVersion,
         WorkingCopy,
     )

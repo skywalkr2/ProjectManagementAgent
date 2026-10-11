@@ -1192,6 +1192,71 @@
         "title": "Handed",
         "type": "object"
       },
+      "JobView": {
+        "description": "A plugin's scheduled work and its last run.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "every_minutes": {
+            "title": "Every Minutes",
+            "type": "integer"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Outcome"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plugin": {
+            "title": "Plugin",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "plugin",
+          "enabled",
+          "every_minutes",
+          "last_run_at",
+          "last_outcome",
+          "last_error"
+        ],
+        "title": "JobView",
+        "type": "object"
+      },
       "Link": {
         "properties": {
           "label": {
@@ -1459,6 +1524,87 @@
           "name"
         ],
         "title": "Option",
+        "type": "object"
+      },
+      "PanelRow": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": true,
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "values"
+        ],
+        "title": "PanelRow",
+        "type": "object"
+      },
+      "PanelView": {
+        "description": "A plugin's screen, described as data (design 7.2).",
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "primary_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Action"
+          },
+          "row_actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Row Actions",
+            "type": "array"
+          },
+          "tab": {
+            "title": "Tab",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "view": {
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "title",
+          "tab",
+          "kind",
+          "view",
+          "columns",
+          "primary_action",
+          "row_actions"
+        ],
+        "title": "PanelView",
         "type": "object"
       },
       "PersonActionView": {
@@ -3368,6 +3514,84 @@
         "title": "TextVersionView",
         "type": "object"
       },
+      "TodayLineView": {
+        "description": "A line a plugin adds to Today.",
+        "properties": {
+          "about": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecordReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The one thing to do from it: a person action or a kind of work.",
+            "title": "Action"
+          },
+          "action_is": {
+            "anyOf": [
+              {
+                "enum": [
+                  "action",
+                  "task"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "action: run it as a person action (/plugin-actions); task: start it as AI work.",
+            "title": "Action Is"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "plugin": {
+            "title": "Plugin",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          },
+          "why": {
+            "default": "",
+            "title": "Why",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plugin",
+          "id",
+          "text"
+        ],
+        "title": "TodayLineView",
+        "type": "object"
+      },
       "UndoChoice": {
         "properties": {
           "ops": {
@@ -4353,6 +4577,29 @@
         "summary": "Health"
       }
     },
+    "/api/jobs": {
+      "get": {
+        "description": "Plugins' scheduled work: whether it runs, how often, and how its last run went.",
+        "operationId": "jobs_api_jobs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/JobView"
+                  },
+                  "title": "Response Jobs Api Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Jobs"
+      }
+    },
     "/api/notes": {
       "get": {
         "description": "Every filed note, newest first, with the project it was filed under (if any).",
@@ -4374,6 +4621,88 @@
           }
         },
         "summary": "Notes"
+      }
+    },
+    "/api/panels": {
+      "get": {
+        "description": "The screens running plugins add.",
+        "operationId": "panels_api_panels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PanelView"
+                  },
+                  "title": "Response Panels Api Panels Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Panels"
+      }
+    },
+    "/api/panels/{name}/rows": {
+      "get": {
+        "operationId": "panel_rows_api_panels__name__rows_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PanelRow"
+                  },
+                  "title": "Response Panel Rows Api Panels  Name  Rows Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Panel Rows"
       }
     },
     "/api/people": {
@@ -4713,6 +5042,29 @@
           }
         },
         "summary": "Person Action Preview"
+      }
+    },
+    "/api/plugin-today": {
+      "get": {
+        "description": "Lines running plugins add to Today.",
+        "operationId": "plugin_today_api_plugin_today_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TodayLineView"
+                  },
+                  "title": "Response Plugin Today Api Plugin Today Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Plugin Today"
       }
     },
     "/api/plugins": {

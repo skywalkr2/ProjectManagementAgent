@@ -41,10 +41,13 @@ from api.schemas import (
     FollowupSection,
     Handed,
     HandIn,
+    JobView,
     NoteView,
     Ok,
     Option,
     OpView,
+    PanelRow,
+    PanelView,
     PersonActionView,
     PersonChoice,
     PersonIn,
@@ -57,6 +60,7 @@ from api.schemas import (
     ProposedFile,
     ProposedOp,
     ReadVersion,
+    RecordReference,
     RecordView,
     Reply,
     RequestChanged,
@@ -84,6 +88,7 @@ from api.schemas import (
     TextRegion,
     TextReview,
     TextVersionView,
+    TodayLineView,
     UndoChoice,
     UndoReport,
     Unmark,
@@ -163,6 +168,78 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 )
             },
         )
+
+    @r.get("/plugin-today")
+    def plugin_today() -> list[TodayLineView]:
+        """Lines running plugins add to Today."""
+        lines = []
+        for plugin, line in store.plugins.today():
+            registrar = store.plugins.registrars[plugin]
+            action_is = None
+            if line.action is not None:
+                action_is = "action" if line.action in registrar.actions else "task"
+            lines.append(
+                TodayLineView(
+                    plugin=plugin,
+                    id=line.id,
+                    text=line.text,
+                    about=RecordReference(kind=line.about[0], id=line.about[1]) if line.about else None,
+                    action=line.action,
+                    action_is=action_is,
+                    why=line.why,
+                    until=line.until,
+                )
+            )
+        return lines
+
+    @r.get("/panels")
+    def panels() -> list[PanelView]:
+        """The screens running plugins add."""
+        found = []
+        for plugin, registrar in sorted(store.plugins.registrars.items()):
+            if store.plugins.active(plugin):
+                found += [
+                    PanelView(
+                        name=p.name,
+                        title=p.title,
+                        tab=p.tab,
+                        kind=p.kind,
+                        view=p.view,
+                        columns=list(p.columns),
+                        primary_action=p.primary_action,
+                        row_actions=list(p.row_actions),
+                    )
+                    for p in registrar.panels.values()
+                ]
+        return found
+
+    @r.get("/panels/{name:path}/rows")
+    def panel_rows(name: str, project: str | None = None) -> list[PanelRow]:
+        rows = guard(lambda: store.plugins.panel_rows(name, project))
+        return [PanelRow(**row) for row in rows]
+
+    @r.get("/jobs")
+    def jobs() -> list[JobView]:
+        """Plugins' scheduled work: whether it runs, how often, and how its last run went."""
+        found = []
+        for plugin, registrar in sorted(store.plugins.registrars.items()):
+            if not store.plugins.active(plugin):
+                continue
+            for name in sorted(registrar.jobs):
+                enabled, every = store.plugins.job_settings(name)
+                last = store.plugins.last_job_run(name)
+                found.append(
+                    JobView(
+                        name=name,
+                        plugin=plugin,
+                        enabled=enabled,
+                        every_minutes=every,
+                        last_run_at=str(last.data["started_at"]) if last else None,
+                        last_outcome=last.data["outcome"] if last else None,
+                        last_error=last.data.get("error") if last else None,
+                    )
+                )
+        return found
 
     @r.get("/task-kinds")
     def task_kinds(kind: str | None = None, id: str | None = None) -> list[TaskKindView]:

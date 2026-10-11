@@ -54,6 +54,11 @@ class ActionSettings(ConfigModel):
     )
 
 
+class JobSettings(ConfigModel):
+    enabled: bool = Field(True, description="Off: the job doesn't run.")
+    every_minutes: int | None = Field(None, ge=5, description="How often it runs; unset means the plugin's default.")
+
+
 class PluginSettings(ConfigModel):
     enabled: list[str] = Field(default_factory=list, description="Plugins enabled in this workspace, by name.")
     actions: ActionSettings = Field(
@@ -63,6 +68,9 @@ class PluginSettings(ConfigModel):
         default_factory=ToolSettings,
         description="Limits on the outside programs plugins run (where they are found is"
         " set per computer in .cockpit/tools.yaml).",
+    )
+    jobs: dict[str, JobSettings] = Field(
+        default_factory=dict, description="Plugins' scheduled work, by job name: on or off, and how often."
     )
 
 

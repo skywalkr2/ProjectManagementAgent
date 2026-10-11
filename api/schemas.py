@@ -579,6 +579,51 @@ class TakenBack(BaseModel):
     unmapped: list[str] = Field(description="What couldn't be read back into the text.")
 
 
+class TodayLineView(BaseModel):
+    """A line a plugin adds to Today."""
+
+    plugin: str
+    id: str
+    text: str
+    about: RecordReference | None = None
+    action: str | None = Field(None, description="The one thing to do from it: a person action or a kind of work.")
+    action_is: Literal["action", "task"] | None = Field(
+        None, description="action: run it as a person action (/plugin-actions); task: start it as AI work."
+    )
+    why: str = ""
+    until: str | None = None
+
+
+class PanelView(BaseModel):
+    """A plugin's screen, described as data (design 7.2)."""
+
+    name: str
+    title: str
+    tab: str
+    kind: str
+    view: str
+    columns: list[str]
+    primary_action: str | None
+    row_actions: list[str]
+
+
+class PanelRow(BaseModel):
+    id: str
+    values: dict[str, Any]
+
+
+class JobView(BaseModel):
+    """A plugin's scheduled work and its last run."""
+
+    name: str
+    plugin: str
+    enabled: bool
+    every_minutes: int
+    last_run_at: str | None
+    last_outcome: str | None
+    last_error: str | None
+
+
 class TaskKindView(BaseModel):
     """AI work the person can start, on a record of kind `on` or on the whole workspace."""
 

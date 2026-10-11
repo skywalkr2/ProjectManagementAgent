@@ -84,6 +84,7 @@ class Worker:
         self._thread: threading.Thread | None = None
         self._backups: threading.Thread | None = None
         self._sync: threading.Thread | None = None
+        self._jobs: threading.Thread | None = None
         self._synced_at: int | None = -1
         self._beat = 0.0
         self.sync_lost = False
@@ -116,6 +117,8 @@ class Worker:
         self._backups.start()
         self._sync = threading.Thread(target=self._sync_loop, name="cockpit-sync", daemon=True)
         self._sync.start()
+        self._jobs = threading.Thread(target=self._jobs_loop, name="cockpit-jobs", daemon=True)
+        self._jobs.start()
 
     def stop(self) -> None:
         self._stop.set()
@@ -124,6 +127,8 @@ class Worker:
             self._thread.join(timeout=10)
         if self._backups:
             self._backups.join(timeout=60)
+        if self._jobs:
+            self._jobs.join(timeout=60)
         if self._sync:
             self.events.changed()
             self._sync.join(timeout=60)
@@ -230,6 +235,28 @@ class Worker:
                 log.exception("writing the synced folder failed")
             after = self.events.wait(after, timeout=self.SYNC_CHECK_SECONDS)
             self._stop.wait(timeout=1)
+
+    def run_due_jobs(self) -> int:
+        """Run every plugin job that is due. Returns how many ran."""
+        from datetime import UTC, datetime
+
+        if self._changed_since_start():
+            return 0
+        due = self.store.plugins.due_jobs(datetime.now(UTC))
+        for name in due:
+            self.store.plugins.run_job(name)
+        if due:
+            self.events.changed()
+            self.poke()
+        return len(due)
+
+    def _jobs_loop(self) -> None:
+        while not self._stop.is_set():
+            try:
+                self.run_due_jobs()
+            except Exception:  # a job's failure is recorded on its run; nothing here may stop the thread
+                log.exception("running scheduled jobs failed")
+            self._stop.wait(timeout=60)
 
     def _backup_loop(self) -> None:
         while not self._stop.is_set():
