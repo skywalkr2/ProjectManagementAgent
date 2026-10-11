@@ -75,6 +75,19 @@ Last updated: 2026-10-12.
 
 ## 5. Version 1 build (from 2026-12-14)
 
+- [ ] **M0: install with no manual setup (first, from 2026-12-14).** A person downloads one installer for their
+  computer and double-clicks it; nothing else is needed (decisions, 2026-10-11).
+  - Installers for macOS and Windows, signed so the system opens them without warnings; Linux keeps the package
+    file and script, with an AppImage if it is cheap.
+  - The installer carries everything the app needs (no Python, uv, Node or terminal), starts the app in the
+    background with a menu-bar or tray icon, and opens the setup guide in the browser on first run.
+  - The app updates itself from new releases, with the previous version kept to go back to; workspaces are never
+    touched by an install, an update or an uninstall.
+  - Add-ons install from the Add-ons screen with one click: the catalog says where each pack's release is, the app
+    downloads it, checks its signature or hash against the catalog, installs it beside itself and offers Turn on.
+    Private packs the person has access to install the same way.
+  - Owner's part: the signing certificates for macOS and Windows (yearly fees) and where releases are hosted.
+
 - [ ] **M1–2: rest of the core.** The parts the launch slice trimmed (13.1).
 - [ ] **M3: scope and facts.** Scope resolver; facts looked up from configured sources, never asked (6.18, 6.19).
 - [ ] **M4: plugin host.** Finish what 3a started: the remaining `1.0` extension points and moving built-ins behind them;
@@ -96,7 +109,8 @@ Last updated: 2026-10-12.
 
 ## Not in 1.0
 
-Hosted mode and sign-in (Part 11), social, email and newsletter channels, the sales pack (13.3).
+Hosted mode and sign-in (Part 11), social, email and newsletter channels, the sales pack (13.3). A hosted website is
+the next step after the desktop installer (M0), once 1.0 is out.
 
 ## Open items
 

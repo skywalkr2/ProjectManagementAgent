@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: People install with no manual setup: a desktop installer, first thing after launch
+
+**Decided by:** project owner (a desktop installer, "right after launch"; asked that a deployment needing no manual
+setup be in the plan).
+
+**What:** Version 1 starts with M0: signed installers for macOS and Windows that carry everything the app needs, run
+it in the background, open the setup guide on first run and update themselves; add-ons install with one click from
+the Add-ons screen. A hosted website stays after 1.0. The freeze before the 2026-12-01 launch stays fixes only.
+
+**Why:** Installing today needs a terminal, uv and an install script, and installing an add-on means a command too;
+people the owner shares it with should only download and double-click.
+
+**Impact:** `docs/project/roadmap-to-1.0.md` (M0 in section 5); design Part 11 gains the desktop install and updates
+when M0 is designed; the packs catalog format gains where a pack's release is and how it is checked. Costs for the
+owner: signing certificates and release hosting. No change to the launch scope.
+
 ## 2026-10-11: Signing in needs no app registration from the person
 
 **Decided by:** project owner (both ways: the add-on's own registration by default, and the person's own pasted on
