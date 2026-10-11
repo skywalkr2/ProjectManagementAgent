@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Today — mockup</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Mockup of the proposed Today: full-width shell, queue + inspector + context rail. Fictional data. */
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--canvas); color: var(--text); font: var(--weight-regular) var(--text-md)/var(--lh-md) var(--font-ui); }
+button, input { font: inherit; color: inherit; }
+svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- Shell ---------- */
+.app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; grid-template-rows: var(--header-h) 1fr; min-height: 100vh; }
+.top { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-4); background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
+.brand { display: flex; align-items: center; gap: var(--space-2); width: calc(var(--sidebar-w) - var(--space-4)); font-weight: var(--weight-semibold); font-size: var(--text-lg); }
+.logo { width: 28px; height: 28px; border-radius: var(--radius-md); background: var(--accent); color: var(--text-on-accent); display: grid; place-items: center; font-size: 14px; }
+.demo { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--warn); background: var(--warn-soft); border-radius: var(--radius-full); padding: 2px 8px; }
+.ask { flex: 1; max-width: 640px; display: flex; align-items: center; gap: var(--space-2); height: var(--btn-h); padding: 0 var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-md); color: var(--text-subtle); background: var(--surface); }
+.ask kbd { margin-left: auto; }
+.spacer { flex: 1; }
+.status { display: flex; align-items: center; gap: var(--space-2); height: 30px; padding: 0 var(--space-3); border-radius: var(--radius-full); background: var(--surface-sunk); font-size: var(--text-sm); color: var(--text-muted); border: 0; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+.status .warnword { color: var(--warn); font-weight: var(--weight-semibold); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); display: grid; place-items: center; font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+
+.btn { display: inline-flex; align-items: center; gap: var(--space-2); height: var(--btn-h); padding: 0 var(--btn-px); border-radius: var(--radius-md); border: 1px solid var(--border-strong); background: var(--surface); font-size: var(--text-sm); font-weight: var(--weight-semibold); cursor: pointer; white-space: nowrap; transition: background var(--dur-fast) var(--ease-out); }
+.btn:hover { background: var(--surface-hover); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
+.btn.sm { height: var(--btn-h-sm); padding: 0 var(--btn-px-sm); }
+.btn.icon { width: var(--btn-h-sm); padding: 0; justify-content: center; }
+kbd { font: 12px/18px var(--font-mono); padding: 0 5px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--radius-sm); color: var(--text-muted); }
+
+/* Sidebar */
+.side { border-right: 1px solid var(--border); background: var(--surface); padding: var(--space-3) var(--space-2); display: flex; flex-direction: column; gap: 2px; position: sticky; top: var(--header-h); height: calc(100vh - var(--header-h)); }
+.side a { display: flex; align-items: center; gap: var(--space-3); height: 36px; padding: 0 var(--space-3); border-radius: var(--radius-md); color: var(--text-muted); text-decoration: none; font-size: var(--text-sm); font-weight: var(--weight-medium); }
+.side a:hover { background: var(--surface-hover); color: var(--text); }
+.side a[aria-current] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
+.side .count { margin-left: auto; font-size: var(--text-xs); font-weight: var(--weight-semibold); }
+.side .sub a { height: 32px; padding-left: 42px; }
+.side h6 { margin: var(--space-4) var(--space-3) var(--space-1); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--text-subtle); }
+.side .bottom { margin-top: auto; }
+
+/* ---------- Today layout: queue | inspector | rail ---------- */
+.main { padding: var(--page-pad); display: grid; grid-template-columns: minmax(520px, 1fr) var(--rail-w); gap: var(--gutter); align-items: start; align-content: start; }
+.inspector { display: none; }
+@media (min-width: 1680px) {
+  .main { grid-template-columns: minmax(560px, 1fr) var(--detail-w) var(--rail-w); }
+  .inspector { display: block; }
+}
+.pagehead { grid-column: 1 / -1; display: flex; align-items: baseline; gap: var(--space-3); }
+.pagehead h1 { margin: 0; font-size: var(--text-xl); line-height: var(--lh-xl); font-weight: var(--weight-semibold); }
+.pagehead p { margin: 0; color: var(--text-muted); font-size: var(--text-sm); }
+.setup { grid-column: 1 / -1; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); font-size: var(--text-sm); }
+.progress { width: 120px; height: 6px; border-radius: var(--radius-full); background: var(--surface-sunk); overflow: hidden; }
+.progress i { display: block; height: 100%; width: 83%; background: var(--ok); }
+
+/* Queue */
+.queue { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.qhead { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.qhead h2 { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-semibold); }
+.qhead .meta { color: var(--text-subtle); font-size: var(--text-sm); }
+.line { display: grid; grid-template-columns: 128px 1fr auto; gap: var(--row-gap); align-items: center; padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
+.line:last-child { border-bottom: 0; }
+.line:hover { background: var(--surface-hover); }
+.line.sel { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.line .t { font-weight: var(--weight-semibold); }
+.line .s { color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.acts { display: flex; gap: var(--space-2); align-items: center; }
+.pill { display: inline-flex; align-items: center; height: var(--pill-h); padding: 0 var(--pill-px); border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: var(--weight-semibold); justify-self: start; white-space: nowrap; }
+.pill.need { background: var(--accent-soft); color: var(--accent-text); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.risk { background: var(--danger-soft); color: var(--danger); }
+.pill.neutral { background: var(--surface-sunk); color: var(--text-muted); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.group { padding: var(--space-2) var(--row-px); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--text-subtle); background: var(--canvas); border-bottom: 1px solid var(--border); }
+.children { grid-column: 2 / -1; display: grid; gap: var(--space-2); margin-top: var(--space-2); }
+.child { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px dashed var(--border); }
+.because { font-size: var(--text-sm); color: var(--text-muted); }
+.because q { font-style: italic; color: var(--text); }
+a.link { color: var(--accent-text); }
+
+/* Inspector */
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.panel > header { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.panel > header h2, .panel > header h3 { margin: 0; font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.panel .body { padding: var(--space-4); display: grid; gap: var(--space-4); }
+.voice { border-left: 3px solid var(--border); padding-left: var(--space-3); color: var(--text-muted); font-size: var(--text-sm); }
+.voice b { color: var(--text); font-weight: var(--weight-semibold); }
+.source { background: var(--surface-sunk); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); max-width: var(--measure); }
+.source .from { color: var(--text-subtle); font-size: var(--text-xs); margin-bottom: var(--space-1); display: flex; gap: var(--space-2); align-items: center; }
+mark { background: var(--mark); color: var(--mark-text); border-radius: 2px; padding: 0 2px; text-decoration: underline; text-decoration-thickness: 1px; }
+.item { display: grid; gap: var(--space-1); }
+.item .row { display: flex; align-items: center; gap: var(--space-2); }
+.item .row .t { font-weight: var(--weight-semibold); }
+.item .row .btn { margin-left: auto; }
+.footer-acts { display: flex; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
+
+/* Rail */
+.rail { display: grid; gap: var(--gutter); }
+.rail .panel .body { gap: var(--space-2); padding: var(--space-2) var(--space-4) var(--space-3); }
+.ag { display: grid; grid-template-columns: 52px 1fr; gap: var(--space-2); font-size: var(--text-sm); padding: var(--space-1) 0; }
+.ag time { color: var(--text-subtle); font-variant-numeric: tabular-nums; }
+.ag.now { box-shadow: inset 0 -2px 0 var(--danger); }
+.todo { display: flex; gap: var(--space-2); align-items: flex-start; font-size: var(--text-sm); padding: var(--space-1) 0; }
+.todo input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--accent); }
+.todo small { display: block; color: var(--text-subtle); font-size: var(--text-xs); }
+.collapsed { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); color: var(--text-muted); }
+.collapsed b { color: var(--text); font-weight: var(--weight-semibold); white-space: nowrap; }
+.collapsed span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.collapsed .btn { margin-left: auto; }
+
+/* Toast */
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); display: flex; align-items: center; gap: var(--space-4); background: var(--text); color: var(--canvas); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); box-shadow: var(--elev-3); font-size: var(--text-sm); }
+.toast button { background: none; border: 0; color: inherit; font-weight: var(--weight-semibold); text-decoration: underline; cursor: pointer; }
+
+/* Bottom bar (phone only) */
+.bottombar { display: none; }
+
+/* ---------- Laptop: collapse the sidebar to icons ---------- */
+@media (max-width: 1279px) {
+  .app { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+  .brand { width: auto; } .brand span, .side a span, .side .count, .side h6, .side .sub { display: none; }
+  .side a { justify-content: center; padding: 0; }
+}
+/* ---------- Tablet: rail goes under the queue ---------- */
+@media (max-width: 1023px) {
+  .main { grid-template-columns: 1fr; }
+  .rail { grid-template-columns: repeat(2, 1fr); }
+  .ask { flex: 0 0 auto; } .ask .txt, .ask kbd { display: none; }
+}
+/* ---------- Phone ---------- */
+@media (max-width: 639px) {
+  :root { --page-pad: 12px; --gutter: 12px; }
+  .app { grid-template-columns: 1fr; }
+  .side, .ask, .status .label, .top .btn.primary, .avatar { display: none; }
+  .top { padding: 0 var(--space-3); }
+  .main { padding-bottom: 96px; }
+  .rail { grid-template-columns: 1fr; }
+  .line { grid-template-columns: 1fr auto; }
+  .line .pill { grid-column: 1 / -1; }
+  .line .acts .icon { display: none; }
+  .setup .progress, .setup .txt2 { display: none; }
+  .pagehead p { display: none; }
+  .qhead kbd, .qhead .meta + .spacer ~ .meta { display: none; }
+  .bottombar { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; bottom: 0; left: 0; right: 0; height: 64px; background: var(--surface); border-top: 1px solid var(--border); align-items: center; z-index: 5; }
+  .bottombar a { display: grid; justify-items: center; gap: 2px; font-size: 11px; color: var(--text-muted); text-decoration: none; }
+  .bottombar a[aria-current] { color: var(--accent-text); font-weight: var(--weight-semibold); }
+  .bottombar .plus { width: 48px; height: 48px; border-radius: 50%; background: var(--accent); color: var(--text-on-accent); display: grid; place-items: center; margin-top: -18px; box-shadow: var(--elev-2); }
+  .toast { bottom: 80px; width: calc(100% - 24px); }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13l3-8h12l3 8v6H3z M3 13h5l1 3h6l1-3h5"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13 M22 2l-7 20-4-9-9-4z"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M12 3v12 M7 8l5-5 5 5 M4 15v5h16v-5"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5z M3 13l9 5 9-5"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5 M16 4.5a3.5 3.5 0 0 1 0 7 M18 14.5c2 .6 3.2 2.5 3.6 5.5"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-rss" viewBox="0 0 24 24"><path d="M4 11a9 9 0 0 1 9 9 M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-puzzle" viewBox="0 0 24 24"><path d="M10 3h4v3a2 2 0 1 0 4 0V3h3v7h-3a2 2 0 1 0 0 4h3v7h-7v-3a2 2 0 1 0-4 0v3H3v-7h3a2 2 0 1 0 0-4H3V3z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14 M5 12h14"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14 M12 17h.01"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-ask" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></symbol>
+</svg>
+
+<div class="app">
+  <header class="top">
+    <div class="brand"><div class="logo">LH</div><span>Lantern House</span></div>
+    <span class="demo">Demo</span>
+    <div class="ask" role="search"><svg class="i"><use href="#i-search"/></svg><span class="txt">Ask Quill or search…</span><kbd>/</kbd></div>
+    <div class="spacer"></div>
+    <button class="status" title="Live, updated 11:05 PM. No backup yet."><span class="dot"></span><span class="label">Live ·</span> <span class="warnword">Backup needed</span></button>
+    <button class="btn primary"><svg class="i"><use href="#i-plus"/></svg>Hand something in</button>
+    <button class="btn ghost icon" aria-label="Help and shortcuts"><svg class="i"><use href="#i-help"/></svg></button>
+    <div class="avatar" aria-label="Avery Lane">AL</div>
+  </header>
+
+  <nav class="side" aria-label="Views">
+    <a href="#" aria-current="page"><svg class="i"><use href="#i-home"/></svg><span>Today</span><b class="count">8</b></a>
+    <h6>Work</h6>
+    <a href="#"><svg class="i"><use href="#i-inbox"/></svg><span>What changed</span><b class="count">4</b></a>
+    <a href="#"><svg class="i"><use href="#i-send"/></svg><span>Follow-ups</span><b class="count">3</b></a>
+    <a href="#"><svg class="i"><use href="#i-out"/></svg><span>Waiting to go out</span></a>
+    <a href="#"><svg class="i"><use href="#i-layers"/></svg><span>Stages</span></a>
+    <div class="sub"><a href="#"><span>Pieces</span></a></div>
+    <h6>Records</h6>
+    <a href="#"><svg class="i"><use href="#i-grid"/></svg><span>Projects</span></a>
+    <a href="#"><svg class="i"><use href="#i-users"/></svg><span>People</span></a>
+    <a href="#"><svg class="i"><use href="#i-folder"/></svg><span>Files</span></a>
+    <div class="bottom">
+      <a href="#"><svg class="i"><use href="#i-rss"/></svg><span>Sources</span></a>
+      <a href="#"><svg class="i"><use href="#i-puzzle"/></svg><span>Add-ons</span></a>
+      <a href="#"><svg class="i"><use href="#i-gear"/></svg><span>Settings</span></a>
+    </div>
+  </nav>
+
+  <main class="main" id="main">
+    <div class="pagehead"><h1>Today</h1><p>Tuesday, October 13 · 8 things need you · next check 11:30 PM</p></div>
+
+    <div class="setup"><span class="pill neutral">Setup 5 of 6</span><div class="progress"><i></i></div><span class="txt2">Next: add an AI account so Quill reads your notes for real.</span><span class="spacer"></span><button class="btn sm">Continue setup</button><button class="btn ghost sm icon" aria-label="Hide"><svg class="i"><use href="#i-more"/></svg></button></div>
+
+    <section class="queue" aria-labelledby="q">
+      <div class="qhead"><h2 id="q">Needs you</h2><span class="meta">8 · most urgent first</span><span class="spacer"></span><kbd>j</kbd><kbd>k</kbd><span class="meta">move</span><kbd>a</kbd><span class="meta">act</span></div>
+
+      <div class="group">Decide</div>
+      <div class="line"><span class="pill need">Decision</span><div><div class="t">Answer 1 decision</div><div class="s">Cover finish for the hardcover: matte or soft-touch? · from Theo Brandt's email</div></div><div class="acts"><button class="btn primary sm">Answer</button><button class="btn ghost sm icon" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></div></div>
+      <div class="line"><span class="pill warn">Waiting for you</span><div><div class="t">Pick who “Maya” is</div><div class="s">Send the guest list for the launch reading · due Fri, Nov 20 · two people are called Maya</div></div><div class="acts"><button class="btn primary sm">Pick</button><button class="btn ghost sm icon" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></div></div>
+      <div class="line"><span class="pill risk">At risk</span><div><div class="t">1 dependency at risk</div><div class="s">Proof approval (need by Nov 3) waits on the proof copy, now shipping Nov 5</div></div><div class="acts"><button class="btn primary sm">Draft a question</button><button class="btn ghost sm icon" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></div></div>
+
+      <div class="group">Review</div>
+      <div class="line sel"><span class="pill neutral">Review</span><div><div class="t">Look over 3 actions Quill added</div><div class="s">Production check-in notes · Oct 8 · 3 actions, 1 waits for you</div></div><div class="acts"><button class="btn primary sm">All looks good</button><button class="btn ghost sm icon" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></div></div>
+      <div class="line"><span class="pill neutral">Review</span><div><div class="t">Check 1 recorded date</div><div class="s">Email from Jun Park · proof copies ship Nov 5</div></div><div class="acts"><button class="btn primary sm">Looks good</button><button class="btn ghost sm icon" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></div></div>
+
+      <div class="group">Send and follow up</div>
+      <div class="line"><span class="pill need">Send</span><div><div class="t">Send 2 questions to Maya Okafor</div><div class="s">Plus 1 action item with her · ready to send</div></div><div class="acts"><button class="btn primary sm">Review &amp; copy</button><button class="btn ghost sm icon" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></div></div>
+      <div class="line"><span class="pill need">Send</span><div><div class="t">Send 2 action items to Sam Rivera</div><div class="s">Interior file to the printer · trim size with the printer</div></div><div class="acts"><button class="btn primary sm">Review &amp; copy</button><button class="btn ghost sm icon" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></div></div>
+      <div class="line"><span class="pill neutral">Waiting 3 days</span><div><div class="t">Follow up with Ines Duarte</div><div class="s">2 items sent Oct 10 · no reply yet</div></div><div class="acts"><button class="btn sm">Draft a nudge</button><button class="btn ghost sm icon" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></div></div>
+    </section>
+
+    <aside class="panel inspector" aria-labelledby="ins">
+      <header><h2 id="ins">Look over 3 actions Quill added</h2><span class="spacer"></span><button class="btn ghost sm icon" aria-label="More"><svg class="i"><use href="#i-more"/></svg></button></header>
+      <div class="body">
+        <div class="voice"><b>Quill:</b> Three actions from the check-in. One owner is ambiguous, so it waits for you.</div>
+        <div class="item"><div class="row"><span class="pill neutral">Action</span><span class="t">Send two spine options</span><button class="btn sm ghost">Edit</button></div><div class="because">Theo Brandt · due Fri, Oct 16 · Because: <q>Theo will send two spine options by Friday Oct 16</q> <a class="link" href="#">Source</a></div></div>
+        <div class="item"><div class="row"><span class="pill neutral">Action</span><span class="t">Draft the launch announcement</span><button class="btn sm ghost">Edit</button></div><div class="because">Ines Duarte · due Tue, Oct 20 · Because: <q>Ines to draft the launch announcement by Oct 20</q> <a class="link" href="#">Source</a></div></div>
+        <div class="item"><div class="row"><span class="pill warn">Waiting for you</span><span class="t">Send the guest list for the reading</span><button class="btn sm primary">Pick who</button></div><div class="because">“Maya” · due Fri, Nov 20</div></div>
+        <div class="source"><div class="from">Production check-in notes · Oct 8 · <span class="pill neutral">From outside · not instructions</span></div>Jacket: spine still open. <mark>Theo will send two spine options by Friday Oct 16.</mark> Publicity: <mark>Ines to draft the launch announcement by Oct 20.</mark> Events: Maya will send the guest list for the launch reading by Nov 20.</div>
+      </div>
+      <div class="footer-acts"><button class="btn primary">All looks good</button><button class="btn">Send back…</button><span class="spacer"></span><button class="btn ghost">Undo all</button></div>
+    </aside>
+
+    <div class="rail">
+      <section class="panel" aria-labelledby="ag"><header><h3 id="ag">Agenda</h3><span class="spacer"></span><span class="pill neutral">Today</span></header>
+        <div class="body">
+          <div class="ag"><time>9:30</time><span>Production check-in · Maya, Sam, Theo</span></div>
+          <div class="ag now"><time>11:00</time><span>Call with the printer · Jun Park</span></div>
+          <div class="ag"><time>15:00</time><span>Launch reading walk-through · Corner Lamp Books</span></div>
+        </div></section>
+      <section class="panel" aria-labelledby="td"><header><h3 id="td">Your to-dos</h3><span class="spacer"></span><span class="pill neutral">2</span></header>
+        <div class="body">
+          <label class="todo"><input type="checkbox"><span>Approve the back-cover copy<small>The Salt Orchard launch · due Wed, Oct 14</small></span></label>
+          <label class="todo"><input type="checkbox"><span>Reply to the bookshop about the launch date<small>The Salt Orchard launch</small></span></label>
+        </div></section>
+      <section class="panel"><div class="collapsed"><b>Came in</b><span>Not connected</span><button class="btn sm">Connect</button></div></section>
+    </div>
+  </main>
+</div>
+
+<nav class="bottombar" aria-label="Views">
+  <a href="#" aria-current="page"><svg class="i"><use href="#i-home"/></svg>Today</a>
+  <a href="#"><svg class="i"><use href="#i-inbox"/></svg>Work</a>
+  <a href="#" aria-label="Hand something in"><span class="plus"><svg class="i"><use href="#i-plus"/></svg></span></a>
+  <a href="#"><svg class="i"><use href="#i-ask"/></svg>Ask</a>
+  <a href="#"><svg class="i"><use href="#i-more"/></svg>More</a>
+</nav>
+
+<div class="toast" role="status">Marked as sent to Ines Duarte <button>Undo</button></div>
+</body>
+</html>
