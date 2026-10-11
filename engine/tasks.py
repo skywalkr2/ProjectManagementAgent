@@ -49,10 +49,15 @@ class TaskKind:
     questions: int = 0  # how many questions for the person a draft may end with
     role: str = "write"  # write, check (an independent second opinion) or research
     where: dict[str, tuple[Any, ...]] = _field(default_factory=dict)  # field values a record of kind `on` must have
+    start_where: dict[str, tuple[Any, ...]] = _field(default_factory=dict)  # and, for runs the person starts, these
 
     def offered_on(self, record: Any, texts: Callable[[str], bool | None] | None = None) -> bool:
         """Whether this work applies to a record (of kind `on`): every `where` field holds one of its values."""
         return where_matches(self.where, record, texts)
+
+    def startable_on(self, record: Any, texts: Callable[[str], bool | None] | None = None) -> bool:
+        """Whether the person may start this work on a record: `where` and `start_where` both match."""
+        return self.offered_on(record, texts) and where_matches(self.start_where, record, texts)
 
 
 def where_matches(

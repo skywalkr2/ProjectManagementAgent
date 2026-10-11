@@ -80,6 +80,8 @@ EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
             "previous": "The number of the version it replaced (None for the first).",
             "source": "edit, draft, proposal, merge or import.",
             "authorship": "Words by kind of author: {person, assistant, assistant_edit}, all three always present.",
+            "request": "The request whose run drafted the version, or None (the person's own edit, an import).",
+            "part": "The part of the text that request named (as given to queue_request(part=)), or None.",
         },
     ),
     "request.queued": ("AI work was queued.", {"id": "The request's id."}),
@@ -1513,9 +1515,9 @@ def _source_text(store: Any, digest: str) -> str:
     return path.read_text(encoding="utf-8") if path.exists() and re.fullmatch(r"[0-9a-f]+", digest) else ""
 
 
-def check_about(view: Any, kind: Any, about: dict[str, str] | None, store: Any = None) -> None:
+def check_about(view: Any, kind: Any, about: dict[str, str] | None, store: Any = None, starting: bool = False) -> None:
     """A request for a task kind declared `on` a record kind must name a live record of that kind that its `where`
-    matches; others name none."""
+    matches (and its `start_where`, when the person is `starting` it); others name none."""
     if kind.on is None:
         if about is not None:
             raise StoreError(f"{kind.name} doesn't work on a record")
@@ -1534,7 +1536,7 @@ def check_about(view: Any, kind: Any, about: dict[str, str] | None, store: Any =
         from engine.texts import text_presence
 
         texts = text_presence(store, view, record)
-    if not kind.offered_on(record, texts):
+    if not (kind.startable_on(record, texts) if starting else kind.offered_on(record, texts)):
         raise StoreError(f"{kind.label or kind.name} isn't for this {what}")
 
 

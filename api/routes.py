@@ -408,7 +408,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             if "/" in name
             and store.plugins.active(name.split("/", 1)[0])
             and k.on == kind
-            and (record is None or k.offered_on(record, text_presence(store, store.read(), record)))
+            and (record is None or k.startable_on(record, text_presence(store, store.read(), record)))
         ]
         return [
             TaskKindView(
@@ -426,7 +426,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 raise StoreError("start a plugin's kind of work here; hand things in for the core's")
             kind = store.plugins.task_kind(name)
             with store.transaction() as tx:
-                check_about(tx, kind, about, store)
+                check_about(tx, kind, about, store, starting=True)
                 return tx.create(
                     "request",
                     {

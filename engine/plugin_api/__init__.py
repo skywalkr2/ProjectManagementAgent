@@ -38,7 +38,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.31"
+PLUGIN_API_VERSION = "0.3.32"
 
 
 class Settings(BaseModel):
@@ -461,11 +461,16 @@ class EventContext(ReadView):
 class PacketContext(ReadView):
     """The read view a task kind's packet function gets, with `origin`, who started the run: "pm" (the person, so the
     note is their own words), "input" (an outside input) or "schedule" (a schedule, a stage entry or a plugin's
-    request). A note from anyone but the person is shown to the run as untrusted material."""
+    request). A note from anyone but the person is shown to the run as untrusted material. `request` is the run's
+    request id and `part` the part of the record it names (as given to `queue_request(part=)`), or None."""
 
-    def __init__(self, view: Any, plugin: str, origin: str):
+    def __init__(
+        self, view: Any, plugin: str, origin: str, request: str | None = None, part: dict[str, Any] | None = None
+    ):
         super().__init__(view, plugin)
         self.origin = origin
+        self.request = request
+        self.part = dict(part) if part else None
 
 
 class ActionContext(ReadView):
@@ -946,6 +951,7 @@ class Registrar:
         anchored: bool = False,
         questions: int = 0,
         where: dict[str, Any] | None = None,
+        start_where: dict[str, Any] | None = None,
         role: str = "write",
         prompt: str = "notes",
         playbook: str = "notes",
@@ -970,7 +976,11 @@ class Registrar:
         stops the run with that message for the person: the request waits with it as the reason, and no retry, fix
         round or escalation follows. `where` narrows which records of kind `on` the work is offered on and may start
         on: {field: value} or {field: (value, ...)}, every field matching; ANY means the field has a value and None
-        that it has none, which for a long text field asks whether the record has text in it.
+        that it has none, which for a long text field asks whether the record has text in it. `start_where`, in the
+        same form, narrows further only the runs the person starts (from a record, or offered to them there):
+        requests a plugin, an action or a stage queues, and any request naming a `part`, check `where` alone, so a
+        kind the person starts only on an empty record can still continue part by part. The packet's `max_output`
+        hint is never below 256 tokens.
 
         `output` is "ops" (the answer is a changeset of `ops`) or "draft": the answer is plain prose for the long text
         field `field` of the record the run is about (`on` is required). The core wraps it as a pending `text.draft`
@@ -1008,6 +1018,7 @@ class Registrar:
         if not isinstance(questions, int) or not 0 <= questions <= 20:
             raise ValueError("questions is how many a draft may ask, from 0 to 20")
         narrowed = _narrowed(where, on)
+        start_narrowed = _narrowed(start_where, on)
         if output == "draft":
             if on is None or not field or ops:
                 raise ValueError(
@@ -1047,6 +1058,7 @@ class Registrar:
             anchored=anchored,
             questions=questions,
             where=narrowed,
+            start_where=start_narrowed,
             role=role,
         )
 

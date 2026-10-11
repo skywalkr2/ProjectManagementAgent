@@ -10,6 +10,21 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.32 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A packet knows its request:** `PacketContext` has `request` (the run's request id) and `part` (the part of the
+  record it names, as given to `queue_request(part=)`, or None).
+- **The request behind an accepted version:** the `text.accepted` payload gains `request` (the request whose run
+  drafted the version, or None for the person's own edit or an import) and `part` (the part it named, or None). The
+  path from a version's `run` to the run record to its request also works.
+- **Work the person starts on fewer records:** `registrar.task_kind(..., start_where={...})`, in the same form as
+  `where`, narrows only the runs the person starts (offered on a record's page, or started there). Requests a plugin,
+  an action or a stage queues, and any request naming a `part`, check `where` alone, so a kind started only on an
+  empty record can continue part by part once it has text.
+- **The smallest output:** a packet's `max_output` hint is raised to at least 256 tokens. The guide now says so.
+
 ## What 0.3.31 adds
 
 Manifests stay `'>=0.3,<0.4'`.

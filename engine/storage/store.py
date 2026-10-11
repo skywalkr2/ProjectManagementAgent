@@ -192,7 +192,7 @@ class Tx:
             if kind == "text_version" and field == "status" and after == "accepted" and before != after:
                 accepted = self.get("text_version", rid)
                 if accepted is not None:
-                    special.append(("text.accepted", _text_accepted(accepted)))
+                    special.append(("text.accepted", _text_accepted(accepted, self)))
         return [("record.changed", data) for data in grouped.values()] + special + list(self.emitted)
 
     def sql(self, query: str, args: tuple[Any, ...] = ()) -> sqlite3.Cursor:
@@ -426,8 +426,11 @@ class Tx:
         )
 
 
-def _text_accepted(version: Stored) -> dict[str, Any]:
-    """The text.accepted payload: which field got which version, from what, and its authorship in words."""
+def _text_accepted(version: Stored, view: Any) -> dict[str, Any]:
+    """The text.accepted payload: which field got which version, from what, its authorship in words, and the request
+    (with the part it named) whose run drafted it, when a run did."""
+    run = view.get("run", version.data["run"]) if version.data.get("run") else None
+    request = view.get("request", run.data["request"]) if run is not None and run.data.get("request") else None
     counts = {"person": 0, "assistant": 0, "assistant_edit": 0}
     for span in version.data.get("authorship", []):
         counts[span["kind"]] = counts.get(span["kind"], 0) + int(span.get("words", 0))
@@ -439,6 +442,8 @@ def _text_accepted(version: Stored) -> dict[str, Any]:
         "previous": version.data.get("replaces"),
         "source": version.data["source"],
         "authorship": counts,
+        "request": request.id if request is not None else None,
+        "part": request.data.get("part") if request is not None else None,
     }
 
 
