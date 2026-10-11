@@ -24,13 +24,14 @@ Last updated: 2026-10-12.
 - [x] Plugin API 0.2 (decisions, 2026-10-10), see `docs/plugin-api-0.x.md`: data levels, origin and person-only values, unique fields and `find`,
   filtered `list`, `Ref` fields, validators that see the changeset, event kind filters, `record.delete`.
 - [x] The define-your-own kit with starting templates; the demo runs on a template (decisions, 2026-10-10).
-- [ ] Guided install and setup: built screens in the package, one-step install and update, first-run wizard, settings
-  screens; agent accounts; ask the assistant about the app; a user guide. Done so far: agent accounts (2026-10-11);
-  settings and setup routes, self-restart (2026-10-11). For the install step: `templates/` and `catalog/` must
-  ship in the package (they sit outside the Python packages today).
-- [ ] **Friends' preview**: packaged install, guided setup, labeled demo, bring-your-own AI, feedback button, download.
-- [x] Plugin API 0.3 with uploads, previews and person actions (2026-10-11); now 0.3.24, see `docs/plugin-api-0.x.md`.
-- [ ] Watchers and lookups (engine and general sources in the core; product connectors as plugins).
+- [x] Guided install and setup: built screens in the package, one-step install and update, first-run wizard, settings
+  screens; agent accounts; ask the assistant about the app; a user guide (2026-10-11).
+- [x] **Friends' preview**: packaged install, guided setup, labeled demo, bring-your-own AI, feedback button, download
+  (2026-10-11; `docs/install.md`; a tag builds the release).
+- [x] Plugin API 0.3 with uploads, previews and person actions (2026-10-11); now 0.3.30, see `docs/plugin-api-0.x.md`.
+- [ ] Watchers and lookups (engine and general sources in the core; product connectors as plugins). Done: the engine,
+  triage and Auto-closed, folder, feed, calendar (ICS) and mailbox (IMAP) sources, the Sources screen. Waiting on the
+  owner: product mail and calendar plugins with their own sign-in.
 - [ ] Publishing pack in its own private repository. For the 2026-12-01 launch, a publishing template built with the
   kit is the stretch goal, alongside the manual process.
 - Every feature: run on the fictional imprint end to end with desktop and phone screenshots before hand-over; the owner's
