@@ -65,7 +65,8 @@ Last updated: 2026-10-12.
 - [ ] File channel (6.3). Files, uploads and outputs exist (2026-10-12); the publisher's channel waits for M6.
 - [x] Two computers through a synced folder: readable layout by project, lease in the folder, no silent merges, outside edits back for review (5.0) (2026-10-12).
 - [x] Plugin developer guide generated from the plugin API, for plugins kept in other repositories (2026-10-11).
-- [ ] A sandbox workspace for trying plugins, apart from the launch workspace.
+- [x] A sandbox workspace for trying plugins, apart from the launch workspace: `cockpit demo --plugin <folder>`
+  (2026-10-11).
 
 ## 4. Retrospective (by 2026-12-11)
 

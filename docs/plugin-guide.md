@@ -12,6 +12,8 @@ Plugins change knowledge only through ops, which the applier checks, records in 
 
 Plugins run in the host's process: enabling one trusts its code. A plugin that breaks its contract, or whose callback raises an unexpected exception, is turned off for the run with the reason in its status; core work and other plugins carry on. Today lines, interface items, event handlers and jobs are contained per call: a failing call is skipped and noted, and the plugin is turned off only after `workspace.plugins.failures_before_off` failures in a row there.
 
+To try a plugin without touching a real workspace, run `cockpit demo --plugin <its folder>`: it makes (or reuses) a demo workspace of made-up data, links the plugin folder into it, turns the plugin on and serves it. Edits show after a restart; `--fresh` starts the demo over, and an installed plugin is named instead of its folder.
+
 Import everything from `engine.plugin_api`: `ConnectorError`, `Poll`, `SourceItem`, `PLUGIN_API_VERSION`, `Settings`, `Record`, `OpModel`, `EvidenceIn`, `ANY`, `NeedsPerson`, `PluginMisuse`, `RefTo`, `Tier`, `WriteContext`, `Stored`, `StoreError`, `ReadView`, `OpWriter`, `EventContext`, `ActionContext`, `LintFinding`, `TakeBack`, `WorkingCopyContext`, `InterfaceItem`, `TodayLine`, `PacketContext`, `LongText`, `Unit`, `Part`, `PacketParts`, `Proposal`, `NewFile`, `Preview`, `Choice`, `Group`, `Item`, `Registrar`, `StageDefinition`, `StageCheckResult`, `ToolBox`, `ToolResult`, `ToolError`. Nothing else in the host is an API.
 
 ## The manifest: plugin.yaml

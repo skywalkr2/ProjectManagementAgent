@@ -67,3 +67,22 @@ def test_product_facts_come_from_the_shipped_catalog(tmp_path):
     assert product(packaged=tmp_path)["feedback_to"] == "someone@example.com"
     (tmp_path / "catalog" / "product.yaml").write_text(": not yaml [")
     assert product(packaged=tmp_path) == {}
+
+
+def test_the_demo_tries_a_plugin_from_its_folder_or_by_name(tmp_path, monkeypatch, capsys):
+    import yaml
+
+    monkeypatch.setattr(engine.cli, "cmd_serve", lambda args: 0)
+    plugin = tmp_path / "work" / "mine"
+    plugin.mkdir(parents=True)
+    (plugin / "plugin.yaml").write_text("name: mine\n")
+    folder = tmp_path / "try"
+    assert main(["demo", str(folder), "--plugin", str(plugin), "--plugin", "installed-one"]) == 0
+    linked = folder / "plugins" / "mine"
+    assert (linked / "plugin.yaml").is_file()
+    text = (folder / "config" / "workspace.yaml").read_text()
+    assert {"mine", "installed-one"} <= set(yaml.safe_load(text)["plugins"]["enabled"])
+    assert "# " in text  # the file's comments are kept
+    assert main(["demo", str(folder), "--plugin", str(plugin)]) == 0  # again: nothing doubles
+    assert yaml.safe_load((folder / "config" / "workspace.yaml").read_text())["plugins"]["enabled"].count("mine") == 1
+    assert main(["demo", str(folder), "--plugin", str(tmp_path / "nowhere" / "x.zip")]) == 1

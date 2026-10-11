@@ -109,6 +109,13 @@ def _parser() -> argparse.ArgumentParser:
     )
     sp.add_argument("--which", choices=DEMOS, default="demo-b", help="which demo to start from (default: %(default)s)")
     sp.add_argument("--fresh", action="store_true", help="start over: replace the demo folder with a new copy")
+    sp.add_argument(
+        "--plugin",
+        action="append",
+        default=[],
+        help="try a plugin in the demo: its folder (linked, so edits show after a restart) or an installed plugin's "
+        "name; repeat for more",
+    )
     _open_args(sp, default=True)
     sp.set_defaults(func=cmd_demo, host=None, port=None, base_path=None)
 
@@ -204,8 +211,42 @@ def cmd_demo(args: argparse.Namespace) -> int:
     if not folder.exists() or not any(folder.iterdir()):
         init_workspace(folder, template=demo(args.which))
         print(f"Made a demo workspace at {folder}. Everything in it is made up.")
+    for plugin in args.plugin:
+        print(f"Trying the plugin {add_plugin(Workspace(folder), plugin)} in the demo.")
     args.workspace = str(folder)
     return cmd_serve(args)
+
+
+def add_plugin(ws: Workspace, plugin: str) -> str:
+    """Turn a plugin on in a workspace: a folder holding plugin.yaml is linked into the workspace's plugins/ (copied
+    where links aren't allowed); anything else is taken as an installed plugin's name. Returns the plugin's name."""
+    from engine.config.yaml_edit import set_key
+
+    source = Path(plugin).expanduser()
+    if (source / "plugin.yaml").is_file():
+        manifest = yaml.safe_load((source / "plugin.yaml").read_text(encoding="utf-8")) or {}
+        name = str(manifest.get("name") or source.resolve().name)
+        target = ws.root / "plugins" / name
+        target.parent.mkdir(exist_ok=True)
+        if target.is_symlink() and target.resolve() != source.resolve():
+            raise WorkspaceError(f"The demo already tries another plugin named {name}. Start over with --fresh.")
+        if not target.is_symlink():
+            if target.exists():
+                shutil.rmtree(target)  # an earlier copy: take the plugin as it is now
+            try:
+                target.symlink_to(source.resolve(), target_is_directory=True)
+            except OSError:
+                shutil.copytree(source, target)
+    elif "/" in plugin or "\\" in plugin or Path(plugin).suffix:
+        raise WorkspaceError(f"{plugin} isn't a plugin folder (it has no plugin.yaml) or an installed plugin's name.")
+    else:
+        name = plugin
+    path = ws.config_dir / "workspace.yaml"
+    text = path.read_text(encoding="utf-8")
+    enabled = list((yaml.safe_load(text) or {}).get("plugins", {}).get("enabled", []))
+    if name not in enabled:
+        path.write_text(set_key(text, ["plugins", "enabled"], [*enabled, name]), encoding="utf-8")
+    return name
 
 
 def cmd_init(args: argparse.Namespace) -> int:
