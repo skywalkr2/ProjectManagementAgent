@@ -151,12 +151,12 @@ def test_steps_say_what_is_done_and_can_be_skipped(tmp_path):
     c, api = client(ws, cfg, store)
     steps = {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}
     assert list(steps)[:6] == ["workspace", "template", "ai", "backup", "people", "first_note"]
-    assert not steps["template"]["done"]
-    assert c.post(f"{api}/setup/template/skip").status_code == 200
+    assert not steps["first_note"]["done"]
+    assert c.post(f"{api}/setup/first_note/skip").status_code == 200
     view = c.get(f"{api}/setup").json()
-    assert {s["id"]: s for s in view["steps"]}["template"]["skipped"] and view["local"]
-    c.post(f"{api}/setup/template/reopen")
-    assert not {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}["template"]["skipped"]
+    assert {s["id"]: s for s in view["steps"]}["first_note"]["skipped"] and view["local"]
+    c.post(f"{api}/setup/first_note/reopen")
+    assert not {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}["first_note"]["skipped"]
 
 
 def test_a_backup_folder_is_checked_then_added(tmp_path):
@@ -226,6 +226,40 @@ def test_a_template_is_listed_and_applied(tmp_path):
     assert "client-work" in [t["id"] for t in c.get(f"{api}/templates").json()]
     assert c.post(f"{api}/templates/apply", json={"id": "client-work"}).json()["plugins"] == ["kit"]
     assert {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}["template"]["done"]
+
+
+@pytest.mark.skipif(os.environ.get("COCKPIT_TEST_CORE_ONLY") == "1", reason="the kit plugin is off in this run")
+def test_a_template_already_set_up_counts_as_done(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    from engine import setup, templates
+
+    kit = ws.config_dir / "plugins" / "kit.yaml"
+    have = {t["id"] for t in yaml.safe_load(kit.read_text())["types"]}
+    expected = {
+        t["id"]
+        for t in templates.shipped()
+        if {k["id"] for k in yaml.safe_load(t["path"].read_text())["plugins"]["kit"]["types"]} <= have
+    }
+    assert expected, "the demo workspace sets up a shipped template's item types"
+    step = {s.id: s for s in setup.steps(ws, cfg, store)}["template"]
+    assert step.done
+    c, api = client(ws, cfg, store)
+    assert {t["id"] for t in c.get(f"{api}/templates").json() if t["set_up"]} == expected
+    assert all(t["adds"] for t in c.get(f"{api}/templates").json())
+
+
+def test_a_template_not_yet_set_up_is_not_done(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    from engine import setup
+
+    kit = ws.config_dir / "plugins" / "kit.yaml"
+    settings = yaml.safe_load(kit.read_text())
+    settings["types"] = []
+    kit.write_text(yaml.safe_dump(settings))
+    try:
+        assert not {s.id: s for s in setup.steps(ws, cfg, store)}["template"].done
+    finally:
+        store.close()
 
 
 # ---- plugin steps and restarting -------------------------------------------------------------------------------------
@@ -518,3 +552,92 @@ def test_the_ai_test_says_in_plain_words_whether_each_kind_of_work_answered(tmp_
     for x in lines:
         assert "/" not in x["account"] and "temperature" not in x["account"] and "max output" not in x["detail"]
         assert x["ok"] is False or x["detail"] == "answered"
+
+
+def test_an_account_is_listed_changed_and_removed_with_undo(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    kind = next(k for k in known_endpoints() if k["needs_key"] and k["base_url"])
+    added = c.post(
+        f"{api}/ai/accounts",
+        json={
+            "name": "mine",
+            "adapter": kind["adapter"],
+            "endpoint": kind["id"],
+            "base_url": kind["base_url"],
+            "key": "first-key",
+            "models": {"everyday": "a-model"},
+            "use": {"routine": "everyday"},
+            "fingerprint": fingerprint,
+        },
+    ).json()
+    listed = {a["name"]: a for a in c.get(f"{api}/ai/accounts").json()}
+    assert listed["mine"]["kind"] == kind["id"] and listed["mine"]["used_for"] == ["routine"]
+    assert listed["mine"]["has_key"] and "first-key" not in str(listed)
+    changed = c.post(
+        f"{api}/ai/accounts/mine",
+        json={"key": "second-key", "models": {"everyday": "b-model"}, "fingerprint": added["fingerprint"]},
+    )
+    assert changed.status_code == 200, changed.text
+    assert (ws.private_dir / "keys" / "mine").read_text().strip() == "second-key"
+    assert load_config(ws.config_dir, env={}).ai.providers["mine"].models == {"everyday": "b-model"}
+    removed = c.post(f"{api}/ai/accounts/mine/remove", json={"fingerprint": changed.json()["fingerprint"]})
+    assert removed.status_code == 200, removed.text
+    after = load_config(ws.config_dir, env={})
+    assert "mine" not in after.ai.providers and not (after.ai.tiers["routine"].use or "").startswith("mine/")
+    assert removed.json()["needs_restart"] is False  # AI accounts apply live
+    # Undo puts it back, as a settings undo does: the values from before.
+    undo = {"changes": {}, "reset": [], "fingerprint": removed.json()["fingerprint"]}
+    for change in removed.json()["changes"]:
+        undo["changes"][change["key"]] = change["before"]
+    assert c.post(f"{api}/settings", json=undo).status_code == 200
+    assert "mine" in load_config(ws.config_dir, env={}).ai.providers
+    assert c.post(f"{api}/ai/accounts/nobody/remove", json={"fingerprint": "x"}).status_code == 404
+
+
+def test_built_in_agents_start_with_their_tools_off_and_say_if_installed(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    kinds = c.get(f"{api}/ai/endpoints").json()
+    generic = next(k for k in kinds if k["id"] == "agent")
+    agents = [k for k in kinds if k["program"]]
+    assert len(agents) >= 4
+    assert all(k["adapter"] == generic["adapter"] and k["installed"] in (True, False) for k in agents)
+    for kind in agents:
+        command = kind["settings"]["agent"]["command"]
+        assert command[0] == kind["program"]
+        assert kind["settings"]["agent"]["packet_via"] in ("stdin", "argument")
+        assert "{prompt}" in command or kind["settings"]["agent"]["packet_via"] != "argument"
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    first = agents[0]
+    made = c.post(
+        f"{api}/ai/accounts",
+        json={
+            "name": "agent-one",
+            "adapter": first["adapter"],
+            "endpoint": first["id"],
+            "models": {"everyday": (first["model_examples"] or ["default"])[0]},
+            "fingerprint": fingerprint,
+        },
+    )
+    assert made.status_code == 200, made.text
+    provider = load_config(ws.config_dir, env={}).ai.providers["agent-one"]
+    assert provider.agent is not None and provider.agent.command == first["settings"]["agent"]["command"]
+    assert provider.kind == first["id"]
+    picks_own = next(k for k in agents if k["model_optional"])
+    made = c.post(
+        f"{api}/ai/accounts",
+        json={
+            "name": "agent-two",
+            "adapter": picks_own["adapter"],
+            "endpoint": picks_own["id"],
+            "models": {},
+            "use_for": ["routine"],
+            "fingerprint": made.json()["fingerprint"],
+        },
+    )
+    assert made.status_code == 200, made.text
+    saved = load_config(ws.config_dir, env={})
+    assert list(saved.ai.providers["agent-two"].models) == ["default"]
+    assert saved.ai.tiers["routine"].use.startswith("agent-two/")

@@ -9,7 +9,7 @@ import { WelcomeAi } from "./WelcomeAi";
 const WEB = "https" + "://";
 
 // The names and adapters are made up here: the screen must send whatever the chosen entry says, never a name of its own.
-const KINDS: S["EndpointView"][] = [
+const KINDS: S["EndpointView"][] = ([
   {
     id: "service-a",
     name: "Service A",
@@ -45,7 +45,7 @@ const KINDS: S["EndpointView"][] = [
   },
   { id: "other", name: "Another service", adapter: "adapter-one", base_url: "", key_url: "", needs_key: false, local: false, note: "Enter its address." },
   { id: "runner", name: "A command-line program", adapter: "adapter-two", base_url: "", key_url: "", needs_key: false, local: false, note: "Give the command that starts it." },
-];
+] as Omit<S["EndpointView"], "program" | "model_optional">[]).map((k) => ({ program: "", model_optional: false, ...k }));
 
 const MODELS: S["AiModelView"][] = [
   { id: "model-a", context_tokens: 200000, input_per_million: 3, output_per_million: 15 },

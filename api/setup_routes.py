@@ -9,6 +9,8 @@ from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     AiAccountAdd,
+    AiAccountChange,
+    AiAccountView,
     AiModelsAsk,
     AiModelsView,
     AiModelView,
@@ -187,7 +189,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.get("/templates")
     def template_list() -> list[TemplateView]:
-        return [TemplateView(id=t["id"], name=t["name"], description=t["description"]) for t in templates.shipped()]
+        try:
+            set_up = templates.in_use(ws, list(current().workspace.plugins.enabled))
+        except templates.TemplateError:
+            set_up = None
+        return [
+            TemplateView(
+                id=t["id"], name=t["name"], description=t["description"], adds=t["adds"], set_up=t["id"] == set_up
+            )
+            for t in templates.shipped()
+        ]
 
     @r.post("/templates/apply")
     def template_apply(body: TemplateApply) -> TemplateApplied:
@@ -231,7 +242,80 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.get("/ai/endpoints")
     def endpoints() -> list[EndpointView]:
-        return [EndpointView(**e) for e in setup.known_endpoints()]
+        import shutil
+
+        found = []
+        for e in setup.known_endpoints():
+            installed = (shutil.which(e["program"]) is not None) if (e["program"] and local) else None
+            found.append(EndpointView(**e, installed=installed))
+        return found
+
+    @r.get("/ai/accounts")
+    def ai_accounts() -> list[AiAccountView]:
+        """The AI accounts in the settings, as they are on disk now; never a key."""
+        ai = current().ai
+        return [
+            AiAccountView(
+                name=name,
+                kind=p.kind,
+                adapter=p.adapter,
+                base_url=p.base_url,
+                models=dict(p.models),
+                used_for=[t for t, tier in ai.tiers.items() if (tier.use or "").split("/", 1)[0] == name],
+                has_key=bool(p.auth),
+            )
+            for name, p in ai.providers.items()
+        ]
+
+    @r.post("/ai/accounts/{name}")
+    def ai_account_change(name: str, body: AiAccountChange) -> SettingsSaved:
+        """Give an account a new key, other models or other work, with Undo."""
+        provider = current().ai.providers.get(name)
+        if provider is None:
+            raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
+        if body.key and body.key_ref:
+            raise HTTPException(status_code=400, detail="Paste a key or give where it is, not both.")
+        if body.key and not local:
+            raise HTTPException(
+                status_code=400, detail="On a hosted app, keys come from the environment: give env:NAME instead."
+            )
+        changes: dict[str, Any] = {}
+        if body.key:
+            try:
+                changes[f"ai.providers.{name}.auth"] = setup.keep_key(ws, name, body.key)
+            except StoreError as err:
+                raise HTTPException(status_code=400, detail=str(err)) from None
+        elif body.key_ref:
+            changes[f"ai.providers.{name}.auth"] = body.key_ref.strip()
+        models = body.models if body.models is not None else dict(provider.models)
+        if body.models is not None:
+            if not body.models:
+                raise HTTPException(status_code=400, detail="Name at least one model the account uses.")
+            changes[f"ai.providers.{name}.models"] = body.models
+        for tier, short in body.use.items():
+            if short not in models:
+                raise HTTPException(status_code=400, detail=f"{short} isn't one of this account's models.")
+            changes[f"ai.tiers.{tier}.use"] = f"{name}/{short}"
+        if not changes:
+            raise HTTPException(status_code=400, detail="Nothing to change.")
+        return saved(save(changes, [], body.fingerprint, allow=("ai.providers.", "ai.tiers.")))
+
+    @r.post("/ai/accounts/{name}/remove")
+    def ai_account_remove(name: str, body: FingerprintIn) -> SettingsSaved:
+        """Remove an account, with Undo: the work it did goes back to the tier's default account. Its kept key stays
+        on this computer, so Undo brings the account back whole."""
+        ai = current().ai
+        if name not in ai.providers:
+            raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
+        reset = [f"ai.providers.{name}"]
+        changes: dict[str, Any] = {}
+        for tier_name, tier in ai.tiers.items():
+            if (tier.use or "").split("/", 1)[0] == name:
+                reset.append(f"ai.tiers.{tier_name}.use")
+            kept = [ref for ref in tier.fallback if ref.split("/", 1)[0] != name]
+            if kept != list(tier.fallback):
+                changes[f"ai.tiers.{tier_name}.fallback"] = kept
+        return saved(save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers.")))
 
     @r.post("/ai/accounts")
     def ai_account_add(body: AiAccountAdd) -> SettingsSaved:
@@ -241,7 +325,13 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail=f"There is no kind of account called {body.adapter}.")
         if body.name in current().ai.providers:
             raise HTTPException(status_code=409, detail=f"There is already an account called {body.name}.")
-        if not body.models:
+        kind = setup.endpoint(body.endpoint) if body.endpoint else None
+        if body.endpoint and kind is None:
+            raise HTTPException(status_code=400, detail=f"There is no kind of account called {body.endpoint}.")
+        models = dict(body.models)
+        if not models and kind is not None and kind.get("model_optional"):
+            models = {"default": "default"}  # the program picks its own model; the id is passed nowhere
+        if not models:
             raise HTTPException(status_code=400, detail="Name at least one model the account uses.")
         if body.key and body.key_ref:
             raise HTTPException(status_code=400, detail="Paste a key or give where it is, not both.")
@@ -249,13 +339,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(
                 status_code=400, detail="On a hosted app, keys come from the environment: give env:NAME instead."
             )
-        kind = setup.endpoint(body.endpoint) if body.endpoint else None
-        if body.endpoint and kind is None:
-            raise HTTPException(status_code=400, detail=f"There is no kind of account called {body.endpoint}.")
         provider: dict[str, Any] = {
             **(kind["settings"] if kind else {}),
+            **({"kind": kind["id"]} if kind else {}),
             "adapter": body.adapter,
-            "models": body.models,
+            "models": models,
             "allowed_data": list(body.allowed_data),
         }
         if body.base_url:
@@ -271,12 +359,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             provider["auth"] = kept
         elif body.key_ref:
             provider["auth"] = body.key_ref.strip()
-        first = next(iter(body.models))
+        first = next(iter(models))
         changes: dict[str, Any] = {f"ai.providers.{body.name}": provider}
         for tier in body.use_for:
             changes[f"ai.tiers.{tier}.use"] = f"{body.name}/{first}"
         for tier, short in body.use.items():
-            if short not in body.models:
+            if short not in models:
                 raise HTTPException(status_code=400, detail=f"{short} isn't one of this account's models.")
             changes[f"ai.tiers.{tier}.use"] = f"{body.name}/{short}"
         try:

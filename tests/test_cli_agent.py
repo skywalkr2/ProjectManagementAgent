@@ -39,6 +39,8 @@ elif mode == "env":
     print(json.dumps(sorted(os.environ)))
 elif mode == "packet-file":
     print(len(open(sys.argv[2]).read()))
+elif mode == "packet-argument":
+    print(len(sys.argv[2]))
 elif mode == "cwd":
     print(os.getcwd())
 elif mode == "obedient":
@@ -97,6 +99,17 @@ def test_the_packet_can_go_in_as_a_file(agent_script):
     s = settings(agent_script, "packet-file", "{packet}", packet_via="file")
     result = CliAgentAdapter(s).run(task(), "agent-model")
     assert int(result.text) == len("Follow the rules.\n\nStable part.\n\nThe request.")
+
+
+def test_the_packet_can_go_in_as_an_argument_up_to_a_limit(agent_script):
+    from engine.ai.adapters.cli_agent import MAX_ARGUMENT_CHARS
+
+    s = settings(agent_script, "packet-argument", "{prompt}", packet_via="argument")
+    result = CliAgentAdapter(s).run(task(), "agent-model")
+    assert int(result.text) == len("Follow the rules.\n\nStable part.\n\nThe request.")
+    huge = AiTask("notes", "x" * (MAX_ARGUMENT_CHARS + 1), "", "", {})
+    with pytest.raises(AiError):
+        CliAgentAdapter(s).run(huge, "agent-model")
 
 
 def test_the_agent_runs_in_its_own_folder_with_a_small_environment(agent_script, monkeypatch, tmp_path):

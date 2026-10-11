@@ -3,6 +3,25 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Command-line agents are chosen from a list, and accounts can be fixed after adding
+
+**Decided by:** project owner ("we should have built in Anthropic CLI and Copilot CLI options … as there is no reason why
+we need the user to set this up by hand"; an account saved by mistake "you can never fix").
+
+**What:** The Add account screen offers the common command-line agents by name (`catalog/ai-endpoints.yaml`), each with
+its command, the program's own options that keep its tools off, how it takes the packet and where its answer is. The
+screen says whether the program is installed and how to sign in; the person never types a command. An agent that only
+takes the packet on its command line gets it as an argument, refused above a size limit. Added accounts are listed with
+Replace key, Change models and Remove (with Undo). The template step counts as done when the workspace already has a
+starting template's item types, and each template lists what it adds before it is applied.
+
+**Why:** Typing an agent's locked-down command by hand is error-prone, a mistaken account blocked adding it again, and
+the template step gave no way to know what it would do.
+
+**Impact:** `catalog/ai-endpoints.yaml` (data, not code); `agent.packet_via: argument` and `{prompt}`; `GET /ai/accounts`,
+`POST /ai/accounts/{name}`, `POST /ai/accounts/{name}/remove`; `EndpointView.program`, `installed`, `model_examples`,
+`model_optional`; `TemplateView.adds` and `set_up`. No change to scope.
+
 ## 2026-10-11: The app restarts only when it must, and only when the person says so
 
 **Decided by:** project owner ("only restart when it's necessary and then warn the user before that happens").

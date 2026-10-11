@@ -31,12 +31,67 @@ class TemplateError(Exception):
 
 
 def shipped() -> list[dict[str, Any]]:
-    """The starting templates: {id, name, description, path} each."""
+    """The starting templates: {id, name, description, adds, path} each."""
     found = []
     for path in sorted(SHIPPED.glob("*.yaml")):
         data = _read(path)
-        found.append({"id": path.stem, "name": data["name"], "description": data.get("description", ""), "path": path})
+        found.append(
+            {
+                "id": path.stem,
+                "name": data["name"],
+                "description": data.get("description", ""),
+                "adds": adds(data),
+                "path": path,
+            }
+        )
     return found
+
+
+def adds(template: dict[str, Any]) -> list[dict[str, Any]]:
+    """What a template adds, for the person to read before applying it: each kind of record it sets up, with its
+    fields' labels and its stages' labels in order. Plain data from the template; nothing is applied."""
+    found = []
+    for settings in (template.get("plugins") or {}).values():
+        for kind in (settings or {}).get("types") or []:
+            if not isinstance(kind, dict):
+                continue
+            found.append(
+                {
+                    "name": str(kind.get("plural") or kind.get("name") or kind.get("id") or ""),
+                    "fields": [
+                        str(f.get("label") or f.get("name")) for f in kind.get("fields") or [] if isinstance(f, dict)
+                    ],
+                    "stages": [
+                        str(s.get("label") or s.get("id")) for s in kind.get("stages") or [] if isinstance(s, dict)
+                    ],
+                }
+            )
+    return found
+
+
+def in_use(ws: Any, enabled: list[str]) -> str | None:
+    """The shipped template this workspace already has set up, if any: one whose plugins are all turned on and
+    already hold every entry with an id the template adds (item types, stages). Read from the settings files."""
+    for template in shipped():
+        plugins = (_read(template["path"]).get("plugins")) or {}
+        held = all(plugin in enabled and _holds(ws, plugin, settings or {}) for plugin, settings in plugins.items())
+        if plugins and held:
+            return str(template["id"])
+    return None
+
+
+def _holds(ws: Any, plugin: str, settings: dict[str, Any]) -> bool:
+    path = ws.config_dir / "plugins" / f"{plugin}.yaml"
+    try:
+        current = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return False
+    for key, entries in settings.items():
+        if isinstance(entries, list) and all(isinstance(e, dict) and "id" in e for e in entries):
+            have = {e.get("id") for e in current.get(key) or [] if isinstance(e, dict)}
+            if not {e["id"] for e in entries} <= have:
+                return False
+    return True
 
 
 def find(name_or_path: str) -> Path:

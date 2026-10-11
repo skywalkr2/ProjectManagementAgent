@@ -703,6 +703,134 @@
         "title": "AiAccountAdd",
         "type": "object"
       },
+      "AiAccountChange": {
+        "additionalProperties": false,
+        "description": "A change to an existing account: a new key, other models, or the work it does.",
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A new pasted key; kept on this computer.",
+            "title": "Key"
+          },
+          "key_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Or where the key is now: env:NAME or file:/path.",
+            "title": "Key Ref"
+          },
+          "models": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its models, replacing the ones it has.",
+            "title": "Models"
+          },
+          "use": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Tiers to one of its models by short name.",
+            "title": "Use",
+            "type": "object"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "AiAccountChange",
+        "type": "object"
+      },
+      "AiAccountView": {
+        "description": "An AI account in the settings, for the screens: never its key.",
+        "properties": {
+          "adapter": {
+            "title": "Adapter",
+            "type": "string"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "has_key": {
+            "description": "A key or a reference to one is set.",
+            "title": "Has Key",
+            "type": "boolean"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The kind of account it was made from (GET /api/ai/endpoints).",
+            "title": "Kind"
+          },
+          "models": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Models",
+            "type": "object"
+          },
+          "name": {
+            "description": "Its short name in ai.yaml.",
+            "title": "Name",
+            "type": "string"
+          },
+          "used_for": {
+            "description": "The tiers whose main account it is.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Used For",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "adapter",
+          "models",
+          "used_for",
+          "has_key"
+        ],
+        "title": "AiAccountView",
+        "type": "object"
+      },
       "AiModelView": {
         "properties": {
           "context_tokens": {
@@ -1645,6 +1773,18 @@
             "title": "Id",
             "type": "string"
           },
+          "installed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether that program is on this computer (None when it can't be told: a hosted app).",
+            "title": "Installed"
+          },
           "key_url": {
             "default": "",
             "description": "Where the person makes a key, to open in a new tab; empty when none.",
@@ -1655,6 +1795,20 @@
             "default": false,
             "description": "A server on this computer: nothing leaves it.",
             "title": "Local",
+            "type": "boolean"
+          },
+          "model_examples": {
+            "description": "Model names the program accepts.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Model Examples",
+            "type": "array"
+          },
+          "model_optional": {
+            "default": false,
+            "description": "The program picks its own model when none is named.",
+            "title": "Model Optional",
             "type": "boolean"
           },
           "name": {
@@ -1670,6 +1824,12 @@
           "note": {
             "default": "",
             "title": "Note",
+            "type": "string"
+          },
+          "program": {
+            "default": "",
+            "description": "For a command-line agent: the program it runs.",
+            "title": "Program",
             "type": "string"
           },
           "settings": {
@@ -5939,6 +6099,38 @@
         "title": "TaskStarted",
         "type": "object"
       },
+      "TemplateAdds": {
+        "properties": {
+          "fields": {
+            "description": "What each entry in it holds, by label.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "name": {
+            "description": "What the list it adds is called, such as Requests.",
+            "title": "Name",
+            "type": "string"
+          },
+          "stages": {
+            "description": "The steps an entry goes through, in order.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Stages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "fields",
+          "stages"
+        ],
+        "title": "TemplateAdds",
+        "type": "object"
+      },
       "TemplateApplied": {
         "properties": {
           "needs_restart": {
@@ -5977,6 +6169,14 @@
       },
       "TemplateView": {
         "properties": {
+          "adds": {
+            "description": "What applying it sets up.",
+            "items": {
+              "$ref": "#/components/schemas/TemplateAdds"
+            },
+            "title": "Adds",
+            "type": "array"
+          },
           "description": {
             "title": "Description",
             "type": "string"
@@ -5988,6 +6188,12 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "set_up": {
+            "default": false,
+            "description": "This workspace already has everything it adds.",
+            "title": "Set Up",
+            "type": "boolean"
           }
         },
         "required": [
@@ -6883,6 +7089,27 @@
       }
     },
     "/api/ai/accounts": {
+      "get": {
+        "description": "The AI accounts in the settings, as they are on disk now; never a key.",
+        "operationId": "ai_accounts_api_ai_accounts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AiAccountView"
+                  },
+                  "title": "Response Ai Accounts Api Ai Accounts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ai Accounts"
+      },
       "post": {
         "operationId": "ai_account_add_api_ai_accounts_post",
         "requestBody": {
@@ -6918,6 +7145,106 @@
           }
         },
         "summary": "Ai Account Add"
+      }
+    },
+    "/api/ai/accounts/{name}": {
+      "post": {
+        "description": "Give an account a new key, other models or other work, with Undo.",
+        "operationId": "ai_account_change_api_ai_accounts__name__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAccountChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Account Change"
+      }
+    },
+    "/api/ai/accounts/{name}/remove": {
+      "post": {
+        "description": "Remove an account, with Undo: the work it did goes back to the tier's default account. Its kept key stays\non this computer, so Undo brings the account back whole.",
+        "operationId": "ai_account_remove_api_ai_accounts__name__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FingerprintIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Account Remove"
       }
     },
     "/api/ai/endpoints": {

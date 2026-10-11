@@ -7,7 +7,12 @@
 #   needs_key          whether a key is asked for
 #   local              a server on this computer: nothing leaves it, and the screen can look for it
 #   allowed_data       the data levels a new account of this kind is offered by default (the person can change them)
-#   settings           provider settings a new account of this kind starts with (see ai.yaml's providers)
+#   settings           provider settings a new account of this kind starts with (see ai.yaml's providers); for a
+#                      command-line agent, its whole `agent` block: the command with the program's own options that
+#                      turn its tools off, how it takes the packet and where its answer is
+#   program            for a command-line agent: the program's name, so the screen can say whether it is installed
+#   model_examples     names the program accepts for its models, offered when it can't list them
+#   model_optional     the program picks its own model when none is named
 #   note               one line shown with it
 # Model ids are never listed here: the screen asks the service for its models with the person's key.
 endpoints:
@@ -91,8 +96,74 @@ endpoints:
     base_url: ""
     needs_key: true
     note: Enter its address from the service's own documentation.
+  - id: claude-code
+    name: Claude Code
+    adapter: cli-agent
+    base_url: ""
+    needs_key: false
+    program: claude
+    model_examples: [sonnet, opus, haiku]
+    settings:
+      agent:
+        command: [claude, -p, --output-format, json, --model, "{model}", --tools, "", --strict-mcp-config, --no-session-persistence]
+        packet_via: stdin
+        output_via: stdout
+        output_json: true
+        output_fields:
+          text: result
+          input_tokens: usage.input_tokens
+          output_tokens: usage.output_tokens
+          cached_input_tokens: usage.cache_read_input_tokens
+          cost_usd: total_cost_usd
+        sign_in_hint: Open a terminal, run claude and sign in, then press Test again.
+    note: Uses your Claude subscription or account through Claude Code, with its tools turned off.
+  - id: copilot
+    name: GitHub Copilot CLI
+    adapter: cli-agent
+    base_url: ""
+    needs_key: false
+    program: copilot
+    model_optional: true
+    settings:
+      agent:
+        command: [copilot, -p, "{prompt}", -s]
+        packet_via: argument
+        output_via: stdout
+        sign_in_hint: Open a terminal, run copilot and sign in with /login, then press Test again.
+    note: Uses your Copilot plan through the Copilot CLI; it asks before using tools, so here it can't use them.
+  - id: codex
+    name: Codex CLI
+    adapter: cli-agent
+    base_url: ""
+    needs_key: false
+    program: codex
+    model_optional: true
+    settings:
+      agent:
+        command: [codex, exec, --sandbox, read-only, --skip-git-repo-check, --ephemeral]
+        packet_via: stdin
+        output_via: stdout
+        sign_in_hint: Open a terminal, run codex and sign in, then press Test again.
+    note: Uses your ChatGPT plan or account through the Codex CLI, in its read-only sandbox.
+  - id: gemini-cli
+    name: Gemini CLI
+    adapter: cli-agent
+    base_url: ""
+    needs_key: false
+    program: gemini
+    model_optional: true
+    settings:
+      agent:
+        command: [gemini, --output-format, json]
+        packet_via: stdin
+        output_via: stdout
+        output_json: true
+        output_fields:
+          text: response
+        sign_in_hint: Open a terminal, run gemini and sign in, then press Test again.
+    note: Uses your Google account through the Gemini CLI; it asks before using tools, so here it can't use them.
   - id: agent
-    name: A command-line agent signed in as you
+    name: Another command-line agent signed in as you
     adapter: cli-agent
     base_url: ""
     needs_key: false

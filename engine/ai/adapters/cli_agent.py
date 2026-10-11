@@ -78,7 +78,10 @@ class CliAgentAdapter:
         packet = scratch / "packet.md"
         packet.write_text(prompt, encoding="utf-8")
         home = self._fresh_home(scratch) if self.agent.home == "fresh" else None
+        if self.agent.packet_via == "argument" and len(prompt) > MAX_ARGUMENT_CHARS:
+            raise AiError("other", "the packet is too long to pass on the command line; this agent can't take it")
         values = {"model": model, "packet": str(packet), "outbox": str(outbox), "scratch": str(scratch)}
+        values["prompt"] = prompt
         args = [_fill(part, values) for part in self.agent.command]
         if shutil.which(args[0], path=self._env(home).get("PATH")) is None and not Path(args[0]).is_file():
             raise AiError("provider_down", f"the agent program {args[0]} isn't installed on this computer")
@@ -243,8 +246,12 @@ class _scratch:
         shutil.rmtree(self.path, ignore_errors=True)
 
 
+#: The longest packet passed as one command-line argument, well inside every system's limit.
+MAX_ARGUMENT_CHARS = 100_000
+
+
 def _fill(part: str, values: dict[str, str]) -> str:
-    return re.sub(r"\{(model|packet|outbox|scratch)\}", lambda m: values[m.group(1)], part)
+    return re.sub(r"\{(model|packet|outbox|scratch|prompt)\}", lambda m: values[m.group(1)], part)
 
 
 def _at(data: Any, path: str) -> Any:

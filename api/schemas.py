@@ -1039,10 +1039,18 @@ class SetupView(BaseModel):
     local: bool = Field(description="The app runs on the person's own computer, so folders can be picked here.")
 
 
+class TemplateAdds(BaseModel):
+    name: str = Field(description="What the list it adds is called, such as Requests.")
+    fields: list[str] = Field(description="What each entry in it holds, by label.")
+    stages: list[str] = Field(description="The steps an entry goes through, in order.")
+
+
 class TemplateView(BaseModel):
     id: str
     name: str
     description: str
+    adds: list[TemplateAdds] = Field(default_factory=list, description="What applying it sets up.")
+    set_up: bool = Field(False, description="This workspace already has everything it adds.")
 
 
 class TemplateApply(BaseModel):
@@ -1095,7 +1103,37 @@ class EndpointView(BaseModel):
     settings: dict[str, Any] = Field(
         default_factory=dict, description="Provider settings a new account of this kind starts with."
     )
+    program: str = Field("", description="For a command-line agent: the program it runs.")
+    installed: bool | None = Field(
+        None, description="Whether that program is on this computer (None when it can't be told: a hosted app)."
+    )
+    model_examples: list[str] = Field(default_factory=list, description="Model names the program accepts.")
+    model_optional: bool = Field(False, description="The program picks its own model when none is named.")
     note: str = ""
+
+
+class AiAccountView(BaseModel):
+    """An AI account in the settings, for the screens: never its key."""
+
+    name: str = Field(description="Its short name in ai.yaml.")
+    kind: str | None = Field(None, description="The kind of account it was made from (GET /api/ai/endpoints).")
+    adapter: str
+    base_url: str | None = None
+    models: dict[str, str]
+    used_for: list[str] = Field(description="The tiers whose main account it is.")
+    has_key: bool = Field(description="A key or a reference to one is set.")
+
+
+class AiAccountChange(BaseModel):
+    """A change to an existing account: a new key, other models, or the work it does."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key: str | None = Field(None, description="A new pasted key; kept on this computer.")
+    key_ref: str | None = Field(None, description="Or where the key is now: env:NAME or file:/path.")
+    models: dict[str, str] | None = Field(None, description="Its models, replacing the ones it has.")
+    use: dict[str, str] = Field(default_factory=dict, description="Tiers to one of its models by short name.")
+    fingerprint: str
 
 
 class AiModelsAsk(BaseModel):

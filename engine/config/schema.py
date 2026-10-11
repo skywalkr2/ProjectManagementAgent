@@ -291,10 +291,13 @@ class AgentSettings(ConfigModel):
     command: list[str] = Field(
         default_factory=list,
         description="The program and its arguments, locked-down flags included. Placeholders: {model}, {packet} "
-        "(the packet file), {outbox} (the folder for the answer), {scratch} (the run's folder).",
+        "(the packet file), {prompt} (the packet's text, for packet_via: argument), {outbox} (the folder for the "
+        "answer), {scratch} (the run's folder).",
     )
-    packet_via: Literal["stdin", "file"] = Field(
-        "stdin", description="How the agent gets the packet: on its input, or as a file named by {packet}."
+    packet_via: Literal["stdin", "file", "argument"] = Field(
+        "stdin",
+        description="How the agent gets the packet: on its input, as a file named by {packet}, or as the argument "
+        "{prompt} (for a program that takes its prompt only on the command line).",
     )
     output_via: Literal["stdout", "outbox"] = Field(
         "stdout", description="Where the agent puts its answer: its output, or a file in {outbox}."
@@ -331,6 +334,9 @@ class AgentSettings(ConfigModel):
 
 class ProviderSettings(ConfigModel):
     adapter: str = Field("stub", description="Which installed adapter talks to this account.")
+    kind: str | None = Field(
+        None, description="The kind of account from the app's list it was made from (its id), for showing its name."
+    )
     base_url: str | None = Field(None, description="The API address, for adapters that need one.")
     auth: str | None = Field(None, description="A secret reference (env:NAME or file:/path), never the secret itself.")
     models: dict[str, str] = Field(default_factory=dict, description="Short names for this account's models.")

@@ -80,7 +80,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
     people = view.list("person")
     done = {
         "workspace": _pm_named(cfg, view) and cfg.workspace.name != "Workspace",
-        "template": bool(state.get("template")),
+        "template": bool(state.get("template")) or _template_in_use(ws, cfg),
         "ai": ai_state(ws, cfg, store)[0] == "ok",
         "backup": bool(cfg.storage.backups.targets),
         "people": len(people) >= 2,
@@ -117,6 +117,15 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
             )
         )
     return found
+
+
+def _template_in_use(ws: Any, cfg: Any) -> bool:
+    from engine import templates
+
+    try:
+        return templates.in_use(ws, list(cfg.workspace.plugins.enabled)) is not None
+    except templates.TemplateError:
+        return False
 
 
 def _pm_named(cfg: Any, view: Any) -> bool:
@@ -206,6 +215,9 @@ def known_endpoints() -> list[dict[str, Any]]:
                 "local": bool(e.get("local", False)),
                 "allowed_data": levels or ["open"],
                 "settings": dict(e.get("settings") or {}),
+                "program": str(e.get("program") or ""),
+                "model_examples": [str(m) for m in e.get("model_examples") or []],
+                "model_optional": bool(e.get("model_optional", False)),
                 "note": str(e.get("note") or ""),
             }
         )
