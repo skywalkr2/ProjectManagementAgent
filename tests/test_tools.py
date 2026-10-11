@@ -94,6 +94,10 @@ def test_a_run_that_overruns_is_stopped(program):
     assert result.timed_out and result.returncode == -1 and result.seconds < 10
 
 
+def test_the_timeout_may_be_given_in_place(program):
+    assert tools(program).run("fakeprog", ["sleep", "30"], {}, 0.5).timed_out
+
+
 def test_a_timeout_above_the_maximum_is_held_to_it(program):
     result = tools(program, max_timeout_seconds=0.5).run("fakeprog", ["sleep", "30"], timeout=600)
     assert result.timed_out
