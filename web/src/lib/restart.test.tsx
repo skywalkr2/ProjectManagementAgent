@@ -122,3 +122,26 @@ test("with a server that can't name its start, running out of time also says it 
   expect(screen.getByRole("status")).toHaveTextContent(STUCK);
   vi.useRealTimers();
 });
+
+test("when asking, the notice says what waits for the restart", () => {
+  fakeApi({ "GET runtime-config": () => ({ instance: "one" }) });
+  function Asker() {
+    const { offer } = useRestart();
+    return (
+      <button type="button" onClick={offer}>
+        offer
+      </button>
+    );
+  }
+  render(
+    <WordingProvider>
+      <RestartProvider hellos={1}>
+        <Asker />
+        <RestartNotice what="Restart to use: Backups kept." />
+      </RestartProvider>
+    </WordingProvider>,
+  );
+  act(() => screen.getByRole("button", { name: "offer" }).click());
+  expect(screen.getByRole("status")).toHaveTextContent("This change needs the app to restart.");
+  expect(screen.getByRole("status")).toHaveTextContent("Restart to use: Backups kept.");
+});

@@ -1,5 +1,6 @@
 // Settings forms: turning each setting's value into what a control edits and back, grouping, searching and read-backs.
 import type { S } from "./api";
+import { readable } from "./records";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
 type Has = (key: string) => boolean;
@@ -61,12 +62,55 @@ export function labelOf(item: Pick<Item, "key" | "description">, t: T, has: Has)
   return has(key) ? t(key) : item.description;
 }
 
-/** A heading for a group: the wording sheet's, otherwise its dotted name made readable. */
+/** Add-on settings sit in a group named for the add-on: "plugins/<name>". */
+const ADDON_PREFIX = "plugins/";
+
+/** The add-on a group belongs to, if it is an add-on's. */
+export const addonOf = (group: string): string | null => (group.startsWith(ADDON_PREFIX) ? group.slice(ADDON_PREFIX.length) : null);
+
+/** An add-on's name for showing: the wording sheet's when it has one, otherwise its name made readable. */
+export function addonLabel(name: string, t: T, has: Has): string {
+  const key = `settings.addon.${name}`;
+  return has(key) ? t(key) : readable(name);
+}
+
+/** A heading for a group: an add-on's name, the wording sheet's, otherwise its dotted name made readable. */
 export function groupLabel(group: string, t: T, has: Has): string {
+  const addon = addonOf(group);
+  if (addon !== null) return addonLabel(addon, t, has);
   const key = `settings.group.${group}`;
   if (has(key)) return t(key);
   const words = group.replace(/[._-]+/g, " ").replace(/\bai\b/g, "AI").trim();
   return words ? words[0].toUpperCase() + words.slice(1) : group;
+}
+
+/** What to call a setting by its key: the label its screen shows, else its group's, else a general phrase. */
+export function labelForKey(key: string, items: Item[], t: T, has: Has): string {
+  const item = items.find((i) => i.key === key);
+  if (item) return labelOf(item, t, has);
+  if (has(`settings.key.${key}`)) return t(`settings.key.${key}`);
+  const parts = key.split(".");
+  for (let n = parts.length - 1; n >= 1; n -= 1) {
+    const group = parts.slice(0, n).join(".");
+    if (addonOf(group) !== null || has(`settings.group.${group}`)) return groupLabel(group, t, has);
+  }
+  return t("restart.for_other");
+}
+
+const RESTART_SHOWN = 3;
+
+/** What waits for a restart, in plain words: each settings key by its label, "code" as an update to the app. Up to three
+ * are named, then how many more. Nothing when nothing waits. */
+export function restartWhat(keys: string[], items: Item[], t: T, has: Has): string {
+  const names: string[] = [];
+  for (const key of keys) {
+    const name = key === "code" ? t("restart.for_code") : labelForKey(key, items, t, has);
+    if (!names.includes(name)) names.push(name);
+  }
+  if (!names.length) return "";
+  const shown = names.slice(0, RESTART_SHOWN).join(", ");
+  const list = names.length > RESTART_SHOWN ? t("restart.for_more", { list: shown, n: names.length - RESTART_SHOWN }) : shown;
+  return t("restart.for", { what: list });
 }
 
 export interface Group {
@@ -80,7 +124,8 @@ export function groupItems(items: Item[], opts: { more: boolean; query: string }
   const q = opts.query.trim().toLowerCase();
   const shown = items.filter((item) => {
     if (!q) return opts.more || item.basic;
-    return [item.key, labelOf(item, t, has), item.description].some((x) => x.toLowerCase().includes(q));
+    const addon = item.plugin ? [addonLabel(item.plugin, t, has)] : [];
+    return [item.key, labelOf(item, t, has), item.description, ...addon].some((x) => x.toLowerCase().includes(q));
   });
   const groups = new Map<string, Item[]>();
   for (const item of shown) groups.set(item.group, [...(groups.get(item.group) ?? []), item]);
@@ -88,7 +133,9 @@ export function groupItems(items: Item[], opts: { more: boolean; query: string }
     group,
     items: [...list.filter((i) => i.basic), ...list.filter((i) => !i.basic)],
   }));
-  return [...out.filter((g) => g.items.some((i) => i.basic)), ...out.filter((g) => !g.items.some((i) => i.basic))];
+  const ordered = [...out.filter((g) => g.items.some((i) => i.basic)), ...out.filter((g) => !g.items.some((i) => i.basic))];
+  // The app's own groups come first; each add-on's follows, one group each.
+  return [...ordered.filter((g) => addonOf(g.group) === null), ...ordered.filter((g) => addonOf(g.group) !== null)];
 }
 
 /** The setting that switches this one on or off, if there is one. */

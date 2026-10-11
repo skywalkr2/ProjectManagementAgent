@@ -179,3 +179,61 @@ test("nothing about restarting shows when no restart is needed", async () => {
   expect(screen.queryByRole("button", { name: "Restart now" })).toBeNull();
   expect(screen.queryByText(/restart/i)).toBeNull();
 });
+
+const settingItem = (key: string, description: string, extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] => ({
+  key,
+  file: key.split(".")[0],
+  group: key.split(".").slice(0, 2).join("."),
+  description,
+  type: "integer",
+  options: [],
+  value: 1,
+  default: 1,
+  source: "default",
+  locked: false,
+  basic: true,
+  editable: true,
+  ...extra,
+});
+
+function waiting(keys: string[], items: S["SettingItem"][]) {
+  showRestart(
+    { restart_needed: "A setting changed.", can_restart: true, restart_for: keys },
+    { "GET settings": () => ({ fingerprint: "fp", items }) },
+  );
+}
+
+test("the restart line names what waits by the labels Settings shows, never the keys", async () => {
+  waiting(
+    ["storage.backups.keep", "workspace.plugins.enabled"],
+    [
+      settingItem("storage.backups.keep", "How many backups stay."),
+      settingItem("workspace.plugins.enabled", "Which add-ons are on", { type: "list", value: [], default: [] }),
+    ],
+  );
+  const line = await screen.findByText("Restart to use: Backups to keep in each folder, Which add-ons are on.");
+  expect(line).toBeInTheDocument();
+  expect(document.body).not.toHaveTextContent("storage.backups.keep");
+  expect(document.body).not.toHaveTextContent("workspace.plugins");
+});
+
+test("an update to the app is named as one, and only three things are listed before 'and N more'", async () => {
+  waiting(
+    ["code", "storage.backups.keep", "storage.backups.every_hours", "storage.sync.folder", "ui.toast_seconds"],
+    [
+      settingItem("storage.backups.keep", "A"),
+      settingItem("storage.backups.every_hours", "B"),
+      settingItem("storage.sync.folder", "C"),
+      settingItem("ui.toast_seconds", "D"),
+    ],
+  );
+  expect(
+    await screen.findByText("Restart to use: an update to the app, Backups to keep in each folder, Hours between backups and 2 more."),
+  ).toBeInTheDocument();
+  expect(document.querySelector(".restart-slot")).toBeInTheDocument();
+});
+
+test("a key with no known label is named by its group, or as other settings", async () => {
+  waiting(["storage.backups.unknown_thing", "mystery.thing"], []);
+  expect(await screen.findByText("Restart to use: Backups, other settings.")).toBeInTheDocument();
+});

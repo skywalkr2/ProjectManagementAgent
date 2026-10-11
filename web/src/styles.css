@@ -151,6 +151,8 @@ textarea.drop { border-style: dashed; border-width: 1.5px; min-height: 160px; }
 .menu { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 4px; display: grid; outline: none; }
 .menu-item { padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: 14px; outline: none; }
 .menu-item[data-focused] { background: var(--sunk); }
+.menu-item[data-disabled] { cursor: default; color: var(--muted, inherit); }
+.menu-item [slot="description"] { display: block; font-size: 13px; max-width: 28ch; }
 .menu-item[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: -2px; }
 .toasts { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 70; width: min(560px, calc(100% - 32px)); }
 .toast-stack { display: grid; gap: 8px; }

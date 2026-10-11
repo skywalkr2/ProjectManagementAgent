@@ -1,5 +1,5 @@
 // The "…" menu on a row: every action other than the row's one primary action.
-import { Button, Menu, MenuItem, MenuTrigger, Popover } from "react-aria-components";
+import { Button, Menu, MenuItem, MenuTrigger, Popover, Text } from "react-aria-components";
 import { useWords } from "../lib/wording";
 
 export interface MenuAction {
@@ -8,6 +8,9 @@ export interface MenuAction {
   run?: () => void;
   /** An address to open in a new tab instead of running something (only for an address the caller has checked). */
   href?: string;
+  /** The action can't be run now; `reason` says why, under its label. */
+  disabled?: boolean;
+  reason?: string;
 }
 
 export function RowMenu(props: { label: string; actions: MenuAction[] }) {
@@ -28,11 +31,18 @@ export function RowMenu(props: { label: string; actions: MenuAction[] }) {
             <MenuItem
               id={item.id}
               className="menu-item"
+              isDisabled={item.disabled}
+              textValue={item.label}
               href={item.href}
               target={item.href ? "_blank" : undefined}
               rel={item.href ? "noopener noreferrer" : undefined}
             >
-              {item.label}
+              <Text slot="label">{item.label}</Text>
+              {item.disabled && item.reason && (
+                <Text slot="description" className="hint">
+                  {item.reason}
+                </Text>
+              )}
             </MenuItem>
           )}
         </Menu>

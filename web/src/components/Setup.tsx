@@ -12,6 +12,7 @@ import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
 import { restoreFocus } from "./ModalPanel";
+import { OrgSelect } from "./OrgSelect";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
@@ -19,7 +20,12 @@ import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
 
 /** The value lists a project's fields take their choices from. */
-const PROJECT_LISTS = { status: "project-status", phase: "project-phase", group: "project-group" } as const;
+const PROJECT_LISTS = {
+  status: "project-status",
+  phase: "project-phase",
+  group: "project-group",
+  priority: "project-priority",
+} as const;
 
 const list = (text: string) =>
   text
@@ -31,6 +37,7 @@ export function Setup() {
   return (
     <>
       <PeoplePanel />
+      <OrganizationsPanel />
       <ProjectsPanel />
       <SyncPanel />
       <JobsPanel />
@@ -103,7 +110,7 @@ function PersonRow(props: { person: S["PersonView"] }) {
         ),
     });
   }
-  const sub = [p.role, p.org, p.aliases.length ? t("setup.also_called", { names: p.aliases.join(", ") }) : ""]
+  const sub = [p.role, p.org_name, p.aliases.length ? t("setup.also_called", { names: p.aliases.join(", ") }) : ""]
     .filter(Boolean)
     .join(" · ");
   return (
@@ -144,7 +151,7 @@ function PersonForm(props: { person?: S["PersonView"]; onDone: () => void }) {
   const [aliases, setAliases] = useState(p?.aliases.join(", ") ?? "");
   const key = p?.id ?? "new";
   const save = async () => {
-    const body = { full_name: name.trim(), role: role.trim() || null, org: org.trim() || null, aliases: list(aliases) };
+    const body = { full_name: name.trim(), role: role.trim() || null, org: org || null, aliases: list(aliases) };
     const done = p
       ? await act(
           () => api.editPerson(p.id, body),
@@ -172,7 +179,7 @@ function PersonForm(props: { person?: S["PersonView"]; onDone: () => void }) {
     >
       <Field id={`pn-${key}`} label={t("setup.full_name")} value={name} onChange={setName} required autoFocus />
       <Field id={`pr-${key}`} label={t("setup.role")} value={role} onChange={setRole} hint={t("setup.role_hint")} />
-      <Field id={`po-${key}`} label={t("setup.org")} value={org} onChange={setOrg} hint={t("setup.org_hint")} />
+      <OrgSelect id={`po-${key}`} label={t("setup.org")} value={org} onChange={setOrg} hint={t("setup.org_hint")} />
       <Field id={`pa-${key}`} label={t("setup.aliases")} value={aliases} onChange={setAliases} hint={t("setup.aliases_hint")} />
       <div className="row-end">
         <button type="button" className="btn quiet" onClick={props.onDone}>
@@ -183,6 +190,162 @@ function PersonForm(props: { person?: S["PersonView"]; onDone: () => void }) {
         </button>
       </div>
     </form>
+  );
+}
+
+// ---- organizations -------------------------------------------------------------------------------------------------
+
+function OrganizationsPanel() {
+  const { t } = useWords();
+  const act = useAct();
+  const orgs = useQuery({ queryKey: ["organizations"], queryFn: api.organizations });
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState("");
+  const rows = [...(orgs.data ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+  const stop = () => {
+    setAdding(false);
+    setName("");
+  };
+  const add = async () => {
+    const wanted = name.trim();
+    if (!wanted) return;
+    const done = await act(
+      () => api.addOrganization({ name: wanted }),
+      (created) => ({ message: t("toast.added", { name: wanted }), undo: () => api.removeOrganization(created.id) }),
+    );
+    if (done) stop();
+  };
+  return (
+    <section className="panel-section" aria-labelledby="organizations-title">
+      <div className="heading">
+        <h2 id="organizations-title">{t("setup.organizations")}</h2>
+        {!adding && (
+          <button type="button" className="btn primary" onClick={() => setAdding(true)}>
+            {t("setup.add_organization")}
+          </button>
+        )}
+      </div>
+      {adding && (
+        <form
+          className="panel setup-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void add();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") stop();
+          }}
+        >
+          <Field id="org-new" label={t("setup.organization_name")} value={name} onChange={setName} required autoFocus />
+          <div className="row-end">
+            <button type="button" className="btn quiet" onClick={stop}>
+              {t("action.cancel")}
+            </button>
+            <button type="submit" className="btn primary" disabled={!name.trim()}>
+              {t("setup.add_organization")}
+            </button>
+          </div>
+        </form>
+      )}
+      {orgs.isPending ? (
+        <p className="empty">{t("loading")}</p>
+      ) : rows.length === 0 ? (
+        <p className="empty">{t("setup.no_organizations")}</p>
+      ) : (
+        <ul className="queue">
+          {rows.map((o) => (
+            <OrganizationRow key={o.id} org={o} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function OrganizationRow(props: { org: S["OrganizationView"] }) {
+  const { t, tn } = useWords();
+  const act = useAct();
+  const o = props.org;
+  const [renaming, setRenaming] = useState(false);
+  const [name, setName] = useState(o.name);
+  const stop = () => {
+    setRenaming(false);
+    setName(o.name);
+  };
+  const rename = async () => {
+    const wanted = name.trim();
+    if (!wanted) return;
+    if (wanted === o.name) {
+      stop();
+      return;
+    }
+    const done = await act(
+      () => api.editOrganization(o.id, { name: wanted }),
+      () => ({ message: t("toast.renamed", { name: wanted }), undo: () => api.editOrganization(o.id, { name: o.name }) }),
+    );
+    if (done) setRenaming(false);
+  };
+  const menu: MenuAction[] = [
+    { id: "rename", label: t("setup.rename"), run: () => setRenaming(true) },
+    {
+      id: "remove",
+      label: t("setup.remove"),
+      disabled: o.people > 0,
+      reason: t("setup.org_remove_blocked"),
+      run: () =>
+        void act(
+          () => api.removeOrganization(o.id),
+          () => ({ message: t("toast.removed", { name: o.name }), undo: () => api.restoreOrganization(o.id) }),
+        ),
+    },
+  ];
+  const sub = [tn("setup.org_people", o.people), o.aliases.length ? t("setup.also_called", { names: o.aliases.join(", ") }) : ""]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <li className="line">
+      <div className="row">
+        <div className="text">
+          {renaming ? (
+            <form
+              className="inline-field"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void rename();
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") stop();
+              }}
+            >
+              <label className="sr" htmlFor={`org-rename-${o.id}`}>
+                {t("setup.organization_name")}
+              </label>
+              <input
+                id={`org-rename-${o.id}`}
+                type="text"
+                value={name}
+                autoFocus
+                autoComplete="off"
+                required
+                onChange={(e) => setName(e.target.value)}
+              />
+              <button type="submit" className="btn primary" disabled={!name.trim()}>
+                {t("setup.save")}
+              </button>
+              <button type="button" className="btn quiet" onClick={stop}>
+                {t("action.cancel")}
+              </button>
+            </form>
+          ) : (
+            <strong>{o.name}</strong>
+          )}
+          <span className="sub">{sub}</span>
+        </div>
+        <div className="acts">
+          <RowMenu label={o.name} actions={menu} />
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -260,6 +423,7 @@ function ProjectRow(props: { project: S["ProjectView"]; projects: S["ProjectView
   const sub = [
     p.status,
     p.phase,
+    p.priority ? t("setup.priority_is", { priority: p.priority }) : "",
     p.target ? t("setup.target_on", { date: day(p.target) }) : "",
     p.owner_name ? t("setup.owned_by", { name: p.owner_name }) : "",
     parent ? t("setup.inside_of", { name: parent.name }) : "",
@@ -327,6 +491,7 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
   const [status, setStatus] = useState(p?.status ?? "");
   const [phase, setPhase] = useState(p?.phase ?? "");
   const [group, setGroup] = useState(p?.group ?? "");
+  const [priority, setPriority] = useState(p?.priority ?? "");
   const [target, setTarget] = useState(p?.target ?? "");
   const [owner, setOwner] = useState(p?.owner ?? "");
   const [summary, setSummary] = useState(p?.summary ?? "");
@@ -347,6 +512,7 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
       status: status.trim() || null,
       phase: phase.trim() || null,
       group: group.trim() || null,
+      priority: priority.trim() || null,
       target: target || null,
       owner: owner || null,
       summary: summary.trim() || null,
@@ -362,6 +528,7 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
                 status: p.status,
                 phase: p.phase,
                 group: p.group,
+                priority: p.priority ?? null,
                 target: p.target,
                 owner: p.owner,
                 summary: p.summary,
@@ -392,6 +559,13 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
       <Field id={`jt-${key}`} label={t("setup.target")} value={target} onChange={setTarget} type="date" />
       <ValueSelect id={`js-${key}`} list={PROJECT_LISTS.status} label={t("setup.status")} value={status} onChange={setStatus} />
       <ValueSelect id={`jp-${key}`} list={PROJECT_LISTS.phase} label={t("setup.phase")} value={phase} onChange={setPhase} />
+      <ValueSelect
+        id={`jr-${key}`}
+        list={PROJECT_LISTS.priority}
+        label={t("setup.priority")}
+        value={priority}
+        onChange={setPriority}
+      />
       <ValueSelect
         id={`jg-${key}`}
         list={PROJECT_LISTS.group}

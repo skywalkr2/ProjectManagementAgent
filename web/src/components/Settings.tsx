@@ -199,7 +199,9 @@ function SettingRow(props: {
   const note = item.locked
     ? t(item.source === "env" ? "settings.locked_env" : "settings.locked_flag")
     : readOnly
-      ? t("settings.changed_in", { file: fileName(item) })
+      ? item.plugin
+        ? t("settings.changed_in_addon")
+        : t("settings.changed_in", { file: fileName(item) })
       : null;
   const hint = label !== item.description ? item.description : null;
   const parsed = !readOnly && !item.locked && draft !== toDraft(item) ? fromDraft(item, draft) : null;

@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api, type S } from "./api";
 import { useRestart } from "./restart";
-import { formatValue, labelOf, undoBody } from "./settings";
+import { formatValue, labelForKey, undoBody } from "./settings";
 import { useToasts } from "./toasts";
 import { useWords } from "./wording";
 
@@ -24,10 +24,7 @@ export function useAfterSave() {
         return refreshed;
       }
       const known = client.getQueryData<S["SettingsView"]>(["settings"])?.items ?? [];
-      const label = (key: string) => {
-        const item = known.find((i) => i.key === key);
-        return item ? labelOf(item, t, has) : key;
-      };
+      const label = (key: string) => labelForKey(key, known, t, has);
       const line = (c: S["SettingChangeView"]) =>
         c.is_default
           ? t("settings.saved_default", { label: label(c.key), value: formatValue(c.after, t) })

@@ -1,5 +1,5 @@
 import type { S } from "./api";
-import { formatValue, fromDraft, groupItems, groupLabel, labelOf, toDraft, undoBody } from "./settings";
+import { formatValue, fromDraft, groupItems, groupLabel, labelForKey, labelOf, restartWhat, toDraft, undoBody } from "./settings";
 
 const t = (key: string, vars: Record<string, string | number> = {}) =>
   ({ "settings.empty": "(empty)", "settings.yes": "Yes", "settings.no": "No" })[key] ?? `${key}${JSON.stringify(vars)}`;
@@ -75,4 +75,46 @@ test("undo puts back the old values, and returns what was default to default", (
     "fp-2",
   );
   expect(body).toEqual({ changes: { "a.one": "old" }, reset: ["a.two"], fingerprint: "fp-2" });
+});
+
+const words: Record<string, string> = {
+  "settings.group.demo": "Demo group",
+  "settings.key.demo.known": "Known setting",
+  "restart.for": "Restart to use: {what}.",
+  "restart.for_more": "{list} and {n} more",
+  "restart.for_code": "an update to the app",
+  "restart.for_other": "other settings",
+};
+const tw = (key: string, vars: Record<string, string | number> = {}) =>
+  (words[key] ?? key).replace(/\{(\w+)\}/g, (_m, name: string) => String(vars[name]));
+const hasWord = (key: string) => key in words;
+
+test("an add-on's group is named for the add-on, never by where it lives, and comes after the app's groups", () => {
+  const items = [
+    item({ key: "plugins/sample-pack.a", group: "plugins/sample-pack", plugin: "sample-pack", basic: true }),
+    item({ key: "demo.x", group: "demo", basic: true }),
+    item({ key: "plugins/other.b", group: "plugins/other", plugin: "other", basic: true }),
+    item({ key: "demo.y", group: "demo.deep", basic: false }),
+  ];
+  expect(groupLabel("plugins/sample-pack", tw, hasWord)).toBe("Sample pack");
+  const groups = groupItems(items, { more: true, query: "" }, tw, hasWord).map((g) => g.group);
+  expect(groups).toEqual(["demo", "demo.deep", "plugins/sample-pack", "plugins/other"]);
+});
+
+test("a key is named by its setting's label, else its group's, else a general phrase", () => {
+  const items = [item({ key: "demo.plain", description: "Plain words" })];
+  expect(labelForKey("demo.plain", items, tw, hasWord)).toBe("Plain words");
+  expect(labelForKey("demo.known", [], tw, hasWord)).toBe("Known setting");
+  expect(labelForKey("demo.other", [], tw, hasWord)).toBe("Demo group");
+  expect(labelForKey("plugins/sample-pack.x", [], tw, hasWord)).toBe("Sample pack");
+  expect(labelForKey("mystery.thing", [], tw, hasWord)).toBe("other settings");
+});
+
+test("what waits for a restart lists up to three names without repeats, then how many more", () => {
+  expect(restartWhat([], [], tw, hasWord)).toBe("");
+  expect(restartWhat(["code"], [], tw, hasWord)).toBe("Restart to use: an update to the app.");
+  expect(restartWhat(["demo.known", "demo.known"], [], tw, hasWord)).toBe("Restart to use: Known setting.");
+  expect(restartWhat(["demo.known", "demo.a", "code", "plugins/p.q", "mystery.thing"], [], tw, hasWord)).toBe(
+    "Restart to use: Known setting, Demo group, an update to the app and 2 more.",
+  );
 });

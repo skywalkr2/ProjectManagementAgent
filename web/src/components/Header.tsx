@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useRestart } from "../lib/restart";
+import { useRestartWhat } from "../lib/restart-for";
 import { time } from "../lib/dates";
 import type { LiveState } from "../lib/live";
 import { panelView, type View } from "../lib/views";
@@ -40,6 +41,7 @@ export function Header(props: {
   const { t } = useWords();
   const act = useAct();
   const restart = useRestart();
+  const restartWhat = useRestartWhat();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const panels = useQuery({ queryKey: ["panels"], queryFn: api.panels });
   const workPanels = (panels.data ?? []).filter((p) => p.tab === "work");
@@ -93,7 +95,8 @@ export function Header(props: {
               <span className="mark" aria-hidden="true">
                 !
               </span>
-              {t(status.data.can_restart ? "restart.needed" : "restart.needed_manual")}
+              <span>{t(status.data.can_restart ? "restart.needed" : "restart.needed_manual")}</span>
+              {restartWhat && <span data-restart-for>{restartWhat}</span>}
               {status.data.can_restart && (
                 <button type="button" className="btn quiet small" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
                   {t("restart.now")}

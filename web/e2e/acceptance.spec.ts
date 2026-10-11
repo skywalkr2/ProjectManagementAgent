@@ -380,6 +380,32 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
   });
 
+  test("an organization added from the person form is selected and shows by name on the person's row", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("button", { name: "People & projects" }).click();
+    await page.getByRole("button", { name: "Add a person" }).click();
+    const form = page.locator("form.setup-form");
+    await form.getByLabel(/Full name/).fill("Org Person");
+    const org = form.getByRole("combobox", { name: /Organization/ });
+    await expect(org.locator("option")).toContainText(["Not set", "Add an organization…"]);
+    await org.selectOption({ label: "Add an organization…" });
+    const field = form.getByRole("textbox", { name: "Name of the new organization" });
+    await expect(field).toBeFocused();
+    const name = `Test Organization ${Date.now()}`;
+    await field.fill(name);
+    await checkAccessibility(page);
+    // Enter adds the organization; it does not send the person.
+    await field.press("Enter");
+    await expect(org.locator("option:checked")).toHaveText(name);
+    await form.getByRole("button", { name: "Add a person" }).click();
+    const row = page.locator("li.line", { hasText: "Org Person" });
+    await expect(row).toContainText(name);
+    await expect(row).not.toContainText(/ORG-/);
+    const orgs = page.getByRole("region", { name: "Organizations" });
+    await expect(orgs.locator("li.line", { hasText: name })).toContainText("1 person");
+    await checkAccessibility(page);
+  });
+
   test("a value added to the project status list from a project form is selected, and still there after a reload", async ({ page }) => {
     await signIn(page);
     await page.getByRole("button", { name: "People & projects" }).click();

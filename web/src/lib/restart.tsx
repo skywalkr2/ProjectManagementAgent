@@ -153,12 +153,16 @@ export function RestartProvider(props: { hellos: number; seconds?: number; doneS
 }
 
 /** The live region that asks about a restart and says it is happening. It is always on the page, so a screen reader hears the change. */
-export function RestartNotice() {
+/** `what` names what waits for the restart, when the caller knows (see `useRestartWhat`). */
+export function RestartNotice(props: { what?: string }) {
   const { t } = useWords();
   const { phase, problem, busy, now, dismiss } = useRestart();
+  const what = props.what ?? "";
   const text =
     phase === "asking"
-      ? t("restart.ask")
+      ? what
+        ? `${t("restart.ask")} ${what}`
+        : t("restart.ask")
       : phase === "waiting"
         ? t("restart.restarting")
         : phase === "done"

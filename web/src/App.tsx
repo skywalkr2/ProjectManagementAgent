@@ -4,6 +4,7 @@ import type { S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
 import { RestartNotice, RestartProvider } from "./lib/restart";
+import { useRestartWhat } from "./lib/restart-for";
 import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
 import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
@@ -78,7 +79,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
         onAsk={() => setAsk({})}
         onHelp={() => setHelp(true)}
       />
-      <RestartNotice />
+      <RestartAsk />
       <main id="main" tabIndex={-1}>
         {handIn && <HandIn onClose={() => setHandIn(false)} />}
         {shown.type === "panel" ? (
@@ -178,4 +179,9 @@ function useView(): [View, (v: View) => void] {
     setViewState(v);
   };
   return [view, setView];
+}
+
+/** The restart notice with what waits for the restart named in it. */
+function RestartAsk() {
+  return <RestartNotice what={useRestartWhat()} />;
 }

@@ -415,3 +415,77 @@ test("Settings ends with a Lists section where the choices dropdowns offer can b
   expect(screen.getByText("Project status")).toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: "Add a value to Project status" })).toBeInTheDocument();
 });
+
+// ---- an add-on's settings ------------------------------------------------------------------------------------------
+
+function addonItem(name: string, field: string, extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] {
+  return {
+    ...item(`demo.${field}`),
+    key: `plugins/${name}.${field}`,
+    file: `plugins/${name}`,
+    group: `plugins/${name}`,
+    plugin: name,
+    description: `What ${field} does for the add-on`,
+    ...extra,
+  };
+}
+
+const ADDON_ITEMS: S["SettingItem"][] = [
+  addonItem("sample-pack", "greeting", { value: "Hello", default: "Hi", source: "file" }),
+  addonItem("sample-pack", "loud", { type: "yes_no", value: false, default: false }),
+  addonItem("sample-pack", "mode", { type: "choice", options: ["quiet", "bold"], value: "quiet", default: "quiet" }),
+  addonItem("sample-pack", "fixed", { editable: false, value: "set elsewhere" }),
+  addonItem("other-pack", "limit", { type: "integer", value: 3, default: 3 }),
+];
+
+test("an add-on's settings sit under its name after the app's own groups, one group each, and never show where they live", async () => {
+  api([...ADDON_ITEMS, ...ITEMS]);
+  open();
+  await screen.findByLabelText("The display name.");
+  const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+  expect(headings.slice(-2)).toEqual(["Sample pack", "Other pack"]);
+  expect(headings.indexOf("Demo")).toBeLessThan(headings.indexOf("Sample pack"));
+  expect(document.body).not.toHaveTextContent("plugins/");
+  const group = screen.getByRole("heading", { name: "Sample pack" }).closest("form")!;
+  expect(within(group).getByLabelText("What greeting does for the add-on")).toHaveValue("Hello");
+  expect(within(group).getByLabelText("What loud does for the add-on")).not.toBeChecked();
+  expect(within(group).getByLabelText("What mode does for the add-on")).toHaveValue("quiet");
+  expect(within(group).getByText("Default: Hi")).toBeInTheDocument();
+  const fixed = within(group).getByText("What fixed does for the add-on").closest(".setting") as HTMLElement;
+  expect(within(fixed).getByText("Changed in the workspace's settings files for this add-on.")).toBeInTheDocument();
+});
+
+test("an add-on's settings save like the app's: only what changed, under the key the file uses, with undo", async () => {
+  const user = userEvent.setup();
+  const calls = api([...ADDON_ITEMS, ...ITEMS], {
+    "POST settings": () => ({
+      changes: [{ key: "plugins/sample-pack.greeting", before: "Hello", after: "Howdy", was_default: false, is_default: false }],
+      fingerprint: "fp-2",
+      needs_restart: false,
+    }),
+  });
+  open();
+  const group = (await screen.findByRole("heading", { name: "Sample pack" })).closest("form")!;
+  await user.clear(within(group).getByLabelText("What greeting does for the add-on"));
+  await user.type(within(group).getByLabelText("What greeting does for the add-on"), "Howdy");
+  await user.click(within(group).getByLabelText("What loud does for the add-on"));
+  await user.click(within(group).getByRole("button", { name: /^Save/ }));
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toEqual({
+    changes: { "plugins/sample-pack.greeting": "Howdy", "plugins/sample-pack.loud": true },
+    reset: [],
+    fingerprint: "fp-1",
+  });
+  expect(await screen.findByText(/Saved/)).toBeInTheDocument();
+  expect(document.body).not.toHaveTextContent("plugins/");
+});
+
+test("the search finds an add-on's settings by the add-on's name", async () => {
+  const user = userEvent.setup();
+  api([...ADDON_ITEMS, ...ITEMS]);
+  open();
+  await screen.findByLabelText("The display name.");
+  await user.type(screen.getByRole("searchbox", { name: "Search settings" }), "other pack");
+  expect(screen.getByLabelText("What limit does for the add-on")).toBeInTheDocument();
+  expect(screen.queryByLabelText("What greeting does for the add-on")).toBeNull();
+});
