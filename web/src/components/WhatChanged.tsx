@@ -17,11 +17,13 @@ type Filter = "attention" | "done" | "all";
 const ATTENTION = new Set(["queued", "running", "review", "needs_you"]);
 
 /** Still in progress, waiting for review, or holding something until the PM answers. */
-function needsAttention(c: S["ChangeItem"]): boolean {
+export function needsAttention(c: S["ChangeItem"]): boolean {
   return ATTENTION.has(c.state) || !!c.changeset?.ops.some((o) => o.ask?.status === "open");
 }
 
-export function WhatChanged() {
+/** `compact` is for a narrow column on Today: the heading sits one level down. */
+export function WhatChanged(props: { compact?: boolean }) {
+  const Heading = props.compact ? "h3" : "h2";
   const { t, tn } = useWords();
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
   const own = useOwnRequests();
@@ -62,9 +64,9 @@ export function WhatChanged() {
   const filters: Filter[] = ["attention", "done", "all"];
 
   return (
-    <section className="panel-section" aria-labelledby="changes-title">
+    <section className={props.compact ? "panel-section compact" : "panel-section"} aria-labelledby="changes-title">
       <div className="heading">
-        <h2 id="changes-title">{t("changes.title")}</h2>
+        <Heading id="changes-title">{t("changes.title")}</Heading>
         <div className="filters" role="group" aria-label={t("changes.filter")}>
           {filters.map((f) => (
             <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
@@ -134,7 +136,7 @@ const PILL: Record<S["ChangeItem"]["state"], string> = {
 };
 
 /** A run held back because its estimate is above the amount to confirm (stage tasks have their own go row). */
-function waitsForGo(c: S["ChangeItem"]): boolean {
+export function waitsForGo(c: S["ChangeItem"]): boolean {
   return c.approval === "required" && !c.stage_task && c.state === "needs_you" && !c.dismissed;
 }
 

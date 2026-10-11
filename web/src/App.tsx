@@ -1,4 +1,4 @@
-// The launch-slice home: one column with What changed and Follow-ups under the header (design 7.7).
+// The app shell: the header, the screen the address names, and Today, the home, as a board of columns (design 7.7).
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
@@ -14,21 +14,19 @@ import { AssistantNotice } from "./components/AssistantNotice";
 import { DemoStrip } from "./components/DemoStrip";
 import { Feedback } from "./components/Feedback";
 import { Files } from "./components/Files";
-import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Panel } from "./components/Panel";
 import { restoreFocus } from "./components/ModalPanel";
-import { PluginToday } from "./components/PluginToday";
 import { RecordPage } from "./components/RecordPage";
 import { Header } from "./components/Header";
 import { Settings } from "./components/Settings";
 import { Sources } from "./components/Sources";
 import { Setup } from "./components/Setup";
 import { StartHere } from "./components/StartHere";
+import { TodayBoard } from "./components/TodayBoard";
 import { Stages } from "./components/Stages";
 import { ShortcutHelp } from "./components/ShortcutHelp";
 import { Welcome, type FocusStep } from "./components/Welcome";
-import { WhatChanged } from "./components/WhatChanged";
 
 export function App(props: { rc: S["RuntimeConfig"] }) {
   const { t } = useWords();
@@ -99,9 +97,7 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
               workspace={props.rc.workspace_name}
               onOpenGuide={openGuide}
             />
-            <WhatChanged />
-            <PluginToday />
-            <FollowUps />
+            <TodayBoard onView={setView} />
           </>
         ) : view === "stages" ? (
           <Stages />

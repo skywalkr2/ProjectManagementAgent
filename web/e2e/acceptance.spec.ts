@@ -310,6 +310,51 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
+  test("on a laptop-sized window Today shows its four columns at once, with no page scroll", async ({ page }) => {
+    await page.setViewportSize({ width: 1512, height: 860 });
+    await signIn(page);
+    // The first-run card and the assistant's notice are on screen too: the board still fits beneath them.
+    await expect(page.getByRole("region", { name: "Start here" })).toBeVisible();
+    for (const name of ["Agenda", "To do", "Needs you", "Came in"]) {
+      const heading = page.getByRole("heading", { level: 2, name, exact: true });
+      await expect(heading).toBeVisible();
+      await expect(heading).toBeInViewport({ ratio: 1 });
+    }
+    const boxes = await Promise.all(
+      ["agenda", "todo", "needs", "arrived"].map((id) => page.locator(`[data-col="${id}"]`).boundingBox()),
+    );
+    // Side by side, in reading order, and inside the window.
+    for (const [i, box] of boxes.entries()) {
+      expect(box).not.toBeNull();
+      expect(box!.y + box!.height).toBeLessThanOrEqual(860);
+      if (i > 0) expect(box!.x).toBeGreaterThan(boxes[i - 1]!.x);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(1);
+    await checkAccessibility(page);
+  });
+
+  test("a mid-sized window pairs the columns, and a phone stacks them with the page scrolling", async ({ page }) => {
+    await page.setViewportSize({ width: 1100, height: 800 });
+    await signIn(page);
+    const at = async (id: string) => (await page.locator(`[data-col="${id}"]`).boundingBox())!;
+    const [agenda, todo, needs, arrived] = [await at("agenda"), await at("todo"), await at("needs"), await at("arrived")];
+    expect(todo.x).toBe(agenda.x);
+    expect(todo.y).toBeGreaterThan(agenda.y);
+    expect(needs.x).toBeGreaterThan(agenda.x);
+    expect(arrived.x).toBe(needs.x);
+    expect(arrived.y).toBeGreaterThan(needs.y);
+    await checkAccessibility(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator("html")).toHaveAttribute("data-narrow", "");
+    const column = async (id: string) => (await page.locator(`[data-col="${id}"]`).boundingBox())!;
+    const [a, b, c, d] = [await column("agenda"), await column("todo"), await column("needs"), await column("arrived")];
+    expect(b.y).toBeGreaterThan(a.y + a.height - 1);
+    expect(c.y).toBeGreaterThan(b.y + b.height - 1);
+    expect(d.y).toBeGreaterThan(c.y + c.height - 1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await checkAccessibility(page);
+  });
+
   test("people and projects are set up from the screen, with undo", async ({ page }) => {
     await signIn(page);
     await page.getByRole("button", { name: "People & projects" }).click();

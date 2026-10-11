@@ -379,3 +379,55 @@ input:disabled, textarea:disabled, select:disabled { opacity: 0.7; cursor: not-a
 .check-row .problem-note { flex: 1 1 100%; margin: 0; }
 .level-list { flex-direction: column; }
 .level-hint { margin: 0 0 6px 28px; }
+
+/* Today's board: four columns that fill the window, each scrolling on its own. Narrow screens stack them and the page scrolls. */
+.today-board { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); grid-auto-flow: column; min-height: 0; }
+@media (min-width: 1400px) {
+  .today-board { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+}
+.tb-col { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.tb-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex: none; }
+.tb-head h2 { font-family: var(--display); font-weight: 600; font-size: 19px; line-height: 1.2; margin: 0; }
+.tb-count { display: inline-block; min-width: 22px; padding: 0 8px; border-radius: 999px; background: var(--sunk); color: var(--fg); font-size: 12.5px; font-weight: 700; text-align: center; }
+.tb-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 12px; display: grid; align-content: start; gap: 14px; }
+.tb-foot { flex: none; border-top: 1px solid var(--line); padding: 8px 14px; font-size: 13.5px; }
+.tb-group { display: grid; gap: 4px; }
+.tb-group-head { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.tb-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.tb-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--line); }
+.tb-row:last-child { border-bottom: 0; }
+.tb-what { flex: 1 1 auto; min-width: 0; }
+.tb-title { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.tb-meta { color: var(--muted); font-size: 12.5px; overflow-wrap: anywhere; }
+.tb-when { flex: none; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tb-row > .tb-when:first-child { flex-basis: 8.75rem; }
+.tb-row .pill { margin: 0 6px 0 0; }
+.tb-row .struck { text-decoration: line-through; }
+.tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--muted); font-weight: 500; }
+.tb-row.unread .tb-title { font-weight: 800; }
+.tb-row .btn.small { flex: none; }
+.now-line { display: flex; align-items: center; gap: 8px; padding: 2px 4px; color: var(--accent); font-size: 12px; font-weight: 700; }
+.now-line::before, .now-line::after { content: ""; height: 2px; background: var(--accent); flex: 1; opacity: 0.6; }
+.now-line::before { flex: 0 0 12px; }
+.tb-empty { display: grid; gap: 10px; justify-items: start; color: var(--muted); font-size: 14px; }
+.compact { gap: 8px; }
+.compact .heading h2, .compact .heading h3 { font-family: var(--display); font-weight: 600; font-size: 17px; line-height: 1.2; margin: 0; }
+.compact .row { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 10px 12px; }
+.compact .row.pair { grid-template-columns: minmax(0, 1fr) auto; }
+.compact .row .kind { justify-self: start; }
+.compact .empty { text-align: left; }
+.tb-body > .compact + .compact { border-top: 1px dashed var(--line); padding-top: 12px; }
+.start .steps { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.start .steps li { padding: 6px 10px; }
+
+/* With the board showing (and a wide enough window), the page is as tall as the window and only the columns scroll. */
+html[data-today] main, html[data-today] .top-inner { max-width: none; }
+html[data-today]:not([data-narrow]) body { padding-block: 0; }
+html[data-today]:not([data-narrow]) #root { height: 100dvh; display: flex; flex-direction: column; }
+html[data-today]:not([data-narrow]) #root > :not(main) { flex: none; }
+html[data-today]:not([data-narrow]) main { flex: 1 1 0; min-height: 0; width: 100%; display: flex; flex-direction: column; gap: 12px; padding-block: 12px 12px; overflow-y: auto; }
+html[data-today]:not([data-narrow]) main > * { flex: none; }
+html[data-today]:not([data-narrow]) main > .today-board { flex: 1 1 0; min-height: 26rem; }
+html[data-today]:not([data-narrow]) .footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 16px; padding-top: 6px; font-size: 13px; }
+[data-narrow] .today-board { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; }
+[data-narrow] .tb-col, [data-narrow] .tb-body { overflow: visible; }

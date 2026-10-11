@@ -21,18 +21,21 @@ const toSendActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.tol
 const waitingQuestions = (s: S["FollowupSection"]) => s.questions.filter((q) => q.status === "sent");
 const waitingActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.told !== null);
 
-export function FollowUps() {
+/** `compact` is for a narrow column on Today: headings sit one level down, and the PM's own actions are left to the to-do list beside it. */
+export function FollowUps(props: { compact?: boolean }) {
   const { t } = useWords();
+  const compact = !!props.compact;
+  const Heading = compact ? "h3" : "h2";
   const [filter, setFilter] = useState<Filter>("send");
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
-  const sections = (followups.data ?? []).filter((s) => s.questions.length || s.actions.length);
+  const sections = (followups.data ?? []).filter((s) => s.questions.length || (s.actions.length && !(compact && s.is_pm)));
   const shown = sections.filter((s) =>
     filter === "send" ? s.is_pm || s.to_send > 0 : !s.is_pm && waitingQuestions(s).length + waitingActions(s).length > 0,
   );
   return (
-    <section className="panel-section" aria-labelledby="followups-title">
+    <section className={compact ? "panel-section compact" : "panel-section"} aria-labelledby="followups-title">
       <div className="heading">
-        <h2 id="followups-title">{t("followups.title")}</h2>
+        <Heading id="followups-title">{t("followups.title")}</Heading>
         <div className="filters" role="group" aria-label={t("followups.filter")}>
           {FILTERS.map((f) => (
             <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
@@ -58,11 +61,11 @@ export function FollowUps() {
         <ol className="queue">
           {shown.map((s) =>
             s.is_pm ? (
-              <YourSection key={s.person} section={s} />
+              <YourSection key={s.person} section={s} compact={compact} />
             ) : filter === "send" ? (
               <PersonSection key={s.person} section={s} />
             ) : (
-              <WaitingSection key={s.person} section={s} />
+              <WaitingSection key={s.person} section={s} compact={compact} />
             ),
           )}
         </ol>
@@ -71,16 +74,18 @@ export function FollowUps() {
   );
 }
 
-function YourSection(props: { section: S["FollowupSection"] }) {
+function YourSection(props: { section: S["FollowupSection"]; compact: boolean }) {
   const { t, tn } = useWords();
   const s = props.section;
+  const actions = props.compact ? [] : s.actions;
+  const Heading = props.compact ? "h4" : "h3";
   return (
     <li className="line">
       <div className="row single">
         <div className="text">
-          <h3 className="name">{t("followups.you")}</h3>
+          <Heading className="name">{t("followups.you")}</Heading>
           <span className="sub">
-            {[s.questions.length ? tn("followups.decisions", s.questions.length) : "", s.actions.length ? tn("followups.your_actions", s.actions.length) : ""]
+            {[s.questions.length ? tn("followups.decisions", s.questions.length) : "", actions.length ? tn("followups.your_actions", actions.length) : ""]
               .filter(Boolean)
               .join(" · ")}
           </span>
@@ -94,9 +99,9 @@ function YourSection(props: { section: S["FollowupSection"] }) {
             ))}
           </ul>
         )}
-        {s.actions.length > 0 && (
+        {actions.length > 0 && (
           <ul className="children">
-            {s.actions.map((a) => (
+            {actions.map((a) => (
               <OwnActionRow key={a.id} action={a} />
             ))}
           </ul>
@@ -317,18 +322,19 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
 }
 
 // What each person has already been sent or told, one line each, with the step that closes it.
-function WaitingSection(props: { section: S["FollowupSection"] }) {
+function WaitingSection(props: { section: S["FollowupSection"]; compact: boolean }) {
   const { tn } = useWords();
   const s = props.section;
+  const Heading = props.compact ? "h4" : "h3";
   const questions = waitingQuestions(s);
   const actions = waitingActions(s);
   return (
     <li className="line" aria-labelledby={`w-${s.person}`}>
       <div className="row single">
         <div className="text">
-          <h3 className="name" id={`w-${s.person}`}>
+          <Heading className="name" id={`w-${s.person}`}>
             {s.name}
-          </h3>
+          </Heading>
           <span className="sub">{tn("followups.waiting_count", questions.length + actions.length)}</span>
         </div>
       </div>

@@ -1,0 +1,404 @@
+// Today's board (design 7.7): the agenda, the person's own list, what needs them and what came in, side by side so
+// everything important shows at once. Each column scrolls on its own; narrow screens stack them and the page scrolls.
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
+import { api, type S } from "../lib/api";
+import { useAct } from "../lib/act";
+import { addDays, day, localDate, time, wallTime, weekday } from "../lib/dates";
+import type { View } from "../lib/views";
+import { useWords } from "../lib/wording";
+import { FollowUps } from "./FollowUps";
+import { PluginToday } from "./PluginToday";
+import { SafeLink } from "./SafeText";
+import { useStageToday } from "./StageToday";
+import { WhatChanged, needsAttention, waitsForGo } from "./WhatChanged";
+
+type T = ReturnType<typeof useWords>["t"];
+
+/** The current time, refreshed every minute, for the "now" line and for telling today's mail from older mail. */
+function useNow(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  return now;
+}
+
+/** While the board shows, the page is sized to the window (the styles key off this); it is removed when the board goes. */
+function useFitsWindow() {
+  useEffect(() => {
+    document.documentElement.setAttribute("data-today", "");
+    return () => document.documentElement.removeAttribute("data-today");
+  }, []);
+}
+
+export function TodayBoard(props: { onView: (view: View) => void }) {
+  const { t } = useWords();
+  useFitsWindow();
+  return (
+    <div className="today-board" role="group" aria-label={t("today.board.label")}>
+      <AgendaColumn onView={props.onView} />
+      <TodoColumn />
+      <NeedsColumn />
+      <ArrivedColumn onView={props.onView} />
+    </div>
+  );
+}
+
+/** A column: a visible heading with its count, a body that scrolls by itself, and an optional footer line. */
+function Column(props: {
+  id: string;
+  title: string;
+  count: number | null;
+  countText: string;
+  footer?: ReactNode;
+  children: ReactNode;
+}) {
+  const titleId = `today-${props.id}-title`;
+  return (
+    <section className="tb-col" aria-labelledby={titleId} data-col={props.id}>
+      <div className="tb-head">
+        <h2 id={titleId}>{props.title}</h2>
+        {props.count !== null && (
+          <span className="tb-count">
+            <span aria-hidden="true">{props.count}</span>
+            <span className="sr">{props.countText}</span>
+          </span>
+        )}
+      </div>
+      <div className="tb-body" tabIndex={0} role="group" aria-labelledby={titleId}>
+        {props.children}
+      </div>
+      {props.footer && <div className="tb-foot">{props.footer}</div>}
+    </section>
+  );
+}
+
+function Empty(props: { text: string; button?: { label: string; run: () => void } }) {
+  return (
+    <div className="tb-empty">
+      <p>{props.text}</p>
+      {props.button && (
+        <button type="button" className="btn" onClick={props.button.run}>
+          {props.button.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Failed(props: { text: string; retry: () => void }) {
+  const { t } = useWords();
+  return (
+    <p className="empty">
+      {props.text}{" "}
+      <button type="button" className="btn" onClick={props.retry}>
+        {t("action.try_again")}
+      </button>
+    </p>
+  );
+}
+
+/** Source names are only worth showing when rows come from more than one source. */
+function useSourceNames(sources: string[]): (id: string) => string {
+  const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
+  const many = new Set(sources).size > 1;
+  const names = new Map((watch.data ?? []).map((s) => [s.id, s.label]));
+  return (id) => (many ? (names.get(id) ?? "") : "");
+}
+
+// ---------------------------------------------------------------- Agenda
+
+type Event = S["AgendaItemView"];
+
+interface DayGroup {
+  date: string;
+  events: Event[];
+}
+
+/** Events by the days they fall on (today onward), all-day ones first within a day. */
+export function groupByDay(events: Event[], today: string): DayGroup[] {
+  const days = new Map<string, Event[]>();
+  for (const event of events) {
+    for (const date of event.days) {
+      if (date < today) continue;
+      days.set(date, [...(days.get(date) ?? []), event]);
+    }
+  }
+  return [...days.keys()]
+    .sort()
+    .map((date) => {
+      const all = days.get(date)!;
+      return { date, events: [...all.filter((e) => e.all_day), ...all.filter((e) => !e.all_day)] };
+    });
+}
+
+function whenText(event: Event, date: string, t: T): string {
+  if (event.all_day) return t("today.agenda.all_day");
+  const startDay = event.start.slice(0, 10);
+  const endDay = event.end?.slice(0, 10);
+  if (date > startDay) {
+    return event.end && endDay === date ? t("today.agenda.until", { time: wallTime(event.end) }) : t("today.agenda.all_day");
+  }
+  return event.end && endDay === date
+    ? t("today.agenda.range", { start: wallTime(event.start), end: wallTime(event.end) })
+    : wallTime(event.start);
+}
+
+function AgendaColumn(props: { onView: (view: View) => void }) {
+  const { t, tn } = useWords();
+  const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
+  const now = useNow();
+  const today = localDate(now);
+  const tomorrow = addDays(today, 1);
+  const events = agenda.data ?? [];
+  const sourceName = useSourceNames(events.map((e) => e.source));
+  const groups = groupByDay(events, today);
+  const count = events.filter((e) => !e.cancelled && e.days.includes(today)).length;
+  const dayLabel = (date: string) =>
+    date === today ? t("today.agenda.today") : date === tomorrow ? t("today.agenda.tomorrow") : day(date);
+
+  return (
+    <Column id="agenda" title={t("today.agenda.title")} count={agenda.data ? count : null} countText={tn("today.agenda.count", count)}>
+      {agenda.isPending ? (
+        <p className="empty">{t("loading")}</p>
+      ) : agenda.isError ? (
+        <Failed text={t("today.agenda.load_failed")} retry={() => void agenda.refetch()} />
+      ) : groups.length === 0 ? (
+        <Empty
+          text={t("today.agenda.empty")}
+          button={{ label: t("today.agenda.connect"), run: () => props.onView("sources") }}
+        />
+      ) : (
+        groups.map((group) => {
+          const headId = `agenda-day-${group.date}`;
+          // On today's list, a line marks where the day has got to: after what has ended, before what is still to come.
+          const ended = (e: Event) => new Date(e.end ?? e.start).getTime() <= now.getTime();
+          const rows: Array<Event | "now"> = [...group.events];
+          if (group.date === today) {
+            const timed = group.events.filter((e) => !e.all_day);
+            if (timed.length > 0) {
+              const upcoming = timed.find((e) => !ended(e));
+              rows.splice(upcoming ? rows.indexOf(upcoming) : rows.length, 0, "now");
+            }
+          }
+          return (
+            <div key={group.date} className="tb-group">
+              <h3 id={headId} className="tb-group-head">
+                {dayLabel(group.date)}
+              </h3>
+              <ul className="tb-list" aria-labelledby={headId}>
+                {rows.map((row, i) =>
+                  row === "now" ? (
+                    <li key="now" className="now-line">
+                      <span>{t("today.agenda.now", { time: time(now) })}</span>
+                    </li>
+                  ) : (
+                    <AgendaRow
+                      key={`${row.snapshot}:${i}`}
+                      event={row}
+                      when={whenText(row, group.date, t)}
+                      past={group.date === today && !row.all_day && ended(row)}
+                      source={sourceName(row.source)}
+                    />
+                  ),
+                )}
+              </ul>
+            </div>
+          );
+        })
+      )}
+    </Column>
+  );
+}
+
+function AgendaRow(props: { event: Event; when: string; past: boolean; source: string }) {
+  const { t } = useWords();
+  const { event } = props;
+  const meta = [event.where, props.source].filter(Boolean).join(" · ");
+  return (
+    <li className={props.past ? "tb-row past" : "tb-row"}>
+      <span className="tb-when">{props.when}</span>
+      <div className="tb-what">
+        <div className="tb-title">
+          {event.cancelled && <span className="pill k-risk">{t("today.agenda.called_off")}</span>}
+          <span className={event.cancelled ? "struck" : undefined}>
+            {event.link ? <SafeLink label={event.title} url={event.link} /> : event.title}
+          </span>
+        </div>
+        {meta && <div className="tb-meta">{meta}</div>}
+      </div>
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------- To do
+
+type Todo = S["TodoView"];
+
+function TodoColumn() {
+  const { t, tn } = useWords();
+  const todo = useQuery({ queryKey: ["today", "todo"], queryFn: api.todo });
+  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const today = localDate(useNow());
+  const items = todo.data ?? [];
+  const names = new Map((projects.data ?? []).map((p) => [p.id, p.name]));
+  const isToday = (x: Todo) => !x.overdue && !!x.due && x.due <= today;
+  const groups = [
+    { id: "overdue", label: t("today.todo.overdue"), rows: items.filter((x) => x.overdue) },
+    { id: "today", label: t("today.todo.today"), rows: items.filter(isToday) },
+    { id: "later", label: t("today.todo.later"), rows: items.filter((x) => !x.overdue && !isToday(x) && !!x.due) },
+    { id: "none", label: t("today.todo.no_date"), rows: items.filter((x) => !x.overdue && !x.due) },
+  ].filter((g) => g.rows.length > 0);
+
+  return (
+    <Column id="todo" title={t("today.todo.title")} count={todo.data ? items.length : null} countText={tn("today.todo.count", items.length)}>
+      {todo.isPending ? (
+        <p className="empty">{t("loading")}</p>
+      ) : todo.isError ? (
+        <Failed text={t("today.todo.load_failed")} retry={() => void todo.refetch()} />
+      ) : groups.length === 0 ? (
+        <Empty text={t("today.todo.empty")} />
+      ) : (
+        groups.map((group) => (
+          <div key={group.id} className="tb-group" data-group={group.id}>
+            <h3 className="tb-group-head">
+              {group.label} <span className="tb-count">{group.rows.length}</span>
+            </h3>
+            <ul className="tb-list">
+              {group.rows.map((item) => (
+                <TodoRow
+                  key={item.action}
+                  item={item}
+                  project={item.project ? (names.get(item.project) ?? "") : ""}
+                  showDue={group.id !== "today"}
+                />
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
+    </Column>
+  );
+}
+
+function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
+  const { t } = useWords();
+  const act = useAct();
+  const { item } = props;
+  const meta = [props.project, props.showDue && item.due ? t("today.todo.due", { date: day(item.due) }) : ""]
+    .filter(Boolean)
+    .join(" · ");
+  const done = () =>
+    void act(
+      () => api.actionStatus(item.action, "done"),
+      () => ({ message: t("toast.action_done"), undo: () => api.actionStatus(item.action, "open") }),
+    );
+  return (
+    <li className="tb-row" data-row tabIndex={-1}>
+      <div className="tb-what">
+        <div className="tb-title">{item.text}</div>
+        {meta && <div className="tb-meta">{meta}</div>}
+      </div>
+      <button
+        type="button"
+        className="btn small"
+        data-key="primary"
+        aria-label={t("today.todo.done_named", { text: item.text })}
+        onClick={done}
+      >
+        {t("followups.mark_done")}
+      </button>
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------- Needs you
+
+/** How many things wait on the person: work to look at, lines plugins add, decisions and messages to send. */
+function useNeedsCount(): number {
+  const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
+  const lines = useQuery({ queryKey: ["plugin-today"], queryFn: api.pluginToday });
+  const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
+  const stage = useStageToday();
+  const waitingGo = new Set(stage.waiting.map((w) => w.request.id));
+  const work = (changes.data ?? []).filter((c) => needsAttention(c) && !waitsForGo(c) && !waitingGo.has(c.id)).length;
+  const messages = (followups.data ?? []).reduce(
+    (n, s) => n + (s.is_pm ? s.questions.filter((q) => q.status === "open").length : s.to_send),
+    0,
+  );
+  return work + stage.count + (lines.data?.length ?? 0) + messages;
+}
+
+function NeedsColumn() {
+  const { t, tn } = useWords();
+  const count = useNeedsCount();
+  return (
+    <Column id="needs" title={t("today.needs.title")} count={count} countText={tn("today.needs.count", count)}>
+      <WhatChanged compact />
+      <PluginToday compact />
+      <FollowUps compact />
+    </Column>
+  );
+}
+
+// ---------------------------------------------------------------- Came in
+
+function ArrivedColumn(props: { onView: (view: View) => void }) {
+  const { t, tn } = useWords();
+  const arrived = useQuery({ queryKey: ["today", "arrived"], queryFn: api.arrived });
+  const now = useNow();
+  const today = localDate(now);
+  const items = arrived.data?.items ?? [];
+  const leftOut = arrived.data?.left_out ?? 0;
+  const sourceName = useSourceNames(items.map((m) => m.source));
+  const received = (iso: string) => (iso.slice(0, 10) === today ? wallTime(iso) : weekday(iso));
+
+  return (
+    <Column
+      id="arrived"
+      title={t("today.arrived.title")}
+      count={arrived.data ? items.length : null}
+      countText={tn("today.arrived.count", items.length)}
+      footer={
+        leftOut > 0 && (
+          <button type="button" className="link-button" onClick={() => props.onView("sources")}>
+            {t("today.arrived.closed", { n: leftOut })}
+          </button>
+        )
+      }
+    >
+      {arrived.isPending ? (
+        <p className="empty">{t("loading")}</p>
+      ) : arrived.isError ? (
+        <Failed text={t("today.arrived.load_failed")} retry={() => void arrived.refetch()} />
+      ) : items.length === 0 ? (
+        <Empty
+          text={t("today.arrived.empty")}
+          button={{ label: t("today.arrived.connect"), run: () => props.onView("sources") }}
+        />
+      ) : (
+        <ul className="tb-list">
+          {items.map((message, i) => {
+            const meta = [message.sender, sourceName(message.source)].filter(Boolean).join(" · ");
+            return (
+              <li key={`${message.snapshot}:${i}`} className={message.unread ? "tb-row unread" : "tb-row"}>
+                <div className="tb-what">
+                  <div className="tb-title">
+                    {message.unread && <span className="pill k-wait">{t("today.arrived.new")}</span>}
+                    <span>{message.link ? <SafeLink label={message.title} url={message.link} /> : message.title}</span>
+                  </div>
+                  {meta && <div className="tb-meta">{meta}</div>}
+                </div>
+                <time className="tb-when" dateTime={message.received}>
+                  {received(message.received)}
+                </time>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Column>
+  );
+}

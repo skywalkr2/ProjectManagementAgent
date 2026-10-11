@@ -8,15 +8,17 @@ import { usePluginRun } from "../lib/plugin-run";
 import { useWords } from "../lib/wording";
 import { SafeText } from "./SafeText";
 
-export function PluginToday() {
+/** `compact` is for a narrow column on Today: the heading sits one level down. */
+export function PluginToday(props: { compact?: boolean }) {
+  const Heading = props.compact ? "h3" : "h2";
   const { t } = useWords();
   const lines = useQuery({ queryKey: ["plugin-today"], queryFn: api.pluginToday });
   const { run, review } = usePluginRun();
   if (!lines.data || lines.data.length === 0) return null;
   return (
-    <section className="panel-section" aria-labelledby="plugin-today-title">
+    <section className={props.compact ? "panel-section compact" : "panel-section"} aria-labelledby="plugin-today-title">
       <div className="heading">
-        <h2 id="plugin-today-title">{t("today.plugins.title")}</h2>
+        <Heading id="plugin-today-title">{t("today.plugins.title")}</Heading>
       </div>
       <ul className="queue">
         {lines.data.map((line) => (
