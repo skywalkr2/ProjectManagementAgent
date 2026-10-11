@@ -263,3 +263,100 @@ def test_an_anchored_draft_keeps_its_map_and_authorship(tmp_path, monkeypatch):
     assert [s["kind"] for s in version.data["authorship"]] == ["assistant_edit", "person", "assistant"]
     store.close()
     set_responder(None)
+
+
+# ---- questions, where a kind starts, and who started a run --------------------------------------------------------
+
+
+def test_questions_come_off_the_text():
+    from engine.texts import AnchorProblem, split_questions
+
+    text, asked = split_questions(
+        "The ferry left.\n\n<questions>\n- Which pier?\n-  At dawn  or later?\n</questions>\n", 3
+    )
+    assert text == "The ferry left.\n" and asked == ["Which pier?", "At dawn or later?"]
+    assert split_questions("No block here.\n", 3) == ("No block here.\n", [])
+    with pytest.raises(AnchorProblem, match="ask at most 1"):
+        split_questions("Text.\n<questions>\n- One?\n- Two?\n</questions>", 1)
+
+
+def test_a_draft_keeps_its_questions_beside_the_text(tmp_path, monkeypatch):
+    from engine.texts import read_text
+
+    asking = FIXTURE.replace('output="draft", field="body"', 'output="draft", field="body", questions=1')
+    ws, cfg, store = workspace(tmp_path, asking)
+    env = (ws, cfg, store)
+    record = chapter(env)
+    asked = answers(
+        monkeypatch,
+        prose("The ferry left early.\n\n<questions>\n- Which pier?\n- Whose ferry?\n</questions>"),
+        prose("The ferry left early.\n\n<questions>\n- Which pier?\n</questions>"),
+    )
+    run(env, start(env, record))
+    assert "up to 1 short questions" in asked[0].request and "ask at most 1" in asked[1].request
+    version = pending(store, record)
+    assert version.data["questions"] == ["Which pier?"]
+    assert read_text(store, version.data["sha256"]) == "The ferry left early.\n"
+    store.close()
+    set_responder(None)
+
+
+def test_where_narrows_the_records_a_kind_starts_on(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+
+    narrowed = FIXTURE.replace(
+        'on="p09/chapter", packet=packet', 'on="p09/chapter", packet=packet, where={"title": "The Crossing"}'
+    )
+    ws, cfg, store = workspace(tmp_path, narrowed)
+    env = (ws, cfg, store)
+    record = chapter(env)
+    with store.transaction() as tx:
+        other = tx.create("p09/chapter", {"title": "The Return"}, WriteContext("pm", "trusted", "ui"))
+    store.close()
+    token = "test-token"
+    client = TestClient(create_app(ws, cfg, token, start_worker=False))
+    client.headers["Authorization"] = f"Bearer {token}"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    listed = client.get(f"{api}/task-kinds", params={"kind": record.kind, "id": record.id}).json()
+    assert [k["name"] for k in listed] == ["p09/revise"]
+    assert client.get(f"{api}/task-kinds", params={"kind": record.kind, "id": other.id}).json() == []
+    refused = client.post(f"{api}/task-kinds/p09/revise/start", json={"about": {"kind": other.kind, "id": other.id}})
+    assert refused.status_code in (400, 409) and "isn't for this" in refused.text
+
+
+def test_where_must_name_fields_the_record_has(tmp_path):
+    broken = FIXTURE.replace('on="p09/chapter", packet=packet', 'on="p09/chapter", packet=packet, where={"genre": "x"}')
+    ws, cfg, store = workspace(tmp_path, broken)
+    assert "doesn't have" in store.plugins.status["p09"].reason
+    store.close()
+
+
+def test_the_packet_knows_who_started_the_run_and_a_note_not_from_the_person_is_untrusted(tmp_path, monkeypatch):
+    seen = FIXTURE.replace(
+        'return PacketParts(request=[Part("Current text", view.text(target, "body"))])',
+        'return PacketParts(request=[Part("Started by", view.origin, trusted=True)])',
+    )
+    ws, cfg, store = workspace(tmp_path, seen)
+    env = (ws, cfg, store)
+    record = chapter(env)
+    asked = answers(monkeypatch, prose("The ferry left early.\n"))
+    with store.transaction() as tx:
+        request_id = tx.create(
+            "request",
+            {
+                "task": "p09/revise",
+                "about": {"kind": record.kind, "id": record.id},
+                "note": "Make it shorter.",
+                "origin": "input",
+                "state": "queued",
+                "created_at": NOW.isoformat(),
+            },
+            WriteContext("pm", "trusted", "ui"),
+        ).id
+    run(env, request_id)
+    assert "input" in asked[0].request
+    assert '<untrusted source="note">\nMake it shorter.' in asked[0].request
+    store.close()
+    set_responder(None)

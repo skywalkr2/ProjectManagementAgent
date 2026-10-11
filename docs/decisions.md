@@ -172,6 +172,29 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: Plugin API 0.3.12: who started a run, where work starts, questions from drafts
+
+**Decided by:** Claude (design), from plugin questions; the owner can override.
+
+**What:**
+- A packet function sees who started the run. Only a note from the person counts as their words; a note from an
+  outside input is now untrusted, like a scheduled one.
+- A task kind can narrow the records it is offered on by field values.
+- A draft may end with a few questions for the person, kept beside the version instead of inside the text.
+- A person action rerun drops a choice it no longer offers.
+- Temporary names for records created earlier in the same answer were not added. One op that creates both records
+  covers the need. Handles would break when one op is held or refused and the other applies.
+
+**Why:**
+- Treating an outside input's note as the person's words was a trust gap.
+- Work offered where it can only fail is noise.
+- Questions inside a draft's prose get accepted as text by mistake.
+
+**Impact:**
+- New `TextVersion.questions` and `text.draft.questions`.
+- `GET /api/task-kinds` takes `id`.
+- Rerun the evaluation for the core's note-reading prompt only if inputs start carrying notes (none do today).
+
 ## 2026-10-11: Working copies: long text edited in the person's own tools
 
 **Decided by:** Claude (design), building the plugin API; the owner can override.

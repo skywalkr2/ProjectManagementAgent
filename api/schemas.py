@@ -484,6 +484,10 @@ class TextVersionView(BaseModel):
     words: int
     base: int | None
     note: str | None
+    unmapped: list[str] = Field(
+        default_factory=list, description="Taken back from a working copy: what couldn't be read back, to show."
+    )
+    questions: list[str] = Field(default_factory=list, description="A draft's questions for the person, to show.")
     created_at: str
 
 

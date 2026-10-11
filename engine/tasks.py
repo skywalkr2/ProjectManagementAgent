@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from dataclasses import field as _field
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,12 @@ class TaskKind:
     output: str = "ops"  # "draft": the answer is prose for the long text field `field` of the record it is about
     field: str | None = None
     anchored: bool = False  # a draft that revises the current text, paragraph by paragraph, with ids
+    questions: int = 0  # how many questions for the person a draft may end with
+    where: dict[str, tuple[Any, ...]] = _field(default_factory=dict)  # field values a record of kind `on` must have
+
+    def offered_on(self, record: Any) -> bool:
+        """Whether this work applies to a record (of kind `on`): every `where` field holds one of its values."""
+        return all(record.data.get(key) in values for key, values in self.where.items())
 
 
 TASKS: dict[str, TaskKind] = {

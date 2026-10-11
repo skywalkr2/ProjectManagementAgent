@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.11"
+PLUGIN_API_VERSION = "0.3.12"
 
 
 class Settings(BaseModel):
@@ -346,6 +346,16 @@ class EventContext(ReadView):
         self.commands.append(("question", {"title": title, "text": text}))
 
 
+class PacketContext(ReadView):
+    """The read view a task kind's packet function gets, with `origin`, who started the run: "pm" (the person, so the
+    note is their own words), "input" (an outside input) or "schedule" (a schedule, a stage entry or a plugin's
+    request). A note from anyone but the person is shown to the run as untrusted material."""
+
+    def __init__(self, view: Any, plugin: str, origin: str):
+        super().__init__(view, plugin)
+        self.origin = origin
+
+
 class ActionContext(ReadView):
     """What a person action sees: core and own records, file bytes, the plugin's settings and its declared programs.
     It changes nothing itself; it returns a Proposal the person reviews."""
@@ -359,7 +369,9 @@ class ActionContext(ReadView):
 @dataclass
 class Choice:
     """A named choice the person can flip on the review; the action runs again with the new value before anything
-    applies. `options` are (value, label) pairs; none means on or off."""
+    applies. `options` are (value, label) pairs; none means on or off. `value` is the value the action used: the
+    choices it was given can name a choice it no longer offers (dropped) or a value it no longer offers (report the
+    value you fell back to)."""
 
     id: str
     label: str
@@ -609,6 +621,8 @@ class Registrar:
         output: str = "ops",
         field: str | None = None,
         anchored: bool = False,
+        questions: int = 0,
+        where: dict[str, Any] | None = None,
         prompt: str = "notes",
         playbook: str = "notes",
         on: str | None = None,
@@ -627,8 +641,10 @@ class Registrar:
 
         `on` is the record kind a run is about (core or own), when it works on one record: the request then carries that
         record, and the person can start it from the record. `packet(target, view, settings, note) -> PacketParts` says
-        what the run sees (without it, the run sees what reading notes sees). It runs before every call, so it must be
-        deterministic and quick; raising StoreError stops the run with that message for the person.
+        what the run sees (without it, the run sees what reading notes sees); `view` is a PacketContext, whose `origin`
+        says who started the run. It runs before every call, so it must be deterministic and quick; raising StoreError
+        stops the run with that message for the person. `where` narrows which records of kind `on` the work is
+        offered on and may start on: {field: value} or {field: (value, ...)}, every field matching.
 
         `output` is "ops" (the answer is a changeset of `ops`) or "draft": the answer is plain prose for the long text
         field `field` of the record the run is about (`on` is required). The core wraps it as a pending `text.draft`
@@ -637,6 +653,8 @@ class Registrar:
         `anchored=True` the draft revises the current text: the run sees it with an id on each unit, starts every
         paragraph it writes with the ids it came from, and a core check refuses a draft that leaves a unit unaccounted
         for, names an unknown id, or splits or merges an atomic unit; the paragraph map is kept with the version.
+        `questions=N` lets a draft end with up to N questions for the person, in a `<questions>` block the core takes
+        off the text and keeps on the version (`questions`), shown beside it; more than N gets a fix round.
 
         `tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates
         before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them."""
@@ -645,8 +663,18 @@ class Registrar:
         self._name(name)
         if output not in ("ops", "draft"):
             raise ValueError('a task kind\'s output is "ops" or "draft"')
-        if anchored and output != "draft":
-            raise ValueError("only a draft task kind is anchored")
+        if (anchored or questions) and output != "draft":
+            raise ValueError("only a draft task kind is anchored or asks questions")
+        if not isinstance(questions, int) or not 0 <= questions <= 20:
+            raise ValueError("questions is how many a draft may ask, from 0 to 20")
+        if where is not None and (on is None or not where):
+            raise ValueError("where narrows the records of kind `on`; it needs `on` and at least one field")
+        narrowed = {}
+        for key, value in (where or {}).items():
+            values = tuple(value) if isinstance(value, (list, tuple, set, frozenset)) else (value,)
+            if not values or not all(v is None or isinstance(v, (str, int, float, bool)) for v in values):
+                raise ValueError("where matches fields against plain values")
+            narrowed[str(key)] = values
         if output == "draft":
             if on is None or not field or ops:
                 raise ValueError(
@@ -684,6 +712,8 @@ class Registrar:
             output=output,
             field=field,
             anchored=anchored,
+            questions=questions,
+            where=narrowed,
         )
 
     def _own_file(self, name: str, folder: str) -> Path | None:
@@ -830,6 +860,7 @@ __all__ = [
     "LintFinding",
     "TakeBack",
     "WorkingCopyContext",
+    "PacketContext",
     "LongText",
     "Unit",
     "Part",

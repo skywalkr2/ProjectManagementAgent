@@ -3309,6 +3309,14 @@
             "title": "Number",
             "type": "integer"
           },
+          "questions": {
+            "description": "A draft's questions for the person, to show.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
           "source": {
             "title": "Source",
             "type": "string"
@@ -3316,6 +3324,14 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "unmapped": {
+            "description": "Taken back from a working copy: what couldn't be read back, to show.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmapped",
+            "type": "array"
           },
           "version": {
             "description": "The record version, to state when reviewing it.",
@@ -5573,7 +5589,7 @@
     },
     "/api/task-kinds": {
       "get": {
-        "description": "Plugin AI work the person can start on a record of `kind` (or on the workspace with no kind).",
+        "description": "Plugin AI work the person can start on a record of `kind` (or on the workspace with no kind); with `id`,\nonly the work offered on that record.",
         "operationId": "task_kinds_api_task_kinds_get",
         "parameters": [
           {
@@ -5590,6 +5606,22 @@
                 }
               ],
               "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Id"
             }
           }
         ],

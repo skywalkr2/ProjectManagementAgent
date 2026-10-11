@@ -29,6 +29,13 @@ DRAFT_RULE = (
 )
 
 
+QUESTIONS_RULE = (
+    "If something only the person can answer would change the text, end your answer with up to {n} short questions "
+    'for them: a line <questions>, one question per line starting with "- ", then a line </questions>. Leave the '
+    "block out when you have none."
+)
+
+
 @dataclass(frozen=True)
 class Packet:
     task: AiTask
@@ -87,8 +94,8 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         }
         # Record content is data, not new instructions, even after the person approves a task.
         request_parts.append("<untrusted>\n" + json.dumps(context, ensure_ascii=False) + "\n</untrusted>")
-    if note and req.data["origin"] == "schedule":
-        # A note on scheduled work was written by a plugin or a job, not the PM: data, not instructions.
+    if note and req.data["origin"] != "pm":
+        # A note on scheduled work or an outside input wasn't written by the PM: data, not instructions.
         request_parts.append(f'<untrusted source="note">\n{note}\n</untrusted>')
     elif note:
         request_parts.append(f"<note>\n{note}\n</note>")
@@ -140,15 +147,17 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     """A run of a plugin's task kind sees its instructions, the op reference, its guidance and the parts the plugin's
     packet function returns: stable parts first, this run's parts last. Content is marked by trust; reference-only
     parts are marked not to be quoted."""
-    from engine.plugin_api import PacketParts, ReadView
+    from engine.plugin_api import PacketContext, PacketParts
 
     plugin = kind.name.split("/", 1)[0]
     about = target_of(store, req.data)
     target = store.read().get(*about) if about else None
     if kind.on is not None and (target is None or target.kind != kind.on):
         raise PacketRefused(f"this work needs a {kind.on} to work on, and the one it was asked for is gone")
+    if target is not None and not kind.offered_on(target):
+        raise PacketRefused(f"this work isn't for this {kind.on} any more")
     note = req.data.get("note") or ""
-    view = store.plugins._with_files(ReadView(store.read(), plugin))
+    view = store.plugins._with_files(PacketContext(store.read(), plugin, req.data["origin"]))
     config = store.plugins.registrars[plugin].config.model_copy(deep=True)
     try:
         parts = kind.packet(target, view, config, note)
@@ -171,7 +180,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         *(_render_part(p) for p in parts.stable),
     ]
     request_parts = [f"Today is {today.isoformat()} ({today.strftime('%A')})."]
-    if note and req.data["origin"] == "schedule":
+    if note and req.data["origin"] != "pm":
         request_parts.append(f'<untrusted source="note">\n{note}\n</untrusted>')
     elif note:
         request_parts.append(f"<note>\n{note}\n</note>")
@@ -188,6 +197,8 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         request_parts.append(_render_part(Part("Text to revise", anchored_text(base_text, anchor_units))))
     if drafting:
         request_parts.append(DRAFT_RULE)
+    if drafting and kind.questions:
+        request_parts.append(QUESTIONS_RULE.format(n=kind.questions))
     task = _task(
         cfg,
         store,

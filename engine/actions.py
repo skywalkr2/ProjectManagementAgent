@@ -203,14 +203,8 @@ def _checked(
     for c in choice_list:
         if c["group"] is not None and c["group"] not in group_ids:
             raise StoreError(f"choice {c['id']} is in a group the proposal doesn't list")
-    offered = {c["id"]: c for c in choice_list}
-    for key, value in choices.items():
-        choice = offered.get(key)
-        if choice is None:
-            raise StoreError(f"there is no choice called {key}")
-        valid = {o["value"] for o in choice["options"]} if choice["options"] else {True, False}
-        if (str(value) if choice["options"] else value) not in valid:
-            raise StoreError(f"{value!r} isn't one of the options for {choice['label']}")
+    # The proposal's own choices are what stands: a choice the run no longer offers is dropped, and one whose earlier
+    # value it no longer offers shows the value the action fell back to.
     for c in choice_list:
         allowed = {o["value"] for o in c["options"]}
         if allowed and str(c["value"]) not in allowed:

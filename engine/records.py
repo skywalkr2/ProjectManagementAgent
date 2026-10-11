@@ -370,6 +370,9 @@ class TextVersion(Record):
         default_factory=list,
         description="For a version taken back from a working copy, what the format couldn't map, shown beside it.",
     )
+    questions: list[str] = Field(
+        default_factory=list, description="For a draft, the questions for the person it ended with, shown beside it."
+    )
     run: str | None = Field(None, description="The AI run that wrote it, for a draft.")
     created_at: datetime = Field(description="When it was written.")
 

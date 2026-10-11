@@ -255,10 +255,15 @@ def test_flipping_a_choice_runs_the_action_again(env):
     work = a_work(env)
     pending = run(env, "p04/finish", work, {"status": "draft"})
     assert pending.summary.endswith("draft") and pending.choices == {"status": "draft"}
-    with pytest.raises(ActionFailed, match="isn't one of the options"):
-        run(env, "p04/finish", work, {"status": "lost"})
-    with pytest.raises(ActionFailed, match="no choice called"):
-        run(env, "p04/finish", work, {"colour": "blue"})
+    with pytest.raises(ActionFailed, match="set to a value it doesn't offer"):
+        run(env, "p04/finish", work, {"status": "lost"})  # the action kept a value it doesn't offer
+
+
+def test_a_choice_no_longer_offered_is_dropped(env):
+    _, _, store = env
+    work = a_work(env)
+    pending = run(env, "p04/finish", work, {"status": "draft", "colour": "blue"})
+    assert pending.choices == {"status": "draft"}
 
 
 def test_a_build_adds_its_file_and_undo_takes_everything_back(env):

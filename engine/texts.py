@@ -432,6 +432,7 @@ def new_version(
     authors: list[dict[str, Any]] | None = None,
     paragraph_map: list[dict[str, Any]] | None = None,
     unmapped: list[str] | None = None,
+    questions: list[str] | None = None,
 ) -> Any:
     """Write a version of a long text field: stored by hash, with authorship derived from its base (unchanged units
     keep theirs). An accepted version becomes the field's text; anything else waits for review."""
@@ -489,6 +490,7 @@ def new_version(
             ],
             "paragraph_map": list(paragraph_map or []),
             "unmapped": list(unmapped or []),
+            "questions": list(questions or []),
             "note": note,
             "run": run,
             "created_at": store.clock(),
@@ -604,7 +606,24 @@ _REMOVED = re.compile(r"^\s*Removed:\s*(none|p\d+(?:\s*,\s*p\d+)*)\s*\.?\s*$", r
 
 
 class AnchorProblem(ValueError):
-    """An anchored draft's paragraph ids don't account for the text; the message is for the fix round."""
+    """A draft's paragraph ids don't account for the text, or it asks too many questions; the message is for the fix
+    round."""
+
+
+_QUESTIONS = re.compile(r"(?:^|\n)[ \t]*<questions>[ \t]*\n(.*?)\n?[ \t]*</questions>\s*$", re.S)
+
+
+def split_questions(answer: str, limit: int) -> tuple[str, list[str]]:
+    """A draft's text without the `<questions>` block it may end with, and the questions in it (one per "- " line).
+    Raises AnchorProblem, for the fix round, when there are more than `limit`."""
+    match = _QUESTIONS.search(answer)
+    if match is None:
+        return answer, []
+    asked = [" ".join(line.strip()[1:].split()) for line in match.group(1).splitlines() if line.strip().startswith("-")]
+    asked = [q for q in asked if q]
+    if len(asked) > limit:
+        raise AnchorProblem(f"there are {len(asked)} questions; ask at most {limit}, the ones that matter most")
+    return answer[: match.start()].rstrip() + "\n", asked
 
 
 def anchored_text(text: str, units: list[Unit]) -> str:

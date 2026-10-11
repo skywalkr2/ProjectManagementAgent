@@ -10,6 +10,23 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.12 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Who started a run: a task kind's `packet` function now gets a `PacketContext` as its view, a read view with
+  `origin` ("pm", "input" or "schedule"). Only a note from the person ("pm") is shown to the run as their words; a note
+  from an outside input is now untrusted like a scheduled one, and so is the run's changeset.
+- `task_kind(..., where={field: value})` narrows which records of kind `on` the work is offered on and may start on.
+  A value may be a tuple of values. `GET /api/task-kinds?kind=&id=` lists only the work offered on that record;
+  starting it on another is refused, and so is a run whose record no longer matches.
+- `task_kind(..., output="draft", questions=N)`: the draft may end with up to N questions for the person in a
+  `<questions>` block. The core takes the block off the text and keeps the questions on the version
+  (`TextVersion.questions`, also on `text.draft`); more than N gets a fix round. The text-version views show
+  `questions` and `unmapped`.
+- Person actions: a rerun given a choice it no longer offers drops it, rather than failing. A value it no longer
+  offers falls back to the value the action reports in its `Choice`.
+
 ## What 0.3.11 adds
 
 Manifests stay `'>=0.3,<0.4'`.

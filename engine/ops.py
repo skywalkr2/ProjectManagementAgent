@@ -305,6 +305,9 @@ class TextDraftOp(OpModel):
         default_factory=list,
         description="For an anchored draft, per paragraph in order, the base units it came from: {from: [p1, ...]}.",
     )
+    questions: list[str] = Field(
+        default_factory=list, description="Questions for the person the draft ended with, shown beside it."
+    )
 
     def describe(self) -> str | None:
         return f"Draft new text for {self.record.kind} {self.record.id}"

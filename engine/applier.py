@@ -601,6 +601,7 @@ def _apply_op(
             run=op.run,
             base=op.base,
             paragraph_map=op.paragraph_map,
+            questions=op.questions,
         )
         return [{"kind": "text_version", "id": version.id}], None
     if isinstance(op, TextAcceptOp):

@@ -267,6 +267,7 @@ def build() -> str:
                 + _table(["Field", "Type", "Default"], _dataclass_rows(cls))
                 for cls in (api.PacketParts, api.Part)
             ),
+            "### PacketContext\n\n" + _para(_doc(api.PacketContext)),
         ),
         _section(
             "Lints",

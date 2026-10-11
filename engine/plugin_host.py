@@ -444,6 +444,11 @@ class PluginHost:
                 raise ValueError("file.add is made only by person actions, never by a task")
             if task.on is not None and task.on not in REGISTRY and task.on not in registrar.records:
                 raise ValueError(f"task {task.name} is on an unknown record kind {task.on}")
+            if task.where:
+                fields = (registrar.records.get(task.on) or REGISTRY[task.on]).model_fields
+                unknown = sorted(set(task.where) - set(fields))
+                if unknown:
+                    raise ValueError(f"task {task.name} narrows {task.on} by {unknown[0]}, which it doesn't have")
             if task.output == "draft":
                 from engine.texts import long_text_fields
 
@@ -727,15 +732,19 @@ def _source_text(store: Any, digest: str) -> str:
 
 
 def check_about(view: Any, kind: Any, about: dict[str, str] | None) -> None:
-    """A request for a task kind declared `on` a record kind must name a live record of that kind; others name none."""
+    """A request for a task kind declared `on` a record kind must name a live record of that kind that its `where`
+    matches; others name none."""
     if kind.on is None:
         if about is not None:
             raise StoreError(f"{kind.name} doesn't work on a record")
         return
     if about is None or about.get("kind") != kind.on:
         raise StoreError(f"{kind.name} works on a {kind.on}")
-    if view.get(about["kind"], about["id"]) is None:
+    record = view.get(about["kind"], about["id"])
+    if record is None:
         raise StoreError(f"there is no {about['kind']} {about['id']}")
+    if not kind.offered_on(record):
+        raise StoreError(f"{kind.label or kind.name} isn't for this {kind.on}")
 
 
 def _origin_parameter(fn: Any) -> str | None:

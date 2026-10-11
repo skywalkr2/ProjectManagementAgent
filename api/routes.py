@@ -165,12 +165,19 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         )
 
     @r.get("/task-kinds")
-    def task_kinds(kind: str | None = None) -> list[TaskKindView]:
-        """Plugin AI work the person can start on a record of `kind` (or on the workspace with no kind)."""
+    def task_kinds(kind: str | None = None, id: str | None = None) -> list[TaskKindView]:
+        """Plugin AI work the person can start on a record of `kind` (or on the workspace with no kind); with `id`,
+        only the work offered on that record."""
+        record = store.read().get(kind, id) if kind and id else None
+        if kind and id and record is None:
+            raise HTTPException(status_code=404, detail=f"{kind} {id} doesn't exist")
         found = [
             k
             for name, k in store.plugins.tasks.items()
-            if "/" in name and store.plugins.active(name.split("/", 1)[0]) and k.on == kind
+            if "/" in name
+            and store.plugins.active(name.split("/", 1)[0])
+            and k.on == kind
+            and (record is None or k.offered_on(record))
         ]
         return [
             TaskKindView(
@@ -218,6 +225,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             words=v.data["words"],
             base=v.data.get("base"),
             note=v.data.get("note"),
+            unmapped=v.data.get("unmapped") or [],
+            questions=v.data.get("questions") or [],
             created_at=str(v.data["created_at"]),
         )
 

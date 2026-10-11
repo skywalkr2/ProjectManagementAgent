@@ -114,8 +114,9 @@ def process(
                 f"{cfg.dispatch.max_input_chars:,}). Split it, or raise dispatch.max_input_chars."
             ),
         )
-    # Scheduled work (stage tasks, plugin requests) carries no words from the PM, so nothing in it is trusted.
-    scheduled = req.data["origin"] == "schedule"
+    # Work the PM didn't start (stage tasks, plugin requests, outside inputs) carries no words from the PM, so nothing
+    # in it is trusted.
+    scheduled = req.data["origin"] != "pm"
     trust = "untrusted" if req.data.get("source") or scheduled or packet.untrusted_material else "trusted"
     inputs = Inputs(request_id, req.data.get("source"), packet.raw_input, packet.note, trust, cites=packet.cites)
     ctx = Context(
@@ -166,6 +167,7 @@ def process(
             "field": kind.field,
             "base": packet.draft_base,
             "anchors": packet.anchor_units if kind.anchored else None,
+            "questions": kind.questions,
         }
     first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use, content, draft)
     outcome = first
@@ -265,21 +267,24 @@ def _rounds(
             text, stop = _drafted(router, task, result, request_id, tier, data_level, use, content)
             if stop:
                 return _Outcome(run_id=out.run_id, stop=stop)
-            mapping: list = []
-            if draft.get("anchors") is not None:
-                from engine.texts import AnchorProblem, parse_anchored
+            from engine.texts import AnchorProblem, parse_anchored, split_questions
 
-                try:
+            mapping: list = []
+            asked: list[str] = []
+            try:
+                if draft.get("questions"):
+                    text, asked = split_questions(text, draft["questions"])
+                if draft.get("anchors") is not None:
                     text, mapping = parse_anchored(text, draft["anchors"])
-                except AnchorProblem as err:
-                    if not last:
-                        why = f"Your draft's paragraph ids don't account for the text: {err}. Write it all again."
-                        task = replace(task, request=base.request + "\n\n" + why)
-                        continue
-                    return _Outcome(
-                        run_id=out.run_id, stop=f"The draft's paragraph ids were wrong: {err}.", escalate=True
-                    )
-            changeset = _draft_changeset(draft, text, out.run_id, mapping)
+            except AnchorProblem as err:
+                if not last:
+                    why = f"Your draft doesn't follow the format asked for: {err}. Write it all again."
+                    task = replace(task, request=base.request + "\n\n" + why)
+                    continue
+                return _Outcome(
+                    run_id=out.run_id, stop=f"The draft didn't follow the format asked for: {err}.", escalate=True
+                )
+            changeset = _draft_changeset(draft, text, out.run_id, mapping, asked)
             problems = check(changeset, ctx)
             out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id)
             if needs_another_round(problems):
@@ -367,7 +372,9 @@ def _unfenced(text: str) -> str:
     return match.group(1) + "\n" if match else text
 
 
-def _draft_changeset(draft: dict, text: str, run_id: str | None, mapping: list | None = None) -> ChangesetIn:
+def _draft_changeset(
+    draft: dict, text: str, run_id: str | None, mapping: list | None = None, questions: list[str] | None = None
+) -> ChangesetIn:
     op = {
         "op": "text.draft",
         "record": {"kind": draft["kind"], "id": draft["id"]},
@@ -376,6 +383,7 @@ def _draft_changeset(draft: dict, text: str, run_id: str | None, mapping: list |
         "base": draft["base"],
         "run": run_id,
         "paragraph_map": mapping or [],
+        "questions": questions or [],
     }
     return CHANGESET.validate_python({"summary": "A draft for your review.", "ops": [op]})
 
