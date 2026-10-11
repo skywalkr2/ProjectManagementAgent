@@ -1093,3 +1093,86 @@ class SignInView(BaseModel):
 
 class SignInStarted(BaseModel):
     url: str = Field(description="The service's sign-in page, to open in the person's browser.")
+
+
+class PackAdds(BaseModel):
+    item_types: list[str] = Field(description="The kinds of items it adds, in words.")
+    screens: int
+    today: int = Field(description="How many kinds of lines it puts on Today.")
+    ai_work: int = Field(description="How many kinds of AI work it adds.")
+    actions: int
+    setup_steps: int
+    sources: int = Field(description="Places it can keep reading.")
+
+
+class PackReaches(BaseModel):
+    sign_ins: list[str] = Field(description="Services it signs in to as you, in words.")
+    hosts: list[str] = Field(description="Internet hosts it may reach.")
+    programs: list[str] = Field(description="Programs it runs on this computer.")
+    keys: int = Field(description="How many keys or passwords you provide it.")
+
+
+class PackSummary(BaseModel):
+    adds: PackAdds
+    reaches: PackReaches
+    keeps: Literal["open", "internal", "restricted"] = Field(description="The most private material it holds.")
+
+
+class PackCost(BaseModel):
+    label: str
+    tokens: int = Field(description="The job's typical size, input and answer together.")
+    usd: float | None = Field(description="Its price on this workspace's accounts, when the prices are known.")
+    account: bool = Field(description="False when no AI account is set up for this kind of work.")
+
+
+class PackPrice(BaseModel):
+    model: Literal["free", "one_time", "subscription", "see_publisher"]
+    amount: float | None
+    currency: str
+    period: Literal["month", "year"] | None
+    note: str
+
+
+class PackView(BaseModel):
+    id: str
+    name: str
+    summary: str
+    publisher: str
+    maintainers: bool = Field(description="Made by the app's maintainers rather than a third party.")
+    updated: str
+    version: str
+    price: PackPrice
+    homepage: str | None
+    homepage_domain: str | None = Field(description="The homepage's real domain, to show beside the link.")
+    install: str = Field(description="How to install it, as the feed says (a command or a short instruction).")
+    demo: bool = Field(description="It can be tried in the demo.")
+    compatible: bool | None = Field(description="Works with this version of the app; None when the feed doesn't say.")
+    installed_version: str | None
+    enabled: bool
+    what: PackSummary
+    costs: list[PackCost]
+    feed: str = Field(description="The domain of the feed that lists it.")
+
+
+class InstalledPackView(BaseModel):
+    name: str
+    version: str | None
+    description: str
+    enabled: bool
+    state: str
+    reason: str | None
+    what: PackSummary
+
+
+class PackFeedView(BaseModel):
+    domain: str
+    error: str | None
+    notes: list[str]
+    read_at: str | None
+
+
+class PacksView(BaseModel):
+    enabled: bool = Field(description="The catalog is on in this workspace.")
+    feeds: list[PackFeedView]
+    available: list[PackView]
+    installed: list[InstalledPackView]

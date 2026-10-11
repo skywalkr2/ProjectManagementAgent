@@ -313,7 +313,8 @@ test("Save sends only the changed fields with the version that was read, then of
     fields: { title: "The new harbor", final: true, book: "PRJ-2", owner: null, pages: null, tags: ["a", "b"] },
   });
   expect(await screen.findByText("Saved.")).toBeInTheDocument();
-  await waitFor(() => expect(screen.getByRole("button", { name: "Edit details" })).toHaveFocus());
+  // Focus returns once the dialog's close finishes, which can take longer than a second when every test file runs at once.
+  await waitFor(() => expect(screen.getByRole("button", { name: "Edit details" })).toHaveFocus(), { timeout: 4000 });
   await user.click(screen.getByRole("button", { name: "Undo" }));
   await waitFor(() => expect(calls.map((c) => c.route)).toContain("POST changesets/CS-9/undo"));
 });

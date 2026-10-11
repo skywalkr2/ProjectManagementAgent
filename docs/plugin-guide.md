@@ -746,6 +746,11 @@ In the workspace's `config/workspace.yaml`; the person can change them.
 | `workspace.plugins.jobs.every_minutes` | int \| None | `None` | How often it runs; unset means the plugin's default. |
 | `workspace.plugins.secrets` | dict[str, dict[str, str]] | `{}` | Each plugin's secrets, by plugin then secret name, as references (env:NAME or file:/path), never the secret itself. |
 | `workspace.plugins.failures_before_off` | int | `3` | How many times in a row a plugin's Today lines, interface items, event handler or job may fail before the plugin is turned off; each failure is noted on the plugin. |
+| `workspace.plugins.catalog` | CatalogSettings | see below | Where the Add-ons screen finds packs to tell you about. |
+| `workspace.plugins.catalog.enabled` | bool | `True` | Show the packs catalog feeds list on the Add-ons screen. |
+| `workspace.plugins.catalog.shipped_feed` | bool | `True` | Include the catalog feed this build of the app came with, if any. |
+| `workspace.plugins.catalog.feeds` | list[str] | `[]` | More catalog feeds to read, as https addresses (a team's own, say). |
+| `workspace.plugins.catalog.refresh_hours` | int | `24` | How old the kept copy of a feed may be before opening the screen reads it again. |
 
 Files, in `config/storage.yaml`. A file kind keeps only the media types listed here; the plugin's status notes any it loses.
 

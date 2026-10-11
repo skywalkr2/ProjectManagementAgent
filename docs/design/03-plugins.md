@@ -269,3 +269,38 @@ shared as one template file):
 `templates/`. A template is applied in the first-run wizard or later from settings; applying one to a workspace that
 already has types adds the new ones and leaves the existing ones as they are. "Save as template" writes the current
 settings to a file to share. The fictional demo workspaces run on templates.
+
+## 3.11 Finding packs: the Add-ons screen
+
+People learn about packs inside the app, on one calm screen, never through ads, badges or lines on Today.
+
+**Add-ons** has two tabs. *Installed* lists the plugins this install has, on or off, with what each adds and why one
+is off. *Available* lists packs from catalog feeds. A pack's listing answers four questions before anything is
+installed:
+
+- **What it does:** its name, one line, who makes it ("Made by the app's maintainers" or "Third party"), when it was
+  updated, whether it works with this version (its `plugin_api` range against the running one), and its price as the
+  feed states it (free, one-time, a subscription, or "see the publisher's page").
+- **What it adds, reaches and keeps:** written by the core from the pack's manifest, never from its own description:
+  the item types, screens, steps on Today and AI work it adds; the services it signs in to, the hosts it reaches and
+  the programs it runs on this computer; the most private data level it uses. The same summary is what the person
+  approves when turning the pack on, and again when an update asks for more.
+- **What its AI work costs here:** each pack lists its typical AI jobs (a label, typical input and output size, the
+  role). The core prices them with the person's own accounts, tiers and prices ("Drafting a chapter ≈ $0.04"); on a
+  subscription or a local model it shows the size of the work instead of a price.
+- **How to try it:** "Try it in the demo" runs the pack on made-up data (`cockpit demo --plugin`), apart from real
+  work. "Get it" shows the install command for a free pack, or opens the publisher's page (its real domain shown) for
+  a paid one. The app never installs code into itself and never handles payment.
+
+**Catalog feeds.** A feed is one index file at an HTTPS address: version, and per pack its id, name, summary,
+publisher, first-party flag, price, latest version, `plugin_api` range, install instructions, homepage, its manifest's
+`provides` and `requires`, and its typical AI jobs. A release build ships the maintainers' feed address (as it ships
+the feedback address); the repository holds none. A workspace can turn the catalog off or add feeds
+(`workspace.plugins.catalog`). A feed is read only when the person opens *Available* or presses Refresh, with a plain
+request that carries nothing about them, and the copy is kept for offline use. Everything in a feed is untrusted: text
+is shown as text, links show their real domain, and nothing in it becomes a rule, a setting or an instruction.
+
+**Later:** updates with what changed and re-approval when an update asks for more; licence keys kept as a plugin
+secret; asking the assistant knows the catalog, so a question the core can't answer but a pack can mentions the pack
+before a report is drafted; a signed feed and pinned package fingerprints; installing from the screen behind a
+confirmation; team feeds for hosted installs.

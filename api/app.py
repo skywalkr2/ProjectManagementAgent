@@ -20,6 +20,7 @@ from starlette.routing import Mount
 from starlette.types import ASGIApp
 
 from api.ask_routes import build_ask_router
+from api.pack_routes import build_pack_router
 from api.routes import build_router
 from api.schemas import RuntimeConfig
 from api.setup_routes import build_setup_router
@@ -168,6 +169,7 @@ def create_app(
     inner.include_router(build_ask_router(ws, cfg, store, events, worker))
     inner.include_router(build_watch_router(ws, cfg, store, events, worker))
     inner.include_router(build_sign_in_router(ws, cfg, store))
+    inner.include_router(build_pack_router(ws, cfg, store))
     inner.state.worker = worker
     inner.state.store = store
     inner.state.events = events

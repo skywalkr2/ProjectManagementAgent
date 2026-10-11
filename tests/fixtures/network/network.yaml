@@ -11,3 +11,4 @@ calendar_host: calendar.example.com
 mail_host: mail.example.com
 mail_user: rafael@example.com
 auth_host: auth.example.com
+catalog_host: packs.example.com

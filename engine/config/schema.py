@@ -62,6 +62,25 @@ class JobSettings(ConfigModel):
     every_minutes: int | None = Field(None, ge=5, description="How often it runs; unset means the plugin's default.")
 
 
+class CatalogSettings(ConfigModel):
+    enabled: bool = Field(True, description="Show the packs catalog feeds list on the Add-ons screen.")
+    shipped_feed: bool = Field(True, description="Include the catalog feed this build of the app came with, if any.")
+    feeds: list[str] = Field(
+        default_factory=list, description="More catalog feeds to read, as https addresses (a team's own, say)."
+    )
+    refresh_hours: int = Field(
+        24, ge=1, le=720, description="How old the kept copy of a feed may be before opening the screen reads it again."
+    )
+
+    @field_validator("feeds")
+    @classmethod
+    def _https(cls, value: list[str]) -> list[str]:
+        for url in value:
+            if not url.startswith("https://"):
+                raise ValueError(f"{url}: a catalog feed is an https address")
+        return value
+
+
 class PluginSettings(ConfigModel):
     enabled: list[str] = Field(default_factory=list, description="Plugins enabled in this workspace, by name.")
     actions: ActionSettings = Field(
@@ -85,6 +104,9 @@ class PluginSettings(ConfigModel):
         ge=1,
         description="How many times in a row a plugin's Today lines, interface items, event handler or job may fail "
         "before the plugin is turned off; each failure is noted on the plugin.",
+    )
+    catalog: CatalogSettings = Field(
+        default_factory=CatalogSettings, description="Where the Add-ons screen finds packs to tell you about."
     )
 
 

@@ -277,8 +277,9 @@ def read_manifest(path: Path) -> Manifest:
     return Manifest.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
 
 
-def declared_plugins(config_dir: Path | None, enabled: list[str]):
-    """Read available declarations without executing plugin code."""
+def declared_plugins(config_dir: Path | None, enabled: list[str] | None):
+    """Read available declarations without executing plugin code: the enabled plugins', or with `enabled` None,
+    every installed plugin's."""
     from importlib.metadata import entry_points
 
     roots = [Path(__file__).resolve().parents[1] / "plugins"]
@@ -289,7 +290,7 @@ def declared_plugins(config_dir: Path | None, enabled: list[str]):
         if ep.name not in {name for name, _ in paths}:
             paths.append((ep.name, installed_manifest(ep)))
     for name, path in paths:
-        if name in enabled:
+        if enabled is None or name in enabled:
             try:
                 yield read_manifest(path)
             except (ValueError, OSError):

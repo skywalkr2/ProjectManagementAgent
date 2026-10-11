@@ -1918,6 +1918,62 @@
         "title": "Handed",
         "type": "object"
       },
+      "InstalledPackView": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          },
+          "what": {
+            "$ref": "#/components/schemas/PackSummary"
+          }
+        },
+        "required": [
+          "name",
+          "version",
+          "description",
+          "enabled",
+          "state",
+          "reason",
+          "what"
+        ],
+        "title": "InstalledPackView",
+        "type": "object"
+      },
       "JobView": {
         "description": "A plugin's scheduled work and its last run.",
         "properties": {
@@ -2322,6 +2378,435 @@
           "path"
         ],
         "title": "OutsideEditView",
+        "type": "object"
+      },
+      "PackAdds": {
+        "properties": {
+          "actions": {
+            "title": "Actions",
+            "type": "integer"
+          },
+          "ai_work": {
+            "description": "How many kinds of AI work it adds.",
+            "title": "Ai Work",
+            "type": "integer"
+          },
+          "item_types": {
+            "description": "The kinds of items it adds, in words.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Item Types",
+            "type": "array"
+          },
+          "screens": {
+            "title": "Screens",
+            "type": "integer"
+          },
+          "setup_steps": {
+            "title": "Setup Steps",
+            "type": "integer"
+          },
+          "sources": {
+            "description": "Places it can keep reading.",
+            "title": "Sources",
+            "type": "integer"
+          },
+          "today": {
+            "description": "How many kinds of lines it puts on Today.",
+            "title": "Today",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "item_types",
+          "screens",
+          "today",
+          "ai_work",
+          "actions",
+          "setup_steps",
+          "sources"
+        ],
+        "title": "PackAdds",
+        "type": "object"
+      },
+      "PackCost": {
+        "properties": {
+          "account": {
+            "description": "False when no AI account is set up for this kind of work.",
+            "title": "Account",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "tokens": {
+            "description": "The job's typical size, input and answer together.",
+            "title": "Tokens",
+            "type": "integer"
+          },
+          "usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its price on this workspace's accounts, when the prices are known.",
+            "title": "Usd"
+          }
+        },
+        "required": [
+          "label",
+          "tokens",
+          "usd",
+          "account"
+        ],
+        "title": "PackCost",
+        "type": "object"
+      },
+      "PackFeedView": {
+        "properties": {
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          }
+        },
+        "required": [
+          "domain",
+          "error",
+          "notes",
+          "read_at"
+        ],
+        "title": "PackFeedView",
+        "type": "object"
+      },
+      "PackPrice": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "model": {
+            "enum": [
+              "free",
+              "one_time",
+              "subscription",
+              "see_publisher"
+            ],
+            "title": "Model",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "enum": [
+                  "month",
+                  "year"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          }
+        },
+        "required": [
+          "model",
+          "amount",
+          "currency",
+          "period",
+          "note"
+        ],
+        "title": "PackPrice",
+        "type": "object"
+      },
+      "PackReaches": {
+        "properties": {
+          "hosts": {
+            "description": "Internet hosts it may reach.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Hosts",
+            "type": "array"
+          },
+          "keys": {
+            "description": "How many keys or passwords you provide it.",
+            "title": "Keys",
+            "type": "integer"
+          },
+          "programs": {
+            "description": "Programs it runs on this computer.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Programs",
+            "type": "array"
+          },
+          "sign_ins": {
+            "description": "Services it signs in to as you, in words.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Sign Ins",
+            "type": "array"
+          }
+        },
+        "required": [
+          "sign_ins",
+          "hosts",
+          "programs",
+          "keys"
+        ],
+        "title": "PackReaches",
+        "type": "object"
+      },
+      "PackSummary": {
+        "properties": {
+          "adds": {
+            "$ref": "#/components/schemas/PackAdds"
+          },
+          "keeps": {
+            "description": "The most private material it holds.",
+            "enum": [
+              "open",
+              "internal",
+              "restricted"
+            ],
+            "title": "Keeps",
+            "type": "string"
+          },
+          "reaches": {
+            "$ref": "#/components/schemas/PackReaches"
+          }
+        },
+        "required": [
+          "adds",
+          "reaches",
+          "keeps"
+        ],
+        "title": "PackSummary",
+        "type": "object"
+      },
+      "PackView": {
+        "properties": {
+          "compatible": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Works with this version of the app; None when the feed doesn't say.",
+            "title": "Compatible"
+          },
+          "costs": {
+            "items": {
+              "$ref": "#/components/schemas/PackCost"
+            },
+            "title": "Costs",
+            "type": "array"
+          },
+          "demo": {
+            "description": "It can be tried in the demo.",
+            "title": "Demo",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "feed": {
+            "description": "The domain of the feed that lists it.",
+            "title": "Feed",
+            "type": "string"
+          },
+          "homepage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Homepage"
+          },
+          "homepage_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The homepage's real domain, to show beside the link.",
+            "title": "Homepage Domain"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "install": {
+            "description": "How to install it, as the feed says (a command or a short instruction).",
+            "title": "Install",
+            "type": "string"
+          },
+          "installed_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Installed Version"
+          },
+          "maintainers": {
+            "description": "Made by the app's maintainers rather than a third party.",
+            "title": "Maintainers",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price": {
+            "$ref": "#/components/schemas/PackPrice"
+          },
+          "publisher": {
+            "title": "Publisher",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "what": {
+            "$ref": "#/components/schemas/PackSummary"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "summary",
+          "publisher",
+          "maintainers",
+          "updated",
+          "version",
+          "price",
+          "homepage",
+          "homepage_domain",
+          "install",
+          "demo",
+          "compatible",
+          "installed_version",
+          "enabled",
+          "what",
+          "costs",
+          "feed"
+        ],
+        "title": "PackView",
+        "type": "object"
+      },
+      "PacksView": {
+        "properties": {
+          "available": {
+            "items": {
+              "$ref": "#/components/schemas/PackView"
+            },
+            "title": "Available",
+            "type": "array"
+          },
+          "enabled": {
+            "description": "The catalog is on in this workspace.",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "feeds": {
+            "items": {
+              "$ref": "#/components/schemas/PackFeedView"
+            },
+            "title": "Feeds",
+            "type": "array"
+          },
+          "installed": {
+            "items": {
+              "$ref": "#/components/schemas/InstalledPackView"
+            },
+            "title": "Installed",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "feeds",
+          "available",
+          "installed"
+        ],
+        "title": "PacksView",
         "type": "object"
       },
       "PanelRow": {
@@ -6390,6 +6875,42 @@
           }
         },
         "summary": "Notes"
+      }
+    },
+    "/api/packs": {
+      "get": {
+        "operationId": "listed_api_packs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PacksView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Listed"
+      }
+    },
+    "/api/packs/refresh": {
+      "post": {
+        "operationId": "refreshed_api_packs_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PacksView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Refreshed"
       }
     },
     "/api/panels": {

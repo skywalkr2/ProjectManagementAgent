@@ -30,13 +30,15 @@ jobs:
           uv run ruff check .
           uv run pytest
           uv run python -m engine.selfcheck
-      - name: Fill in where feedback goes (a repository variable; left empty when unset)
+      - name: Fill in where feedback goes and the packs catalog (repository variables; empty when unset)
         env:
           FEEDBACK_TO: ${{ vars.FEEDBACK_TO }}
+          PACK_CATALOG: ${{ vars.PACK_CATALOG }}
         run: |
-          if [ -n "$FEEDBACK_TO" ]; then
-            printf 'feedback_to: "%s"\n' "$FEEDBACK_TO" > catalog/product.yaml
-          fi
+          {
+            if [ -n "$FEEDBACK_TO" ]; then printf 'feedback_to: "%s"\n' "$FEEDBACK_TO"; else echo "feedback_to: null"; fi
+            if [ -n "$PACK_CATALOG" ]; then printf 'pack_catalog: "%s"\n' "$PACK_CATALOG"; else echo "pack_catalog: null"; fi
+          } > catalog/product.yaml
       - name: Build the package
         run: uv build --wheel -o dist
       - name: Install it in a clean environment and start the demo

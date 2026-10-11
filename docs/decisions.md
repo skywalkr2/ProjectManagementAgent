@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Packs are found on an Add-ons screen, from catalog feeds, with costs priced on the person's accounts
+
+**Decided by:** project owner (direction, maintainers' packs only in the default catalog, prices shown, the catalog as
+a public index file the owner controls); project lead (design 3.11).
+
+**What:** An Add-ons screen with Installed and Available. A listing shows what a pack does, what it adds, reaches and
+keeps (written by the core from the pack's manifest), what its typical AI jobs cost on the person's own accounts, its
+price and how to try it in the demo. The app never installs code into itself and never handles payment. Feeds are
+read only when the person looks; the release build ships the maintainers' feed address; the repository holds none.
+
+**Why:** People should be able to find out what packs exist, what they do, what they can touch and what they cost,
+before installing anything, without ads or tracking.
+
+**Impact:** Design 3.11; a `workspace.plugins.catalog` setting; `/api/packs` routes; the Add-ons screen. First
+release: the catalog, the generated summary, the cost estimate, demo and install instructions. Later: updates with
+re-approval, licence keys, Ask knowing the catalog, signed feeds, install from the screen.
+
 ## 2026-10-11: Mail and calendar from named services are plugins in a private repository; the core signs in
 
 **Decided by:** project owner (plugins, in a new private repository); project lead (the sign-in in the core).
