@@ -589,6 +589,12 @@ class FieldView(BaseModel):
     description: str = ""
     long_text: str | None = Field(None, description="The long text format, for a long text field.")
     refers_to: str | None = Field(None, description="The kind of record the field holds an id of.")
+    type: Literal["text", "long_text", "number", "yes_no", "date", "choice", "reference", "list", "other"] = Field(
+        "other", description="What kind of value it holds, for the edit form."
+    )
+    options: list[str] = Field(default_factory=list, description="For a choice: the values allowed.")
+    required: bool = False
+    editable: bool = Field(True, description="The person can change it with a field edit (not the id or stage).")
 
 
 class KindView(BaseModel):

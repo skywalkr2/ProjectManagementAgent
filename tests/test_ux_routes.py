@@ -24,6 +24,10 @@ def test_a_kind_and_a_record_are_described_for_screens(tmp_path):
     c, api = client_for(ws, cfg, store)
     kind = c.get(f"{api}/kinds/p18/goal").json()
     assert [f["name"] for f in kind["fields"]] == ["id", "stage", "title", "status"]
+    by_name = {f["name"]: f for f in kind["fields"]}
+    assert by_name["title"]["type"] == "text" and by_name["title"]["required"] and by_name["title"]["editable"]
+    assert by_name["status"]["type"] == "choice" and by_name["status"]["options"] == ["open", "done"]
+    assert not by_name["id"]["editable"] and not by_name["stage"]["editable"]
     record = c.get(f"{api}/record", params={"kind": "p18/goal", "id": goal.id}).json()
     assert record["fields"]["title"] == "Finish the map" and record["long_text"] == []
     assert c.get(f"{api}/kinds/run").status_code == 404

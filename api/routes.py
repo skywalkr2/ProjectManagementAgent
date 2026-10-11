@@ -124,6 +124,33 @@ from engine.workspace import Workspace
 _PM = WriteContext(actor="pm", trust="trusted", op="ui")
 
 
+def _field_type(annotation: Any) -> tuple[str, list[str]]:
+    """What kind of value a field's annotation holds, and a choice's options."""
+    import datetime as dt
+    import types
+    from typing import Annotated, Literal, Union, get_args, get_origin
+
+    origin = get_origin(annotation)
+    if origin is Annotated:
+        return _field_type(get_args(annotation)[0])
+    if origin is Union or isinstance(annotation, types.UnionType):
+        inner = [a for a in get_args(annotation) if a is not type(None)]
+        return _field_type(inner[0]) if len(inner) == 1 else ("other", [])
+    if origin is Literal:
+        return "choice", [str(v) for v in get_args(annotation)]
+    if origin in (list, tuple, set):
+        return "list", []
+    if annotation is bool:
+        return "yes_no", []
+    if annotation in (int, float):
+        return "number", []
+    if annotation in (dt.date, dt.datetime):
+        return "date", []
+    if annotation is str:
+        return "text", []
+    return "other", []
+
+
 def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
 
@@ -197,19 +224,28 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             raise HTTPException(status_code=404, detail="not found")
         model = store.plugins.records[kind]
         texts, refs = long_text_fields(model), dict(ref_fields(model))
-        return KindView(
-            kind=kind,
-            fields=[
+        fields = []
+        for name, info in model.model_fields.items():
+            if name == "ext":
+                continue
+            value_type, options = _field_type(info.annotation)
+            if name in texts:
+                value_type = "long_text"
+            elif name in refs:
+                value_type = "reference"
+            fields.append(
                 FieldView(
                     name=name,
                     description=info.description or "",
                     long_text=texts.get(name),
                     refers_to=refs.get(name),
+                    type=value_type,
+                    options=options,
+                    required=info.is_required(),
+                    editable=name not in ("id", "stage") and name not in texts,
                 )
-                for name, info in model.model_fields.items()
-                if name not in ("ext",)
-            ],
-        )
+            )
+        return KindView(kind=kind, fields=fields)
 
     @r.get("/record")
     def generic_record(kind: str, id: str) -> GenericRecordView:

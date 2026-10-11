@@ -13,11 +13,18 @@ const textUrl = `texts?kind=${encodeURIComponent(KIND)}&id=${ID}&field=${field}`
 const kind: S["KindView"] = {
   kind: KIND,
   fields: [
-    { name: "id", description: "" },
-    { name: "title", description: "What the chapter is called." },
-    { name: "owner", description: "", refers_to: "person" },
-    { name: "tags", description: "" },
-    { name: "body_text", description: "The chapter itself.", long_text: "plain" },
+    { name: "id", description: "", type: "text", required: true, editable: false },
+    { name: "title", description: "What the chapter is called.", type: "text", required: true, editable: true },
+    { name: "owner", description: "", refers_to: "person", type: "reference", required: false, editable: true },
+    { name: "tags", description: "", type: "list", required: false, editable: true },
+    {
+      name: "body_text",
+      description: "The chapter itself.",
+      long_text: "plain",
+      type: "long_text",
+      required: false,
+      editable: false,
+    },
   ],
 };
 

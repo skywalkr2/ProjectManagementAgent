@@ -843,6 +843,12 @@
             "title": "Description",
             "type": "string"
           },
+          "editable": {
+            "default": true,
+            "description": "The person can change it with a field edit (not the id or stage).",
+            "title": "Editable",
+            "type": "boolean"
+          },
           "long_text": {
             "anyOf": [
               {
@@ -859,6 +865,14 @@
             "title": "Name",
             "type": "string"
           },
+          "options": {
+            "description": "For a choice: the values allowed.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
           "refers_to": {
             "anyOf": [
               {
@@ -870,6 +884,28 @@
             ],
             "description": "The kind of record the field holds an id of.",
             "title": "Refers To"
+          },
+          "required": {
+            "default": false,
+            "title": "Required",
+            "type": "boolean"
+          },
+          "type": {
+            "default": "other",
+            "description": "What kind of value it holds, for the edit form.",
+            "enum": [
+              "text",
+              "long_text",
+              "number",
+              "yes_no",
+              "date",
+              "choice",
+              "reference",
+              "list",
+              "other"
+            ],
+            "title": "Type",
+            "type": "string"
           }
         },
         "required": [
