@@ -343,6 +343,7 @@ class PluginStatusView(BaseModel):
     state: str
     version: str | None = None
     reason: str | None = None
+    tools: dict[str, str] = Field(default_factory=dict, description="Each declared program and what was found.")
 
 
 class RecordReference(BaseModel):

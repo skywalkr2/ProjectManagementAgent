@@ -87,7 +87,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/plugins")
     def plugin_status() -> list[PluginStatusView]:
         return [
-            PluginStatusView(name=s.name, state=s.state, version=s.version, reason=s.reason)
+            PluginStatusView(name=s.name, state=s.state, version=s.version, reason=s.reason, tools=s.tools)
             for s in store.plugins.status.values()
         ]
 

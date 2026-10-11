@@ -34,8 +34,24 @@ class UserSettings(ConfigModel):
     timezone: str = Field("UTC", description="The PM's time zone, as an IANA name such as Europe/Lisbon.")
 
 
+class ToolSettings(ConfigModel):
+    timeout_seconds: float = Field(120, gt=0, description="How long a plugin's program may run if it sets no limit.")
+    max_timeout_seconds: float = Field(
+        1800, gt=0, description="The longest any program may run; plugins can't ask more."
+    )
+    probe_timeout_seconds: float = Field(10, gt=0, description="How long a program's version check may take.")
+    output_kb: int = Field(512, gt=0, description="How much of a program's output and error stream is kept, in KB.")
+    collect_file_mb: float = Field(25, gt=0, description="Largest file a program wrote that is returned to the plugin.")
+    collect_total_mb: float = Field(100, gt=0, description="Most a program's returned files may add up to, in MB.")
+
+
 class PluginSettings(ConfigModel):
     enabled: list[str] = Field(default_factory=list, description="Plugins enabled in this workspace, by name.")
+    tools: ToolSettings = Field(
+        default_factory=ToolSettings,
+        description="Limits on the outside programs plugins run (where they are found is"
+        " set per computer in .cockpit/tools.yaml).",
+    )
 
 
 class WorkspaceFile(FileModel):

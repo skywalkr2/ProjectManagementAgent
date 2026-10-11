@@ -10,3 +10,10 @@ user:
 owner_format: "{team} ({full_name})"
 plugins:
   enabled: [example]
+  tools:
+    timeout_seconds: 120
+    max_timeout_seconds: 1800
+    probe_timeout_seconds: 10
+    output_kb: 512
+    collect_file_mb: 25
+    collect_total_mb: 100

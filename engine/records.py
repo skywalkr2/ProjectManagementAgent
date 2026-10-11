@@ -211,6 +211,26 @@ class File(Record):
     added_at: datetime
 
 
+class ToolRun(Record):
+    """One run of an outside program a plugin declared: what ran, how it ended and what it returned."""
+
+    record_kind: ClassVar[str] = "tool_run"
+    prefix: ClassVar[str] = "TOOL"
+
+    plugin: str
+    tool: str
+    args: list[str] = Field(default_factory=list)
+    inputs: list[str] = Field(default_factory=list, description="Names of the files given to the program.")
+    returncode: int
+    timed_out: bool = False
+    output_cut: bool = False
+    seconds: float = 0
+    collected: list[dict[str, Any]] = Field(default_factory=list, description="Files returned: {name, size}.")
+    omitted: list[dict[str, Any]] = Field(default_factory=list, description="Files matched but not returned.")
+    stderr_tail: str = Field("", description="The end of the program's error stream, for diagnosing a failure.")
+    ran_at: datetime
+
+
 class StageStart(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: str
@@ -326,7 +346,22 @@ class Signal(Record):
 #: Record kind to its model. The order is the export order.
 REGISTRY: dict[str, type[Record]] = {
     model.record_kind: model
-    for model in (Person, Team, Project, Action, Question, Source, Request, Changeset, Fact, Note, Run, Signal, File)
+    for model in (
+        Person,
+        Team,
+        Project,
+        Action,
+        Question,
+        Source,
+        Request,
+        Changeset,
+        Fact,
+        Note,
+        Run,
+        Signal,
+        File,
+        ToolRun,
+    )
 }
 
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.

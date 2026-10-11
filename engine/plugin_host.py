@@ -11,6 +11,7 @@ import uuid
 from collections import deque
 from copy import deepcopy
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from datetime import UTC, datetime
 from importlib.metadata import entry_points
 from pathlib import Path
@@ -59,6 +60,7 @@ class PluginStatus:
     state: str
     version: str | None = None
     reason: str | None = None
+    tools: dict[str, str] = dataclass_field(default_factory=dict)  # tool name -> what was found on this computer
 
 
 class PluginHost:
@@ -73,6 +75,7 @@ class PluginHost:
         self.status: dict[str, PluginStatus] = {}
         self.manifests: dict[str, Manifest] = {}
         self.registrars: dict[str, Registrar] = {}
+        self._tools: Any = None
         self.candidates: dict[str, Path] = {}
         self._modules: list[str] = []
         self._queue: deque = deque()
@@ -156,8 +159,9 @@ class PluginHost:
             p, reach = manifest.provides, manifest.requires
             if p.panels or p.today or p.jobs or p.playbook or manifest.interfaces.provides or manifest.interfaces.uses:
                 raise ValueError("manifest requests an extension point not implemented in plugin API 0.x")
-            if reach.network or reach.secrets or reach.tools:
-                raise ValueError("declared reach is not supported by plugin API 0.x")
+            if reach.network or reach.secrets:
+                raise ValueError("network and secret reach are not supported by plugin API 0.x")
+            self._check_tools(name, manifest)
             if not set(manifest.events()) <= EVENTS:
                 raise ValueError("unsupported event subscription")
             for dep in manifest.depends_on:
@@ -190,6 +194,64 @@ class PluginHost:
             self.status[name].state = "enabled"
         except Exception as err:
             self.disable(name, str(err))
+
+    @property
+    def tools(self) -> Any:
+        """The runner for declared programs on this computer, made on first use."""
+        if self._tools is None:
+            from engine.tools import ToolLimits, Tools, read_locations
+
+            limits = ToolLimits(**self.cfg.workspace.plugins.tools.model_dump())
+            self._tools = Tools(read_locations(self.store.path.parent / ".cockpit" / "tools.yaml"), limits)
+        return self._tools
+
+    def _check_tools(self, name: str, manifest: Manifest) -> None:
+        """Probe each declared program: a missing required one keeps the plugin off; a missing optional one only
+        turns off the features listed with it, which the plugin checks with `tools.available`."""
+        import shlex
+
+        names = [tool.name for tool in manifest.requires.tools]
+        if len(names) != len(set(names)):
+            raise ValueError("declare each tool once in requires.tools")
+        for tool in manifest.requires.tools:
+            words = shlex.split(tool.probe)
+            if not words or words[0] != tool.name:
+                raise ValueError(f"the probe for {tool.name} must start with the tool's name")
+        for tool in manifest.requires.tools:
+            status = self.tools.probe(tool.name, tool.probe, tool.min_version)
+            shown = f"found {status.version}" if status.found and status.version else "found"
+            self.status[name].tools[tool.name] = shown if status.found else status.reason
+            if not status.found and not tool.optional:
+                raise ValueError(f"needs {tool.name}: {status.reason}")
+
+    def tool_box(self, name: str) -> Any:
+        """The declared programs one plugin may run; each run is recorded as a tool_run."""
+        from engine.tools import ToolBox
+
+        declared = {tool.name: tool for tool in self.manifests[name].requires.tools}
+        return ToolBox(self.tools, name, declared, self._record_tool_run)
+
+    def _record_tool_run(self, plugin: str, tool: str, args: list[str], inputs: list[str], result: Any) -> None:
+        context = WriteContext(actor="plugin", trust="untrusted", op=f"{plugin}/tool")
+        with self.store.transaction() as tx:
+            tx.create(
+                "tool_run",
+                {
+                    "plugin": plugin,
+                    "tool": tool,
+                    "args": args,
+                    "inputs": inputs,
+                    "returncode": result.returncode,
+                    "timed_out": result.timed_out,
+                    "output_cut": result.output_cut,
+                    "seconds": result.seconds,
+                    "collected": [{"name": n, "size": len(b)} for n, b in result.files.items()],
+                    "omitted": result.omitted,
+                    "stderr_tail": result.stderr[-4000:],
+                    "ran_at": datetime.now(UTC).isoformat(),
+                },
+                context,
+            )
 
     def _importer(self, root: Path, top: str):
         namespace = "_cockpit_plugin_" + uuid.uuid4().hex

@@ -81,6 +81,24 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-11: How run_tool finds, checks and runs programs
+
+**Decided by:** Claude (design), building plugin API 0.3; the owner can override.
+
+**What:** Where a program is found is set per computer in `.cockpit/tools.yaml` (a path, or a command with its own
+environment), falling back to the PATH; it is never synced, so two computers can differ. Each declared tool is probed
+when its plugin loads: a missing or too-old required tool keeps the plugin off with the reason; a missing optional one
+shows on the plugin's status and `tools.available()` says no. A probe starts with the tool's name. A run happens in a
+fresh temporary folder, without a shell, with a minimal environment (PATH, locale, and HOME and temp pointed at the
+folder), a timeout the plugin may lower but not raise, and capped output that says when it was cut. Limits are
+`workspace.plugins.tools`. Every run is a `tool_run` record. Plugins get tools only in person actions, never in event
+handlers, stage checks or validators, which must stay quick and deterministic.
+
+**Why:** Programs differ by computer; a long or hanging program must never stall the engine, and a run must not see
+the person's environment or files beyond what it was given.
+
+**Impact:** Plugin API 0.3. New core record `tool_run`; new settings under `workspace.plugins.tools`.
+
 ## 2026-10-10: Plugin API 0.2.1: the core keeps its own rules everywhere it applies them
 
 **Decided by:** Claude (design), from trying plugin API 0.2; the owner can override.
