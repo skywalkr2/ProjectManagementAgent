@@ -185,11 +185,18 @@ class Worker:
                 "Close it here; changes made here since then are kept on this computer."
             )
             return False
+        from engine import outside
+
+        if self.cfg.storage.sync.watch_outside_edits and outside.pick_up(self.store, self.ws, self.cfg):
+            self.events.changed()
         head, count = self.store.read().sql("SELECT max(seq), count(*) FROM ledger").fetchone()
         wrote = False
         if head != self._synced_at:
             try:
-                self.sync_result = write_folder(self.store, self.ws, self.cfg)
+                self.sync_result = write_folder(
+                    self.store, self.ws, self.cfg, may_overwrite=outside.settled(self.store, self.cfg)
+                )
+                outside.forget(self.cfg)
                 self.sync_problem = None
             except (OSError, ValueError) as err:
                 self.sync_problem = str(err)

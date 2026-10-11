@@ -86,6 +86,9 @@ class Provides(Strict):
     lints: list[str] = Field(default_factory=list, description="Lints the plugin registers.")
     text_formats: list[str] = Field(default_factory=list, description="Long text formats the plugin registers.")
     working_copies: list[str] = Field(default_factory=list, description="Working-copy formats the plugin registers.")
+    derived_files: list[str] = Field(
+        default_factory=list, description="Files the plugin generates from its records into each project's folder."
+    )
     panels: list[str] = Field(default_factory=list, description="Screens. Not yet available.")
     today: list[str] = Field(default_factory=list, description="Lines on Today. Not yet available.")
     jobs: list[str] = Field(default_factory=list, description="Scheduled work. Not yet available.")
@@ -156,6 +159,7 @@ class Manifest(Strict):
             "lints",
             "text_formats",
             "working_copies",
+            "derived_files",
             "panels",
             "today",
             "jobs",

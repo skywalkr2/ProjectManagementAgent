@@ -44,7 +44,12 @@ def files_dir(store: Store) -> Path:
 
 
 def blob_path(store: Store, sha256: str) -> Path:
-    return files_dir(store) / sha256[:2] / sha256
+    return blob_path_in(store.path.parent, sha256)
+
+
+def blob_path_in(root: Path, sha256: str) -> Path:
+    """Where a workspace at `root` keeps the bytes with this hash."""
+    return root / "files" / sha256[:2] / sha256
 
 
 def check_file(

@@ -234,6 +234,20 @@ class ProjectAddOp(OpModel):
         return f"Start the project {self.name}"
 
 
+class RecordEditOp(OpModel):
+    """The person's own change to fields of any record (core or a plugin's), such as an edit made to the record's
+    file in the synced folder: it waits for the person's review there, and applies as theirs. Long text, the stage,
+    the id and plugin extension fields aren't changed this way. Only the person uses it."""
+
+    op: Literal["record.edit"] = "record.edit"
+    record: RecordRef = Field(description="The record to change.")
+    fields: dict[str, Any] = Field(description="The new values, by field name.")
+    read_version: int = Field(ge=1, description="The record's version the edit was made from.")
+
+    def describe(self) -> str | None:
+        return f"Change {', '.join(sorted(self.fields))} of {self.record.kind} {self.record.id}"
+
+
 class TextEditOp(OpModel):
     """The person's own new text for a long text field, written here: it becomes the field's text at once, with the
     person as author of every passage it changes. Only the person (an edit on screen or their own action) uses it."""
@@ -327,6 +341,7 @@ Op = Annotated[
     | RecordDeleteOp
     | FileAddOp
     | ProjectAddOp
+    | RecordEditOp
     | TextEditOp
     | TextProposeOp
     | TextAcceptOp
@@ -349,6 +364,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "record.delete": RecordDeleteOp,
     "file.add": FileAddOp,
     "project.add": ProjectAddOp,
+    "record.edit": RecordEditOp,
     "text.edit": TextEditOp,
     "text.propose": TextProposeOp,
     "text.accept": TextAcceptOp,
@@ -357,7 +373,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
 }
 
 #: Ops only the person makes: from anyone else they are refused, never held.
-PERSON_ONLY_OPS = {"text.edit", "text.accept", "text.discard"}
+PERSON_ONLY_OPS = {"text.edit", "text.accept", "text.discard", "record.edit"}
 
 TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {"record.delete": "system", "project.add": "system"}
 

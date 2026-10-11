@@ -10,6 +10,42 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.15 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Collections:** a record type with `layout_collection = True` writes every record whose `layout` renders the same
+  path into one YAML file, a list of entries each with its id, sorted by `layout_sort` (the id when unset). Record
+  types with long text can't be collections.
+- **Paths through a reference:** a layout may use `{ref.field}` (with a format, `{chapter.order:02}`), where `ref` is a
+  field holding one `RefTo` id and `field` a field of the record it refers to. Checked at load. A missing record or
+  value becomes the id.
+- **Generated files:** `registrar.derived_file(name, path=, depends_on=, render=)`, listed in
+  `provides.derived_files`. `render(project, view, settings) -> str | None` makes a read-only file at `path` in each
+  project's folder, for every project with records of a kind in `depends_on`. It runs each time the folder is
+  written, so it must be pure and quick. An edit made outside is reported and overwritten; a render that raises turns
+  the plugin off.
+- **`record.edit`, a new core op:** the person's own change to fields of any record, core or a plugin's (not long
+  text, the stage, the id or `ext`), checked against the record type, its unique groups and references. Person only.
+- **Outside edits come back:** with `storage.sync.watch_outside_edits` (default true), a readable file changed in
+  another program becomes a proposal. Nothing applies without the person:
+  - **long text:** a pending `text.propose` made from the version written there, noted "edited outside the cockpit";
+  - **fields:** a held `record.edit`;
+  - **a collection:**
+    - a changed entry: a held `record.edit`;
+    - a removed entry: a held `record.delete`;
+    - an added entry: reported, not created.
+  - **a working copy in `working/`:** taken back by its format.
+
+  Each change is handled once. Once the person has decided, the file is written again from the records.
+- **More in the folder:**
+  - **sources:** texts handed in, and files the person added, go in the project's `sources/`;
+  - **outputs:** files the person approved from actions go in `outputs/`, the newest of each;
+  - **working copies:** copies that are out go in `working/`;
+  - **the machine copy** now holds the bytes of every file and source, so a handover carries them.
+
+  A deleted source, output or working copy is reported, not written again.
+
 ## What 0.3.14 adds
 
 Manifests stay `'>=0.3,<0.4'`.

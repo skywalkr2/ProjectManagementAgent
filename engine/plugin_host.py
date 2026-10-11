@@ -374,6 +374,7 @@ class PluginHost:
             ("lints", registrar.lints),
             ("text_formats", registrar.text_formats),
             ("working_copies", registrar.working_copies),
+            ("derived_files", registrar.derived_files),
         ):
             if set(getattr(expected, key)) != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
@@ -458,11 +459,15 @@ class PluginHost:
             for name in (task.prompt, task.playbook):
                 if "/" in name and not name.startswith(registrar.name + "/"):
                     raise ValueError("a task's prompt and guidance are core ones or the plugin's own")
+        for derived in registrar.derived_files.values():
+            unknown = [k for k in derived.depends_on if k not in REGISTRY and k not in registrar.records]
+            if unknown:
+                raise ValueError(f"generated file {derived.name} depends on an unknown record kind {unknown[0]}")
         for model in registrar.records.values():
             if getattr(model, "layout", None) is not None:
                 from engine.sync import check_layout
 
-                check_layout(model.layout, model)
+                check_layout(model.layout, model, {**REGISTRY, **registrar.records})
             if "stage" in vars(model).get("__annotations__", {}):
                 raise ValueError("the stage field belongs to the core; record types may not redefine it")
         for op in registrar.ops.values():

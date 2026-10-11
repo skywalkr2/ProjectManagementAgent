@@ -36,6 +36,7 @@ from engine.ops import (
     QuestionAddOp,
     QuestionDoneOp,
     RecordDeleteOp,
+    RecordEditOp,
     RecordLogOp,
     RecordSetOp,
     StageMoveOp,
@@ -122,7 +123,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             refuse(i, "allowed-ops", f"{name} isn't an op this task may use")
             continue
         if name in PERSON_ONLY_OPS and ctx.actor != "pm":
-            refuse(i, "person-only", f"only the person can {name.split('.', 1)[1]} text")
+            refuse(i, "person-only", f"only the person can use {name}")
             continue
         if isinstance(op, (TextEditOp, TextProposeOp, TextDraftOp)):
             why = _text_target(ctx.store, view, op.record.kind, op.record.id, op.field)
@@ -187,6 +188,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"question {op.id} is already closed")
             elif evidence is not None and not _shares_words(evidence.quote, target.data["title"] + " " + op.answer):
                 lint(i, "evidence-fit", f"the quote doesn't seem to answer question {op.id}")
+        if isinstance(op, RecordEditOp):
+            why = edit_problem(ctx.store, view, op)
+            if why:
+                refuse(i, "targets", why)
         if isinstance(op, RecordSetOp):
             target = view.get(op.kind, op.id)
             if target is None:
@@ -381,6 +386,50 @@ def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | N
     return " ".join(text.split())[:200] if isinstance(text, str) and text.strip() else None
 
 
+def edit_problem(store: Store, view: Any, op: Any) -> str | None:
+    """Why a record.edit can't apply, or None: the fields must exist, be ordinary fields, and leave the record valid,
+    its unique groups unique and its references pointing at records that exist."""
+    from engine.records import ref_fields, values_at
+    from engine.texts import long_text_fields
+
+    model = store.plugins.records.get(op.record.kind)
+    current = view.get(op.record.kind, op.record.id)
+    if model is None or current is None:
+        return f"there is no {op.record.kind} {op.record.id}"
+    if not op.fields:
+        return "nothing to change"
+    closed = {"id", "stage", "ext"} | set(long_text_fields(model))
+    for name in op.fields:
+        if name not in model.model_fields:
+            return f"{op.record.kind} has no field {name}"
+        if name in closed:
+            return f"{name} can't be changed this way"
+    merged = {**current.data, **op.fields}
+    try:
+        model.model_validate(merged)
+    except ValidationError as err:
+        first = err.errors()[0]
+        return f"{'.'.join(str(p) for p in first['loc'])}: {first['msg']}"
+    for group in model.unique:
+        if set(group) & set(op.fields):
+            equals = {f: merged.get(f) for f in group}
+            if any(s.id != current.id for s in view.find(op.record.kind, equals)):
+                return f"there is already a {op.record.kind} with " + ", ".join(f"{f}={v}" for f, v in equals.items())
+    for path, target in ref_fields(model):
+        if path.split(".")[0].removesuffix("[]") in op.fields:
+            for value in values_at(op.fields, path):
+                if value is not None and view.get(target, value) is None:
+                    return f"{path.replace('[]', '')} refers to {target} {value}, which doesn't exist"
+    return None
+
+
+def edit_record(store: Store, tx: Tx, op: Any, w: WriteContext) -> None:
+    why = edit_problem(store, tx, op)
+    if why:
+        raise StoreError(why)
+    tx.update(op.record.kind, op.record.id, dict(op.fields), w, read_version=op.read_version)
+
+
 def apply_changeset(
     cs: ChangesetIn,
     problems: list[Problem],
@@ -558,6 +607,9 @@ def _apply_op(
         return apply_move(ctx.store, tx, op, w), None
     if "/" in op.op:
         return ctx.store.plugins.apply(tx, op, w), None
+    if isinstance(op, RecordEditOp):
+        edit_record(ctx.store, tx, op, w)
+        return [{"kind": op.record.kind, "id": op.record.id}], None
     if isinstance(op, RecordDeleteOp):
         kind, rid = op.record.kind, op.record.id
         users = ctx.store.plugins._referrers(tx)(kind, rid)

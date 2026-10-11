@@ -163,6 +163,11 @@ class SyncSettings(ConfigModel):
         "workspace is written there, one folder per project, readable in any editor. Empty: off. The workspace "
         "itself must not be inside it.",
     )
+    watch_outside_edits: bool = Field(
+        True,
+        description="Bring back edits made to the folder's files in other programs, as changes for you to review. "
+        "Off: they are only reported, and the files are left as they are.",
+    )
     lease_stale_after_minutes: int = Field(
         10,
         ge=1,

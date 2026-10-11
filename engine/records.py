@@ -41,6 +41,12 @@ class Record(BaseModel):
     #: `record.yaml` and a file per field. Every version of its long text is kept beside it, in `.versions/`. None:
     #: the record is only in the folder's machine copy.
     layout: ClassVar[str | None] = None
+    #: With a layout, write every record whose path renders the same into one YAML file: a list of entries, each with
+    #: its id. Not for record types with long text. Edits made outside come back per entry: a changed entry as a
+    #: field edit and a removed one as a delete, both waiting for the person; an added entry is reported, not created.
+    layout_collection: ClassVar[bool] = False
+    #: The field a collection's entries are sorted by (the id when unset).
+    layout_sort: ClassVar[str | None] = None
 
     id: str = Field(description='The record\'s id: "<prefix>-<number>", never reused.')
     stage: str | None = Field(None, description="Current configured stage id; wording lives in stages.yaml.")

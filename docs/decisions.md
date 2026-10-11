@@ -172,6 +172,32 @@ the text and what it costs stay the person's choice.
 **Impact:** Run outcome `refused`; `Request.use`; `GET /api/requests/<id>/accounts` and `use` on retry. Content levels,
 which route around refusals before they happen, come next.
 
+## 2026-10-12: Outside edits, collections and generated files in the synced folder
+
+**Decided by:** Claude (design), building design 5.0 and from plugin questions 59-61; the owner can override.
+
+**What:**
+- Plugin API 0.3.15. Files changed outside come back as proposals: long text pending, field edits and deletes held. A
+  new core op, `record.edit`, carries the person's field changes to any record.
+- Collections put many small records in one YAML file.
+- Layouts can use a referenced record's field.
+- Plugins can declare generated read-only files.
+- Sources, outputs and working copies get readable copies, and file bytes travel in the machine copy.
+- The machine copy now carries file and source bytes, which fixes handover for workspaces with files.
+- Encrypting or leaving out sources above a data level waits until sources and files carry a data level. Until then
+  every source is copied.
+
+**Why:**
+- Writers edit in their own tools. Outside edits must reach the record without ever changing it silently.
+- Many tiny files make a folder unreadable.
+- Records like a chapter's bible entry are named after another record.
+
+**Impact:**
+- Design 5.0.
+- New setting `storage.sync.watch_outside_edits`.
+- Core op `record.edit` is person only and never offered to note reading.
+- The review screens for held edits exist; a screen listing outside edits comes with the UX pass.
+
 ## 2026-10-12: Handing a workspace between computers
 
 **Decided by:** Claude (design), building design 5.0; the owner can override.

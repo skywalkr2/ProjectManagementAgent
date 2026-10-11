@@ -30,7 +30,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from engine.sync import MACHINE, MANIFEST, _write_atomic, folder_problem, placement_problem
+from engine.sync import INDEX, MACHINE, MANIFEST, _write_atomic, folder_problem, placement_problem
 
 LEASE = f"{MACHINE}/lease.json"
 #: Config files that describe one computer, never copied between them.
@@ -117,7 +117,7 @@ def conflict_copies(folder: Path) -> list[str]:
     """Files a sync service seems to have made on a conflict: in the machine copy, anything the manifest doesn't list;
     elsewhere, an unlisted file named like a listed one with something added ("name (1).md", "name-PC.md")."""
     manifest = _manifest(folder)
-    listed = set(manifest) | {MANIFEST, LEASE}
+    listed = set(manifest) | {MANIFEST, LEASE, INDEX, f"{MACHINE}/outside.json"}
     stems: dict[str, set[str]] = {}
     for rel in manifest:
         head, _, name = rel.rpartition("/")
@@ -266,6 +266,8 @@ def load_from_folder(ws: Any, cfg: Any) -> str | None:
     export = _verified(folder, f"{MACHINE}/export/")
     config = _verified(folder, f"{MACHINE}/config/")
     plugin_data = _verified(folder, f"{MACHINE}/plugin-data/")
+    blobs = _verified(folder, f"{MACHINE}/files/")
+    texts = _verified(folder, f"{MACHINE}/sources/")
     with tempfile.TemporaryDirectory(prefix="cockpit-load-") as tmp:
         data_dir, config_dir = Path(tmp) / "export", Path(tmp) / "config"
         shutil.copytree(ws.config_dir, config_dir)
@@ -287,6 +289,10 @@ def load_from_folder(ws: Any, cfg: Any) -> str | None:
             loading.unlink(missing_ok=True)
             raise
         store.close()
+        from engine.sync import restore_bytes
+
+        # Named by hash, so adding them first changes nothing if a later step fails.
+        restore_bytes(ws.root, blobs, texts)
         backup = backup_local(ws, "before-loading-the-synced-folder")
         for rel in config:
             if rel not in PER_COMPUTER:

@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.14"
+PLUGIN_API_VERSION = "0.3.15"
 
 
 class Settings(BaseModel):
@@ -483,6 +483,16 @@ class WorkingCopyContext(ReadView):
 
 
 @dataclass(frozen=True)
+class DerivedFileRegistration:
+    """A registered generated file (host side)."""
+
+    name: str
+    path: str
+    depends_on: tuple[str, ...]
+    render: Callable
+
+
+@dataclass(frozen=True)
 class WorkingCopyRegistration:
     """A registered working-copy format (host side)."""
 
@@ -565,6 +575,7 @@ class Registrar:
         self.lints: dict[str, LintRegistration] = {}
         self.text_formats: dict[str, Callable] = {}
         self.working_copies: dict[str, WorkingCopyRegistration] = {}
+        self.derived_files: dict[str, DerivedFileRegistration] = {}
 
     def _name(self, name: str) -> None:
         if not re.fullmatch(re.escape(self.name) + r"/[a-z][a-z0-9_.-]*", name):
@@ -828,6 +839,21 @@ class Registrar:
         self.working_copies[name] = WorkingCopyRegistration(
             name, label.strip(), extension, media_type, tuple(text_formats), hand_out, take_back
         )
+
+    def derived_file(self, name: str, *, path: str, depends_on: tuple[str, ...], render: Callable) -> None:
+        """A read-only file generated from records into each project's folder in the synced folder (an overview, a
+        sheet of facts). `path` is relative to the project's folder, with an extension ("views/overview.md").
+        `render(project, view, settings) -> str | None` makes its text for one project; None writes nothing. It runs
+        for every project that has records of a kind in `depends_on` (core or own; "project" means every project),
+        each time the folder is written, so it must be pure and quick and never call AI. The file is marked
+        generated: an edit made outside is reported and overwritten, never proposed or loaded."""
+        from engine.sync import check_derived_path
+
+        self._name(name)
+        if name in self.derived_files or not callable(render) or not depends_on:
+            raise ValueError("duplicate generated file, invalid render function or nothing it depends on")
+        check_derived_path(path)
+        self.derived_files[name] = DerivedFileRegistration(name, path, tuple(depends_on), render)
 
     def lint(self, name: str, fn: Callable, *, ops: tuple[str, ...], severity: str = "warn") -> None:
         """A soft check on the assistant's proposals: `fn(op, view, settings) -> list[LintFinding]` runs on every op

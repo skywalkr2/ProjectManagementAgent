@@ -101,9 +101,16 @@ repositories, so neither ever lives in the synced folder:
   changeset is not one the local copy has seen, and the local copy has changes the folder lacks), nothing loads. The person
   chooses which history to keep (`cockpit sync keep --here` or `--folder`); the other is saved as a backup. Duplicate files a sync service creates on conflict are found,
   shown, and never loaded.
-- **Edits made outside:** the folder is watched (the local-folder connector). A long-text file changed in another editor comes
-  back as a proposed version (`text.propose`, 6.7) for the person to review, marked as edited outside the cockpit, never
-  applied silently.
+- **Edits made outside:** the folder is checked for changes every few seconds (`storage.sync.watch_outside_edits`). Long
+  text changed in another editor comes back as a proposed version (`text.propose`, 6.7) made from the version written
+  there, marked as edited outside the cockpit. Changed fields come back as a `record.edit` held for the person; in a
+  collection file, changed entries come back as held edits and removed ones as held deletes, while added entries are
+  reported (creating a record takes its plugin's op). Nothing applies silently. Each change is handled once, and once the
+  person has decided, the file is written again from the records. History, sources, outputs and generated files are never
+  read back.
+- **Collections and generated files:** a record type can put all its records for one path in a single YAML list
+  (`layout_collection`), and a layout can use a field of a referenced record (`{chapter.order:02}`). A plugin can declare
+  generated read-only files rendered from its records; an edit made to one outside is reported and it is rebuilt.
 
 **Working copies.** People often write and edit long text in the desktop tools they already use, not in the cockpit. A plugin
 that registers a working-copy format (3.3) can hand a `long_text` field out as a file in that tool's format and take it back:

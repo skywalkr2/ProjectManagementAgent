@@ -17,6 +17,7 @@ NOT_FROM_NOTES = {
     "record.delete",
     "file.add",
     "project.add",
+    "record.edit",
     "text.edit",
     "text.propose",
     "text.accept",

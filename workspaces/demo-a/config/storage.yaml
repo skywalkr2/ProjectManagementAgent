@@ -16,4 +16,5 @@ files:
   max_total_mb: 2000
 sync:
   folder: ""   # e.g. ~/CloudDrive/cockpit; off until set
+  watch_outside_edits: true
   lease_stale_after_minutes: 10
