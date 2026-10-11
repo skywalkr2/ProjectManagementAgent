@@ -336,6 +336,17 @@ def build() -> str:
                 for name in ("connector_context", "read")
             ),
             "#### Reply and Asked\n\n" + _para(_doc(testing.Reply)) + " " + _para(_doc(testing.Asked)),
+            "### Testing everything else: `plugin_workspace`\n\n"
+            + _join(
+                f"#### `plugin_workspace{inspect.signature(testing.plugin_workspace)}`",
+                _para(_doc(testing.plugin_workspace)),
+            ),
+            _para(_doc(testing.PluginWorkspace)),
+            _methods(testing.PluginWorkspace, "ws"),
+            "\n\n".join(
+                _join(f"#### {cls.__name__}", _para(_doc(cls)))
+                for cls in (testing.Outcome, testing.AskResult, testing.ActionResult)
+            ),
         ),
         _section(
             "Errors",

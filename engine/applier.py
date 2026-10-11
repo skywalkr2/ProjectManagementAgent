@@ -9,7 +9,7 @@ dropped and shown, returned lints hold an op that would reach another person and
 from __future__ import annotations
 
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, date, datetime
 from typing import Any, Literal
 
@@ -110,6 +110,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems: list[Problem] = [
         Problem("plugin-validator", "refuse", i, message) for i, message in _validate_in_order(cs, ctx)
     ]
+    problems += _required_ops(cs, ctx)
     view = ctx.store.read()
     lints = ctx.cfg.checks.lints
     open_actions = [a for a in view.list("action") if a.data["status"] != "done"]
@@ -461,7 +462,7 @@ def edit_problem(store: Store, view: Any, op: Any) -> str | None:
         return f"there is no {op.record.kind} {op.record.id}"
     if not op.fields:
         return "nothing to change"
-    closed = {"id", "stage", "ext"} | set(long_text_fields(model))
+    closed = {"id", "stage", "ext"} | set(long_text_fields(model)) | set(getattr(model, "fixed_fields", ()))
     for name in op.fields:
         if name not in model.model_fields:
             return f"{op.record.kind} has no field {name}"
@@ -513,13 +514,15 @@ def apply_changeset(
     for p in problems:
         if p.op is not None:
             by_op.setdefault(p.op, []).append(p)
+    # A refusal of the answer as a whole (it lacks an op its task kind requires) refuses every op in it.
+    whole = [p for p in problems if p.op is None and p.severity == "refuse"]
 
     try:
         with ctx.store.transaction() as tx:
             cs_id = tx.new_id("changeset")
             outcomes: list[OpOutcome] = []
             for i, op in enumerate(cs.ops):
-                mine = list(by_op.get(i, []))
+                mine = list(by_op.get(i, [])) + [replace(p, op=i) for p in whole]
                 known = {p.message for p in mine if p.check == "plugin-validator"}
                 mine += [
                     Problem("plugin-validator", "refuse", i, message)
@@ -568,6 +571,8 @@ def apply_changeset(
                     outcome.reason = "Waiting for you to say who this is"
                 outcomes.append(outcome)
             status = "held" if any(o.status == "held" for o in outcomes) else "applied"
+            if whole:
+                status = "rejected"
             refused = [o for o in outcomes if o.status == "refused"]
             if all_or_nothing and refused:
                 raise _AllOrNothing(outcomes)  # rolls back everything applied above
@@ -642,6 +647,21 @@ def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
     if isinstance(op, PersonAddOp) and ctx.inputs.trust == "untrusted" and not ctx.confirmed_by_pm:
         return "A new person named only in outside content: add them?"
     return None
+
+
+def _required_ops(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """An answer to a task kind with `requires_ops` must include one of them; one that doesn't is refused, so it gets
+    a fix round like any invariant."""
+    task = origin_of(ctx).get("task")
+    try:
+        kind = ctx.store.plugins.task_kind(task) if task else None
+    except Exception:
+        kind = None
+    required = getattr(kind, "requires_ops", ())
+    if not required or any(op.op in required for op in cs.ops):
+        return []
+    names = ", ".join(required)
+    return [Problem("required-ops", "refuse", None, f"the answer must include at least one of these ops: {names}")]
 
 
 def origin_of(ctx: Context) -> dict[str, Any]:

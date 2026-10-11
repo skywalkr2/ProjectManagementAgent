@@ -52,6 +52,8 @@ class Record(BaseModel):
     #: For a record with no project of its own: the reference field whose record's project it is placed under in the
     #: synced folder (a chapter's entry, under the chapter's book).
     layout_project: ClassVar[str | None] = None
+    #: Fields that never change once the record is made: no edit, the person's included, may set them.
+    fixed_fields: ClassVar[tuple[str, ...]] = ()
 
     id: str = Field(description='The record\'s id: "<prefix>-<number>", never reused.')
     stage: str | None = Field(None, description="Current configured stage id; wording lives in stages.yaml.")
@@ -380,10 +382,11 @@ class Watched(BaseModel):
 
 class Source(Record):
     """One input the workspace received, such as pasted text; the text is kept by its hash. The engine adds it when
-    something is handed in, and it is never edited."""
+    something is handed in, and its content never changes; the person may mark how it may be quoted."""
 
     record_kind: ClassVar[str] = "source"
     prefix: ClassVar[str] = "SRC"
+    fixed_fields: ClassVar[tuple[str, ...]] = ("received_at", "kind", "content_hash", "trust", "url", "watched")
 
     received_at: datetime = Field(description="When the input arrived.")
     kind: str = Field(description="How it arrived, such as pasted.")
@@ -395,6 +398,11 @@ class Source(Record):
     projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")
     url: str | None = Field(None, description="Where it came from, when it has an address.")
     watched: Watched | None = Field(None, description="For an input a watcher found: where and what changed.")
+    excerpts: Literal["allowed", "never"] = Field(
+        "allowed",
+        description="never: the person allows using this source but never quoting it beyond a word or two; checks "
+        "that compare drafts with sources apply a stricter limit to it. Set by the person only.",
+    )
 
 
 class File(Record):

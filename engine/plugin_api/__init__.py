@@ -35,7 +35,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal, get_args, get_origin
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from engine.config.schema import StageDefinition, TypeStages
 from engine.ops import EvidenceIn, OpModel, Tier
@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.48"
+PLUGIN_API_VERSION = "0.3.49"
 
 
 class Settings(BaseModel):
@@ -56,6 +56,33 @@ class Settings(BaseModel):
 
     model_config = ConfigDict(extra="forbid", validate_default=True)
     version: Literal[1] = Field(1, description="Settings format version.")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _renamed(cls, data: Any) -> Any:
+        """Read a key under its old name for a field declaring `json_schema_extra={"renamed_from": "<old>"}` (or a
+        list of old names): the value moves to the new name unless the new one is set, and the old key is dropped.
+        Saving the add-on's settings on the Settings screen writes the new name; `renamed_keys(data)` says which old
+        names a file still uses."""
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        for name, old in cls.renamed_keys(data):
+            value = data.pop(old)
+            data.setdefault(name, value)
+        return data
+
+    @classmethod
+    def renamed_keys(cls, data: Any) -> list[tuple[str, str]]:
+        """(new name, old name) for every old name a settings mapping still uses."""
+        found = []
+        for name, info in cls.model_fields.items():
+            extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
+            olds = extra.get("renamed_from") or ()
+            for old in [olds] if isinstance(olds, str) else list(olds):
+                if isinstance(data, dict) and old in data and old not in cls.model_fields:
+                    found.append((info.alias or name, old))
+        return found
 
 
 class PluginMisuse(StoreError):
@@ -1105,6 +1132,7 @@ class Registrar:
         expected_output: int | None = None,
         temperature: float | None = None,
         all_or_nothing: bool = False,
+        requires_ops: tuple[str, ...] | list[str] = (),
     ) -> None:
         """Register AI work: the core or own ops its answer may use, and `label`, what to call it on screen.
 
@@ -1153,7 +1181,12 @@ class Registrar:
 
         `all_or_nothing=True` applies an answer's ops together: if any is refused, none applies, and the changeset is
         recorded as refused with each op's reason, for ops that depend on each other (notes that summarize findings
-        made in the same answer). Ops held for the person still wait as usual."""
+        made in the same answer). Ops held for the person still wait as usual.
+
+        `requires_ops` names ops (from `ops`) an answer must include at least one of, for work whose every answer
+        reports (findings, or an explicit "nothing found"): an answer with none of them is refused like any
+        invariant, which gets the usual fix round, then a stronger tier; one still without them is held for the
+        person as refused."""
         from engine.config.schema import TaskSettings
 
         self._name(name)
@@ -1175,6 +1208,8 @@ class Registrar:
             ops = ("text.draft",)
         if name in self.tasks or not ops:
             raise ValueError("duplicate task kind or empty op list")
+        if not set(requires_ops) <= set(ops):
+            raise ValueError("requires_ops names ops the task kind's answers may use")
         if packet is not None and not callable(packet):
             raise ValueError("packet must be callable")
         defaults = {
@@ -1209,6 +1244,7 @@ class Registrar:
             start_where=start_narrowed,
             role=role,
             all_or_nothing=bool(all_or_nothing),
+            requires_ops=tuple(requires_ops),
         )
 
     def _own_file(self, name: str, folder: str) -> Path | None:

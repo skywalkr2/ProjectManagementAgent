@@ -275,6 +275,14 @@ def save(
     for key in reset:
         name, *path = key.split(".")
         texts[name] = remove_key(texts[name], path)
+    for name in texts:
+        if name in models and hasattr(models[name], "renamed_keys"):
+            # An add-on's renamed setting is written under its new name, and the old name goes.
+            data = yaml.safe_load(texts[name]) or {}
+            for new_name, old_name in models[name].renamed_keys(data):
+                texts[name] = remove_key(texts[name], [old_name])
+                if new_name not in data:
+                    texts[name] = set_key(texts[name], [new_name], data[old_name])
     core = {name: text for name, text in texts.items() if name not in models}
     checked = _check_whole(config_dir, core, env) if core else cfg
     for name, text in texts.items():

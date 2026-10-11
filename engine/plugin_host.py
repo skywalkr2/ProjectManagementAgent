@@ -1097,6 +1097,11 @@ class PluginHost:
             config_path = self.store.path.parent / "config" / "plugins" / f"{name}.yaml"
             raw = yaml.safe_load(config_path.read_text()) if config_path.exists() else {}
             config = schema.model_validate({} if raw is None else raw)
+            for new_name, old_name in schema.renamed_keys(raw):
+                self.status[name].notes.append(
+                    f"its settings file uses the old name {old_name}; it now reads as {new_name}. Saving its "
+                    "settings on the Settings screen writes the new name."
+                )
             registrar = Registrar(name, config, path.parent)
             symbols(manifest.entry)(registrar)
             self._validate(manifest, registrar)

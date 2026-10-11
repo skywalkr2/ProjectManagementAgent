@@ -51,6 +51,7 @@ class TaskKind:
     where: dict[str, tuple[Any, ...]] = _field(default_factory=dict)  # field values a record of kind `on` must have
     start_where: dict[str, tuple[Any, ...]] = _field(default_factory=dict)  # and, for runs the person starts, these
     all_or_nothing: bool = False  # the answer's ops apply together or not at all
+    requires_ops: tuple[str, ...] = ()  # an answer must include at least one of these ops
 
     def offered_on(self, record: Any, texts: Callable[[str], bool | None] | None = None) -> bool:
         """Whether this work applies to a record (of kind `on`): every `where` field holds one of its values."""

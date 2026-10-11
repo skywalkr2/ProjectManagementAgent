@@ -10,6 +10,25 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.49 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A source never to be quoted:** a core `source` has `excerpts` ("allowed" or "never"), set by the person only
+  (`record.edit`). Checks that compare drafts with sources can read it and apply a stricter limit. A source's content
+  fields (its hash, kind, trust, address, when it arrived) are now fixed: no edit changes them.
+- **Renaming a setting:** a plugin `Settings` field may declare `json_schema_extra={"renamed_from": "<old name>"}`
+  (or a list). A settings file still using the old name reads as the new one, the plugin's status says so, and saving
+  the plugin's settings on the Settings screen writes the new name. Keep the old name for one version.
+- **`task_kind(..., requires_ops=(...))`:** an answer must include at least one of these ops. One without them is
+  refused as a whole (every op in it), which gets the usual fix round, then a stronger tier; one still without them
+  is recorded as rejected.
+- **The testing kit's throwaway workspace:** `engine.plugin_api.testing.plugin_workspace(<plugin folder>,
+  settings=..., root=tmp_path)` loads the plugin in a copy of the fictional demo workspace, with `apply` (as the
+  person or the assistant), `ask` (a task kind with a scripted answer, through the dispatcher), `action`, `emit`,
+  `move_stage`, `stage_status`, `view` and `folder`. Plugin tests that used the host's internals can move to it.
+- **Publishing a pack:** a pack that ships files its source control ignores builds its wheel from the checkout.
+
 ## What 0.3.48 adds
 
 Manifests stay `'>=0.3,<0.4'`.

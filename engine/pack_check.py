@@ -23,8 +23,12 @@ Publishing a pack (the process every plugin repository follows; the catalog's PU
    pack's tests, a run in the demo sandbox) and opens a pull request on the catalog with the entry, saying what the
    pack adds, reaches and keeps, and what changed in what it asks for since its last listing.
 
-6. **The owner decides:** the pack is listed when the owner merges that pull request, never before. Updates follow
-   the same path.
+6. **The owner decides:** the pack is listed only once the owner has said it may be, and the pull request is merged
+   (by the owner, or by the host's session when the owner has handed it that). Updates follow the same path.
+
+A pack that ships files its source control ignores (an app registration written by the release build, say) builds
+its wheel straight from the checkout: a wheel built from the source archive leaves such files out. Check the built
+package holds them before publishing.
 
 The check reports each finding in plain words and passes only when every one does.
 """
