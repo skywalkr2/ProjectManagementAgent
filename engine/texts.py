@@ -705,19 +705,23 @@ def anchored_authors(
 
 def check_part(kind: Any, part: dict[str, Any] | None) -> dict[str, Any] | None:
     """A request's part of a text, checked against its task kind: a span ({first, last}, paragraph numbers from 1) for
-    an anchored draft, a place ({after}: a paragraph number, 0 for the start or "end") for any other draft; with the
+    an anchored draft or for work that answers with ops (which reads that part; the core passes it on and uses it for
+    nothing else), a place ({after}: a paragraph number, 0 for the start or "end") for any other draft; with the
     {base} version number they refer to, if given. Raises ValueError with the reason."""
     if part is None:
         return None
-    if getattr(kind, "output", "ops") != "draft":
-        raise ValueError("only a draft can be about part of a text")
+    drafting = getattr(kind, "output", "ops") == "draft"
     base = part.get("base")
     if base is not None and (not isinstance(base, int) or base < 1):
         raise ValueError("base is a version number")
-    if getattr(kind, "anchored", False):
+    if getattr(kind, "anchored", False) or not drafting:
         first, last = part.get("first"), part.get("last")
         if set(part) - {"first", "last", "base"} or not isinstance(first, int) or not isinstance(last, int):
-            raise ValueError("an anchored draft's part is {first, last}: the paragraph numbers it revises")
+            raise ValueError(
+                "an anchored draft's part is {first, last}: the paragraph numbers it revises"
+                if drafting
+                else "this work's part is {first, last}: the paragraph numbers it reads"
+            )
         if not 1 <= first <= last:
             raise ValueError("a span runs from paragraph first to paragraph last, counting from 1")
         return {"first": first, "last": last, "base": base}

@@ -34,10 +34,13 @@ def hand_in(
     pasted: str = "",
     now: datetime | None = None,
     data_level: str | None = None,
+    project: str | None = None,
 ) -> HandedIn:
     note, pasted = note.strip(), pasted.strip()
     if not note and not pasted:
         raise IntakeError("Nothing to hand in: add a note or paste something.")
+    if project is not None and store.read().get("project", project) is None:
+        raise IntakeError(f"There is no project {project}.")
     now = now or datetime.now(UTC)
     source_id = None
     with store.transaction() as tx:
@@ -70,6 +73,7 @@ def hand_in(
                 "waiting": "With the assistant, starting now",
                 "created_at": now.isoformat(),
                 **({"sensitivity": data_level} if data_level else {}),
+                **({"project": project} if project else {}),
             },
             _PM,
         )

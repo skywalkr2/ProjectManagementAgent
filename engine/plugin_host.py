@@ -193,8 +193,9 @@ class PluginHost:
                 if ep.name in self.cfg.workspace.plugins.enabled:
                     self.disable(ep.name, str(err))
 
-    def note_candidates(self, allowed: tuple[str, ...]) -> str:
-        """The records offered ops may name, for the notes packet: one block per op that lists them."""
+    def note_candidates(self, allowed: tuple[str, ...], project: str | None = None) -> str:
+        """The records offered ops may name, for the notes packet: one block per op that lists them. A candidates
+        function taking a third argument gets the project the note was handed in for (or None)."""
         from engine.plugin_api import ReadView
 
         blocks = []
@@ -207,7 +208,10 @@ class PluginHost:
                 reader = self._with_files(ReadView(self.store.read(), plugin))
                 where = f"candidates for {name}"
                 try:
-                    found = list(op.candidates(reader, registrar.config.model_copy(deep=True)))[:50]
+                    args = [reader, registrar.config.model_copy(deep=True)]
+                    if _positional_count(op.candidates) >= 3:
+                        args.append(project)
+                    found = list(op.candidates(*args))[:50]
                     lines = [f"- {str(i)}: {' '.join(str(n).split())[:120]}" for i, n in found]
                 except Exception as err:
                     self.failed(plugin, where, err)

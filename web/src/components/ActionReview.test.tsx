@@ -349,8 +349,8 @@ test("work the action also starts is listed with what it is about, and says each
     [PREVIEW_URL]: () =>
       proposal({
         requests: [
-          { task: "demo/check", label: "Check the chapter", about: { kind: "demo/chapter", id: "CH-1" }, note: "" },
-          { task: "demo/other", label: "Summarize everything", about: null, note: "" },
+          { id: "r1", kept: true, task: "demo/check", label: "Check the chapter", about: { kind: "demo/chapter", id: "CH-1" }, note: "" },
+          { id: "r2", kept: true, task: "demo/other", label: "Summarize everything", about: null, note: "" },
         ],
       }),
     "GET record?kind=demo%2Fchapter&id=CH-1": () => ({ kind: "demo/chapter", id: "CH-1", version: 1, fields: { title: "The first chapter" }, long_text: [] }),

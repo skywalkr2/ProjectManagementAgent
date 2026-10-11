@@ -175,6 +175,9 @@ export const api = {
     }),
   dropCopy: (copy: string) => call<S["Ok"]>("POST", `working-copies/${id(copy)}/drop`),
 
+  packs: () => call<S["PacksView"]>("GET", "packs"),
+  refreshPacks: () => call<S["PacksView"]>("POST", "packs/refresh"),
+
   signIns: () => call<S["SignInView"][]>("GET", "sign-ins"),
   startSignIn: (name: string) => call<S["SignInStarted"]>("POST", `sign-ins/${named(name)}/start`),
   signOut: (name: string) => call<S["Ok"]>("DELETE", `sign-ins/${named(name)}`),

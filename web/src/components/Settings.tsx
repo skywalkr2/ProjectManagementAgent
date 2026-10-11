@@ -22,7 +22,7 @@ import { SignIns } from "./SignIns";
 
 type Edits = Record<string, Draft>;
 
-export function Settings(props: { onOpenGuide: () => void }) {
+export function Settings(props: { onOpenGuide: () => void; onOpenAddons: () => void }) {
   const { t, tn, has } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
@@ -86,9 +86,14 @@ export function Settings(props: { onOpenGuide: () => void }) {
     <section className="panel-section" aria-labelledby="settings-title">
       <div className="heading">
         <h2 id="settings-title">{t("settings.title")}</h2>
-        <button type="button" className="btn" onClick={props.onOpenGuide}>
-          {t("settings.open_guide")}
-        </button>
+        <div className="acts">
+          <button type="button" className="btn" onClick={props.onOpenAddons}>
+            {t("settings.open_addons")}
+          </button>
+          <button type="button" className="btn" onClick={props.onOpenGuide}>
+            {t("settings.open_guide")}
+          </button>
+        </div>
       </div>
       <p className="hint">{t("settings.intro")}</p>
       <div className="settings-tools">

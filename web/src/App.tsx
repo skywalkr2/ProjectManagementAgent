@@ -8,6 +8,7 @@ import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
 import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
 import { useWords } from "./lib/wording";
+import { Addons } from "./components/Addons";
 import { Ask } from "./components/Ask";
 import { AssistantNotice } from "./components/AssistantNotice";
 import { DemoStrip } from "./components/DemoStrip";
@@ -111,7 +112,9 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
         ) : view === "welcome" ? (
           <Welcome focusStep={guideStep} onOpenPeople={() => setView("setup")} onHandIn={() => setHandIn(true)} />
         ) : view === "settings" ? (
-          <Settings onOpenGuide={() => openGuide()} />
+          <Settings onOpenGuide={() => openGuide()} onOpenAddons={() => setView("addons")} />
+        ) : view === "addons" ? (
+          <Addons onBack={() => setView("settings")} />
         ) : (
           <Setup />
         )}

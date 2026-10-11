@@ -84,7 +84,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     from engine.dispatcher import _data_level, ops_for_level
 
     offered = ops_for_level(store, kind.ops, _data_level(store, req.data)) if kind.name == "notes" else kind.ops
-    candidates = store.plugins.note_candidates(offered) if kind.name == "notes" else ""
+    candidates = store.plugins.note_candidates(offered, req.data.get("project")) if kind.name == "notes" else ""
     stable = "\n\n".join(
         part
         for part in (
@@ -99,6 +99,10 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         if part.strip()
     )
     request_parts = [f"Today is {today.isoformat()} ({today.strftime('%A')})."]
+    about_project = store.read().get("project", req.data["project"]) if req.data.get("project") else None
+    if about_project is not None:
+        # The person said which project this is about; their choice, so it is trusted.
+        request_parts.append(f"This is about the project {about_project.data['name']} ({about_project.id}).")
     if req.data.get("stage_start"):
         origin = req.data["stage_start"]
         record = store.read().get(origin["kind"], origin["record"])

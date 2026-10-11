@@ -38,7 +38,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.33"
+PLUGIN_API_VERSION = "0.3.34"
 
 
 class Settings(BaseModel):
@@ -583,7 +583,9 @@ class Proposal:
     #: The ops only make sense together (an import): if any is refused when applied, none applies.
     all_or_nothing: bool = False
     #: AI work to queue when the person applies it: {"task": one of this plugin's task kinds, "about": (kind, id)
-    #: or None, "note": ""}. Each waits for the person's go, whatever it costs.
+    #: or None, "note": "", "part": the part of a text it is about, "group": a group id}. Each waits for the
+    #: person's go, whatever it costs. The person keeps or drops each one on the review (a request in a group is
+    #: set with its group); one about an item is dropped with that item.
     requests: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -901,7 +903,8 @@ class Registrar:
         core's reading of notes, so the assistant can use it on what the person hands in: give it an `EvidenceIn`
         field, which the core checks against the input, for anything it claims. It is offered only when the note's
         data level covers every record type the op writes, so a note handed in as internal never writes restricted
-        records. `candidates(view, settings) -> list[(id, name)]` lists records such an op may name, shown to the run
+        records. `candidates(view, settings[, project]) -> list[(id, name)]` lists records such an op may name (with a
+        third argument, it gets the id of the project the note was handed in for, or None), shown to the run
         (at most 50, at the level of the record types the op writes), so it can refer to an existing one by id."""
         if not issubclass(model, OpModel) or "op" not in model.model_fields:
             raise ValueError("op requires an OpModel with a literal op identifier")

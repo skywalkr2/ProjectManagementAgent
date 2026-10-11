@@ -24,7 +24,7 @@ const LIST = [
 ];
 
 const settings = { "GET settings": () => ({ fingerprint: "fp", items: [] }) };
-const open = () => renderApp(<Settings onOpenGuide={() => undefined} />);
+const open = () => renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} />);
 const row = (label: string) => screen.getByText(label).closest("li") as HTMLElement;
 
 let assign: ReturnType<typeof vi.fn>;

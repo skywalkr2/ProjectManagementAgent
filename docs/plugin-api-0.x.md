@@ -10,6 +10,21 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.34 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A part for work that answers with ops:** a request of any task kind may name a span of a long text, `{first,
+  last}` paragraph numbers (with `base`). For a kind that answers with ops, the core checks the shape and passes the
+  span to the packet (`view.part`) and to validators (`origin["part"]`); it doesn't use it for the answer. Drafts keep
+  their parts as before.
+- **A hand-in names its project:** the person can say which project a hand-in is about (`project` on the hand-in). The
+  reading is told so, and a `candidates` function taking a third argument gets that project's id (or None), so it can
+  list that project's records first.
+- **Keeping or dropping offered work:** each of a proposal's `requests` gets an id (`r1`, `r2`, ...) and is kept or
+  dropped on the review, like an item. A request may name a proposal `group`, so setting the group sets it too. A
+  request about an item is still dropped with that item.
+
 ## What 0.3.33 adds
 
 Manifests stay `'>=0.3,<0.4'`.

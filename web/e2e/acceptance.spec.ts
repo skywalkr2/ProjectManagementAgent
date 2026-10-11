@@ -470,6 +470,20 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
+  test("Add-ons opens from Settings, lists the bundled add-on under Installed, and passes the accessibility checks", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("button", { name: "Settings" }).click();
+    await page.getByRole("button", { name: "Add-ons" }).click();
+    await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Available" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByText(/This copy of the app doesn't list a catalog/)).toBeVisible();
+    await checkAccessibility(page);
+    await page.getByRole("tab", { name: "Installed" }).click();
+    await expect(page.getByRole("tab", { name: "Installed" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("listitem", { name: "example", exact: true })).toBeVisible();
+    await checkAccessibility(page);
+  });
+
   test("on a wide screen the Hand something in button stays on one line beside the views", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await signIn(page);

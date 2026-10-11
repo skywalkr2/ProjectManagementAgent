@@ -59,6 +59,14 @@
             "title": "Kept",
             "type": "object"
           },
+          "kept_requests": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "The person's final ticks on the AI work it would queue, by request id.",
+            "title": "Kept Requests",
+            "type": "object"
+          },
           "token": {
             "title": "Token",
             "type": "string"
@@ -361,6 +369,40 @@
               }
             ]
           },
+          "group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The group it belongs to, so setting a group sets it too.",
+            "title": "Group"
+          },
+          "id": {
+            "description": "Its id in this review, for keeping or dropping it.",
+            "title": "Id",
+            "type": "string"
+          },
+          "item": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The item it goes with: dropping that item drops it too.",
+            "title": "Item"
+          },
+          "kept": {
+            "default": true,
+            "title": "Kept",
+            "type": "boolean"
+          },
           "label": {
             "title": "Label",
             "type": "string"
@@ -376,6 +418,7 @@
           }
         },
         "required": [
+          "id",
           "task",
           "label"
         ],
@@ -1888,6 +1931,18 @@
             "default": "",
             "title": "Pasted",
             "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The project it is about, when the person says.",
+            "title": "Project"
           }
         },
         "title": "HandIn",

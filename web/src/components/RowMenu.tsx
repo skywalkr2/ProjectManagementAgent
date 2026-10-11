@@ -5,7 +5,9 @@ import { useWords } from "../lib/wording";
 export interface MenuAction {
   id: string;
   label: string;
-  run: () => void;
+  run?: () => void;
+  /** An address to open in a new tab instead of running something (only for an address the caller has checked). */
+  href?: string;
 }
 
 export function RowMenu(props: { label: string; actions: MenuAction[] }) {
@@ -19,11 +21,17 @@ export function RowMenu(props: { label: string; actions: MenuAction[] }) {
       <Popover placement="bottom end" className="menu-popover">
         <Menu
           className="menu"
-          onAction={(key) => props.actions.find((a) => a.id === key)?.run()}
+          onAction={(key) => props.actions.find((a) => a.id === key)?.run?.()}
           items={props.actions}
         >
           {(item) => (
-            <MenuItem id={item.id} className="menu-item">
+            <MenuItem
+              id={item.id}
+              className="menu-item"
+              href={item.href}
+              target={item.href ? "_blank" : undefined}
+              rel={item.href ? "noopener noreferrer" : undefined}
+            >
               {item.label}
             </MenuItem>
           )}

@@ -113,3 +113,9 @@ def test_the_add_ons_routes_list_available_and_installed(tmp_path, monkeypatch):
     off = TestClient(create_app(ws, load_config(ws.config_dir, env={}), "t", start_worker=False))
     off.headers["Authorization"] = "Bearer t"
     assert off.get(f"{api}/packs").json()["available"] == []
+
+
+def test_the_shipped_feed_template_reads_cleanly():
+    template = Path(__file__).parents[1] / "deploy" / "pack-catalog.example.yaml"
+    feed = packs.parse(FEED, template.read_text())
+    assert len(feed.entries) == 1 and not feed.notes and feed.error is None

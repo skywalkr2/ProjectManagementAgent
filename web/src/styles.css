@@ -333,3 +333,30 @@ input:disabled, textarea:disabled, select:disabled { opacity: 0.7; cursor: not-a
 .footer { display: grid; gap: 6px; }
 .footer-feedback { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 10px; }
 .footer-feedback .link-button { color: var(--accent); font-size: 14px; }
+
+/* Add-ons: tabs, pack rows, the install dialog and the catalog lines */
+.addon-tabs { display: grid; gap: 14px; }
+.tablist { display: flex; flex-wrap: wrap; gap: 2px; background: var(--sunk); padding: 3px; border-radius: 9px; justify-self: start; }
+.tab { padding: 6px 14px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; border-bottom: 3px solid transparent; }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); border-bottom-color: var(--accent); }
+.tab[data-focus-visible] { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tab-panel { display: grid; gap: 14px; }
+.tab-panel:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.addons-body { display: grid; gap: 20px; }
+.text.pack { display: grid; gap: 4px; }
+.pack-price { color: var(--fg); font-weight: 600; }
+.pack-summary { overflow-wrap: anywhere; }
+.pack-what { display: grid; gap: 8px; margin-top: 6px; }
+.pack-part { display: grid; gap: 2px; }
+.pack-part p, .pack-part li { overflow-wrap: anywhere; }
+.pack-update { font-weight: 600; }
+.get-it { display: grid; gap: 10px; }
+.copy-line { display: grid; gap: 6px; }
+.copy-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.command { flex: 1 1 240px; min-width: 0; font-family: var(--mono); font-size: 13px; background: var(--sunk); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.catalog { display: grid; gap: 6px; border-top: 1px dashed var(--line); padding-top: 12px; }
+.catalog .heading h3 { font-family: var(--display); font-weight: 600; font-size: 17px; margin: 0; }
+.catalog-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.feed { overflow-wrap: anywhere; }
+.feed-notes { font-size: 12.5px; color: var(--muted); }
+.feed-notes summary { cursor: pointer; }

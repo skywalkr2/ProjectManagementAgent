@@ -54,7 +54,7 @@ function api(items = ITEMS, extra: Record<string, (body: unknown) => unknown> = 
   });
 }
 
-const open = () => renderApp(<Settings onOpenGuide={() => undefined} />);
+const open = () => renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} />);
 const posted = (calls: ReturnType<typeof fakeApi>) => calls.filter((c) => c.route === "POST settings").map((c) => c.body);
 
 test("basic settings show first and More settings reveals the rest", async () => {
@@ -244,7 +244,7 @@ test("a save that restarts the app says so in a live region until it is back", a
         <button type="button" onClick={() => setHellos(hellos + 1)}>
           reconnect
         </button>
-        <Settings onOpenGuide={() => undefined} />
+        <Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} />
       </RestartProvider>
     );
   }
@@ -255,4 +255,13 @@ test("a save that restarts the app says so in a live region until it is back", a
   await waitFor(() => expect(live).toHaveTextContent("Restarting to use the new settings…"));
   await user.click(screen.getByRole("button", { name: "reconnect" }));
   await waitFor(() => expect(live).toBeEmptyDOMElement());
+});
+
+test("Add-ons opens the add-ons screen", async () => {
+  api();
+  const onOpenAddons = vi.fn();
+  const user = userEvent.setup();
+  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} />);
+  await user.click(screen.getByRole("button", { name: "Add-ons" }));
+  expect(onOpenAddons).toHaveBeenCalled();
 });

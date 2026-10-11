@@ -251,6 +251,16 @@ def _tick(pending: Pending, kept: dict[str, bool]) -> None:
         items[item_id]["kept"] = value
 
 
+def _tick_requests(pending: Pending, kept: dict[str, bool]) -> None:
+    requests = {r["id"]: r for r in pending.requests}
+    for request_id, value in kept.items():
+        if request_id not in requests:
+            raise StoreError(f"there is no request {request_id} in this review")
+        if not isinstance(value, bool):
+            raise StoreError("a request is kept or dropped: true or false")
+        requests[request_id]["kept"] = value
+
+
 def _checked(
     store: Store, cfg: Config, plugin: str, name: str, record: Any, choices: dict[str, Any], result: Any
 ) -> Pending:
@@ -399,7 +409,7 @@ def _checked(
         items=items,
         groups=groups,
         all_or_nothing=bool(result.all_or_nothing),
-        requests=_requests_checked(store, plugin, result.requests, ops, {i["id"] for i in items}),
+        requests=_requests_checked(store, plugin, result.requests, ops, {i["id"] for i in items}, set(group_ids)),
         expires_at=datetime.fromtimestamp(time.time() + keep * 60, UTC).isoformat(),
     )
 
@@ -415,6 +425,8 @@ def _resolved(store: Store, pending: Pending, cs_id: str) -> list[dict[str, Any]
             at += len(item["ops"])
     found = []
     for request in pending.requests:
+        if not request.get("kept", True):
+            continue
         about = request["about"]
         if not about or ("op" not in about and "item" not in about):
             found.append(request)
@@ -462,9 +474,15 @@ def _queue(store: Store, cfg: Config, requests: list[dict[str, Any]]) -> None:
 
 
 def _requests_checked(
-    store: Store, plugin: str, requests: list[Any], ops: list[Any] = (), items: set[str] = frozenset()
+    store: Store,
+    plugin: str,
+    requests: list[Any],
+    ops: list[Any] = (),
+    items: set[str] = frozenset(),
+    groups: set[str] = frozenset(),
 ) -> list[dict[str, Any]]:
-    """A proposal's requests, each naming one of the plugin's own task kinds and a record it may work on."""
+    """A proposal's requests, each naming one of the plugin's own task kinds and a record it may work on, with an id
+    for the review, kept unless the person drops it, and the `group` it belongs to, if any."""
     from engine.plugin_host import check_about
     from engine.texts import check_part
 
@@ -499,7 +517,20 @@ def _requests_checked(
         except ValueError as err:
             raise StoreError(str(err)) from None
         note = " ".join(str(r.get("note", "")).split())[:2000]
-        checked.append({"task": task, "about": about, "note": note, "part": part})
+        group = r.get("group")
+        if group is not None and group not in groups:
+            raise StoreError(f"a request names group {group}, which the proposal doesn't have")
+        checked.append(
+            {
+                "id": f"r{len(checked) + 1}",
+                "task": task,
+                "about": about,
+                "note": note,
+                "part": part,
+                "kept": True,
+                "group": group,
+            }
+        )
     return checked
 
 
@@ -564,15 +595,22 @@ def _fallback_label(op: dict[str, Any]) -> str:
     return ""
 
 
-def apply(store: Store, cfg: Config, token: str, kept: dict[str, bool] | None = None) -> str:
-    """Apply exactly the proposal the person reviewed, as theirs, with their final ticks (`kept`, by item id).
-    Returns the changeset id."""
+def apply(
+    store: Store,
+    cfg: Config,
+    token: str,
+    kept: dict[str, bool] | None = None,
+    kept_requests: dict[str, bool] | None = None,
+) -> str:
+    """Apply exactly the proposal the person reviewed, as theirs, with their final ticks (`kept`, by item id, and
+    `kept_requests`, by request id). Returns the changeset id."""
     from engine.applier import apply_changeset
 
     keep = cfg.workspace.plugins.actions.keep_minutes
     pending = store.plugins.proposals.take(token, keep)
     try:
         _tick(pending, kept or {})
+        _tick_requests(pending, kept_requests or {})
     except StoreError:
         store.plugins.proposals.put(pending, keep)
         raise

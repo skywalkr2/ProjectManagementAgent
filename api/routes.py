@@ -619,10 +619,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             summary=pending.summary,
             requests=[
                 ActionRequestView(
+                    id=r["id"],
                     task=r["task"],
                     label=store.plugins.task_kind(r["task"]).label or r["task"],
                     about=RecordReference(**r["about"]) if r["about"] and "kind" in r["about"] else None,
                     note=r["note"],
+                    kept=r["kept"],
+                    group=r["group"],
+                    item=(r["about"] or {}).get("item"),
                 )
                 for r in pending.requests
             ],
@@ -672,7 +676,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.post("/plugin-actions/apply")
     def person_action_apply(body: ActionApply) -> ActionApplied:
-        cs_id = guard(lambda: person_actions.apply(store, cfg, body.token, body.kept))
+        cs_id = guard(lambda: person_actions.apply(store, cfg, body.token, body.kept, body.kept_requests))
         ops = store.read().get("changeset", cs_id).data["ops"]
         changed()
         return ActionApplied(
@@ -880,7 +884,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.post("/handin")
     def handin(body: HandIn) -> Handed:
-        handed = guard(lambda: hand_in(ws, store, note=body.note, pasted=body.pasted, data_level=body.data_level))
+        handed = guard(
+            lambda: hand_in(
+                ws, store, note=body.note, pasted=body.pasted, data_level=body.data_level, project=body.project
+            )
+        )
         changed()
         worker.poke()
         return Handed(request=handed.request, source=handed.source)

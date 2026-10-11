@@ -19,6 +19,7 @@ class HandIn(BaseModel):
     data_level: Literal["open", "internal", "restricted"] | None = Field(
         None, description="How sensitive it is, when the person says it is more than the usual."
     )
+    project: str | None = Field(None, description="The project it is about, when the person says.")
 
 
 class SendBack(BaseModel):
@@ -740,6 +741,9 @@ class ActionApply(BaseModel):
     model_config = ConfigDict(extra="forbid")
     token: str
     kept: dict[str, bool] = Field(default_factory=dict, description="The person's final ticks, by item id.")
+    kept_requests: dict[str, bool] = Field(
+        default_factory=dict, description="The person's final ticks on the AI work it would queue, by request id."
+    )
 
 
 class ChoiceOption(BaseModel):
@@ -796,10 +800,14 @@ class ProposedOp(BaseModel):
 
 
 class ActionRequestView(BaseModel):
+    id: str = Field(description="Its id in this review, for keeping or dropping it.")
     task: str
     label: str
     about: RecordReference | None = None
     note: str = ""
+    kept: bool = True
+    group: str | None = Field(None, description="The group it belongs to, so setting a group sets it too.")
+    item: str | None = Field(None, description="The item it goes with: dropping that item drops it too.")
 
 
 class ActionProposalView(BaseModel):

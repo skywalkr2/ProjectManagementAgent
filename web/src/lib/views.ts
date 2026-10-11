@@ -1,9 +1,9 @@
 // Which screen is showing. The core's screens have fixed names; a plugin's panel is "panel:<name>" and any record's
 // page is "record:<kind>:<id>". The address's #fragment carries it, each part encoded, so a refresh keeps the screen.
-export type CoreView = "home" | "stages" | "files" | "sources" | "setup" | "welcome" | "settings";
+export type CoreView = "home" | "stages" | "files" | "sources" | "setup" | "welcome" | "settings" | "addons";
 export type View = CoreView | `panel:${string}` | `record:${string}:${string}`;
 
-const CORE: readonly string[] = ["home", "stages", "files", "sources", "setup", "welcome", "settings"];
+const CORE: readonly string[] = ["home", "stages", "files", "sources", "setup", "welcome", "settings", "addons"];
 
 export const panelView = (name: string): View => `panel:${name}`;
 export const recordView = (kind: string, id: string): View => `record:${kind}:${id}`;
