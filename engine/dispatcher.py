@@ -160,7 +160,13 @@ def process(
     kind = store.plugins.task_kind(req.data["task"])
     draft = None
     if kind.output == "draft" and packet.about is not None:
-        draft = {"kind": packet.about[0], "id": packet.about[1], "field": kind.field, "base": packet.draft_base}
+        draft = {
+            "kind": packet.about[0],
+            "id": packet.about[1],
+            "field": kind.field,
+            "base": packet.draft_base,
+            "anchors": packet.anchor_units if kind.anchored else None,
+        }
     first = _rounds(store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use, content, draft)
     outcome = first
     # The person's pick of account is theirs: no escalation away from it.
@@ -259,7 +265,21 @@ def _rounds(
             text, stop = _drafted(router, task, result, request_id, tier, data_level, use, content)
             if stop:
                 return _Outcome(run_id=out.run_id, stop=stop)
-            changeset = _draft_changeset(draft, text, out.run_id)
+            mapping: list = []
+            if draft.get("anchors") is not None:
+                from engine.texts import AnchorProblem, parse_anchored
+
+                try:
+                    text, mapping = parse_anchored(text, draft["anchors"])
+                except AnchorProblem as err:
+                    if not last:
+                        why = f"Your draft's paragraph ids don't account for the text: {err}. Write it all again."
+                        task = replace(task, request=base.request + "\n\n" + why)
+                        continue
+                    return _Outcome(
+                        run_id=out.run_id, stop=f"The draft's paragraph ids were wrong: {err}.", escalate=True
+                    )
+            changeset = _draft_changeset(draft, text, out.run_id, mapping)
             problems = check(changeset, ctx)
             out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id)
             if needs_another_round(problems):
@@ -347,7 +367,7 @@ def _unfenced(text: str) -> str:
     return match.group(1) + "\n" if match else text
 
 
-def _draft_changeset(draft: dict, text: str, run_id: str | None) -> ChangesetIn:
+def _draft_changeset(draft: dict, text: str, run_id: str | None, mapping: list | None = None) -> ChangesetIn:
     op = {
         "op": "text.draft",
         "record": {"kind": draft["kind"], "id": draft["id"]},
@@ -355,6 +375,7 @@ def _draft_changeset(draft: dict, text: str, run_id: str | None) -> ChangesetIn:
         "text": text,
         "base": draft["base"],
         "run": run_id,
+        "paragraph_map": mapping or [],
     }
     return CHANGESET.validate_python({"summary": "A draft for your review.", "ops": [op]})
 

@@ -599,6 +599,7 @@ def _apply_op(
             by="assistant",
             run=op.run,
             base=op.base,
+            paragraph_map=op.paragraph_map,
         )
         return [{"kind": "text_version", "id": version.id}], None
     if isinstance(op, TextAcceptOp):
@@ -1046,4 +1047,41 @@ def move_stage(store: Store, op: StageMoveOp, *, actor: Literal["pm", "rule"] = 
             record_id=cs_id,
         )
     store.plugins.publish("changeset.applied", {"id": cs_id})
+    return cs_id
+
+
+def apply_as_person(store: Store, cfg: Config, ops: list[dict[str, Any]], summary: str, task: str = "notes") -> str:
+    """Apply ops the person made on screen (an edit, a review's choices) as theirs. Returns the changeset id."""
+    from engine.names import People
+    from engine.ops import CHANGESET
+
+    changeset = CHANGESET.validate_python({"summary": summary, "ops": ops}, context={"op_models": store.plugins.ops})
+    with store.transaction() as tx:
+        request = tx.create(
+            "request",
+            {"task": task, "origin": "pm", "state": "done", "note": summary, "created_at": store.clock()},
+            WriteContext("pm", "trusted", "screen.request"),
+        )
+    ctx = Context(
+        store,
+        cfg,
+        People(store, cfg),
+        tuple(store.plugins.ops),
+        Inputs(request.id, None, "", "", "trusted"),
+        confirmed_by_pm=True,
+        actor="pm",
+    )
+    cs_id = apply_changeset(changeset, [], ctx, run=None, extra={"reviewed": True})
+    refused = [o for o in store.read().get("changeset", cs_id).data["ops"] if o["status"] == "refused"]
+    if refused:
+        raise StoreError(refused[0].get("reason") or "that couldn't be done")
+    with store.transaction() as tx:
+        current = tx.get("request", request.id)
+        tx.update(
+            "request",
+            request.id,
+            {"changeset": cs_id},
+            WriteContext("engine", "trusted", "screen.request"),
+            read_version=current.version,
+        )
     return cs_id

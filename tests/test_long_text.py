@@ -319,3 +319,47 @@ def test_a_plugins_text_format_is_checked(env):
     text = "Scene one.\n* * *\nScene two.\n"
     units = units_of(store, "p08/scenes", text)
     assert "".join(text[u.start : u.end] for u in units) == text
+
+
+def test_the_review_routes_compare_accept_and_edit(env):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+
+    ws, cfg, store = env
+    record = chapter(env)
+    draft = "The ferry left before dawn.\n\nNobody on the pier waved.\n\nThe gulls wheeled behind it.\n"
+    apply(env, [{"op": "p08/rewrite", "chapter": record.id, "text": draft}], person=False)
+    store.close()
+    token = "test-token"
+    client = TestClient(create_app(ws, cfg, token, start_worker=False))
+    client.headers["Authorization"] = f"Bearer {token}"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    where = {"kind": record.kind, "id": record.id, "field": "body"}
+    field = client.get(f"{api}/texts", params=where).json()
+    assert (
+        field["current"] == 1
+        and field["text"] == TEXT
+        and [v["status"] for v in field["versions"]]
+        == [
+            "accepted",
+            "pending",
+        ]
+    )
+    pending = field["versions"][1]
+    review = client.get(f"{api}/text-versions/{pending['id']}/review").json()
+    assert not review["three_way"] and [r["id"] for r in review["regions"]] == ["c1", "c2"]
+    assert review["regions"][0]["pending"] == "The ferry left before dawn."
+    stale = client.post(f"{api}/text-versions/{pending['id']}/accept", json={"read_version": 99})
+    assert stale.status_code == 409
+    done = client.post(
+        f"{api}/text-versions/{pending['id']}/accept",
+        json={"read_version": pending["version"], "choices": {"c2": "reject"}},
+    )
+    assert done.status_code == 200, done.text
+    after = client.get(f"{api}/texts", params=where).json()
+    assert after["current"] == 3 and after["text"].startswith("The ferry left before dawn.")
+    assert {s["kind"] for s in after["authorship"]} == {"assistant_edit", "person"}
+    edited = client.post(f"{api}/texts/edit", json={**where, "text": "All mine now.\n"})
+    assert edited.status_code == 200
+    assert client.get(f"{api}/texts", params=where).json()["text"] == "All mine now.\n"

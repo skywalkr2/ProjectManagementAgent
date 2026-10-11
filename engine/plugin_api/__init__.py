@@ -32,7 +32,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.8"
+PLUGIN_API_VERSION = "0.3.9"
 
 
 class Settings(BaseModel):
@@ -540,6 +540,7 @@ class Registrar:
         label: str = "",
         output: str = "ops",
         field: str | None = None,
+        anchored: bool = False,
         prompt: str = "notes",
         playbook: str = "notes",
         on: str | None = None,
@@ -564,7 +565,10 @@ class Registrar:
         `output` is "ops" (the answer is a changeset of `ops`) or "draft": the answer is plain prose for the long text
         field `field` of the record the run is about (`on` is required). The core wraps it as a pending `text.draft`
         version for the person's review, runs lints on it (lints on the op "text.draft"), sends a "return" finding
-        back for one fix round, and continues a draft cut off at the output limit once before holding it.
+        back for one fix round, and continues a draft cut off at the output limit once before holding it. With
+        `anchored=True` the draft revises the current text: the run sees it with an id on each unit, starts every
+        paragraph it writes with the ids it came from, and a core check refuses a draft that leaves a unit unaccounted
+        for, names an unknown id, or splits or merges an atomic unit; the paragraph map is kept with the version.
 
         `tier`, `max_output` (the most tokens an answer may use), `expected_output` (typical answer size, for estimates
         before there are past runs) and `temperature` are defaults; the workspace's `ai.tasks.<kind>` overrides them."""
@@ -573,6 +577,8 @@ class Registrar:
         self._name(name)
         if output not in ("ops", "draft"):
             raise ValueError('a task kind\'s output is "ops" or "draft"')
+        if anchored and output != "draft":
+            raise ValueError("only a draft task kind is anchored")
         if output == "draft":
             if on is None or not field or ops:
                 raise ValueError(
@@ -609,6 +615,7 @@ class Registrar:
             guidance_file=guidance_file,
             output=output,
             field=field,
+            anchored=anchored,
         )
 
     def _own_file(self, name: str, folder: str) -> Path | None:

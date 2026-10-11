@@ -430,6 +430,7 @@ def new_version(
     note: str | None = None,
     accept: bool = False,
     authors: list[dict[str, Any]] | None = None,
+    paragraph_map: list[dict[str, Any]] | None = None,
 ) -> Any:
     """Write a version of a long text field: stored by hash, with authorship derived from its base (unchanged units
     keep theirs). An accepted version becomes the field's text; anything else waits for review."""
@@ -449,6 +450,13 @@ def new_version(
     if base is not None and base not in live:
         raise StoreError(f"{kind}.{field} has no version {base}")
     units = units_of(store, fmt, text)
+    if authors is None and paragraph_map and base is not None and len(paragraph_map) == len(units):
+        base_version = live[base]
+        base_text = read_text(store, base_version.data["sha256"])
+        base_units = units_of(store, fmt, base_text)
+        base_authors = unit_authors(base_version.data["authorship"], base_units)
+        paragraphs = [text[u.start : u.end] for u in units]
+        authors = anchored_authors(base_text, base_units, base_authors, paragraphs, paragraph_map, run)
     if authors is None:
         if base is None:
             kind_of = "person" if by == "person" else "assistant"
@@ -478,6 +486,7 @@ def new_version(
             "authorship": [
                 {**span, "words": words(text[span["start"] : span["end"]])} for span in spans_for(units, authors)
             ],
+            "paragraph_map": list(paragraph_map or []),
             "note": note,
             "run": run,
             "created_at": store.clock(),
@@ -577,3 +586,96 @@ def discard(tx: Any, context: Any, version_id: str, read_version: int) -> Any:
     if pending.version != read_version:
         raise StoreError(f"{version_id} changed since it was reviewed")
     return tx.update("text_version", pending.id, {"status": "discarded"}, context, read_version=pending.version)
+
+
+# ---- anchored drafts -------------------------------------------------------------------------------------------------
+
+ANCHOR_RULE = (
+    "The text below has an id before each paragraph, such as [p3]. Start every paragraph you write with the ids of "
+    "the paragraphs it comes from, in brackets: [p3] for a kept or rewritten paragraph, [p3,p4] when you merge two, "
+    "the same id on two paragraphs when you split one, and [new] for a paragraph you add. Paragraphs marked atomic "
+    "are never split or merged. End with one line listing the paragraphs you removed, `Removed: p5, p7`, or "
+    "`Removed: none`."
+)
+_MARK = re.compile(r"^\[(new|p\d+(?:\s*,\s*p\d+)*)\][ \t]*", re.M)
+_REMOVED = re.compile(r"^\s*Removed:\s*(none|p\d+(?:\s*,\s*p\d+)*)\s*\.?\s*$", re.M | re.I)
+
+
+class AnchorProblem(ValueError):
+    """An anchored draft's paragraph ids don't account for the text; the message is for the fix round."""
+
+
+def anchored_text(text: str, units: list[Unit]) -> str:
+    """The base text with each unit's id before it, as the run sees it."""
+    parts = []
+    for index, unit in enumerate(units, start=1):
+        mark = f"[p{index}{' atomic' if unit.atomic else ''}] "
+        parts.append(mark + text[unit.start : unit.end].strip())
+    return "\n\n".join(parts)
+
+
+def parse_anchored(answer: str, units: list[Unit]) -> tuple[str, list[dict[str, Any]]]:
+    """The draft's text without its ids, and its paragraph map ([{"from": ["p3"], ...}] per paragraph, in order).
+    Raises AnchorProblem when a base paragraph is unaccounted for, an id is unknown, or an atomic paragraph was split
+    or merged."""
+    removed_match = None
+    for match in _REMOVED.finditer(answer):
+        removed_match = match
+    body = answer[: removed_match.start()] if removed_match else answer
+    removed = set()
+    if removed_match and removed_match.group(1).lower() != "none":
+        removed = {x.strip() for x in removed_match.group(1).split(",")}
+    marks = list(_MARK.finditer(body))
+    if not marks:
+        raise AnchorProblem("no paragraph starts with its ids; start each one with [p1], [p2], [new] and so on")
+    if body[: marks[0].start()].strip():
+        raise AnchorProblem("there is text before the first paragraph's ids; start the answer with an id")
+    known = {f"p{i}" for i in range(1, len(units) + 1)}
+    atomic = {f"p{i}" for i, u in enumerate(units, start=1) if u.atomic}
+    paragraphs, mapping = [], []
+    for index, mark in enumerate(marks):
+        end = marks[index + 1].start() if index + 1 < len(marks) else len(body)
+        ids = [] if mark.group(1) == "new" else [x.strip() for x in mark.group(1).split(",")]
+        paragraphs.append(body[mark.end() : end].strip())
+        mapping.append({"from": ids})
+    used = [i for entry in mapping for i in entry["from"]]
+    problems = []
+    unknown = sorted((set(used) | removed) - known, key=lambda x: int(x[1:]))
+    if unknown:
+        problems.append(f"{', '.join(unknown)} isn't a paragraph of the text")
+    missing = sorted(known - set(used) - removed, key=lambda x: int(x[1:]))
+    if missing:
+        problems.append(f"{', '.join(missing)} is neither in the draft nor listed as removed")
+    for pid in sorted(atomic, key=lambda x: int(x[1:])):
+        if used.count(pid) > 1:
+            problems.append(f"{pid} is atomic and was split")
+        if any(pid in e["from"] and len(e["from"]) > 1 for e in mapping):
+            problems.append(f"{pid} is atomic and was merged with another paragraph")
+    if problems:
+        raise AnchorProblem("; ".join(problems))
+    return "\n\n".join(paragraphs) + "\n", mapping
+
+
+def anchored_authors(
+    base: str,
+    base_units: list[Unit],
+    base_authors: list[dict[str, Any]],
+    paragraphs: list[str],
+    mapping: list[dict[str, Any]],
+    run: str | None,
+) -> list[dict[str, Any]]:
+    """Per-paragraph authors from a paragraph map: a paragraph kept word for word keeps its author; one rewritten from
+    the person's text is "assistant_edit"; one from the assistant's own text, or new, is "assistant"."""
+    authors = []
+    for text, entry in zip(paragraphs, mapping, strict=True):
+        sources = [int(i[1:]) - 1 for i in entry["from"]]
+        if (
+            len(sources) == 1
+            and base[base_units[sources[0]].start : base_units[sources[0]].end].strip() == text.strip()
+        ):
+            authors.append(base_authors[sources[0]])
+        elif any(base_authors[i]["kind"] == "person" for i in sources):
+            authors.append({"kind": "assistant_edit", "run": run})
+        else:
+            authors.append({"kind": "assistant", "run": run})
+    return authors

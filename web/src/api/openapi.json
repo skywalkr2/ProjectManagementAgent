@@ -435,6 +435,19 @@
         "title": "Answer",
         "type": "object"
       },
+      "Applied": {
+        "properties": {
+          "changeset": {
+            "title": "Changeset",
+            "type": "string"
+          }
+        },
+        "required": [
+          "changeset"
+        ],
+        "title": "Applied",
+        "type": "object"
+      },
       "Ask": {
         "description": "A question to the PM that an item waits on: who a name is, or who owns an action.",
         "properties": {
@@ -482,6 +495,35 @@
           "options"
         ],
         "title": "Ask",
+        "type": "object"
+      },
+      "AuthorSpan": {
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "kind": {
+            "description": "person, assistant (drafted) or assistant_edit (the person's text changed).",
+            "title": "Kind",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "words": {
+            "default": 0,
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "kind"
+        ],
+        "title": "AuthorSpan",
         "type": "object"
       },
       "BackupStatus": {
@@ -3019,6 +3061,250 @@
         "title": "TaskStarted",
         "type": "object"
       },
+      "TextChoices": {
+        "additionalProperties": false,
+        "properties": {
+          "choices": {
+            "additionalProperties": {
+              "enum": [
+                "accept",
+                "reject"
+              ],
+              "type": "string"
+            },
+            "title": "Choices",
+            "type": "object"
+          },
+          "read_version": {
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_version"
+        ],
+        "title": "TextChoices",
+        "type": "object"
+      },
+      "TextEdit": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "field",
+          "text"
+        ],
+        "title": "TextEdit",
+        "type": "object"
+      },
+      "TextFieldView": {
+        "description": "A long text field: its current text, who wrote what, and every version.",
+        "properties": {
+          "authorship": {
+            "items": {
+              "$ref": "#/components/schemas/AuthorSpan"
+            },
+            "title": "Authorship",
+            "type": "array"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/TextVersionView"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "text",
+          "current",
+          "authorship",
+          "versions"
+        ],
+        "title": "TextFieldView",
+        "type": "object"
+      },
+      "TextRegion": {
+        "properties": {
+          "base": {
+            "title": "Base",
+            "type": "string"
+          },
+          "current": {
+            "title": "Current",
+            "type": "string"
+          },
+          "id": {
+            "description": "The change's id for the choices; empty for the current text's own changes (kept).",
+            "title": "Id",
+            "type": "string"
+          },
+          "pending": {
+            "title": "Pending",
+            "type": "string"
+          },
+          "side": {
+            "description": "pending, current (kept as is) or both (a conflict).",
+            "title": "Side",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "side",
+          "base",
+          "current",
+          "pending"
+        ],
+        "title": "TextRegion",
+        "type": "object"
+      },
+      "TextReview": {
+        "description": "What reviewing a pending version needs.",
+        "properties": {
+          "current": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "pending_text": {
+            "title": "Pending Text",
+            "type": "string"
+          },
+          "regions": {
+            "items": {
+              "$ref": "#/components/schemas/TextRegion"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
+          "three_way": {
+            "description": "The text moved on since the version's base; changes are against both.",
+            "title": "Three Way",
+            "type": "boolean"
+          },
+          "version": {
+            "$ref": "#/components/schemas/TextVersionView"
+          }
+        },
+        "required": [
+          "version",
+          "current",
+          "three_way",
+          "regions",
+          "pending_text"
+        ],
+        "title": "TextReview",
+        "type": "object"
+      },
+      "TextVersionView": {
+        "properties": {
+          "base": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "description": "The record version, to state when reviewing it.",
+            "title": "Version",
+            "type": "integer"
+          },
+          "words": {
+            "title": "Words",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "version",
+          "status",
+          "source",
+          "words",
+          "base",
+          "note",
+          "created_at"
+        ],
+        "title": "TextVersionView",
+        "type": "object"
+      },
       "UndoChoice": {
         "properties": {
           "ops": {
@@ -5208,6 +5494,238 @@
           }
         },
         "summary": "Task Start"
+      }
+    },
+    "/api/text-versions/{version_id}/accept": {
+      "post": {
+        "operationId": "text_accept_api_text_versions__version_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextChoices"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Text Accept"
+      }
+    },
+    "/api/text-versions/{version_id}/discard": {
+      "post": {
+        "operationId": "text_discard_api_text_versions__version_id__discard_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextChoices"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Text Discard"
+      }
+    },
+    "/api/text-versions/{version_id}/review": {
+      "get": {
+        "operationId": "text_review_api_text_versions__version_id__review_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextReview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Text Review"
+      }
+    },
+    "/api/texts": {
+      "get": {
+        "operationId": "text_field_api_texts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "field",
+            "required": true,
+            "schema": {
+              "title": "Field",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextFieldView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Text Field"
+      }
+    },
+    "/api/texts/edit": {
+      "post": {
+        "operationId": "text_edit_api_texts_edit_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Text Edit"
       }
     }
   }

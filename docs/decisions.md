@@ -81,6 +81,21 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-12: Drafts are prose, anchored when they revise, and reviewed change by change
+
+**Decided by:** Claude (design 6.7 as built); the owner can override.
+
+**What:** A draft task kind's model writes plain prose; the core wraps it as a pending version, continues it once if
+cut off, and runs lints on it. A revision can be anchored: the model marks each paragraph with the base units it came
+from, a core invariant checks the map accounts for every unit and keeps atomic units whole, and the map decides
+authorship. The person reviews pending versions through routes that give the regions to decide (three-way when the
+text moved on) and accept, discard or edit.
+
+**Why:** Long prose inside JSON is where cheaper models fail; anchors make "what changed and who wrote it" exact
+instead of guessed.
+
+**Impact:** Plugin API 0.3.9. The review and compare screens come with the UX work.
+
 ## 2026-10-12: Long text is versioned, reviewed change by change, and the assistant's text is always a draft
 
 **Decided by:** Claude (design 5.0, 6.7 as built), the owner can override.

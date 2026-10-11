@@ -26,7 +26,9 @@ from api.schemas import (
     ActionState,
     AiState,
     Answer,
+    Applied,
     Ask,
+    AuthorSpan,
     BackupStatus,
     ChangeItem,
     ChangesetView,
@@ -75,6 +77,12 @@ from api.schemas import (
     TaskKindView,
     TaskStart,
     TaskStarted,
+    TextChoices,
+    TextEdit,
+    TextFieldView,
+    TextRegion,
+    TextReview,
+    TextVersionView,
     UndoChoice,
     UndoReport,
     Unmark,
@@ -195,6 +203,95 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         worker.poke()
         changed()
         return TaskStarted(request=request_id)
+
+    def _version_view(v: Any) -> TextVersionView:
+        return TextVersionView(
+            id=v.id,
+            number=v.data["number"],
+            version=v.version,
+            status=v.data["status"],
+            source=v.data["source"],
+            words=v.data["words"],
+            base=v.data.get("base"),
+            note=v.data.get("note"),
+            created_at=str(v.data["created_at"]),
+        )
+
+    @r.get("/texts")
+    def text_field(kind: str, id: str, field: str) -> TextFieldView:
+        from engine import texts
+
+        view = store.read()
+        if view.get(kind, id) is None:
+            raise HTTPException(status_code=404, detail=f"{kind} {id} doesn't exist")
+        every = texts.versions(view, kind, id, field)
+        now = texts.current(view, kind, id, field)
+        return TextFieldView(
+            text=texts.read_text(store, now.data["sha256"]) if now else "",
+            current=now.data["number"] if now else None,
+            authorship=[
+                AuthorSpan(**{k: s[k] for k in ("start", "end", "kind")}, words=s.get("words", 0))
+                for s in (now.data["authorship"] if now else [])
+            ],
+            versions=[_version_view(v) for v in every],
+        )
+
+    @r.get("/text-versions/{version_id}/review")
+    def text_review(version_id: str) -> TextReview:
+        from engine import texts
+
+        found = guard(lambda: texts.review(store, store.read(), version_id))
+        b_text, b_units, _ = found["texts"]["base"]
+        c_text, c_units, _ = found["texts"]["current"]
+        p_text, p_units, _ = found["texts"]["pending"]
+
+        def stretch(text: str, units: list, start: int, end: int) -> str:
+            return "".join(text[u.start : u.end] for u in units[start:end]).strip()
+
+        base, now = found["base"], found["current"]
+        return TextReview(
+            version=_version_view(found["pending"]),
+            current=now.data["number"] if now else None,
+            three_way=(base.id if base else None) != (now.id if now else None),
+            regions=[
+                TextRegion(
+                    id=g.id,
+                    side=g.side,
+                    base=stretch(b_text, b_units, g.b1, g.b2),
+                    current=stretch(c_text, c_units, g.c1, g.c2),
+                    pending=stretch(p_text, p_units, g.p1, g.p2),
+                )
+                for g in found["regions"]
+            ],
+            pending_text=p_text,
+        )
+
+    @r.post("/text-versions/{version_id}/accept")
+    def text_accept(version_id: str, body: TextChoices) -> Applied:
+        from engine.applier import apply_as_person
+
+        op = {"op": "text.accept", "version": version_id, "read_version": body.read_version, "choices": body.choices}
+        cs_id = guard(lambda: apply_as_person(store, cfg, [op], "Accepted text changes"))
+        changed()
+        return Applied(changeset=cs_id)
+
+    @r.post("/text-versions/{version_id}/discard")
+    def text_discard(version_id: str, body: TextChoices) -> Applied:
+        from engine.applier import apply_as_person
+
+        op = {"op": "text.discard", "version": version_id, "read_version": body.read_version}
+        cs_id = guard(lambda: apply_as_person(store, cfg, [op], "Set a text version aside"))
+        changed()
+        return Applied(changeset=cs_id)
+
+    @r.post("/texts/edit")
+    def text_edit(body: TextEdit) -> Applied:
+        from engine.applier import apply_as_person
+
+        op = {"op": "text.edit", "record": {"kind": body.kind, "id": body.id}, "field": body.field, "text": body.text}
+        cs_id = guard(lambda: apply_as_person(store, cfg, [op], "Edited text"))
+        changed()
+        return Applied(changeset=cs_id)
 
     @r.get("/plugin-actions")
     def plugin_actions(kind: str | None = None, id: str | None = None) -> list[PersonActionView]:

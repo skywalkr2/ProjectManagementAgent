@@ -475,6 +475,70 @@ class AccountChoice(BaseModel):
     label: str
 
 
+class TextVersionView(BaseModel):
+    id: str
+    number: int
+    version: int = Field(description="The record version, to state when reviewing it.")
+    status: str
+    source: str
+    words: int
+    base: int | None
+    note: str | None
+    created_at: str
+
+
+class AuthorSpan(BaseModel):
+    start: int
+    end: int
+    kind: str = Field(description="person, assistant (drafted) or assistant_edit (the person's text changed).")
+    words: int = 0
+
+
+class TextFieldView(BaseModel):
+    """A long text field: its current text, who wrote what, and every version."""
+
+    text: str
+    current: int | None
+    authorship: list[AuthorSpan]
+    versions: list[TextVersionView]
+
+
+class TextRegion(BaseModel):
+    id: str = Field(description="The change's id for the choices; empty for the current text's own changes (kept).")
+    side: str = Field(description="pending, current (kept as is) or both (a conflict).")
+    base: str
+    current: str
+    pending: str
+
+
+class TextReview(BaseModel):
+    """What reviewing a pending version needs."""
+
+    version: TextVersionView
+    current: int | None
+    three_way: bool = Field(description="The text moved on since the version's base; changes are against both.")
+    regions: list[TextRegion]
+    pending_text: str
+
+
+class TextChoices(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    read_version: int = Field(ge=1)
+    choices: dict[str, Literal["accept", "reject"]] = Field(default_factory=dict)
+
+
+class TextEdit(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: str
+    id: str
+    field: str
+    text: str
+
+
+class Applied(BaseModel):
+    changeset: str
+
+
 class TaskKindView(BaseModel):
     """AI work the person can start, on a record of kind `on` or on the whole workspace."""
 

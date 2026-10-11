@@ -40,6 +40,7 @@ class Packet:
     cites: str | None = None  # what quotes from raw_input are cited as, when it isn't a saved source
     about: tuple[str, str] | None = None  # (kind, id) of the record the work is about
     draft_base: int | None = None  # for a draft, the number of the field's version it is made from
+    anchor_units: list | None = None  # for an anchored draft, the base text's units the ids number
 
     @property
     def input_chars(self) -> int:
@@ -175,6 +176,16 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     elif note:
         request_parts.append(f"<note>\n{note}\n</note>")
     request_parts += [_render_part(p) for p in parts.request]
+    anchor_units = None
+    if drafting and kind.anchored:
+        from engine.plugin_api import Part
+        from engine.texts import ANCHOR_RULE, anchored_text, units_of
+
+        base_text = view.text(target, kind.field)
+        fmt = _field_format(store, target.kind, kind.field)
+        anchor_units = units_of(store, fmt, base_text) if base_text else []
+        request_parts.append(ANCHOR_RULE)
+        request_parts.append(_render_part(Part("Text to revise", anchored_text(base_text, anchor_units))))
     if drafting:
         request_parts.append(DRAFT_RULE)
     task = _task(
@@ -203,7 +214,14 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         cites=f"{target.kind}:{target.id}" if target is not None else kind.name,
         about=(target.kind, target.id) if target is not None else None,
         draft_base=base,
+        anchor_units=anchor_units,
     )
+
+
+def _field_format(store: Store, kind: str, field: str) -> str:
+    from engine.texts import long_text_fields
+
+    return long_text_fields(store.plugins.records[kind])[field]
 
 
 def _render_part(part: object) -> str:

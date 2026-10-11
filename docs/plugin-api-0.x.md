@@ -10,6 +10,21 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.9 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- Anchored drafts: `task_kind(..., output="draft", anchored=True)`. The run sees the current text with an id on each
+  unit (`[p3]`, atomic ones marked) and starts each paragraph it writes with the ids it came from (`[p3]`, `[p3,p4]`,
+  `[new]`), ending with `Removed: ...`. A core check refuses a draft that leaves a unit unaccounted for, names an
+  unknown id, or splits or merges an atomic unit, and sends the reason back for a fix round. The ids are stripped; the
+  paragraph map is kept on the version (`paragraph_map`, also on the `text.draft` op for validators) and decides
+  authorship: a paragraph kept word for word keeps its author, one rewritten from the person's text is
+  `assistant_edit`, a new one `assistant`.
+- Review routes for the screens: `GET /api/texts?kind=&id=&field=` (current text, authorship, versions),
+  `GET /api/text-versions/<id>/review` (the regions to decide, three-way when the text moved on),
+  `POST /api/text-versions/<id>/accept` and `/discard` (`read_version`, `choices`), and `POST /api/texts/edit`.
+
 ## What 0.3.8 changes
 
 Manifests stay `'>=0.3,<0.4'`.

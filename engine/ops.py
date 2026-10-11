@@ -298,6 +298,10 @@ class TextDraftOp(OpModel):
     text: str = Field(description="The whole drafted text.")
     base: int | None = Field(None, description="The number of the version it was made from.")
     run: str | None = Field(None, description="The AI run that wrote it.")
+    paragraph_map: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="For an anchored draft, per paragraph in order, the base units it came from: {from: [p1, ...]}.",
+    )
 
     def describe(self) -> str | None:
         return f"Draft new text for {self.record.kind} {self.record.id}"

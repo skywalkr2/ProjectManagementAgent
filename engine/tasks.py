@@ -38,6 +38,7 @@ class TaskKind:
     guidance_file: Path | None = None  # a plugin's own guidance
     output: str = "ops"  # "draft": the answer is prose for the long text field `field` of the record it is about
     field: str | None = None
+    anchored: bool = False  # a draft that revises the current text, paragraph by paragraph, with ids
 
 
 TASKS: dict[str, TaskKind] = {

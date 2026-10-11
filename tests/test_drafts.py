@@ -218,3 +218,48 @@ def test_a_draft_task_must_name_a_long_text_field(tmp_path):
     ws, cfg, store = workspace(tmp_path, broken)
     assert "isn't a long text field" in store.plugins.status["p09"].reason
     store.close()
+
+
+# ---- anchored drafts ---------------------------------------------------------------------------------------------
+
+
+def test_anchored_ids_are_parsed_and_checked():
+    from engine.texts import AnchorProblem, Unit, parse_anchored
+
+    units = [Unit(0, 10), Unit(10, 20, "code", True), Unit(20, 30), Unit(30, 40)]
+    text, mapping = parse_anchored(
+        "[p1] One.\n\n[p2] Code.\n\n[p3,p4] Three and four.\n\n[new] Added.\nRemoved: none", units
+    )
+    assert text == "One.\n\nCode.\n\nThree and four.\n\nAdded.\n"
+    assert [m["from"] for m in mapping] == [["p1"], ["p2"], ["p3", "p4"], []]
+    with pytest.raises(AnchorProblem, match="p4 is neither"):
+        parse_anchored("[p1] A\n\n[p2] B\n\n[p3] C\nRemoved: none", units)
+    assert parse_anchored("[p1] A\n\n[p2] B\n\n[p3] C\nRemoved: p4", units)[0].endswith("C\n")
+    with pytest.raises(AnchorProblem, match="p9 isn't a paragraph"):
+        parse_anchored("[p1] A\n\n[p2] B\n\n[p3,p4] C\n\n[p9] D\nRemoved: none", units)
+    with pytest.raises(AnchorProblem, match="p2 is atomic and was split"):
+        parse_anchored("[p1] A\n\n[p2] B1\n\n[p2] B2\n\n[p3,p4] C\nRemoved: none", units)
+    with pytest.raises(AnchorProblem, match="p2 is atomic and was merged"):
+        parse_anchored("[p1,p2] AB\n\n[p3,p4] C\nRemoved: none", units)
+
+
+def test_an_anchored_draft_keeps_its_map_and_authorship(tmp_path, monkeypatch):
+    anchored = FIXTURE.replace('output="draft", field="body"', 'output="draft", field="body", anchored=True')
+    ws, cfg, store = workspace(tmp_path, anchored)
+    env = (ws, cfg, store)
+    record = chapter(env)
+    asked = answers(
+        monkeypatch,
+        prose("[p1] The ferry left before dawn.\nRemoved: none"),  # p2 unaccounted for: a fix round
+        prose(
+            "[p1] The ferry left before dawn.\n\n[p2] Nobody on the pier waved.\n\n[new] The gulls came.\nRemoved: none"
+        ),
+    )
+    run(env, start(env, record))
+    assert "[p1] The ferry left at dawn." in asked[0].request and "Start every paragraph" in asked[0].request
+    assert "p2 is neither in the draft nor listed as removed" in asked[1].request
+    version = pending(store, record)
+    assert [m["from"] for m in version.data["paragraph_map"]] == [["p1"], ["p2"], []]
+    assert [s["kind"] for s in version.data["authorship"]] == ["assistant_edit", "person", "assistant"]
+    store.close()
+    set_responder(None)
