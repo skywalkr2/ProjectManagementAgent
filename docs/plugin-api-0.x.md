@@ -10,6 +10,37 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.43 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A project with its family:** `view.list(kind, project=<id>, ancestors=True)` also takes records in the projects
+  above it (its parent, then the parent's parent), and `descendants=True` those in every project below it; the
+  project's own come first, then nearest first. They need a project id.
+- **Said in the guide:** an item's ops can't name a record a main op creates by id; they apply after the main ops in
+  the same transaction, so an own op's `apply` finds it by its natural key (`writer.find`). A group stays on the
+  review while it has items, choices or requests, even when all are dropped; dropping them all queues nothing. The
+  core keeps no cache for validators (the view is made anew for each call): cache costly derived data by content.
+  `candidates` with no project lists what the note could be about across the workspace, most likely first.
+
+## What 0.3.42 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Value lists:** `registrar.value_list(name, label=..., values=[...])` (listed in `provides.value_lists`) declares a
+  list of the values a field may take, shown as a dropdown. Bind a field of your own record type with
+  `Annotated[str | None, InList("<plugin>/<name>")]` (or a list of them); a field may also take a core list
+  (`project-status`, `project-phase`, `project-priority`, `project-group`). Binding to another plugin's list is
+  refused at load.
+- **The person owns a list:** `values` are a workspace's first values, given once together with any values its
+  records already hold; after that the person adds, renames and retires values (core ops `list.add`,
+  `list.rename`, `list.retire`, system tier, each with Undo). A rename changes every record that holds the value in
+  one step. Never rely on a value staying on a list.
+- **Enforced where records are written:** a value not on its list is refused for any writer (a plugin op, the
+  assistant, an edit), with the list's values in the reason. A value a record already holds stays valid after it is
+  retired. The assistant's packets list the values each bound field takes.
+- **Core fields:** a project's `status`, `phase`, `priority` and `group` now take their values from core lists.
+
 ## What 0.3.41 adds
 
 Manifests stay `'>=0.3,<0.4'`.

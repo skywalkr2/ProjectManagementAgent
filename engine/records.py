@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -63,6 +63,40 @@ class RefTo:
     """Marks a field as holding the id of another record: `Annotated[str | None, RefTo("project")]`."""
 
     kind: str
+
+
+@dataclass(frozen=True)
+class InList:
+    """Marks a field whose values come from a value list (design 5.1): `Annotated[str | None, InList("project-status")]`
+    or a list of them. A value not on the list is refused wherever the record is written; a value already on the
+    record stays valid after it is retired from the list."""
+
+    name: str
+
+
+def list_fields(model: type[BaseModel]) -> list[tuple[str, str, bool]]:
+    """(field, list name, holds many) for every top-level field marked with InList."""
+    from typing import Annotated, Union, get_args, get_origin
+
+    def marks(annotation: Any) -> list[str]:
+        if get_origin(annotation) is Annotated:
+            return [m.name for m in annotation.__metadata__ if isinstance(m, InList)]
+        return []
+
+    found = []
+    for name, info in model.model_fields.items():
+        direct = [m.name for m in info.metadata if isinstance(m, InList)]
+        annotation = info.annotation
+        origin = get_origin(annotation)
+        members = get_args(annotation) if origin is Union or type(annotation).__name__ == "UnionType" else ()
+        single = direct + [n for arg in members for n in marks(arg)] + marks(annotation)
+        many = []
+        for arg in (annotation, *members):
+            if get_origin(arg) in (list, tuple, set):
+                many += [n for inner in get_args(arg) for n in marks(inner)]
+        found += [(name, n, False) for n in dict.fromkeys(single)]
+        found += [(name, n, True) for n in dict.fromkeys(many)]
+    return found
 
 
 def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> list[tuple[str, str]]:
@@ -203,11 +237,19 @@ class Project(Record):
     content_levels_field: ClassVar[str | None] = "content_levels"
 
     name: str = Field(min_length=1, description="The name shown wherever the project appears.")
-    group: str | None = Field(None, description="The portfolio grouping the project is listed under.")
-    status: str | None = Field(None, description="Where the project stands now, in the person's own words.")
-    phase: str | None = Field(None, description="The part of its life the project is in, in the person's own words.")
+    group: Annotated[str | None, InList("project-group")] = Field(
+        None, description="The portfolio grouping the project is listed under, from the project-group list."
+    )
+    status: Annotated[str | None, InList("project-status")] = Field(
+        None, description="Where the project stands now, from the project-status list."
+    )
+    phase: Annotated[str | None, InList("project-phase")] = Field(
+        None, description="The part of its life the project is in, from the project-phase list."
+    )
     target: date | None = Field(None, description="The day the project is meant to be finished.")
-    priority: str | None = Field(None, description="How important the project is, in the person's own words.")
+    priority: Annotated[str | None, InList("project-priority")] = Field(
+        None, description="How important the project is, from the project-priority list."
+    )
     summary: str | None = Field(None, description="A short description of what the project is.")
     owner: str | None = Field(None, description="The id of the person responsible for the project.")
     links: list[Link] = Field(default_factory=list, description="Pages that belong to the project.")
@@ -784,6 +826,35 @@ class Signal(Record):
 
 
 #: Record kind to its model. The order is the export order.
+class ValueList(Record):
+    """A list of the values a field may take, shown as a dropdown (design 5.1). The core and plugins ship its first
+    values; the person adds, renames and retires values with `list.add`, `list.rename` and `list.retire`. A retired
+    value is no longer offered, and records that have it keep it."""
+
+    record_kind: ClassVar[str] = "value_list"
+    prefix: ClassVar[str] = "LIST"
+    unique: ClassVar[tuple[tuple[str, ...], ...]] = (("name",),)
+
+    name: str = Field(
+        pattern=r"^([a-z0-9][a-z0-9-]*/)?[a-z0-9][a-z0-9-]*$",
+        description='The list\'s id: "project-status", or "<plugin>/<name>" for a plugin\'s list.',
+    )
+    label: str = Field(min_length=1, description="What the list is called on screen.")
+    values: list[str] = Field(default_factory=list, description="The values offered, in the order shown.")
+    retired: list[str] = Field(
+        default_factory=list, description="Values no longer offered that records may still hold."
+    )
+
+    @model_validator(mode="after")
+    def _distinct(self) -> ValueList:
+        everything = [v.strip() for v in (*self.values, *self.retired)]
+        if any(not v for v in everything):
+            raise ValueError("a list's values are words, not blanks")
+        if len({v.casefold() for v in everything}) != len(everything):
+            raise ValueError("a list holds each value once")
+        return self
+
+
 REGISTRY: dict[str, type[Record]] = {
     model.record_kind: model
     for model in (
@@ -810,6 +881,7 @@ REGISTRY: dict[str, type[Record]] = {
         WatchRun,
         TextVersion,
         WorkingCopy,
+        ValueList,
     )
 }
 

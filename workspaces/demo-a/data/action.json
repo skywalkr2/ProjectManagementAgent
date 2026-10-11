@@ -44,5 +44,26 @@
     "project": "PRJ-1",
     "status": "held",
     "text": "Book the cut-over war room"
+  },
+  {
+    "due": "2026-10-14",
+    "id": "ACT-5",
+    "owners": [
+      {
+        "person": "PER-1"
+      }
+    ],
+    "project": "PRJ-1",
+    "text": "Review the cut-over checklist before the dry run"
+  },
+  {
+    "id": "ACT-6",
+    "owners": [
+      {
+        "person": "PER-1"
+      }
+    ],
+    "project": "PRJ-1",
+    "text": "Book the room for the go/no-go meeting"
   }
 ]

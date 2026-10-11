@@ -651,6 +651,16 @@ class PluginHost:
             keep(keys, sign_in, {**tokens, "account": " ".join(name.split())[:120]})
         return name
 
+    @property
+    def value_lists(self) -> dict[str, dict[str, Any]]:
+        """Every running plugin's value lists, by name, with their label and first values."""
+        return {
+            name: entry
+            for plugin, registrar in sorted(self.registrars.items())
+            if self.active(plugin)
+            for name, entry in registrar.value_lists.items()
+        }
+
     def triage_matchers(self) -> dict[str, Any]:
         """Every running plugin's triage matchers, by name."""
         return {
@@ -1115,6 +1125,7 @@ class PluginHost:
             ("connectors", registrar.connectors),
             ("triage_matchers", registrar.triage_matchers),
             ("sign_ins", registrar.sign_ins),
+            ("value_lists", registrar.value_lists),
         ):
             declared = set(getattr(expected, key))
             if f"{registrar.name}/*" in declared:
@@ -1124,6 +1135,16 @@ class PluginHost:
                 continue
             if declared != set(actual):
                 raise ValueError(f"registered {key} does not match provides exactly")
+        from engine.lists import core_lists
+        from engine.records import list_fields
+
+        core = set(core_lists())
+        for kind, model in registrar.records.items():
+            for field, name, _ in list_fields(model):
+                if name not in core and name not in registrar.value_lists:
+                    raise ValueError(
+                        f"{kind}.{field} takes values from {name}, which is neither its own list nor the core's"
+                    )
         for sign_in in registrar.sign_ins.values():
             from engine.sign_in import check_addresses
 

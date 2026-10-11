@@ -359,6 +359,41 @@ class SettingProposeOp(OpModel):
         return f"Suggest setting {self.key}"
 
 
+class ListAddOp(OpModel):
+    """Add a value to a value list, or offer a retired one again. A system op: from the assistant it waits for the
+    person."""
+
+    op: Literal["list.add"] = "list.add"
+    list: str = Field(min_length=1, description='The list\'s name, such as "project-status".')
+    value: str = Field(min_length=1, max_length=80, description="The value to offer.")
+
+    def describe(self) -> str | None:
+        return f"Add {' '.join(self.value.split())!r} to the list {self.list}"
+
+
+class ListRenameOp(OpModel):
+    """Rename a value on a list and on every record that holds it, in one step."""
+
+    op: Literal["list.rename"] = "list.rename"
+    list: str = Field(min_length=1, description="The list's name.")
+    value: str = Field(min_length=1, description="The value as it is now.")
+    to: str = Field(min_length=1, max_length=80, description="Its new wording.")
+
+    def describe(self) -> str | None:
+        return f"Rename {self.value!r} to {' '.join(self.to.split())!r} on the list {self.list}"
+
+
+class ListRetireOp(OpModel):
+    """Stop offering a value; records that hold it keep it."""
+
+    op: Literal["list.retire"] = "list.retire"
+    list: str = Field(min_length=1, description="The list's name.")
+    value: str = Field(min_length=1, description="The value to stop offering.")
+
+    def describe(self) -> str | None:
+        return f"Stop offering {self.value!r} on the list {self.list}"
+
+
 class ReportDraftOp(OpModel):
     """Draft a report to the product's maintainers when the PM asks for something the product can't do: what was
     wanted, what happens now, and why it would help. The PM reviews and sends it."""
@@ -393,6 +428,9 @@ Op = Annotated[
     | TextDraftOp
     | AnswerOp
     | SettingProposeOp
+    | ListAddOp
+    | ListRenameOp
+    | ListRetireOp
     | ReportDraftOp,
     Field(discriminator="op"),
 ]
@@ -419,13 +457,22 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "text.draft": TextDraftOp,
     "answer": AnswerOp,
     "setting.propose": SettingProposeOp,
+    "list.add": ListAddOp,
+    "list.rename": ListRenameOp,
+    "list.retire": ListRetireOp,
     "report.draft": ReportDraftOp,
 }
 
 #: Ops only the person makes: from anyone else they are refused, never held.
 PERSON_ONLY_OPS = {"text.edit", "text.accept", "text.discard", "record.edit"}
 
-TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {"record.delete": "system", "project.add": "system"}
+TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {
+    "record.delete": "system",
+    "project.add": "system",
+    "list.add": "system",
+    "list.rename": "system",
+    "list.retire": "system",
+}
 
 #: Ops whose evidence is required (record.set requires it for the fields in EVIDENCE_FIELDS).
 NEEDS_EVIDENCE = {"fact", "action.add", "action.close", "question.done"}

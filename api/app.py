@@ -89,6 +89,9 @@ def create_app(
         from engine.migrate import move_identity
 
         move_identity(ws, store, cfg)
+    from engine.lists import ensure as ensure_lists
+
+    ensure_lists(store)
     worker = Worker(ws, store, cfg, events, router_factory, on_restart)
     instance = uuid.uuid4().hex
     dist = ui_dist if ui_dist is not None else UI_DIST

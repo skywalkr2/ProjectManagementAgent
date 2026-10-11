@@ -29,7 +29,7 @@ registers from); what a plugin may not do is import another plugin's registered 
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -39,13 +39,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from engine.config.schema import StageDefinition, TypeStages
 from engine.ops import EvidenceIn, OpModel, Tier
-from engine.records import Record, RefTo, ref_fields, values_at
+from engine.records import InList, Record, RefTo, ref_fields, values_at
 from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.41"
+PLUGIN_API_VERSION = "0.3.43"
 
 
 class Settings(BaseModel):
@@ -99,14 +99,50 @@ class ReadView:
         self._allow(kind)
         return self.__view.get(kind, record_id)
 
-    def list(self, kind: str, /, *, project: Any = ANY, **equals: Any) -> list[Stored]:
+    def list(
+        self,
+        kind: str,
+        /,
+        *,
+        project: Any = ANY,
+        ancestors: bool = False,
+        descendants: bool = False,
+        **equals: Any,
+    ) -> list[Stored]:
         """Live records of a kind, optionally only those in one project (`project=None` for records in no project) or
         with given field values, matched exactly (case-sensitive) in the database. An unknown field is refused. The
-        kind is positional, so a field called `kind` can be matched too."""
+        kind is positional, so a field called `kind` can be matched too. With a project id, `ancestors=True` also
+        takes records in the projects above it (its parent, the parent's parent: a series a book belongs to) and
+        `descendants=True` those in every project below it; the project's own come first, then nearest first."""
         self._allow(kind)
+        if project is not ANY and (ancestors or descendants):
+            if not isinstance(project, str):
+                raise PluginMisuse("ancestors and descendants need a project id")
+            found = []
+            for pid in self._family(project, ancestors, descendants):
+                found += self.__view.find(kind, {**equals, "project": pid})
+            return found
         if project is not ANY:
             equals = {**equals, "project": project}
         return self.__view.find(kind, equals) if equals else self.__view.list(kind)
+
+    def _family(self, project: str, ancestors: bool, descendants: bool) -> list[str]:
+        """The project, then its ancestors nearest first, then its descendants nearest first; each once."""
+        order = [project]
+        if ancestors:
+            at = self.__view.get("project", project)
+            while at is not None and at.data.get("parent") and at.data["parent"] not in order:
+                order.append(at.data["parent"])
+                at = self.__view.get("project", at.data["parent"])
+        if descendants:
+            level = [project]
+            while level:
+                below = [
+                    p.id for pid in level for p in self.__view.find("project", {"parent": pid}) if p.id not in order
+                ]
+                order += below
+                level = below
+        return order
 
     #: Set by the host: reads a file's bytes by id, checked against its hash.
     read_file: Callable[[str], bytes] | None = None
@@ -592,7 +628,10 @@ class Proposal:
     #: AI work to queue when the person applies it: {"task": one of this plugin's task kinds, "about": (kind, id)
     #: or None, "note": "", "part": the part of a text it is about, "group": a group id}. Each waits for the
     #: person's go, whatever it costs. The person keeps or drops each one on the review (a request in a group is
-    #: set with its group); one about an item is dropped with that item.
+    #: set with its group); one about an item is dropped with that item. A group stays on the review while it has
+    #: items, choices or requests, even when all are dropped, so the person can keep them again; dropping them all
+    #: queues nothing for it. An item's ops can't name a record a main op creates by id: they apply after the main
+    #: ops in the same transaction, so an own op's `apply` finds that record by its natural key (`writer.find`).
     requests: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -877,6 +916,7 @@ class Registrar:
         self.setup_steps: dict[str, SetupStepRegistration] = {}
         self.connectors: dict[str, Any] = {}
         self.triage_matchers: dict[str, Callable] = {}
+        self.value_lists: dict[str, dict[str, Any]] = {}
         self.sign_ins: dict[str, Any] = {}
         self.interface_provisions: dict[str, InterfaceProvision] = {}
 
@@ -912,7 +952,10 @@ class Registrar:
         data level covers every record type the op writes, so a note handed in as internal never writes restricted
         records. `candidates(view, settings[, project]) -> list[(id, name)]` lists records such an op may name (with a
         third argument, it gets the id of the project the note was handed in for, or None), shown to the run
-        (at most 50, at the level of the record types the op writes), so it can refer to an existing one by id."""
+        (at most 50, at the level of the record types the op writes), so it can refer to an existing one by id. With
+        None the person named no project: list what the note could be about across the workspace, most likely first
+        (recently changed, still open), since only the first 50 reach the run; an empty list leaves the run nothing
+        to name, so it can only create."""
         if not issubclass(model, OpModel) or "op" not in model.model_fields:
             raise ValueError("op requires an OpModel with a literal op identifier")
         annotation = model.model_fields["op"].annotation
@@ -946,7 +989,10 @@ class Registrar:
         raised from an op's `apply` refuses the op without a fix round. Before anything applies, the core dry-runs the
         whole changeset in order (text writes included) and rolls it back, so a validator sees what earlier ops in it
         created; with the check at the write boundary, a validator usually runs about three times per op, so it must
-        be pure and quick."""
+        be pure and quick. There is no cache the core keeps for a pass: the view is made anew for each call. Cache
+        costly derived data by its content (a hash of the text it comes from, say, in a module-level dictionary of
+        bounded size), never by record id or version alone, since the changeset so far may change what a version
+        holds."""
         if not callable(fn):
             raise ValueError("validator must be callable")
         self.validators.setdefault(op_name, []).append(fn)
@@ -1424,6 +1470,22 @@ class Registrar:
             raise ValueError("duplicate triage matcher or invalid match function")
         self.triage_matchers[name] = match
 
+    def value_list(self, name: str, *, label: str, values: Sequence[str] = ()) -> None:
+        """A value list (listed in `provides.value_lists`): the values a field of the plugin's own record types may
+        take, shown as a dropdown. Bind a field to it with `Annotated[str | None, InList("<plugin>/<name>")]` (or a
+        list of those); a field may also take a core list, such as "project-status". `values` are the first values a
+        workspace gets, once, the first time the list is needed, together with any values its records already hold;
+        after that the list is the person's (they add, rename and retire values, with Undo), so never rely on a value
+        staying on it. A value not on the list is refused wherever the record is written, a refusal the op's author
+        sees; a value a record already holds stays valid after it is retired."""
+        self._name(name)
+        if name in self.value_lists or not str(label).strip():
+            raise ValueError("duplicate value list, or a list without a label")
+        cleaned = [" ".join(str(v).split()) for v in values]
+        if any(not v or len(v) > 80 for v in cleaned) or len({v.casefold() for v in cleaned}) != len(cleaned):
+            raise ValueError("a list's values are distinct words of up to 80 characters")
+        self.value_lists[name] = {"label": " ".join(str(label).split()), "values": cleaned}
+
     def setup_step(
         self,
         name: str,
@@ -1516,6 +1578,7 @@ __all__ = [
     "NeedsPerson",
     "PluginMisuse",
     "RefTo",
+    "InList",
     "Tier",
     "WriteContext",
     "Stored",

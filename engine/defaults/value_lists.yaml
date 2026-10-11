@@ -1,0 +1,15 @@
+# The core's value lists and their first values. A workspace gets each list the first time it opens; after that the
+# list is the person's, changed from the screens (add, rename, retire). Values a workspace already uses are added.
+lists:
+  project-status:
+    label: Project status
+    values: [On track, At risk, Off track, On hold, Done]
+  project-phase:
+    label: Project phase
+    values: [Idea, Planning, Underway, Wrapping up, Finished]
+  project-priority:
+    label: Project priority
+    values: [High, Medium, Low]
+  project-group:
+    label: Project group
+    values: []

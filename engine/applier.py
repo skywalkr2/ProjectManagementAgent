@@ -744,6 +744,10 @@ def _apply_op(
         return apply_move(ctx.store, tx, op, w), None
     if "/" in op.op:
         return ctx.store.plugins.apply(tx, op, w), None
+    if op.op in ("list.add", "list.rename", "list.retire"):
+        from engine import lists
+
+        return lists.apply(tx, op, w), None
     if isinstance(op, RecordEditOp):
         edit_record(ctx.store, tx, op, w)
         return [{"kind": op.record.kind, "id": op.record.id}], None

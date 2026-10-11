@@ -288,6 +288,7 @@ class Tx:
                 raise StoreError(f"{kind} {record_id} already exists (ids are never reused)")
             self._reserve(kind, record_id)
         clean = _validate(self.models[kind], {**data, "id": record_id})
+        self._check_lists(kind, record_id, clean, set(clean), {})
         self._c.execute(
             "INSERT INTO records(kind, id, version, deleted, data) VALUES(?, ?, 1, 0, ?)",
             (kind, record_id, dumps(clean)),
@@ -317,6 +318,7 @@ class Tx:
         diff = {k: merged.get(k) for k in set(merged) | set(current.data) if merged.get(k) != current.data.get(k)}
         if not diff:
             return current
+        self._check_lists(kind, record_id, merged, set(diff), current.data)
         version = current.version + 1
         self._c.execute(
             "UPDATE records SET version=?, data=? WHERE kind=? AND id=?", (version, dumps(merged), kind, record_id)
@@ -325,6 +327,34 @@ class Tx:
         for field in sorted(diff):
             self._log(at, ctx, kind, record_id, version, field, current.data.get(field), merged.get(field))
         return Stored(kind, record_id, version, False, merged)
+
+    def _check_lists(
+        self, kind: str, record_id: str, data: dict[str, Any], changed: set[str], before: dict[str, Any]
+    ) -> None:
+        """Refuse a value not on its field's value list. A value the record already held stays valid (it may have
+        been retired since); a list that doesn't exist yet (while a workspace is being loaded) checks nothing."""
+        from engine.records import list_fields
+
+        bound = [b for b in list_fields(self.models[kind]) if b[0] in changed]
+        if not bound:
+            return
+        lists = {r.data["name"]: r.data for r in self.list("value_list")}
+        for field, name, many in bound:
+            value_list = lists.get(name)
+            if value_list is None:
+                continue
+            values = data.get(field)
+            held = before.get(field)
+            for value in (values or []) if many else [values]:
+                if value is None or value in value_list["values"]:
+                    continue
+                if value == held or (many and value in (held or [])):
+                    continue
+                offered = ", ".join(value_list["values"]) or "nothing yet"
+                raise InvalidRecord(
+                    f"{kind} {record_id}: {field}: {value!r} isn't on the list {value_list['label']} ({offered}); "
+                    "add it to the list first"
+                )
 
     def delete(self, kind: str, record_id: str, ctx: WriteContext, *, read_version: int) -> None:
         """Mark a record deleted. Its id stays retired and its history stays in the ledger."""

@@ -49,6 +49,8 @@ from api.schemas import (
     InboxView,
     JobView,
     KindView,
+    ListRenameIn,
+    ListValueIn,
     NoteView,
     Ok,
     Option,
@@ -99,9 +101,11 @@ from api.schemas import (
     TextReview,
     TextVersionView,
     TodayLineView,
+    TodoView,
     UndoChoice,
     UndoReport,
     Unmark,
+    ValueListView,
     WorkingCopyFormatView,
     WorkingCopyOut,
     WorkingCopyView,
@@ -230,13 +234,15 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/kinds/{kind:path}")
     def kind_view(kind: str) -> KindView:
-        from engine.records import ref_fields
+        from engine.records import list_fields, ref_fields
         from engine.texts import long_text_fields
 
         if kind not in shown_kinds():
             raise HTTPException(status_code=404, detail="not found")
         model = store.plugins.records[kind]
         texts, refs = long_text_fields(model), dict(ref_fields(model))
+        bound = {field: name for field, name, _ in list_fields(model)}
+        offered = {r.data["name"]: r.data["values"] for r in store.read().list("value_list")}
         fields = []
         for name, info in model.model_fields.items():
             if name == "ext":
@@ -246,6 +252,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 value_type = "long_text"
             elif name in refs:
                 value_type = "reference"
+            elif name in bound:
+                value_type, options = "choice", list(offered.get(bound[name], []))
             fields.append(
                 FieldView(
                     name=name,
@@ -254,6 +262,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     refers_to=refs.get(name),
                     type=value_type,
                     options=options,
+                    value_list=bound.get(name),
                     required=info.is_required(),
                     editable=name not in ("id", "stage") and name not in texts,
                 )
@@ -276,6 +285,49 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             fields={k: v for k, v in record.data.items() if k not in texts and k != "ext"},
             long_text=list(texts),
         )
+
+    @r.get("/lists")
+    def value_lists() -> list[ValueListView]:
+        """Every value list, with the fields that use it."""
+        from engine.records import list_fields
+
+        users: dict[str, list[str]] = {}
+        for kind, model in store.plugins.records.items():
+            for field, name, _ in list_fields(model):
+                users.setdefault(name, []).append(f"{kind}.{field}")
+        return [
+            ValueListView(
+                id=r.id,
+                name=r.data["name"],
+                label=r.data["label"],
+                values=r.data["values"],
+                retired=r.data["retired"],
+                used_by=users.get(r.data["name"], []),
+            )
+            for r in sorted(store.read().list("value_list"), key=lambda r: r.data["label"].casefold())
+        ]
+
+    def list_op(op: dict[str, Any], summary: str) -> Applied:
+        from engine.applier import apply_as_person
+
+        cs_id = guard(lambda: apply_as_person(store, cfg, [op], summary))
+        changed()
+        return Applied(changeset=cs_id)
+
+    @r.post("/lists/{name:path}/add")
+    def list_add(name: str, body: ListValueIn) -> Applied:
+        """Add a value to a list (or offer a retired one again), with Undo."""
+        return list_op({"op": "list.add", "list": name, "value": body.value}, "Added to a list")
+
+    @r.post("/lists/{name:path}/rename")
+    def list_rename(name: str, body: ListRenameIn) -> Applied:
+        """Rename a value on a list and on every record that holds it, with Undo."""
+        return list_op({"op": "list.rename", "list": name, "value": body.value, "to": body.to}, "Renamed on a list")
+
+    @r.post("/lists/{name:path}/retire")
+    def list_retire(name: str, body: ListValueIn) -> Applied:
+        """Stop offering a value; records that hold it keep it. Undo offers it again."""
+        return list_op({"op": "list.retire", "list": name, "value": body.value}, "Retired from a list")
 
     @r.post("/records/edit")
     def record_edit(body: RecordEdit) -> Applied:
@@ -331,6 +383,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         from engine import today
 
         return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, datetime.now(UTC))]
+
+    @r.get("/today/todo")
+    def today_todo() -> list[TodoView]:
+        """The person's own open actions: overdue, due today, then the rest."""
+        from engine import today
+
+        return [TodoView(**vars(t)) for t in today.todo(store, cfg, datetime.now(UTC))]
 
     @r.get("/today/arrived")
     def today_arrived() -> InboxView:

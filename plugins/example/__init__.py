@@ -1,6 +1,6 @@
 """A small fictional plugin demonstrating a ledger-backed op and a safe event reaction."""
 
-from typing import ClassVar, Literal
+from typing import Annotated, ClassVar, Literal
 
 from pydantic import Field
 
@@ -8,6 +8,7 @@ from engine.plugin_api import (
     ActionContext,
     Choice,
     EventContext,
+    InList,
     OpModel,
     OpWriter,
     Proposal,
@@ -46,12 +47,20 @@ class Config(Settings):
     note_empty: str = Field(
         "That file has no text to make a note from.", description="Shown when the file has no text."
     )
+    kinds_label: str = Field("Reminder kind", description="What the list of reminder kinds is called on screen.")
+    kinds: list[str] = Field(
+        default_factory=lambda: ["Call", "Email", "Errand"],
+        description="The first kinds of reminder a workspace's list offers; after that the person changes the list.",
+    )
 
 
 class Reminder(Record):
     record_kind: ClassVar[str] = "example/reminder"
     prefix: ClassVar[str] = "REM"
     text: str = Field(min_length=1)
+    kind: Annotated[str | None, InList("example/kind")] = Field(
+        None, description="What sort of reminder it is, from the reminder kind list."
+    )
 
 
 class AddReminder(OpModel):
@@ -103,6 +112,7 @@ def note_from_file(target, context: ActionContext, choices: dict) -> Proposal:
 
 
 def register(registrar: Registrar) -> None:
+    registrar.value_list("example/kind", label=registrar.config.kinds_label, values=registrar.config.kinds)
     registrar.record_type(Reminder)
     registrar.stage_check("example/has-text", ready)
     registrar.stages(

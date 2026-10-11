@@ -73,6 +73,13 @@ those go stale within months. The screen lists the models the service itself rep
 key that isn't kept) and the person picks one for everyday work and, optionally, one for harder work. Suggesting
 models waits until it can rest on what a service publishes (prices, context size) rather than on names.
 
+**Update (same day):** value lists are kept as records (`value_list`), not in `config/lists.yaml`: adding a value
+then has history and Undo like any change and needs no restart, the lists travel with the workspace's data, and the
+storage layer refuses an off-list value from any writer. The core's first values ship in
+`engine/defaults/value_lists.yaml`; plugins declare theirs (plugin API 0.3.42). First fields bound: a project's
+status, phase, priority and group. A person's role and organization are not lists yet: an organization is better as
+its own record (one source of truth), and that comes with the people screens.
+
 ## 2026-10-11: Every plugin repository has its own autonomous builder, with a written brief and a question channel
 
 **Decided by:** project owner.

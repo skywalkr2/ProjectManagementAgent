@@ -346,11 +346,15 @@ def test_a_person_in_use_cannot_be_removed_and_a_rename_shows_everywhere(api):
 def test_projects_can_be_added_and_edited(api):
     client, base, _ = api
     owner = by_role("Editor")["id"]
-    body = {"name": "Second title", "target": "2027-03-01", "owner": owner, "status": "Planning"}
+    statuses = next(v for v in client.get(f"{base}/lists").json() if v["name"] == "project-status")["values"]
+    body = {"name": "Second title", "target": "2027-03-01", "owner": owner, "status": statuses[0]}
     prj = client.post(f"{base}/projects", json=body).json()["id"]
     assert client.post(f"{base}/projects", json={"name": "second title"}).status_code == 409
     assert client.post(f"{base}/projects", json={"name": "X", "owner": "PER-999"}).status_code == 404
-    client.post(f"{base}/projects/{prj}", json={"status": "Writing"})
+    off_list = client.post(f"{base}/projects/{prj}", json={"status": "Writing"})
+    assert off_list.status_code >= 400 and "isn't on the list" in off_list.text  # a status comes from its list
+    assert client.post(f"{base}/lists/project-status/add", json={"value": "Writing"}).status_code == 200
+    assert client.post(f"{base}/projects/{prj}", json={"status": "Writing"}).status_code == 200
     view = next(p for p in client.get(f"{base}/projects").json() if p["id"] == prj)
     assert view["status"] == "Writing" and view["target"] == "2027-03-01" and view["owner"] == owner
     assert client.post(f"{base}/projects/{prj}/remove").status_code == 200

@@ -40,5 +40,26 @@
     "project": "PRJ-1",
     "status": "held",
     "text": "Book a photographer for the launch reading"
+  },
+  {
+    "due": "2026-10-14",
+    "id": "ACT-5",
+    "owners": [
+      {
+        "person": "PER-1"
+      }
+    ],
+    "project": "PRJ-1",
+    "text": "Approve the back-cover copy"
+  },
+  {
+    "id": "ACT-6",
+    "owners": [
+      {
+        "person": "PER-1"
+      }
+    ],
+    "project": "PRJ-1",
+    "text": "Reply to the bookshop about the launch date"
   }
 ]

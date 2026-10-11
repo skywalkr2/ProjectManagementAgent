@@ -140,3 +140,24 @@ def test_the_routes_answer_for_the_screens(tmp_path):
     assert [a["title"] for a in c.get(f"{api}/today/agenda").json()] == ["Event soon"]
     inbox = c.get(f"{api}/today/arrived").json()
     assert [a["sender"] for a in inbox["items"]] == ["E"] and inbox["left_out"] == 0
+
+
+def test_the_persons_own_open_actions_come_overdue_first(tmp_path):
+    from engine.today import todo
+
+    ws, cfg, store = make(tmp_path, [])
+    try:
+        me = cfg.workspace.user.person
+        assert me
+        mine = [
+            a
+            for a in store.read().list("action")
+            if a.data["status"] == "open" and any(o["person"] == me for o in a.data["owners"])
+        ]
+        found = todo(store, cfg, NOW)
+        assert {t.action for t in found} == {a.id for a in mine}
+        dated = [t.due for t in found if t.due is not None]
+        assert dated == sorted(dated) and all(t.due is None for t in found[len(dated) :])
+        assert all(t.overdue == (t.due is not None and t.due < NOW.date()) for t in found)
+    finally:
+        store.close()

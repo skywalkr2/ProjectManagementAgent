@@ -130,6 +130,9 @@ class Provides(Strict):
     setup_steps: list[str] = Field(default_factory=list, description="Steps added to the first-run setup.")
     connectors: list[str] = Field(default_factory=list, description="Places the assistant can keep reading.")
     triage_matchers: list[str] = Field(default_factory=list, description="Rule kinds for triaging watched changes.")
+    value_lists: list[str] = Field(
+        default_factory=list, description="Value lists the plugin's record fields take their values from."
+    )
     sign_ins: list[str] = Field(
         default_factory=list, description="Sign-ins to a service, through its own sign-in page, as the person."
     )

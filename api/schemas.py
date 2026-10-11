@@ -608,8 +608,33 @@ class FieldView(BaseModel):
         "other", description="What kind of value it holds, for the edit form."
     )
     options: list[str] = Field(default_factory=list, description="For a choice: the values allowed.")
+    value_list: str | None = Field(
+        None, description="For a field whose values come from a value list: its name, so the form can add to it."
+    )
     required: bool = False
     editable: bool = Field(True, description="The person can change it with a field edit (not the id or stage).")
+
+
+class ValueListView(BaseModel):
+    """A value list: what a field's dropdown offers."""
+
+    id: str
+    name: str
+    label: str
+    values: list[str] = Field(description="The values offered, in order.")
+    retired: list[str] = Field(description="Values no longer offered that records may still hold.")
+    used_by: list[str] = Field(description="The fields that take their values from it, as kind.field.")
+
+
+class ListValueIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    value: str = Field(min_length=1, max_length=80)
+
+
+class ListRenameIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    value: str = Field(min_length=1)
+    to: str = Field(min_length=1, max_length=80)
 
 
 class KindView(BaseModel):
@@ -684,6 +709,16 @@ class ArrivedView(BaseModel):
     received: str = Field(description="ISO 8601 date-time with its offset.")
     unread: bool | None = None
     link: str | None = None
+
+
+class TodoView(BaseModel):
+    """One of the person's own open actions."""
+
+    action: str = Field(description="The action's id; its record is at GET /api/records/{id}.")
+    text: str
+    project: str | None = None
+    due: date | None = None
+    overdue: bool
 
 
 class InboxView(BaseModel):

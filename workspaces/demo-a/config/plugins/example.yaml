@@ -17,3 +17,5 @@ note_count_label: Include the word count
 note_count_text: ({n} words)
 note_not_text: Only plain text files can be turned into a note.
 note_empty: That file has no text to make a note from.
+kinds_label: Reminder kind
+kinds: [Call, Email, Site visit]   # the first values of the reminder kind list

@@ -139,3 +139,37 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
         )
     found.sort(key=lambda a: moment(a.received), reverse=True)
     return Inbox(items=found[: cfg.ui.today.mail_max], left_out=left_out)
+
+
+@dataclass
+class Todo:
+    action: str
+    text: str
+    project: str | None
+    due: date | None
+    overdue: bool
+
+
+def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
+    """The person's own open actions: overdue first, then due today, then the rest with no date or a later one,
+    earliest first. Empty when the workspace doesn't say which person record is theirs."""
+    me = cfg.workspace.user.person
+    if not me:
+        return []
+    today_here = now.astimezone(zone(cfg)).date()
+    found = []
+    for action in store.read().list("action"):
+        data = action.data
+        if data.get("status") != "open" or not any(o.get("person") == me for o in data.get("owners") or []):
+            continue
+        due = date.fromisoformat(str(data["due"])) if data.get("due") else None
+        found.append(
+            Todo(
+                action=action.id,
+                text=data["text"],
+                project=data.get("project"),
+                due=due,
+                overdue=due is not None and due < today_here,
+            )
+        )
+    return sorted(found, key=lambda t: (t.due is None, t.due or today_here, t.text))

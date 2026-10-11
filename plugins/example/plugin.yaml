@@ -14,6 +14,7 @@ provides:
   ai_task_kinds: [example/capture]
   actions: [example/note-from-file]
   wording: [wording.yaml]
+  value_lists: [example/kind]
 config_schema: example:Config
 requires:
   network: []

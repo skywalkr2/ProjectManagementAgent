@@ -91,6 +91,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
             "# Op reference\n" + reference_for(list(offered), store.plugins.ops),
             "# Records you may name\n" + candidates if candidates else "",
             "# Practice\n" + _guidance(kind),
+            _value_lists(store),
             "# Open actions\n" + _open_actions(store, People(store, cfg)),
             "# Open questions\n" + _open_questions(store, People(store, cfg)),
             "# People\n" + _people(store, cfg),
@@ -419,6 +420,28 @@ def _people(store: Store, cfg: Config) -> str:
             bits.append("this is the PM")
         lines.append("- " + " | ".join(bits))
     return "\n".join(lines) or "(none)"
+
+
+def _value_lists(store: Store) -> str:
+    """The values list-bound fields take, so the assistant proposes only values that will be accepted."""
+    from engine.records import list_fields
+
+    users: dict[str, list[str]] = {}
+    for kind, model in store.plugins.records.items():
+        for field, name, _ in list_fields(model):
+            users.setdefault(name, []).append(f"{kind}.{field}")
+    lines = []
+    for r in sorted(store.read().list("value_list"), key=lambda r: r.data["name"]):
+        if r.data["name"] in users:
+            values = "; ".join(r.data["values"]) or "(none yet)"
+            lines.append(f"- {', '.join(users[r.data['name']])}: {values}")
+    if not lines:
+        return ""
+    return (
+        "# Values these fields take\n"
+        "Use one of these exactly. If none fits, leave the field as it is and say so in a note; the person adds "
+        "values to a list.\n" + "\n".join(lines)
+    )
 
 
 def _projects(store: Store) -> str:

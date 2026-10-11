@@ -1766,6 +1766,18 @@
             ],
             "title": "Type",
             "type": "string"
+          },
+          "value_list": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a field whose values come from a value list: its name, so the form can add to it.",
+            "title": "Value List"
           }
         },
         "required": [
@@ -2486,6 +2498,44 @@
           "url"
         ],
         "title": "Link",
+        "type": "object"
+      },
+      "ListRenameIn": {
+        "additionalProperties": false,
+        "properties": {
+          "to": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "To",
+            "type": "string"
+          },
+          "value": {
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "to"
+        ],
+        "title": "ListRenameIn",
+        "type": "object"
+      },
+      "ListValueIn": {
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "title": "ListValueIn",
         "type": "object"
       },
       "LocalServerView": {
@@ -6067,6 +6117,54 @@
         "title": "TodayLineView",
         "type": "object"
       },
+      "TodoView": {
+        "description": "One of the person's own open actions.",
+        "properties": {
+          "action": {
+            "description": "The action's id; its record is at GET /api/records/{id}.",
+            "title": "Action",
+            "type": "string"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "overdue": {
+            "title": "Overdue",
+            "type": "boolean"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action",
+          "text",
+          "overdue"
+        ],
+        "title": "TodoView",
+        "type": "object"
+      },
       "UndoChoice": {
         "properties": {
           "ops": {
@@ -6168,6 +6266,57 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "ValueListView": {
+        "description": "A value list: what a field's dropdown offers.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "retired": {
+            "description": "Values no longer offered that records may still hold.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Retired",
+            "type": "array"
+          },
+          "used_by": {
+            "description": "The fields that take their values from it, as kind.field.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Used By",
+            "type": "array"
+          },
+          "values": {
+            "description": "The values offered, in order.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "label",
+          "values",
+          "retired",
+          "used_by"
+        ],
+        "title": "ValueListView",
         "type": "object"
       },
       "WatchRunView": {
@@ -7486,6 +7635,179 @@
           }
         },
         "summary": "Kind View"
+      }
+    },
+    "/api/lists": {
+      "get": {
+        "description": "Every value list, with the fields that use it.",
+        "operationId": "value_lists_api_lists_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ValueListView"
+                  },
+                  "title": "Response Value Lists Api Lists Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Value Lists"
+      }
+    },
+    "/api/lists/{name}/add": {
+      "post": {
+        "description": "Add a value to a list (or offer a retired one again), with Undo.",
+        "operationId": "list_add_api_lists__name__add_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListValueIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Add"
+      }
+    },
+    "/api/lists/{name}/rename": {
+      "post": {
+        "description": "Rename a value on a list and on every record that holds it, with Undo.",
+        "operationId": "list_rename_api_lists__name__rename_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListRenameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Rename"
+      }
+    },
+    "/api/lists/{name}/retire": {
+      "post": {
+        "description": "Stop offering a value; records that hold it keep it. Undo offers it again.",
+        "operationId": "list_retire_api_lists__name__retire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListValueIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Retire"
       }
     },
     "/api/me": {
@@ -10150,6 +10472,29 @@
           }
         },
         "summary": "Today Arrived"
+      }
+    },
+    "/api/today/todo": {
+      "get": {
+        "description": "The person's own open actions: overdue, due today, then the rest.",
+        "operationId": "today_todo_api_today_todo_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TodoView"
+                  },
+                  "title": "Response Today Todo Api Today Todo Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Today Todo"
       }
     },
     "/api/watch": {
