@@ -768,8 +768,10 @@ class TodayLineView(BaseModel):
     text: str
     about: RecordReference | None = None
     action: str | None = Field(None, description="The one thing to do from it: a person action or a kind of work.")
-    action_is: Literal["action", "task"] | None = Field(
-        None, description="action: run it as a person action (/plugin-actions); task: start it as AI work."
+    action_is: Literal["action", "task", "core"] | None = Field(
+        None,
+        description="action: run it as a person action (/plugin-actions); task: start it as AI work; core: one of the "
+        "core's own (open, review, go, answer, move-stage) on `about`.",
     )
     why: str = ""
     until: str | None = None
@@ -1326,6 +1328,11 @@ class SignInView(BaseModel):
     can_paste: bool = Field(False, description="The person can paste their own registration here (on this computer).")
     needs_secret: bool = Field(False, description="The service issues a client secret along with the client id.")
     set_aside: bool = Field(False, description="A pasted registration was set aside and can be brought back.")
+    default_unusable: bool = Field(
+        False,
+        description="The add-on has its own registration, but it doesn't allow this app's address (served under "
+        "another path, or hosted), so the person's own is needed.",
+    )
     own_app_steps: list[SignInStep] = Field(
         default_factory=list, description="How to make one's own registration with the service."
     )

@@ -41,6 +41,19 @@ class Config:
             return files[name]
         raise AttributeError(name)
 
+    def value(self, key: str) -> Any:
+        """The effective value at a dotted key ("ai.content_levels"), a whole mapping included; None when unset."""
+        name, _, rest = key.partition(".")
+        model = self.files.get(name)
+        if model is None:
+            return None
+        data: Any = model.model_dump(mode="json")
+        for part in rest.split(".") if rest else []:
+            if not isinstance(data, Mapping) or part not in data:
+                return None
+            data = data[part]
+        return data
+
     def flat(self) -> list[tuple[str, Any, str]]:
         """Every key as (dotted path, value, layer), in file order."""
         rows: list[tuple[str, Any, str]] = []

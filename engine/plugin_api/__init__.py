@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.47"
+PLUGIN_API_VERSION = "0.3.48"
 
 
 class Settings(BaseModel):
@@ -226,6 +226,18 @@ class ReadView:
                     if item.is_file() and not item.is_symlink():
                         found.add(item.relative_to(layer).as_posix())
         return sorted(found)
+
+    #: Set by the host: a record's place in the effective stages.
+    stage_status_of: Callable[[Stored], StageStatus | None] | None = None
+
+    def stage_status(self, record: Stored) -> StageStatus | None:
+        """Where a record of a core kind or this plugin's own stands in the workspace's effective stages, with the
+        next stage's entry checks run now; None for a kind with no stages. Not available inside a stage check, which
+        is itself part of this answer (it raises PluginMisuse there)."""
+        self._allow(record.kind)
+        if self.stage_status_of is None:
+            return None
+        return self.stage_status_of(record)
 
     def source_text(self, source_id: str) -> str:
         """The text of a saved core `source` (a handed-in email, a page): untrusted material to check quotes against,
@@ -689,12 +701,25 @@ class WorkingCopyContext(ReadView):
         self.record, self.field, self.version = record, field, version
 
 
+#: The core's own actions a Today line may offer, with the kind of record each needs as `about` (None: any).
+CORE_LINE_ACTIONS: dict[str, str | None] = {
+    "open": None,  # open the record
+    "review": None,  # review what waits on it: the assistant's answer (a changeset) or a draft on the record
+    "go": "request",  # give the go to a queued run that waits for it
+    "answer": "question",  # answer a question
+    "move-stage": None,  # move the record to its next stage (a kind with stages)
+}
+
+
 @dataclass
 class TodayLine:
     """One line a plugin adds to Today: `text` is one plain line for the person (no internal terms); `about` is the
-    record it is about, as (kind, id); `action` is the one thing to do from it, a person action or a task kind of
-    this plugin's, on that record or the workspace; `why` and `until` say why it is waiting and until when, when it
-    is. `id` is stable across calls, so the same line isn't shown twice."""
+    record it is about, as (kind, id); `action` is the one thing to do from it: a person action or a task kind of
+    this plugin's, on that record or the workspace, or one of the core's own (`CORE_LINE_ACTIONS`): "open" the
+    record, "review" what waits on it (the assistant's answer as a `changeset`, or a draft on the record), give the
+    "go" to a queued `request`, "answer" a `question`, or "move-stage" (a kind with stages). A core action needs
+    `about`. `why` and `until` say why it is waiting and until when, when it is. `id` is stable across calls, so the
+    same line isn't shown twice."""
 
     id: str
     text: str
@@ -726,6 +751,8 @@ class PanelRegistration:
     row_actions: tuple[str, ...]
     tab: str
     new_action: str | None = None
+    computed: dict[str, Callable] = field(default_factory=dict)
+    show_for: Callable | None = None
 
 
 @dataclass(frozen=True)
@@ -901,6 +928,48 @@ class StageCheckResult:
 
     passed: bool
     reason: str
+
+
+class SetupState(frozenset):
+    """What a setup step's `done` can see beyond records, as its third argument. It is the set of the plugin's
+    declared secrets that are set (names only, never values), so `"client-id" in state` works; it also carries
+    `settings`, the effective values of the core settings the step suggests, read from the files as they are now
+    (a hand edit counts); `accounts`, how many AI accounts can do each role's work ({"write": 1, "check": 0,
+    "research": 1}: the accounts of the tier the role names, else of every tier); and `tool_available(name)`,
+    whether a program the plugin declares is installed here."""
+
+    settings: dict[str, Any]
+    accounts: dict[str, int]
+
+    def __new__(
+        cls,
+        secrets: Any = (),
+        settings: dict[str, Any] | None = None,
+        accounts: dict[str, int] | None = None,
+        tool_available: Callable[[str], bool] | None = None,
+    ) -> SetupState:
+        state = super().__new__(cls, secrets)
+        state.settings = dict(settings or {})
+        state.accounts = dict(accounts or {})
+        state._available = tool_available
+        return state
+
+    def tool_available(self, name: str) -> bool:
+        return bool(self._available and self._available(name))
+
+
+@dataclass(frozen=True)
+class StageStatus:
+    """Where a record stands in the workspace's own stages (`stages.yaml`, else the plugin's defaults): `current` is
+    its stage id (None before the first), `stages` the ids of the stages that apply to it in order, `next` the next
+    one that applies (None at the end), `checks` that stage's entry checks by id, and `ready` whether all of them
+    pass, so moving on is one step for the person."""
+
+    current: str | None
+    stages: tuple[str, ...]
+    next: str | None
+    checks: dict[str, StageCheckResult]
+    ready: bool
 
 
 class Registrar:
@@ -1342,13 +1411,24 @@ class Registrar:
         row_actions: tuple[str, ...] = (),
         tab: str = "work",
         new_action: str | None = None,
+        computed: dict[str, Callable] | None = None,
+        show_for: Callable | None = None,
     ) -> None:
         """A screen listing records (listed in `provides.panels`), described as data so it looks and behaves like
         the core's (design 7.2): the records of `kind` (core or own) whose fields equal `filter`, shown as `view`
-        ("list", "table" or "board"; a board groups by the first column) with `columns` (fields of the kind).
-        `primary_action` is the one action on a row and `row_actions` the rest, in its menu: this plugin's person
-        actions or task kinds on that kind. `new_action` is a person action of this plugin's on the workspace (`on`
-        None) shown above the rows, to add one. Rows are read through the core, and actions run as they always do."""
+        ("list", "table" or "board"; a board groups by the first column) with `columns` (fields of the kind, or
+        names in `computed`). `primary_action` is the one action on a row and `row_actions` the rest, in its menu:
+        this plugin's person actions or task kinds on that kind. `new_action` is a person action of this plugin's on
+        the workspace (`on` None) shown above the rows, to add one. Rows are read through the core, and actions run
+        as they always do.
+
+        `computed` adds columns that aren't fields: {"words": fn} where `fn(record, view, settings)` returns a short
+        str, a number, a bool or None (a word count, a stage, "complete for its tier", the last build). It must be
+        quick and deterministic and never call AI; one that raises shows an empty cell and counts as the plugin
+        failing (failure containment). Filtered by project, a kind with no `project` field follows its
+        `layout_project` reference: a record is in the project its referenced record is in. `show_for(project,
+        view) -> bool` lists the panel only on the projects it returns True for (a panel of what a parent project's
+        children share, say); without it the panel is on every project."""
         self._name(name)
         if name in self.panels or not title.strip() or not columns:
             raise ValueError("duplicate panel, missing title or no columns")
@@ -1356,6 +1436,11 @@ class Registrar:
             raise ValueError('a panel view is "list", "table" or "board"')
         if tab not in ("today", "work", "people", "settings"):
             raise ValueError('a panel tab is "today", "work", "people" or "settings"')
+        computed = dict(computed or {})
+        if any(not isinstance(k, str) or not k or not callable(fn) for k, fn in computed.items()):
+            raise ValueError("computed maps column names to functions of (record, view, settings)")
+        if show_for is not None and not callable(show_for):
+            raise ValueError("show_for is a function of (project, view)")
         self.panels[name] = PanelRegistration(
             name,
             title.strip(),
@@ -1367,6 +1452,8 @@ class Registrar:
             tuple(row_actions),
             tab,
             new_action,
+            computed,
+            show_for,
         )
 
     def job(self, name: str, *, every_minutes: int, run: Callable) -> None:
@@ -1429,6 +1516,7 @@ class Registrar:
         default_client_secret: str | None = None,
         default_app_note: str | None = None,
         own_app_steps: Sequence[str | tuple[str, str]] = (),
+        default_redirects: Sequence[str] = (),
     ) -> None:
         """A sign-in to a service through its own sign-in page, as the person (listed in `provides.sign_ins`):
         OAuth 2.0 authorization code with PKCE. `authorize_url` and `token_url` are the service's HTTPS addresses, on
@@ -1466,7 +1554,18 @@ class Registrar:
         hosted app sets its own. `default_app_note` says in plain words what using the add-on's registration means
         (a warning page, how often to sign in again), shown while it is in use. `own_app_steps` is how a person
         makes their own registration, shown as a numbered list beside the paste boxes and the address to allow: each
-        step is a line, or (line, https link) to open the service's page for it (up to 12)."""
+        step is a line, or (line, https link) to open the service's page for it (up to 12).
+
+        The default pair: `default_client_id` alone is a public client (the service issues no secret);
+        `default_client_secret` needs `default_client_id`. `requires.secrets` still lists `client_id` (and
+        `client_secret`), the names a pasted or workspace registration is kept under. `default_app_note` shows only
+        while the add-on's registration is in use; say there what the service's limits mean for the person (a
+        warning page, how often to sign in again, a cap on who may sign in). The note and each step are one or two
+        short sentences (up to 300 characters). `default_redirects` lists the callback addresses the add-on's
+        registration allows (`http://localhost/api/sign-ins/callback`, say; a loopback host matches any port): when
+        the app's own address isn't one of them (served under another base path, or hosted), the add-on's
+        registration isn't used and the person is asked for their own, with the reason. Without it, any address is
+        assumed to be allowed."""
         self._name(name)
         if name in self.sign_ins or not str(label).strip() or not scopes:
             raise ValueError("duplicate sign-in, or a sign-in without a label or scopes")
@@ -1492,6 +1591,10 @@ class Registrar:
             steps.append((" ".join(str(text).split()), link))
         if len(steps) > 12:
             raise ValueError("own_app_steps lists up to 12 steps")
+        if any(not str(a).startswith(("http://", "https://")) for a in default_redirects):
+            raise ValueError("default_redirects are full http(s) callback addresses")
+        if default_redirects and not default_client_id:
+            raise ValueError("default_redirects describe default_client_id's registration")
         from engine.sign_in import SignIn
 
         self.sign_ins[name] = SignIn(
@@ -1511,6 +1614,7 @@ class Registrar:
             default_client_secret=default_client_secret.strip() if default_client_secret else None,
             default_app_note=" ".join(default_app_note.split()) if default_app_note else None,
             own_app_steps=tuple(steps),
+            default_redirects=tuple(str(a) for a in default_redirects),
         )
 
     def triage_matcher(self, name: str, *, match: Callable) -> None:
@@ -1555,13 +1659,16 @@ class Registrar:
     ) -> None:
         """A step of the first-run setup (listed in `provides.setup_steps`), shown after the core's steps: `label` says
         what to do in a few words, `explanation` why, and `done(view, settings) -> bool` whether it is done, called
-        whenever setup is shown, so it must be quick and deterministic. A `done` taking a third argument gets the
-        names of its declared secrets that are set (a frozenset; never their values), so a step such as "set up the
-        app registration" can tell when it is done. `action` is one of this plugin's person
-        actions on the workspace, offered as the step's button; without one, the step points to the plugin's
-        settings. `settings` suggests core settings the plugin needs ({"ai.budgets.confirm_unpriced": True}): the
-        step shows them with an Apply button that saves them like any settings change (checked, with Undo); the
-        plugin never changes them itself. The person can skip it and come back to it later."""
+        whenever setup is shown, so it must be quick and deterministic. A `done` taking a third argument gets a
+        `SetupState`: the names of its declared secrets that are set (a frozenset; never their values), the
+        effective values of the settings it suggests (`state.settings`), the AI accounts per role
+        (`state.accounts`) and `state.tool_available(name)` for its declared programs. `action` is one of this
+        plugin's person actions on the workspace, offered as the step's button; without one, the step points to the
+        plugin's settings. `settings` suggests core settings the plugin needs
+        ({"ai.budgets.confirm_unpriced": True}): the step shows them with an Apply button that saves them like any
+        settings change (checked, with Undo); the plugin never changes them itself. A suggested mapping is merged:
+        its keys are added and every key the person already has keeps its value. The person can skip it and come
+        back to it later."""
         self._name(name)
         label = " ".join(str(label).split())
         if name in self.setup_steps or not callable(done) or not label or len(label) > 80:
@@ -1649,6 +1756,7 @@ __all__ = [
     "WorkingCopyContext",
     "InterfaceItem",
     "TodayLine",
+    "CORE_LINE_ACTIONS",
     "PacketContext",
     "LongText",
     "Unit",
@@ -1663,6 +1771,8 @@ __all__ = [
     "Registrar",
     "StageDefinition",
     "StageCheckResult",
+    "StageStatus",
+    "SetupState",
     "ToolBox",
     "ToolResult",
     "ToolError",

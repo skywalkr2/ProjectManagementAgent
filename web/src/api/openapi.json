@@ -5461,6 +5461,12 @@
             "title": "Can Paste",
             "type": "boolean"
           },
+          "default_unusable": {
+            "default": false,
+            "description": "The add-on has its own registration, but it doesn't allow this app's address (served under another path, or hosted), so the person's own is needed.",
+            "title": "Default Unusable",
+            "type": "boolean"
+          },
           "label": {
             "description": "What to call the service's sign-in on screen.",
             "title": "Label",
@@ -6598,7 +6604,8 @@
               {
                 "enum": [
                   "action",
-                  "task"
+                  "task",
+                  "core"
                 ],
                 "type": "string"
               },
@@ -6606,7 +6613,7 @@
                 "type": "null"
               }
             ],
-            "description": "action: run it as a person action (/plugin-actions); task: start it as AI work.",
+            "description": "action: run it as a person action (/plugin-actions); task: start it as AI work; core: one of the core's own (open, review, go, answer, move-stage) on `about`.",
             "title": "Action Is"
           },
           "id": {
@@ -8763,8 +8770,26 @@
     },
     "/api/panels": {
       "get": {
-        "description": "The screens running plugins add.",
+        "description": "The screens running plugins add; with a project, only those its add-on lists on that project.",
         "operationId": "panels_api_panels_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "project",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -8779,6 +8804,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Panels"

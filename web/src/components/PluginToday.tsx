@@ -45,6 +45,7 @@ function TodayRow(props: { line: S["TodayLineView"]; run: (offer: Offer, target:
   const about = line.about ?? null;
   const isAction = line.action_is === "action";
   const isTask = line.action_is === "task";
+  const runnable = !!line.action && (isAction || isTask);
   const actions = usePluginActions(about?.kind, about?.id, !!line.action && isAction);
   const tasks = useTaskKinds(about?.kind, about?.id, !!line.action && isTask);
   const found = (isAction ? actions.data : tasks.data)?.find((x) => x.name === line.action);
@@ -53,20 +54,20 @@ function TodayRow(props: { line: S["TodayLineView"]; run: (offer: Offer, target:
   const titleId = `today-${line.plugin}-${line.id}`.replace(/[^A-Za-z0-9_-]/g, "-");
   return (
     <li className="line" data-row tabIndex={-1} aria-labelledby={titleId}>
-      <div className={line.action && line.action_is ? "row pair" : "row single"}>
+      <div className={runnable ? "row pair" : "row single"}>
         <div className="text">
           <div id={titleId} className="name">
             <SafeText text={line.text} />
           </div>
           {wait && <span className="sub">{wait}</span>}
         </div>
-        {line.action && line.action_is && (
+        {runnable && (
           <div className="acts">
             <button
               type="button"
               className="btn primary"
               data-key="primary"
-              onClick={() => props.run({ name: line.action!, label, is: line.action_is!, on: about?.kind ?? null }, about)}
+              onClick={() => props.run({ name: line.action!, label, is: isAction ? "action" : "task", on: about?.kind ?? null }, about)}
             >
               {label}
             </button>

@@ -10,6 +10,30 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.48 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Today lines can offer the core's own actions:** `action` may be one of `CORE_LINE_ACTIONS`: "open" the record,
+  "review" what waits on it (the assistant's answer as a `changeset`, or a draft on the record), give the "go" to a
+  queued `request`, "answer" a `question`, or "move-stage" (a kind with stages). A core action needs `about`; a line
+  that names the wrong kind for it fails the contributor like any bad line.
+- **A setup step's `done` sees more:** its third argument is now a `SetupState`, still the set of its declared
+  secrets that are set, plus `state.settings` (the effective values of the settings it suggests, read from the
+  files as they are now, so a hand edit counts), `state.accounts` (AI accounts per role: write, check, research) and
+  `state.tool_available(name)`.
+- **A suggested mapping merges:** applying a step's suggestion for a mapping setting adds its keys and keeps every key
+  the person already has.
+- **Panels:** `computed={"column": fn(record, view, settings)}` adds columns that aren't fields (short values, quick,
+  contained); a kind with no `project` field is filtered by project through its `layout_project` reference;
+  `show_for(project, view) -> bool` lists a panel only on the projects it returns True for (`GET /api/panels?project=`).
+- **`view.stage_status(record)`** gives a record's place in the workspace's effective stages (`stages.yaml`, else the
+  plugin's defaults): `current`, `stages` (those that apply), `next`, the next stage's `checks` and `ready`. Not
+  available inside a stage check.
+- **Sign-ins:** `default_redirects` lists the callback addresses the add-on's own registration allows; at any other
+  address (another base path, a hosted app) the person is asked for their own, with the reason
+  (`SignInView.default_unusable`). The guide now states the default pair's rules.
+
 ## What 0.3.47 adds
 
 Manifests stay `'>=0.3,<0.4'`.

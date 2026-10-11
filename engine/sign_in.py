@@ -59,6 +59,23 @@ class SignIn:
     default_client_secret: str | None = None
     default_app_note: str | None = None  # what using the add-on's own registration means for the person
     own_app_steps: tuple[tuple[str, str | None], ...] = ()  # how to make one's own registration: (step, link)
+    default_redirects: tuple[str, ...] = ()  # the callback addresses the add-on's own registration allows
+
+
+def address_allowed(redirect: str, allowed: tuple[str, ...]) -> bool:
+    """Whether the app's callback address is one a registration allows: the same address, where a loopback host
+    (localhost, 127.0.0.1, [::1]) matches on any port, as services accept for apps on a person's computer. No list
+    means any address."""
+    if not allowed:
+        return True
+    loopback = {"localhost", "127.0.0.1", "::1"}
+
+    def key(address: str) -> tuple[str, str | None, int | None, str]:
+        parts = urlsplit(address)
+        host = (parts.hostname or "").lower()
+        return parts.scheme, host, None if host in loopback else parts.port, parts.path.rstrip("/") or "/"
+
+    return key(redirect) in {key(a) for a in allowed}
 
 
 #: Where the app registration a sign-in uses comes from: the workspace's references, values pasted on this computer,

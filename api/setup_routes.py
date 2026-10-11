@@ -49,6 +49,17 @@ NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "wor
 GUIDED = ("ai.providers.", "ai.tiers.", "storage.backups.targets")
 
 
+def _merged(current: Any, suggested: Any) -> Any:
+    """A suggested value laid over the current one: a mapping adds the keys it suggests and keeps every key the
+    person already has, with their values; anything else is replaced."""
+    if isinstance(current, dict) and isinstance(suggested, dict):
+        out = dict(current)
+        for key, value in suggested.items():
+            out[key] = _merged(current[key], value) if key in current else value
+        return out
+    return suggested
+
+
 def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
     local = cfg.server.mode == "local"
@@ -171,7 +182,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         barred = [k for k in found.settings if k.startswith(NEVER_SUGGESTED)]
         if barred:
             raise HTTPException(status_code=400, detail=f"An add-on can't suggest {', '.join(barred)}.")
-        return saved(save(dict(found.settings), [], body.fingerprint, allow=("",)))
+        now = current()
+        changes = {key: _merged(now.value(key), value) for key, value in found.settings.items()}
+        return saved(save(changes, [], body.fingerprint, allow=("",)))
 
     @r.post("/setup/{step:path}/skip")
     def setup_skip(step: str) -> Ok:

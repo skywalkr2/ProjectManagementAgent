@@ -152,6 +152,7 @@ class PluginHost:
         self.tasks = dict(TASKS)
         self.stage_checks = {}
         self.stages = cfg.stages.model_copy(deep=True)
+        self._in_stage_check = False
         self.status: dict[str, PluginStatus] = {}
         self.manifests: dict[str, Manifest] = {}
         self.registrars: dict[str, Registrar] = {}
@@ -508,7 +509,7 @@ class PluginHost:
 
     def today(self) -> list[tuple[str, Any]]:
         """(plugin, TodayLine) from every running plugin's Today contributors, each checked."""
-        from engine.plugin_api import ReadView, TodayLine
+        from engine.plugin_api import CORE_LINE_ACTIONS, ReadView, TodayLine
 
         found = []
         for plugin, registrar in sorted(self.registrars.items()):
@@ -523,8 +524,18 @@ class PluginHost:
                             raise ValueError("lines must be TodayLine objects")
                         if not line.text.strip() or "\n" in line.text or len(line.text) > 300:
                             raise ValueError("a Today line is one line of up to 300 characters")
-                        if line.action is not None and line.action not in registrar.actions | registrar.tasks:
-                            raise ValueError(f"{line.action} isn't one of this plugin's actions or task kinds")
+                        if line.action in CORE_LINE_ACTIONS:
+                            needs = CORE_LINE_ACTIONS[line.action]
+                            if line.about is None or (needs is not None and line.about[0] != needs):
+                                raise ValueError(f"the core's {line.action} needs about=({needs or 'kind'!r}, id)")
+                            if line.action == "move-stage" and not (
+                                self.stages.types.get(line.about[0]) and self.stages.types[line.about[0]].stages
+                            ):
+                                raise ValueError(f"{line.about[0]} has no stages to move")
+                        elif line.action is not None and line.action not in registrar.actions | registrar.tasks:
+                            raise ValueError(
+                                f"{line.action} isn't one of this plugin's actions or task kinds, or a core action"
+                            )
                         if line.about is not None and "/" in line.about[0] and not line.about[0].startswith(plugin):
                             raise ValueError("a Today line is about a core record or one of the plugin's own")
                 except Exception as err:
@@ -589,9 +600,15 @@ class PluginHost:
                 secret.read_text(encoding="utf-8").strip() if secret is not None and secret.is_file() else None,
                 "pasted",
             )
-        if sign_in.default_client_id:
+        if sign_in.default_client_id and self.default_app_fits(sign_in):
             return sign_in.default_client_id, sign_in.default_client_secret, "add-on"
         return None, None, "none"
+
+    def default_app_fits(self, sign_in: Any) -> bool:
+        """Whether the add-on's own registration allows this app's callback address."""
+        from engine.sign_in import address_allowed, redirect_uri
+
+        return address_allowed(redirect_uri(self.cfg.server), sign_in.default_redirects)
 
     def sign_in_token(self, name: str, workspace_root: Any) -> str:
         """A current access token for a sign-in, renewed when needed; ConnectorError("auth") when the person needs
@@ -818,9 +835,7 @@ class PluginHost:
         reader = self._with_files(ReadView(self.store.read(), plugin))
         args = [reader, registrar.config.model_copy(deep=True)]
         if _positional_count(step.done) >= 3:
-            root = Path(self.store.path).parent
-            declared = self.manifests[plugin].requires.secrets
-            args.append(frozenset(n for n in declared if self.plugin_secret(plugin, n, root)))
+            args.append(self.setup_state(plugin, step))
         try:
             done = bool(step.done(*args))
         except Exception as err:
@@ -828,6 +843,30 @@ class PluginHost:
             return False
         self.succeeded(plugin, f"setup step {step.name}")
         return done
+
+    def setup_state(self, plugin: str, step: Any) -> Any:
+        """What a setup step's `done` sees besides records: its secrets that are set, the effective values of the
+        settings it suggests (from the files as they are now), AI accounts per role, and its programs."""
+        import os
+
+        from engine.config import ConfigError, load_config
+        from engine.plugin_api import SetupState
+
+        root = Path(self.store.path).parent
+        declared = self.manifests[plugin].requires.secrets
+        try:
+            current = load_config(root / "config", env=dict(os.environ))
+        except ConfigError:
+            current = self.cfg
+        settings = {key: current.value(key) for key in step.settings}
+        tools = {tool.name for tool in self.manifests[plugin].requires.tools}
+        box = self.tool_box(plugin) if tools else None
+        return SetupState(
+            (n for n in declared if self.plugin_secret(plugin, n, root)),
+            settings=settings,
+            accounts=_accounts_per_role(current.ai),
+            tool_available=(lambda name: name in tools and box.available(name)) if box else None,
+        )
 
     def panel(self, name: str) -> Any | None:
         plugin = name.split("/", 1)[0]
@@ -839,10 +878,72 @@ class PluginHost:
         panel = self.panel(name)
         if panel is None:
             raise StoreError(f"there is no panel {name} running now")
+        from engine.plugin_api import ReadView
+
+        plugin = name.split("/", 1)[0]
         view = self.store.read()
-        equals = dict(panel.filter) | ({"project": project} if project else {})
+        model = self.records.get(panel.kind)
+        has_project = model is not None and "project" in model.model_fields
+        via = getattr(model, "layout_project", None)
+        equals = dict(panel.filter) | ({"project": project} if project and has_project else {})
         records = view.find(panel.kind, equals) if equals else view.list(panel.kind)
-        return [{"id": r.id, "values": {c: r.data.get(c) for c in panel.columns}} for r in records]
+        if project and not has_project:
+            if not via:
+                raise StoreError(f"{panel.kind} isn't kept per project, so this panel can't be filtered by one")
+            records = [r for r in records if self._project_through(view, panel.kind, via, r) == project]
+        reader = self._with_files(ReadView(view, plugin)) if panel.computed else None
+        settings = self.registrars[plugin].config if panel.computed else None
+        rows = []
+        for r in records:
+            values = {}
+            for column in panel.columns:
+                fn = panel.computed.get(column)
+                values[column] = (
+                    r.data.get(column) if fn is None else self._computed(plugin, panel, column, r, reader, settings)
+                )
+            rows.append({"id": r.id, "values": values})
+        return rows
+
+    def _project_through(self, view: Any, kind: str, via: str, record: Any) -> str | None:
+        """The project of the record a reference field points at, for a kind kept under another record's project."""
+        from engine.records import ref_fields
+
+        target = dict(ref_fields(self.records[kind])).get(via)
+        referred = view.get(target, record.data.get(via) or "") if target else None
+        return referred.data.get("project") if referred is not None else None
+
+    def _computed(self, plugin: str, panel: Any, column: str, record: Any, reader: Any, settings: Any) -> Any:
+        """One computed cell: a short value, or None when the function fails (contained, noted on the plugin)."""
+        where = f"panel {panel.name} column {column}"
+        try:
+            value = panel.computed[column](deepcopy(record), reader, settings.model_copy(deep=True))
+            if value is not None and not isinstance(value, str | int | float | bool):
+                raise ValueError("a computed column returns a short str, a number, a bool or None")
+            if isinstance(value, str) and (len(value) > 200 or "\n" in value):
+                raise ValueError("a computed column's text is one short line")
+        except Exception as err:
+            self.failed(plugin, where, err)
+            return None
+        self.succeeded(plugin, where)
+        return value
+
+    def panel_shown_for(self, panel: Any, project: str) -> bool:
+        """Whether a panel is listed on a project: its `show_for`, contained (a failure hides it)."""
+        from engine.plugin_api import ReadView
+
+        if panel.show_for is None:
+            return True
+        plugin = panel.name.split("/", 1)[0]
+        view = self.store.read()
+        record = view.get("project", project)
+        if record is None:
+            return False
+        try:
+            shown = bool(panel.show_for(deepcopy(record), self._with_files(ReadView(view, plugin))))
+        except Exception as err:
+            self.failed(plugin, f"panel {panel.name} show_for", err)
+            return False
+        return shown
 
     def job_settings(self, name: str) -> tuple[bool, int]:
         """Whether a job runs and how often, from the workspace's settings and the plugin's default."""
@@ -1285,9 +1386,12 @@ class PluginHost:
             model = registrar.records.get(panel.kind) or REGISTRY.get(panel.kind)
             if model is None:
                 raise ValueError(f"panel {panel.name} lists {panel.kind}, which is neither core nor the plugin's own")
-            for field_name in (*panel.columns, *panel.filter):
+            for field_name in (*[c for c in panel.columns if c not in panel.computed], *panel.filter):
                 if field_name not in model.model_fields:
                     raise ValueError(f"panel {panel.name}: {panel.kind} has no field {field_name}")
+            clash = [c for c in panel.computed if c in model.model_fields]
+            if clash:
+                raise ValueError(f"panel {panel.name}: computed column {clash[0]} is already a field of {panel.kind}")
             for action in (*([panel.primary_action] if panel.primary_action else []), *panel.row_actions):
                 target = registrar.actions.get(action) or registrar.tasks.get(action)
                 if target is None or getattr(target, "on", None) != panel.kind:
@@ -1327,6 +1431,7 @@ class PluginHost:
             return StageCheckResult(False, wording(self.cfg, "check_unavailable"))
         if "/" in record.kind and not record.kind.startswith(owner + "/"):
             return StageCheckResult(False, wording(self.cfg, "check_access"))
+        outer, self._in_stage_check = self._in_stage_check, True
         try:
             result = fn(
                 deepcopy(record),
@@ -1344,6 +1449,8 @@ class PluginHost:
         except Exception as err:
             self.disable(owner, f"stage check failed: {err}")
             return StageCheckResult(False, wording(self.cfg, "check_failed"))
+        finally:
+            self._in_stage_check = outer
 
     def lint_findings(
         self, op: Any, view: Any, severity: Any = None, origin: dict[str, Any] | None = None
@@ -1395,7 +1502,28 @@ class PluginHost:
         view.read_interface = lambda spec, project=None: self.read_interface(plugin, spec, project)
         view.find_interface_about = lambda item, task: self.interface_about(plugin, item, task)
         view.user = self.cfg.workspace.user.person
+        view.stage_status_of = self._stage_status
         return view
+
+    def _stage_status(self, record: Any) -> Any:
+        """A record's place in the effective stages, for ReadView.stage_status; refused inside a stage check, whose
+        own result it would need."""
+        from engine.plugin_api import PluginMisuse, StageStatus
+        from engine.stages import record_status
+
+        if self._in_stage_check:
+            raise PluginMisuse("a stage check can't ask for stage status, which runs the stage checks")
+        settings = self.stages.types.get(record.kind)
+        if settings is None or not settings.stages:
+            return None
+        status = record_status(self.store, record)
+        return StageStatus(
+            current=status["current"],
+            stages=tuple(s["id"] for s in status["stages"]),
+            next=status["next"]["id"] if status["next"] else None,
+            checks={c["id"]: StageCheckResult(c["passed"], c["reason"]) for c in status["checks"]},
+            ready=status["ready"],
+        )
 
     def wording(self) -> dict[str, str]:
         """What the screens call running plugins' own things: each AI task kind's label as `task.<kind>`, then the
@@ -1777,6 +1905,22 @@ def check_about(view: Any, kind: Any, about: dict[str, str] | None, store: Any =
         texts = text_presence(store, view, record)
     if not (kind.startable_on(record, texts) if starting else kind.offered_on(record, texts)):
         raise StoreError(f"{kind.label or kind.name} isn't for this {what}")
+
+
+def _accounts_per_role(ai: Any) -> dict[str, int]:
+    """How many distinct accounts can do each role's work: those of the tier the role names (its main account and
+    fallbacks), else of every tier. An account is counted only when it is set up in `ai.providers`."""
+
+    def accounts(tier: Any) -> set[str]:
+        refs = [tier.use, *tier.fallback] if tier is not None else []
+        return {ref.split("/", 1)[0] for ref in refs if ref and ref.split("/", 1)[0] in ai.providers}
+
+    found = {}
+    for role in type(ai.roles).model_fields:
+        named = getattr(ai.roles, role).tier
+        tiers = [ai.tiers.get(named)] if named else list(ai.tiers.values())
+        found[role] = len(set().union(*(accounts(t) for t in tiers)) if tiers else set())
+    return found
 
 
 def _positional_count(fn: Any) -> int:

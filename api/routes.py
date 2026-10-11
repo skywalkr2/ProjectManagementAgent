@@ -123,6 +123,7 @@ from engine.followups import mark_sent, sections, unmark_sent
 from engine.intake import IntakeError, hand_in, source_text
 from engine.names import People
 from engine.ops import StageMoveOp
+from engine.plugin_api import CORE_LINE_ACTIONS
 from engine.plugin_host import check_about
 from engine.prompts import render
 from engine.records import referrers
@@ -409,7 +410,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         for plugin, line in store.plugins.today():
             registrar = store.plugins.registrars[plugin]
             action_is = None
-            if line.action is not None:
+            if line.action in CORE_LINE_ACTIONS:
+                action_is = "core"
+            elif line.action is not None:
                 action_is = "action" if line.action in registrar.actions else "task"
             lines.append(
                 TodayLineView(
@@ -426,8 +429,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         return lines
 
     @r.get("/panels")
-    def panels() -> list[PanelView]:
-        """The screens running plugins add."""
+    def panels(project: str | None = None) -> list[PanelView]:
+        """The screens running plugins add; with a project, only those its add-on lists on that project."""
         found = []
         for plugin, registrar in sorted(store.plugins.registrars.items()):
             if store.plugins.active(plugin):
@@ -444,6 +447,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                         new_action=p.new_action,
                     )
                     for p in registrar.panels.values()
+                    if project is None or store.plugins.panel_shown_for(p, project)
                 ]
         return found
 

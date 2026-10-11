@@ -50,6 +50,7 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
             can_paste=local and source != "workspace",
             needs_secret=bool(s.client_secret),
             set_aside=(keys(s.plugin) / f"{s.client_id}.set-aside").is_file(),
+            default_unusable=bool(s.default_client_id) and not host.default_app_fits(s),
             own_app_steps=[SignInStep(text=text, link=link) for text, link in s.own_app_steps],
         )
 
