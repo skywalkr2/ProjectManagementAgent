@@ -10,6 +10,28 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.36 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **What a sign-in asks, before the person leaves:** `registrar.sign_in(..., allows=("Read your mail", ...))`, up to
+  10 short lines, shown on the Sign-ins row and the sign-in's setup step.
+- **The signed-in account:** `account=fn(context) -> str`, called once after signing in with a connector-like
+  context (`context.web`, `context.access_token`), names the account ("Signed in as …"). A failure leaves it unnamed
+  and is contained.
+- **What was allowed:** `context.granted(name) -> set[str]` is the scopes the person allowed (what the service said,
+  or everything asked when it doesn't say). The row names scopes asked for and not granted; a granted scope written
+  with the service's resource in front of it counts for the plain name.
+- **A refused renewal:** when the service refuses to renew a sign-in, it shows "Sign in again" at once, every later
+  read gets `auth` without asking the service again, and the person gets one question to sign in again, closed when
+  they do. A service that is down or out of reach doesn't count as a refusal.
+- **Signing out withdraws access:** `revoke_url=` (HTTPS, on a declared host): signing out sends the token there
+  (RFC 7009), best effort, before forgetting it.
+- **The service's refusal:** the callback keeps the service's `error` code and description; the screen shows them as
+  text.
+- **A setup step per sign-in:** the core adds one, labeled with the sign-in and what it asks, done while signed in,
+  so a plugin's own steps don't need to check.
+
 ## What 0.3.35 adds
 
 Manifests stay `'>=0.3,<0.4'`.

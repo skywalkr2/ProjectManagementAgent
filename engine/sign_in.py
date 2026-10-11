@@ -31,7 +31,12 @@ CALLBACK_PATH = "/api/sign-ins/callback"
 
 
 class SignInError(Exception):
-    """A sign-in can't start, finish or be renewed; the message says why in plain words."""
+    """A sign-in can't start, finish or be renewed; the message says why in plain words. `refused`: the service
+    refused to renew it just now, so the person has to sign in again."""
+
+    def __init__(self, message: str, refused: bool = False):
+        super().__init__(message)
+        self.refused = refused
 
 
 @dataclass(frozen=True)
@@ -47,6 +52,9 @@ class SignIn:
     client_id: str  # the declared secret holding the app's client id
     client_secret: str | None = None  # the declared secret holding its client secret, when the service issues one
     params: dict[str, str] = field(default_factory=dict)  # extra parameters for the sign-in page (e.g. offline access)
+    allows: tuple[str, ...] = ()  # what the person is asked to allow, in plain words, shown before they leave the app
+    account: Any = None  # (context) -> str: the signed-in account's name, read once after signing in
+    revoke_url: str | None = None  # where signing out withdraws the access at the service (RFC 7009), if it offers it
 
 
 @dataclass
@@ -74,7 +82,7 @@ def check_addresses(sign_in: SignIn, network: list[str]) -> None:
     """A sign-in's addresses are HTTPS and on hosts the plugin declares in `requires.network`."""
     from engine.net import host_allowed
 
-    for url in (sign_in.authorize_url, sign_in.token_url):
+    for url in (sign_in.authorize_url, sign_in.token_url, *([sign_in.revoke_url] if sign_in.revoke_url else [])):
         parts = urlsplit(url)
         if parts.scheme != "https" or not parts.hostname or not host_allowed(parts.hostname, network):
             raise ValueError(f"{url} must be an https address on a host listed in requires.network")
@@ -122,6 +130,11 @@ def finish(
     if client_secret:
         form["client_secret"] = client_secret
     return pending.sign_in, _tokens(web.post(pending.sign_in.token_url, data=form), now)
+
+
+def drop_pending(state: str) -> None:
+    """Forget a started sign-in the service refused."""
+    _PENDING.pop(state, None)
 
 
 def pending_sign_in(state: str) -> SignIn | None:
@@ -187,6 +200,8 @@ def access_token(
     tokens = kept(keys, sign_in)
     if tokens is None:
         raise SignInError(f"Sign in to {sign_in.label} first.")
+    if tokens.get("refused"):
+        raise SignInError(f"The sign-in to {sign_in.label} was withdrawn. Sign in again.")
     if float(tokens.get("expires_at") or 0) - now > RENEW_SECONDS:
         return tokens["access_token"]
     if not tokens.get("refresh_token") or not client_id:
@@ -202,12 +217,16 @@ def access_token(
     from engine.connectors import ConnectorError
 
     try:
-        renewed = _tokens(web.post(sign_in.token_url, data=form), now, keep_refresh=tokens["refresh_token"])
-    except ConnectorError as err:
-        if err.kind in ("auth", "no_access"):
-            raise SignInError(f"The sign-in to {sign_in.label} was withdrawn. Sign in again.") from None
-        raise
+        response = web.post(sign_in.token_url, data=form)
+        renewed = _tokens(response, now, keep_refresh=tokens["refresh_token"])
+    except (ConnectorError, SignInError) as err:
+        if isinstance(err, ConnectorError) and err.kind not in ("auth", "no_access"):
+            raise  # the service is failing or out of reach: try again later, the sign-in still stands
+        keep(keys, sign_in, {**tokens, "refused": True})
+        raise SignInError(f"The sign-in to {sign_in.label} was withdrawn. Sign in again.", refused=True) from None
     renewed["signed_in_at"] = tokens.get("signed_in_at")
+    renewed["account"] = tokens.get("account")
+    renewed["scope"] = renewed.get("scope") or tokens.get("scope")
     keep(keys, sign_in, renewed)
     return renewed["access_token"]
 
@@ -218,6 +237,37 @@ def status(keys: Path, sign_in: SignIn, now: float | None = None) -> str:
     tokens = kept(keys, sign_in)
     if tokens is None:
         return "signed_out"
-    if float(tokens.get("expires_at") or 0) <= now and not tokens.get("refresh_token"):
+    if tokens.get("refused") or (float(tokens.get("expires_at") or 0) <= now and not tokens.get("refresh_token")):
         return "expired"
     return "signed_in"
+
+
+def granted(keys: Path, sign_in: SignIn) -> set[str]:
+    """The scopes the person allowed: what the service said it granted, or everything asked when it didn't say."""
+    tokens = kept(keys, sign_in)
+    if tokens is None:
+        return set()
+    scope = tokens.get("scope")
+    return set(str(scope).split()) if scope else set(sign_in.scopes)
+
+
+def missing(sign_in: SignIn, allowed: set[str]) -> list[str]:
+    """Scopes asked for and not granted. A granted scope written with the service's resource in front of it
+    (".../Mail.Read") counts for the plain name."""
+    return [s for s in sign_in.scopes if not any(g == s or g.endswith("/" + s) for g in allowed)]
+
+
+def revoke(web: Any, sign_in: SignIn, tokens: dict[str, Any] | None, client_id: str | None) -> bool:
+    """Withdraw the access at the service, when it offers it; best effort. True when the service accepted."""
+    from engine.connectors import ConnectorError
+
+    token = (tokens or {}).get("refresh_token") or (tokens or {}).get("access_token")
+    if not sign_in.revoke_url or not token:
+        return False
+    form = {"token": token, "token_type_hint": "refresh_token" if tokens.get("refresh_token") else "access_token"}
+    if client_id:
+        form["client_id"] = client_id
+    try:
+        return web.post(sign_in.revoke_url, data=form).status < 400
+    except ConnectorError:
+        return False

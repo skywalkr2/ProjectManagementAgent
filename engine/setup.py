@@ -36,6 +36,7 @@ class Step:
     action: str | None = None  # a plugin step's person action, if it has one
     plugin: str | None = None
     settings: dict[str, Any] = field(default_factory=dict)  # core settings a plugin step suggests
+    sign_in: str | None = None  # a step the core adds per sign-in: the sign-in's name
 
 
 @dataclass
@@ -98,6 +99,21 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
                 action=step.action,
                 plugin=plugin,
                 settings=dict(step.settings),
+            )
+        )
+    from engine.sign_in import status
+
+    for name, sign_in in store.plugins.sign_ins().items():
+        signed = status(ws.root / ".cockpit" / "keys" / sign_in.plugin, sign_in) == "signed_in"
+        found.append(
+            Step(
+                name,
+                signed,
+                name in skipped and not signed,
+                label=sign_in.label,
+                explanation="; ".join(sign_in.allows),
+                plugin=sign_in.plugin,
+                sign_in=name,
             )
         )
     return found

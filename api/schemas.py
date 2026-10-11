@@ -909,6 +909,7 @@ class SetupStepView(BaseModel):
     settings: dict[str, Any] = Field(
         default_factory=dict, description="Core settings a plugin step suggests, applied with the step's Apply."
     )
+    sign_in: str | None = Field(None, description="For a step the core adds per sign-in: the sign-in's name.")
 
 
 class SetupView(BaseModel):
@@ -1098,6 +1099,11 @@ class SignInView(BaseModel):
     status: Literal["signed_in", "expired", "signed_out"]
     ready: bool = Field(description="The add-on's app registration (its client id) is set, so signing in can start.")
     callback: str = Field(description="The address the service's app registration must allow to send people back to.")
+    allows: list[str] = Field(default_factory=list, description="What the person is asked to allow, in plain words.")
+    account: str | None = Field(None, description="The signed-in account, when the add-on can name it.")
+    missing: list[str] = Field(
+        default_factory=list, description="Scopes asked for that the person didn't allow, while signed in."
+    )
 
 
 class SignInStarted(BaseModel):

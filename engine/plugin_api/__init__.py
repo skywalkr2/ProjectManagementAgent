@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.35"
+PLUGIN_API_VERSION = "0.3.36"
 
 
 class Settings(BaseModel):
@@ -1351,6 +1351,9 @@ class Registrar:
         client_id: str = "client-id",
         client_secret: str | None = None,
         params: dict[str, str] | None = None,
+        allows: tuple[str, ...] | list[str] = (),
+        account: Callable | None = None,
+        revoke_url: str | None = None,
     ) -> None:
         """A sign-in to a service through its own sign-in page, as the person (listed in `provides.sign_ins`):
         OAuth 2.0 authorization code with PKCE. `authorize_url` and `token_url` are the service's HTTPS addresses, on
@@ -1363,12 +1366,26 @@ class Registrar:
         register it again if the app's address or port changes), keeps the
         tokens on this computer and renews them. A connector gets a current token with
         `context.access_token(name)`; when the person needs to sign in (again) it raises `ConnectorError("auth",
-        ...)`, which asks them once. The plugin never sees the sign-in itself or the refresh token."""
+        ...)`, which asks them once. The plugin never sees the sign-in itself or the refresh token.
+
+        `allows` says in plain words what the person is asked to allow ("Read your mail"), shown on the Sign-ins
+        row and the setup step before they leave for the service's page. `account(context) -> str`, when given, is
+        called once after signing in, with a context like a connector's (`context.web`, `context.access_token`), and
+        names the signed-in account ("Signed in as …"); a failure leaves it unnamed. `context.granted(name)` is the
+        set of scopes the person allowed (the service's answer, or everything asked when it doesn't say); the row
+        names any scope asked for and not granted. `revoke_url` (HTTPS, on a declared host) is where signing out
+        withdraws the access at the service (RFC 7009), best effort. When the service refuses to renew a sign-in, it
+        shows "Sign in again" at once and the person is told once. The core adds a setup step per sign-in, done
+        while signed in."""
         self._name(name)
         if name in self.sign_ins or not str(label).strip() or not scopes:
             raise ValueError("duplicate sign-in, or a sign-in without a label or scopes")
         if not all(isinstance(s, str) and s.strip() for s in scopes):
             raise ValueError("a sign-in's scopes are words")
+        if len(allows) > 10 or not all(isinstance(a, str) and a.strip() and len(a) <= 80 for a in allows):
+            raise ValueError("allows lists up to 10 short lines of what the person is asked to allow")
+        if account is not None and not callable(account):
+            raise ValueError("account is a function")
         from engine.sign_in import SignIn
 
         self.sign_ins[name] = SignIn(
@@ -1381,6 +1398,9 @@ class Registrar:
             client_id=client_id,
             client_secret=client_secret,
             params=dict(params or {}),
+            allows=tuple(" ".join(a.split()) for a in allows),
+            account=account,
+            revoke_url=revoke_url,
         )
 
     def triage_matcher(self, name: str, *, match: Callable) -> None:

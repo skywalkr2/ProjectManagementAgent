@@ -4405,6 +4405,18 @@
             "title": "Settings",
             "type": "object"
           },
+          "sign_in": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a step the core adds per sign-in: the sign-in's name.",
+            "title": "Sign In"
+          },
           "skipped": {
             "title": "Skipped",
             "type": "boolean"
@@ -4462,6 +4474,26 @@
       },
       "SignInView": {
         "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The signed-in account, when the add-on can name it.",
+            "title": "Account"
+          },
+          "allows": {
+            "description": "What the person is asked to allow, in plain words.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Allows",
+            "type": "array"
+          },
           "callback": {
             "description": "The address the service's app registration must allow to send people back to.",
             "title": "Callback",
@@ -4471,6 +4503,14 @@
             "description": "What to call the service's sign-in on screen.",
             "title": "Label",
             "type": "string"
+          },
+          "missing": {
+            "description": "Scopes asked for that the person didn't allow, while signed in.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
           },
           "name": {
             "title": "Name",

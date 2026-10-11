@@ -548,9 +548,83 @@ class PluginHost:
         try:
             return access_token(keys, sign_in, web, client_id, client_secret)
         except SignInError as err:
+            if err.refused:
+                self.tell_sign_in_refused(sign_in)
             raise ConnectorError("auth", str(err)) from None
         finally:
             web.close()
+
+    def tell_sign_in_refused(self, sign_in: Any) -> None:
+        """Ask the person once to sign in again, unless a question about this sign-in is already open."""
+        from engine.storage import WriteContext
+
+        pm = self.cfg.workspace.user.person
+        if not pm or self.store.read().get("person", pm) is None:
+            return
+        resolves = {"kind": "sign_in", "name": sign_in.name}
+        if any(
+            q.data.get("resolves") == resolves and q.data["status"] == "open"
+            for q in self.store.read().list("question")
+        ):
+            return
+        with self.store.transaction() as tx:
+            tx.create(
+                "question",
+                {
+                    "to": pm,
+                    "title": f"Sign in to {sign_in.label} again",
+                    "text": f"{sign_in.label} stopped accepting this app's sign-in, so it can't be read. Sign in "
+                    "again from Settings, under Sign-ins.",
+                    "kind": "decision",
+                    "resolves": resolves,
+                },
+                WriteContext(actor="engine", trust="trusted", op="sign_in.refused"),
+            )
+
+    def signed_in(self, sign_in: Any, workspace_root: Any) -> str | None:
+        """After signing in: close the question asking to, and name the account when the plugin can. Returns it."""
+        from engine.connectors import ConnectorError
+        from engine.sign_in import keep, kept
+        from engine.storage import WriteContext
+
+        resolves = {"kind": "sign_in", "name": sign_in.name}
+        open_ones = [
+            q
+            for q in self.store.read().list("question")
+            if q.data.get("resolves") == resolves and q.data["status"] == "open"
+        ]
+        if open_ones:
+            with self.store.transaction() as tx:
+                for q in open_ones:
+                    tx.update(
+                        "question",
+                        q.id,
+                        {"status": "dropped"},
+                        WriteContext(actor="engine", trust="trusted", op="sign_in.done"),
+                        read_version=q.version,
+                    )
+        if sign_in.account is None:
+            return None
+        context = self.connector_context(sign_in.plugin, workspace_root)
+        where = f"account name for {sign_in.name}"
+        try:
+            name = sign_in.account(context)
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError("account returns the account's name as text")
+        except ConnectorError:
+            return None
+        except Exception as err:
+            self.failed(sign_in.plugin, where, err)
+            return None
+        finally:
+            if context.web is not None:
+                context.web.close()
+        self.succeeded(sign_in.plugin, where)
+        keys = Path(workspace_root) / ".cockpit" / "keys" / sign_in.plugin
+        tokens = kept(keys, sign_in)
+        if tokens is not None:
+            keep(keys, sign_in, {**tokens, "account": " ".join(name.split())[:120]})
+        return name
 
     def triage_matchers(self) -> dict[str, Any]:
         """Every running plugin's triage matchers, by name."""
@@ -601,6 +675,14 @@ class PluginHost:
                 raise PluginMisuse(f"{name} isn't a sign-in this plugin registers")
             return self.sign_in_token(name, workspace_root)
 
+        def allowed(name: str) -> set[str]:
+            from engine.plugin_api import PluginMisuse
+            from engine.sign_in import granted
+
+            if name not in own_sign_ins:
+                raise PluginMisuse(f"{name} isn't a sign-in this plugin registers")
+            return granted(keys, self.registrars[plugin].sign_ins[name])
+
         def keep_secret(name: str, value: str) -> None:
             import os
 
@@ -620,6 +702,7 @@ class PluginHost:
             secret=secret if declared else None,
             keep_secret=keep_secret if declared else None,
             access_token=token if own_sign_ins else None,
+            granted=allowed if own_sign_ins else None,
         )
 
     def poll_connector(self, connector: Any, settings: Any, state: dict[str, Any], context: Any) -> Any:

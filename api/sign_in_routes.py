@@ -4,7 +4,7 @@ signing out."""
 
 from __future__ import annotations
 
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse
@@ -40,6 +40,11 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
                 status=flow.status(keys(s.plugin), s),
                 ready=bool(host.plugin_secret(s.plugin, s.client_id, ws.root)),
                 callback=flow.redirect_uri(cfg.server),
+                allows=list(s.allows),
+                account=(flow.kept(keys(s.plugin), s) or {}).get("account"),
+                missing=flow.missing(s, flow.granted(keys(s.plugin), s))
+                if flow.status(keys(s.plugin), s) == "signed_in"
+                else [],
             )
             for s in host.sign_ins().values()
         ]
@@ -54,12 +59,18 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
         return SignInStarted(url=url)
 
     @r.get("/sign-ins/callback", include_in_schema=False)
-    def callback(state: str = "", code: str = "", error: str = "") -> RedirectResponse:
-        """The service sends the person back here; the screen then says how it went."""
+    def callback(state: str = "", code: str = "", error: str = "", error_description: str = "") -> RedirectResponse:
+        """The service sends the person back here; the screen then says how it went, with the service's own code
+        and words when it refused (shown as text)."""
         s = flow.pending_sign_in(state)
-        if s is None or error or not code:
-            reason = "refused" if error else "expired"
-            return RedirectResponse(f"{prefix}/?sign_in={reason}", status_code=303)
+        if error:
+            flow.drop_pending(state)
+            words = urlencode(
+                {"sign_in": "refused", "error": error[:80], "detail": " ".join(error_description.split())[:300]}
+            )
+            return RedirectResponse(f"{prefix}/?{words}", status_code=303)
+        if s is None or not code:
+            return RedirectResponse(f"{prefix}/?sign_in=expired", status_code=303)
         from engine.net import WebClient
 
         web = WebClient(list(host.manifests[s.plugin].requires.network))
@@ -73,11 +84,20 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
             return RedirectResponse(f"{prefix}/?sign_in=failed&name={quote(s.name)}", status_code=303)
         finally:
             web.close()
+        host.signed_in(done, ws.root)
         return RedirectResponse(f"{prefix}/?sign_in=done&name={quote(s.name)}", status_code=303)
 
     @r.delete("/sign-ins/{name:path}")
     def sign_out(name: str) -> Ok:
         s = find(name)
+        if s.revoke_url:
+            from engine.net import WebClient
+
+            web = WebClient(list(host.manifests[s.plugin].requires.network))
+            try:
+                flow.revoke(web, s, flow.kept(keys(s.plugin), s), host.plugin_secret(s.plugin, s.client_id, ws.root))
+            finally:
+                web.close()
         flow.forget(keys(s.plugin), s)
         return Ok(ok="signed_out")
 
