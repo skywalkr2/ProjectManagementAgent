@@ -8,6 +8,9 @@ repository uses them where they are. Code asks for a shipped folder by name and 
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 PACKAGED = Path(__file__).resolve().parent / "_shipped"
 CHECKOUT = Path(__file__).resolve().parents[1]
@@ -37,3 +40,13 @@ def demo(name: str = "demo-b", packaged: Path = PACKAGED, checkout: Path = CHECK
     if name not in DEMOS:
         raise KeyError(name)
     return shipped("demos", packaged, checkout) / name
+
+
+def product(packaged: Path = PACKAGED, checkout: Path = CHECKOUT) -> dict[str, Any]:
+    """Facts about this build (`catalog/product.yaml`), such as where feedback goes; empty when there are none."""
+    path = shipped("catalog", packaged, checkout) / "product.yaml"
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        return {}
+    return data if isinstance(data, dict) else {}

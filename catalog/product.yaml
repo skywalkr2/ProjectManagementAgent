@@ -1,0 +1,3 @@
+# Facts about this build of the product, shipped with it. A release build may fill these in; the repository leaves
+# them empty, so no address is committed here.
+feedback_to: null   # where the feedback button writes, unless a workspace sets ui.feedback_to

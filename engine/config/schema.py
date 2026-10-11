@@ -577,6 +577,7 @@ DEFAULT_SHORTCUTS = {
     "undo": "u",
     "hand_in": "n",
     "help": "?",
+    "ask": "/",
 }
 
 
@@ -591,6 +592,12 @@ class UiFile(FileModel):
     )
     narrow_below_px: int = Field(900, ge=320, description="Below this width the screen uses one column.")
     toast_seconds: float = Field(7, ge=0, description="How long an undo toast stays; 0 keeps toasts until dismissed.")
+    feedback_to: str | None = Field(
+        None,
+        pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+        description="The address the feedback button writes its email to. Empty uses the address the app was "
+        "packaged with, if any; with neither, feedback is drafted to copy.",
+    )
 
     @field_validator("shortcuts")
     @classmethod

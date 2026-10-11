@@ -365,6 +365,8 @@ class RuntimeConfig(BaseModel):
     toast_seconds: float
     shortcuts: dict[str, str]
     wording: dict[str, str]
+    demo: bool = Field(False, description="The workspace holds made-up example data; every screen says so.")
+    feedback_to: str | None = Field(None, description="Where the feedback button writes its email, if anywhere.")
 
 
 class PluginStatusView(BaseModel):

@@ -30,6 +30,13 @@ jobs:
           uv run ruff check .
           uv run pytest
           uv run python -m engine.selfcheck
+      - name: Fill in where feedback goes (a repository variable; left empty when unset)
+        env:
+          FEEDBACK_TO: ${{ vars.FEEDBACK_TO }}
+        run: |
+          if [ -n "$FEEDBACK_TO" ]; then
+            printf 'feedback_to: "%s"\n' "$FEEDBACK_TO" > catalog/product.yaml
+          fi
       - name: Build the package
         run: uv build --wheel -o dist
       - name: Install it in a clean environment and start the demo

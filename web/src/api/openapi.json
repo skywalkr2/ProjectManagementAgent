@@ -3439,6 +3439,24 @@
             "title": "Base Path",
             "type": "string"
           },
+          "demo": {
+            "default": false,
+            "description": "The workspace holds made-up example data; every screen says so.",
+            "title": "Demo",
+            "type": "boolean"
+          },
+          "feedback_to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the feedback button writes its email, if anywhere.",
+            "title": "Feedback To"
+          },
           "narrow_below_px": {
             "title": "Narrow Below Px",
             "type": "integer"

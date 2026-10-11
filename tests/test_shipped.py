@@ -10,7 +10,7 @@ import pytest
 
 import engine.cli
 from engine.cli import main
-from engine.shipped import CHECKOUT, demo, shipped
+from engine.shipped import CHECKOUT, demo, product, shipped
 
 
 def test_a_packaged_copy_wins_over_the_checkout(tmp_path):
@@ -58,3 +58,12 @@ def test_the_build_hook_skips_runtime_files(tmp_path, monkeypatch):
         (tmp_path / name).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / name).write_text("")
     assert [rel for _, rel in hook._files(tmp_path)] == [Path("config/workspace.yaml")]
+
+
+def test_product_facts_come_from_the_shipped_catalog(tmp_path):
+    assert product().get("feedback_to") is None  # the repository commits no address
+    (tmp_path / "catalog").mkdir()
+    (tmp_path / "catalog" / "product.yaml").write_text("feedback_to: someone@example.com\n")
+    assert product(packaged=tmp_path)["feedback_to"] == "someone@example.com"
+    (tmp_path / "catalog" / "product.yaml").write_text(": not yaml [")
+    assert product(packaged=tmp_path) == {}

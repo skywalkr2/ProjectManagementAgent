@@ -194,6 +194,8 @@ def test_runtime_config_carries_ui_settings(api):
     client, base, _ = api
     rc = client.get(f"{base}/runtime-config").json()
     assert rc["shortcuts"]["next"] and rc["narrow_below_px"] >= 320 and rc["pm"]
+    assert rc["demo"] is True and rc["shortcuts"]["ask"]  # the demo workspaces are labeled as made up
+    assert rc["feedback_to"] and rc["feedback_to"].endswith("@example.com")
 
 
 def test_mark_sent_can_be_undone(api):

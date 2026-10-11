@@ -27,7 +27,7 @@ from api.watch_routes import build_watch_router
 from engine import __version__
 from engine.ai.router import Router
 from engine.config import Config
-from engine.shipped import shipped
+from engine.shipped import product, shipped
 from engine.storage import Store
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -158,6 +158,8 @@ def create_app(
             toast_seconds=cfg.ui.toast_seconds,
             shortcuts=cfg.ui.shortcuts,
             wording=cfg.ui.wording,
+            demo=cfg.workspace.demo,
+            feedback_to=cfg.ui.feedback_to or product().get("feedback_to") or None,
         )
 
     inner.include_router(build_router(ws, cfg, store, events, worker))
