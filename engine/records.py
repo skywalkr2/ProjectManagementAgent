@@ -211,7 +211,9 @@ class Person(Record):
     )
     role: str | None = Field(None, description="Their job or part in the work, in plain words.")
     team: str | None = Field(None, description="The id of the team they belong to.")
-    org: str | None = Field(None, description="The organization they work for.")
+    org: Annotated[str | None, RefTo("organization")] = Field(
+        None, description="The id of the organization they work for; its name lives on that record."
+    )
     how_to_reach: dict[str, str] = Field(
         default_factory=dict, description="How to reach them: a channel name mapped to the address or handle for it."
     )
@@ -222,6 +224,19 @@ class Person(Record):
     status: Literal["active", "left"] = Field(
         "active", description="active: still around. left: no longer part of the work."
     )
+
+
+class Organization(Record):
+    """A company, client, supplier or other body people work for (design 5.1). Its name lives here only: people refer
+    to it by id, so a rename shows everywhere at once."""
+
+    record_kind: ClassVar[str] = "organization"
+    prefix: ClassVar[str] = "ORG"
+    unique: ClassVar[tuple[tuple[str, ...], ...]] = (("name",),)
+
+    name: str = Field(min_length=1, description="The name shown wherever the organization appears.")
+    aliases: list[str] = Field(default_factory=list, description="Other names that mean this organization.")
+    notes: str | None = Field(None, description="Anything worth knowing about it, in plain words.")
 
 
 class Team(Record):
@@ -868,6 +883,7 @@ REGISTRY: dict[str, type[Record]] = {
     model.record_kind: model
     for model in (
         Person,
+        Organization,
         Team,
         Project,
         Action,
@@ -896,7 +912,7 @@ REGISTRY: dict[str, type[Record]] = {
 
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.
 REFERENCES: dict[str, list[tuple[str, str]]] = {
-    "person": [("team", "team")],
+    "person": [("team", "team"), ("org", "organization")],
     "team": [("members[]", "person")],
     "project": [("owner", "person"), ("parent", "project")],
     "action": [("project", "project"), ("owners[].person", "person"), ("owners[].team", "team"), ("source", "source")],

@@ -403,6 +403,7 @@ def _open_questions(store: Store, people: People) -> str:
 
 def _people(store: Store, cfg: Config) -> str:
     teams = {t.id: t.data["name"] for t in store.read().list("team")}
+    orgs = {o.id: o.data["name"] for o in store.read().list("organization")}
     lines = []
     pm = cfg.workspace.user.person
     for p in store.read().list("person"):
@@ -415,7 +416,7 @@ def _people(store: Store, cfg: Config) -> str:
         if d.get("team") in teams:
             bits.append("team: " + teams[d["team"]])
         if d.get("org"):
-            bits.append("org: " + d["org"])
+            bits.append("org: " + orgs.get(d["org"], d["org"]))
         if p.id == pm:
             bits.append("this is the PM")
         lines.append("- " + " | ".join(bits))

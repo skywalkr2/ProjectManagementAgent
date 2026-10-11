@@ -134,7 +134,8 @@ def workspace_terms(ws_root: Path) -> set[str]:
         add(user.get("full_name"))
         add(user.get("aliases"))
     fields = {
-        "person": ("full_name", "aliases", "org"),
+        "person": ("full_name", "aliases"),
+        "organization": ("name", "aliases"),
         "team": ("name", "aliases"),
         "project": ("name", "group"),
     }

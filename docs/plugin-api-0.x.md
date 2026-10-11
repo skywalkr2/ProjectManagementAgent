@@ -10,6 +10,17 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.46 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Organizations are records:** a core record `organization` (name, aliases, notes) holds each company, client or
+  supplier once. A person's `org` is now an organization's id (`RefTo("organization")`), not a name; read the
+  organization for its name. A workspace whose people held names is moved over when it opens. `person.add` and
+  `record.set` on a person's `org` still take a name from the assistant: it is matched to an organization by name or
+  alias, or a new one is made.
+- **A project's priority** is in the project screens and API, from the `project-priority` list.
+
 ## What 0.3.45 adds
 
 Manifests stay `'>=0.3,<0.4'`.

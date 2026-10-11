@@ -55,6 +55,9 @@ from api.schemas import (
     Ok,
     Option,
     OpView,
+    OrganizationIn,
+    OrganizationPatch,
+    OrganizationView,
     OutsideEditView,
     PanelRow,
     PanelView,
@@ -938,6 +941,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             version=events.version,
             restart_needed=worker.restart_needed,
             can_restart=worker.can_restart,
+            restart_for=list(worker.restart_for),
         )
 
     @r.get("/notes")
@@ -1199,12 +1203,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/people")
     def people() -> list[PersonView]:
         pm = cfg.workspace.user.person
+        orgs = {o.id: o.data["name"] for o in store.read().list("organization")}
         return [
             PersonView(
                 id=p.id,
                 name=p.data["full_name"],
                 role=p.data.get("role"),
                 org=p.data.get("org"),
+                org_name=orgs.get(p.data.get("org") or ""),
                 aliases=p.data.get("aliases", []),
                 status=p.data.get("status", "active"),
                 is_pm=p.id == pm,
@@ -1220,6 +1226,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.post("/people")
     def add_person(body: PersonIn) -> Created:
         _same_name("person", "full_name", body.full_name)
+        if body.org:
+            need("organization", body.org)
 
         def do() -> str:
             with store.transaction() as tx:
@@ -1236,6 +1244,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changes = body.model_dump(exclude_unset=True)
         if changes.get("full_name"):
             _same_name("person", "full_name", changes["full_name"], except_id=pid)
+        if changes.get("org"):
+            need("organization", changes["org"])
         guard(lambda: _update(store, "person", pid, changes, _setup("person.edit")))
         changed()
         return Ok(ok=pid)
@@ -1254,6 +1264,61 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         guard(lambda: _restore(store, "person", pid))
         changed()
         return Ok(ok=pid)
+
+    @r.get("/organizations")
+    def organizations() -> list[OrganizationView]:
+        """The organizations people work for, by name."""
+        count: dict[str, int] = {}
+        for p in store.read().list("person"):
+            if p.data.get("org"):
+                count[p.data["org"]] = count.get(p.data["org"], 0) + 1
+        found = [
+            OrganizationView(
+                id=o.id,
+                name=o.data["name"],
+                aliases=o.data.get("aliases", []),
+                notes=o.data.get("notes"),
+                people=count.get(o.id, 0),
+            )
+            for o in store.read().list("organization")
+        ]
+        return sorted(found, key=lambda o: o.name.casefold())
+
+    @r.post("/organizations")
+    def add_organization(body: OrganizationIn) -> Created:
+        _same_name("organization", "name", body.name)
+
+        def do() -> str:
+            with store.transaction() as tx:
+                return tx.create("organization", body.model_dump(), _setup("organization.add")).id
+
+        new = guard(do)
+        changed()
+        return Created(id=new)
+
+    @r.post("/organizations/{oid}")
+    def edit_organization(oid: str, body: OrganizationPatch) -> Ok:
+        """Rename or change an organization. People refer to it by id, so a new name shows everywhere at once."""
+        need("organization", oid)
+        changes = body.model_dump(exclude_unset=True)
+        if changes.get("name"):
+            _same_name("organization", "name", changes["name"], except_id=oid)
+        guard(lambda: _update(store, "organization", oid, changes, _setup("organization.edit")))
+        changed()
+        return Ok(ok=oid)
+
+    @r.post("/organizations/{oid}/remove")
+    def remove_organization(oid: str) -> Ok:
+        need("organization", oid)
+        guard(lambda: _remove(store, "organization", oid))
+        changed()
+        return Ok(ok=oid)
+
+    @r.post("/organizations/{oid}/restore")
+    def restore_organization(oid: str) -> Ok:
+        guard(lambda: _restore(store, "organization", oid))
+        changed()
+        return Ok(ok=oid)
 
     @r.get("/projects")
     def projects() -> list[ProjectView]:
@@ -1274,6 +1339,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 group=p.data.get("group"),
                 status=p.data.get("status"),
                 phase=p.data.get("phase"),
+                priority=p.data.get("priority"),
                 target=str(p.data["target"]) if p.data.get("target") else None,
                 owner=p.data.get("owner"),
                 owner_name=names.name(p.data["owner"]) if p.data.get("owner") else None,

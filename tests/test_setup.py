@@ -269,6 +269,7 @@ def test_the_app_restarts_only_when_the_person_asks(tmp_path):
         text = (ws.config_dir / "storage.yaml").read_text()
         (ws.config_dir / "storage.yaml").write_text(set_key(text, ["backups", "keep"], 3))
         assert worker.needs_restart() and not worker.restart_due() and asked == []  # shown, never on its own
+        assert worker.restart_for == ["storage.backups.keep"]  # and says what waits for it
         worker.request_restart()
         assert worker.restart_due() and asked == [True]
         assert not worker.restart_due() and asked == [True]
@@ -345,6 +346,19 @@ def test_a_restart_that_fails_says_how_to_start_again(monkeypatch, capsys):
     assert engine.cli.restart_self() == 1
     err = capsys.readouterr().err
     assert "couldn't restart by itself" in err and "cockpit serve -w ws" in err
+
+
+def test_a_restart_never_starts_the_demo_over_or_opens_another_tab(monkeypatch):
+    import engine.cli
+
+    ran = []
+    monkeypatch.setattr(engine.cli.os, "execv", lambda exe, args: ran.append(args))
+    monkeypatch.setattr(engine.cli.os, "name", "posix")
+    monkeypatch.setattr(engine.cli.sys, "orig_argv", ["python", "cockpit", "demo", "~/d", "--fresh", "--open"])
+    monkeypatch.delenv(engine.cli.RESTARTED, raising=False)
+    engine.cli.restart_self()
+    assert ran and "--fresh" not in ran[0] and ran[0][-3:] == ["demo", "~/d", "--open"]
+    assert engine.cli.os.environ.get(engine.cli.RESTARTED) == "1"  # read once by the new start, then dropped
 
 
 def test_the_person_the_app_is_for_is_named_on_their_record(tmp_path):

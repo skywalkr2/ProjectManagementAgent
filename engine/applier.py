@@ -880,7 +880,12 @@ def _apply_op(
         )
     elif isinstance(op, RecordSetOp):
         cur = tx.get(op.kind, op.id)
-        tx.update(op.kind, op.id, {op.field: op.value}, w, read_version=cur.version)
+        value = op.value
+        if op.kind == "person" and op.field == "org":
+            from engine.organizations import resolve
+
+            value = resolve(tx, value, w)  # the assistant names an organization; people refer to it by id
+        tx.update(op.kind, op.id, {op.field: value}, w, read_version=cur.version)
         made(op.kind, op.id)
     elif isinstance(op, RecordLogOp):
         cur = tx.get("project", op.project)
@@ -948,11 +953,12 @@ def _apply_op(
         )
         made("fact", fact.id)
     elif isinstance(op, PersonAddOp):
+        from engine.organizations import resolve
+
+        org = resolve(tx, op.org, w)
         made(
             "person",
-            tx.create(
-                "person", {"full_name": op.full_name, "role": op.role, "org": op.org, "aliases": op.aliases}, w
-            ).id,
+            tx.create("person", {"full_name": op.full_name, "role": op.role, "org": org, "aliases": op.aliases}, w).id,
         )
     return touched, None
 

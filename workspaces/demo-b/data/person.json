@@ -2,7 +2,7 @@
   {
     "full_name": "Avery Lane",
     "id": "PER-1",
-    "org": "Lantern House",
+    "org": "ORG-1",
     "role": "Publisher",
     "team": "TEAM-1"
   },
@@ -15,7 +15,7 @@
       "email": "maya.okafor@example.org"
     },
     "id": "PER-2",
-    "org": "Lantern House",
+    "org": "ORG-1",
     "role": "Editor",
     "team": "TEAM-1"
   },
@@ -46,7 +46,7 @@
   {
     "full_name": "Jun Park",
     "id": "PER-6",
-    "org": "Harrowgate Print Works",
+    "org": "ORG-2",
     "role": "Printer account contact"
   },
   {
@@ -55,7 +55,7 @@
     ],
     "full_name": "Maya Lindqvist",
     "id": "PER-7",
-    "org": "Corner Lamp Books",
+    "org": "ORG-3",
     "role": "Bookshop events coordinator"
   }
 ]

@@ -357,6 +357,10 @@ def test_projects_can_be_added_and_edited(api):
     assert client.post(f"{base}/projects/{prj}", json={"status": "Writing"}).status_code == 200
     view = next(p for p in client.get(f"{base}/projects").json() if p["id"] == prj)
     assert view["status"] == "Writing" and view["target"] == "2027-03-01" and view["owner"] == owner
+    priorities = next(v for v in client.get(f"{base}/lists").json() if v["name"] == "project-priority")["values"]
+    assert client.post(f"{base}/projects/{prj}", json={"priority": priorities[0]}).status_code == 200
+    assert next(p for p in client.get(f"{base}/projects").json() if p["id"] == prj)["priority"] == priorities[0]
+    assert client.post(f"{base}/projects/{prj}", json={"priority": "Whenever"}).status_code >= 400
     assert client.post(f"{base}/projects/{prj}/remove").status_code == 200
     in_use = fixture_records(DEMO_B, "project")[0]["id"]
     assert client.post(f"{base}/projects/{in_use}/remove").status_code == 409

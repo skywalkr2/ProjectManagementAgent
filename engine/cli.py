@@ -353,7 +353,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     prefix = "" if cfg.server.base_path == "/" else cfg.server.base_path
     url = f"http://{cfg.server.host}:{cfg.server.port}{prefix}/?token={token}"
     print(f"Open {url}")
-    if cfg.server.open_browser:
+    if cfg.server.open_browser and not os.environ.pop(RESTARTED, ""):
         threading.Timer(1.0, webbrowser.open, args=(url,)).start()
     released = False
 
@@ -397,10 +397,23 @@ def cmd_serve(args: argparse.Namespace) -> int:
     return 0
 
 
+#: Set in the environment of a process that started itself again, so it doesn't open another browser tab.
+RESTARTED = "COCKPIT_RESTARTED"
+#: Options that act once, at the start the person typed, never again on a restart: starting the demo over would erase
+#: everything done in it since.
+ONCE_ONLY = ("--fresh",)
+
+
+def restart_args(args: list[str]) -> list[str]:
+    """The command line to start again with: the same, without the options that act only once."""
+    return [a for a in args if a not in ONCE_ONLY]
+
+
 def restart_self() -> int:
     """Start this same command again to use new settings: the process replaces itself where the system allows it,
     and elsewhere (Windows) starts a new one and ends. If neither works, it says how to start it again."""
-    command = [sys.executable, *sys.orig_argv[1:]]
+    command = [sys.executable, *restart_args(sys.orig_argv[1:])]
+    os.environ[RESTARTED] = "1"  # the browser is already open on the app
     print("Restarting to use the new settings.", file=sys.stderr)
     sys.stderr.flush()
     sys.stdout.flush()
@@ -412,7 +425,7 @@ def restart_self() -> int:
             return 0
         os.execv(sys.executable, command)  # noqa: S606 - this same program again
     except OSError as err:
-        shown = " ".join(sys.orig_argv[1:]) or "cockpit serve"
+        shown = " ".join(restart_args(sys.orig_argv[1:])) or "cockpit serve"
         print(f"cockpit: couldn't restart by itself ({err}). Start it again with: {shown}", file=sys.stderr)
         return 1
     return 0

@@ -109,6 +109,8 @@ class Worker:
         self._config_seen = self._started_with[0]
         self.restart_needed: str | None = None
         self.restart_requested = False
+        #: The settings keys whose change waits for the restart, and "code" when the program itself changed.
+        self.restart_for: list[str] = []
 
     def apply_live(self) -> bool:
         """Take in changed settings now when every changed key is live (an AI account, the person's name); returns
@@ -127,7 +129,9 @@ class Worker:
         before = {k: v for k, v, _ in self.cfg.flat()}
         after = {k: v for k, v, _ in fresh.flat()}
         changed = {k for k in before.keys() | after.keys() if before.get(k) != after.get(k)}
-        if any(not is_live(k) for k in changed):
+        waiting = sorted(k for k in changed if not is_live(k))
+        if waiting:
+            self.restart_for = sorted(set(self.restart_for) | set(waiting))
             return False
         for name in {k.split(".", 1)[0] for k in changed}:
             self.cfg.files[name] = fresh.files[name]
@@ -144,11 +148,14 @@ class Worker:
         """Old code never runs new settings: once settings that need a restart or code changed, no new job starts in
         this process. Live settings are taken in first and don't count."""
         self.apply_live()
-        if self.restart_needed is None and (self._config_seen, code_fingerprint()) != (
+        code = code_fingerprint()
+        if self.restart_needed is None and (self._config_seen, code) != (
             config_fingerprint(self.ws),
             self._started_with[1],
         ):
             self.restart_needed = RESTART_NEEDED
+            if code != self._started_with[1] and "code" not in self.restart_for:
+                self.restart_for.append("code")
         return self.restart_needed is not None
 
     def _hold_queued(self) -> None:

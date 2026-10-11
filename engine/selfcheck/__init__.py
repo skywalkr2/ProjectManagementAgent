@@ -71,7 +71,8 @@ def check_workspace_fixture(ws_root: Path, *, plugins: bool = True) -> list[Find
 
 def _check_references(store: Store, name: str) -> list[Finding]:
     view = store.read()
-    ids = {kind: {s.id for s in view.list(kind)} for kind in REFERENCES}
+    kinds = set(REFERENCES) | {target for refs in REFERENCES.values() for _, target in refs}
+    ids = {kind: {s.id for s in view.list(kind)} for kind in kinds}
     findings = []
     for kind, refs in REFERENCES.items():
         for stored in view.list(kind):

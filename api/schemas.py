@@ -117,6 +117,11 @@ class Status(BaseModel):
     can_restart: bool = Field(
         False, description="The app can start itself again when the person asks (POST /api/restart)."
     )
+    restart_for: list[str] = Field(
+        default_factory=list,
+        description='What waits for the restart: settings keys (their labels are in GET /api/settings), and "code" '
+        "when the app itself was updated while running.",
+    )
 
 
 class Option(BaseModel):
@@ -271,7 +276,8 @@ class PersonView(BaseModel):
     id: str
     name: str
     role: str | None
-    org: str | None = None
+    org: str | None = Field(None, description="The id of the organization they work for.")
+    org_name: str | None = Field(None, description="That organization's name, for showing.")
     aliases: list[str] = []
     status: Literal["active", "left"] = "active"
     is_pm: bool = False
@@ -280,16 +286,38 @@ class PersonView(BaseModel):
 class PersonIn(BaseModel):
     full_name: str = Field(min_length=1)
     role: str | None = None
-    org: str | None = None
+    org: str | None = Field(None, description="An organization's id, from GET /api/organizations.")
     aliases: list[str] = []
 
 
 class PersonPatch(BaseModel):
     full_name: str | None = Field(None, min_length=1)
     role: str | None = None
-    org: str | None = None
+    org: str | None = Field(None, description="An organization's id; null for none.")
     aliases: list[str] | None = None
     status: Literal["active", "left"] | None = None
+
+
+class OrganizationView(BaseModel):
+    id: str
+    name: str
+    aliases: list[str] = []
+    notes: str | None = None
+    people: int = Field(0, description="How many people on file work for it.")
+
+
+class OrganizationIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1)
+    aliases: list[str] = []
+    notes: str | None = None
+
+
+class OrganizationPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = Field(None, min_length=1)
+    aliases: list[str] | None = None
+    notes: str | None = None
 
 
 class ProjectView(BaseModel):
@@ -298,6 +326,7 @@ class ProjectView(BaseModel):
     group: str | None
     status: str | None
     phase: str | None
+    priority: str | None = None
     target: str | None
     owner: str | None
     owner_name: str | None
@@ -321,9 +350,10 @@ class NoteView(BaseModel):
 
 class ProjectIn(BaseModel):
     name: str = Field(min_length=1)
-    group: str | None = None
-    status: str | None = None
-    phase: str | None = None
+    group: str | None = Field(None, description="From the project-group list.")
+    status: str | None = Field(None, description="From the project-status list.")
+    phase: str | None = Field(None, description="From the project-phase list.")
+    priority: str | None = Field(None, description="From the project-priority list.")
     target: str | None = Field(None, description="A date, YYYY-MM-DD.")
     owner: str | None = None
     summary: str | None = None
@@ -344,6 +374,7 @@ class ProjectPatch(BaseModel):
     group: str | None = None
     status: str | None = None
     phase: str | None = None
+    priority: str | None = None
     target: str | None = None
     owner: str | None = None
     summary: str | None = None

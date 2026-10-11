@@ -2864,6 +2864,127 @@
         "title": "Option",
         "type": "object"
       },
+      "OrganizationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "aliases": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "OrganizationIn",
+        "type": "object"
+      },
+      "OrganizationPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "aliases": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aliases"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "title": "OrganizationPatch",
+        "type": "object"
+      },
+      "OrganizationView": {
+        "properties": {
+          "aliases": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "people": {
+            "default": 0,
+            "description": "How many people on file work for it.",
+            "title": "People",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "OrganizationView",
+        "type": "object"
+      },
       "OutsideEditView": {
         "properties": {
           "path": {
@@ -3509,6 +3630,7 @@
                 "type": "null"
               }
             ],
+            "description": "An organization's id, from GET /api/organizations.",
             "title": "Org"
           },
           "role": {
@@ -3566,6 +3688,7 @@
                 "type": "null"
               }
             ],
+            "description": "An organization's id; null for none.",
             "title": "Org"
           },
           "role": {
@@ -3630,7 +3753,20 @@
                 "type": "null"
               }
             ],
+            "description": "The id of the organization they work for.",
             "title": "Org"
+          },
+          "org_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "That organization's name, for showing.",
+            "title": "Org Name"
           },
           "role": {
             "anyOf": [
@@ -3747,6 +3883,7 @@
                 "type": "null"
               }
             ],
+            "description": "From the project-group list.",
             "title": "Group"
           },
           "language": {
@@ -3797,7 +3934,20 @@
                 "type": "null"
               }
             ],
+            "description": "From the project-phase list.",
             "title": "Phase"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "From the project-priority list.",
+            "title": "Priority"
           },
           "status": {
             "anyOf": [
@@ -3808,6 +3958,7 @@
                 "type": "null"
               }
             ],
+            "description": "From the project-status list.",
             "title": "Status"
           },
           "summary": {
@@ -3937,6 +4088,17 @@
               }
             ],
             "title": "Phase"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
           },
           "status": {
             "anyOf": [
@@ -4070,6 +4232,17 @@
               }
             ],
             "title": "Phase"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
           },
           "spent_usd": {
             "default": 0.0,
@@ -5550,6 +5723,14 @@
           },
           "requests": {
             "$ref": "#/components/schemas/RequestCounts"
+          },
+          "restart_for": {
+            "description": "What waits for the restart: settings keys (their labels are in GET /api/settings), and \"code\" when the app itself was updated while running.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Restart For",
+            "type": "array"
           },
           "restart_needed": {
             "anyOf": [
@@ -7924,6 +8105,193 @@
           }
         },
         "summary": "Notes"
+      }
+    },
+    "/api/organizations": {
+      "get": {
+        "description": "The organizations people work for, by name.",
+        "operationId": "organizations_api_organizations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OrganizationView"
+                  },
+                  "title": "Response Organizations Api Organizations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Organizations"
+      },
+      "post": {
+        "operationId": "add_organization_api_organizations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Organization"
+      }
+    },
+    "/api/organizations/{oid}": {
+      "post": {
+        "description": "Rename or change an organization. People refer to it by id, so a new name shows everywhere at once.",
+        "operationId": "edit_organization_api_organizations__oid__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oid",
+            "required": true,
+            "schema": {
+              "title": "Oid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Edit Organization"
+      }
+    },
+    "/api/organizations/{oid}/remove": {
+      "post": {
+        "operationId": "remove_organization_api_organizations__oid__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oid",
+            "required": true,
+            "schema": {
+              "title": "Oid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Remove Organization"
+      }
+    },
+    "/api/organizations/{oid}/restore": {
+      "post": {
+        "operationId": "restore_organization_api_organizations__oid__restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "oid",
+            "required": true,
+            "schema": {
+              "title": "Oid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Restore Organization"
       }
     },
     "/api/packs": {
