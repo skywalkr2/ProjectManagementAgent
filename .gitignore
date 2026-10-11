@@ -14,7 +14,7 @@ dist/
 build/
 
 # Web
-node_modules/
+node_modules
 web/dist/
 
 # Local environment and secrets
