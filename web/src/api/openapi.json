@@ -1639,6 +1639,14 @@
             "title": "Name",
             "type": "string"
           },
+          "notes": {
+            "description": "What the person should know, though it loaded.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
           "reason": {
             "anyOf": [
               {

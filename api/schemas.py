@@ -347,6 +347,7 @@ class PluginStatusView(BaseModel):
     version: str | None = None
     reason: str | None = None
     tools: dict[str, str] = Field(default_factory=dict, description="Each declared program and what was found.")
+    notes: list[str] = Field(default_factory=list, description="What the person should know, though it loaded.")
 
 
 class RecordReference(BaseModel):

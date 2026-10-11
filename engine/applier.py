@@ -282,9 +282,18 @@ class OpOutcome:
     label: str | None = None
 
 
-def _label(op: OpModel) -> str | None:
+def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | None:
+    """An op's own one-line label. A plugin op's `describe` may take a read view, to name the records it changes."""
+    import inspect
+
     try:
-        text = op.describe()
+        takes_view = len(inspect.signature(op.describe).parameters) >= 1
+        if takes_view and view is not None and store is not None and "/" in op.op:
+            from engine.plugin_api import ReadView
+
+            text = op.describe(store.plugins._with_files(ReadView(view, op.op.split("/", 1)[0])))
+        else:
+            text = op.describe() if not takes_view else None
     except Exception:
         return None
     return " ".join(text.split())[:200] if isinstance(text, str) and text.strip() else None
@@ -326,7 +335,7 @@ def apply_changeset(
                 "applied",
                 op.group or f"op{i}",
                 problems=[asdict(p) for p in mine],
-                label=_label(op),
+                label=_label(op, tx, ctx.store),
             )
             if any(p.severity == "refuse" for p in mine):
                 outcome.status = "refused"
@@ -819,13 +828,17 @@ def _op_index(op_name: str) -> int | None:
 
 
 def _conflict(tx: Tx, entries: list[dict[str, Any]]) -> str | None:
+    """Why undoing these entries would overwrite a later change, or None. A field written again since counts only
+    while it holds something other than what these entries set: a later change that was itself undone has left it as
+    they left it."""
     by_record: dict[tuple[str, str], dict[str, Any]] = {}
     for e in entries:
         key = (e["kind"], e["record_id"])
-        cur = by_record.setdefault(key, {"version": 0, "fields": set()})
+        cur = by_record.setdefault(key, {"version": 0, "fields": set(), "set_to": {}})
         cur["version"] = max(cur["version"], e["version"])
         if e["field"]:
             cur["fields"].add(e["field"])
+            cur["set_to"][e["field"]] = e["after"]
     for (kind, rid), info in by_record.items():
         current = tx.get(kind, rid, include_deleted=True)
         if current is None:
@@ -835,7 +848,9 @@ def _conflict(tx: Tx, entries: list[dict[str, Any]]) -> str | None:
                 "SELECT field FROM ledger WHERE kind=? AND record_id=? AND version>? AND field IS NOT NULL",
                 (kind, rid, info["version"]),
             ).fetchall()
-            clash = {r["field"] for r in later} & info["fields"]
+            clash = {
+                f for f in {r["field"] for r in later} & info["fields"] if current.data.get(f) != info["set_to"].get(f)
+            }
             if clash or current.deleted:
                 return f"{kind} {rid} changed since ({', '.join(sorted(clash)) or 'deleted'})"
     return None

@@ -170,6 +170,20 @@ class Manifest(Strict):
         return []
 
 
+def installed_manifest(entry_point: object) -> Path:
+    """Where an installed plugin's plugin.yaml is: beside its top-level package, found without importing it. Works for
+    built wheels and for editable (development) installs, whose package lives in the source checkout."""
+    import importlib.util
+
+    module = entry_point.value.split(":")[0].split(".")[0]
+    spec = importlib.util.find_spec(module)
+    if spec is not None and spec.submodule_search_locations:
+        for location in spec.submodule_search_locations:
+            if (Path(location) / "plugin.yaml").is_file():
+                return Path(location) / "plugin.yaml"
+    return Path(entry_point.dist.locate_file(module)) / "plugin.yaml"
+
+
 def read_manifest(path: Path) -> Manifest:
     return Manifest.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
 
@@ -183,8 +197,8 @@ def declared_plugins(config_dir: Path | None, enabled: list[str]):
         roots.append(config_dir.parent / "plugins")
     paths = [(path.parent.name, path) for root in roots for path in root.glob("*/plugin.yaml")]
     for ep in entry_points(group="pm_cockpit.plugins"):
-        module = ep.value.split(":")[0].split(".")[0]
-        paths.append((ep.name, Path(ep.dist.locate_file(module)) / "plugin.yaml"))
+        if ep.name not in {name for name, _ in paths}:
+            paths.append((ep.name, installed_manifest(ep)))
     for name, path in paths:
         if name in enabled:
             try:

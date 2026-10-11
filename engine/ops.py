@@ -16,14 +16,20 @@ Tier = Literal["data", "outbound", "system"]
 
 class OpModel(BaseModel):
     """Base for every op: one change the applier checks, records in the ledger and can undo. A plugin's op subclasses
-    it with a single literal `op` id and a `writes` class variable; see `Registrar.op`."""
+    it with a single literal `op` id and a `writes` class variable; see `Registrar.op`.
+
+    An op that doesn't match its model (a missing, unknown or wrongly typed field) makes the whole answer or proposal
+    unreadable: an AI answer goes back to the assistant with the reason for a fix round, and a person action fails with
+    the reason. An op that matches but is refused (by a validator, a rule, or StoreError in its apply) is refused
+    alone, and the others still apply."""
 
     model_config = ConfigDict(extra="forbid")
 
     group: str | None = Field(None, description="Ops that must be undone together share a group name.")
 
     def describe(self) -> str | None:
-        """A one-line plain label for this op in review lists; plugin ops may override it."""
+        """A one-line plain label for this op in review lists; plugin ops may override it. A plugin op may instead
+        define `describe(self, view)` to read records for the label (a read view of core and its own records)."""
         return None
 
 

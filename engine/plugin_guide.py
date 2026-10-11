@@ -161,7 +161,7 @@ def _join(*parts: str) -> str:
 def build() -> str:
     import engine.plugin_api as api
     from engine import actions, plugin_host, plugin_manifest, tools
-    from engine.config.schema import PluginSettings
+    from engine.config.schema import FileLimits, PluginSettings
     from engine.ops import OP_MODELS
     from engine.records import REGISTRY
 
@@ -279,6 +279,9 @@ def build() -> str:
             "Settings that limit plugins",
             "In the workspace's `config/workspace.yaml`; the person can change them.",
             _table(["Key", "Type", "Default", "What it is"], _model_rows(PluginSettings, "workspace.plugins.")),
+            "Files, in `config/storage.yaml`. A file kind keeps only the media types listed here; the plugin's status "
+            "notes any it loses.",
+            _table(["Key", "Type", "Default", "What it is"], _model_rows(FileLimits, "storage.files.")),
         ),
         _section(
             "Core records",

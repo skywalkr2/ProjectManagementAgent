@@ -353,7 +353,11 @@ def labels(store: Store, pending: Pending, ops: list[dict[str, Any]] | None = No
     ids = [f"FILE-{i + 1}" for i in range(len(pending.files))]
     ops = to_apply(pending, ids) if ops is None else [_substituted(op, ids) for op in ops]
     parsed = _validated(ops, store, pending.summary).ops
-    return [{"op": op.op, "label": _label(op) or _fallback_label(raw)} for op, raw in zip(parsed, ops, strict=True)]
+    view = store.read()
+    return [
+        {"op": op.op, "label": _label(op, view, store) or _fallback_label(raw)}
+        for op, raw in zip(parsed, ops, strict=True)
+    ]
 
 
 def _fallback_label(op: dict[str, Any]) -> str:

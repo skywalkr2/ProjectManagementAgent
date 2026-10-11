@@ -10,6 +10,21 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.3 changes
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- An installed plugin is found in its checkout too (editable, development installs).
+- A plugin in the workspace's `plugins/` folder wins over an installed one of the same name, with a note in its
+  status (`notes` in `/api/plugins`); other duplicates are still refused.
+- A file kind whose accepted types the workspace narrows (some or all) loads with a note saying what it lost.
+- An op's `describe` may take a read view, `describe(self, view)`, to name the records it changes.
+- Undo after an undo: a field written again since counts as a conflict only while it holds something other than what
+  the change being undone set.
+- Documented: an op's own `group` in a proposal item wins (one Undo for several items); nested settings models and
+  aliases; an op that doesn't match its model makes the whole answer or proposal unreadable, while a refused op is
+  refused alone.
+
 ## What 0.3.2 adds
 
 Manifests stay `'>=0.3,<0.4'`. Plugin task kinds can now do real work (see "Registering" in the guide):

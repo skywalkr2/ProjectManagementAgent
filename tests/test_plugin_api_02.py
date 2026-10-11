@@ -43,6 +43,10 @@ class Decide(OpModel):
     writes: ClassVar[dict] = {"p02/entry": ("status",)}
     slug: str
 
+    def describe(self, view):
+        entry = view.find("p02/entry", slug=self.slug)
+        return "Decide " + (entry.id if entry else "a missing entry")
+
 class Remove(OpModel):
     op: Literal["p02/remove"] = "p02/remove"
     writes: ClassVar[dict] = {"p02/entry": ("*",)}

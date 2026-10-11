@@ -34,7 +34,7 @@ from engine.plugin_api import (
     Settings,
     StageCheckResult,
 )
-from engine.plugin_manifest import NOT_YET, Manifest, read_manifest
+from engine.plugin_manifest import NOT_YET, Manifest, installed_manifest, read_manifest
 from engine.records import REFERENCES, REGISTRY, ref_fields, values_at
 from engine.storage import StoreError, WriteContext
 from engine.tasks import TASKS
@@ -86,6 +86,7 @@ class PluginStatus:
     version: str | None = None
     reason: str | None = None
     tools: dict[str, str] = dataclass_field(default_factory=dict)  # tool name -> what was found on this computer
+    notes: list[str] = dataclass_field(default_factory=list)  # what the person should know, though it loaded
 
 
 class PluginHost:
@@ -105,6 +106,7 @@ class PluginHost:
 
         self.proposals = Proposals()
         self.candidates: dict[str, Path] = {}
+        self.notes: dict[str, list[str]] = {}  # things the person should know about a plugin that still loads
         self._modules: list[str] = []
         self._queue: deque = deque()
         self._dispatching = False
@@ -138,7 +140,11 @@ class PluginHost:
             raise
 
     def _discover(self, bundled: Path) -> None:
-        for root in (bundled, self.store.path.parent / "plugins"):
+        """Bundled plugins, then the workspace's plugins/ folder, then installed ones. A plugin in the workspace's
+        folder wins over an installed one of the same name (the usual case while developing it), with a note in its
+        status; any other duplicate is refused."""
+        local = self.store.path.parent / "plugins"
+        for root in (bundled, local):
             for path in sorted(root.glob("*/plugin.yaml")):
                 name = path.parent.name
                 if name in self.candidates:
@@ -148,9 +154,15 @@ class PluginHost:
         for ep in entry_points(group="pm_cockpit.plugins"):
             try:
                 # Locate the manifest without ep.load(), which would execute code too early.
-                module = ep.value.split(":")[0].split(".")[0]
-                path = Path(ep.dist.locate_file(module)) / "plugin.yaml"
-                if ep.name in self.candidates:
+                path = installed_manifest(ep)
+                existing = self.candidates.get(ep.name)
+                if existing is not None and existing.parent.parent == local:
+                    note = (
+                        f"the copy in the workspace's plugins folder is used; the installed one ({path.parent}) isn't"
+                    )
+                    self.notes.setdefault(ep.name, []).append(note)
+                    continue
+                if existing is not None:
                     raise ValueError("duplicate plugin name across discovery locations")
                 self.candidates[ep.name] = path
             except Exception as err:
@@ -181,7 +193,7 @@ class PluginHost:
             if manifest.name != name:
                 raise ValueError("manifest name must match its discovery name")
             self.manifests[name] = manifest
-            self.status[name] = PluginStatus(name, "loading", manifest.version)
+            self.status[name] = PluginStatus(name, "loading", manifest.version, notes=list(self.notes.get(name, [])))
             if Version(PLUGIN_API_VERSION) not in SpecifierSet(manifest.plugin_api):
                 raise ValueError(f"plugin API {PLUGIN_API_VERSION} is outside {manifest.plugin_api}")
             for key in NOT_YET:
@@ -218,9 +230,25 @@ class PluginHost:
             self.tiers.update({key: value.tier for key, value in registrar.ops.items()})
             self.tasks.update(registrar.tasks)
             self.stage_checks.update({key: (name, fn) for key, fn in registrar.stage_checks.items()})
+            self.status[name].notes += self._file_kind_notes(registrar)
             self.status[name].state = "enabled"
         except Exception as err:
             self.disable(name, str(err))
+
+    def _file_kind_notes(self, registrar: Registrar) -> list[str]:
+        """A file kind keeps only the media types the workspace accepts; say so when that drops some or all of them."""
+        accepted = set(self.cfg.storage.files.accepted_types)
+        notes = []
+        for kind in registrar.file_kinds.values():
+            dropped = [t for t in kind.accept if t not in accepted]
+            if not dropped:
+                continue
+            kept = [t for t in kind.accept if t in accepted]
+            notes.append(
+                f"file kind {kind.name}: {', '.join(dropped)} isn't accepted in this workspace "
+                f"(storage.files.accepted_types), so it accepts {', '.join(kept) if kept else 'no files at all'}"
+            )
+        return notes
 
     @property
     def tools(self) -> Any:

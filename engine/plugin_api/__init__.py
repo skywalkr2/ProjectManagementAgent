@@ -31,12 +31,14 @@ from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.2"
+PLUGIN_API_VERSION = "0.3.3"
 
 
 class Settings(BaseModel):
     """Base for a plugin's settings, read from `config/plugins/<plugin>.yaml`. Every field needs a default and a
-    description; unknown keys are refused. Handlers and actions get a copy as `context.config`."""
+    description; unknown keys are refused. Handlers and actions get a copy as `context.config`. A field may be a nested
+    model (shown as its own section on the Settings screen; keep it to one level) and may use an alias when its name
+    in the file can't be a Python name."""
 
     model_config = ConfigDict(extra="forbid", validate_default=True)
     version: Literal[1] = Field(1, description="Settings format version.")
@@ -257,7 +259,8 @@ class Group:
 class Item:
     """A change the person keeps or drops without the action running again: one judgment call, made of one or more
     ops (dicts) that apply together. `id` is stable across runs, so the person's tick carries over to an unchanged
-    item when a choice reruns the action."""
+    item when a choice reruns the action. An item's ops undo together; an op that sets its own `group` keeps it, so
+    several items can share one Undo."""
 
     id: str
     label: str
