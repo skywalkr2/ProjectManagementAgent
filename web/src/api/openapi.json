@@ -7303,6 +7303,45 @@
         "title": "ValueListView",
         "type": "object"
       },
+      "WatchKindView": {
+        "description": "A kind of source the assistant can keep reading, with the form its settings take.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SettingItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plugin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The add-on it comes from; None for the app's own.",
+            "title": "Plugin"
+          }
+        },
+        "required": [
+          "name",
+          "label",
+          "items"
+        ],
+        "title": "WatchKindView",
+        "type": "object"
+      },
       "WatchRunView": {
         "properties": {
           "changed": {
@@ -7375,6 +7414,114 @@
           "outcome"
         ],
         "title": "WatchRunView",
+        "type": "object"
+      },
+      "WatchSourceChange": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "every_minutes": {
+            "anyOf": [
+              {
+                "minimum": 5.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Every Minutes"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "settings": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Settings"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "WatchSourceChange",
+        "type": "object"
+      },
+      "WatchSourceIn": {
+        "additionalProperties": false,
+        "properties": {
+          "connector": {
+            "description": "The kind of source, from GET /api/watch/kinds.",
+            "title": "Connector",
+            "type": "string"
+          },
+          "every_minutes": {
+            "default": 60,
+            "minimum": 5.0,
+            "title": "Every Minutes",
+            "type": "integer"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "description": "Its settings, by field (nested as objects).",
+            "title": "Settings",
+            "type": "object"
+          }
+        },
+        "required": [
+          "connector",
+          "fingerprint"
+        ],
+        "title": "WatchSourceIn",
         "type": "object"
       },
       "WatchSourceView": {
@@ -11329,6 +11476,25 @@
         "summary": "Setup View"
       }
     },
+    "/api/setup/addons/leave-off": {
+      "post": {
+        "description": "Leave every add-on that is off now off: the setup step counts as done until another is installed.",
+        "operationId": "addons_leave_off_api_setup_addons_leave_off_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Addons Leave Off"
+      }
+    },
     "/api/setup/backup-folder": {
       "post": {
         "operationId": "backup_folder_api_setup_backup_folder_post",
@@ -12480,6 +12646,168 @@
           }
         },
         "summary": "Sources"
+      }
+    },
+    "/api/watch/kinds": {
+      "get": {
+        "description": "The kinds of source the assistant can keep reading: the core's and running add-ons', each with the form\nits settings take.",
+        "operationId": "watch_kinds_api_watch_kinds_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WatchKindView"
+                  },
+                  "title": "Response Watch Kinds Api Watch Kinds Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Watch Kinds"
+      }
+    },
+    "/api/watch/sources": {
+      "post": {
+        "description": "Start reading a new source, with Undo. Its id comes from its label.",
+        "operationId": "watch_add_api_watch_sources_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchSourceIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Watch Add"
+      }
+    },
+    "/api/watch/sources/{source_id}": {
+      "post": {
+        "description": "Change a source's name, how often it is read, whether it is read, or its settings, with Undo.",
+        "operationId": "watch_change_api_watch_sources__source_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchSourceChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Watch Change"
+      }
+    },
+    "/api/watch/sources/{source_id}/remove": {
+      "post": {
+        "description": "Stop reading a source and take it off the list, with Undo; what it already handed in stays.",
+        "operationId": "watch_remove_api_watch_sources__source_id__remove_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FingerprintIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Watch Remove"
       }
     },
     "/api/watch/{source_id}/read": {

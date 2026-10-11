@@ -85,7 +85,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
         "backup": bool(cfg.storage.backups.targets),
         "people": len(people) >= 2,
         "first_note": any(r.data.get("origin") == "pm" for r in view.list("request")),
-        "addons": not addons_off(ws, cfg),
+        "addons": not set(addons_off(ws, cfg)) - set(state.get("addons_decided", [])),
     }
     found = [Step(step, done[step], step in skipped and not done[step]) for step in CORE_STEPS]
     for plugin, step in store.plugins.setup_steps():
@@ -130,6 +130,14 @@ def addons_off(ws: Any, cfg: Any) -> list[str]:
     except Exception:  # an add-on whose manifest doesn't read is listed on the Add-ons screen, not here
         return []
     return sorted(installed - enabled)
+
+
+def decide_addons(ws: Any, names: list[str]) -> None:
+    """Remember that the person chose about these add-ons (turned on, turned off or left off), so the add-ons step
+    stops asking about them."""
+    state = _state(ws)
+    state["addons_decided"] = sorted(set(state.get("addons_decided", [])) | set(names))
+    _save_state(ws, state)
 
 
 def _template_in_use(ws: Any, cfg: Any) -> bool:

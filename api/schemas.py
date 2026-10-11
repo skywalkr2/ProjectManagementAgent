@@ -1540,3 +1540,36 @@ class DataFileRestore(BaseModel):
 
 class DataFileSaved(BaseModel):
     before: str | None = Field(description="The layer's copy before this change, for Undo; None when there was none.")
+
+
+# ---- adding watched sources ------------------------------------------------------------------------------------------
+
+
+class WatchKindView(BaseModel):
+    """A kind of source the assistant can keep reading, with the form its settings take."""
+
+    name: str
+    label: str
+    plugin: str | None = Field(None, description="The add-on it comes from; None for the app's own.")
+    items: list[SettingItem]
+
+
+class WatchSourceIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    connector: str = Field(description="The kind of source, from GET /api/watch/kinds.")
+    label: str = ""
+    every_minutes: int = Field(60, ge=5)
+    project: str | None = None
+    settings: dict[str, Any] = Field(default_factory=dict, description="Its settings, by field (nested as objects).")
+    fingerprint: str
+
+
+class WatchSourceChange(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: str | None = None
+    every_minutes: int | None = Field(None, ge=5)
+    enabled: bool | None = None
+    settings: dict[str, Any] | None = None
+    fingerprint: str

@@ -746,3 +746,89 @@ def test_an_installed_add_on_is_turned_on_and_off_with_undo(tmp_path):
     assert again.status_code == 409
     off = c.post(f"{api}/packs/spare/off", json={"fingerprint": turned.json()["fingerprint"]})
     assert off.status_code == 200 and "spare" not in load_config(ws.config_dir, env={}).workspace.plugins.enabled
+
+
+def test_a_source_is_added_changed_and_removed_from_the_screens_without_a_restart(tmp_path):
+    from engine.worker import Events, Worker
+
+    ws, cfg, store = make(tmp_path)
+    worker = Worker(ws, store, cfg, Events(), on_restart=lambda: None)
+    c, api = client(ws, cfg, store)
+    kinds = {k["name"]: k for k in c.get(f"{api}/watch/kinds").json()}
+    folder_kind = next(k for k in kinds.values() if k["plugin"] is None and any(i["key"] == "path" for i in k["items"]))
+    folder = tmp_path / "inbox"
+    folder.mkdir()
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    bad = c.post(
+        f"{api}/watch/sources",
+        json={"connector": folder_kind["name"], "label": "Shared notes", "settings": {}, "fingerprint": fingerprint},
+    )
+    assert bad.status_code == 400 and "path" in bad.text
+    added = c.post(
+        f"{api}/watch/sources",
+        json={
+            "connector": folder_kind["name"],
+            "label": "Shared notes",
+            "settings": {"path": str(folder)},
+            "fingerprint": fingerprint,
+        },
+    )
+    assert added.status_code == 200, added.text
+    assert added.json()["needs_restart"] is False
+    assert worker.needs_restart() is False  # watched sources are taken in at once
+    listed = {s["id"]: s for s in c.get(f"{api}/watch").json()}
+    assert "shared-notes" in listed and listed["shared-notes"]["label"] == "Shared notes"
+    again = c.post(
+        f"{api}/watch/sources",
+        json={
+            "connector": folder_kind["name"],
+            "label": "Shared notes",
+            "settings": {"path": str(folder)},
+            "fingerprint": added.json()["fingerprint"],
+        },
+    )
+    assert again.status_code == 200 and "shared-notes-2" in {s["id"] for s in c.get(f"{api}/watch").json()}
+    changed = c.post(
+        f"{api}/watch/sources/shared-notes",
+        json={"every_minutes": 15, "enabled": False, "fingerprint": again.json()["fingerprint"]},
+    )
+    assert changed.status_code == 200
+    source = next(s for s in load_config(ws.config_dir, env={}).watch.sources if s.id == "shared-notes")
+    assert source.every_minutes == 15 and source.enabled is False
+    removed = c.post(f"{api}/watch/sources/shared-notes/remove", json={"fingerprint": changed.json()["fingerprint"]})
+    assert removed.status_code == 200
+    assert "shared-notes" not in {s.id for s in load_config(ws.config_dir, env={}).watch.sources}
+    assert c.post(f"{api}/watch/sources/nothing/remove", json={"fingerprint": "x"}).status_code == 404
+
+
+def test_an_add_on_turned_on_shows_as_on_and_one_left_off_stops_the_step_asking(tmp_path):
+    from engine import setup
+
+    ws, cfg, store = make(tmp_path)
+    folder = ws.root / "plugins" / "spare"
+    folder.mkdir(parents=True)
+    (folder / "plugin.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "name": "spare",
+                "version": "0.1.0",
+                "plugin_api": ">=0.3,<0.4",
+                "description": "An add-on left off",
+                "entry": "spare:register",
+                "config_schema": "spare:Config",
+            }
+        )
+    )
+    c, api = client(ws, cfg, store)
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    steps = {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}
+    assert not steps["addons"]["done"]
+    assert c.post(f"{api}/packs/spare/off", json={"fingerprint": fingerprint}).status_code == 200  # leave it off
+    assert "spare" in setup._state(ws)["addons_decided"]
+    assert c.post(f"{api}/setup/addons/leave-off").status_code == 200  # and any other add-on left off
+    assert {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}["addons"]["done"]
+    turned = c.post(f"{api}/packs/spare/on", json={"fingerprint": fingerprint})
+    assert turned.status_code == 200
+    spare = next(p for p in c.get(f"{api}/packs").json()["installed"] if p["name"] == "spare")
+    assert spare["enabled"] is True  # as saved, before the restart
+    assert "spare" not in setup.addons_off(ws, load_config(ws.config_dir, env={}))

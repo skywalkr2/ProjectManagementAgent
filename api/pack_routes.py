@@ -11,7 +11,7 @@ from fastapi import APIRouter
 
 from api.schemas import InstalledPackView, PackFeedView, PackSummary, PacksView, PackView
 from engine import packs
-from engine.config import Config
+from engine.config import Config, ConfigError, load_config
 from engine.plugin_api import PLUGIN_API_VERSION
 from engine.plugin_manifest import declared_plugins
 from engine.shipped import product
@@ -42,7 +42,11 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
         feeds = packs.read_feeds(
             packs.feed_urls(cfg, product()), ws.private_dir, settings.refresh_hours, refresh=refresh
         )
-        enabled = set(cfg.workspace.plugins.enabled)
+        # As saved now: an add-on just turned on shows as on (it starts after the restart the person chooses).
+        try:
+            enabled = set(load_config(ws.config_dir, env=dict(os.environ)).workspace.plugins.enabled)
+        except ConfigError:
+            enabled = set(cfg.workspace.plugins.enabled)
         on_disk = {m.name: m for m in declared_plugins(ws.config_dir, None)}
         available = []
         for feed in feeds:

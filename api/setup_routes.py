@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -35,6 +36,9 @@ from api.schemas import (
     TemplateApplied,
     TemplateApply,
     TemplateView,
+    WatchKindView,
+    WatchSourceChange,
+    WatchSourceIn,
 )
 from engine import settings as config_screens
 from engine import setup, templates
@@ -47,6 +51,16 @@ from engine.workspace import Workspace
 NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "workspace.plugins.enabled", "server.")
 #: Keys the guided steps write that no form shows: an AI account, the tiers it does, the backup folders.
 GUIDED = ("ai.providers.", "ai.tiers.", "storage.backups.targets")
+
+
+def _defaults(model: Any) -> dict[str, Any]:
+    """A settings model's defaults where every field has one; empty where a field must be filled in."""
+    values = {}
+    for key, info in model.model_fields.items():
+        if not info.is_required():
+            default = info.get_default(call_default_factory=True)
+            values[key] = default.model_dump(mode="json") if hasattr(default, "model_dump") else default
+    return values
 
 
 def _merged(current: Any, suggested: Any) -> Any:
@@ -267,6 +281,94 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             found.append(EndpointView(**e, installed=installed))
         return found
 
+    # ---- watched sources ----------------------------------------------------------------------------------------
+
+    def source_kinds() -> dict[str, Any]:
+        from engine import watch
+
+        return watch.connectors(store)
+
+    @r.get("/watch/kinds")
+    def watch_kinds() -> list[WatchKindView]:
+        """The kinds of source the assistant can keep reading: the core's and running add-ons', each with the form
+        its settings take."""
+        found = []
+        for name, connector in sorted(source_kinds().items()):
+            items: list = []
+            defaults = _defaults(connector.settings)
+            config_screens._walk(connector.settings, ["source"], defaults, defaults, {}, items)
+            for item in items:
+                item.key = item.key.removeprefix("source.")
+                item.group = item.group.removeprefix("source.").removeprefix("source")
+                item.source = "default"
+            plugin = name.split("/", 1)[0] if "/" in name else None
+            found.append(
+                WatchKindView(
+                    name=name, label=connector.label, plugin=plugin, items=[SettingItem(**vars(i)) for i in items]
+                )
+            )
+        return found
+
+    def sources_now() -> list[dict[str, Any]]:
+        return [s.model_dump(mode="json") for s in current().watch.sources]
+
+    def checked_source(kind: str, settings: dict[str, Any]) -> dict[str, Any]:
+        connector = source_kinds().get(kind)
+        if connector is None:
+            raise HTTPException(status_code=404, detail=f"There is no kind of source called {kind} running now.")
+        try:
+            return connector.settings.model_validate(settings).model_dump(mode="json", exclude_defaults=True)
+        except ValueError as err:
+            first = err.errors()[0] if hasattr(err, "errors") else {"loc": (), "msg": str(err)}
+            raise HTTPException(
+                status_code=400, detail=f"{'.'.join(map(str, first['loc'])) or 'settings'}: {first['msg']}"
+            ) from None
+
+    @r.post("/watch/sources")
+    def watch_add(body: WatchSourceIn) -> SettingsSaved:
+        """Start reading a new source, with Undo. Its id comes from its label."""
+        settings = checked_source(body.connector, body.settings)
+        sources = sources_now()
+        base = re.sub(r"[^a-z0-9]+", "-", (body.label or body.connector).lower()).strip("-")[:40] or "source"
+        taken = {s["id"] for s in sources}
+        source_id = base
+        if base in taken:
+            source_id = next(f"{base}-{n}" for n in range(2, 999) if f"{base}-{n}" not in taken)
+        new = {
+            "id": source_id,
+            "connector": body.connector,
+            "label": body.label.strip() or source_kinds()[body.connector].label,
+            "every_minutes": body.every_minutes,
+            "settings": settings,
+        }
+        if body.project:
+            new["project"] = body.project
+        return saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
+
+    @r.post("/watch/sources/{source_id}")
+    def watch_change(source_id: str, body: WatchSourceChange) -> SettingsSaved:
+        """Change a source's name, how often it is read, whether it is read, or its settings, with Undo."""
+        sources = sources_now()
+        found = next((s for s in sources if s["id"] == source_id), None)
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"There is no source {source_id}.")
+        if body.settings is not None:
+            found["settings"] = checked_source(found["connector"], body.settings)
+        for key in ("label", "every_minutes", "enabled"):
+            value = getattr(body, key)
+            if value is not None:
+                found[key] = value
+        return saved(save({"watch.sources": sources}, [], body.fingerprint, allow=("watch.sources",)))
+
+    @r.post("/watch/sources/{source_id}/remove")
+    def watch_remove(source_id: str, body: FingerprintIn) -> SettingsSaved:
+        """Stop reading a source and take it off the list, with Undo; what it already handed in stays."""
+        sources = sources_now()
+        if not any(s["id"] == source_id for s in sources):
+            raise HTTPException(status_code=404, detail=f"There is no source {source_id}.")
+        rest = [s for s in sources if s["id"] != source_id]
+        return saved(save({"watch.sources": rest}, [], body.fingerprint, allow=("watch.sources",)))
+
     # ---- turning add-ons on and off -------------------------------------------------------------------------------
 
     @r.post("/packs/{name}/on")
@@ -281,17 +383,27 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if name in enabled:
             raise HTTPException(status_code=409, detail=f"{name} is on already.")
         changes = {"workspace.plugins.enabled": [*enabled, name]}
-        return saved(save(changes, [], body.fingerprint, allow=("workspace.plugins.enabled",)))
+        done = saved(save(changes, [], body.fingerprint, allow=("workspace.plugins.enabled",)))
+        setup.decide_addons(ws, [name])
+        return done
 
     @r.post("/packs/{name}/off")
     def pack_off(name: str, body: FingerprintIn) -> SettingsSaved:
         """Turn an add-on off, with Undo: it stops after the restart the person chooses; its records and settings
         stay."""
         enabled = list(current().workspace.plugins.enabled)
+        setup.decide_addons(ws, [name])
         if name not in enabled:
-            raise HTTPException(status_code=409, detail=f"{name} is off already.")
+            # Off already: leaving it off is the person's choice, so the setup step stops asking about it.
+            return SettingsSaved(changes=[], fingerprint=body.fingerprint, needs_restart=False)
         changes = {"workspace.plugins.enabled": [n for n in enabled if n != name]}
         return saved(save(changes, [], body.fingerprint, allow=("workspace.plugins.enabled",)))
+
+    @r.post("/setup/addons/leave-off")
+    def addons_leave_off() -> Ok:
+        """Leave every add-on that is off now off: the setup step counts as done until another is installed."""
+        setup.decide_addons(ws, setup.addons_off(ws, current()))
+        return Ok(ok="addons")
 
     @r.get("/ai/accounts")
     def ai_accounts() -> list[AiAccountView]:
