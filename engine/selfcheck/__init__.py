@@ -101,6 +101,7 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
     checks += [(f"core alone {ws.name}", lambda ws=ws: check_workspace_fixture(ws, plugins=False)) for ws in FIXTURES]
     checks.append(("bundled manifests", check_manifests))
     checks.append(("api schema", check_api_schema))
+    checks.append(("plugin guide", check_plugin_guide))
     failed = 0
     for label, check in checks:
         findings = check()
@@ -123,6 +124,17 @@ def check_api_schema() -> list[Finding]:
     if committed != build():
         rel = SCHEMA_PATH.relative_to(REPO)
         return [Finding("api", str(rel), 0, "out of date; run `uv run python -m api.openapi`")]
+    return []
+
+
+def check_plugin_guide() -> list[Finding]:
+    """The committed plugin developer guide matches the plugin API it is generated from."""
+    from engine.plugin_guide import GUIDE_PATH, build
+
+    committed = GUIDE_PATH.read_text(encoding="utf-8") if GUIDE_PATH.exists() else ""
+    if committed != build():
+        rel = GUIDE_PATH.relative_to(REPO)
+        return [Finding("guide", str(rel), 0, "out of date; run `uv run python -m engine.plugin_guide`")]
     return []
 
 

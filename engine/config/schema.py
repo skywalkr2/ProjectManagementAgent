@@ -418,6 +418,8 @@ class UiFile(FileModel):
 
 
 class StageDefinition(ConfigModel):
+    """One stage in a record type's steps, as a plugin's default or in the workspace's stages.yaml."""
+
     id: str = Field("", min_length=1, description="Stable stage identifier, unique within this record type.")
     label: str = Field(
         "", min_length=1, description="Editable wording for this stage; changing it does not change stored data."

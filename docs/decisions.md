@@ -81,6 +81,22 @@ their reach, while a separate packet-only run still removes the writing run's co
 
 **Impact:** Design 6.16 (independent second opinion) when built.
 
+## 2026-10-11: The plugin developer guide is generated from the code and is the contract
+
+**Decided by:** project owner (the guide before the rest of the API); Claude (how it is made).
+
+**What:** `docs/plugin-guide.md` is written by `uv run python -m engine.plugin_guide` from docstrings, field
+descriptions, `#:` comments and the host's own tables (manifest, events and their payloads, plugin settings, core
+records and ops). The self-check fails when it is out of date, and tests check it covers the public API and that real
+event payloads match it. Plugin authors get names only from it, never ahead of the code. `docs/plugin-api-0.x.md`
+keeps only what changed per version. Core records and ops now carry a description on every field; the op descriptions
+also reach the assistant in its task schemas.
+
+**Why:** Names given ahead of the code drifted from what was built. A generated guide can't, and it grows with each
+API step, so plugins integrate what exists instead of waiting for the whole API.
+
+**Impact:** Prompts carry the fuller op descriptions; rerun the evaluation on the routine model to confirm results hold.
+
 ## 2026-10-11: Long reviews: groups, and items kept or dropped without a rerun
 
 **Decided by:** Claude (design), from a plugin question; the owner can override.

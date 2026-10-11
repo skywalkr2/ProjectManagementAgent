@@ -2,8 +2,8 @@
 
 Where a program is found is set per computer in `.cockpit/tools.yaml`, which is never synced:
 
-    epubcheck: {command: [java, -jar, /opt/epubcheck/epubcheck.jar], env: {JAVA_HOME: /opt/java}}
-    typst: /usr/local/bin/typst
+    checker: {command: [/opt/checker/bin/run, --strict], env: {CHECKER_HOME: /opt/checker}}
+    renderer: /usr/local/bin/renderer
 
 A tool missing from that file is looked up on the PATH by its name. Each declared tool is probed once per process: its
 probe command runs, and the first version number in its output is compared with the declared minimum.
@@ -50,6 +50,10 @@ class ToolStatus:
 
 @dataclass
 class ToolResult:
+    """How a program run ended and what it returned. A run that timed out has `timed_out` set and returncode -1;
+    `output_cut` says stdout or stderr was longer than the cap and was cut there; `files` are the collected files by
+    path inside the working folder; `omitted` lists matched files not returned, as {name, size, reason}."""
+
     returncode: int
     stdout: str
     stderr: str
@@ -274,6 +278,7 @@ class ToolBox:
         self.__tools, self.__plugin, self.__declared, self.__record = tools, plugin, dict(declared), record
 
     def available(self, name: str) -> bool:
+        """Whether a declared program is installed on this computer and new enough (probed once per run of the host)."""
         tool = self.__declared.get(name)
         return tool is not None and self.__tools.probe(name, tool.probe, tool.min_version).found
 

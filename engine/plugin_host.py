@@ -34,21 +34,46 @@ from engine.plugin_api import (
     Settings,
     StageCheckResult,
 )
-from engine.plugin_manifest import Manifest, read_manifest
+from engine.plugin_manifest import NOT_YET, Manifest, read_manifest
 from engine.records import REFERENCES, REGISTRY, ref_fields, values_at
 from engine.storage import StoreError, WriteContext
 from engine.tasks import TASKS
 
 BUNDLED = Path(__file__).resolve().parents[1] / "plugins"
-EVENTS = {
-    "stage.moved",
-    "changeset.applied",
-    "changeset.undone",
-    "record.changed",
-    "request.queued",
-    "question.answered",
-    "file.added",
+#: Events plugins may subscribe to: what each means and the fields of its payload. Payloads carry ids and names,
+#: never record contents; read the record for its values.
+EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
+    "record.changed": (
+        "A record was created, changed, deleted or brought back by Undo. One event per record per op.",
+        {
+            "kind": "The record's kind.",
+            "id": "The record's id.",
+            "version": "The record's version after the change.",
+            "op": "The ledger's op name, with the op's index in its changeset after '#'.",
+            "fields": "The names of the fields that changed; `_deleted` for a delete and for its Undo.",
+        },
+    ),
+    "stage.moved": (
+        "A record moved to another stage, by the person, a rule or Undo.",
+        {
+            "kind": "The record's kind.",
+            "id": "The record's id.",
+            "version": "The record's version after the move.",
+            "from": "The stage it left (None when it had none yet).",
+            "to": "The stage it entered (None when Undo took it back out of its steps).",
+            "op": "The ledger's op name.",
+        },
+    ),
+    "file.added": ("A file was added.", {"id": "The file's id.", "kind": "The file's kind."}),
+    "request.queued": ("AI work was queued.", {"id": "The request's id."}),
+    "question.answered": ("A question was answered.", {"id": "The question's id."}),
+    "changeset.applied": ("A changeset was applied (some of its ops may be held or refused).", {"id": "Its id."}),
+    "changeset.undone": (
+        "Ops of a changeset were undone.",
+        {"id": "The changeset's id.", "ops": "The indexes of the ops undone."},
+    ),
 }
+EVENTS = set(EVENT_SPECS)
 #: Events whose payload names a kind, so a subscription can be limited to kinds (file kinds for file.added).
 EVENTS_WITH_KIND = {"record.changed", "stage.moved", "file.added"}
 log = logging.getLogger(__name__)
@@ -159,11 +184,10 @@ class PluginHost:
             self.status[name] = PluginStatus(name, "loading", manifest.version)
             if Version(PLUGIN_API_VERSION) not in SpecifierSet(manifest.plugin_api):
                 raise ValueError(f"plugin API {PLUGIN_API_VERSION} is outside {manifest.plugin_api}")
-            p, reach = manifest.provides, manifest.requires
-            if p.panels or p.today or p.jobs or p.playbook or manifest.interfaces.provides or manifest.interfaces.uses:
-                raise ValueError("manifest requests an extension point not implemented in plugin API 0.x")
-            if reach.network or reach.secrets:
-                raise ValueError("network and secret reach are not supported by plugin API 0.x")
+            for key in NOT_YET:
+                section, _, attribute = key.partition(".")
+                if getattr(getattr(manifest, section), attribute):
+                    raise ValueError(f"{key} is not available in plugin API {PLUGIN_API_VERSION} yet")
             self._check_tools(name, manifest)
             if not set(manifest.events()) <= EVENTS:
                 raise ValueError("unsupported event subscription")

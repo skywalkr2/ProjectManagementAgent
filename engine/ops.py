@@ -15,6 +15,9 @@ Tier = Literal["data", "outbound", "system"]
 
 
 class OpModel(BaseModel):
+    """Base for every op: one change the applier checks, records in the ledger and can undo. A plugin's op subclasses
+    it with a single literal `op` id and a `writes` class variable; see `Registrar.op`."""
+
     model_config = ConfigDict(extra="forbid")
 
     group: str | None = Field(None, description="Ops that must be undone together share a group name.")
@@ -25,6 +28,8 @@ class OpModel(BaseModel):
 
 
 class EvidenceIn(BaseModel):
+    """The exact words from the input that justify a claim; the applier checks they are there."""
+
     model_config = ConfigDict(extra="forbid")
 
     quote: str = Field(min_length=3, description="The exact words from the input that justify this op.")
@@ -46,138 +51,161 @@ class EvidenceIn(BaseModel):
 
 
 class LinkIn(BaseModel):
+    """A labeled web link to attach to a question."""
+
     model_config = ConfigDict(extra="forbid")
 
-    label: str
-    url: str
+    label: str = Field(description="What the link is, in words for the reader.")
+    url: str = Field(description="The address to open; a question to someone else needs one the recipient can open.")
 
 
 class NoteOp(OpModel):
-    """Keep something from the input that isn't a fact, action or question."""
+    """Keep something from the input that isn't a fact, action or question. Creates a note record."""
 
     op: Literal["note"]
-    text: str = Field(min_length=1)
+    text: str = Field(min_length=1, description="What to keep.")
     project: str | None = Field(None, description="Project id, if the note is about one.")
 
 
 class FactOp(OpModel):
-    """Record something the input states as true."""
+    """Record something the input states as true. Creates a fact record; evidence is required."""
 
     op: Literal["fact"]
-    text: str = Field(min_length=1)
-    project: str | None = None
-    evidence: EvidenceIn
+    text: str = Field(min_length=1, description="The fact, as a statement.")
+    project: str | None = Field(None, description="Project id, if the fact is about one.")
+    evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
 
 
 class RecordSetOp(OpModel):
-    """Change one field of an existing record."""
+    """Change one field of an existing record. Allowed fields: project status, phase, target, priority and summary;
+    action text, due and notes; question title and text; person role, org and why_they_matter. The new value must
+    be valid for the field. Evidence is required for due, status, owners, target and owner."""
 
     op: Literal["record.set"]
-    kind: Literal["project", "action", "question", "person"]
-    id: str
-    field: str
-    value: Any
-    evidence: EvidenceIn | None = None
+    kind: Literal["project", "action", "question", "person"] = Field(description="The kind of record to change.")
+    id: str = Field(description="The id of the record to change.")
+    field: str = Field(description="The field to set; only the fields listed for this kind are allowed.")
+    value: Any = Field(description="The new value, in the field's own type; a date is written YYYY-MM-DD.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The words that justify the change; see the fields needing it."
+    )
 
 
 class RecordLogOp(OpModel):
-    """Add a dated line to a project's update log."""
+    """Add a dated line to a project's update log. The line is dated the day it is applied."""
 
     op: Literal["record.log"]
-    project: str
-    text: str = Field(min_length=1)
+    project: str = Field(description="The id of the project whose log gets the line.")
+    text: str = Field(min_length=1, description="The line to add.")
 
 
 class ActionAddOp(OpModel):
-    """A new action: something a person will do. Owners are people (name or id); leave empty if nobody is named."""
+    """A new action: something a person will do. Owners are people (name or id); leave empty if nobody is named.
+    With no owner the action is held and the PM is asked to pick one. Evidence is required."""
 
     op: Literal["action.add"]
     text: str = Field(
         min_length=1, description="A verb that does something, e.g. 'Send the final file to the printer'."
     )
-    owners: list[str] = Field(default_factory=list)
-    due: date | None = None
-    project: str | None = None
-    evidence: EvidenceIn
+    owners: list[str] = Field(
+        default_factory=list,
+        description="The people who do it, each by name or id; empty if nobody is named. A name that isn't one "
+        "known person waits for the PM to say who.",
+    )
+    due: date | None = Field(None, description="The day it is due, if one is stated.")
+    project: str | None = Field(None, description="Project id, if the action belongs to one.")
+    evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
 
 
 class ActionCloseOp(OpModel):
-    """Close an open action the input says is done."""
+    """Close an open action the input says is done. Refused if the action doesn't exist or is already done; evidence
+    is required."""
 
     op: Literal["action.close"]
-    id: str
-    evidence: EvidenceIn
+    id: str = Field(description="The id of the open action that is done.")
+    evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
 
 
 class QuestionAddOp(OpModel):
-    """A question for a person, written for its reader. Decisions are questions to the PM."""
+    """A question for a person, written for its reader. Decisions are questions to the PM. A question to anyone else
+    needs at least one link the recipient can open."""
 
     op: Literal["question.add"]
     to: str = Field(description="The person, by name or id.")
-    title: str = Field(min_length=1)
-    text: str = ""
-    links: list[LinkIn] = Field(default_factory=list)
-    project: str | None = None
-    kind: Literal["question", "decision"] = "question"
+    title: str = Field(min_length=1, description="The question in one line.")
+    text: str = Field("", description="The detail the reader needs to answer.")
+    links: list[LinkIn] = Field(default_factory=list, description="Pages the reader can open to see what it is about.")
+    project: str | None = Field(None, description="Project id, if the question is about one.")
+    kind: Literal["question", "decision"] = Field(
+        "question", description="question: an ordinary question. decision: a choice for the PM to make."
+    )
 
 
 class QuestionDoneOp(OpModel):
-    """Record the answer to an open question and close it."""
+    """Record the answer to an open question and close it. Also records the answer as a fact. Refused if the question
+    doesn't exist or is already closed; evidence is required."""
 
     op: Literal["question.done"]
-    id: str
-    answer: str = Field(min_length=1)
-    evidence: EvidenceIn
+    id: str = Field(description="The id of the open question that was answered.")
+    answer: str = Field(min_length=1, description="The answer, in words.")
+    evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
 
 
 class PersonAddOp(OpModel):
-    """Someone the input names who isn't on file yet."""
+    """Someone the input names who isn't on file yet. From outside content it waits for the PM to confirm."""
 
     op: Literal["person.add"]
-    full_name: str = Field(min_length=1)
-    role: str | None = None
-    org: str | None = None
-    aliases: list[str] = Field(default_factory=list)
+    full_name: str = Field(min_length=1, description="The person's full name.")
+    role: str | None = Field(None, description="Their job or part in the work, if stated.")
+    org: str | None = Field(None, description="The organization they work for, if stated.")
+    aliases: list[str] = Field(default_factory=list, description="Other names the input uses for them.")
 
 
 class RecordRef(BaseModel):
+    """A reference to one record by kind and id."""
+
     model_config = ConfigDict(extra="forbid")
-    kind: str
-    id: str
+    kind: str = Field(description="The record kind, such as project or a plugin's own kind.")
+    id: str = Field(description="The record's id.")
 
 
 class StageMoveOp(OpModel):
     """Propose entering a configured stage. Always waits for the person's confirmation."""
 
     op: Literal["stage.move"] = "stage.move"
-    record: RecordRef
-    to: str = Field(min_length=1)
-    read_version: int = Field(ge=1)
+    record: RecordRef = Field(description="The record to move.")
+    to: str = Field(min_length=1, description="The id of the stage to enter.")
+    read_version: int = Field(
+        ge=1, description="The version of the record that was read; the move fails if it changed."
+    )
 
 
 class RecordDeleteOp(OpModel):
-    """Delete a record. Refused while another live record refers to it; Undo brings it back. A system op: from the
-    assistant it waits for the person; never part of extracting notes."""
+    """Delete a record. Refused while another live record refers to it, or if it changed since it was read; Undo brings
+    it back. A system op: from the assistant it waits for the person; never part of extracting notes."""
 
     op: Literal["record.delete"] = "record.delete"
-    record: RecordRef
-    read_version: int = Field(ge=1)
+    record: RecordRef = Field(description="The record to delete.")
+    read_version: int = Field(
+        ge=1, description="The version of the record that was read; the delete fails if it changed."
+    )
 
 
 class FileAddOp(OpModel):
     """Record a file whose bytes the host already stored under their hash, such as one a person action built. Only
-    person actions offer it; Undo removes the record (the bytes stay, unused)."""
+    person actions offer it; Undo removes the record (the bytes stay, unused). The record is marked untrusted and as
+    written by a program."""
 
     op: Literal["file.add"] = "file.add"
     id: str = Field(pattern=r"^FILE-[0-9]+$", description="The id the host set aside for this file.")
-    name: str = Field(min_length=1)
-    media_type: str
-    size: int = Field(ge=0)
-    sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    file_kind: str = "attachment"
-    project: str | None = None
-    meta: dict[str, Any] = Field(default_factory=dict)
-    replaces: str | None = None
+    name: str = Field(min_length=1, description="The file's name, for showing and downloading.")
+    media_type: str = Field(description="What kind of content it is, such as image/png.")
+    size: int = Field(ge=0, description="Size in bytes; it must match the stored bytes.")
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$", description="Hash of the bytes, which must already be stored.")
+    file_kind: str = Field("attachment", description="What the file is for: the core's attachment or a declared kind.")
+    project: str | None = Field(None, description="The project it belongs to; none means the whole workspace.")
+    meta: dict[str, Any] = Field(default_factory=dict, description="Details the file kind asks for, validated on add.")
+    replaces: str | None = Field(None, description="The earlier file this one is a new version of.")
 
     def describe(self) -> str | None:
         return f"Add the file {self.name}"

@@ -45,6 +45,9 @@ class InvalidRecord(StoreError):
 
 @dataclass(frozen=True)
 class Stored:
+    """A record as read: its kind, id, current version (state it when updating), whether it is deleted, and its
+    fields in `data`."""
+
     kind: str
     id: str
     version: int

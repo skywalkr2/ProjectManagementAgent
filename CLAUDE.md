@@ -54,6 +54,9 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 - Web: `npm --prefix web test` · `npm --prefix web run build` (generates the API types, type-checks) ·
   `npm --prefix web run e2e` (Playwright with axe, at the root and a nested base path; build first).
 - After changing an API model, run `uv run python -m api.openapi`; the self-check fails while the schema is stale.
+- After changing the plugin API (`engine/plugin_api`, the manifest, events, plugin settings, core records or ops), run
+  `uv run python -m engine.plugin_guide`. `docs/plugin-guide.md` is generated from the code and is the plugin contract;
+  give plugin authors names only from it, never ahead of the code.
 - API routes return Pydantic models from `api/schemas.py`, never bare dicts, so the UI's types stay generated.
 - Try it: `uv run cockpit init ~/cockpit-try --from workspaces/demo-b` then `uv run cockpit serve -w ~/cockpit-try`.
 - Tests read names and ids from the fixtures instead of writing them out, so the specificity scan holds for tests too.

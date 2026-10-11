@@ -1,4 +1,8 @@
-# Plugin API 0.3
+# Plugin API 0.x: what changed in each version
+
+The contract is `docs/plugin-guide.md`, generated from the code. This file only records what each version changed.
+
+## Plugin API 0.3
 
 Plugin API 0.x, not 1.0: expect small changes until both of the host's own add-on packs run on it unchanged. Manifests
 declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is refused (0.x minor versions may break).

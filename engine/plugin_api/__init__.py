@@ -1,8 +1,17 @@
-"""The public plugin contract. In-process plugins are trusted code, not a sandbox.
+"""The public plugin contract: the only module a plugin imports from the host.
 
-Register contributions atomically at startup. Op callbacks get a writer limited to
-model.writes; validators and event handlers get read-only views. Handler commands
-are staged until the handler returns successfully.
+A plugin is a Python package with a `plugin.yaml` beside it. At startup the host reads the manifest, validates the
+plugin's settings, and calls its entry function with a `Registrar`. What the plugin registers must match the manifest's
+`provides` and `subscribes` exactly; registration is all or nothing.
+
+Plugins change knowledge only through ops, which the applier checks, records in the ledger and can undo. Ops get a
+writer limited to what they declare; validators, stage checks and event handlers get read-only views; person actions
+return a proposal the person reviews. Plugins read core records and their own, never another plugin's. Every identifier
+is namespaced `<plugin>/<name>`.
+
+Plugins run in the host's process: enabling one trusts its code. A plugin that breaks its contract, or whose callback
+raises an unexpected exception, is turned off for the run with the reason in its status; core work and other plugins
+carry on.
 """
 
 from __future__ import annotations
@@ -19,11 +28,15 @@ from engine.ops import EvidenceIn, OpModel, Tier
 from engine.records import Record, RefTo, ref_fields, values_at
 from engine.storage import Stored, StoreError, WriteContext
 from engine.tasks import TaskKind
+from engine.tools import ToolBox, ToolError, ToolResult
 
 PLUGIN_API_VERSION = "0.3.1"
 
 
 class Settings(BaseModel):
+    """Base for a plugin's settings, read from `config/plugins/<plugin>.yaml`. Every field needs a default and a
+    description; unknown keys are refused. Handlers and actions get a copy as `context.config`."""
+
     model_config = ConfigDict(extra="forbid", validate_default=True)
     version: Literal[1] = Field(1, description="Settings format version.")
 
@@ -56,6 +69,7 @@ class ReadView:
             raise PluginMisuse("another plugin's records require a declared interface")
 
     def get(self, kind: str, record_id: str) -> Stored | None:
+        """A live record by kind and id, or None. Reading another plugin's kind raises PluginMisuse."""
         self._allow(kind)
         return self.__view.get(kind, record_id)
 
@@ -141,6 +155,8 @@ class OpWriter(ReadView):
             raise PluginMisuse("op attempted to write outside its declared fields")
 
     def create(self, kind: str, data: dict[str, Any]) -> Stored:
+        """Create one of this plugin's records (the op declares `("*",)` for the kind). The record type's rules are
+        enforced: person-only values from anyone but the person hold the op, unique groups and references refuse it."""
         if kind == "request" and (data.get("stage_start") is not None or data.get("approval") is not None):
             raise PluginMisuse("stage task approval belongs to the core")
         if data.get("stage") is not None:
@@ -152,6 +168,8 @@ class OpWriter(ReadView):
         return result
 
     def update(self, kind: str, record_id: str, changes: dict[str, Any], *, read_version: int) -> Stored:
+        """Change fields of one of this plugin's records, stating the version that was read; a newer version refuses
+        the op. Only fields the op declares in `writes` may change."""
         if kind == "request" and {"approval", "stage_start"} & set(changes):
             raise PluginMisuse("stage task approval belongs to the core")
         if "stage" in changes:
@@ -174,7 +192,8 @@ class OpWriter(ReadView):
 
 
 class EventContext(ReadView):
-    """Commands are requests to the core, never direct record writes or sends."""
+    """What an event handler gets: a read view, the plugin's settings, and two commands the core carries out after the
+    handler returns (never direct writes or sends). If the handler raises, its commands are dropped."""
 
     def __init__(self, view: Any, plugin: str, config: Settings):
         super().__init__(view, plugin)
@@ -182,6 +201,8 @@ class EventContext(ReadView):
         self.commands: list[tuple[str, dict[str, Any]]] = []
 
     def queue_request(self, task: str, note: str) -> None:
+        """Queue AI work of one of this plugin's task kinds (or a core one). The note reaches the assistant as
+        untrusted material, and system ops from it wait for the person. After a stage move, it waits for the go."""
         self.commands.append(("request", {"task": task, "note": note}))
 
     def file_question(self, title: str, text: str = "") -> None:
@@ -275,6 +296,8 @@ class Proposal:
 
 @dataclass(frozen=True)
 class ActionRegistration:
+    """A registered person action (host side)."""
+
     name: str
     label: str
     on: str | None
@@ -284,6 +307,8 @@ class ActionRegistration:
 
 @dataclass(frozen=True)
 class OpRegistration:
+    """A registered op (host side)."""
+
     model: type[OpModel]
     tier: Tier
     apply: Callable
@@ -292,6 +317,8 @@ class OpRegistration:
 
 @dataclass(frozen=True)
 class StageCheckResult:
+    """What a stage check returns: whether the item may enter the stage, and why, in plain words for the person."""
+
     passed: bool
     reason: str
 
@@ -316,6 +343,8 @@ class Registrar:
             raise ValueError(f"identifier must be namespaced {self.name}/<name>: {name}")
 
     def record_type(self, model: type[Record]) -> None:
+        """Register a record kind: a `Record` subclass with `record_kind` ("<plugin>/<name>") and an id `prefix`
+        (capital letters, unique in the workspace)."""
         if not issubclass(model, Record):
             raise ValueError("record_type requires a Record model")
         self._name(model.record_kind)
@@ -324,6 +353,10 @@ class Registrar:
         self.records[model.record_kind] = model
 
     def op(self, model: type[OpModel], tier: Tier, apply: Callable) -> None:
+        """Register an op: an `OpModel` subclass with a single literal `op` id and a `writes` class variable mapping
+        own record kinds to the fields it may change (`("*",)` to create or delete). `tier` is "data" or "system"
+        (system ops from the assistant wait for the person). `apply(op, writer, settings)` makes the change through
+        the `OpWriter`; raising StoreError refuses this op only."""
         if not issubclass(model, OpModel) or "op" not in model.model_fields:
             raise ValueError("op requires an OpModel with a literal op identifier")
         annotation = model.model_fields["op"].annotation
@@ -343,11 +376,17 @@ class Registrar:
         self.ops[name] = OpRegistration(model, tier, apply, writes)
 
     def op_validator(self, op_name: str, fn: Callable) -> None:
+        """Check a core or own op before it applies: `fn(op, view, origin)` (or `fn(op, view)`; `origin` may also be
+        keyword-only) returns a list of refusal messages, empty to let it through. The view is the changeset so far.
+        `origin` is {"actor": "pm" | "assistant" | "rule", "trust": "trusted" | "untrusted", "via": "screen" | "note" |
+        "input" | "task" | "rule" | "action"}. Validators run more than once per op, so they must be pure and quick."""
         if not callable(fn):
             raise ValueError("validator must be callable")
         self.validators.setdefault(op_name, []).append(fn)
 
     def task_kind(self, name: str, *, ops: tuple[str, ...], prompt: str = "notes", playbook: str = "notes") -> None:
+        """Register AI work the plugin can queue: the core or own ops its answer may use. The prompt and playbook are
+        the core's or the workspace's by name; a plugin's own prompts and playbook are not yet available."""
         self._name(name)
         if name in self.tasks or not ops:
             raise ValueError("duplicate task kind or empty op list")
@@ -361,7 +400,8 @@ class Registrar:
         self.stage_checks[id] = fn
 
     def stages(self, record_type: str, stages: list[StageDefinition | dict], *, moves=None) -> None:
-        """Supply replaceable defaults for one of this plugin's record types."""
+        """Default stages for one of this plugin's record types. The workspace's stages.yaml may replace them. `moves`
+        is "person" (the default: only the person moves items) or "rule" (stage checks move items forward)."""
         self._name(record_type)
         if record_type in self.stage_defaults:
             raise ValueError("duplicate default stages")
@@ -393,7 +433,8 @@ class Registrar:
         """Something the person starts: on a record of kind `on` (core or own; "file" with optional `file_kinds`), or
         on the workspace when `on` is None. `run(target, context, choices) -> Proposal` is deterministic work (it may
         run declared programs through `context.tools`); the person reviews the proposal, and what they approve
-        applies as theirs."""
+        applies as theirs. Raising StoreError or ToolError shows its message to the person; any other exception turns
+        the plugin off."""
         self._name(name)
         if name in self.actions or not callable(run) or not label.strip():
             raise ValueError("duplicate action, missing label or invalid callback")
@@ -402,6 +443,8 @@ class Registrar:
         self.actions[name] = ActionRegistration(name, label.strip(), on, run, tuple(file_kinds))
 
     def subscribe(self, event: str, fn: Callable) -> None:
+        """Handle an event after the change behind it is committed: `fn(payload, context)` with an `EventContext`.
+        One handler per event; route by `payload["kind"]` when it handles several kinds."""
         if event in self.handlers or not callable(fn):
             raise ValueError("duplicate subscription or invalid handler")
         self.handlers[event] = fn
@@ -434,4 +477,7 @@ __all__ = [
     "Registrar",
     "StageDefinition",
     "StageCheckResult",
+    "ToolBox",
+    "ToolResult",
+    "ToolError",
 ]
