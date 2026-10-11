@@ -76,7 +76,8 @@ test.describe.serial("acceptance scenario", () => {
     const card = page.getByRole("region", { name: "Start here" });
     await expect(card).toBeVisible();
     const steps = card.getByRole("listitem");
-    await expect(steps).toHaveCount(3);
+    // The demo workspace already has what the template step sets up, so that step is not listed.
+    await expect(steps).toHaveCount(2);
     await expect(steps.nth(0)).toContainText("Not done yet");
     await expect(page.getByText("The assistant is a stand-in for trying the app")).toBeVisible();
     await expect(page.getByText("Add an account in your AI settings, then run the connection test: cockpit ai test")).toBeVisible();

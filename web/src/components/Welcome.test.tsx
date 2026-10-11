@@ -46,8 +46,18 @@ function api(steps: S["SetupStepView"][], extra: Record<string, (body: unknown) 
     "GET settings": () => ({ fingerprint: "fp-1", items: ITEMS }),
     "GET me": () => ({ person: null, full_name: "" }),
     "GET templates": () => [
-      { id: "tpl-a", name: "Book project", description: "Chapters and drafts." },
-      { id: "tpl-b", name: "Event", description: "Dates and tasks." },
+      {
+        id: "tpl-a",
+        name: "Book project",
+        description: "Chapters and drafts.",
+        set_up: false,
+        adds: [
+          { name: "Chapters", fields: ["Title", "Length"], stages: ["Outline", "Draft", "Final"] },
+          { name: "Notes", fields: [], stages: [] },
+        ],
+      },
+      { id: "tpl-b", name: "Event", description: "Dates and tasks.", set_up: false, adds: [{ name: "Dates", fields: ["When"], stages: ["Planned"] }] },
+      { id: "tpl-c", name: "Trip", description: "Places and plans.", set_up: true, adds: [{ name: "Places", fields: ["Where"], stages: [] }] },
     ],
     "GET ai/endpoints": () => [],
     ...extra,
@@ -327,4 +337,27 @@ describe("a sign-in's step", () => {
     expect(within(section("demo/other")).getByRole("button", { name: "Sign in to Demo Other" })).toBeInTheDocument();
     expect(within(section("demo/other")).getByRole("button", { name: /^Do it now/ })).toBeInTheDocument();
   });
+});
+
+test("each template lists what it adds as short lists, and one already set up says so instead of offering Apply", async () => {
+  api([step("template")]);
+  open();
+  const book = (await screen.findByText("Book project")).closest("li") as HTMLElement;
+  const chapters = within(book).getByText("Chapters").closest("li") as HTMLElement;
+  expect(within(chapters).getAllByRole("listitem").map((l) => l.textContent)).toEqual(["Fields: Title, Length", "Steps: Outline → Draft → Final"]);
+  // A kind with no fields or steps is just named.
+  const notes = within(book).getByText("Notes").closest("li") as HTMLElement;
+  expect(within(notes).queryAllByRole("listitem")).toHaveLength(0);
+  expect(within(book).getByRole("button", { name: "Apply Book project" })).toBeInTheDocument();
+  const trip = screen.getByText("Trip").closest("li") as HTMLElement;
+  expect(trip).toHaveTextContent("Already set up");
+  expect(within(trip).queryByRole("button")).toBeNull();
+  expect(within(trip).getByText("Fields: Where")).toBeInTheDocument();
+  expect(within(trip).queryByText(/^Steps:/)).toBeNull();
+});
+
+test("the step says plainly that applying turns on item types and may need a restart, which is asked first", async () => {
+  api([step("template")]);
+  open();
+  expect(await screen.findByText(/Applying one turns on the item types it lists and may need a restart; the app asks you first\./)).toBeInTheDocument();
 });

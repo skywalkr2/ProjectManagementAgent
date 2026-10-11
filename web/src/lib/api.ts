@@ -218,6 +218,11 @@ export const api = {
   aiModels: (body: S["AiModelsAsk"]) => call<S["AiModelsView"]>("POST", "ai/models", body),
   aiLocal: () => call<S["LocalServerView"][]>("GET", "ai/local"),
   addAccount: (body: S["AiAccountAdd"]) => call<S["SettingsSaved"]>("POST", "ai/accounts", body),
+  aiAccounts: () => call<S["AiAccountView"][]>("GET", "ai/accounts"),
+  changeAccount: (name: string, body: S["AiAccountChange"]) =>
+    call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}`, body),
+  removeAccount: (name: string, fingerprint: string) =>
+    call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}/remove`, { fingerprint } satisfies S["FingerprintIn"]),
   testAi: () => call<S["AiTestResult"][]>("POST", "ai/test"),
 };
 

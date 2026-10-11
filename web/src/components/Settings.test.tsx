@@ -489,3 +489,18 @@ test("the search finds an add-on's settings by the add-on's name", async () => {
   expect(screen.getByLabelText("What limit does for the add-on")).toBeInTheDocument();
   expect(screen.queryByLabelText("What greeting does for the add-on")).toBeNull();
 });
+
+test("the AI section lists the accounts that are set up, one row each, with a Test button", async () => {
+  api(ITEMS, {
+    "GET ai/accounts": () => [{ name: "main", kind: "svc", adapter: "adapter-one", base_url: null, models: { everyday: "m" }, used_for: ["routine"], has_key: true }],
+    "GET ai/endpoints": () => [{ id: "svc", name: "A service", adapter: "adapter-one", base_url: "", needs_key: true }],
+    "GET setup": () => ({ steps: [], finished: false, local: true }),
+  });
+  open();
+  expect(await screen.findByRole("heading", { name: "Your AI accounts" })).toBeInTheDocument();
+  const row = screen.getByText("main", { selector: "strong" }).closest("li") as HTMLElement;
+  expect(row).toHaveTextContent("A service");
+  expect(row).toHaveTextContent("Key saved");
+  expect(within(row).getByRole("button", { name: "Test main" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "More actions for main" })).toBeInTheDocument();
+});

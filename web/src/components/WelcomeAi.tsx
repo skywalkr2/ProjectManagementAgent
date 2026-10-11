@@ -3,12 +3,13 @@
 // computer; the settings file only refers to it. What a kind needs is read from its catalog entry (a key, an address, or a
 // command for a command-line agent), never from its name.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useSmallMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
+import { AiAccounts } from "./AiAccounts";
 import { domainOf } from "./SafeText";
 
 type Kind = S["EndpointView"];
@@ -21,6 +22,8 @@ const OTHER_KIND = "other";
 /** Past this many models the list can be narrowed by typing. */
 const SEARCH_ABOVE = 15;
 const HARDER_SAME = "";
+/** The choice in a program's model list that lets the person type a model's name. */
+const OTHER_MODEL = "\u0001other";
 
 /** A kind that has an address of its own, or is the one where the person types it; the rest are started by a command. */
 const takesAddress = (kind: Kind) => kind.base_url !== "" || kind.id === OTHER_KIND;
@@ -28,6 +31,8 @@ const takesAddress = (kind: Kind) => kind.base_url !== "" || kind.id === OTHER_K
 const asksAddress = (kind: Kind) => takesAddress(kind) && kind.base_url === "";
 /** A service the person reaches with a key, shown as a large choice of its own. */
 const isService = (kind: Kind) => kind.needs_key && kind.base_url !== "" && !kind.local;
+/** A command-line program the app knows how to start: the person names no command. */
+const isBuiltin = (kind: Kind) => (kind.program ?? "") !== "" && !takesAddress(kind);
 
 /** The kind's id, or the id with -2, -3 … when an account of that name is already set up. */
 function freeName(id: string, taken: Set<string>): string {
@@ -45,6 +50,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   const endpoints = useQuery({ queryKey: ["ai-endpoints"], queryFn: api.endpoints });
   const found = useQuery({ queryKey: ["ai-local"], queryFn: api.aiLocal });
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
   const [kindId, setKindId] = useState("");
   const [usingFound, setUsingFound] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -62,6 +68,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   const [harder, setHarder] = useState(HARDER_SAME);
   const [levels, setLevels] = useState<Level[]>(["open"]);
   const [useForWork, setUseForWork] = useState(!props.done);
+  const [customModel, setCustomModel] = useState(false);
   const [command, setCommand] = useState("");
   const [packetVia, setPacketVia] = useState<"stdin" | "file">("stdin");
   const [outputVia, setOutputVia] = useState<"stdout" | "outbox">("stdout");
@@ -77,24 +84,42 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   const kind = endpoints.data?.find((e) => e.id === kindId);
   const server = usingFound ? found.data?.find((s) => s.endpoint === kindId) : undefined;
   const agent = kind ? !takesAddress(kind) : false;
+  // A program the app knows picks its command for itself; any other command-line agent asks for one.
+  const builtin = !!kind && isBuiltin(kind);
+  const generic = agent && !builtin;
+  const examples = builtin ? (kind.model_examples ?? []) : [];
+  const optional = builtin && !!kind.model_optional;
+  // The program picks its own model when none is named and the person has not typed one.
+  const programPicks = optional && !customModel && everyday.trim() === "";
   // A service's models can be listed when it has an address of its own or this app can reach a typed one.
   const canList = !!kind && !agent && !server && (kind.base_url !== "" || props.local);
   const hasKeyField = !!kind && !agent && !server && !kind.local && (kind.needs_key || asksAddress(kind));
-  const taken = new Set(
-    (settings.data?.items ?? []).flatMap((i) => (i.key.startsWith("ai.providers.") ? [i.key.split(".")[2]] : [])),
-  );
+  const taken = new Set([
+    ...(settings.data?.items ?? []).flatMap((i) => (i.key.startsWith("ai.providers.") ? [i.key.split(".")[2]] : [])),
+    ...(accounts.data ?? []).map((a) => a.name),
+  ]);
   const accountName = nameTouched ? name : kind ? freeName(kind.id, taken) : "";
   const nameBad = accountName !== "" && !ACCOUNT_NAME.test(accountName);
 
   const list: ModelInfo[] = server ? server.models.map((id) => ({ id })) : (models ?? []);
   const asked = models !== null || listProblem !== "";
-  const manualModel = agent || (!!kind && !server && (!canList || (asked && !listProblem && list.length === 0)));
+  const manualModel = builtin
+    ? examples.length === 0 && !optional
+    : generic || (!!kind && !server && (!canList || (asked && !listProblem && list.length === 0)));
   const showModels = !!kind && (agent || !!server || !canList || asked);
   const shown = filter.trim() ? list.filter((m) => m.id.toLowerCase().includes(filter.trim().toLowerCase())) : list;
-  const withCurrent = (current: string) =>
-    current && !shown.some((m) => m.id === current) && list.some((m) => m.id === current)
-      ? [...shown, list.find((m) => m.id === current)!]
-      : shown;
+  // Nothing in the list matches what was typed: there is no model to pick until the search changes.
+  const noMatch = !manualModel && !builtin && list.length > 0 && shown.length === 0;
+
+  /** Narrow the list; a chosen model that the search hides is replaced by the first one still shown. */
+  const narrow = (text: string) => {
+    setFilter(text);
+    const wanted = text.trim().toLowerCase();
+    const next = wanted ? list.filter((m) => m.id.toLowerCase().includes(wanted)) : list;
+    if (next.length === 0) return;
+    if (!next.some((m) => m.id === everyday)) setEveryday(next[0].id);
+    if (harder !== HARDER_SAME && !next.some((m) => m.id === harder)) setHarder(next[0].id);
+  };
 
   useEffect(() => {
     if (added) testButton.current?.focus();
@@ -120,7 +145,11 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
       const got = answer.models ?? [];
       setModels(got);
       setListProblem(answer.problem ?? "");
-      if (got.length) setEveryday((cur) => (got.some((m) => m.id === cur) ? cur : got[0].id));
+      setFilter("");
+      if (got.length) {
+        setEveryday((cur) => (got.some((m) => m.id === cur) ? cur : got[0].id));
+        setHarder((cur) => (got.some((m) => m.id === cur) ? cur : HARDER_SAME));
+      }
     } catch (err) {
       if (mine !== lookup.current) return;
       setModels(null);
@@ -141,7 +170,8 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
     setListProblem("");
     setListing(false);
     setFilter("");
-    setEveryday("");
+    setEveryday(isBuiltin(picked) && !picked.model_optional ? (picked.model_examples ?? [])[0] ?? "" : "");
+    setCustomModel(false);
     setHarder(HARDER_SAME);
     setLevels(picked.allowed_data?.length ? picked.allowed_data : ["open"]);
     setProblem("");
@@ -152,7 +182,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
     if (!picked) return;
     reset(picked);
     setUsingFound(false);
-    if (!isService(picked)) setMoreOpen(true);
+    if (!isService(picked) && !isBuiltin(picked)) setMoreOpen(true);
     // A service with an address and no key needs nothing more from the person: its models are listed at once.
     if (picked.base_url !== "" && !picked.needs_key) void check(picked, {});
   };
@@ -166,6 +196,13 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
     setEveryday(running.models[0] ?? "");
   };
 
+  /** Enter in a key field runs Check, as pressing the button does; it never adds the account. */
+  const enterChecks = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+    e.preventDefault();
+    if (kind && canCheck) void check(kind);
+  };
+
   const keyReady = !kind?.needs_key || !!server || key.trim() !== "" || keyRef.trim() !== "";
   const canCheck =
     canList && !listing && keyReady && (!kind || !asksAddress(kind) || address.trim() !== "");
@@ -173,9 +210,10 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   const ready =
     !!kind &&
     ACCOUNT_NAME.test(accountName) &&
-    everyday.trim() !== "" &&
+    (programPicks || everyday.trim() !== "") &&
+    !noMatch &&
     levels.length > 0 &&
-    (agent ? command.trim() !== "" : !takesAddress(kind) || address.trim() !== "") &&
+    (generic ? command.trim() !== "" : builtin || !takesAddress(kind) || address.trim() !== "") &&
     (agent || keyReady) &&
     !!settings.data &&
     !busy;
@@ -201,15 +239,19 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
       name: accountName,
       adapter: kind.adapter,
       endpoint: kind.id,
-      models: second ? { everyday: everyday.trim(), harder: second } : { everyday: everyday.trim() },
+      models: programPicks ? {} : second ? { everyday: everyday.trim(), harder: second } : { everyday: everyday.trim() },
       allowed_data: levels,
       fingerprint: settings.data.fingerprint,
     };
-    if (useForWork) body.use = { routine: "everyday", deep: second ? "harder" : "everyday" };
+    // With no model named there is no short name to point at, so the account's own first model does the work.
+    if (useForWork) {
+      if (programPicks) body.use_for = ["routine", "deep"];
+      else body.use = { routine: "everyday", deep: second ? "harder" : "everyday" };
+    }
     if (takesAddress(kind) && address.trim()) body.base_url = address.trim();
-    if (agent) {
+    if (generic) {
       body.agent = { command: command.trim().split(/\s+/), packet_via: packetVia, output_via: outputVia };
-    } else {
+    } else if (!agent) {
       Object.assign(body, keyArgs());
     }
     setBusy(true);
@@ -220,7 +262,11 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
       setKeyRef("");
       setResults(null);
       setAdded(accountName);
+      // The next suggested name looks at the accounts as they are now, so a second account of this kind gets -2.
+      setName("");
+      setNameTouched(false);
       await afterSave(saved, { message: t("welcome.ai.added", { name: accountName }) });
+      await client.invalidateQueries({ queryKey: ["ai-accounts"] });
       void test();
     } catch (err) {
       // The typed values stay, so a correction is one edit away. A changed file means the form is out of date.
@@ -243,7 +289,10 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   const all = endpoints.data ?? [];
   const foundIds = new Set((found.data ?? []).map((s) => s.endpoint));
   const services = all.filter((k) => isService(k));
-  const more = all.filter((k) => !isService(k) && !foundIds.has(k.id));
+  const apps = all.filter((k) => isBuiltin(k) && !foundIds.has(k.id));
+  const others = all.filter((k) => !isService(k) && !isBuiltin(k) && !foundIds.has(k.id));
+  // The command-line agent that needs a command typed comes last.
+  const more = [...others.filter((k) => takesAddress(k)), ...others.filter((k) => !takesAddress(k))];
 
   const kindChoice = (e: Kind) => (
     <label key={e.id} className="radio kind-choice kind-card">
@@ -272,7 +321,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   };
 
   const modelSelect = (props2: { id: string; label: string; value: string; onChange: (v: string) => void; same?: boolean }) => {
-    const options = withCurrent(props2.value);
+    const options = shown;
     const note = props2.value === HARDER_SAME ? "" : modelNote(props2.value);
     return (
       <div className="field">
@@ -308,8 +357,8 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
       ) : (
         <form
           onSubmit={(e) => {
+            // Enter in a field never adds the account: only the Add button does.
             e.preventDefault();
-            if (ready) void add();
           }}
         >
           <fieldset className="details">
@@ -340,6 +389,12 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
               );
             })}
             <div className="kinds kind-grid">{services.map(kindChoice)}</div>
+            {apps.length > 0 && (
+              <div role="group" className="kind-group" aria-labelledby="ai-apps-title">
+                <h4 id="ai-apps-title">{t("welcome.ai.apps")}</h4>
+                <div className="kinds kind-grid">{apps.map(kindChoice)}</div>
+              </div>
+            )}
             {more.length > 0 && (
               <details
                 className="more-options"
@@ -369,7 +424,24 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                   </p>
                 </div>
               )}
-              {agent && (
+              {builtin && kind.installed != null && (
+                <div className="check-row">
+                  <p className="hint" id="ai-app-status" role="status">
+                    <span aria-hidden="true">{kind.installed ? "✓ " : "✗ "}</span>
+                    {endpoints.isFetching ? t("welcome.ai.app_checking") : t(kind.installed ? "welcome.ai.app_installed" : "welcome.ai.app_missing")}
+                  </p>
+                  <button
+                    type="button"
+                    className="btn"
+                    disabled={endpoints.isFetching}
+                    aria-describedby="ai-app-status"
+                    onClick={() => void endpoints.refetch()}
+                  >
+                    {t("welcome.ai.check")}
+                  </button>
+                </div>
+              )}
+              {generic && (
                 <>
                   <div className="field">
                     <label htmlFor="ai-command">{t("welcome.ai.command")}</label>
@@ -440,6 +512,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                           spellCheck={false}
                           disabled={keyRef.trim() !== ""}
                           aria-describedby="ai-key-hint"
+                          onKeyDown={enterChecks}
                           onChange={(e) => setKey(e.target.value)}
                           onPaste={(e) => {
                             // A key pasted into an empty field is checked at once; typing waits for Check.
@@ -470,6 +543,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                         autoComplete="off"
                         placeholder="env:NAME"
                         aria-describedby="ai-key-where-hint"
+                        onKeyDown={enterChecks}
                         onChange={(e) => setKeyRef(e.target.value)}
                       />
                       <p className="hint" id="ai-key-where-hint">
@@ -511,6 +585,48 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                         {t(agent ? "welcome.ai.model_agent_hint" : "welcome.ai.model_hint")}
                       </p>
                     </div>
+                  ) : builtin && optional && examples.length === 0 ? (
+                    // The program's command names no model, so a name typed here would never reach it.
+                    <p className="hint">{t("welcome.ai.model_program_picks_hint")}</p>
+                  ) : builtin ? (
+                    <>
+                      <div className="field">
+                        <label htmlFor="ai-model">{t("welcome.ai.model_choice")}</label>
+                        <select
+                          id="ai-model"
+                          value={customModel ? OTHER_MODEL : everyday}
+                          onChange={(e) => {
+                            const other = e.target.value === OTHER_MODEL;
+                            setCustomModel(other);
+                            setEveryday(other ? "" : e.target.value);
+                          }}
+                        >
+                          {optional && <option value="">{t("welcome.ai.model_program_picks")}</option>}
+                          {examples.map((m) => (
+                            <option key={m} value={m}>
+                              {m}
+                            </option>
+                          ))}
+                          <option value={OTHER_MODEL}>{t("welcome.ai.model_other")}</option>
+                        </select>
+                      </div>
+                      {customModel && (
+                        <div className="field">
+                          <label htmlFor="ai-model-custom">{t("welcome.ai.model")}</label>
+                          <input
+                            id="ai-model-custom"
+                            type="text"
+                            value={everyday}
+                            autoComplete="off"
+                            aria-describedby="ai-model-custom-hint"
+                            onChange={(e) => setEveryday(e.target.value)}
+                          />
+                          <p className="hint" id="ai-model-custom-hint">
+                            {t("welcome.ai.model_agent_hint")}
+                          </p>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     list.length > 0 && (
                       <>
@@ -522,23 +638,25 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                               type="search"
                               value={filter}
                               autoComplete="off"
-                              onChange={(e) => setFilter(e.target.value)}
+                              onChange={(e) => narrow(e.target.value)}
                             />
-                            {shown.length === 0 && (
+                            {noMatch && (
                               <p className="hint" role="status">
                                 {t("welcome.ai.model_none")}
                               </p>
                             )}
                           </div>
                         )}
-                        {modelSelect({ id: "ai-model", label: t("welcome.ai.model_everyday"), value: everyday, onChange: setEveryday })}
-                        {modelSelect({
-                          id: "ai-model-harder",
-                          label: t("welcome.ai.model_harder"),
-                          value: harder,
-                          onChange: setHarder,
-                          same: true,
-                        })}
+                        {!noMatch &&
+                          modelSelect({ id: "ai-model", label: t("welcome.ai.model_everyday"), value: everyday, onChange: setEveryday })}
+                        {!noMatch &&
+                          modelSelect({
+                            id: "ai-model-harder",
+                            label: t("welcome.ai.model_harder"),
+                            value: harder,
+                            onChange: setHarder,
+                            same: true,
+                          })}
                       </>
                     )
                   )}
@@ -606,6 +724,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                       autoComplete="off"
                       disabled={key.trim() !== ""}
                       aria-describedby="ai-key-ref-hint"
+                      onKeyDown={enterChecks}
                       onChange={(e) => setKeyRef(e.target.value)}
                     />
                     <p className="hint" id="ai-key-ref-hint">
@@ -620,7 +739,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                 </p>
               )}
               <div className="row-end">
-                <button type="submit" className="btn primary" disabled={!ready}>
+                <button type="button" className="btn primary" disabled={!ready} onClick={() => void add()}>
                   {t(busy ? "welcome.ai.adding" : "welcome.ai.add")}
                 </button>
               </div>
@@ -628,6 +747,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
           )}
         </form>
       )}
+      <AiAccounts local={props.local} level={4} />
       <div className="guide-test">
         {canTest && (
           <button type="button" className="btn" ref={testButton} disabled={testing} onClick={() => void test()}>

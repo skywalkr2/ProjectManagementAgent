@@ -45,7 +45,43 @@ const KINDS: S["EndpointView"][] = ([
   },
   { id: "other", name: "Another service", adapter: "adapter-one", base_url: "", key_url: "", needs_key: false, local: false, note: "Enter its address." },
   { id: "runner", name: "A command-line program", adapter: "adapter-two", base_url: "", key_url: "", needs_key: false, local: false, note: "Give the command that starts it." },
-] as Omit<S["EndpointView"], "program" | "model_optional">[]).map((k) => ({ program: "", model_optional: false, ...k }));
+  {
+    id: "app-a",
+    name: "App A",
+    adapter: "adapter-two",
+    base_url: "",
+    key_url: "",
+    needs_key: false,
+    local: false,
+    note: "Uses the app you are signed in to.",
+    program: "app-a-cli",
+    installed: true,
+    model_examples: ["alpha", "beta"],
+    model_optional: true,
+    allowed_data: ["open"],
+  },
+  {
+    id: "app-b",
+    name: "App B",
+    adapter: "adapter-two",
+    base_url: "",
+    key_url: "",
+    needs_key: false,
+    local: false,
+    note: "Another signed-in app.",
+    program: "app-b-cli",
+    installed: false,
+    model_examples: ["gamma", "delta"],
+    model_optional: false,
+    allowed_data: ["open", "internal"],
+  },
+] as Omit<S["EndpointView"], "program" | "model_optional" | "model_examples" | "installed">[]).map((k) => ({
+  program: "",
+  model_optional: false,
+  model_examples: [],
+  installed: null,
+  ...k,
+}));
 
 const MODELS: S["AiModelView"][] = [
   { id: "model-a", context_tokens: 200000, input_per_million: 3, output_per_million: 15 },
@@ -56,6 +92,7 @@ const MODELS: S["AiModelView"][] = [
 function api(extra: Record<string, (body: unknown) => unknown> = {}) {
   return fakeApi({
     "GET ai/endpoints": () => KINDS,
+    "GET ai/accounts": () => [],
     "GET ai/local": () => [],
     "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
     "POST ai/models": () => ({ models: MODELS }),
@@ -187,11 +224,113 @@ test("a long list can be narrowed by typing", async () => {
   api({ "POST ai/models": () => ({ models: many }) });
   open();
   await keyed(user);
-  await user.type(screen.getByLabelText("Find a model"), "model-1");
   const everyday = screen.getByLabelText("Model for everyday work");
-  expect(within(everyday).getAllByRole("option")).toHaveLength(11);
-  await user.type(screen.getByLabelText("Find a model"), "9x");
+  const harder = screen.getByLabelText("Model for harder work (optional)");
+  expect(everyday).toHaveValue("model-00");
+  await user.selectOptions(harder, "model-05");
+  await user.type(screen.getByLabelText("Find a model"), "model-1");
+  // The select shows only what matches, and a choice the search hides gives way to the first match.
+  expect(within(everyday).getAllByRole("option").map((o) => o.textContent)).toEqual(
+    Array.from({ length: 10 }, (_, i) => `model-${10 + i}`),
+  );
+  expect(everyday).toHaveValue("model-10");
+  expect(harder).toHaveValue("model-10");
+  // A choice that still matches stays chosen.
+  await user.selectOptions(everyday, "model-12");
+  await user.type(screen.getByLabelText("Find a model"), "2");
+  expect(everyday).toHaveValue("model-12");
+  expect(within(everyday).getAllByRole("option")).toHaveLength(1);
+  // Clearing the search brings the whole list back and keeps the choice.
+  await user.clear(screen.getByLabelText("Find a model"));
+  expect(within(everyday).getAllByRole("option")).toHaveLength(20);
+  expect(everyday).toHaveValue("model-12");
+});
+
+test("when nothing matches the search there is no model to pick and Add stays off", async () => {
+  const user = userEvent.setup();
+  const many = Array.from({ length: 20 }, (_, i) => ({ id: `model-${String(i).padStart(2, "0")}` }));
+  api({ "POST ai/models": () => ({ models: many }) });
+  open();
+  await keyed(user);
+  const add = screen.getByRole("button", { name: "Add account" });
+  expect(add).toBeEnabled();
+  await user.type(screen.getByLabelText("Find a model"), "zzz");
   expect(screen.getByText("No model matches.")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Model for everyday work")).toBeNull();
+  expect(screen.queryByLabelText("Model for harder work (optional)")).toBeNull();
+  expect(add).toBeDisabled();
+  await user.clear(screen.getByLabelText("Find a model"));
+  expect(screen.queryByText("No model matches.")).toBeNull();
+  expect(add).toBeEnabled();
+});
+
+test("Enter in the key field runs Check and never adds the account", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "Service A");
+  await user.type(screen.getByLabelText("Key"), "secret-value{Enter}");
+  await screen.findByLabelText("Model for everyday work");
+  expect(modelsAsked(calls)).toHaveLength(1);
+  expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key: "secret-value" });
+  expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
+  // Enter in any other field does nothing.
+  const advanced = screen.getByText("Advanced").closest("details")!;
+  await user.type(within(advanced).getByLabelText("Account name", { selector: "input" }), "{Enter}");
+  await user.type(within(advanced).getByLabelText("Or where the key is"), "{Enter}");
+  expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
+  expect(modelsAsked(calls)).toHaveLength(1);
+});
+
+test("Enter in the address field does not add the account either", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "Another service");
+  await user.type(screen.getByLabelText("Address"), "http://model-host:8080/v1{Enter}");
+  expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
+  await user.click(screen.getByRole("button", { name: "Check" }));
+  await screen.findByLabelText("Model for everyday work");
+  await user.type(screen.getByLabelText("Address"), "{Enter}");
+  expect(calls.some((c) => c.route === "POST ai/accounts")).toBe(false);
+});
+
+test("after an add the suggested name looks at the accounts as they are now", async () => {
+  const user = userEvent.setup();
+  let existing: S["AiAccountView"][] = [];
+  const calls = api({
+    "GET ai/accounts": () => existing,
+    "POST ai/accounts": () => {
+      existing = [{ name: "service-a", kind: "service-a", adapter: "adapter-one", models: { everyday: "model-a" }, used_for: [], has_key: true }];
+      return { changes: [], fingerprint: "fp-2", needs_restart: false };
+    },
+  });
+  open();
+  await keyed(user);
+  const advanced = screen.getByText("Advanced").closest("details")!;
+  expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("service-a");
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("service-a-2"));
+  expect(calls.filter((c) => c.route === "GET ai/accounts").length).toBeGreaterThan(1);
+  // The account just made is listed, with a way to fix or remove it.
+  const row = (await screen.findByText("service-a", { selector: "strong" })).closest("li")!;
+  expect(within(row).getByRole("button", { name: "Test service-a" })).toBeInTheDocument();
+  expect(within(row).getByRole("button", { name: "More actions for service-a" })).toBeInTheDocument();
+});
+
+test("a name the person typed is dropped after an add, so the next one is suggested again", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await keyed(user);
+  const advanced = screen.getByText("Advanced").closest("details")!;
+  const name = within(advanced).getByLabelText("Account name", { selector: "input" });
+  await user.clear(name);
+  await user.type(name, "mine");
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).name).toBe("mine");
+  await waitFor(() => expect(within(advanced).getByLabelText("Account name", { selector: "input" })).toHaveValue("service-a"));
 });
 
 test("adding sends the kind, both models, the data levels the kind allows and what to use them for", async () => {
@@ -481,4 +620,143 @@ test("when the step was already done, the test button is there from the start", 
   open({ done: true });
   await user.click(await screen.findByRole("button", { name: "Test the connection" }));
   expect(await screen.findByText("There is nothing to test yet. Add an account first.")).toBeInTheDocument();
+});
+
+test("apps the person is signed in to are normal choices under their own heading, ahead of More options", async () => {
+  api();
+  open();
+  const group = await screen.findByRole("group", { name: "Use an app you're signed in to" });
+  expect(within(group).getByRole("radio", { name: /App A/ })).toBeInTheDocument();
+  expect(within(group).getByRole("radio", { name: /App B/ })).toBeInTheDocument();
+  expect(within(group).getByText("Uses the app you are signed in to.")).toBeInTheDocument();
+  const more = screen.getByText("More options").closest("details")!;
+  expect(within(more).queryByRole("radio", { name: /App A/, hidden: true })).toBeNull();
+  // The command-line entry with no program of its own keeps its command field and is listed last.
+  const inMore = within(more).getAllByRole("radio", { hidden: true }).map((r) => r.getAttribute("value"));
+  expect(inMore[inMore.length - 1]).toBe("runner");
+});
+
+test("an installed app asks for no key and no command, and says it is installed", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await pick(user, "App A");
+  expect(screen.queryByLabelText("Key")).toBeNull();
+  expect(screen.queryByLabelText("Command")).toBeNull();
+  expect(screen.queryByRole("radio", { name: "On its input" })).toBeNull();
+  expect(screen.getByText("Installed on this computer")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Check" })).toBeEnabled();
+});
+
+test("an app left to choose its own model is added with no models and works through its first one", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "App A");
+  const model = screen.getByLabelText("Model");
+  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["Let the program choose", "alpha", "beta", "Another model"]);
+  expect(model).toHaveValue("");
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls)).toEqual({
+    name: "app-a",
+    adapter: "adapter-two",
+    endpoint: "app-a",
+    models: {},
+    allowed_data: ["open"],
+    use_for: ["routine", "deep"],
+    fingerprint: "fp-1",
+  });
+  expect(modelsAsked(calls)).toHaveLength(0);
+});
+
+test("an app that picks its own model and names no examples asks for no model", async () => {
+  const user = userEvent.setup();
+  const calls = api({ "GET ai/endpoints": () => KINDS.map((k) => (k.id === "app-a" ? { ...k, model_examples: [] } : k)) });
+  open();
+  await pick(user, "App A");
+  expect(screen.queryByLabelText("Model")).toBeNull();
+  expect(screen.getByText("This program picks its own model; change it in the program's own settings.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).models).toEqual({});
+  expect(body(calls).use_for).toEqual(["routine", "deep"]);
+});
+
+test("an app's example models can be chosen, and another model can be typed", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "App A");
+  await user.selectOptions(screen.getByLabelText("Model"), "beta");
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).models).toEqual({ everyday: "beta" });
+  expect(body(calls).use).toEqual({ routine: "everyday", deep: "everyday" });
+  expect(body(calls).agent).toBeUndefined();
+});
+
+test("choosing another model asks for its name, and Add waits for it", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "App A");
+  await user.selectOptions(screen.getByLabelText("Model"), "Another model");
+  const add = screen.getByRole("button", { name: "Add account" });
+  expect(add).toBeDisabled();
+  await user.type(screen.getByLabelText("Model name"), "typed-model");
+  expect(add).toBeEnabled();
+  await user.click(add);
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).models).toEqual({ everyday: "typed-model" });
+});
+
+test("an app whose model must be named starts on its first example", async () => {
+  const user = userEvent.setup();
+  const calls = api();
+  open();
+  await pick(user, "App B");
+  const model = screen.getByLabelText("Model");
+  expect(within(model).getAllByRole("option").map((o) => o.textContent)).toEqual(["gamma", "delta", "Another model"]);
+  expect(model).toHaveValue("gamma");
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  await waitFor(() => expect(body(calls)).toBeDefined());
+  expect(body(calls).models).toEqual({ everyday: "gamma" });
+  expect(body(calls).allowed_data).toEqual(["open", "internal"]);
+});
+
+test("an app that is not found says what to do, and Check looks again", async () => {
+  const user = userEvent.setup();
+  let installed = false;
+  const calls = api({ "GET ai/endpoints": () => KINDS.map((k) => (k.id === "app-b" ? { ...k, installed } : k)) });
+  open();
+  await pick(user, "App B");
+  expect(screen.getByText("Not found on this computer: install it, sign in once in a terminal, then press Check")).toBeInTheDocument();
+  installed = true;
+  await user.click(screen.getByRole("button", { name: "Check" }));
+  expect(await screen.findByText("Installed on this computer")).toBeInTheDocument();
+  expect(calls.filter((c) => c.route === "GET ai/endpoints").length).toBeGreaterThan(1);
+  expect(screen.queryByText(/Not found on this computer/)).toBeNull();
+});
+
+test("when the app can't tell whether a program is installed, nothing is claimed", async () => {
+  const user = userEvent.setup();
+  api({ "GET ai/endpoints": () => KINDS.map((k) => (k.id === "app-b" ? { ...k, installed: null } : k)) });
+  open();
+  await pick(user, "App B");
+  expect(screen.queryByText(/^Installed on this computer/)).toBeNull();
+  expect(screen.queryByText(/Not found on this computer/)).toBeNull();
+  expect(screen.queryByRole("button", { name: "Check" })).toBeNull();
+});
+
+test("after adding an app, a sign-in failure shows the hint from its test", async () => {
+  const user = userEvent.setup();
+  api({
+    "POST ai/test": () => [{ tier: "routine", account: "app-a", main: true, ok: false, detail: "Sign in once in a terminal." }],
+  });
+  open();
+  await pick(user, "App A");
+  await user.click(screen.getByRole("button", { name: "Add account" }));
+  const line = await screen.findByText(/didn't answer/);
+  expect(line).toHaveTextContent("Everyday work: app-a — didn't answer: Sign in once in a terminal. ✗");
 });

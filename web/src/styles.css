@@ -376,6 +376,14 @@ input:disabled, textarea:disabled, select:disabled { opacity: 0.7; cursor: not-a
 .more-options > summary { cursor: pointer; font-weight: 600; font-size: 13.5px; min-height: 32px; display: flex; align-items: center; }
 .key-step { display: grid; gap: 8px; margin-bottom: 10px; }
 .key-step h4 { margin: 0; font-size: 14px; }
+.kind-group { margin-top: 12px; }
+.kind-group h4 { margin: 0 0 8px; font-size: 14px; }
+.check-row .hint { margin: 0; }
+.ai-accounts { display: grid; gap: 8px; margin-top: 8px; }
+.ai-accounts h3, .ai-accounts h4 { margin: 0; font-size: 15px; }
+.template-adds { margin-top: 8px; }
+.template-adds ul { margin-top: 4px; }
+.template-set-up { font-weight: 600; font-size: 13.5px; white-space: nowrap; }
 .key-steps { list-style: decimal; }
 .check-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
 .check-row .problem-note { flex: 1 1 100%; margin: 0; }

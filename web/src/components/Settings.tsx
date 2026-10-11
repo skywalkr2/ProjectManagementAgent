@@ -21,6 +21,7 @@ import {
 } from "../lib/settings";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
+import { AiAccounts } from "./AiAccounts";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
 import { restoreFocus } from "./ModalPanel";
 import { SignIns } from "./SignIns";
@@ -172,6 +173,7 @@ export function Settings(props: { onOpenGuide: () => void; onOpenAddons: () => v
           })
         )}
       </div>
+      <AiAccounts />
       <ValueLists />
       <SignIns />
     </section>
