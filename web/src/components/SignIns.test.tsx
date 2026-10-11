@@ -213,6 +213,199 @@ test("Sign out signs out at once and says so, with no undo", async () => {
   expect(await screen.findByText("Not signed in")).toBeInTheDocument();
 });
 
+const WEB = "https" + "://";
+const STEPS = [
+  { text: "Open the service's developer page", link: `${WEB}portal.example.com/apps` },
+  { text: "Register a new app and allow the address below", link: null },
+];
+const menuOf = (r: HTMLElement) => within(r).getByRole("button", { name: /^More actions for/ });
+
+describe("the app registration", () => {
+  test("the add-on's own registration works as before, shows its note, and offers your own in the menu", async () => {
+    const user = userEvent.setup();
+    fakeApi({
+      ...settings,
+      "GET sign-ins": () => [
+        signIn("demo/three", { app: "add-on", app_note: "Using the add-on's shared registration.", can_paste: true, own_app_steps: STEPS }),
+      ],
+    });
+    open();
+    const three = await screen.findByText("Service demo/three").then((el) => el.closest("li") as HTMLElement);
+    expect(within(three).getByText("Using the add-on's shared registration.")).toBeInTheDocument();
+    expect(within(three).getByRole("button", { name: "Sign in to Service demo/three" })).toBeEnabled();
+    expect(within(three).queryByRole("form")).toBeNull();
+    await user.click(menuOf(three));
+    await user.click(await screen.findByRole("menuitem", { name: "Use your own app registration" }));
+    const form = await within(three).findByRole("form", { name: "Your own app registration for Service demo/three" });
+    await waitFor(() => expect(within(form).getByLabelText("Client ID")).toHaveFocus());
+    // Cancel closes it and focus goes back to the menu button.
+    await user.click(within(form).getByRole("button", { name: /^Cancel/ }));
+    expect(within(three).queryByRole("form")).toBeNull();
+    await waitFor(() => expect(menuOf(three)).toHaveFocus());
+  });
+
+  test("the menu offers nothing to paste when the person can't paste here", async () => {
+    fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/three", { app: "add-on", app_note: "Shared.", can_paste: false })] });
+    open();
+    const three = await screen.findByText("Service demo/three").then((el) => el.closest("li") as HTMLElement);
+    expect(within(three).queryByRole("button", { name: /^More actions/ })).toBeNull();
+  });
+
+  test("a row with no registration shows the form with steps, links with their domain, and the address to allow", async () => {
+    fakeApi({
+      ...settings,
+      "GET sign-ins": () => [signIn("demo/three", { app: "none", ready: false, can_paste: true, own_app_steps: STEPS })],
+    });
+    open();
+    const three = await screen.findByText("Service demo/three").then((el) => el.closest("li") as HTMLElement);
+    const form = within(three).getByRole("form");
+    expect(within(form).getByRole("heading", { name: "How to make your own" })).toBeInTheDocument();
+    const list = within(form).getByRole("list", { name: "How to make your own" });
+    const items = within(list).getAllByRole("listitem");
+    expect(items).toHaveLength(2);
+    const link = within(items[0]).getByRole("link", { name: "Open the service's developer page" });
+    expect(link).toHaveAttribute("href", `${WEB}portal.example.com/apps`);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(items[0]).toHaveTextContent("(portal.example.com)");
+    expect(within(items[1]).queryByRole("link")).toBeNull();
+    expect(within(form).getByLabelText("Address to allow")).toHaveAttribute("readonly");
+    expect(screen.getAllByLabelText("Address to allow")).toHaveLength(1);
+    // The old not-ready line gives way to the form; sign in stays off.
+    expect(within(three).queryByText("Set the add-on's app registration first. Then you can sign in.")).toBeNull();
+    expect(within(three).getByRole("button", { name: "Sign in to Service demo/three" })).toBeDisabled();
+    // No secret asked for.
+    expect(within(form).queryByLabelText("Client secret")).toBeNull();
+  });
+
+  test("a row with no registration and no way to paste keeps the not-ready line", async () => {
+    fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/three", { app: "none", ready: false, can_paste: false })] });
+    open();
+    expect(await screen.findByText("Set the add-on's app registration first. Then you can sign in.")).toBeInTheDocument();
+    expect(screen.queryByRole("form")).toBeNull();
+  });
+
+  test("Save stays off until filled, trims, and sends the client id alone when no secret is needed", async () => {
+    const user = userEvent.setup();
+    let app: S["SignInView"]["app"] = "none";
+    const calls = fakeApi({
+      ...settings,
+      "GET sign-ins": () => [signIn("demo/three", { app, ready: app !== "none", can_paste: true })],
+      "POST sign-ins/demo/three/app": () => {
+        app = "pasted";
+        return signIn("demo/three", { app: "pasted", can_paste: true });
+      },
+    });
+    open();
+    const save = await screen.findByRole("button", { name: "Save the app registration for Service demo/three" });
+    expect(save).toBeDisabled();
+    await user.type(screen.getByLabelText("Client ID"), "   ");
+    expect(save).toBeDisabled();
+    await user.type(screen.getByLabelText("Client ID"), " abc-123 {Enter}");
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST sign-ins/demo/three/app")).toHaveLength(1));
+    expect(calls.find((c) => c.route === "POST sign-ins/demo/three/app")?.body).toEqual({ client_id: "abc-123" });
+    expect(await screen.findByText("Saved your app registration for Service demo/three. Sign in to use it.")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole("form")).toBeNull());
+    expect(screen.getByText("Using your own app registration")).toBeInTheDocument();
+  });
+
+  test("a secret is asked for when the service issues one, hidden, and Enter waits until both are filled", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi({
+      ...settings,
+      "GET sign-ins": () => [signIn("demo/three", { app: "none", ready: false, can_paste: true, needs_secret: true })],
+      "POST sign-ins/demo/three/app": () => signIn("demo/three", { app: "pasted", can_paste: true, needs_secret: true }),
+    });
+    open();
+    const secret = await screen.findByLabelText("Client secret");
+    expect(secret).toHaveAttribute("type", "password");
+    expect(secret).toHaveAttribute("autocomplete", "off");
+    await user.type(screen.getByLabelText("Client ID"), "abc-123{Enter}");
+    expect(calls.some((c) => c.route === "POST sign-ins/demo/three/app")).toBe(false);
+    expect(screen.getByRole("button", { name: /^Save the app registration/ })).toBeDisabled();
+    await user.type(secret, " s3cret {Enter}");
+    await waitFor(() => expect(calls.some((c) => c.route === "POST sign-ins/demo/three/app")).toBe(true));
+    expect(calls.find((c) => c.route === "POST sign-ins/demo/three/app")?.body).toEqual({
+      client_id: "abc-123",
+      client_secret: "s3cret",
+    });
+  });
+
+  test("a refusal shows the server's words on the row and keeps what was typed", async () => {
+    const user = userEvent.setup();
+    fakeApi({
+      ...settings,
+      "GET sign-ins": () => [signIn("demo/three", { app: "none", ready: false, can_paste: true })],
+      "POST sign-ins/demo/three/app": () => new Refuse(422, "That client ID isn't valid."),
+    });
+    open();
+    await user.type(await screen.findByLabelText("Client ID"), "nope");
+    await user.click(screen.getByRole("button", { name: /^Save the app registration/ }));
+    expect(await within(row("Service demo/three")).findByRole("alert")).toHaveTextContent("That client ID isn't valid.");
+    expect(screen.getByLabelText("Client ID")).toHaveValue("nope");
+    expect(screen.getByRole("button", { name: /^Save the app registration/ })).toBeEnabled();
+  });
+
+  test("Cancel closes the form and the not-ready line returns, with a way to open it again", async () => {
+    const user = userEvent.setup();
+    fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/three", { app: "none", ready: false, can_paste: true })] });
+    open();
+    await user.click(await screen.findByRole("button", { name: /^Cancel/ }));
+    const three = row("Service demo/three");
+    expect(within(three).queryByRole("form")).toBeNull();
+    expect(within(three).getByText("Set the add-on's app registration first. Then you can sign in.")).toBeInTheDocument();
+    await user.click(menuOf(three));
+    await user.click(await screen.findByRole("menuitem", { name: "Use your own app registration" }));
+    expect(await within(three).findByRole("form")).toBeInTheDocument();
+  });
+
+  test("a pasted registration says so, and Stop using it acts at once with an Undo that brings it back", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi({
+      ...settings,
+      "GET sign-ins": () => [signIn("demo/one", { app: "pasted", can_paste: true })],
+      "POST sign-ins/demo/one/app/set-aside": () => signIn("demo/one", { app: "add-on", set_aside: true }),
+      "POST sign-ins/demo/one/app/bring-back": () => signIn("demo/one", { app: "pasted" }),
+    });
+    open();
+    const one = await screen.findByText("Service demo/one").then((el) => el.closest("li") as HTMLElement);
+    expect(within(one).getByText("Using your own app registration")).toBeInTheDocument();
+    expect(within(one).queryByRole("form")).toBeNull();
+    await user.click(menuOf(one));
+    await user.click(await screen.findByRole("menuitem", { name: "Stop using it" }));
+    expect(
+      await screen.findByText("Stopped using your own app registration for Service demo/one. You'll need to sign in again."),
+    ).toBeInTheDocument();
+    expect(calls.filter((c) => c.route === "POST sign-ins/demo/one/app/set-aside")).toHaveLength(1);
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST sign-ins/demo/one/app/bring-back")).toBe(true));
+  });
+
+  test("a set-aside registration can be brought back from the menu", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi({
+      ...settings,
+      "GET sign-ins": () => [signIn("demo/one", { app: "add-on", set_aside: true, can_paste: true })],
+      "POST sign-ins/demo/one/app/bring-back": () => signIn("demo/one", { app: "pasted" }),
+    });
+    open();
+    const one = await screen.findByText("Service demo/one").then((el) => el.closest("li") as HTMLElement);
+    await user.click(menuOf(one));
+    expect(screen.queryByRole("menuitem", { name: "Stop using it" })).toBeNull();
+    await user.click(await screen.findByRole("menuitem", { name: "Use the registration you set aside" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST sign-ins/demo/one/app/bring-back")).toBe(true));
+    expect(await screen.findByText(/You'll need to sign in again\./)).toBeInTheDocument();
+  });
+
+  test("a workspace registration has nothing new, and no menu", async () => {
+    fakeApi({ ...settings, "GET sign-ins": () => [signIn("demo/one", { app: "workspace", can_paste: true })] });
+    open();
+    const one = await screen.findByText("Service demo/one").then((el) => el.closest("li") as HTMLElement);
+    expect(within(one).queryByRole("button", { name: /^More actions/ })).toBeNull();
+    expect(within(one).queryByRole("form")).toBeNull();
+  });
+});
+
 function Return() {
   useSignInReturn();
   return null;

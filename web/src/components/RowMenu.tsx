@@ -13,12 +13,12 @@ export interface MenuAction {
   reason?: string;
 }
 
-export function RowMenu(props: { label: string; actions: MenuAction[] }) {
+export function RowMenu(props: { label: string; actions: MenuAction[]; buttonId?: string }) {
   const { t } = useWords();
   if (!props.actions.length) return null;
   return (
     <MenuTrigger>
-      <Button className="btn more" aria-label={t("menu.more", { what: props.label })}>
+      <Button id={props.buttonId} className="btn more" aria-label={t("menu.more", { what: props.label })}>
         •••
       </Button>
       <Popover placement="bottom end" className="menu-popover">

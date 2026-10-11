@@ -78,6 +78,7 @@ main:focus { outline: none; }
 .row.single { grid-template-columns: minmax(0, 1fr); }
 .row.pair { grid-template-columns: minmax(0, 1fr) auto; }
 .plain-list { list-style: disc; margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+.own-steps { margin: 0; padding-left: 22px; display: grid; gap: 6px; }
 .plain-list .title { font-weight: 600; overflow-wrap: anywhere; }
 .plain-list .meta { display: block; color: var(--muted); font-size: 13px; }
 .name { margin: 0; font-size: 15px; }
