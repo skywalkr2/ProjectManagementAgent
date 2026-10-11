@@ -56,3 +56,17 @@ test("near a limit, the line says which one in words", async () => {
   show({ today_usd: 0.1, month_usd: 25, warn: true, warn_month: true });
   expect(await screen.findByText(/near this month's limit$/)).toBeInTheDocument();
 });
+
+test("Files is one of the views beside Today, Stages and People & projects", async () => {
+  const onView = vi.fn();
+  fakeApi({ "GET status": () => status() });
+  renderApp(
+    <Header workspace="Workspace" live={{ state: "live", lastUpdate: null }} view="files" onView={onView} onHandIn={() => {}} onHelp={() => {}} />,
+  );
+  const views = screen.getByRole("navigation", { name: "Views" });
+  expect(Array.from(views.querySelectorAll("button")).map((b) => b.textContent)).toEqual(["Today", "Stages", "Files", "People & projects"]);
+  expect(screen.getByRole("button", { name: "Files" })).toHaveAttribute("aria-current", "page");
+  screen.getByRole("button", { name: "Stages" }).click();
+  expect(onView).toHaveBeenCalledWith("stages");
+  await screen.findByText("No off-device backup");
+});

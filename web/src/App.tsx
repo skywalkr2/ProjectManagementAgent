@@ -6,6 +6,7 @@ import { useLive } from "./lib/live";
 import { useToasts } from "./lib/toasts";
 import { useWords } from "./lib/wording";
 import { AssistantNotice } from "./components/AssistantNotice";
+import { Files } from "./components/Files";
 import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Header } from "./components/Header";
@@ -60,6 +61,8 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
           </>
         ) : view === "stages" ? (
           <Stages />
+        ) : view === "files" ? (
+          <Files />
         ) : (
           <Setup />
         )}
@@ -82,11 +85,14 @@ function useNarrow(px: number) {
   }, [px]);
 }
 
-export type View = "home" | "stages" | "setup";
+export type View = "home" | "stages" | "files" | "setup";
 
 /** Which view is showing, kept in the address's #fragment so a refresh or the back button keeps it. */
 function useView(): [View, (v: View) => void] {
-  const read = (): View => (window.location.hash === "#setup" ? "setup" : window.location.hash === "#stages" ? "stages" : "home");
+  const read = (): View => {
+    const hash = window.location.hash.slice(1);
+    return hash === "setup" || hash === "stages" || hash === "files" ? hash : "home";
+  };
   const [view, setViewState] = useState<View>(read);
   useEffect(() => {
     const onHash = () => setViewState(read());

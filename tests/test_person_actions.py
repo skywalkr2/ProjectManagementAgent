@@ -204,7 +204,7 @@ def test_actions_are_offered_where_they_apply(env):
     listing = add_file(store, cfg, b"One\nTwo", name="works.txt", media_type="text/plain", file_kind="p04/list")
     other = add_file(store, cfg, b"x", name="notes.txt", media_type="text/plain")
     assert [a.name for a in actions.available(store, "file", listing.id)] == ["p04/import"]
-    assert actions.available(store, "file", other.id) == []
+    assert "p04/import" not in {a.name for a in actions.available(store, "file", other.id)}
 
 
 def test_a_person_action_applies_as_the_person(env):

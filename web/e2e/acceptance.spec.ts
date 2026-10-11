@@ -331,6 +331,67 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
+  test("files are added from the screen, and an action on one is reviewed, applied and undone", async ({ page }) => {
+    await signIn(page);
+    await page.getByRole("button", { name: "Files" }).click();
+    await expect(page.getByRole("heading", { name: "Files", exact: true })).toBeVisible();
+    await checkAccessibility(page);
+    const first = "A line to make a note from";
+    const body = `\n${first}\nand a second line\n`;
+    const words = body.split(/\s+/).filter(Boolean).length;
+    const opener = page.getByRole("button", { name: "Add a file" });
+    await opener.click();
+    const dialog = page.getByRole("dialog", { name: "Add a file" });
+    await expect(dialog).toBeVisible();
+    await dialog.getByLabel("File").setInputFiles({ name: "short-note.txt", mimeType: "text/plain", buffer: Buffer.from(body) });
+    await dialog.getByLabel(/^Description/).fill("Written by the browser test");
+    await checkAccessibility(page);
+    await dialog.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(page.getByText("Added short-note.txt.")).toBeVisible();
+    await expect(dialog).toHaveCount(0);
+    await expect(opener).toBeFocused();
+    const row = page.locator("li.line", { hasText: "short-note.txt" });
+    await expect(row).toContainText("Attachment");
+    await expect(row.getByRole("link", { name: /^Open short-note\.txt/ })).toHaveAttribute("target", "_blank");
+    await checkAccessibility(page);
+
+    await row.getByRole("button", { name: /More actions for/ }).click();
+    await page.getByRole("menuitem", { name: "Make a note from this file" }).click();
+    const review = page.getByRole("dialog", { name: "Make a note from short-note.txt" });
+    await expect(review).toContainText(`${first} (${words} words)`);
+    await review.getByRole("checkbox", { name: "Include the word count" }).uncheck();
+    await expect(review.getByText(first, { exact: true })).toBeVisible();
+    await expect(review.getByRole("checkbox", { name: "Include the word count" })).toBeFocused();
+    await checkAccessibility(page);
+    await review.getByRole("button", { name: "Apply" }).click();
+    await expect(page.getByText("Make a note from short-note.txt: 1 change made.")).toBeVisible();
+    await expect(review).toHaveCount(0);
+    const notes: Array<{ text: string }> = await (await page.request.get("api/notes")).json();
+    expect(notes.map((n) => n.text)).toContain(first);
+    await page.getByRole("button", { name: "Undo" }).last().click();
+    await expect(page.getByText("Undone. It's back as it was.")).toBeVisible();
+    const after: Array<{ text: string }> = await (await page.request.get("api/notes")).json();
+    expect(after.map((n) => n.text)).not.toContain(first);
+  });
+
+  test("a phone-sized screen shows files in one column", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await signIn(page);
+    await page.getByRole("button", { name: "Files" }).click();
+    await expect(page.locator("li.line").first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await checkAccessibility(page);
+  });
+
+  test("on a wide screen the Hand something in button stays on one line beside the views", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await signIn(page);
+    const box = await page.getByRole("button", { name: "Hand something in" }).first().boundingBox();
+    const tabs = await page.getByRole("navigation", { name: "Views" }).boundingBox();
+    expect(box!.height).toBeLessThan(50);
+    expect(Math.abs(box!.y - tabs!.y)).toBeLessThan(20);
+  });
+
   test("nothing broke the content security policy or threw", async () => {
     expect(problems.filter((p) => !p.includes("Failed to load resource"))).toEqual([]);
   });

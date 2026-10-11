@@ -188,3 +188,36 @@ test("a task waiting for the go shows its estimate under the item once it has on
   expect(within(lines[0]).getByText("About $0.40")).toBeInTheDocument();
   expect(within(lines[1]).queryByText(/\$|cent/)).toBeNull();
 });
+
+test("a plugin's actions for an item are in its menu after the stage items, and the row's one primary action is unchanged", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET stages/records": () => [ready],
+    "GET stages/requests": () => [],
+    "GET plugin-actions?kind=project&id=A-1": () => [{ name: "demo/export", label: "Export this item", on: "project" }],
+    "POST plugin-actions/demo/export/preview": () => ({
+      token: "tok-9",
+      action: "demo/export",
+      summary: "Export Alpha item",
+      ops: [],
+      files: [],
+      previews: [],
+      choices: [],
+      notes: [],
+      expires_at: "2026-10-09T15:00:00Z",
+    }),
+  });
+  renderApp(<Stages />);
+  const alpha = await screen.findByRole("listitem", { name: "Alpha item" });
+  expect(within(alpha).getAllByRole("button", { name: /^Move to/ })).toHaveLength(1);
+  const more = within(alpha).getByRole("button", { name: /More actions for Alpha item/ });
+  await user.click(more);
+  const items = await screen.findAllByRole("menuitem");
+  expect(items.map((i) => i.textContent)).toEqual(["Move back to First step", "History", "Export this item"]);
+  await user.click(items[2]);
+  await screen.findByRole("dialog", { name: "Export Alpha item" });
+  expect(calls.find((c) => c.route === "POST plugin-actions/demo/export/preview")?.body).toEqual({
+    target: { kind: "project", id: "A-1" },
+    choices: {},
+  });
+});

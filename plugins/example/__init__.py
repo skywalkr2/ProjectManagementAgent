@@ -4,7 +4,20 @@ from typing import ClassVar, Literal
 
 from pydantic import Field
 
-from engine.plugin_api import EventContext, OpModel, OpWriter, ReadView, Record, Registrar, Settings, StageCheckResult
+from engine.plugin_api import (
+    ActionContext,
+    Choice,
+    EventContext,
+    OpModel,
+    OpWriter,
+    Proposal,
+    ReadView,
+    Record,
+    Registrar,
+    Settings,
+    StageCheckResult,
+    StoreError,
+)
 
 
 class Config(Settings):
@@ -14,6 +27,25 @@ class Config(Settings):
     check_fail: str = Field("Add text to the reminder first.", description="Reason shown when the entry check fails.")
     ask_on_add: bool = Field(True, description="File a question for the PM when a reminder is added.")
     question: str = Field("Review the new reminder?", description="Title of the question filed for the PM.")
+    note_action_label: str = Field(
+        "Make a note from this file", description="Name of the action that makes a note from a text file."
+    )
+    note_summary: str = Field(
+        "Make a note from {name}",
+        description="One line saying what the note action will do; {name} is the file's name.",
+    )
+    note_count_label: str = Field(
+        "Include the word count", description="Label of the choice that adds the file's word count to the note."
+    )
+    note_count_text: str = Field(
+        "({n} words)", description="What is added to the note when the word count is on; {n} is the count."
+    )
+    note_not_text: str = Field(
+        "Only plain text files can be turned into a note.", description="Shown when the file is not plain text."
+    )
+    note_empty: str = Field(
+        "That file has no text to make a note from.", description="Shown when the file has no text."
+    )
 
 
 class Reminder(Record):
@@ -48,6 +80,28 @@ def ready(record, view: ReadView, config: Config) -> StageCheckResult:
     return StageCheckResult(passed, config.check_pass if passed else config.check_fail)
 
 
+NOTE_LENGTH = 200
+
+
+def note_from_file(target, context: ActionContext, choices: dict) -> Proposal:
+    config = context.config
+    if target.data["media_type"] != "text/plain":
+        raise StoreError(config.note_not_text)
+    text = context.file_bytes(target.id).decode("utf-8", errors="replace")
+    first = next((line.strip() for line in text.splitlines() if line.strip()), "")
+    if not first:
+        raise StoreError(config.note_empty)
+    count = bool(choices.get("count", True))
+    note = first[:NOTE_LENGTH].strip()
+    if count:
+        note = f"{note} {config.note_count_text.format(n=len(text.split()))}"
+    return Proposal(
+        config.note_summary.format(name=target.data["name"]),
+        ops=[{"op": "note", "text": note}],
+        choices=[Choice("count", config.note_count_label, count)],
+    )
+
+
 def register(registrar: Registrar) -> None:
     registrar.record_type(Reminder)
     registrar.stage_check("example/has-text", ready)
@@ -62,3 +116,10 @@ def register(registrar: Registrar) -> None:
     registrar.op_validator("example/reminder.add", validate)
     registrar.task_kind("example/capture", ops=("example/reminder.add",))
     registrar.subscribe("record.changed", changed)
+    registrar.action(
+        "example/note-from-file",
+        label=registrar.config.note_action_label,
+        run=note_from_file,
+        on="file",
+        file_kinds=("attachment",),
+    )

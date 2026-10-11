@@ -38,8 +38,9 @@ p { margin: 0; }
 .top-inner { max-width: var(--column); margin: 0 auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
 .brand { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .brand b { font-family: var(--display); font-size: 20px; font-weight: 600; }
-.top-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 13px; color: var(--muted); flex: 1 1 auto; }
-.top-acts { display: flex; gap: 6px; }
+/* Name and views on the first row with the buttons at its end (never wrapped); the status line has its own row below and wraps within it. */
+.top-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 13px; color: var(--muted); flex: 1 1 100%; order: 3; min-width: 0; }
+.top-acts { display: flex; gap: 6px; flex: none; margin-left: auto; white-space: nowrap; order: 2; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 6px; }
 .live-live .dot { background: var(--ok); }
 .live-offline .dot { background: var(--warn); }
@@ -176,7 +177,6 @@ kbd { font-family: var(--mono); font-size: 12px; border: 1px solid var(--line); 
 [data-narrow] .acts { justify-content: stretch; }
 [data-narrow] .acts .primary { flex: 1; }
 [data-narrow] .child .acts .primary { flex: 0 1 auto; }
-[data-narrow] .top-meta { order: 3; flex-basis: 100%; }
 
 @media (prefers-reduced-motion: no-preference) {
   .toast { animation: rise 0.16s ease-out; }
@@ -211,3 +211,23 @@ textarea.big { min-height: 220px; }
 .notes li { display: grid; gap: 2px; border-left: 3px solid var(--line); padding-left: 10px; overflow-wrap: anywhere; }
 .loose-notes { display: grid; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; }
 .loose-notes h3 { margin: 0; font-size: 15px; font-family: var(--display); font-weight: 600; }
+
+/* Dialogs for adding a file and reviewing an action */
+.acts.wrap { flex-wrap: wrap; justify-content: flex-end; }
+.pill.untrusted { margin: 4px 0 0; }
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+.dialog-panel { width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow: auto; }
+.dialog-panel form { display: grid; gap: 0; }
+.review-body { display: grid; gap: 14px; }
+.review-body[aria-busy="true"] { opacity: 0.7; }
+.review-choices { display: grid; gap: 4px; }
+.dialog-panel .what { margin: 0 0 4px; }
+.check-line { display: flex; align-items: center; gap: 10px; min-height: 32px; cursor: pointer; font-weight: 600; font-size: 13.5px; }
+input[type="checkbox"] { width: 18px; height: 18px; padding: 0; flex: none; accent-color: var(--accent); }
+fieldset.details { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px 2px; margin: 0 0 10px; min-width: 0; }
+fieldset.details legend { padding: 0 6px; font-weight: 600; font-size: 13.5px; }
+.previews { display: grid; gap: 8px; }
+.preview { margin: 0; display: grid; gap: 4px; }
+.preview img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.preview-text { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--bg); font-size: 13.5px; overflow-wrap: anywhere; }
+.preview figcaption { font-size: 12.5px; color: var(--muted); }

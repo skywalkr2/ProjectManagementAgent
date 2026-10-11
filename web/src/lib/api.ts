@@ -13,13 +13,8 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
-  const init: RequestInit = { method, credentials: "same-origin", headers: {} };
-  if (body !== undefined) {
-    init.headers = { "content-type": "application/json" };
-    init.body = JSON.stringify(body);
-  }
-  const response = await fetch(`api/${path}`, init);
+async function send<T>(method: "GET" | "POST", path: string, init: RequestInit): Promise<T> {
+  const response = await fetch(`api/${path}`, { method, credentials: "same-origin", ...init });
   if (!response.ok) {
     let detail = "";
     try {
@@ -33,7 +28,22 @@ async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Pr
   return (await response.json()) as T;
 }
 
+async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+  if (body === undefined) return send<T>(method, path, { headers: {} });
+  return send<T>(method, path, { headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+}
+
+/** Details of a file being added; they go in the address, and the file's own bytes are the request body. */
+export interface FileUpload {
+  kind: string;
+  project?: string | null;
+  meta?: Record<string, unknown>;
+  replaces?: string | null;
+}
+
 const id = encodeURIComponent;
+/** A namespaced name such as "plugin/name" keeps its slash; each part is encoded. */
+const named = (name: string) => name.split("/").map(id).join("/");
 
 export const api = {
   runtimeConfig: () => call<S["RuntimeConfig"]>("GET", "runtime-config"),
@@ -83,6 +93,28 @@ export const api = {
   editProject: (p: string, body: S["ProjectPatch"]) => call<S["Ok"]>("POST", `projects/${id(p)}`, body),
   removeProject: (p: string) => call<S["Ok"]>("POST", `projects/${id(p)}/remove`),
   restoreProject: (p: string) => call<S["Ok"]>("POST", `projects/${id(p)}/restore`),
+
+  files: () => call<S["FileView"][]>("GET", "files"),
+  fileKinds: () => call<S["FileKindView"][]>("GET", "file-kinds"),
+  /** Where a file's bytes are, relative to the page like every other address. */
+  fileContent: (file: string) => `api/files/${id(file)}/content`,
+  uploadFile: (file: Blob & { name: string }, upload: FileUpload) => {
+    const query = new URLSearchParams({ name: file.name, kind: upload.kind });
+    if (upload.project) query.set("project", upload.project);
+    if (upload.replaces) query.set("replaces", upload.replaces);
+    if (upload.meta && Object.keys(upload.meta).length) query.set("meta", JSON.stringify(upload.meta));
+    const type = file.type || "application/octet-stream";
+    return send<S["FileView"]>("POST", `files?${query.toString()}`, { headers: { "content-type": type }, body: file });
+  },
+
+  pluginActions: (kind?: string, record?: string) =>
+    call<S["PersonActionView"][]>(
+      "GET",
+      kind && record ? `plugin-actions?kind=${id(kind)}&id=${id(record)}` : "plugin-actions",
+    ),
+  actionPreview: (name: string, body: S["ActionRun"]) =>
+    call<S["ActionProposalView"]>("POST", `plugin-actions/${named(name)}/preview`, body),
+  actionApply: (token: string) => call<S["ActionApplied"]>("POST", "plugin-actions/apply", { token }),
 };
 
 export const EVENTS_PATH = "api/events";

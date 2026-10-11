@@ -19,7 +19,9 @@ import {
   type StageView,
 } from "../lib/stages";
 import { useEstimate } from "../lib/money";
+import { usePluginActions } from "../lib/plugin-actions";
 import { useWords } from "../lib/wording";
+import { useActionReview } from "./ActionReview";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
 
@@ -87,6 +89,8 @@ function StageRow(props: { view: StageView; waiting: StageRequest[] }) {
   const { error, busy, move } = useMove();
   const [history, setHistory] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
+  const actions = usePluginActions(view.record.kind, view.record.id);
+  const { start, review } = useActionReview();
   const ids = view.stages.map((s) => s.id);
   const here = view.current === null ? -1 : ids.indexOf(view.current);
   const failed = view.checks.filter((c) => !c.passed);
@@ -103,6 +107,14 @@ function StageRow(props: { view: StageView; waiting: StageRequest[] }) {
     });
   }
   menu.push({ id: "history", label: t(history ? "stages.history_hide" : "stages.history"), run: () => setHistory((v) => !v) });
+  for (const action of actions.data ?? []) {
+    menu.push({
+      id: `action-${action.name}`,
+      label: action.label,
+      run: () =>
+        start(action, { kind: view.record.kind, id: view.record.id }, () => ref.current?.querySelector<HTMLElement>("button.more")),
+    });
+  }
 
   useRowKeys(ref, { primary: primary?.run, toggle: () => setHistory((v) => !v) });
 
@@ -163,6 +175,7 @@ function StageRow(props: { view: StageView; waiting: StageRequest[] }) {
           )}
         </div>
       )}
+      {review}
     </li>
   );
 }

@@ -10,3 +10,10 @@ ready_label: Ready for review
 # Explanations returned by the deterministic entry check.
 check_pass: The reminder has text.
 check_fail: Add text to the reminder first.
+# Wording for the action that makes a note from a text file.
+note_action_label: Make a note from this file
+note_summary: Make a note from {name}
+note_count_label: Include the word count
+note_count_text: ({n} words)
+note_not_text: Only plain text files can be turned into a note.
+note_empty: That file has no text to make a note from.
