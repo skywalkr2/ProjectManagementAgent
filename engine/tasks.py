@@ -50,9 +50,29 @@ class TaskKind:
     role: str = "write"  # write, check (an independent second opinion) or research
     where: dict[str, tuple[Any, ...]] = _field(default_factory=dict)  # field values a record of kind `on` must have
 
-    def offered_on(self, record: Any) -> bool:
+    def offered_on(self, record: Any, texts: Callable[[str], bool | None] | None = None) -> bool:
         """Whether this work applies to a record (of kind `on`): every `where` field holds one of its values."""
-        return all(record.data.get(key) in values for key, values in self.where.items())
+        return where_matches(self.where, record, texts)
+
+
+def where_matches(
+    where: dict[str, tuple[Any, ...]], record: Any, texts: Callable[[str], bool | None] | None = None
+) -> bool:
+    """Whether a record passes a `where` filter: each field holds one of its values, where ANY means "has a value"
+    and None "has none". For a long text field, `texts(field)` says whether the record has text in it (None for a
+    field that isn't long text)."""
+    from engine.plugin_api import ANY
+
+    for key, values in where.items():
+        has_text = texts(key) if texts is not None else None
+        value = record.data.get(key)
+        present = has_text if has_text is not None else value not in (None, "", [], {})
+        if not any(
+            (v is ANY and present) or (v is None and not present) or (has_text is None and v is not ANY and v == value)
+            for v in values
+        ):
+            return False
+    return True
 
 
 TASKS: dict[str, TaskKind] = {

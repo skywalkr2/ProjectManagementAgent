@@ -23,6 +23,7 @@ class AiTask:
     temperature: float = 0.0
     max_output: int = 4000
     output: Literal["json", "text"] = "json"  # text: the answer is prose (a draft), not a JSON object
+    expected_output: int | None = None  # this run's likely answer size in tokens, when its packet knows better
 
     @property
     def size(self) -> int:

@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from engine.config import Config
 from engine.ops import CHANGESET, NEEDS_EVIDENCE, OP_MODELS
 from engine.storage import Store, StoreError, WriteContext
+from engine.texts import text_presence
 
 #: What a preview may be: pictures and plain text, never markup or anything that runs.
 PREVIEW_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp", "text/plain"}
@@ -86,7 +87,8 @@ class Proposals:
 
 def available(store: Store, kind: str | None = None, record_id: str | None = None) -> list[Any]:
     """The actions a person can start on a record of `kind` (or on the workspace when kind is None)."""
-    target = store.read().get(kind, record_id) if kind and record_id else None
+    view = store.read()
+    target = view.get(kind, record_id) if kind and record_id else None
     found = []
     for name, registrar in store.plugins.registrars.items():
         if not store.plugins.active(name):
@@ -96,7 +98,7 @@ def available(store: Store, kind: str | None = None, record_id: str | None = Non
                 continue
             if action.file_kinds and (target is None or target.data.get("file_kind") not in action.file_kinds):
                 continue
-            if action.where and (target is None or not action.offered_on(target)):
+            if action.where and (target is None or not action.offered_on(target, text_presence(store, view, target))):
                 continue
             found.append(action)
     return sorted(found, key=lambda a: a.label)
@@ -144,7 +146,7 @@ def preview(
             raise StoreError(f"there is no {what} {target['id']}")
         if action.file_kinds and record.data.get("file_kind") not in action.file_kinds:
             raise StoreError(f"{action.label} doesn't work on this kind of file")
-        if not action.offered_on(record):
+        if not action.offered_on(record, text_presence(store, view, record)):
             raise StoreError(f"{action.label} isn't for this {what}")
     registrar = store.plugins.registrars[plugin]
     actions, files = cfg.workspace.plugins.actions, cfg.storage.files
@@ -402,6 +404,7 @@ def _queue(store: Store, cfg: Config, requests: list[dict[str, Any]]) -> None:
                     "task": r["task"],
                     "about": r["about"],
                     "note": r["note"] or None,
+                    "part": r.get("part"),
                     "origin": "pm",
                     "state": "needs_you",
                     "approval": "required",
@@ -415,6 +418,7 @@ def _queue(store: Store, cfg: Config, requests: list[dict[str, Any]]) -> None:
 def _requests_checked(store: Store, plugin: str, requests: list[Any]) -> list[dict[str, Any]]:
     """A proposal's requests, each naming one of the plugin's own task kinds and a record it may work on."""
     from engine.plugin_host import check_about
+    from engine.texts import check_part
 
     checked = []
     view = store.read()
@@ -427,8 +431,13 @@ def _requests_checked(store: Store, plugin: str, requests: list[Any]) -> list[di
         about = r.get("about")
         if isinstance(about, (list, tuple)):
             about = {"kind": about[0], "id": about[1]}
-        check_about(view, store.plugins.task_kind(task), about)
-        checked.append({"task": task, "about": about, "note": " ".join(str(r.get("note", "")).split())[:2000]})
+        check_about(view, store.plugins.task_kind(task), about, store)
+        try:
+            part = check_part(store.plugins.task_kind(task), r.get("part"))
+        except ValueError as err:
+            raise StoreError(str(err)) from None
+        note = " ".join(str(r.get("note", "")).split())[:2000]
+        checked.append({"task": task, "about": about, "note": note, "part": part})
     if len(checked) > store.plugins.cfg.workspace.plugins.actions.max_items:
         raise StoreError("more requests than an action may queue at once")
     return checked

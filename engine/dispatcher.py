@@ -177,7 +177,17 @@ def process(
             "base": packet.draft_base,
             "anchors": packet.anchor_units if kind.anchored else None,
             "questions": kind.questions,
+            "part": req.data.get("part"),
         }
+        if draft["part"]:
+            from engine.texts import current, long_text_fields, read_text, units_of
+
+            latest = current(store.read(), packet.about[0], packet.about[1], kind.field)
+            base_text = read_text(store, latest.data["sha256"]) if latest else ""
+            fmt = long_text_fields(store.plugins.records[packet.about[0]])[kind.field]
+            draft["base_text"] = base_text
+            draft["units"] = packet.anchor_units or (units_of(store, fmt, base_text) if base_text.strip() else [])
+            draft["split"] = lambda text, fmt=fmt: units_of(store, fmt, text)
     first = _rounds(
         store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use, content, draft, independent
     )
@@ -330,15 +340,23 @@ def _rounds(
             text, stop = _drafted(router, task, result, request_id, tier, data_level, use, content, independent)
             if stop:
                 return _Outcome(run_id=out.run_id, stop=stop)
-            from engine.texts import AnchorProblem, parse_anchored, split_questions
+            from engine.texts import AnchorProblem, parse_anchored, splice_after, splice_span, split_questions
 
             mapping: list = []
             asked: list[str] = []
             try:
                 if draft.get("questions"):
                     text, asked = split_questions(text, draft["questions"])
-                if draft.get("anchors") is not None:
+                part = draft.get("part")
+                if draft.get("anchors") is not None and part:
+                    start, end = part["first"], part["last"]
+                    revised, span_map = parse_anchored(text, draft["anchors"][start - 1 : end], start)
+                    text, mapping = splice_span(draft["base_text"], draft["units"], start, end, revised, span_map)
+                elif draft.get("anchors") is not None:
                     text, mapping = parse_anchored(text, draft["anchors"])
+                elif part:
+                    added = len(draft["split"](text)) if text.strip() else 0
+                    text, mapping = splice_after(draft["base_text"], draft["units"], part["after"], text, added)
             except AnchorProblem as err:
                 if not last:
                     why = f"Your draft doesn't follow the format asked for: {err}. Write it all again."

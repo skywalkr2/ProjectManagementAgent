@@ -626,16 +626,17 @@ def split_questions(answer: str, limit: int) -> tuple[str, list[str]]:
     return answer[: match.start()].rstrip() + "\n", asked
 
 
-def anchored_text(text: str, units: list[Unit]) -> str:
-    """The base text with each unit's id before it, as the run sees it."""
+def anchored_text(text: str, units: list[Unit], first: int = 1) -> str:
+    """The base text with each unit's id before it, as the run sees it; `first` numbers a span's units as they are
+    numbered in the whole text."""
     parts = []
-    for index, unit in enumerate(units, start=1):
+    for index, unit in enumerate(units, start=first):
         mark = f"[p{index}{' atomic' if unit.atomic else ''}] "
         parts.append(mark + text[unit.start : unit.end].strip())
     return "\n\n".join(parts)
 
 
-def parse_anchored(answer: str, units: list[Unit]) -> tuple[str, list[dict[str, Any]]]:
+def parse_anchored(answer: str, units: list[Unit], first: int = 1) -> tuple[str, list[dict[str, Any]]]:
     """The draft's text without its ids, and its paragraph map ([{"from": ["p3"], ...}] per paragraph, in order).
     Raises AnchorProblem when a base paragraph is unaccounted for, an id is unknown, or an atomic paragraph was split
     or merged."""
@@ -651,8 +652,8 @@ def parse_anchored(answer: str, units: list[Unit]) -> tuple[str, list[dict[str, 
         raise AnchorProblem("no paragraph starts with its ids; start each one with [p1], [p2], [new] and so on")
     if body[: marks[0].start()].strip():
         raise AnchorProblem("there is text before the first paragraph's ids; start the answer with an id")
-    known = {f"p{i}" for i in range(1, len(units) + 1)}
-    atomic = {f"p{i}" for i, u in enumerate(units, start=1) if u.atomic}
+    known = {f"p{i}" for i in range(first, first + len(units))}
+    atomic = {f"p{i}" for i, u in enumerate(units, start=first) if u.atomic}
     paragraphs, mapping = [], []
     for index, mark in enumerate(marks):
         end = marks[index + 1].start() if index + 1 < len(marks) else len(body)
@@ -700,3 +701,75 @@ def anchored_authors(
         else:
             authors.append({"kind": "assistant", "run": run})
     return authors
+
+
+def check_part(kind: Any, part: dict[str, Any] | None) -> dict[str, Any] | None:
+    """A request's part of a text, checked against its task kind: a span ({first, last}, paragraph numbers from 1) for
+    an anchored draft, a place ({after}: a paragraph number, 0 for the start or "end") for any other draft; with the
+    {base} version number they refer to, if given. Raises ValueError with the reason."""
+    if part is None:
+        return None
+    if getattr(kind, "output", "ops") != "draft":
+        raise ValueError("only a draft can be about part of a text")
+    base = part.get("base")
+    if base is not None and (not isinstance(base, int) or base < 1):
+        raise ValueError("base is a version number")
+    if getattr(kind, "anchored", False):
+        first, last = part.get("first"), part.get("last")
+        if set(part) - {"first", "last", "base"} or not isinstance(first, int) or not isinstance(last, int):
+            raise ValueError("an anchored draft's part is {first, last}: the paragraph numbers it revises")
+        if not 1 <= first <= last:
+            raise ValueError("a span runs from paragraph first to paragraph last, counting from 1")
+        return {"first": first, "last": last, "base": base}
+    after = part.get("after")
+    if set(part) - {"after", "base"} or not (after == "end" or (isinstance(after, int) and after >= 0)):
+        raise ValueError('a draft\'s part is {after}: the paragraph number new text goes after, 0 or "end"')
+    return {"after": after, "base": base}
+
+
+def splice_span(
+    base: str, units: list[Unit], first: int, last: int, revised: str, span_map: list[dict[str, Any]]
+) -> tuple[str, list[dict[str, Any]]]:
+    """The whole text with paragraphs first..last replaced by the revised ones, keeping the blank space around the
+    span, and the paragraph map for the whole text (paragraphs outside the span map to themselves)."""
+    start, end = units[first - 1].start, units[last - 1].end
+    segment = base[start:end]
+    lead = segment[: len(segment) - len(segment.lstrip())]
+    trail = segment[len(segment.rstrip()) :] or ("\n\n" if last < len(units) else "\n")
+    text = base[:start] + lead + revised.strip() + trail + base[end:]
+    before = [{"from": [f"p{i}"]} for i in range(1, first)]
+    after = [{"from": [f"p{i}"]} for i in range(last + 1, len(units) + 1)]
+    return text, [*before, *span_map, *after]
+
+
+def splice_after(base: str, units: list[Unit], after: int | str, added: str, added_count: int) -> tuple[str, list]:
+    """The whole text with new paragraphs added after paragraph `after` (0: at the start; "end": at the end), and its
+    paragraph map (the existing paragraphs map to themselves; the new ones come from nothing)."""
+    position = len(units) if after == "end" else min(int(after), len(units))
+    new_part = added.strip()
+    if not units or not base.strip():
+        text = new_part + "\n"
+    elif position == len(units):
+        text = base.rstrip() + "\n\n" + new_part + "\n"
+    elif position == 0:
+        text = new_part + "\n\n" + base.lstrip()
+    else:
+        cut = units[position - 1].end
+        text = base[:cut].rstrip() + "\n\n" + new_part + "\n\n" + base[cut:].lstrip()
+    existing = [{"from": [f"p{i}"]} for i in range(1, len(units) + 1)]
+    new = [{"from": []} for _ in range(added_count)]
+    return text, [*existing[:position], *new, *existing[position:]]
+
+
+def text_presence(store: Any, view: Any, record: Any) -> Callable[[str], bool | None]:
+    """For `where` filters: whether a record has text in one of its long text fields (None for other fields)."""
+    model = store.plugins.records.get(record.kind)
+    fields = long_text_fields(model) if model is not None else {}
+
+    def has(field: str) -> bool | None:
+        if field not in fields:
+            return None
+        latest = current(view, record.kind, record.id, field)
+        return latest is not None and bool(read_text(store, latest.data["sha256"]).strip())
+
+    return has

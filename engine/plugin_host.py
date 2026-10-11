@@ -1289,7 +1289,17 @@ class PluginHost:
         with self.store.transaction() as tx:
             for kind, data in commands:
                 allowed_fields = {
-                    "request": {"task", "note", "about", "via", "interface_task", "provider", "needs_go", "item"},
+                    "request": {
+                        "task",
+                        "note",
+                        "about",
+                        "via",
+                        "interface_task",
+                        "provider",
+                        "needs_go",
+                        "item",
+                        "part",
+                    },
                     "question": {"title", "text"},
                 }
                 if kind not in allowed_fields or not set(data) <= allowed_fields[kind]:
@@ -1304,7 +1314,14 @@ class PluginHost:
                     task = data["task"]
                     if "/" in task and not task.startswith(name + "/") and not via:
                         raise StoreError("requesting another plugin requires an interface")
-                    check_about(tx, self.task_kind(task), data.get("about"))
+                    check_about(tx, self.task_kind(task), data.get("about"), self.store)
+                    if data.get("part") is not None:
+                        from engine.texts import check_part
+
+                        try:
+                            data["part"] = check_part(self.task_kind(task), data["part"])
+                        except ValueError as err:
+                            raise StoreError(str(err)) from None
                     data = {**data, "origin": "schedule", "created_at": datetime.now(UTC).isoformat()}
                     if self._follows:
                         data["follows"] = self._follows
@@ -1345,20 +1362,29 @@ def _source_text(store: Any, digest: str) -> str:
     return path.read_text(encoding="utf-8") if path.exists() and re.fullmatch(r"[0-9a-f]+", digest) else ""
 
 
-def check_about(view: Any, kind: Any, about: dict[str, str] | None) -> None:
+def check_about(view: Any, kind: Any, about: dict[str, str] | None, store: Any = None) -> None:
     """A request for a task kind declared `on` a record kind must name a live record of that kind that its `where`
     matches; others name none."""
     if kind.on is None:
         if about is not None:
             raise StoreError(f"{kind.name} doesn't work on a record")
         return
+    from engine.records import REGISTRY, kind_label
+
+    models = store.plugins.records if store is not None else REGISTRY
+    what = kind_label(models.get(kind.on), kind.on)
     if about is None or about.get("kind") != kind.on:
-        raise StoreError(f"{kind.name} works on a {kind.on}")
+        raise StoreError(f"{kind.label or kind.name} works on a {what}")
     record = view.get(about["kind"], about["id"])
     if record is None:
-        raise StoreError(f"there is no {about['kind']} {about['id']}")
-    if not kind.offered_on(record):
-        raise StoreError(f"{kind.label or kind.name} isn't for this {kind.on}")
+        raise StoreError(f"there is no {what} {about['id']}")
+    texts = None
+    if store is not None:
+        from engine.texts import text_presence
+
+        texts = text_presence(store, view, record)
+    if not kind.offered_on(record, texts):
+        raise StoreError(f"{kind.label or kind.name} isn't for this {what}")
 
 
 def _positional_count(fn: Any) -> int:

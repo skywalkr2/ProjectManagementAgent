@@ -33,7 +33,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.27"
+PLUGIN_API_VERSION = "0.3.28"
 
 
 class Settings(BaseModel):
@@ -364,15 +364,30 @@ class EventContext(ReadView):
         self.commands: list[tuple[str, dict[str, Any]]] = []
 
     def queue_request(
-        self, task: str, note: str, about: Stored | tuple[str, str] | None = None, *, needs_go: bool = False
+        self,
+        task: str,
+        note: str,
+        about: Stored | tuple[str, str] | None = None,
+        *,
+        needs_go: bool = False,
+        part: dict[str, Any] | None = None,
     ) -> None:
         """Queue AI work of one of this plugin's task kinds (or a core one). `about` is the record it works on, as a
         record or (kind, id), required for a task kind declared `on` a kind. The note reaches the assistant as
         untrusted material, and system ops from it wait for the person. After a stage move, or with `needs_go`, it
-        waits for the person's go whatever it costs."""
+        waits for the person's go whatever it costs.
+
+        `part` limits a draft to part of its long text. For an anchored draft, `{"first": n, "last": m}`: the run
+        sees and must account for paragraphs p<n>..p<m> only (numbered as in the whole text), and the pending version
+        is the whole text with that span replaced. For any other draft, `{"after": n}` (0 for the start, "end" for
+        the end): the run writes only new text, and the pending version is the text with it added there. Add
+        `"base": <version number>` so a text that moved on since the part was chosen refuses the run instead of
+        revising the wrong paragraphs. The packet function adds whatever read-only context the run needs."""
         data: dict[str, Any] = {"task": task, "note": note}
         if needs_go:
             data["needs_go"] = True
+        if part is not None:
+            data["part"] = dict(part)
         if about is not None:
             kind, record_id = (about.kind, about.id) if isinstance(about, Stored) else about
             self._allow(kind)
@@ -713,7 +728,8 @@ class Part:
     person's own words) is marked in the packet as material, never instructions, and any untrusted part makes the run's
     changeset untrusted, so its system ops wait for the person. A `reference_only` part informs the run but is marked
     not to be quoted or reproduced. Evidence may quote any part that isn't reference-only, and is cited as
-    "<kind>:<id>" of the record the run is about. `no_copy` marks material the run may describe and quote as evidence
+    "<kind>:<id>" of the record the run is about. `reference_only` is the stricter mark: it implies `no_copy`, and the
+    part may not be cited either. `no_copy` marks material the run may describe and quote as evidence
     (in a finding) but must not copy into new text, such as a character's entry. `data_level` marks content more
     sensitive than the record the
     run is about (an interface item's level, say): the run goes only to accounts allowed the highest level among
@@ -731,10 +747,14 @@ class Part:
 class PacketParts:
     """What a run of a plugin's task kind sees beyond its instructions. `stable` parts are the same on every run of the
     kind for the same record (a style sheet, the summaries around a chapter) and go first, so providers can reuse a
-    cached prefix; `request` parts are this run's material (the chapter) and go last."""
+    cached prefix; `request` parts are this run's material (the chapter) and go last. `max_output` and
+    `expected_output` (tokens) size this run when its record says how long the answer will be (a planned word count);
+    the estimate and the call use them unless the workspace sets them for the task kind in `ai.tasks`."""
 
     stable: list[Part] = field(default_factory=list)
     request: list[Part] = field(default_factory=list)
+    max_output: int | None = None
+    expected_output: int | None = None
 
 
 def _narrowed(where: dict[str, Any] | None, on: str | None) -> dict[str, tuple[Any, ...]]:
@@ -744,8 +764,8 @@ def _narrowed(where: dict[str, Any] | None, on: str | None) -> dict[str, tuple[A
     narrowed = {}
     for key, value in (where or {}).items():
         values = tuple(value) if isinstance(value, (list, tuple, set, frozenset)) else (value,)
-        if not values or not all(v is None or isinstance(v, (str, int, float, bool)) for v in values):
-            raise ValueError("where matches fields against plain values")
+        if not values or not all(v is None or v is ANY or isinstance(v, (str, int, float, bool)) for v in values):
+            raise ValueError("where matches fields against plain values, ANY (has a value) or None (has none)")
         narrowed[str(key)] = values
     return narrowed
 
@@ -761,9 +781,11 @@ class ActionRegistration:
     file_kinds: tuple[str, ...] = ()
     where: dict[str, tuple[Any, ...]] = field(default_factory=dict)
 
-    def offered_on(self, record: Any) -> bool:
+    def offered_on(self, record: Any, texts: Callable[[str], bool | None] | None = None) -> bool:
         """Whether this action applies to a record (of kind `on`): every `where` field holds one of its values."""
-        return all(record.data.get(key) in values for key, values in self.where.items())
+        from engine.tasks import where_matches
+
+        return where_matches(self.where, record, texts)
 
 
 @dataclass(frozen=True)
@@ -786,7 +808,10 @@ class StageCheckResult:
 
 
 class Registrar:
-    """A staging registry: the host installs it only after checking the manifest."""
+    """A staging registry: the host installs it only after checking the manifest. `register(registrar)` may read
+    `registrar.config` (the plugin's settings, already checked) to decide what to register; registration is fixed
+    until the app restarts, which it does by itself when settings change. Data the workspace adds later (its own
+    lists, profiles) is read per call, not at registration."""
 
     def __init__(self, name: str, config: Settings, root: Path | None = None):
         self.name, self.config, self.root = name, config, root
@@ -895,8 +920,10 @@ class Registrar:
         record, and the person can start it from the record. `packet(target, view, settings, note) -> PacketParts` says
         what the run sees (without it, the run sees what reading notes sees); `view` is a PacketContext, whose `origin`
         says who started the run. It runs before every call, so it must be deterministic and quick; raising StoreError
-        stops the run with that message for the person. `where` narrows which records of kind `on` the work is
-        offered on and may start on: {field: value} or {field: (value, ...)}, every field matching.
+        stops the run with that message for the person: the request waits with it as the reason, and no retry, fix
+        round or escalation follows. `where` narrows which records of kind `on` the work is offered on and may start
+        on: {field: value} or {field: (value, ...)}, every field matching; ANY means the field has a value and None
+        that it has none, which for a long text field asks whether the record has text in it.
 
         `output` is "ops" (the answer is a changeset of `ops`) or "draft": the answer is plain prose for the long text
         field `field` of the record the run is about (`on` is required). The core wraps it as a pending `text.draft`
@@ -905,8 +932,12 @@ class Registrar:
         `anchored=True` the draft revises the current text: the run sees it with an id on each unit, starts every
         paragraph it writes with the ids it came from, and a core check refuses a draft that leaves a unit unaccounted
         for, names an unknown id, or splits or merges an atomic unit; the paragraph map is kept with the version.
+        The core adds the text with its ids after the packet's parts, as untrusted material: ids are p1, p2, ... in
+        the order of the field format's units over the whole text, so a packet can name the same ids. A request's
+        `part` limits a draft to a span or a place in the text (see `queue_request`).
         `questions=N` lets a draft end with up to N questions for the person, in a `<questions>` block the core takes
-        off the text and keeps on the version (`questions`), shown beside it; more than N gets a fix round.
+        off the text and keeps on the version (`questions`), shown beside it; more than N gets a fix round. In an
+        anchored answer the `Removed:` line comes before the `<questions>` block, which is always last.
 
         `role` is "write" (the default: work that writes or changes things), "check" (an independent second opinion on
         work already done) or "research" (gathering from sources). The workspace maps roles to tiers (`ai.roles`). A

@@ -602,6 +602,12 @@ class Request(Record):
     follows: str | None = Field(
         None, description="The change (a changeset id) whose event a plugin answered with this work, if any."
     )
+    part: dict[str, Any] | None = Field(
+        None,
+        description="For a draft of part of a long text: {first, last} paragraphs (by number) an anchored draft "
+        'revises, or {after} a draft adds new text after (0: at the start; "end": at the end); with the {base} '
+        "version number they refer to.",
+    )
     auto_closed: dict[str, str] | None = Field(
         None, description="For a watched change a triage rule closed: {rule, reason}. Taking a closer look clears it."
     )

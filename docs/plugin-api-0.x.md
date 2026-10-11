@@ -10,6 +10,30 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.28 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Drafts over part of a text:** `context.queue_request(..., part=...)`, and `"part"` in a proposal's requests.
+  - For an anchored draft, `{"first": n, "last": m}`: the run sees only paragraphs p<n>..p<m>, with the ids they have
+    in the whole text, and must account for those only. The pending version is the whole text with that span
+    replaced; paragraphs outside it keep their text and authorship, and the paragraph map covers the whole text.
+  - For any other draft, `{"after": n}` (0 for the start, "end" for the end): the run writes only the new part, and
+    the pending version is the text with it added there (new paragraphs map from nothing).
+  - Add `"base": <version number>`: when the text has moved on, the run is refused ("choose the part again") rather
+    than revising the wrong paragraphs. A span past the end is refused too.
+  - Two pending versions over disjoint spans are reviewed as before: once one is accepted, the other's review is
+    three-way against it.
+- **Output size per run:** `PacketParts(..., max_output=, expected_output=)` size this run (the estimate and the
+  call), unless the workspace sets those for the task kind in `ai.tasks`.
+- **`where` presence tests:** `ANY` means the field has a value, `None` that it has none; on a long text field they
+  ask whether the record has text in it.
+- **Stated in the guide:** the core adds the text to revise after the packet's parts, as untrusted material, with ids
+  in unit order over the whole text; `Removed:` comes before the `<questions>` block; `reference_only` implies
+  `no_copy`; a packet function that raises StoreError stops the run with no retry, fix round or escalation;
+  `register` may read `registrar.config`, and registration is fixed until the app restarts.
+- Refusals from a request's `about` check use the kind's label.
+
 ## What 0.3.27 adds
 
 Manifests stay `'>=0.3,<0.4'`.

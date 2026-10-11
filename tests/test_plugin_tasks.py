@@ -266,9 +266,9 @@ def test_a_task_kind_on_a_record_needs_one_of_that_kind(env):
     _, _, store = env
     kind = store.plugins.task_kind("p05/review")
     with store.transaction() as tx:
-        with pytest.raises(StoreError, match="works on a p05/chapter"):
+        with pytest.raises(StoreError, match="works on a chapter"):
             check_about(tx, kind, None)
-        with pytest.raises(StoreError, match="no p05/chapter"):
+        with pytest.raises(StoreError, match="no chapter"):
             check_about(tx, kind, {"kind": "p05/chapter", "id": "CHP-99"})
 
 
@@ -317,7 +317,7 @@ def test_the_person_starts_a_task_kind_on_a_record_through_the_api(env):
     started = client.post(f"{api}/task-kinds/p05/review/start", json={"about": {"kind": record.kind, "id": record.id}})
     assert started.status_code == 200, started.text
     refused = client.post(f"{api}/task-kinds/p05/review/start", json={})
-    assert refused.status_code == 409 and "works on a p05/chapter" in refused.json()["detail"]
+    assert refused.status_code == 409 and "works on a chapter" in refused.json()["detail"]
 
 
 # ---- refusals --------------------------------------------------------------------------------------------------------

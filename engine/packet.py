@@ -21,6 +21,7 @@ from engine.playbook import guidance
 from engine.prompts import render
 from engine.storage import Store, Stored, StoreError
 from engine.tasks import TaskKind, settings
+from engine.texts import text_presence
 from engine.workspace import Workspace
 
 DRAFT_RULE = (
@@ -28,6 +29,12 @@ DRAFT_RULE = (
     "around it."
 )
 
+
+SPAN_RULE = (
+    "This is part of a longer text: paragraphs p{first} to p{last}. Revise only these; account for each of them, and "
+    "use only their ids."
+)
+ADD_RULE = "Write only the new part, which goes {place}. Don't repeat any of the text that is already there."
 
 QUESTIONS_RULE = (
     "If something only the person can answer would change the text, end your answer with up to {n} short questions "
@@ -204,7 +211,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     target = store.read().get(*about) if about else None
     if kind.on is not None and (target is None or target.kind != kind.on):
         raise PacketRefused(f"this work needs a {kind.on} to work on, and the one it was asked for is gone")
-    if target is not None and not kind.offered_on(target):
+    if target is not None and not kind.offered_on(target, text_presence(store, store.read(), target)):
         raise PacketRefused(f"this work isn't for this {kind.on} any more")
     note = req.data.get("note") or ""
     view = store.plugins._with_files(PacketContext(store.read(), plugin, req.data["origin"]))
@@ -237,6 +244,13 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         request_parts.append(f"<note>\n{note}\n</note>")
     request_parts += [_render_part(p) for p in parts.request]
     anchor_units = None
+    part = req.data.get("part")
+    if drafting:
+        from engine.texts import current
+
+        latest = current(store.read(), target.kind, target.id, kind.field)
+        if part and part.get("base") is not None and (latest is None or latest.data["number"] != part["base"]):
+            raise PacketRefused("The text changed since this part of it was chosen; choose the part again.")
     if drafting and kind.anchored:
         from engine.plugin_api import Part
         from engine.texts import ANCHOR_RULE, anchored_text, units_of
@@ -244,8 +258,23 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         base_text = view.text(target, kind.field)
         fmt = _field_format(store, target.kind, kind.field)
         anchor_units = units_of(store, fmt, base_text) if base_text else []
+        first, last = (part["first"], part["last"]) if part else (1, len(anchor_units))
+        if part and last > len(anchor_units):
+            raise PacketRefused(
+                f"The text has {len(anchor_units)} paragraphs, so paragraphs {first}–{last} aren't there."
+            )
         request_parts.append(ANCHOR_RULE)
-        request_parts.append(_render_part(Part("Text to revise", anchored_text(base_text, anchor_units))))
+        if part:
+            request_parts.append(SPAN_RULE.format(first=first, last=last))
+        shown = anchored_text(base_text, anchor_units[first - 1 : last], first)
+        request_parts.append(_render_part(Part("Text to revise", shown)))
+    elif drafting and part:
+        place = (
+            "at the end of the text"
+            if part["after"] == "end"
+            else ("at the start of the text" if part["after"] == 0 else f"after paragraph {part['after']}")
+        )
+        request_parts.append(ADD_RULE.format(place=place))
     if drafting:
         request_parts.append(DRAFT_RULE)
     if drafting and kind.questions:
@@ -258,6 +287,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         "\n\n".join(p for p in stable_parts if p.strip()),
         "\n\n".join(request_parts),
     )
+    task = _sized(cfg, kind, task, parts)
     base = None
     if drafting:
         from engine.texts import current
@@ -279,6 +309,24 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         anchor_units=anchor_units,
         data_level=_highest([p.data_level for p in every if p.data_level]),
     )
+
+
+def _sized(cfg: Config, kind: TaskKind, task: AiTask, parts: object) -> AiTask:
+    """The run's output size from its packet's hints, where the workspace hasn't set one for the task kind."""
+    from dataclasses import replace
+
+    configured = cfg.ai.tasks.get(kind.name)
+    chosen = configured.model_fields_set if configured is not None else set()
+    hinted_max = getattr(parts, "max_output", None)
+    hinted_typical = getattr(parts, "expected_output", None)
+    for value, name in ((hinted_max, "max_output"), (hinted_typical, "expected_output")):
+        if value is not None and (not isinstance(value, int) or isinstance(value, bool) or value < 1):
+            raise PacketRefused(f"the packet's {name} must be a whole number of tokens")
+    if hinted_max is not None and "max_output" not in chosen:
+        task = replace(task, max_output=max(256, hinted_max))
+    if hinted_typical is not None and "expected_output" not in chosen:
+        task = replace(task, expected_output=hinted_typical)
+    return task
 
 
 def _highest(levels: list[str]) -> str | None:

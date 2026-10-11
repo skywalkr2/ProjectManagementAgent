@@ -118,6 +118,7 @@ from engine.prompts import render
 from engine.records import referrers
 from engine.stages import approve_stage_request, record_status, stage_history
 from engine.storage import Store, StoreError, WriteContext
+from engine.texts import text_presence
 from engine.usage import spend
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -407,7 +408,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             if "/" in name
             and store.plugins.active(name.split("/", 1)[0])
             and k.on == kind
-            and (record is None or k.offered_on(record))
+            and (record is None or k.offered_on(record, text_presence(store, store.read(), record)))
         ]
         return [
             TaskKindView(
@@ -425,7 +426,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 raise StoreError("start a plugin's kind of work here; hand things in for the core's")
             kind = store.plugins.task_kind(name)
             with store.transaction() as tx:
-                check_about(tx, kind, about)
+                check_about(tx, kind, about, store)
                 return tx.create(
                     "request",
                     {

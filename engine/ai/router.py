@@ -291,7 +291,7 @@ class Router:
         info = self.model_info(choice)
         if info.input_per_million is None or info.output_per_million is None:
             return None
-        output = self.typical_output(task.kind)
+        output = task.expected_output or self.typical_output(task.kind)
         return (estimate_tokens(task.size) * info.input_per_million + output * info.output_per_million) / 1e6
 
     def typical_output(self, kind: str) -> int:
