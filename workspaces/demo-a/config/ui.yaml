@@ -1,6 +1,5 @@
 version: 1
-wording:
-  stages.group.example/reminder: Reminders
+wording: {}   # overrides for the wording sheet by key; plugins name their own kinds
 shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, undo: u, hand_in: n, help: "?", ask: /}
 narrow_below_px: 1000
 toast_seconds: 0

@@ -2,7 +2,6 @@ version: 1
 # Wording overrides by key from the UI's wording sheet. The imprint calls Follow-ups "Chasers".
 wording:
   followups.title: Chasers
-  stages.group.example/reminder: Reminders
 shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, undo: u, hand_in: n, help: "?", ask: /}
 narrow_below_px: 900
 toast_seconds: 7

@@ -1,0 +1,2 @@
+# What the screens call this plugin's own things. A workspace's config/ui.yaml overrides any of these.
+stages.group.example/reminder: Reminders

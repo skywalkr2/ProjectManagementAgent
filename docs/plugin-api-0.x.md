@@ -10,6 +10,16 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.31 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A plugin names its own kinds on screen:** `provides.wording: [wording.yaml]` lists YAML files beside the manifest,
+  each a map from a wording key to its text, such as `stages.group.<plugin>/<kind>: Chapters` (the heading for a kind
+  of record in Stages). Every key must name something in the plugin's namespace (contain `<plugin>/`), and text is at
+  most 200 characters; other entries are left out and noted on the plugin. Each AI task kind's `label` also becomes
+  its `task.<kind>` wording. The workspace's `ui.wording` overrides any of them.
+
 ## What 0.3.30 adds
 
 Manifests stay `'>=0.3,<0.4'`.

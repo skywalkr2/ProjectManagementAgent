@@ -13,6 +13,7 @@ provides:
   op_validators: [example/reminder.add]
   ai_task_kinds: [example/capture]
   actions: [example/note-from-file]
+  wording: [wording.yaml]
 config_schema: example:Config
 requires:
   network: []

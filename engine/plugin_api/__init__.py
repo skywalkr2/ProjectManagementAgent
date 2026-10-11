@@ -34,7 +34,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.30"
+PLUGIN_API_VERSION = "0.3.31"
 
 
 class Settings(BaseModel):

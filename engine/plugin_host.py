@@ -43,6 +43,8 @@ from engine.storage import StoreError, WriteContext
 from engine.tasks import TASKS
 
 BUNDLED = Path(__file__).resolve().parents[1] / "plugins"
+#: The longest text a plugin's wording entry may have.
+WORDING_MAX = 200
 #: Events plugins may subscribe to: what each means and the fields of its payload. Payloads carry ids and names,
 #: never record contents; read the record for its values.
 EVENT_SPECS: dict[str, tuple[str, dict[str, str]]] = {
@@ -1158,6 +1160,43 @@ class PluginHost:
         view.find_interface_about = lambda item, task: self.interface_about(plugin, item, task)
         view.user = self.cfg.workspace.user.person
         return view
+
+    def wording(self) -> dict[str, str]:
+        """What the screens call running plugins' own things: each AI task kind's label as `task.<kind>`, then the
+        plugins' wording files. A key must name something in its plugin's namespace; other keys and values that
+        aren't short text are left out and noted on the plugin."""
+        import yaml
+
+        found: dict[str, str] = {}
+        for plugin in sorted(self.manifests):
+            if not self.active(plugin):
+                continue
+            registrar = self.registrars.get(plugin)
+            for name, kind in (registrar.tasks if registrar else {}).items():
+                if kind.label:
+                    found[f"task.{name}"] = kind.label
+            for relative in self.manifests[plugin].provides.wording:
+                path = self.candidates[plugin].parent / relative
+                try:
+                    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+                except (OSError, yaml.YAMLError) as err:
+                    self._note(plugin, f"its wording file {relative} can't be read: {err}")
+                    continue
+                if not isinstance(data, dict):
+                    self._note(plugin, f"its wording file {relative} isn't a map of key to text")
+                    continue
+                for key, text in data.items():
+                    if (
+                        not isinstance(key, str)
+                        or f"{plugin}/" not in key
+                        or not isinstance(text, str)
+                        or not text.strip()
+                        or len(text) > WORDING_MAX
+                    ):
+                        self._note(plugin, f"its wording {key!r} was left out: keys name its own things, text is short")
+                        continue
+                    found[key] = " ".join(text.split())
+        return found
 
     def help_sections(self) -> list[Any]:
         """Every running plugin's help, one section per `##` heading, titled "<plugin>: <heading>"."""

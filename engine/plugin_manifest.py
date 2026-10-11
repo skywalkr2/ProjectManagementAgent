@@ -136,12 +136,27 @@ class Provides(Strict):
         "manifest) that asking the assistant reads and cites, like the user guide.",
     )
 
+    wording: list[str] = Field(
+        default_factory=list,
+        description="Wording files the plugin ships (YAML maps from a wording key to its text, paths relative to its "
+        "manifest): what the screens call the plugin's own kinds, e.g. stages.group.<plugin>/<kind>. Every key "
+        "names something in the plugin's namespace; the workspace's ui.wording overrides any of them.",
+    )
+
     @field_validator("help")
     @classmethod
     def _help_paths(cls, value: list[str]) -> list[str]:
         for path in value:
             if path.startswith("/") or ".." in Path(path).parts or not path.endswith(".md"):
                 raise ValueError(f"{path!r}: a help file is a .md path inside the plugin")
+        return value
+
+    @field_validator("wording")
+    @classmethod
+    def _wording_paths(cls, value: list[str]) -> list[str]:
+        for path in value:
+            if path.startswith("/") or ".." in Path(path).parts or not path.endswith((".yaml", ".yml")):
+                raise ValueError(f"{path!r}: a wording file is a .yaml path inside the plugin")
         return value
 
     playbook: str | None = Field(None, description="The plugin's own playbook. Not yet available.")

@@ -157,7 +157,7 @@ def create_app(
             narrow_below_px=cfg.ui.narrow_below_px,
             toast_seconds=cfg.ui.toast_seconds,
             shortcuts=cfg.ui.shortcuts,
-            wording=cfg.ui.wording,
+            wording={**store.plugins.wording(), **cfg.ui.wording},
             demo=cfg.workspace.demo,
             feedback_to=cfg.ui.feedback_to or product().get("feedback_to") or None,
         )

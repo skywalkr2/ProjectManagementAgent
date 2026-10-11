@@ -55,7 +55,7 @@ Last updated: 2026-10-12.
 - [x] Plugin host: plugin API 0.x, manifests, registries, plugins working together through interfaces (3.9), one example plugin (2026-10-12).
 - [x] Long text with versions and authorship (5.0) (2026-10-11).
 - [x] Drafts with prose output; proposed versions and accepting them per passage (6.7) (2026-10-11).
-- [ ] Compare view for long text, two-way and three-way (7.2). Routes done (2026-10-11); the screen is in the UX pass.
+- [x] Compare view for long text, two-way and three-way (7.2) (2026-10-11; the text review screen).
 - [x] Long text formats (`plain`, `markdown`, plugin-registered) dividing text into units; paragraph-anchored drafts; lints computed in code, anchored to passages; lints on drafts count for escalation (6.7, 3.3, 6.16) (2026-10-11).
 - [x] Events: `record.changed`, `text.accepted`, and interface events (3.4) (2026-10-12).
 - [x] Working copies: hand out for the person's own tools, take back, review (5.0, 3.3) (2026-10-11; screens in the UX pass).
@@ -107,5 +107,5 @@ Hosted mode and sign-in (Part 11), social, email and newsletter channels, the sa
   musts: escalation on failure, budgets, native adapters. Cost control (M6) needs budgets. Decide which milestone 10 items
   move into version 1 and update `scope.md` and the build plan to match.
 
-- [ ] **Plugin-supplied labels.** Plugin task kinds and record kinds get their on-screen names from each workspace's
-  `ui.yaml` today (`task.<kind>`, `stages.group.<kind>`). A pack should ship its own wording for its kinds.
+- [x] **Plugin-supplied labels.** A plugin ships wording files for its own kinds (`provides.wording`), and task kind
+  labels become `task.<kind>`; the workspace's `ui.yaml` still overrides them (plugin API 0.3.31, 2026-10-11).
