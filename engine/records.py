@@ -84,6 +84,13 @@ def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> li
             return [k for arg in get_args(annotation) for k in in_list(arg)]
         return []
 
+    def single_in_union(annotation: Any) -> list[str]:
+        """A single reference written as one member of a union: `Annotated[str, RefTo("k")] | None`."""
+        origin = get_origin(annotation)
+        if origin is Union or type(annotation).__name__ == "UnionType":
+            return [m.kind for arg in get_args(annotation) for m in ref_meta(arg)]
+        return []
+
     def nested(annotation: Any) -> list[tuple[type[BaseModel], bool]]:
         """Models a field holds directly ("") or in a list ("[]")."""
         origin = get_origin(annotation)
@@ -101,7 +108,10 @@ def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> li
         for meta in info.metadata:
             if isinstance(meta, RefTo):
                 found.append((path, meta.kind))
-        found += [(f"{path}[]", kind) for kind in in_list(info.annotation)]
+        found += [(path, kind) for kind in single_in_union(info.annotation)]
+        found += [
+            (f"{path}[]", kind) for kind in in_list(info.annotation) if kind not in single_in_union(info.annotation)
+        ]
         if _depth < 3:
             for inner, many in nested(info.annotation):
                 found += ref_fields(inner, f"{path}[]." if many else f"{path}.", _depth + 1)

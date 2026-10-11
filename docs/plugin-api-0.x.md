@@ -10,6 +10,20 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.38 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Optional single references:** `Annotated[str, RefTo("kind")] | None` is now a reference (the delete check and
+  name rendering see it); before, only `Annotated[str | None, RefTo("kind")]` was. References inside unions of
+  models (a field holding one of several shapes) were already found, and are now tested.
+- **Nested models in ops:** an op model's nested models are validated as those models, their validators included,
+  wherever the op arrives (a run, an action, a handler). Recursive models make a recursive JSON schema (`$defs`
+  and `$ref`), which works; keep AI-facing op schemas shallow anyway, since some providers' structured output limits
+  nesting.
+- **A part's label:** a request's `part` may carry `label` (up to 80 characters, such as "3 of 5"); it is kept on the
+  request and comes back in `origin["part"]`, `view.part` and the `text.accepted` payload's `part`.
+
 ## What 0.3.37 adds
 
 Manifests stay `'>=0.3,<0.4'`.

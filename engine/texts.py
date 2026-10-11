@@ -707,10 +707,15 @@ def check_part(kind: Any, part: dict[str, Any] | None) -> dict[str, Any] | None:
     """A request's part of a text, checked against its task kind: a span ({first, last}, paragraph numbers from 1) for
     an anchored draft or for work that answers with ops (which reads that part; the core passes it on and uses it for
     nothing else), a place ({after}: a paragraph number, 0 for the start or "end") for any other draft; with the
-    {base} version number they refer to, if given. Raises ValueError with the reason."""
+    {base} version number they refer to, if given, and a plugin's own `label` for it ("3 of 5", up to 80 characters),
+    which comes back on `text.accepted`. Raises ValueError with the reason."""
     if part is None:
         return None
     drafting = getattr(kind, "output", "ops") == "draft"
+    label = part.get("label")
+    if label is not None and (not isinstance(label, str) or not label.strip() or len(label) > 80):
+        raise ValueError("a part's label is a short line of text")
+    part = {k: v for k, v in part.items() if k != "label"}
     base = part.get("base")
     if base is not None and (not isinstance(base, int) or base < 1):
         raise ValueError("base is a version number")
@@ -724,11 +729,11 @@ def check_part(kind: Any, part: dict[str, Any] | None) -> dict[str, Any] | None:
             )
         if not 1 <= first <= last:
             raise ValueError("a span runs from paragraph first to paragraph last, counting from 1")
-        return {"first": first, "last": last, "base": base}
+        return {"first": first, "last": last, "base": base, **({"label": label.strip()} if label else {})}
     after = part.get("after")
     if set(part) - {"after", "base"} or not (after == "end" or (isinstance(after, int) and after >= 0)):
         raise ValueError('a draft\'s part is {after}: the paragraph number new text goes after, 0 or "end"')
-    return {"after": after, "base": base}
+    return {"after": after, "base": base, **({"label": label.strip()} if label else {})}
 
 
 def splice_span(
