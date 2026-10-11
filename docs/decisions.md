@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-11: Plugins reach the network only through the core's client, to declared hosts
+
+**Decided by:** project lead, following design 3.2 (what a plugin may reach) and 12.
+
+**What:** `requires.network` and `requires.secrets` are now in use. A plugin's connector gets a web client that reaches
+only its declared hosts, over HTTPS, with redirects checked against the same list and a size cap, and its declared
+secrets: references in the workspace's settings, or values it keeps on this computer itself (a refreshed sign-in
+token). Bundled plugins still may not import network modules; the scan enforces it. The core's feed connector reads
+RSS and Atom and refuses documents that declare their own entities.
+
+**Why:** Mail and calendar connectors need the network and a token; the person must be able to see exactly where an
+add-on can reach before enabling it, and a compromised feed must not be able to make the app read other hosts.
+
+**Impact:** Plugin API 0.3.27, `workspace.plugins.secrets` (demo values), a disabled demo feed source. Sign-in flows
+for accounts come with the mail and calendar plugins. No change to scope.
+
 ## 2026-10-11: Triage rules live beside the watched sources
 
 **Decided by:** project lead.

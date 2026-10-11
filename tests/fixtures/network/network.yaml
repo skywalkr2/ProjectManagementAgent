@@ -1,0 +1,9 @@
+# Hosts and names the network tests use; all fictional.
+news_host: news.example.com
+api_host: api.example.com
+other_host: other.example.org
+elsewhere_host: elsewhere.example.com
+evil_host: evil.example.org
+atom_author: Ines Albescu
+atom_key: urn:a-1
+first_link_path: /1

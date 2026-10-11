@@ -33,7 +33,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.26"
+PLUGIN_API_VERSION = "0.3.27"
 
 
 class Settings(BaseModel):
@@ -1217,7 +1217,12 @@ class Registrar:
         what changed.
         Raise `ConnectorError(kind, detail)` with kind `auth`, `no_access`, `not_found`, `outage` or `offline`. The
         core compares, keeps snapshots and hands in what is new, changed or gone; the connector never writes
-        records. It must not reach the network until `requires.network` is available."""
+        records. `context.web` (when `requires.network` lists hosts) reaches only those hosts, over HTTPS:
+        `context.web.get(url, params=..., headers=...)` and `.post(...)` return a response with `status`, `headers`,
+        `content`, `.text` and `.json()`, and raise `ConnectorError` for no connection (offline), timeouts and server
+        errors (outage), 401 (auth), 403 (no_access) and 404 (not_found). `context.secret(name)` reads a secret named
+        in `requires.secrets` (None when it isn't set), and `context.keep_secret(name, value)` keeps one on this
+        computer (a refreshed token)."""
         self._name(name)
         if name in self.connectors or not callable(poll):
             raise ValueError("duplicate connector or invalid poll function")

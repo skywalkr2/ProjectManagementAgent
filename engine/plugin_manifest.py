@@ -30,8 +30,6 @@ class Dependency(Strict):
 
 #: Manifest keys the host refuses until the extension point behind them exists (a non-empty value refuses the plugin).
 NOT_YET = {
-    "requires.network": "network hosts a plugin may reach",
-    "requires.secrets": "secrets a plugin may read",
     "provides.playbook": "a plugin's own playbook",
 }
 
@@ -72,8 +70,33 @@ class Tool(Strict):
 
 
 class Requires(Strict):
-    network: list[str] = Field(default_factory=list, description="Hosts the plugin may reach. Not yet available.")
-    secrets: list[str] = Field(default_factory=list, description="Secrets the plugin may read. Not yet available.")
+    network: list[str] = Field(
+        default_factory=list,
+        description="Hosts the plugin's connectors may reach through the core's web client (\"api.example.com\", "
+        '"*.example.com"); nothing else is reachable.',
+    )
+    secrets: list[str] = Field(
+        default_factory=list,
+        description="Names of the secrets the plugin may read (a key, a sign-in token): set per workspace in "
+        "workspace.plugins.secrets, or kept on this computer by the plugin itself.",
+    )
+
+    @field_validator("network")
+    @classmethod
+    def _hosts(cls, value: list[str]) -> list[str]:
+        for host in value:
+            if not re.fullmatch(r"(\*\.)?[a-z0-9-]+(\.[a-z0-9-]+)+|localhost", host):
+                raise ValueError(f"{host!r} isn't a host name (write api.example.com or *.example.com)")
+        return value
+
+    @field_validator("secrets")
+    @classmethod
+    def _secret_names(cls, value: list[str]) -> list[str]:
+        for name in value:
+            if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,40}", name):
+                raise ValueError(f"{name!r} isn't a secret name (lowercase letters, digits, dashes)")
+        return value
+
     data_levels: list[Literal["open", "internal", "restricted"]] = Field(
         default_factory=lambda: ["open", "internal"],
         description="Every data level the plugin's record types use, the default internal included.",

@@ -49,9 +49,13 @@ class ConnectorError(Exception):
 
 @dataclass(frozen=True)
 class ConnectorContext:
-    """What a connector's read gets besides its settings: the workspace's folder (for paths relative to it)."""
+    """What a connector's read gets besides its settings: the workspace's folder (for paths relative to it), and for
+    a plugin that declares them, a web client limited to its `requires.network` hosts and its declared secrets."""
 
     workspace_root: Path
+    web: Any = None  # engine.net.WebClient, or None when the connector may not reach the network
+    secret: Callable[[str], str | None] | None = None  # a declared secret's value, or None when it isn't set
+    keep_secret: Callable[[str, str], None] | None = None  # keep a declared secret (a refreshed token) on this computer
 
 
 @dataclass(frozen=True)
@@ -120,7 +124,14 @@ def _read_fake(settings: FakeSettings, state: dict[str, Any], context: Connector
     return Poll([SourceItem(**item) for item in settings.items], {"reads": reads}, complete=True)
 
 
-CORE: dict[str, Connector] = {
-    "folder": Connector("folder", "A folder", FolderSettings, _read_folder),
-    "fake": Connector("fake", "A stand-in source for tests", FakeSettings, _read_fake),
-}
+def _core() -> dict[str, Connector]:
+    from engine.connectors.feed import FeedSettings, read_feed
+
+    return {
+        "folder": Connector("folder", "A folder", FolderSettings, _read_folder),
+        "feed": Connector("feed", "A news feed (RSS or Atom)", FeedSettings, read_feed, network=True),
+        "fake": Connector("fake", "A stand-in source for tests", FakeSettings, _read_fake),
+    }
+
+
+CORE: dict[str, Connector] = _core()

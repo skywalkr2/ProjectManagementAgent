@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Updates</title>
+<entry><id>urn:a-1</id><title>Map revised</title><link href="https://maps.example.com/a"/>
+<updated>2030-03-04T09:00:00Z</updated><author><name>Ines Albescu</name></author><summary>New legend.</summary></entry>
+</feed>

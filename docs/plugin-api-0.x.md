@@ -10,6 +10,20 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.27 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Network for connectors:** `requires.network` lists the hosts a plugin's connectors may reach ("api.example.com",
+  "*.example.com"). `context.web.get/post(url, ...)` reaches only those, over HTTPS (plain HTTP only on this computer),
+  follows redirects only to allowed hosts, caps answers at 5 MB, and raises `ConnectorError`: offline (no connection),
+  outage (timeouts, 429 and server errors), auth (401), no_access (403), not_found (404). Other statuses come back
+  for the plugin to read.
+- **Secrets:** `requires.secrets` names them. `context.secret(name)` reads the workspace's reference in
+  `workspace.plugins.secrets.<plugin>.<name>` (env:NAME or file:/path), else a value the plugin kept on this computer
+  with `context.keep_secret(name, value)` (readable only by the user). An undeclared name is refused.
+- The core ships a `feed` connector (RSS and Atom).
+
 ## What 0.3.26 adds
 
 Manifests stay `'>=0.3,<0.4'`.

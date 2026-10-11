@@ -10,6 +10,13 @@ sources:
     settings:
       path: inbox         # inside the workspace's folder; a full path works too
       patterns: ["*.txt", "*.md"]
+  - id: news
+    connector: feed
+    label: Harbor news
+    enabled: false        # turn on to read the feed every few hours
+    every_minutes: 240
+    settings:
+      url: https://news.example.com/feed.xml
 failures_before_asking: 3
 triage:
   - name: Spacing only

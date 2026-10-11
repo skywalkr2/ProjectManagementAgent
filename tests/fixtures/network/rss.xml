@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<rss version="2.0"><channel><title>Harbor news</title>
+<item><guid>n-1</guid><title>Ferry times change</title><link>https://news.example.com/1</link>
+<description>&lt;p&gt;The &lt;b&gt;evening&lt;/b&gt; ferry leaves at six.&lt;/p&gt;</description><pubDate>Mon, 04 Mar 2030</pubDate></item>
+<item><guid>n-2</guid><title>Pier repairs</title><description>Closed on Sunday.</description></item>
+</channel></rss>

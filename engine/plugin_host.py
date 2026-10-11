@@ -459,12 +459,58 @@ class PluginHost:
         self.succeeded(plugin, where)
         return " ".join(reason.split()) if reason else None
 
+    def connector_context(self, plugin: str, workspace_root: Any) -> Any:
+        """What a plugin's connector gets: a web client for its declared hosts, and its declared secrets."""
+        from engine.connectors import ConnectorContext
+        from engine.net import WebClient
+
+        requires = self.manifests[plugin].requires
+        web = WebClient(list(requires.network)) if requires.network else None
+        declared = set(requires.secrets)
+        keys = Path(workspace_root) / ".cockpit" / "keys" / plugin
+
+        def secret(name: str) -> str | None:
+            from engine.plugin_api import PluginMisuse
+            from engine.secrets import SecretError, resolve_secret
+
+            if name not in declared:
+                raise PluginMisuse(f"{name} isn't a secret this plugin declares in requires.secrets")
+            ref = self.cfg.workspace.plugins.secrets.get(plugin, {}).get(name)
+            if ref:
+                try:
+                    return resolve_secret(ref)
+                except SecretError:
+                    return None
+            kept = keys / name
+            return kept.read_text(encoding="utf-8").strip() if kept.is_file() else None
+
+        def keep_secret(name: str, value: str) -> None:
+            import os
+
+            from engine.plugin_api import PluginMisuse
+
+            if name not in declared:
+                raise PluginMisuse(f"{name} isn't a secret this plugin declares in requires.secrets")
+            keys.mkdir(parents=True, exist_ok=True)
+            os.chmod(keys, 0o700)
+            target = keys / name
+            target.write_text(value.strip() + "\n", encoding="utf-8")
+            os.chmod(target, 0o600)
+
+        return ConnectorContext(
+            workspace_root=Path(workspace_root),
+            web=web,
+            secret=secret if declared else None,
+            keep_secret=keep_secret if declared else None,
+        )
+
     def poll_connector(self, connector: Any, settings: Any, state: dict[str, Any], context: Any) -> Any:
         """Read a plugin's connector: its ConnectorError passes through; anything else is contained like a job."""
         from engine.connectors import ConnectorError, Poll
 
         plugin = connector.name.split("/", 1)[0]
         where = f"connector {connector.name}"
+        context = self.connector_context(plugin, context.workspace_root)
         try:
             poll = connector.poll(settings, deepcopy(state), context)
             if not isinstance(poll, Poll):
@@ -474,6 +520,9 @@ class PluginHost:
         except Exception as err:
             self.failed(plugin, where, err)
             raise ConnectorError("outage", f"the add-on {plugin} failed reading it: {err}") from None
+        finally:
+            if context.web is not None:
+                context.web.close()
         self.succeeded(plugin, where)
         return poll
 

@@ -72,6 +72,11 @@ class PluginSettings(ConfigModel):
     jobs: dict[str, JobSettings] = Field(
         default_factory=dict, description="Plugins' scheduled work, by job name: on or off, and how often."
     )
+    secrets: dict[str, dict[str, str]] = Field(
+        default_factory=dict,
+        description="Each plugin's secrets, by plugin then secret name, as references (env:NAME or file:/path), "
+        "never the secret itself.",
+    )
     failures_before_off: int = Field(
         3,
         ge=1,
