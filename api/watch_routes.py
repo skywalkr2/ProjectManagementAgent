@@ -88,6 +88,22 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             )
         return out
 
+    @r.post("/watch/{source_id}/recent")
+    def recent(source_id: str) -> WatchSourceView:
+        """Hand the assistant what the source holds from the recent past or near future that it hasn't seen yet (the
+        last day's mail, today's meetings), after a first read that only noted what was there."""
+        source = next((s for s in cfg.watch.sources if s.id == source_id), None)
+        if source is None:
+            raise HTTPException(status_code=404, detail=f"there is no source {source_id}")
+        try:
+            made = watch.hand_in_recent(ws, store, cfg, source_id)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        if made:
+            worker.poke()
+        return view(source)
+
     @r.post("/requests/{request_id}/closer-look")
     def closer_look(request_id: str, body: ReadVersion) -> Created:
         """Hand in a change a triage rule closed after all; the correction is kept so rules can be tuned."""

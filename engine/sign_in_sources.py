@@ -81,6 +81,8 @@ def start_sources(ws: Any, cfg: Any, store: Any, sign_in: Any, *, again: bool = 
                 "connector": wanted["connector"],
                 "label": wanted["label"],
                 "every_minutes": wanted["every_minutes"],
+                # The first read hands the assistant the last day's mail and today's meetings, not the whole box.
+                "first_run": "recent",
                 "settings": settings,
             }
         )

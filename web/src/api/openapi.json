@@ -13808,6 +13808,46 @@
         "summary": "Read Now"
       }
     },
+    "/api/watch/{source_id}/recent": {
+      "post": {
+        "description": "Hand the assistant what the source holds from the recent past or near future that it hasn't seen yet (the\nlast day's mail, today's meetings), after a first read that only noted what was there.",
+        "operationId": "recent_api_watch__source_id__recent_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchSourceView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Recent"
+      }
+    },
     "/api/working-copies": {
       "get": {
         "operationId": "working_copies_api_working_copies_get",

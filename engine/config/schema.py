@@ -919,9 +919,14 @@ class WatchSource(ConfigModel):
     enabled: bool = Field(True, description="Off keeps its history and stops reading it.")
     every_minutes: int = Field(60, ge=5, description="How often it is read while the app runs.")
     project: str | None = Field(None, description="The project its changes are about, if they all are.")
-    first_run: Literal["baseline", "all"] = Field(
+    first_run: Literal["baseline", "recent", "all"] = Field(
         "baseline",
-        description="baseline: the first read only notes what is there; all: everything there is handed in as new.",
+        description="baseline: the first read only notes what is there; recent: it also hands in what arrived, "
+        "changed or happens within first_run_hours of the read (the last day's mail, today's meetings); all: "
+        "everything there is handed in as new.",
+    )
+    first_run_hours: int = Field(
+        24, ge=1, le=336, description="With first_run recent: how many hours around the first read count as recent."
     )
     report_removed: bool = Field(True, description="Hand in an item that disappeared from the source.")
     settings: dict[str, Any] = Field(

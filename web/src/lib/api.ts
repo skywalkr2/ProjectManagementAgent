@@ -61,6 +61,7 @@ export const api = {
   removeSource: (src: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `watch/sources/${id(src)}/remove`, { fingerprint } satisfies S["FingerprintIn"]),
   readSource: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/read`),
+  handInRecent: (src: string) => call<S["WatchSourceView"]>("POST", `watch/${id(src)}/recent`),
   autoClosed: () => call<S["AutoClosedView"][]>("GET", "auto-closed"),
   closerLook: (req: string, readVersion: number) =>
     call<S["Created"]>("POST", `requests/${id(req)}/closer-look`, { read_version: readVersion }),

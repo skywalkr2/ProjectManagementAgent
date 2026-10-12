@@ -121,8 +121,9 @@ def refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None 
     read_before = any(
         r.data["outcome"] in ("ok", "baseline") for r in store.read().find("watch_run", {"source": source.id})
     )
-    baseline = not read_before and source.first_run == "baseline"
-    result = _compare(ws, store, cfg, source, poll, now, baseline)
+    baseline = not read_before and source.first_run in ("baseline", "recent")
+    recent = timedelta(hours=source.first_run_hours) if baseline and source.first_run == "recent" else None
+    result = _compare(ws, store, cfg, source, poll, now, baseline, recent)
     _record(
         store,
         source.id,
@@ -146,7 +147,37 @@ def _poll(store: Any, connector: Connector, settings: Any, state: dict[str, Any]
     return store.plugins.poll_connector(connector, settings, state, context)
 
 
-def _compare(ws: Any, store: Any, cfg: Any, source: Any, poll: Any, now: datetime, baseline: bool) -> Result:
+def is_recent(details: dict[str, Any], changed_at: str | None, now: datetime, window: timedelta) -> bool:
+    """Whether an item belongs to the recent past or near future: a message received within the window, an event
+    starting within it (before or after now), or else an item changed within it. An item with no time isn't."""
+    from engine.connectors import moment
+
+    message, event = details.get("message") or {}, details.get("event") or {}
+    try:
+        if message.get("received"):
+            return now - window <= moment(message["received"]) <= now + timedelta(minutes=5)
+        if event.get("start"):
+            start = moment(event["start"], all_day=bool(event.get("all_day")))
+            if not isinstance(start, datetime):
+                start = datetime(start.year, start.month, start.day, tzinfo=now.tzinfo)
+            return now - window <= start <= now + window
+        if changed_at:
+            return now - window <= moment(changed_at) <= now + timedelta(minutes=5)
+    except (ValueError, TypeError):
+        return False
+    return False
+
+
+def _compare(
+    ws: Any,
+    store: Any,
+    cfg: Any,
+    source: Any,
+    poll: Any,
+    now: datetime,
+    baseline: bool,
+    recent: timedelta | None = None,
+) -> Result:
     result = Result(source.id, "ok")
     seen = {s.data["key"]: s for s in store.read().find("snapshot", {"source": source.id}) if not s.data["gone"]}
     listed = set()
@@ -180,11 +211,12 @@ def _compare(ws: Any, store: Any, cfg: Any, source: Any, poll: Any, now: datetim
                 tx.create("snapshot", data, _WATCHER)
             else:
                 tx.update("snapshot", before.id, data, _WATCHER, read_version=before.version)
-            if baseline:
+            handed = not baseline or (recent is not None and is_recent(details, item.changed_at, now, recent))
+            if not handed:
                 continue
             text = _input_text(source, item, change, old)
             request = _hand_in(ws, store, tx, cfg, source, item, change, text, now, closed)
-        if not baseline:
+        if handed:
             (result.new if change == "new" else result.changed).append(request)
     gone_keys = [k for k in seen if k not in listed] if poll.complete else [k for k in poll.removed if k in seen]
     for key in gone_keys:
@@ -398,3 +430,41 @@ def _close_question(store: Any, source: str) -> None:
                 WriteContext(actor="watcher", trust="trusted", op="watch.recovered"),
                 read_version=question.version,
             )
+
+
+def hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None = None) -> list[str]:
+    """Hand the assistant what a source already holds from the recent past or near future (its `first_run_hours`
+    around now) that it hasn't been handed yet: the person asks for this after a first read that only noted what was
+    there. Triage rules apply as for any change. Returns the requests made."""
+    from engine.connectors import EventDetails, MessageDetails
+
+    now = now or datetime.now(UTC)
+    source = next((s for s in cfg.watch.sources if s.id == source_id), None)
+    if source is None:
+        raise StoreError(f"there is no source {source_id}")
+    window = timedelta(hours=source.first_run_hours)
+    handed = {
+        (s.data.get("watched") or {}).get("key")
+        for s in store.read().list("source")
+        if (s.data.get("watched") or {}).get("source") == source_id
+    }
+    made = []
+    for snap in store.read().find("snapshot", {"source": source_id}):
+        data = snap.data
+        if data.get("gone") or data["key"] in handed or not is_recent(data, None, now, window):
+            continue
+        item = SourceItem(
+            data["key"],
+            data["title"],
+            _read_text(ws, data["content_hash"]),
+            author=data.get("author"),
+            link=data.get("link"),
+            event=EventDetails(**data["event"]) if data.get("event") else None,
+            message=MessageDetails(**data["message"]) if data.get("message") else None,
+        )
+        closed = first_match(store, cfg, _change(cfg, source, item, "new", None))
+        with store.transaction() as tx:
+            made.append(
+                _hand_in(ws, store, tx, cfg, source, item, "new", _input_text(source, item, "new", None), now, closed)
+            )
+    return made

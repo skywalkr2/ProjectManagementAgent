@@ -22,6 +22,8 @@ sources:
     label: Work calendar
     enabled: false        # turn on once the calendar's private address is set
     every_minutes: 60
+    first_run: recent     # the first read hands in what happens within a day of now; the rest is only noted
+    first_run_hours: 24
     settings:
       address: env:WORK_CALENDAR_ADDRESS   # the private address, kept outside the files
       days_ahead: 30

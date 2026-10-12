@@ -222,6 +222,12 @@ function SourceRow(props: {
     );
     setBusy(false);
   };
+  // After a first read that only noted what was there: hand the assistant the recent past and near future now.
+  const recent = () =>
+    void act(
+      () => api.handInRecent(source.id),
+      () => ({ message: t("sources.recent_toast", { label: source.label }) }),
+    );
   const turn = (enabled: boolean) =>
     void save(
       (fingerprint) => api.changeSource(source.id, { enabled, fingerprint }),
@@ -232,6 +238,7 @@ function SourceRow(props: {
 
   const actions: MenuAction[] = [
     { id: "read", label: t("sources.read_now"), run: () => void readNow(), disabled: !source.enabled || busy },
+    { id: "recent", label: t("sources.recent"), run: recent, disabled: busy || source.items === 0 },
     { id: "change", label: t("sources.change"), run: props.onChange },
     { id: "power", label: t(source.enabled ? "sources.turn_off" : "sources.turn_on"), run: () => turn(!source.enabled) },
     { id: "remove", label: t("sources.remove"), run: remove },

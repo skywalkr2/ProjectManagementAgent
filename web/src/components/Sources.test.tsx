@@ -377,14 +377,14 @@ describe("a source's menu", () => {
   const body = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
   const items = (kind: string) => [{ id: "a", connector: kind, settings: { path: "inbox", patterns: ["*.md"] } }];
 
-  test("has Read now, Change, Turn off and Remove", async () => {
+  test("has Read now, Look at the last day, Change, Turn off and Remove", async () => {
     const user = userEvent.setup();
     open([source("a")]);
     const item = await row("Source a");
     // Read now isn't a button on the row any more.
     expect(within(item).queryByRole("button", { name: /Read Source a now/ })).toBeNull();
     await user.click(within(item).getByRole("button", { name: "More actions for Source a" }));
-    expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Read now", "Change", "Turn off", "Remove"]);
+    expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Read now", "Look at the last day", "Change", "Turn off", "Remove"]);
   });
 
   test("Change opens the same form filled from the source, and saves the name, schedule and settings", async () => {
