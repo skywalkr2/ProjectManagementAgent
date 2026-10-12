@@ -26,6 +26,15 @@ def _sentence(text: str) -> str:
     return (text[:1].upper() + text[1:]).rstrip(".") + "."
 
 
+def _saved(ws: Workspace, cfg: Config) -> Config:
+    """The settings as the files hold them now: an add-on turned off since the start is off here, though it runs until
+    the restart."""
+    try:
+        return load_config(ws.config_dir, env=dict(os.environ))
+    except ConfigError:
+        return cfg
+
+
 def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
     host = store.plugins
@@ -169,8 +178,10 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
 
         from engine import pack_install
 
-        if pack_id in set(cfg.workspace.plugins.enabled):
+        if pack_id in set(_saved(ws, cfg).workspace.plugins.enabled):
             raise HTTPException(status_code=409, detail="Turn it off first, then remove it.")
+        # Turned off but still running until the restart: its files go now, so work waits for that restart.
+        running = host.active(pack_id)
         found = next((ep for ep in entry_points(group="pm_cockpit.plugins") if ep.name == pack_id), None)
         if found is None or found.dist is None:
             raise HTTPException(status_code=404, detail=f"{pack_id} isn't installed as a package.")
@@ -180,6 +191,8 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
             pack_install.remove(name)
         except pack_install.InstallError as err:
             raise HTTPException(status_code=409, detail=_sentence(str(err))) from None
+        if running:
+            worker.add_ons_changed()
         return PackInstalled(name=name, version=version, needs_restart=True)
 
     @r.get("/packs")

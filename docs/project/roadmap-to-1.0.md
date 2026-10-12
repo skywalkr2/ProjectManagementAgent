@@ -205,6 +205,13 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [ ] **"Look at the last day" works for a folder:** today it hands in nothing, because folder items carry no time.
   Folder items carry the file's modified time, kept on the snapshot, so the person can hand in what is already there
   (found by the phase A fixes; the add-source hint then points to it).
+- [ ] **What the mail journey found** (phase A3, J2):
+  - **A blocked word costs a second AI request:** a fixture mail with a blocked word in it sent the item through the
+    fix round, so real mail could cost double. First check in the code whether wording lints look at quoted outside
+    text (evidence) or only at the assistant's own words. Quoted evidence is never linted. A lint on an item that stays
+    internal warns without a return round (CLAUDE.md: lints only warn when the item stays internal).
+  - **Machine timestamps in filed notes** ("When: 2026-10-12T18:19:04Z"): notes show dates and times in the person's
+    format and time zone.
 - [ ] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
   (manifest validation, registration errors) get plain words and a test that produces each; Ask's material names
   settings without their keys, with `setting.propose` finding the key another way.
@@ -380,6 +387,9 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
 - [ ] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
   Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago").
+- [ ] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention
+  empty while Needs you counts 5, and only one review opens by default, so an owner question can sit closed. The
+  Today redesign makes the first results one clear list. After Remove, the add-on's row vanishes along with its note.
 - [ ] **Found by the phase A journeys** (decisions, 2026-10-12, "What the first journeys found"): a new AI account's
   suggested name is the service's name, not its catalog id; a custom address needs no key when the service takes
   none; Follow-ups' Copy shows the message it will copy before copying, as 7.5 says (today it copies at once).

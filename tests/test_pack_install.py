@@ -217,3 +217,28 @@ def test_a_refused_install_says_why_in_a_sentence_and_marks_no_restart(screen, m
     refused = c.post(f"{api}/packs/packdemo/install")
     assert refused.status_code == 409 and refused.json()["detail"] == "The file doesn't match."
     assert worker.restart_needed is None
+
+
+def test_an_add_on_turned_off_but_still_running_can_be_removed_and_work_waits_for_the_restart(screen, monkeypatch):
+    c, api, worker, place = screen
+    c.post(f"{api}/packs/packdemo/install")
+    # Turned off in the saved settings, but this process still runs it until the restart.
+    monkeypatch.setattr(type(worker.store.plugins), "active", lambda self, name: name == "packdemo")
+    done = c.post(f"{api}/packs/packdemo/uninstall")
+    assert done.status_code == 200, done.text
+    assert not (place / "pack_demo").exists()
+    assert worker.restart_needed and worker.restart_for == ["add-ons"]
+
+
+def test_an_add_on_still_on_in_the_saved_settings_is_not_removed(screen):
+    import yaml
+
+    c, api, worker, place = screen
+    c.post(f"{api}/packs/packdemo/install")
+    path = worker.ws.config_dir / "workspace.yaml"
+    data = yaml.safe_load(path.read_text())
+    data.setdefault("plugins", {})["enabled"] = [*data.get("plugins", {}).get("enabled", []), "packdemo"]
+    path.write_text(yaml.safe_dump(data))
+    refused = c.post(f"{api}/packs/packdemo/uninstall")
+    assert refused.status_code == 409 and "Turn it off first" in refused.json()["detail"]
+    assert (place / "pack_demo" / "__init__.py").is_file()

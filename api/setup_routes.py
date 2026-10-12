@@ -380,7 +380,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         }
         if body.project:
             new["project"] = body.project
-        return saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
+        done = saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
+        worker.read_sources_now()  # its first read happens now, not at the next minute's check
+        return done
 
     @r.post("/watch/sources/{source_id}")
     def watch_change(source_id: str, body: WatchSourceChange) -> SettingsSaved:

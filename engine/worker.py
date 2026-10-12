@@ -137,6 +137,7 @@ class Worker:
         self.on_restart = on_restart
         self.restarting = False
         self._wake = threading.Event()
+        self._read_now = threading.Event()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._backups: threading.Thread | None = None
@@ -228,6 +229,7 @@ class Worker:
     def stop(self) -> None:
         self._stop.set()
         self._wake.set()
+        self._read_now.set()
         if self._thread:
             self._thread.join(timeout=10)
         if self._backups:
@@ -238,6 +240,11 @@ class Worker:
             self.events.changed()
             self._sync.join(timeout=60)
             self.release_folder()
+
+    def read_sources_now(self) -> None:
+        """A source was just added or a sign-in just started some: read what is due at once, not at the next minute's
+        check, so the person sees their mail arrive while they are still looking."""
+        self._read_now.set()
 
     def poke(self) -> None:
         self._wake.set()
@@ -425,7 +432,8 @@ class Worker:
                 self.run_due_watches()
             except Exception:  # a failed read is recorded on its run; nothing here may stop the thread
                 log.exception("reading watched sources failed")
-            self._stop.wait(timeout=60)
+            self._read_now.wait(timeout=60)
+            self._read_now.clear()
 
     def _backup_loop(self) -> None:
         while not self._stop.is_set():

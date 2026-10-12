@@ -206,18 +206,17 @@ test.describe.serial("journeys", () => {
     await installed.getByRole("button", { name: "Turn off journey-panel" }).click();
     await expect(installed).toContainText("Off after a restart");
 
-    // The menu offers Remove as soon as it is off. A refusal here is a screen that contradicts itself (the row says it
-    // is off, the answer says to turn it off), so it is checked softly and the journey goes on by restarting first.
+    // The menu offers Remove as soon as it is off, and Remove works then: it still runs until the restart, so new work
+    // waits for that restart, which the header offers.
     await installed.getByRole("button", { name: "More actions for journey-panel" }).click();
     await page.getByRole("menuitem", { name: "Remove" }).click();
-    await expect.soft(installed.getByRole("alert")).toHaveCount(0);
-    if (await installed.count()) {
-      await installed.getByRole("button", { name: "Restart now" }).first().click();
-      await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
-      await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Example overview" })).toHaveCount(0);
-      await installed.getByRole("button", { name: "More actions for journey-panel" }).click();
-      await page.getByRole("menuitem", { name: "Remove" }).click();
-    }
+    await expect(installed.getByRole("alert")).toHaveCount(0);
+    await page.getByRole("button", { name: /^Status: / }).click();
+    await page.getByRole("button", { name: "Restart now" }).first().click();
+    await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
+    await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Example overview" })).toHaveCount(0);
+    await openView(page, "Add-ons");
+    await page.getByRole("tab", { name: "Installed" }).click();
 
     // Removed: the row is gone from Installed, the files are gone from the place the app installs into, and the
     // catalog offers it again.

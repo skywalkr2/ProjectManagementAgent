@@ -131,3 +131,29 @@ def test_the_worker_does_it_on_start_before_taking_work(env):
         assert get(store, request).data["state"] == "queued" and get(store, request).data["waiting"] == INTERRUPTED
     finally:
         worker.stop()
+
+
+def test_reading_sources_now_wakes_the_reads_at_once_instead_of_at_the_next_minute(env):
+    import threading
+
+    ws, cfg, store = env
+    worker = Worker(ws, store, cfg, Events(), router_factory=lambda: pytest.fail("nothing runs in this test"))
+    reads = []
+    second = threading.Event()
+
+    def counted() -> None:
+        reads.append(1)
+        if len(reads) == 2:
+            second.set()
+
+    worker.run_due_watches = counted
+    worker.run_due_jobs = lambda: None
+    thread = threading.Thread(target=worker._jobs_loop, daemon=True)
+    thread.start()
+    try:
+        worker.read_sources_now()
+        assert second.wait(timeout=5), "the reads waited for the minute's check"
+    finally:
+        worker._stop.set()
+        worker._read_now.set()
+        thread.join(timeout=5)

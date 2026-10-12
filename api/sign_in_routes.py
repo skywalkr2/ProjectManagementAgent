@@ -17,12 +17,13 @@ from engine.config import Config
 from engine.connectors import ConnectorError
 from engine.sign_in_sources import not_read, start_sources
 from engine.storage import Store
+from engine.worker import Worker
 from engine.workspace import Workspace
 
 log = logging.getLogger(__name__)
 
 
-def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
+def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
     host = store.plugins
     prefix = "" if cfg.server.base_path == "/" else cfg.server.base_path
@@ -74,7 +75,8 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
         from engine.settings import SettingsConflict, SettingsError
 
         try:
-            start_sources(ws, cfg, store, s, again=True)
+            if start_sources(ws, cfg, store, s, again=True):
+                worker.read_sources_now()
         except (SettingsConflict, SettingsError) as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
         return view(s)
@@ -159,7 +161,8 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
             web.close()
         host.signed_in(done, ws.root)
         try:
-            start_sources(ws, cfg, store, done)
+            if start_sources(ws, cfg, store, done):
+                worker.read_sources_now()
         except Exception as err:  # the sign-in stands; the person can still add the sources by hand
             log.warning("Couldn't start the sources for %s: %s", done.name, err)
         return back(f"sign_in=done&name={quote(s.name)}")
