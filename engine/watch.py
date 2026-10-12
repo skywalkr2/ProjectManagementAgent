@@ -348,8 +348,8 @@ def _record(store: Any, source: str, now: datetime, clock: float, outcome: str, 
 
 WHAT_TO_DO = {
     "auth": "Sign in to it again, then it is read on its next turn.",
-    "no_access": "Check its settings in watch.yaml, or ask for access to it.",
-    "not_found": "Check that it is still there and that watch.yaml names it right.",
+    "no_access": "Check what it reads (Change, on Sources), or sign in again and allow access to it.",
+    "not_found": "Check that it is still there and that its settings on Sources name it right (Change).",
     "outage": "The service it is on seems to be failing; it is tried again on its schedule.",
 }
 
