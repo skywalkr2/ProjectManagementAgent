@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import logging
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -49,6 +50,7 @@ from api.schemas import (
     GenericRecordView,
     Handed,
     HandIn,
+    InboxCheckView,
     InboxView,
     ItemTitle,
     JobView,
@@ -140,6 +142,7 @@ from engine.usage import spend
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
 
+log = logging.getLogger(__name__)
 _PM = WriteContext(actor="pm", trust="trusted", op="ui")
 
 
@@ -408,6 +411,42 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         inbox = today.arrived(store, cfg, datetime.now(UTC))
         return InboxView(items=[ArrivedView(**vars(a)) for a in inbox.items], left_out=inbox.left_out)
+
+    @r.post("/today/arrived/check")
+    def today_arrived_check() -> InboxCheckView:
+        """Read every source that is on, now, and return Came in as it stands. A source that can't be read never
+        stops the others; its problem shows on the source as after any read."""
+        from engine import today, watch
+
+        before = {a.snapshot for a in today.arrived(store, cfg, datetime.now(UTC)).items}
+        read = failed = busy = handed = 0
+        for source in [s for s in cfg.watch.sources if s.enabled]:
+            try:
+                result = watch.refresh(ws, store, cfg, source.id)
+            except Exception:  # one source's failure must not stop the rest
+                log.exception("reading a source failed")
+                failed += 1
+                continue
+            if result.outcome == "busy":
+                busy += 1
+                continue
+            if result.outcome in ("failed", "offline", "throttled"):
+                failed += 1
+            else:
+                read += 1
+            handed += len(result.new) + len(result.changed) + len(result.removed)
+        events.changed()
+        if handed:
+            worker.poke()
+        inbox = today.arrived(store, cfg, datetime.now(UTC))
+        return InboxCheckView(
+            items=[ArrivedView(**vars(a)) for a in inbox.items],
+            left_out=inbox.left_out,
+            new_items=sum(1 for a in inbox.items if a.snapshot not in before),
+            sources_read=read,
+            sources_failed=failed,
+            sources_busy=busy,
+        )
 
     @r.get("/today/queue")
     def today_queue() -> list[QueueLineView]:

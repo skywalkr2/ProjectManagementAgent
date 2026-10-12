@@ -142,6 +142,52 @@ def test_the_routes_answer_for_the_screens(tmp_path):
     assert [a["sender"] for a in inbox["items"]] == ["E"] and inbox["left_out"] == 0
 
 
+def test_check_now_reads_every_source_and_one_that_fails_never_stops_the_rest(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine import watch
+
+    now = datetime.now(UTC).replace(microsecond=0)
+    first = [message("one", (now - timedelta(minutes=5)).isoformat(), sender="E")]
+    second = [message("two", (now - timedelta(minutes=9)).isoformat(), sender="F")]
+    ws, cfg, store = make(tmp_path, first)
+    sources = [
+        {"id": "a", "connector": "fake", "label": "First", "first_run": "all", "settings": {"items": first}},
+        {"id": "broken", "connector": "fake", "label": "Broken", "settings": {"error": "auth"}},
+        {"id": "b", "connector": "fake", "label": "Second", "first_run": "all", "settings": {"items": second}},
+        {"id": "off", "connector": "fake", "enabled": False, "first_run": "all", "settings": {"items": first}},
+    ]
+    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump({"version": 1, "sources": sources}))
+    cfg = load_config(ws.config_dir, env={})
+    store.close()
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    assert c.get(f"{api}/today/arrived").json()["items"] == []
+
+    done = c.post(f"{api}/today/arrived/check")
+    assert done.status_code == 200, done.text
+    body = done.json()
+    assert [a["sender"] for a in body["items"]] == ["E", "F"]
+    assert (body["new_items"], body["sources_read"], body["sources_failed"], body["sources_busy"]) == (2, 2, 1, 0)
+    assert body["items"] == c.get(f"{api}/today/arrived").json()["items"]  # the same list the card shows
+    by_id = {s["id"]: s for s in c.get(f"{api}/watch").json()}
+    assert by_id["broken"]["last"]["outcome"] == "failed" and by_id["broken"]["problem"]  # shown on the source
+    assert by_id["off"]["last"] is None  # a source that is off isn't read
+
+    again = c.post(f"{api}/today/arrived/check").json()
+    assert (again["new_items"], again["sources_read"], again["sources_failed"]) == (0, 2, 1)
+
+    lock = watch._read_lock(ws, "a")
+    assert lock.acquire(blocking=False)
+    try:
+        held = c.post(f"{api}/today/arrived/check").json()
+    finally:
+        lock.release()
+    assert (held["sources_read"], held["sources_failed"], held["sources_busy"]) == (1, 1, 1)
+
+
 def test_the_persons_own_open_actions_come_overdue_first(tmp_path):
     from engine.today import todo
 

@@ -3026,6 +3026,53 @@
         "title": "Handed",
         "type": "object"
       },
+      "InboxCheckView": {
+        "description": "Came in after reading every source now, with what the read found.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ArrivedView"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "left_out": {
+            "description": "Messages in the same hours that a triage rule closed (newsletters, say).",
+            "title": "Left Out",
+            "type": "integer"
+          },
+          "new_items": {
+            "description": "Messages that were not in the list before this read.",
+            "title": "New Items",
+            "type": "integer"
+          },
+          "sources_busy": {
+            "description": "Sources that were already being read, so this read left them alone.",
+            "title": "Sources Busy",
+            "type": "integer"
+          },
+          "sources_failed": {
+            "description": "Sources that could not be read this time; their problem shows on Sources.",
+            "title": "Sources Failed",
+            "type": "integer"
+          },
+          "sources_read": {
+            "description": "How many sources were read.",
+            "title": "Sources Read",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "left_out",
+          "new_items",
+          "sources_read",
+          "sources_failed",
+          "sources_busy"
+        ],
+        "title": "InboxCheckView",
+        "type": "object"
+      },
       "InboxView": {
         "properties": {
           "items": {
@@ -13539,6 +13586,25 @@
         "summary": "Today Arrived"
       }
     },
+    "/api/today/arrived/check": {
+      "post": {
+        "description": "Read every source that is on, now, and return Came in as it stands. A source that can't be read never\nstops the others; its problem shows on the source as after any read.",
+        "operationId": "today_arrived_check_api_today_arrived_check_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxCheckView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Today Arrived Check"
+      }
+    },
     "/api/today/queue": {
       "get": {
         "description": "What needs the person, ranked: decide, then risk, review, and send and follow up (design 7.7).",
@@ -13609,7 +13675,7 @@
     },
     "/api/watch/kinds": {
       "get": {
-        "description": "The kinds of source the assistant can keep reading: the core's and running add-ons', each with the form\nits settings take.",
+        "description": "The kinds of source the assistant can keep reading: the core's and running add-ons', each with the form\nits settings take. Kinds made only for tests are left out.",
         "operationId": "watch_kinds_api_watch_kinds_get",
         "responses": {
           "200": {

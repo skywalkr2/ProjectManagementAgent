@@ -287,7 +287,7 @@ means the design still holds and the work is scheduled; the phase letters refer 
 | **Encrypted off-machine backups** (4.15) | Encryption moved to phase L (section 12). Partly built today: backups go to the folders the person picks (a synced folder works); there is no encryption and no object store yet | As above. |
 | **Audiences and the restricted-content invariant** (4.1, 6.7, 12.1) | Not built. The other invariants on your must-refuse list are in place: model name never shown, links a recipient can open, actions need a person, evidence quotes must exist | Needs the publisher. |
 | **Code owners and hand-off drafts** (4.18, 6.13) | Not built | Needs requests about other projects, which come with the workplace pack. |
-| **The governor** (6.14): stale-item sweeps, outage handling, scheduled export with its remote | Not built (phase E). Crashed runs are not yet re-queued on start (phase A) | Deferred behind the person's path working. |
+| **The governor** (6.14): stale-item sweeps, outage handling, scheduled export with its remote | Not built (phase E). Crashed runs are queued again on start, and held for the person when found stuck twice (built, phase A2) | Deferred behind the person's path working. |
 | **The app restarts itself to use new settings** (6.14, in 1.0) | Changed: settings read at the moment of use apply at once, anything else says a restart is needed and waits for the person's "Restart now" | The owner's rule: restart only when needed and only when told. |
 | **Today as one ranked column** (7.3) | Changed: a ranked queue with a detail pane and a context rail. Engine and API built; the screen is phase B | A laptop screen was two-thirds empty. |
 | **Dependencies, baselines, RAID, risk reviews, escalation, cadence, agendas** (6.23, 6.24, added in 1.0 from your lessons) | Moved out of the core into a project management pack (phase C2), not yet started | Schedules belong to a kind of work. The owner wants an AI project manager that builds schedules and tracks action items as a pack of its own. |
@@ -595,8 +595,9 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 
 | Item | What the code does today | What phase A builds |
 |---|---|---|
-| Crashed runs | A run left `running` by a crash is never picked up again | Queued again on start; held for the person if found stuck twice (6.13) |
-| Test source | "A stand-in source for tests" is offered under Add a source | Connectors can be marked test-only and aren't offered |
+| Crashed runs | A run left `running` by a crash is never picked up again | Queued again on start; held for the person if found stuck twice (6.13). **Built (A2):** interruptions are counted from the request's ledger, since `attempts` also counts a person's Try again |
+| Test source | "A stand-in source for tests" is offered under Add a source | Connectors can be marked test-only and aren't offered. **Built (A2)** |
+| Check now | The source's Read now and the schedule can read one source at the same moment; Came in has no refresh | A lock per source, and Check now on Came in (7.15). **Built (A2)** |
 | Backups | Nothing restores one | `cockpit restore --backup` makes a workspace from one dated backup (5.0) |
 | First run's cost | No notion of a first run | The first runs wait for one Go with their total (7.8, `ai.budgets.first_go`) |
 | Local guards | No `Host` or `Origin` check; any listening address | The allowed hosts and origins, and loopback only in local mode (12.1) |

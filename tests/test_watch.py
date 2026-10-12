@@ -402,3 +402,104 @@ def test_a_plugin_adds_a_triage_matcher_and_a_crash_counts_as_no_match(tmp_path,
         assert "triage matcher p19/cards failed: broken" in caplog.text and store.plugins.active("p19")
     finally:
         store.close()
+
+
+def test_a_source_already_being_read_is_not_read_twice(tmp_path, monkeypatch):
+    import threading
+
+    from engine import watch
+
+    items = [{"key": "a", "title": "A", "text": "first"}]
+    ws, cfg, store = make(
+        tmp_path, [{"id": "s", "connector": "fake", "first_run": "all", "settings": {"items": items}}]
+    )
+    inside, release = threading.Event(), threading.Event()
+    real_poll = watch._poll
+
+    def slow_poll(*args):
+        inside.set()
+        assert release.wait(timeout=10)
+        return real_poll(*args)
+
+    monkeypatch.setattr(watch, "_poll", slow_poll)
+    first = []
+    try:
+        thread = threading.Thread(target=lambda: first.append(watch.refresh(ws, store, cfg, "s", NOW)))
+        thread.start()
+        assert inside.wait(timeout=10)
+        second = watch.refresh(ws, store, cfg, "s", NOW)
+        assert second.outcome == "busy" and second.note == watch.ALREADY_READING and second.new == []
+        assert not store.read().find("watch_run", {"source": "s"})  # the skipped read left no run behind
+        release.set()
+        thread.join(timeout=10)
+        assert first[0].outcome == "ok" and len(first[0].new) == 1
+        handed = [r for r in store.read().list("request") if r.data.get("origin") == "input"]
+        assert len(handed) == 1  # the item was handed in once
+        monkeypatch.setattr(watch, "_poll", real_poll)
+        assert watch.refresh(ws, store, cfg, "s", NOW + timedelta(hours=1)).outcome == "ok"  # the lock was let go
+    finally:
+        release.set()
+        store.close()
+
+
+def test_a_read_that_fails_lets_the_lock_go(tmp_path):
+    from engine import watch
+
+    ws, cfg, store = make(tmp_path, [{"id": "s", "connector": "fake", "settings": {"error": "auth"}}])
+    try:
+        assert watch.refresh(ws, store, cfg, "s", NOW).outcome == "failed"
+        assert watch.refresh(ws, store, cfg, "s", NOW + timedelta(hours=1)).outcome == "failed"
+    finally:
+        store.close()
+
+
+def test_the_read_now_route_leaves_a_source_being_read_alone(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine import watch
+
+    items = [{"key": "a", "title": "A", "text": "first"}]
+    ws, cfg, store = make(
+        tmp_path, [{"id": "s", "connector": "fake", "first_run": "all", "settings": {"items": items}}]
+    )
+    store.close()
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    lock = watch._read_lock(ws, "s")
+    assert lock.acquire(blocking=False)
+    try:
+        assert c.post(f"{api}/watch/s/read").status_code == 200
+        assert c.get(f"{api}/watch").json()[0]["last"] is None  # nothing was read while it was held
+    finally:
+        lock.release()
+    assert c.post(f"{api}/watch/s/read").status_code == 200
+    assert c.get(f"{api}/watch").json()[0]["last"]["outcome"] == "ok"
+
+
+def test_the_test_only_kind_is_not_offered_but_a_source_set_up_with_it_still_reads_and_shows(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine.connectors import CORE
+    from engine.watch import refresh
+
+    items = [{"key": "a", "title": "A", "text": "first"}]
+    ws, cfg, store = make(
+        tmp_path, [{"id": "s", "connector": "fake", "first_run": "all", "settings": {"items": items}}]
+    )
+    try:
+        stand_in = CORE["fake"]
+        assert stand_in.test_only
+        assert len(refresh(ws, store, cfg, "s", NOW).new) == 1
+    finally:
+        store.close()
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    kinds = c.get(f"{api}/watch/kinds").json()
+    assert stand_in.name not in {k["name"] for k in kinds} and stand_in.label not in {k["label"] for k in kinds}
+    assert {k["name"] for k in kinds} >= {name for name, kind in CORE.items() if not kind.test_only}
+    shown = c.get(f"{api}/watch").json()
+    assert [(s["id"], s["connector"], s["connector_label"]) for s in shown] == [("s", stand_in.name, stand_in.label)]

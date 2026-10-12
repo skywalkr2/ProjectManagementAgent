@@ -160,6 +160,7 @@ export const api = {
   agenda: () => call<S["AgendaItemView"][]>("GET", "today/agenda"),
   todo: () => call<S["TodoView"][]>("GET", "today/todo"),
   arrived: () => call<S["InboxView"]>("GET", "today/arrived"),
+  checkArrived: () => call<S["InboxCheckView"]>("POST", "today/arrived/check"),
   taskKinds: (kind?: string, record?: string) =>
     call<S["TaskKindView"][]>("GET", kind && record ? `task-kinds?kind=${id(kind)}&id=${id(record)}` : "task-kinds"),
   startTask: (name: string, about: S["RecordReference"] | null) =>

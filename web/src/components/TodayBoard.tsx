@@ -1,7 +1,7 @@
 // Today's board (design 7.7): the agenda, the person's own list, what needs them and what came in, side by side so
 // everything important shows at once. Each column scrolls on its own; narrow screens stack them and the page scrolls.
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
@@ -51,6 +51,8 @@ function Column(props: {
   title: string;
   count: number | null;
   countText: string;
+  /** A control at the end of the heading row. */
+  action?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
 }) {
@@ -65,6 +67,7 @@ function Column(props: {
             <span className="sr">{props.countText}</span>
           </span>
         )}
+        {props.action && <div className="tb-head-act">{props.action}</div>}
       </div>
       <div className="tb-body" tabIndex={0} role="group" aria-labelledby={titleId}>
         {props.children}
@@ -354,9 +357,54 @@ function NeedsColumn(props: { onOpenRecord?: (kind: string, id: string) => void 
 
 // ---------------------------------------------------------------- Came in
 
+/** What a check says in a toast: what arrived, then any source that couldn't be read or was already being read. */
+function checkedText(result: S["InboxCheckView"], t: T, tn: ReturnType<typeof useWords>["tn"]): string {
+  const parts = [result.new_items > 0 ? tn("today.arrived.check_new", result.new_items) : t("today.arrived.check_none")];
+  if (result.sources_failed > 0) parts.push(tn("today.arrived.check_failed", result.sources_failed));
+  if (result.sources_busy > 0) parts.push(tn("today.arrived.check_busy", result.sources_busy));
+  return parts.join(". ") + (parts.length > 1 ? "." : "");
+}
+
+/** The button that reads every source now and shows what arrived; it never replaces the sources' own schedule. */
+function CheckNow() {
+  const { t, tn } = useWords();
+  const act = useAct();
+  const client = useQueryClient();
+  const [checking, setChecking] = useState(false);
+  const button = useRef<HTMLButtonElement>(null);
+  const keepFocus = useRef(false);
+  // A button that turns off while it works loses the keyboard's place; put it back once it is on again.
+  useEffect(() => {
+    if (!checking && keepFocus.current) {
+      keepFocus.current = false;
+      button.current?.focus();
+    }
+  }, [checking]);
+  const run = async () => {
+    keepFocus.current = document.activeElement === button.current;
+    setChecking(true);
+    await act(
+      async () => {
+        const result = await api.checkArrived();
+        // Show the new list at once, without waiting for it to be fetched again.
+        client.setQueryData<S["InboxView"]>(["today", "arrived"], { items: result.items, left_out: result.left_out });
+        return result;
+      },
+      (result) => ({ message: checkedText(result, t, tn) }),
+    );
+    setChecking(false);
+  };
+  return (
+    <button ref={button} type="button" className="btn small" disabled={checking} aria-busy={checking} onClick={() => void run()}>
+      {t(checking ? "today.arrived.checking" : "today.arrived.check")}
+    </button>
+  );
+}
+
 function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () => void }) {
   const { t, tn } = useWords();
   const sourceState = useSourceState(props.onAddSource, t("today.arrived.connect"));
+  const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const arrived = useQuery({ queryKey: ["today", "arrived"], queryFn: api.arrived });
   const now = useNow();
   const today = localDate(now);
@@ -371,6 +419,7 @@ function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () =
       title={t("today.arrived.title")}
       count={arrived.data ? items.length : null}
       countText={tn("today.arrived.count", items.length)}
+      action={watch.data && anyReading(watch.data) ? <CheckNow /> : undefined}
       footer={
         leftOut > 0 && (
           <button type="button" className="link-button" onClick={() => props.onView("sources")}>

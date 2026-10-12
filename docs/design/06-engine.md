@@ -47,7 +47,7 @@ service's retry-after answer and never loops).
 as a calendar file, which most services offer as a private address; events in the configured window are followed, so a moved
 meeting, a new invitation or a cancellation is handed in) and `mailbox` (a mail folder over IMAP with TLS, using an app
 password kept as a secret reference; messages are fetched without marking anything as read), and a `fake` one for tests
-(decisions, 2026-10-11, "Calendars and mail are read through open protocols in the core…"). Pasting and uploading are ways to
+(marked test-only: Add a source doesn't offer it, and a source already set up with it still reads) (decisions, 2026-10-11, "Calendars and mail are read through open protocols in the core…"). Pasting and uploading are ways to
 hand something in (6.6), not connectors. Connectors for particular products and services (wikis, trackers, a named mail or
 calendar service that needs its own sign-in) are plugins (6.27).
 
@@ -513,8 +513,14 @@ for it, that nothing goes out without the PM approving that exact content, alrea
 
 ## 6.13 Governor, automation problems and reports
 
-- *Designed, not yet built* (roadmap, phase E): every few minutes, re-queue requests whose run never finished (today a run a
-  crash left stuck is queued again when the app starts, and one found stuck a second time waits for the person; roadmap A2), push work waiting too long in working hours, repair
+- **Built (roadmap A2): runs a stop left unfinished.** When the worker starts, every request left running goes back in the
+  queue with the note "The app closed while this ran; it runs again now." and raises `request.queued`. One found running
+  after it was already put back once goes to needs you instead ("Stopped twice when the app closed during it"), its
+  approval untouched, so Try again and Dismiss apply and a request that stops the app can't loop. The number of
+  interruptions is counted from the request's own history (the ledger), not from `attempts`, which also counts a
+  person's Try again.
+- *Designed, not yet built* (roadmap, phase E): every few minutes, re-queue requests whose run never finished (the same
+  rule, while the app runs), push work waiting too long in working hours, repair
   changes no request carries, detect stale data and outages, run the scope sweep (6.18), the rules review (6.21) and the
   notices, and commit the readable export (5.0) hourly.
 - *Designed, not yet built:* problems in the automation become `Problem` records (shown as "automation problems", so "issue" keeps its project

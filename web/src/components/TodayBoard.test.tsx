@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { whenText } from "../lib/dates";
@@ -305,4 +305,62 @@ test("a column that can't load says so and offers Try again without hiding the o
   expect(await screen.findByText("Your calendar couldn't be loaded.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
   expect(await screen.findByText("Send the index")).toBeInTheDocument();
+});
+
+function checked(over: Partial<S["InboxCheckView"]> = {}): S["InboxCheckView"] {
+  return { ...inbox, new_items: 0, sources_read: 1, sources_failed: 0, sources_busy: 0, ...over };
+}
+
+test("Check now reads the sources, shows the new list at once and says what arrived", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  const fresh = message({ title: "Fresh note", sender: "Jo Sample", unread: true });
+  let current = inbox;
+  const calls = fakeApi(
+    routes({
+      "GET watch": () => [watched("a")],
+      "GET today/arrived": () => current,
+      "POST today/arrived/check": () => {
+        current = { ...inbox, items: [fresh, ...inbox.items] };
+        return checked({ items: current.items, new_items: 1 });
+      },
+    }),
+  );
+  renderApp(<TodayBoard onView={vi.fn()} />);
+  const col = await column("Came in");
+  expect(within(col).queryByText("Fresh note")).toBeNull();
+  await user.click(await within(col).findByRole("button", { name: "Check now" }));
+  expect(await within(col).findByText("Fresh note")).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST today/arrived/check")).toBe(true);
+  expect(await screen.findByText("1 new item")).toBeInTheDocument();
+  expect(within(col).getByRole("button", { name: "Check now" })).toBeEnabled();
+});
+
+test("Check now is disabled and says it is working while it reads, and can be used again after", async () => {
+  open({ "GET watch": () => [watched("a")], "POST today/arrived/check": () => checked() });
+  const col = await column("Came in");
+  const button = await within(col).findByRole("button", { name: "Check now" });
+  fireEvent.click(button);
+  const working = within(col).getByRole("button", { name: "Checking…" });
+  expect(working).toBeDisabled();
+  expect(working).toHaveAttribute("aria-busy", "true");
+  expect(await screen.findByText("Nothing new")).toBeInTheDocument();
+  await waitFor(() => expect(within(col).getByRole("button", { name: "Check now" })).toBeEnabled());
+});
+
+test("Check now says when a source couldn't be read or was already being read", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  open({
+    "GET watch": () => [watched("a"), watched("b")],
+    "POST today/arrived/check": () => checked({ sources_failed: 1, sources_busy: 1 }),
+  });
+  await user.click(await within(await column("Came in")).findByRole("button", { name: "Check now" }));
+  expect(
+    await screen.findByText("Nothing new. 1 source couldn't be read: see Sources. 1 source was already being read."),
+  ).toBeInTheDocument();
+});
+
+test("Check now is offered only while a source is on", async () => {
+  open({ "GET watch": () => [watched("a", { enabled: false })] });
+  await within(await column("Came in")).findByText("2 messages");
+  expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
 });

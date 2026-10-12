@@ -353,6 +353,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-col { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .tb-head { display: flex; align-items: center; gap: var(--space-2); min-height: var(--space-12); padding: 0 var(--space-4); border-bottom: 1px solid var(--border); flex: none; }
 .tb-head h2 { font-size: var(--text-lg); line-height: var(--lh-lg); margin: 0; }
+.tb-head-act { margin-left: auto; }
 .tb-count { display: inline-block; min-width: var(--space-5); padding: 0 var(--space-2); border-radius: var(--radius-full); background: var(--surface-sunk); color: var(--text); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); text-align: center; }
 .tb-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--space-3); display: grid; align-content: start; gap: var(--space-4); }
 .tb-foot { flex: none; border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4); font-size: var(--text-sm); }

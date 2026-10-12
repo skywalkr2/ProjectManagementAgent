@@ -21,6 +21,10 @@ from engine.workspace import Workspace
 CODE_ROOTS = (Path(__file__).resolve().parent, Path(__file__).resolve().parents[1] / "api")
 log = logging.getLogger(__name__)
 RESTART_NEEDED = "Settings or code changed since the cockpit started; restart it to use them."
+INTERRUPTED = "The app closed while this ran; it runs again now."
+INTERRUPTED_TWICE = "Stopped twice when the app closed during it"
+_REQUEUE_OP = "worker.requeue"
+_INTERRUPTED_OP = "worker.interrupted"
 
 
 #: Settings the running app takes in at once, without a restart: everything that reads them reads the shared config
@@ -57,6 +61,32 @@ def code_fingerprint() -> str:
     """The newest modification time of the running program's own source files."""
     newest = max((p.stat().st_mtime for root in CODE_ROOTS if root.is_dir() for p in root.rglob("*.py")), default=0.0)
     return repr(newest)
+
+
+def requeue_interrupted(store: Store) -> tuple[list[str], list[str]]:
+    """Put back the requests a stop left running: with the app closed nothing is running them. Each goes back in the
+    queue with a note saying why. One found running after it was already put back once waits for the person instead
+    (Try again and Dismiss apply, its approval untouched), so a request that stops the app can't loop. The number of
+    times a request was interrupted is counted from its own history, not from how many runs it started, since
+    a person's Try again also starts a run. Returns the ids queued again and the ids held for the person."""
+    queued: list[str] = []
+    held: list[str] = []
+    with store.transaction() as tx:
+        for r in tx.list("request"):
+            if r.data["state"] != "running":
+                continue
+            history = tx.ledger(kind="request", record_id=r.id)
+            if any(e["op"] in (_REQUEUE_OP, _INTERRUPTED_OP) for e in history):
+                ctx = WriteContext(actor="engine", trust="trusted", op=_INTERRUPTED_OP)
+                tx.update(
+                    "request", r.id, {"state": "needs_you", "waiting": INTERRUPTED_TWICE}, ctx, read_version=r.version
+                )
+                held.append(r.id)
+            else:
+                ctx = WriteContext(actor="engine", trust="trusted", op=_REQUEUE_OP)
+                tx.update("request", r.id, {"state": "queued", "waiting": INTERRUPTED}, ctx, read_version=r.version)
+                queued.append(r.id)
+    return queued, held
 
 
 class Events:
@@ -180,6 +210,8 @@ class Worker:
             self.events.changed()
 
     def start(self) -> None:
+        if any(requeue_interrupted(self.store)):
+            self.events.changed()
         self._thread = threading.Thread(target=self._loop, name="cockpit-worker", daemon=True)
         self._thread.start()
         self._backups = threading.Thread(target=self._backup_loop, name="cockpit-backups", daemon=True)

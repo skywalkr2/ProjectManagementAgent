@@ -888,6 +888,15 @@ class InboxView(BaseModel):
     left_out: int = Field(description="Messages in the same hours that a triage rule closed (newsletters, say).")
 
 
+class InboxCheckView(InboxView):
+    """Came in after reading every source now, with what the read found."""
+
+    new_items: int = Field(description="Messages that were not in the list before this read.")
+    sources_read: int = Field(description="How many sources were read.")
+    sources_failed: int = Field(description="Sources that could not be read this time; their problem shows on Sources.")
+    sources_busy: int = Field(description="Sources that were already being read, so this read left them alone.")
+
+
 class TodayLineView(BaseModel):
     """A line a plugin adds to Today."""
 

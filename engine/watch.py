@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -38,6 +39,20 @@ class Result:
     changed: list[str] = field(default_factory=list)
     removed: list[str] = field(default_factory=list)
     problem: str | None = None
+    note: str | None = None  # something to tell the person that isn't a problem with the source
+
+
+#: What a read says when the same source is already being read.
+ALREADY_READING = "Already reading this source"
+
+_reading: dict[tuple[str, str], threading.Lock] = {}
+_reading_guard = threading.Lock()
+
+
+def _read_lock(ws: Any, source_id: str) -> threading.Lock:
+    """The one lock for a source in a workspace, shared by every caller in this process."""
+    with _reading_guard:
+        return _reading.setdefault((str(ws.db_path), source_id), threading.Lock())
 
 
 def connectors(store: Any) -> dict[str, Connector]:
@@ -79,7 +94,20 @@ def failures_in_a_row(store: Any, source: str) -> int:
 
 
 def refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None = None) -> Result:
-    """Read one source now, compare and hand in what changed. Returns what happened."""
+    """Read one source now, compare and hand in what changed. Returns what happened. A source is never read twice at
+    the same moment: when another read of it is under way this one does nothing and says so (outcome "busy")."""
+    if not any(s.id == source_id for s in cfg.watch.sources):
+        raise StoreError(f"there is no source {source_id} in watch.yaml")
+    lock = _read_lock(ws, source_id)
+    if not lock.acquire(blocking=False):
+        return Result(source_id, "busy", note=ALREADY_READING)
+    try:
+        return _refresh(ws, store, cfg, source_id, now)
+    finally:
+        lock.release()
+
+
+def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None) -> Result:
     now = now or datetime.now(UTC)
     clock = time.monotonic()
     source = next((s for s in cfg.watch.sources if s.id == source_id), None)

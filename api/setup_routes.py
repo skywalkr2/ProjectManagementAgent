@@ -291,9 +291,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.get("/watch/kinds")
     def watch_kinds() -> list[WatchKindView]:
         """The kinds of source the assistant can keep reading: the core's and running add-ons', each with the form
-        its settings take."""
+        its settings take. Kinds made only for tests are left out."""
         found = []
         for name, connector in sorted(source_kinds().items()):
+            if connector.test_only:
+                continue
             items: list = []
             defaults = _defaults(connector.settings)
             config_screens._walk(connector.settings, ["source"], defaults, defaults, {}, items)
