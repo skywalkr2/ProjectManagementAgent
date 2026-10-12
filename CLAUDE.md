@@ -119,6 +119,8 @@ the change that records it also edits the design section it affects, and `docs/d
 ## Before finishing any change
 - Run the tests and the self-check: specificity, provider, pattern and boundary scans, config coverage, manifests, both
   fictional workspaces, the core with no packs enabled, root and nested base paths, deploy checks, web build.
+- A change to `web/` or `api/` also runs the browser tests (`npm --prefix web run e2e`) before it is pushed: CI runs them on
+  every push, and a red run notifies the owner.
 - New config keys have a schema entry, a default, a description and demo values in both workspaces.
 - No new specific in code; if a scan flags one, move it to config or data, never add it to an allowlist to pass.
 
