@@ -4,9 +4,10 @@ A generic, extensible AI-assisted cockpit for running projects: a core loop plus
 one file per part; section "6.18" is in `06-engine.md`. Start at `docs/design/README.md`, which says what to read for each
 kind of task. Always read Parts 1, 2 and 10.
 
-The project plan is in `docs/project/` (charter, scope, risks, schedule). Design 1.0 is the scope baseline: a change to scope
-or design needs a one-line impact note in `docs/decisions.md` first, and during a freeze only fixes are accepted. Build in the
-order of `docs/project/schedule.md`; anything it defers stays deferred.
+The project plan is in `docs/project/` (charter, scope, risks); the order of work is `docs/project/roadmap-to-1.0.md`, and
+anything it defers stays deferred. The design (version in `docs/design/README.md`) is the scope baseline: a change to scope
+or design needs a one-line impact note in `docs/decisions.md` first. A decision isn't done until the design text says it:
+the change that records it also edits the design section it affects, and `docs/design/CHANGES.md` lists it.
 
 ## The boundary (non-negotiable)
 - Core code (`engine/`, `api/`, `web/src/`) contains **no** specific person, team, organization, product, program, system,
@@ -58,7 +59,8 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
   `uv run python -m engine.plugin_guide`. `docs/plugin-guide.md` is generated from the code and is the plugin contract;
   give plugin authors names only from it, never ahead of the code.
 - API routes return Pydantic models from `api/schemas.py`, never bare dicts, so the UI's types stay generated.
-- Try it: `uv run cockpit init ~/cockpit-try --from workspaces/demo-b` then `uv run cockpit serve -w ~/cockpit-try`.
+- Try it as a person would: `uv run cockpit init ~/cockpit-try` (no template) then `uv run cockpit serve -w ~/cockpit-try`.
+  `uv run cockpit demo` is the sandbox on made-up data, for trying a plugin; never a starting point.
 - Tests read names and ids from the fixtures instead of writing them out, so the specificity scan holds for tests too.
 
 ## Deployment and configuration

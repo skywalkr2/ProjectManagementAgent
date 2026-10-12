@@ -184,7 +184,7 @@ For your information; nothing here needs an answer.
 - **The first real use is now a small literary imprint**, not a workplace. The publishing pack moves first in the build order;
   your workplace PM design stays as the reference pack, built on fictional data, as the main proof that the core is complete
   (Part 9, Part 13).
-- **Dependencies and baselines are now core** (6.23): what waits on what, need-by dates, at-risk warnings on Today, and
+- **Dependencies and baselines are now core** (6.23; moved to the project management pack in 1.1, see 10.2): what waits on what, need-by dates, at-risk warnings on Today, and
   variance against a baseline that only the PM can reset.
 - **Design 1.0 is the scope baseline.** Further changes go through change control (`docs/project/scope.md`).
 - **Playbooks** (3.8): built-in good practice for project support in the core and for each field in its pack, overridable
@@ -227,6 +227,100 @@ For your information; nothing here needs an answer.
   tier with exact parameters, vendor error text read only in the adapter, no new work on old code after settings change,
   canonical form and a re-pull after publishing, premise checks before "can't do", `project.add` and person-owned fields,
   office-file extractors, and probation for a new account.
+
+## 10. Design 1.1 (2026-10-12): what changed since the 1.0 baseline, and what was dropped
+
+For you, so you can see what happened to your design after the baseline. Design 1.0 was set on 2026-10-09. Three days
+of building followed, with about sixty decisions (`docs/decisions.md`), and the design text fell behind them. On
+2026-10-12 every part was brought up to date. Items that are designed but not built are now marked "designed, not yet
+built" in place, not deleted. The full audit of design against code is in `docs/project/review-2026-10-12.md` and
+`docs/project/audit-2026-10-12/`.
+
+### 10.1 What the product became
+
+- **An everyday assistant, not only a PM's tool** (1.1, 7.1). A person running their own days signs in to their mail and
+  calendar and is told what to do each day. A PM gets the same home and more.
+- **The core is complete on its own** (1.3, 3.7). The free version is the core plus a "define your own" kit: item
+  types, fields, stages and checks set on screens and saved as a template. Industry packs, your workplace pack among
+  them, are add-ons in their own repositories, found on an Add-ons screen from a public catalog the owner controls
+  (3.11).
+- **Inputs come in on their own** (6.4, 6.5). Watched sources (a folder, a feed, a calendar file address, a mailbox over
+  IMAP) hand in each difference as an ordinary untrusted input. Services that need their own sign-in (the two big mail
+  and calendar services) are add-ons. The core provides the sign-in (OAuth with PKCE through the service's own page),
+  and signing in is the whole setup: the inbox and main calendar start reading at once.
+- **Guided setup and Settings on screen** (4.0, 7.8). A first-run guide covers where the workspace lives, who you are,
+  the AI account, a template, backups and a first hand-in. Settings forms are generated from the schemas. Saves never
+  race and are committed to the workspace's git. AI accounts are picked from a list of services, or of command-line
+  agents run locked down (6.16).
+- **One source of truth and value lists** (5.1). Every fact lives once and is referred to by id. Fields with a known set
+  of values take them from lists the person can extend, with Undo.
+- **Ask the assistant** (6.25). Answers about the app come only from the shipped user guide, the settings and the
+  records, with the passage quoted and checked like evidence. A settings change it suggests is a proposal the person
+  applies.
+- **Document work** (5.0, 6.7, 6.26). Built for the writing and publishing packs, and useful to any pack:
+  - long text with versions and authorship by passage;
+  - drafts reviewed change by change in a two-way or three-way compare view;
+  - working copies edited in the person's own tools and taken back for review;
+  - a synced folder so one workspace moves between two computers;
+  - stages;
+  - second opinions on another account;
+  - cost estimates and budgets.
+- **Plugins work together only through the core** (3.9): shared records, versioned interfaces, events and requests.
+  The plugin API is at 0.3.55. Its developer guide is generated from the code, and that guide is the contract.
+- **The UI was redesigned** (Part 7). The shell is full-width with a sidebar. Today is a ranked queue with a detail pane
+  and a context rail (agenda, to-dos, what came in). A visual system with tokens and a style guide replaces the earlier
+  screens. Record pages and settings follow set layouts, and item titles follow a rule ("{kind} from {person} · {topic}").
+
+### 10.2 Dropped, deferred or changed from your design
+
+Please look at this table first. Each row is something you designed or asked for that is now different. "Not built"
+means the design still holds and the work is scheduled; the phase letters refer to `docs/project/roadmap-to-1.0.md`.
+
+| Your design (or 1.0) | Now | Why |
+|---|---|---|
+| **Scope enforced by the applier** (6.18): only the tracked area gets actions and detailed questions; one impact question per other area | Designed, not built (phase E) | The first real use is a writer's own work, where nothing is outside scope. It matters again when a workplace pack exists. |
+| **Facts a schedule holds are looked up, never asked** (6.19) | Designed, not built (phase C4) | Waits for the first pack with a published schedule to read. |
+| **The publisher and channels** (6.3, 6.12): the wiki page channel, content-hash approval, Waiting to go out, `external_editors` and lock checks | Not built. The file channel comes first (phase C4); social, email and newsletter channels are not in 1.0 | Copy and Mark sent covers follow-ups today. The first outbound need is saving approved files. |
+| **Read-backs for system ops from the PM's note** (6.7, your second round): Applies to, Doesn't change, Overlaps with, dry-run count | Not built (phase E). System ops from the PM apply with Undo but no read-back | Rules and their structured targets aren't built yet, so there is nothing to compute the lines from. |
+| **Glossary and proposed lessons in every packet** (6.22, your first round, question 1) | Not built (phase E). Packets carry the open actions and questions, people, projects and value lists, stable parts first | Lessons were a launch-slice item and were missed. The review of 2026-10-12 lists this. |
+| **Restore as of a time, and restore one record** (5.0, your caution on git as recovery) | Not built (phase E). Export and import round-trip and are tested; backups run to folders on their own | Comes with the governor. |
+| **Encrypted off-machine backups** (4.15) | Partly built: backups go to the folders the person picks (a synced folder works); there is no encryption and no object store yet | As above. |
+| **Audiences and the restricted-content invariant** (4.1, 6.7, 12.1) | Not built. The other invariants on your must-refuse list are in place: model name never shown, links a recipient can open, actions need a person, evidence quotes must exist | Needs the publisher. |
+| **Code owners and hand-off drafts** (4.18, 6.13) | Not built | Needs requests about other projects, which come with the workplace pack. |
+| **The governor** (6.14): stale-item sweeps, outage handling, scheduled export with its remote | Not built (phase E). Crashed runs are not yet re-queued on start (phase A) | Deferred behind the person's path working. |
+| **The app restarts itself to use new settings** (6.14, in 1.0) | Changed: settings read at the moment of use apply at once, anything else says a restart is needed and waits for the person's "Restart now" | The owner's rule: restart only when needed and only when told. |
+| **Today as one ranked column** (7.3) | Changed: a ranked queue with a detail pane and a context rail. Engine and API built; the screen is phase B | A laptop screen was two-thirds empty. |
+| **Dependencies, baselines, RAID, risk reviews, escalation, cadence, agendas** (6.23, 6.24, added in 1.0 from your lessons) | Moved out of the core into a project management pack (phase C2), not yet started | Schedules belong to a kind of work. The owner wants an AI project manager that builds schedules and tracks action items as a pack of its own. |
+| **The workplace reference pack bundled** (Part 9.1–9.5) | A private add-on in its own repository, not started. The core proves itself through the define-your-own kit and the example plugin | The core must be complete with no pack; industry depth is sold separately. |
+| **The publishing pack bundled** (9.6–9.7) | An add-on in its own repository, not started (phase C3). A writing pack is being built by its own builder | Same decision. |
+| **"The app never installs code into itself"** (3.11, in 1.0) | Changed: one-click install from the Add-ons screen, with checksums. The server side is built; the button is not (phase A) | Installing from a terminal was a pain for the people the owner shares it with. |
+| **Hosted mode** (Part 11) | After 1.0. Base paths and public addresses are kept working, since a local install uses them too | One person on their own computer first. |
+| **Triage rules in `triage.yaml`** (4.5) | A `triage:` list in `watch.yaml`, beside the sources they name | Fewer files. |
+| **A first read hands in nothing** (6.4, the baseline) | A setting: baseline, recent (the last day, the default for a sign-in) or all | A baseline meant a person who just signed in saw nothing at all. |
+| **A rename is one op that updates every reference** (6.7, your lesson) | Holds for value lists. There is no general `record.rename` op yet; records refer to each other by id, so a name changes in one place | Ids made most renames unnecessary. |
+| **The go/no-go on 2026-10-30 and the November freeze** | Set aside. The roadmap now runs in phases, each ending on a test the owner runs | Too many streams ran at once and errors reached the owner (`review-2026-10-12.md`). |
+| **The code fixer** | Removed (section 9 above). Problems become a report the PM sends to the maintainers | An AI rewriting installed code is too risky for people who install it. |
+
+### 10.3 Your earlier answers: kept and built
+
+These hold in the code as you asked:
+- owners as a list of person ids with an optional team, and "Pick an owner" for unknown people;
+- your must-refuse list as invariants and your send-back list as lints, held for the PM after one return when the item
+  reaches someone else;
+- undo per op group with per-field conflicts;
+- runner errors classified from the exit code and error stream only;
+- every waiting state saying why and until when;
+- no network files nothing;
+- our own accounts' edits marked as ours;
+- packets stable parts first;
+- evidence on every claim;
+- one input per AI call.
+
+### 10.4 What we'd like from you
+
+1. **Anything in 10.2 you think is more urgent than its phase.** Scope (6.18) and fact lookups (6.19) came from your
+   running deployment. Both are scheduled after the packs.
+2. **Anything you designed that this summary doesn't mention.** That is the case we are most worried about.
 
 ## Plugin host, API 0.1 (2026-10-09)
 
