@@ -36,10 +36,22 @@ def _remember(ws: Any, names: set[str]) -> None:
     temporary.replace(path)
 
 
-def start_sources(ws: Any, cfg: Any, store: Any, sign_in: Any) -> list[str]:
-    """Add the sign-in's declared sources the workspace doesn't read yet, once. Returns the labels added."""
+def not_read(ws: Any, sign_in: Any) -> list[str]:
+    """The labels of the sign-in's declared sources the workspace reads nothing with yet (none were added, or the
+    person removed them), so the screens can offer to start them with one click."""
+    try:
+        current = load_config(ws.config_dir, env=dict(os.environ))
+    except ConfigError:
+        return []
+    reading = {s.connector for s in current.watch.sources}
+    return [s["label"] for s in sign_in.sources if s["connector"] not in reading]
+
+
+def start_sources(ws: Any, cfg: Any, store: Any, sign_in: Any, *, again: bool = False) -> list[str]:
+    """Add the sign-in's declared sources the workspace doesn't read yet: once per sign-in, or `again` when the
+    person asks for them. Returns the labels added."""
     started = _started(ws)
-    if sign_in.name in started or not sign_in.sources:
+    if (sign_in.name in started and not again) or not sign_in.sources:
         return []
     try:
         current = load_config(ws.config_dir, env=dict(os.environ))

@@ -233,6 +233,7 @@ export const api = {
   signIns: () => call<S["SignInView"][]>("GET", "sign-ins"),
   startSignIn: (name: string) => call<S["SignInStarted"]>("POST", `sign-ins/${named(name)}/start`),
   signOut: (name: string) => call<S["Ok"]>("DELETE", `sign-ins/${named(name)}`),
+  startSignInSources: (name: string) => call<S["SignInView"]>("POST", `sign-ins/${named(name)}/sources`),
   saveSignInApp: (name: string, body: S["SignInApp"]) => call<S["SignInView"]>("POST", `sign-ins/${named(name)}/app`, body),
   setAsideSignInApp: (name: string) => call<S["SignInView"]>("POST", `sign-ins/${named(name)}/app/set-aside`),
   bringBackSignInApp: (name: string) => call<S["SignInView"]>("POST", `sign-ins/${named(name)}/app/bring-back`),

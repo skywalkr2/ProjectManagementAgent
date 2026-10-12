@@ -87,12 +87,17 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
   };
 
   const again = item.status === "expired";
-  const label = signedIn
+  const notReading = signedIn ? (item.not_reading ?? []) : [];
+  const label = notReading.length > 0
+    ? t("sign_in.start_reading")
+    : signedIn
     ? t("sign_in.choose_source")
     : busy
       ? t("sign_in.working")
       : t(again ? "sign_in.sign_in_again" : "sign_in.sign_in");
-  const named = signedIn
+  const named = notReading.length > 0
+    ? t("sign_in.start_reading_named", { label: item.label })
+    : signedIn
     ? t("sign_in.choose_source_named", { label: item.label })
     : t(again ? "sign_in.sign_in_again_named" : "sign_in.sign_in_named", { label: item.label });
   const notReady = !signedIn && !item.ready;
@@ -101,7 +106,13 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
   const allows = signedIn ? [] : (item.allows ?? []);
   const missing = signedIn ? (item.missing ?? []) : [];
   const showHint = notReady && !formOpen;
-  const describedBy = [problem && `${base}-problem`, showHint && `${base}-not-ready`].filter(Boolean).join(" ");
+  const describedBy = [
+    problem && `${base}-problem`,
+    showHint && `${base}-not-ready`,
+    notReading.length > 0 && `${base}-not-reading`,
+  ]
+    .filter(Boolean)
+    .join(" ");
   const menuId = `${base}-menu`;
 
   const openForm = () => {
@@ -131,7 +142,16 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
       }),
     );
 
+  const startReading = () =>
+    void act(
+      () => api.startSignInSources(item.name),
+      () => ({ message: t("sign_in.started_reading_toast", { list: notReading.join(", ") }) }),
+    );
+
   const actions: MenuAction[] = [];
+  if (signedIn && notReading.length > 0) {
+    actions.push({ id: "choose", label: t("sign_in.choose_source"), run: () => props.onChooseSource(addonOfSignIn(item.name)), disabled: busy });
+  }
   if (signedIn) {
     actions.push({ id: "sign-out", label: t("sign_in.sign_out"), run: () => void signOut(), disabled: busy });
     actions.push({ id: "sign-in-again", label: t("sign_in.sign_in_again"), run: () => void start(), disabled: busy || !item.ready });
@@ -180,6 +200,11 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
                 ))}
               </ul>
             </div>
+          )}
+          {notReading.length > 0 && (
+            <p className="hint" id={`${base}-not-reading`}>
+              {t("sign_in.not_reading", { list: notReading.join(", ") })}
+            </p>
           )}
           {missing.length > 0 && (
             <div className="field">
@@ -239,7 +264,13 @@ export function SignInRow(props: { item: SignIn; onChooseSource: (plugin: string
             disabled={busy || notReady}
             aria-label={named}
             aria-describedby={describedBy || undefined}
-            onClick={() => (signedIn ? props.onChooseSource(addonOfSignIn(item.name)) : void start())}
+            onClick={() =>
+              notReading.length > 0
+                ? startReading()
+                : signedIn
+                  ? props.onChooseSource(addonOfSignIn(item.name))
+                  : void start()
+            }
           >
             {label}
           </button>
@@ -354,5 +385,44 @@ function OwnAppForm(props: {
         </button>
       </div>
     </form>
+  );
+}
+
+/** Signed-in accounts whose add-on reads something by default (the inbox, the calendar) that nothing reads yet, one
+ * line each with Start reading: how a source the person removed comes back without filling in a form. */
+export function NotReadingLines() {
+  const { t } = useWords();
+  const act = useAct();
+  const signIns = useQuery({ queryKey: ["sign-ins"], queryFn: api.signIns });
+  const waiting = (signIns.data ?? []).filter((s) => s.status === "signed_in" && (s.not_reading ?? []).length > 0);
+  if (waiting.length === 0) return null;
+  return (
+    <ul className="plain-list" aria-label={t("sign_in.start_reading")}>
+      {waiting.map((item) => {
+        const list = (item.not_reading ?? []).join(", ");
+        const id = `not-reading-${item.name.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+        return (
+          <li key={item.name} className="row pair">
+            <p className="hint" id={id}>
+              {t("sources.signed_in_not_reading", { label: item.label, list })}
+            </p>
+            <button
+              type="button"
+              className="btn primary"
+              aria-label={t("sign_in.start_reading_named", { label: item.label })}
+              aria-describedby={id}
+              onClick={() =>
+                void act(
+                  () => api.startSignInSources(item.name),
+                  () => ({ message: t("sign_in.started_reading_toast", { list }) }),
+                )
+              }
+            >
+              {t("sign_in.start_reading")}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

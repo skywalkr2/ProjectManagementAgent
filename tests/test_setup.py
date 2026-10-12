@@ -832,3 +832,18 @@ def test_an_add_on_turned_on_shows_as_on_and_one_left_off_stops_the_step_asking(
     spare = next(p for p in c.get(f"{api}/packs").json()["installed"] if p["name"] == "spare")
     assert spare["enabled"] is True  # as saved, before the restart
     assert "spare" not in setup.addons_off(ws, load_config(ws.config_dir, env={}))
+
+
+def test_a_list_written_at_its_keys_own_indent_is_edited_in_place():
+    import yaml
+
+    from engine.config.yaml_edit import set_key
+
+    text = "# kept\nretries: 3\nsources:\n- id: a\n  label: A\nlast: true\n"
+    edited = set_key(text, ["sources"], [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}])
+    assert yaml.safe_load(edited) == {
+        "retries": 3,
+        "sources": [{"id": "a", "label": "A"}, {"id": "b", "label": "B"}],
+        "last": True,
+    }
+    assert edited.startswith("# kept")

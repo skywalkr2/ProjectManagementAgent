@@ -33,7 +33,7 @@ def set_key(text: str, path: list[str], value: Any) -> str:
         result = "\n".join(edited) + "\n"
         if (yaml.safe_load(result) or {}) == expected:
             return result
-    except _Fallback:
+    except (_Fallback, yaml.YAMLError):
         pass
     return yaml.safe_dump(expected, sort_keys=False, allow_unicode=True)
 
@@ -49,7 +49,7 @@ def remove_key(text: str, path: list[str]) -> str:
         result = "\n".join(edited) + "\n"
         if (yaml.safe_load(result) or {}) == expected:
             return result
-    except _Fallback:
+    except (_Fallback, yaml.YAMLError):
         pass
     return yaml.safe_dump(expected, sort_keys=False, allow_unicode=True)
 
@@ -114,10 +114,15 @@ def _key_of(line: str) -> tuple[int, str, str] | None:
 
 
 def _block_end(lines: list[str], start: int, indent: int) -> int:
-    """The first line after `start` that is significant and indented `indent` or less (the end of start's block)."""
+    """The first line after `start` that is significant and indented `indent` or less (the end of start's block). A
+    list item at the key's own indent (`key:` then `- item` below it, as many writers lay lists out) is in the block."""
     for i in range(start + 1, len(lines)):
-        if _significant(lines[i]) and _indent(lines[i]) <= indent:
-            return i
+        line = lines[i]
+        if not _significant(line) or _indent(line) > indent:
+            continue
+        if _indent(line) == indent and line.lstrip(" ").startswith(("- ", "-\t")) or line.strip() == "-":
+            continue
+        return i
     return len(lines)
 
 

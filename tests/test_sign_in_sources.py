@@ -75,6 +75,12 @@ def test_signing_in_starts_the_declared_sources_once(signing):  # noqa: F811
     (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(config))
     sign_in(c, api)
     assert not [s for s in sources(ws) if s["connector"] == "p18/inbox"]
+    # The row says what isn't read, and one click starts it again.
+    row = c.get(f"{api}/sign-ins").json()[0]
+    assert row["not_reading"] == ["Your inbox"]
+    again = c.post(f"{api}/sign-ins/p18/service/sources")
+    assert again.status_code == 200 and again.json()["not_reading"] == []
+    assert [s["label"] for s in sources(ws) if s["connector"] == "p18/inbox"] == ["Your inbox"]
 
 
 def test_a_sign_in_made_earlier_gets_its_sources_when_the_app_starts(signing):  # noqa: F811

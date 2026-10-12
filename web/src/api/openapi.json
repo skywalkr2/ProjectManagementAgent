@@ -6697,6 +6697,14 @@
             "title": "Needs Secret",
             "type": "boolean"
           },
+          "not_reading": {
+            "description": "While signed in: what the add-on reads by default (the inbox, the calendar) that nothing reads yet; POST /api/sign-ins/{name}/sources starts them.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Not Reading",
+            "type": "array"
+          },
           "own_app_steps": {
             "description": "How to make one's own registration with the service.",
             "items": {
@@ -12821,6 +12829,46 @@
           }
         },
         "summary": "Set Aside App"
+      }
+    },
+    "/api/sign-ins/{name}/sources": {
+      "post": {
+        "description": "Start reading what the add-on reads by default for this sign-in (the inbox, the calendar), where nothing\nreads with that connector yet: one click instead of filling in a source by hand.",
+        "operationId": "start_reading_api_sign_ins__name__sources_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignInView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Reading"
       }
     },
     "/api/sign-ins/{name}/start": {

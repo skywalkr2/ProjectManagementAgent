@@ -1500,6 +1500,11 @@ class SignInView(BaseModel):
     own_app_steps: list[SignInStep] = Field(
         default_factory=list, description="How to make one's own registration with the service."
     )
+    not_reading: list[str] = Field(
+        default_factory=list,
+        description="While signed in: what the add-on reads by default (the inbox, the calendar) that nothing reads "
+        "yet; POST /api/sign-ins/{name}/sources starts them.",
+    )
 
 
 class SignInStep(BaseModel):

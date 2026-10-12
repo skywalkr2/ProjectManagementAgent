@@ -16,6 +16,7 @@ import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { restoreFocus } from "./ModalPanel";
 import { ItemFields } from "./SettingRow";
+import { NotReadingLines } from "./SignIns";
 
 type Source = S["WatchSourceView"];
 type Closed = S["AutoClosedView"];
@@ -132,6 +133,7 @@ export function Sources(props: {
         </div>
       </div>
       <p className="hint">{t("sources.intro")}</p>
+      <NotReadingLines />
       {form?.type === "add" && (
         <SourceForm
           key={`add-${seen}-${form.plugin ?? ""}`}

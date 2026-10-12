@@ -15,6 +15,7 @@ from api.schemas import Ok, SignInApp, SignInStarted, SignInStep, SignInView
 from engine import sign_in as flow
 from engine.config import Config
 from engine.connectors import ConnectorError
+from engine.sign_in_sources import not_read, start_sources
 from engine.storage import Store
 from engine.workspace import Workspace
 
@@ -56,11 +57,27 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
             set_aside=(keys(s.plugin) / f"{s.client_id}.set-aside").is_file(),
             default_unusable=bool(s.default_client_id) and not host.default_app_fits(s),
             own_app_steps=[SignInStep(text=text, link=link) for text, link in s.own_app_steps],
+            not_reading=not_read(ws, s) if status == "signed_in" else [],
         )
 
     @r.get("/sign-ins")
     def sign_ins() -> list[SignInView]:
         return [view(s) for s in host.sign_ins().values()]
+
+    @r.post("/sign-ins/{name:path}/sources")
+    def start_reading(name: str) -> SignInView:
+        """Start reading what the add-on reads by default for this sign-in (the inbox, the calendar), where nothing
+        reads with that connector yet: one click instead of filling in a source by hand."""
+        s = find(name)
+        if flow.status(keys(s.plugin), s) != "signed_in":
+            raise HTTPException(status_code=409, detail=f"Sign in to {s.label} first.")
+        from engine.settings import SettingsConflict, SettingsError
+
+        try:
+            start_sources(ws, cfg, store, s, again=True)
+        except (SettingsConflict, SettingsError) as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        return view(s)
 
     @r.post("/sign-ins/{name:path}/app")
     def paste_app(name: str, body: SignInApp) -> SignInView:
@@ -140,8 +157,6 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
         finally:
             web.close()
         host.signed_in(done, ws.root)
-        from engine.sign_in_sources import start_sources
-
         try:
             start_sources(ws, cfg, store, done)
         except Exception as err:  # the sign-in stands; the person can still add the sources by hand
