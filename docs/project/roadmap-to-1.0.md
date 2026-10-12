@@ -284,7 +284,9 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago").
 - [ ] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note, kept out of To send.
 - [ ] **This week at every width** (7.7): a collapsed Today section, and the inspector's view when nothing is selected.
-- [ ] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours.
+- [ ] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours. The targets are
+  notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook
+  (chat app or push topic). Each is checked with "Send me a test" and sends only to the person, a count by default.
 - [ ] Words and accessibility throughout: the microcopy table in the review, and axe in light and dark at four widths.
 
 The journey tests from A3 run against the new screens as they land.

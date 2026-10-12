@@ -19,8 +19,10 @@ placed the work.
 - **Follow-ups' Later group** for questions held for a meeting or a weekly note; the question's `batch` field already
   exists (phase B).
 - **This week at every width** (phase B).
-- **Opt-in notifications** for the Decide group only, with quiet hours (phase B). A phone gets them only when it can reach
-  the app.
+- **Opt-in notifications** for the Decide group only, with quiet hours (phase B). Update after the author's follow-up: a
+  notification target is a channel (the browser, mail to the person themselves, or a webhook for a chat app or push topic),
+  tested with "Send me a test", so a phone gets them anywhere from day one, with no hosted mode. Targets send only to the
+  person and carry a count by default; titles go only to targets allowed for the data level.
 - **Small fixes:**
   - format-only differences never appear in Waiting to go out;
   - restart and pause lines stay on Today even when the status chip shows them;

@@ -73,7 +73,9 @@ flagged to the PM once, as unsupported, not request by request.
 The interface in 3.3. A channel describes its capabilities: versioned targets with a concurrency check, pulling others' edits
 back, scheduled sending, length limits, media. The core ships the clipboard channel (the PM copies the approved text and pastes
 it anywhere), the **file channel** (the approved content is written to a configured folder, in whatever format a renderer
-produced: text, a document, a PDF, an ebook; with a synced folder, by default the project's `outputs/` folder, 5.0) and the fake channel. Wiki pages, email, blogs and social networks are plugins.
+produced: text, a document, a PDF, an ebook; with a synced folder, by default the project's `outputs/` folder, 5.0) and the fake channel. Wiki pages, email, blogs and social networks are plugins. A **notification target** (7.19, phase B)
+is a channel of its own kind: mail to the person themselves, or a webhook. It sends only to the person, and only the "needs
+you" items, so it needs no per-message approval.
 Channels are called only by the publisher (6.12). The publisher, the file channel and the clipboard channel as channels are
 *designed, not yet built* (roadmap, phase C4); the person copies approved text from the review today.
 

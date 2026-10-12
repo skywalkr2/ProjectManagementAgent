@@ -482,6 +482,7 @@ Checked against the screens and their wording first.
 | 6. "This week" at every width | A collapsed Today section, and what the inspector shows when nothing is selected; in the rail from 2560px (phase B). |
 | 7. Notifications for "needs you" only | 7.19: opt-in, the Decide group's items only, one line leading with the action, quiet hours (phase B). One limit: a phone gets them only when it can reach the app, which for a local install means the same network; anywhere else waits for hosted mode. |
 | 8. Knowledge rows show use | "Used 12 times · last 2 days ago" or "Never used", from the knowledge log (phase B). |
+| Follow-up: notifications don't need hosted mode | Right. A notification target is a channel: the browser, mail to the person themselves, or a webhook (a chat app's incoming messages, a push-service topic). It's configured once and checked with "Send me a test", so the phone gets "needs you" anywhere from day one. Two guards. It sends only to the person, which is why it needs no per-message approval. And because a push service or chat app is a third party, it carries a count by default; titles go only to targets allowed for the data level, and restricted items never. |
 | The status chip | The restart and pause lines stay on Today even when the chip shows them. |
 | Format-only drafts | 7.4 now says they never appear in Waiting to go out. |
 | The Add-ons introduction | It does still say "the app never installs anything itself". It is fixed with the Install button in phase A. |
