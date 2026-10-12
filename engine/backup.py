@@ -65,6 +65,16 @@ def due(ws: Workspace, cfg: Config, now: datetime | None = None) -> bool:
     return False
 
 
+def _free_folder(base: Path, name: str) -> Path:
+    """The dated folder for a backup: two backups in the same second get -2, -3 … rather than refusing each other."""
+    path = base / name
+    n = 2
+    while path.exists():
+        path = base / f"{name}-{n}"
+        n += 1
+    return path
+
+
 def _hours(now: datetime, stamp: str) -> float:
     return (now - datetime.fromisoformat(stamp)).total_seconds() / 3600
 
@@ -81,7 +91,7 @@ def _run(ws: Workspace, cfg: Config, now: datetime) -> dict[str, Any]:
             if not base.is_dir():
                 # Never create it: a drive that isn't connected would otherwise get a folder on this computer's disk.
                 raise ValueError(f"{base} isn't there; connect the drive or check the folder")
-            dest = base / f"{ws.root.name}-{stamp}"
+            dest = _free_folder(base, f"{ws.root.name}-{stamp}")
             dest.mkdir(exist_ok=False)
             src = sqlite3.connect(ws.db_path)
             dst = sqlite3.connect(dest / "cockpit.db")

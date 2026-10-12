@@ -81,9 +81,7 @@ def settings_lines(cfg: Any) -> list[str]:
     for item in config_screens.describe(cfg):
         if PRIVATE_KEYS.search(item.key) or item.type == "other":
             continue
-        change = (
-            "changeable" if item.editable else "locked" if item.locked else "changed in the settings files, not here"
-        )
+        change = "changeable" if item.editable else "locked" if item.locked else "not changed from this screen"
         now = json.dumps(item.value, ensure_ascii=False)
         lines.append(
             f"{config_screens.screen_name(item)}: {item.description.rstrip('. ')}. Now {now} "

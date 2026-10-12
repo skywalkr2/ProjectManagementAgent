@@ -382,6 +382,7 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .compact .row.pair { grid-template-columns: minmax(0, 1fr) auto; }
 .compact .row .kind { justify-self: start; }
 .compact .empty { text-align: left; }
+.first-go .kind { margin-bottom: var(--space-1); }
 .tb-body > .compact + .compact { border-top: 1px dashed var(--border); padding-top: var(--space-3); }
 [data-narrow] .today-board { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-auto-flow: row; height: auto; }
 [data-narrow] .tb-col, [data-narrow] .tb-body { overflow: visible; }

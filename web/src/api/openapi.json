@@ -6119,6 +6119,12 @@
             "title": "Assistant Name",
             "type": "string"
           },
+          "assistant_named": {
+            "default": true,
+            "description": "The assistant has a name of its own; false while it still has the default name.",
+            "title": "Assistant Named",
+            "type": "boolean"
+          },
           "base_path": {
             "title": "Base Path",
             "type": "string"

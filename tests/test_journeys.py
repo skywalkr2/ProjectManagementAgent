@@ -105,11 +105,12 @@ def test_j5_a_backup_of_a_working_workspace_restores_to_the_same_screens_and_led
             assert any(change["state"] == "review" for change in shown["changes"])
             assert not [line for line in shown["queue"] if line["kind"] == "first_go"]
 
-            # Back up now: one dated folder in the folder I chose.
+            # Choosing the folder made the first backup; Back up now makes another, with everything done since.
             status = client.post("/api/backup")
             assert status.status_code == 200, status.text
             assert status.json()["backup"]["last_success"] and not status.json()["backup"]["needs_attention"]
-        (dated,) = list(offsite.iterdir())
+        first, dated = sorted(offsite.iterdir())
+        assert _counts(first / "cockpit.db") != _counts(dated / "cockpit.db")
         before = _counts(ws.db_path)
 
         # Restore it into a new folder and open that: the same screens, the same ledger.

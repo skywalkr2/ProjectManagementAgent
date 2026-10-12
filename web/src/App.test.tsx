@@ -8,6 +8,7 @@ import { App } from "./App";
 const rc = (extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeConfig"] => ({
   api_base: "api",
   assistant_name: "Helper",
+  assistant_named: true,
   base_path: "",
   demo: false,
   feedback_to: "feedback@example.com",

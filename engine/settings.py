@@ -267,7 +267,7 @@ def save(
         cfg = load_config(config_dir, env=env)
     except ConfigError as err:
         log.warning("A save found the settings files unreadable: %s", err)
-        raise SettingsError(f"the settings files have a problem to fix first: {err.plain}") from None
+        raise SettingsError(f"your settings have a problem to fix first: {err.plain}") from None
     if not changes and not reset:
         return Saved(fingerprint=fingerprint(config_dir))
     plugins = getattr(store, "plugins", None)
@@ -380,7 +380,7 @@ def _check_key(
             f"{screen_name(setting)} is set by {'an environment variable' if setting.source == 'env' else 'a flag'}"
         )
     if setting is not None and not setting.editable and not key.startswith(allow):
-        raise SettingsError(f"{screen_name(setting)} is changed in the workspace's settings files, not here")
+        raise SettingsError(f"{screen_name(setting)} can't be changed here")
     if setting is None:
         for other, layer in cfg.sources.items():
             overlaps = other == key or other.startswith(key + ".") or key.startswith(other + ".")

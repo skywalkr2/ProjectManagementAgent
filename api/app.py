@@ -35,6 +35,7 @@ from api.watch_routes import build_watch_router
 from engine import __version__
 from engine.ai.router import Router
 from engine.config import Config
+from engine.config.schema import WorkspaceFile
 from engine.local_guards import allowed_hosts, allowed_origins
 from engine.shipped import product, shipped
 from engine.storage import Store
@@ -72,6 +73,9 @@ SECURITY_HEADERS = {
 
 
 log = logging.getLogger(__name__)
+
+#: The name the assistant has until the person gives it one.
+_DEFAULT_ASSISTANT_NAME = WorkspaceFile.model_fields["assistant_name"].default
 
 
 def create_app(
@@ -211,6 +215,7 @@ def create_app(
             base_path=base_path,
             api_base=f"{prefix}/api",
             assistant_name=cfg.workspace.assistant_name,
+            assistant_named=cfg.workspace.assistant_name.strip() not in ("", _DEFAULT_ASSISTANT_NAME),
             workspace_name=cfg.workspace.name,
             version=__version__,
             pm=cfg.workspace.user.person,

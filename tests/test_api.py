@@ -33,6 +33,19 @@ def test_bearer_token_works(client):
     assert body["base_path"] == cfg.server.base_path
     assert body["api_base"] == f"{prefix}/api"
     assert body["assistant_name"] == cfg.workspace.assistant_name
+    assert body["assistant_named"] is True  # the fixture's assistant has a name of its own
+
+
+def test_the_runtime_config_says_whether_the_assistant_has_a_name_of_its_own(tmp_path):
+    def asked(folder, **names):
+        ws = init_workspace(tmp_path / folder, git=False, **names)
+        app = create_app(ws, ws.config(env={}), TOKEN, start_worker=False)
+        return TestClient(app).get("/api/runtime-config", headers={"Authorization": f"Bearer {TOKEN}"}).json()
+
+    # The default name is the one the person hasn't chosen yet; the screens word themselves for that.
+    assert asked("plain")["assistant_named"] is False
+    named = asked("named", assistant="Ada")
+    assert named["assistant_name"] == "Ada" and named["assistant_named"] is True
 
 
 def test_link_token_sets_a_cookie_scoped_to_the_base_path_and_strips_itself(client):

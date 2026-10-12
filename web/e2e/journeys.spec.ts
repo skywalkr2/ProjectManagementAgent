@@ -59,6 +59,7 @@ test.describe.serial("journeys", () => {
     await main.getByRole("button", { name: "Check", exact: true }).click();
     const everyday = main.getByLabel("Model for everyday work");
     await expect(everyday.locator("option")).toHaveCount(2);
+    await main.getByText(/^Models:/).click();
     await everyday.selectOption("fake-small");
     // The usual hand-in is internal material; an account only takes what it is allowed to see.
     await main.getByLabel("Internal material").check();

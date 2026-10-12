@@ -59,6 +59,7 @@ test.describe.serial("journey: mail", () => {
     await main.getByRole("button", { name: "Check", exact: true }).click();
     const everyday = main.getByLabel("Model for everyday work");
     await expect(everyday.locator("option")).toHaveCount(2);
+    await main.getByText(/^Models:/).click();
     await everyday.selectOption("fake-small");
     await main.getByLabel("Internal material").check();
     await main.getByRole("button", { name: "Add account" }).click();
@@ -83,6 +84,11 @@ test.describe.serial("journey: mail", () => {
     // and the app proves the sign-in is its own. The answer's code and state are not left in the address.
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
     await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
+    // The row no longer says to sign in: it says who is signed in and what is read, and offers no Sign in.
+    await expect(row).toHaveAttribute("data-signed-in", "");
+    await expect(row).toContainText("Reading your mail and calendar.");
+    await expect(row).not.toContainText("Sign in to start reading");
+    await expect(row.getByRole("button", { name: /^Sign in/ })).toHaveCount(0);
     let seen = await service();
     expect(seen).toMatchObject({ authorizations: 1, exchanges: 1, refused: 0 });
     expect(page.url()).not.toMatch(/code=|state=|sign_in=/);

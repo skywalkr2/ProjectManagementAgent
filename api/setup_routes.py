@@ -310,7 +310,10 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if any(os.path.realpath(os.path.expanduser(t["path"])) == check.path for t in targets):
             raise HTTPException(status_code=409, detail="Backups already go to that folder.")
         targets.append({"path": check.path, "label": body.label.strip()})
-        return saved(save({"storage.backups.targets": targets}, [], body.fingerprint, allow=("storage.backups.",)))
+        result = saved(save({"storage.backups.targets": targets}, [], body.fingerprint, allow=("storage.backups.",)))
+        # The first backup is made now, in the background, so choosing where doesn't leave a request to back up.
+        worker.first_backup_soon()
+        return result
 
     # ---- AI accounts ---------------------------------------------------------------------------------------------
 

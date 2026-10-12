@@ -114,6 +114,7 @@ const COMMAND_ALLOWED = new Set(["addons.demo_command"]);
 function wordingProblems(text: string): string[] {
   const found: string[] = [];
   for (const m of text.matchAll(/\S*\.ya?ml\b/g)) found.push(`names a settings file: ${m[0]}`);
+  for (const m of text.matchAll(/\bsettings? files?\b/gi)) found.push(`names a settings file: ${m[0]}`);
   for (const m of text.matchAll(/\b(?:env|keychain):|\bfile:\/|\bfile:~/g)) found.push(`names a secret reference: ${m[0]}`);
   for (const m of text.matchAll(/\b(?:requires|provides)\.[a-z_]+|\bplugin_api\b/g)) found.push(`names a manifest field: ${m[0]}`);
   const key = new RegExp(`(?<![\\w.-])(?:${SETTINGS_FILES.join("|")})(?:\\.[A-Za-z_][\\w-]*)+(?![\\w-])`, "g");
@@ -126,6 +127,7 @@ function wordingProblems(text: string): string[] {
 
 test("the wording check finds what it should and lets look-alikes through", () => {
   expect(wordingProblems("see ai.yaml").length).toBeGreaterThan(0);
+  expect(wordingProblems("The settings file refers to it, and your Settings Files too")).toHaveLength(2);
   expect(wordingProblems("use env:NAME or file:/path")).toHaveLength(2);
   expect(wordingProblems("raise ai.budgets.per_run_usd")).toHaveLength(1);
   expect(wordingProblems("requires.secrets and plugin_api")).toHaveLength(2);

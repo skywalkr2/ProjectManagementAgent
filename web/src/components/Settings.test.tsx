@@ -452,7 +452,7 @@ test("an add-on's settings sit under its name after the app's own groups, one gr
   expect(within(group).getByLabelText("What mode does for the add-on")).toHaveValue("quiet");
   expect(within(group).getByText("Default: Hi")).toBeInTheDocument();
   const fixed = within(group).getByText("What fixed does for the add-on").closest(".setting") as HTMLElement;
-  expect(within(fixed).getByText("Changed in the workspace's settings files for this add-on.")).toBeInTheDocument();
+  expect(within(fixed).getByText("This add-on's setting is changed outside this screen.")).toBeInTheDocument();
 });
 
 test("an add-on's settings save like the app's: only what changed, under the key the file uses, with undo", async () => {

@@ -61,8 +61,15 @@ test.describe.serial("journey: new start", () => {
     await main.getByLabel("Your full name").fill(info.people[0]);
     await main.getByRole("button", { name: "Save" }).click();
     await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
+    // The save said so in a toast, which never covers the screen's own buttons: Back and Next can be pressed right away.
+    const notices = page.getByRole("region", { name: "Notifications" });
+    await expect(notices.getByText(/^Saved\./)).toBeVisible();
+    await main.getByRole("button", { name: "Next" }).click({ trial: true });
     await visit(page);
     await main.getByRole("button", { name: "Next" }).click();
+    // A toast from one screen is gone when the next one opens.
+    await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+    await expect(notices.getByText(/^Saved\./)).toHaveCount(0);
 
     // 3. Your AI account: the fake service, with Internal ticked, since my mail is internal material.
     await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
@@ -73,6 +80,7 @@ test.describe.serial("journey: new start", () => {
     await main.getByRole("button", { name: "Check", exact: true }).click();
     const everyday = main.getByLabel("Model for everyday work");
     await expect(everyday.locator("option")).toHaveCount(2);
+    await main.getByText(/^Models:/).click();
     await everyday.selectOption("fake-small");
     await main.getByLabel("Internal material").check();
     await visit(page);
@@ -89,6 +97,11 @@ test.describe.serial("journey: new start", () => {
     await expect(row).toHaveAttribute("data-state", "not_installed");
     await expect(row).toContainText("Reads your mail and calendar");
     await expect(row).toContainText("Not on this computer yet");
+    // What it reaches is behind a disclosure, in plain words, and none of the settings jargon is on the row.
+    await expect(row.getByText("What it reaches")).toBeVisible();
+    expect(await row.innerText()).not.toMatch(/Signs in to|Internet:|Keys you provide/);
+    await row.getByText("What it reaches").click();
+    await expect(row).toContainText("You sign in on the service's own page");
     await expect(main.getByText(/Restart to connect/)).toHaveCount(0);
     await visit(page);
     expect(existsSync(installed)).toBe(false);
@@ -121,6 +134,14 @@ test.describe.serial("journey: new start", () => {
     await row.getByRole("button", { name: "Sign in to Example mail", exact: true }).click();
     await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
     await expect(main.getByText(/Signed in as .+@example\.com/)).toBeVisible();
+    // The row no longer says to sign in: it says who is signed in and what is read, and offers no Sign in.
+    await expect(row).toHaveAttribute("data-signed-in", "");
+    await expect(row).toContainText("Reading your mail and calendar.");
+    await expect(row).not.toContainText("Sign in to start reading");
+    await expect(row.getByRole("button", { name: /^Sign in/ })).toHaveCount(0);
+    // The sign-in toast doesn't cover Back or Next either.
+    await main.getByRole("button", { name: "Back" }).click({ trial: true });
+    await main.getByRole("button", { name: "Next" }).click({ trial: true });
     let seen = await service();
     expect(seen).toMatchObject({ authorizations: 1, exchanges: 1, refused: 0 });
     expect(page.url()).not.toMatch(/code=|state=|sign_in=/);
@@ -143,6 +164,8 @@ test.describe.serial("journey: new start", () => {
     await main.getByLabel("Folder", { exact: true }).fill(info.backup_folder);
     await main.getByRole("button", { name: "Use this folder for backups" }).click();
     await expect(page.locator('[data-screen="backup"][data-state]')).toContainText("Done");
+    // Choosing the folder makes the first backup at once, and the screen says how it went.
+    await expect(main.locator("[data-first-backup]")).toContainText("First backup made", { timeout: 30_000 });
     await visit(page);
     await main.getByRole("button", { name: "Next" }).click();
 
@@ -166,6 +189,12 @@ test.describe.serial("journey: new start", () => {
     const go = page.locator("li.line", { hasText: "Start the assistant" });
     await expect(go).toHaveCount(1);
     await expect(go).toBeFocused();
+    // Go is fully on the screen without scrolling, not clipped by the short card it sits in.
+    await expect(go).toBeInViewport({ ratio: 1 });
+    await expect(go.getByRole("button", { name: "Go", exact: true })).toBeInViewport({ ratio: 1 });
+    // The first backup was made while setting up, so Today doesn't ask for one and the header chip doesn't say one is needed.
+    await expect(page.getByRole("region", { name: "Backup", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Status: / })).not.toContainText("Backup needed");
 
     // 8. The recent mail is on Came in within seconds, and today's meetings are on the agenda; what is older isn't.
     const came = page.getByRole("region", { name: "Came in" });
@@ -183,6 +212,7 @@ test.describe.serial("journey: new start", () => {
     seen = await service();
     expect(seen).toMatchObject({ mail_reads: 1, calendar_reads: 1, unauthorized: 0 });
 
+    await expect(go.getByRole("button", { name: "Go", exact: true })).toBeInViewport({ ratio: 1 });
     // Go: one request for each item handed in, each item once, and the line goes.
     await go.getByRole("button", { name: "Go", exact: true }).click();
     await expect(page.locator("li.line", { hasText: "Start the assistant" })).toHaveCount(0);

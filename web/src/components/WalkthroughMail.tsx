@@ -6,7 +6,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
-import { reachesLines, waitsForRestart } from "../lib/packs";
+import { serviceReachLines, waitsForRestart } from "../lib/packs";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
 import { useStartSignIn } from "../lib/sign-in-start";
@@ -25,6 +25,8 @@ export interface Service {
   id: string;
   name: string;
   summary: string;
+  /** Who made it, when the catalog says; empty for an add-on that is here but not listed. */
+  publisher: string;
   reads: Array<"mail" | "calendar">;
   state: ServiceState;
   /** Why an add-on that is on isn't running, in the app's words. */
@@ -55,6 +57,7 @@ export function servicesFrom(available: Pack[], installed: Installed[]): Service
       id: pack.id,
       name: pack.name,
       summary: pack.summary,
+      publisher: pack.publisher,
       reads: pack.what.reads ?? [],
       ...stateOf(here),
       installable: !!pack.installable,
@@ -67,6 +70,7 @@ export function servicesFrom(available: Pack[], installed: Installed[]): Service
       id: item.name,
       name: item.name,
       summary: item.description,
+      publisher: "",
       reads: item.what.reads ?? [],
       ...stateOf(item),
       installable: false,
@@ -174,7 +178,7 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
 
 /** One service: what it reads, where it stands and the one button for the next thing to do. */
 function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: () => void }) {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const client = useQueryClient();
   const restart = useRestart();
   const { service } = props;
@@ -205,23 +209,38 @@ function ServiceRow(props: { service: Service; signIns: SignIn[]; onOpenAddons: 
   };
 
   const reads = service.reads.map((kind) => t(`walkthrough.mail.reads.${kind}`)).join(t("walkthrough.mail.reads_join"));
-  const reaches = reachesLines(service.what.reaches, t);
+  const reaches = serviceReachLines(service.what.reaches, t, tn);
+  // Once the person has signed in, the row says so and what is read, and offers no Sign in.
+  const signedIn = state === "ready" && props.signIns.length > 0 && props.signIns.every((item) => item.status === "signed_in");
   return (
-    <li className="line" id={base} data-service={service.id} data-state={state} aria-labelledby={`${base}-name`}>
+    <li
+      className="line"
+      id={base}
+      data-service={service.id}
+      data-state={state}
+      data-signed-in={signedIn ? "" : undefined}
+      aria-labelledby={`${base}-name`}
+    >
       <div className="row pair">
         <div className="text pack">
           <strong id={`${base}-name`}>{service.name}</strong>
           <span className="sub">{t("walkthrough.mail.reads_line", { reads })}</span>
+          {service.publisher && <span className="sub">{t("walkthrough.mail.publisher", { publisher: service.publisher })}</span>}
           {service.summary && <p className="pack-summary">{service.summary}</p>}
-          <ul className="plain-list">
-            {reaches.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
+          <details className="more-options">
+            <summary>{t("walkthrough.mail.reaches")}</summary>
+            <ul className="plain-list">
+              {reaches.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          </details>
           <p className="sub" id={`${base}-state`}>
             {state === "problem" && service.reason
               ? t("walkthrough.mail.state.problem", { reason: service.reason })
-              : t(`walkthrough.mail.state.${state}`)}
+              : signedIn
+                ? t("walkthrough.mail.state.signed_in", { reads })
+                : t(`walkthrough.mail.state.${state}`)}
           </p>
           {problem && (
             <p className="problem-note" role="alert">

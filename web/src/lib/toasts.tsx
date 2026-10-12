@@ -18,12 +18,21 @@ interface Toast extends ToastInput {
 interface ToastApi {
   push: (toast: ToastInput) => void;
   undoLast: () => void;
+  /** Takes every toast off the screen, for a screen that replaces the one they were about. */
+  dismissAll: () => void;
 }
 
-const ToastContext = createContext<ToastApi>({ push: () => undefined, undoLast: () => undefined });
+const ToastContext = createContext<ToastApi>({ push: () => undefined, undoLast: () => undefined, dismissAll: () => undefined });
 
 export function useToasts(): ToastApi {
   return useContext(ToastContext);
+}
+
+const CountContext = createContext(0);
+
+/** How many toasts show now, for a screen that keeps its own buttons clear of them. */
+export function useToastCount(): number {
+  return useContext(CountContext);
 }
 
 const MAX_SHOWN = 3;
@@ -35,6 +44,22 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
   const undos = useRef<Array<{ id: number; run: () => Promise<unknown> | void }>>([]);
 
   const dismiss = useCallback((id: number) => setToasts((all) => all.filter((x) => x.id !== id)), []);
+
+  const dismissAll = useCallback(() => {
+    setToasts([]);
+  }, []);
+
+  // How many toasts show is told to the page, so a full-window screen can keep its own buttons clear of them.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (toasts.length === 0) return;
+    root.style.setProperty("--toasts", String(toasts.length));
+    root.setAttribute("data-toasts", "");
+    return () => {
+      root.style.removeProperty("--toasts");
+      root.removeAttribute("data-toasts");
+    };
+  }, [toasts.length]);
 
   const push = useCallback((toast: ToastInput) => {
     const id = next.current++;
@@ -65,13 +90,13 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
     void runUndo(last.id, last.run);
   }, [push, runUndo, t]);
 
-  const value = useMemo(() => ({ push, undoLast }), [push, undoLast]);
+  const value = useMemo(() => ({ push, undoLast, dismissAll }), [push, undoLast, dismissAll]);
 
   return (
     <ToastContext.Provider value={value}>
-      {props.children}
+      <CountContext.Provider value={toasts.length}>{props.children}</CountContext.Provider>
       {/* Marked as a top layer so a dialog that is open keeps these messages in the page's reading order for screen readers. */}
-      <section className={styles.region} aria-label={t("toast.region")} data-react-aria-top-layer="">
+      <section className={styles.region} aria-label={t("toast.region")} data-react-aria-top-layer="" data-toast-region="">
         <div aria-live="polite" className={styles.stack}>
           {toasts.map((toast) => (
             <ToastView

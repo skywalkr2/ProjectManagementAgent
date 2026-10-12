@@ -187,6 +187,87 @@ test.describe("screen use and the shell", () => {
     });
   }
 
+  // The first-go line waits in the short Needs-you card (design 7.8); the walkthrough's last button focuses it, and Go must
+  // then be fully on the screen, not clipped by the card.
+  for (const [width, height] of [
+    [1280, 720],
+    [390, 844],
+  ]) {
+    test(`after the walkthrough's last button, the first-go line's Go button is fully visible at ${width}×${height}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      const waiting = (id: string, estimate: number | null) => ({
+        id,
+        version: 1,
+        dismissed: false,
+        stage_task: false,
+        first_go: true,
+        refused: false,
+        state: "needs_you",
+        approval: "required",
+        waiting: "Waiting for your first go.",
+        estimate_usd: estimate,
+        created_at: "2026-10-09T14:00:00Z",
+        note: null,
+        source: null,
+        source_title: `Item ${id}`,
+        changeset: null,
+      });
+      await page.route("**/api/changes", async (route) => {
+        if (route.request().method() !== "GET") return route.fallback();
+        await route.fulfill({ json: [waiting("REQ-1", 0.1), waiting("REQ-2", null), waiting("REQ-3", 0.2)] });
+      });
+      await signIn(page, "setup");
+      await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+      await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^Done/ }).click();
+      await page.getByRole("main").getByRole("button", { name: "Go to Today" }).click();
+      const line = page.locator("li.line", { hasText: "Start the assistant" });
+      await expect(line).toBeFocused();
+      await expect(line).toBeInViewport({ ratio: 1 });
+      await expect(line.getByRole("button", { name: "Go", exact: true })).toBeInViewport({ ratio: 1 });
+      await shoot(page, `first-go-${width}`);
+    });
+  }
+
+  // A toast sits at the bottom of the window; while the walkthrough is open it never covers the screen's own buttons, and
+  // it is gone when the walkthrough moves to another screen.
+  for (const [width, height] of [
+    [1280, 720],
+    [390, 844],
+  ]) {
+    test(`a toast over a walkthrough screen leaves Back and Next clickable at ${width}×${height}, and goes when the screen changes`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await signIn(page, "setup");
+      await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+      await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^Your AI account/ }).click();
+      const main = page.getByRole("main");
+      await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+      // At the end of the screen, where its buttons are, pressing the undo key with nothing to undo says so in a toast.
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await page.keyboard.press("u");
+      const notices = page.getByRole("region", { name: "Notifications" });
+      await expect(notices.getByText("Nothing to undo.")).toBeVisible();
+      const overlap = async () => {
+        const toast = (await notices.getByText("Nothing to undo.").boundingBox())!;
+        for (const name of [/^Back$/, /^(Skip for now|Next)$/]) {
+          const button = (await main.getByRole("button", { name }).boundingBox())!;
+          const apart = button.y + button.height <= toast.y || button.y >= toast.y + toast.height;
+          const aside = button.x + button.width <= toast.x || button.x >= toast.x + toast.width;
+          if (!apart && !aside) return String(name);
+        }
+        return null;
+      };
+      await expect.poll(overlap).toBeNull();
+      await shoot(page, `walkthrough-toast-${width}`);
+      await main.getByRole("button", { name: "Back" }).click({ trial: true });
+      await main.getByRole("button", { name: /^(Skip for now|Next)$/ }).click({ trial: true });
+      await main.getByRole("button", { name: "Back" }).click();
+      await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
+      await expect(notices.getByText("Nothing to undo.")).toHaveCount(0);
+    });
+  }
+
   test("the header and the sidebar do not move when the view changes", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await signIn(page);

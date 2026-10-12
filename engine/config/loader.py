@@ -29,7 +29,7 @@ class ConfigError(Exception):
 
     def __init__(self, message: str, plain: str | None = None) -> None:
         super().__init__(message)
-        self.plain = plain or "a settings file has a value that isn't allowed"
+        self.plain = plain or "a setting has a value that isn't allowed"
 
 
 @dataclass
@@ -147,23 +147,23 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as err:
-        raise ConfigError(f"{path.name}: not valid YAML ({err})", "a settings file isn't written correctly") from None
+        raise ConfigError(f"{path.name}: not valid YAML ({err})", "your settings aren't written correctly") from None
     if data is None:
         return {}
     if not isinstance(data, dict):
-        raise ConfigError(f"{path.name}: the top level must be a set of keys", "a settings file isn't laid out right")
+        raise ConfigError(f"{path.name}: the top level must be a set of keys", "your settings aren't laid out right")
     return data
 
 
 def _check_version(name: str, data: dict[str, Any], path: Path) -> None:
     version = data.get("version", 1)
     if not isinstance(version, int):
-        raise ConfigError(f"{path.name}: version must be a whole number", "a settings file's version isn't a number")
+        raise ConfigError(f"{path.name}: version must be a whole number", "a setting's version isn't a number")
     if version > CURRENT_VERSIONS[name]:
         raise ConfigError(
             f"{path.name} is version {version}, newer than this program understands "
             f"({CURRENT_VERSIONS[name]}). Upgrade the program before using this workspace.",
-            "a settings file is from a newer version of the app; update the app before using this workspace",
+            "your settings are from a newer version of the app; update the app before using this workspace",
         )
 
 

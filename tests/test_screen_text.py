@@ -30,6 +30,18 @@ def test_a_settings_file_name_is_caught(name):
     assert problems(f"Open {name} and change it.")
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "The settings file refers to it.",
+        "Changed in the workspace's settings files.",
+        "Your Settings File has a problem.",
+    ],
+)
+def test_naming_where_settings_are_kept_is_caught(text):
+    assert problems(text)
+
+
 @pytest.mark.parametrize("ref", ["env:NAME", "file:/run/secret", "keychain:item"])
 def test_a_secret_reference_is_caught(ref):
     assert problems(f"The key is at {ref}.")
@@ -78,6 +90,8 @@ def test_a_command_is_caught_and_the_subcommand_names_come_from_the_parser():
         "The cockpit restarts when you choose.",
         "The git history stays.",
         "Hosted on the app's own address.",
+        "Your settings are from a newer version of the app.",
+        "Saved to the file you picked, and the settings apply at once.",
     ],
 )
 def test_look_alikes_pass(text):

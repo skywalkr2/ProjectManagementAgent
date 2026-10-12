@@ -93,3 +93,30 @@ test("a toast goes by itself after its time, unless the pointer is on it", async
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
+
+test("dismissAll takes every toast off the screen, and the page is told how many show while any do", async () => {
+  const user = userEvent.setup();
+  function Clearer() {
+    const { dismissAll } = useToasts();
+    return (
+      <button type="button" onClick={dismissAll}>
+        clear all
+      </button>
+    );
+  }
+  render(
+    <ToastProvider seconds={0}>
+      <Pusher />
+      <Clearer />
+    </ToastProvider>,
+  );
+  expect(document.documentElement).not.toHaveAttribute("data-toasts");
+  await user.click(screen.getByRole("button", { name: "push" }));
+  await user.click(screen.getByRole("button", { name: "push" }));
+  expect(document.documentElement).toHaveAttribute("data-toasts");
+  expect(document.documentElement.style.getPropertyValue("--toasts")).toBe("2");
+  await user.click(screen.getByRole("button", { name: "clear all" }));
+  expect(within(region()).queryAllByRole("button", { name: "Dismiss" })).toHaveLength(0);
+  expect(document.documentElement).not.toHaveAttribute("data-toasts");
+  expect(document.documentElement.style.getPropertyValue("--toasts")).toBe("");
+});

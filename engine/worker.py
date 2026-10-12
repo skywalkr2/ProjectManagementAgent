@@ -315,6 +315,34 @@ class Worker:
         self.events.changed()
         return True
 
+    def first_backup_soon(self) -> threading.Thread | None:
+        """A backup folder was just chosen: when no backup has ever succeeded, make one now on its own thread, so the
+        person isn't asked to back up right after choosing where. Uses the settings as the files hold them now, and
+        the same lock as scheduled backups. Returns the thread, or None when a backup already succeeded."""
+        from engine.backup import state
+        from engine.config import ConfigError, load_config
+
+        try:
+            fresh = load_config(self.ws.config_dir, env=dict(os.environ))
+        except ConfigError as err:
+            log.warning("The first backup wasn't made: %s", err)
+            return None
+        if state(self.ws, fresh).last_success is not None:
+            return None
+
+        def run() -> None:
+            from engine.backup import run_backup
+
+            try:
+                run_backup(self.ws, fresh)
+            except Exception:  # a failed backup is recorded by run_backup; nothing here may break the request
+                log.exception("the first backup failed")
+            self.events.changed()
+
+        thread = threading.Thread(target=run, name="cockpit-first-backup", daemon=True)
+        thread.start()
+        return thread
+
     def sync_if_changed(self) -> bool:
         """Write the synced folder when anything changed since it was last written, and keep this install's lease
         fresh. Stops for good if another computer has taken the workspace over. Returns whether it wrote."""

@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
+import { useToastCount, useToasts } from "../lib/toasts";
 import { after, before, counted, SCREENS, standing, STEP_OF, type Screen } from "../lib/walkthrough";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -37,6 +38,9 @@ export function Walkthrough(
 ) {
   const { t } = useWords();
   const client = useQueryClient();
+  const { dismissAll } = useToasts();
+  const shownToasts = useToastCount();
+  const foot = useRef<HTMLDivElement>(null);
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   const [chosen, setChosen] = useState<Screen | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -81,6 +85,28 @@ export function Walkthrough(
   useEffect(() => {
     if (current) heading.current?.focus();
   }, [current]);
+
+  // What a screen said in a toast is about that screen: moving to another one clears it.
+  const shownScreen = useRef<Screen | null>(null);
+  useEffect(() => {
+    if (current && shownScreen.current && shownScreen.current !== current) dismissAll();
+    if (current) shownScreen.current = current;
+  }, [current, dismissAll]);
+
+  // A toast that appears over the screen's own buttons moves them clear of it; buttons that are off the screen stay put.
+  useEffect(() => {
+    if (!shownToasts) return;
+    // After the page has made room for them.
+    const frame = window.requestAnimationFrame(() => {
+      const buttons = foot.current?.getBoundingClientRect();
+      const toasts = document.querySelector("[data-toast-region]")?.getBoundingClientRect();
+      if (!buttons || !toasts) return;
+      if (buttons.top < window.innerHeight && buttons.bottom > toasts.top) {
+        window.scrollBy?.({ top: buttons.bottom - toasts.top + 8 });
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [shownToasts]);
 
   if (!data || !current) {
     return (
@@ -203,7 +229,7 @@ export function Walkthrough(
               {problem}
             </p>
           )}
-          <div className={styles.foot}>
+          <div className={styles.foot} ref={foot}>
             {previous && <Button onClick={() => go(previous)}>{t("walkthrough.back")}</Button>}
             <span className={styles.grow} />
             {current === "done" ? (

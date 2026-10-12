@@ -336,6 +336,8 @@ function useFocusFirstGo(): () => void {
         window.clearInterval(timer);
         row.scrollIntoView?.({ block: "center" });
         row.focus();
+        // A row taller than the card that holds it can't be centered whole; its button must still be on the screen.
+        row.querySelector("button")?.scrollIntoView?.({ block: "nearest" });
       } else if (tries >= 25) {
         window.clearInterval(timer);
       }

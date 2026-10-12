@@ -120,6 +120,48 @@ async function keyed(user: ReturnType<typeof userEvent.setup>, service = "Servic
   await screen.findByLabelText("Model for everyday work");
 }
 
+test("an assistant with no name of its own is called your assistant in the heading, never Assistant", async () => {
+  api();
+  renderApp(<WelcomeAi local done={false} />, {}, { unnamed: true });
+  expect(await screen.findByRole("group", { name: "Which AI should your assistant use?" })).toBeInTheDocument();
+  expect(screen.queryByRole("group", { name: /Which AI should Helper use/ })).toBeNull();
+});
+
+test("a workspace's own wording for the heading wins over the unnamed variant", async () => {
+  api();
+  renderApp(<WelcomeAi local done={false} />, { "welcome.ai.kind": "Pick the AI for {assistant}" }, { unnamed: true });
+  expect(await screen.findByRole("group", { name: "Pick the AI for Helper" })).toBeInTheDocument();
+});
+
+test("the key hint says in plain words where the key is kept and that it isn't in settings or backups", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await pick(user, "Service A");
+  const hint = await screen.findByText(/^Kept on this computer only/);
+  expect(hint).toHaveTextContent("Kept on this computer only, in a private folder. It is never saved in your settings or copied into backups.");
+  expect(hint.textContent ?? "").not.toMatch(/settings file/i);
+});
+
+test("the model choice is one line under the key until it is opened, so the account's own button stays near the top", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await keyed(user);
+  const details = screen.getByText(/^Models: model-a/).closest("details")!;
+  expect(details).not.toHaveAttribute("open");
+  expect(details).toContainElement(screen.getByLabelText("Model for everyday work"));
+  expect(details).toContainElement(screen.getByLabelText("Model for harder work (optional)"));
+  // The service choice comes first and Add account follows the model line, the level choice and nothing long in between.
+  const order = (a: Element, b: Element) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+  const services = screen.getByRole("group", { name: "Which AI should Helper use?" });
+  expect(order(services, details)).toBeTruthy();
+  expect(order(details, screen.getByRole("button", { name: "Add account" }))).toBeTruthy();
+  // Choosing another model through the line still works.
+  await user.selectOptions(screen.getByLabelText("Model for everyday work"), "model-b");
+  expect(screen.getByText(/^Models: model-b/)).toBeInTheDocument();
+});
+
 test("services that need a key are large choices with their notes; the rest wait under More options", async () => {
   api();
   open();

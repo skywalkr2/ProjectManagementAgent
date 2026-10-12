@@ -123,7 +123,7 @@ after that, anything new, changed or gone is handed in for the assistant to read
 calendar is read through its private address (most calendar services offer one in their sharing settings), and the
 events in the coming weeks are followed: a moved meeting or a new invitation comes in as a change. A mail folder is
 read over IMAP with an app password from your mail service; messages are never marked as read or changed. Addresses
-and passwords are kept outside the settings files, as environment variables or files on this computer. Rules can set
+and passwords are kept outside your settings, as environment variables or files on this computer. Rules can set
 aside changes that don't matter, such as a spacing fix or a change made by your own account; they are listed under
 Auto-closed, where Take a closer look hands one in after all. If a source can't be read several times in a row, you
 are asked once, with what to do.
@@ -148,7 +148,7 @@ stays. An add-on can't send anything or change records except through the same r
 
 Each AI run sees only what that piece of work needs: the input, the related records and your standing rules. Records can
 be marked as internal or restricted; restricted material goes only to accounts you allowed for it, such as a model on
-your own computer. Keys are never written in the settings files; they are kept on this computer or in the environment.
+your own computer. Keys are never written in your settings; they are kept on this computer or in the environment.
 
 ## Keyboard shortcuts
 

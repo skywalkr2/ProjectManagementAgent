@@ -46,6 +46,16 @@ export function reachesLines(reaches: Summary["reaches"], t: T): string[] {
   return lines.length ? lines : [t("addons.reaches.nothing")];
 }
 
+/** What a service reaches, in the plain words the walkthrough uses: no internal names, one line for each thing. */
+export function serviceReachLines(reaches: Summary["reaches"], t: T, tn: Tn): string[] {
+  const lines: string[] = [];
+  if (reaches.sign_ins.length) lines.push(t("walkthrough.mail.reaches.sign_in"));
+  if (reaches.hosts.length) lines.push(t("walkthrough.mail.reaches.hosts", { hosts: reaches.hosts.join(", ") }));
+  if (reaches.programs.length) lines.push(t("walkthrough.mail.reaches.programs", { programs: reaches.programs.join(", ") }));
+  if (reaches.keys) lines.push(tn("walkthrough.mail.reaches.keys", reaches.keys));
+  return lines.length ? lines : [t("addons.reaches.nothing")];
+}
+
 export function keepsText(keeps: Summary["keeps"], t: T): string {
   return t(`addons.keeps.${keeps}`);
 }

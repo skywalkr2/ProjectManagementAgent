@@ -23,6 +23,8 @@ from engine.secrets import SecretHint
 SWITCH = "COCKPIT_CHECK_WORDING"
 
 _FILE_NAME = re.compile(r"\S*\.ya?ml\b")
+#: Phrases that name where settings are kept, which a person never needs to know ("your settings" says it).
+_BANNED_PHRASES = re.compile(r"\bsettings? files?\b", re.IGNORECASE)
 _SECRET_REF = re.compile(r"\b(?:env|keychain):|\bfile:/|\bfile:~")
 _MANIFEST_FIELD = re.compile(r"\b(?:requires|provides)\.[a-z_]+|\bplugin_api\b")
 _DOTTED = re.compile(r"(?<![\w.-])[A-Za-z_][\w-]*(?:\.[A-Za-z_][\w-]*)+(?![\w-])")
@@ -92,6 +94,8 @@ def problems(text: str) -> list[str]:
     """What in text meant for the screen names the product's insides; empty when nothing does."""
     found: list[str] = []
     for match in _FILE_NAME.finditer(text):
+        found.append(f"names a settings file: {match.group()!r}")
+    for match in _BANNED_PHRASES.finditer(text):
         found.append(f"names a settings file: {match.group()!r}")
     for match in _SECRET_REF.finditer(text):
         found.append(f"names a secret reference: {match.group()!r}")

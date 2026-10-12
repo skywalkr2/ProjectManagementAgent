@@ -1143,7 +1143,7 @@ class PluginHost:
             config = schema.model_validate({} if raw is None else raw)
             for new_name, old_name in schema.renamed_keys(raw):
                 self.status[name].notes.append(
-                    f"its settings file uses the old name {old_name}; it now reads as {new_name}. Saving its "
+                    f"its settings use the old name {old_name}; it now reads as {new_name}. Saving its "
                     "settings on the Settings screen writes the new name."
                 )
             registrar = Registrar(name, config, path.parent)

@@ -38,7 +38,11 @@ function start(rc: S["RuntimeConfig"]) {
   }
   createRoot(document.getElementById("root")!).render(
     <StrictMode>
-      <WordingProvider overrides={rc.wording} base={{ assistant: rc.assistant_name, workspace: rc.workspace_name }}>
+      <WordingProvider
+        overrides={rc.wording}
+        base={{ assistant: rc.assistant_name, workspace: rc.workspace_name }}
+        unnamed={rc.assistant_named === false}
+      >
         <QueryClientProvider client={client}>
           <ToastProvider seconds={rc.toast_seconds}>
             <OwnRequestsProvider>

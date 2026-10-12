@@ -15,10 +15,10 @@ export function FirstGoRow(props: { first: FirstGo }) {
   const go = () => void run(api.firstGo, () => ({ message: t("toast.go") }));
   useRowKeys(ref, { primary: go });
   return (
-    <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby="first-go-text">
-      <div className="row">
-        <span className="kind k-held">{t("changes.state.cost_go")}</span>
+    <li className="line first-go" data-row tabIndex={-1} ref={ref} aria-labelledby="first-go-text">
+      <div className="row pair">
         <div className="text">
+          <span className="kind k-held">{t("changes.state.cost_go")}</span>
           <div id="first-go-text" className="name">
             {text(props.first)}
           </div>

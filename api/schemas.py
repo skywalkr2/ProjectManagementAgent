@@ -441,6 +441,9 @@ class RuntimeConfig(BaseModel):
     base_path: str
     api_base: str
     assistant_name: str
+    assistant_named: bool = Field(
+        True, description="The assistant has a name of its own; false while it still has the default name."
+    )
     workspace_name: str
     version: str
     pm: str | None

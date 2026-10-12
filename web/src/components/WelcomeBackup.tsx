@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
+import { backupText } from "../lib/backup";
 import { problemText } from "../lib/problem";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
@@ -18,6 +19,7 @@ export function WelcomeBackup(props: { local: boolean }) {
   const client = useQueryClient();
   const afterSave = useAfterSave();
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const [path, setPath] = useState("");
   const [label, setLabel] = useState("");
   const [checked, setChecked] = useState<S["FolderCheckView"] | null>(null);
@@ -33,6 +35,10 @@ export function WelcomeBackup(props: { local: boolean }) {
         return typeof target?.path === "string" ? [{ path: target.path, label: typeof target.label === "string" ? target.label : "" }] : [];
       })
     : [];
+
+  // The first backup is made as soon as the folder is chosen: the screen says how it went.
+  const backup = existing.length > 0 && status.data?.backup.configured ? status.data.backup : null;
+  const failed = !!backup && backup.last_success === null && !!backup.last_error;
 
   const check = async (at: string) => {
     setProblem("");
@@ -74,6 +80,17 @@ export function WelcomeBackup(props: { local: boolean }) {
               </li>
             ))}
           </ul>
+          {backup && (
+            <p className={failed ? "problem-note" : "hint"} role={failed ? "alert" : "status"} data-first-backup="">
+              {failed
+                ? t("welcome.backup.first_failed", { problem: backup.last_error ?? "" })
+                : backup.last_success === null
+                  ? t("welcome.backup.first_making")
+                  : backup.needs_attention
+                    ? backupText(backup, t)
+                    : t("welcome.backup.first_made")}
+            </p>
+          )}
         </div>
       )}
       <form

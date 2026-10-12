@@ -1,8 +1,10 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useEffect } from "react";
 import type { S } from "../lib/api";
 import { RestartProvider } from "../lib/restart";
+import { useToasts } from "../lib/toasts";
 import { App } from "../App";
 import { Refuse, fakeApi, rcFixture, renderApp, setupStep as step, setupView, statusFixture } from "../test-utils";
 import { Walkthrough } from "./Walkthrough";
@@ -359,6 +361,77 @@ describe("closing", () => {
   });
 });
 
+describe("toasts", () => {
+  function Pusher() {
+    const { push } = useToasts();
+    return (
+      <button type="button" onClick={() => push({ message: "Saved. Workspace name: Offsite team" })}>
+        say something
+      </button>
+    );
+  }
+  const openWith = () => {
+    const h = handlers();
+    renderApp(
+      <RestartProvider hellos={1} pollSeconds={0.05} doneSeconds={0.05}>
+        <Walkthrough at={null} {...h} />
+        <Pusher />
+      </RestartProvider>,
+    );
+  };
+  const region = () => screen.getByRole("region", { name: "Notifications" });
+
+  test("what a screen said in a toast is gone when the walkthrough moves to another screen, by Next, Back or the list", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes({}, CORE.map((id) => step(id, id === "workspace" ? { done: true } : {})), { step: "you" }));
+    openWith();
+    await screenTitle();
+    await user.click(screen.getByRole("button", { name: "say something" }));
+    expect(within(region()).getByText("Saved. Workspace name: Offsite team")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: "Next" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Your AI account" })).toBeInTheDocument();
+    expect(within(region()).queryByText(/Saved\./)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "say something" }));
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByRole("heading", { level: 2, name: "You" })).toBeInTheDocument();
+    expect(within(region()).queryByText(/Saved\./)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "say something" }));
+    await user.click(screen.getByRole("button", { name: /^Backups/ }));
+    expect(await screen.findByRole("heading", { level: 2, name: "Backups" })).toBeInTheDocument();
+    expect(within(region()).queryByText(/Saved\./)).toBeNull();
+  });
+
+  test("a toast stays while the person stays on the screen that made it", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes({}, CORE.map((id) => step(id)), { step: "you" }));
+    openWith();
+    await screenTitle();
+    await user.click(screen.getByRole("button", { name: "say something" }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(within(region()).getByText("Saved. Workspace name: Offsite team")).toBeInTheDocument();
+  });
+
+  test("a toast that arrives as the walkthrough opens at a screen is not cleared by opening", async () => {
+    fakeApi(routes({}, CORE.map((id) => step(id)), { step: "ai" }));
+    const h = handlers();
+    function Early() {
+      const { push } = useToasts();
+      useEffect(() => push({ message: "Signed in to Example mail." }), [push]);
+      return null;
+    }
+    renderApp(
+      <RestartProvider hellos={1} pollSeconds={0.05} doneSeconds={0.05}>
+        <Early />
+        <Walkthrough at={null} {...h} />
+      </RestartProvider>,
+    );
+    await screenTitle();
+    expect(within(region()).getByText("Signed in to Example mail.")).toBeInTheDocument();
+  });
+});
+
 describe("each screen", () => {
   test("You: the person's name, the workspace's name and the time zone in one form", async () => {
     fakeApi(routes());
@@ -559,6 +632,85 @@ describe("Mail and calendar", () => {
     await user.click(within(mine).getByRole("button", { name: "Sign in to The account" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith(login));
     expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+  });
+
+  test("a service row says in plain words what it gives and who made it, with what it reaches behind a disclosure", async () => {
+    service("on");
+    open();
+    const mine = await row();
+    expect(within(mine).getByText("Reads your mail and calendar")).toBeInTheDocument();
+    expect(within(mine).getByText("Made by Example")).toBeInTheDocument();
+    // The reach details are not on the row until asked for, and they are in plain words.
+    const reach = within(mine).getByText("What it reaches").closest("details")!;
+    expect(reach).not.toHaveAttribute("open");
+    expect(within(reach).getByText(/You sign in on the service's own page/)).toBeInTheDocument();
+    expect(within(reach).getByText("Talks over the internet to: api.service.example.com")).toBeInTheDocument();
+    for (const jargon of [/Signs in to/, /Internet:/, /Keys you provide/, /^account$/]) expect(mine.textContent).not.toMatch(jargon);
+  });
+
+  test("what a service reaches in keys and programs is said as what it needs, not as a count", async () => {
+    fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({
+        enabled: true,
+        feeds: [],
+        available: [
+          available("mail-addon", {
+            what: what({ reaches: { sign_ins: ["account"], hosts: [], programs: ["a-helper"], keys: 2 } }),
+          }),
+        ],
+        installed: [],
+      }),
+    });
+    open();
+    const reach = within(await row()).getByText("What it reaches").closest("details")!;
+    expect(within(reach).getByText("Runs these programs on this computer: a-helper")).toBeInTheDocument();
+    expect(within(reach).getByText("Needs 2 keys from you")).toBeInTheDocument();
+  });
+
+  test("a service the catalog names no publisher for shows none", async () => {
+    fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({
+        enabled: true,
+        feeds: [],
+        available: [available("mail-addon", { publisher: "" })],
+        installed: [],
+      }),
+    });
+    open();
+    expect(within(await row()).queryByText(/^Made by/)).toBeNull();
+  });
+
+  test("once signed in the row says who and what is read, offers no Sign in, and no longer says to sign in", async () => {
+    service("on", { signed: true });
+    open();
+    const mine = await row();
+    expect(await within(mine).findByText("Signed in as me@example.com")).toBeInTheDocument();
+    expect(within(mine).getByText("Reading your mail and calendar.")).toBeInTheDocument();
+    expect(within(mine).queryByText(/Sign in to start reading/)).toBeNull();
+    expect(within(mine).queryByRole("button", { name: /^Sign in/ })).toBeNull();
+    expect(mine).toHaveAttribute("data-signed-in");
+  });
+
+  test("a sign-in that has run out still offers Sign in, and the row doesn't claim to be reading", async () => {
+    const { state } = service("on");
+    state.signed = false;
+    fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET packs": () => ({
+        enabled: true,
+        feeds: [],
+        available: [available("mail-addon", { installed_version: "1.0.0", enabled: true })],
+        installed: [installedPack("mail-addon", { enabled: true, state: "enabled" })],
+      }),
+      "GET sign-ins": () => [signIn("mail-addon/account", { status: "expired", account: "me@example.com" })],
+    });
+    open();
+    const mine = await row();
+    expect(await within(mine).findByRole("button", { name: "Sign in again to The account" })).toBeInTheDocument();
+    expect(within(mine).queryByText(/^Reading your/)).toBeNull();
+    expect(mine).not.toHaveAttribute("data-signed-in");
   });
 
   test("after signing in it says what is read now and that the last day of mail waits for the first Go", async () => {

@@ -1,6 +1,6 @@
 // The AI step of the setup guide (design 7.8): pick a service by name, get a key from its page, paste it, pick a model from
 // the list the service gives, choose what it may see, add it, then test it. A pasted key is sent once and kept on this
-// computer; the settings file only refers to it. What a kind needs is read from its catalog entry (a key, an address, or a
+// computer; the account's settings only refer to it. What a kind needs is read from its catalog entry (a key, an address, or a
 // command for a command-line agent), never from its name.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
@@ -56,6 +56,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   const [kindId, setKindId] = useState("");
   const [usingFound, setUsingFound] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [modelsOpen, setModelsOpen] = useState(false);
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
   const [address, setAddress] = useState("");
@@ -631,7 +632,13 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                     </>
                   ) : (
                     list.length > 0 && (
-                      <>
+                      // The first model is already chosen; the choice is one line until the person asks to change it.
+                      <details
+                        className="more-options model-details"
+                        open={modelsOpen || noMatch}
+                        onToggle={(e) => setModelsOpen((e.currentTarget as HTMLDetailsElement).open)}
+                      >
+                        <summary>{t("welcome.ai.models_summary", { model: everyday || list[0].id })}</summary>
                         {list.length > SEARCH_ABOVE && (
                           <div className="field">
                             <label htmlFor="ai-model-find">{t("welcome.ai.model_find")}</label>
@@ -659,7 +666,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                             onChange: setHarder,
                             same: true,
                           })}
-                      </>
+                      </details>
                     )
                   )}
                 </>

@@ -35,10 +35,10 @@ export function fakeApi(routes: Routes) {
   return calls;
 }
 
-export function renderApp(ui: ReactNode, overrides: Record<string, string> = {}) {
+export function renderApp(ui: ReactNode, overrides: Record<string, string> = {}, options: { unnamed?: boolean } = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <WordingProvider overrides={overrides} base={{ assistant: "Helper" }}>
+    <WordingProvider overrides={overrides} base={{ assistant: "Helper" }} unnamed={options.unnamed}>
       <QueryClientProvider client={client}>
         <ToastProvider seconds={0}>
           <OwnRequestsProvider>{ui}</OwnRequestsProvider>
@@ -67,6 +67,7 @@ export function rcFixture(extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeCo
   return {
     api_base: "api",
     assistant_name: "Helper",
+    assistant_named: true,
     base_path: "",
     demo: false,
     feedback_to: "feedback@example.com",

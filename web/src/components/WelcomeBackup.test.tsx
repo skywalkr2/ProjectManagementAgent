@@ -1,7 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Refuse, fakeApi, renderApp } from "../test-utils";
+import type { S } from "../lib/api";
+import { Refuse, fakeApi, renderApp, statusFixture } from "../test-utils";
 import { joinPath } from "./FolderPicker";
 import { WelcomeBackup } from "./WelcomeBackup";
 
@@ -156,4 +157,36 @@ test("folder addresses are joined with the separator the address already uses", 
   expect(joinPath("/", "c")).toBe("/c");
   expect(joinPath("C:\\Users", "me")).toBe("C:\\Users\\me");
   expect(joinPath("C:\\", "me")).toBe("C:\\me");
+});
+
+describe("the first backup", () => {
+  const statusWith = (backup: Partial<S["BackupStatus"]>) => ({
+    "GET status": () => statusFixture({}, { backup: { configured: true, ...backup } }),
+  });
+
+  test("while the first backup is being made the screen says so, and it asks for nothing", async () => {
+    api(statusWith({}));
+    open();
+    expect(await screen.findByText("Making the first backup…")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  test("once it is made the screen says: First backup made", async () => {
+    api(statusWith({ last_success: "2026-10-12T10:00:00Z", age_hours: 0.1 }));
+    open();
+    expect(await screen.findByText("First backup made.")).toBeInTheDocument();
+  });
+
+  test("a first backup that failed shows why, in words, as an alert", async () => {
+    api(statusWith({ last_error: "The drive isn't connected." }));
+    open();
+    expect(await screen.findByRole("alert")).toHaveTextContent("The first backup didn't work: The drive isn't connected.");
+  });
+
+  test("with no folder chosen there is no backup line", async () => {
+    api({ "GET settings": () => ({ fingerprint: "fp-1", items: [] }), "GET status": () => statusFixture() });
+    open();
+    await screen.findByLabelText("Folder");
+    expect(document.querySelector("[data-first-backup]")).toBeNull();
+  });
 });
