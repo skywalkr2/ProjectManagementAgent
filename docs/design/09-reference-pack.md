@@ -70,6 +70,93 @@ not enable it today; they run the example plugin and the kit.
 | Don't chase program milestones run by other PMs or things the leader doesn't own | pack's default `scope.yaml` entries |
 | The leader shouldn't have to confirm routine updates | routing defaults |
 
+## 9.5a What the running use needed (the first design author's review)
+
+*Designed, not yet built; not on the roadmap to 1.0* (decisions, 2026-10-12 "The workplace pack review"). 9.1 to 9.5 were
+thin for "the most proven design". Much of what made the running version work moved into the core (scope 6.18, facts 6.19,
+names 6.11, learning 6.22). These twelve points are what only a workplace PM needs. Each names the core part it builds on.
+
+1. **Roles, shipped as routing templates.** The real use has five roles, not one leader:
+   - **the leader** owns the portfolio and decides priority and capacity;
+   - **a delivery lead** is the first stop for delivery questions on the projects assigned to them, but doesn't prioritize
+     or decide what starts, and is never asked for dates;
+   - **program managers** own program dates and decide new scope, and get one impact question at most;
+   - **an architect per item** answers design questions;
+   - **the PM** owns the meetings and the paperwork.
+
+   The pack ships them as routing-entry templates per role ("first stop for…", "never ask about…", "decides…", 6.22). Setup
+   fills them in by naming who holds each role. That keeps the first month's questions from going to the wrong person.
+2. **Two kinds of dates, by owner.** Program dates (readiness, launch) come from the program manager. Delivery dates (which
+   release, which sprint) come from the delivery lead's sources. One never overrides the other: a TBD on one side doesn't
+   erase the other's date. When the two disagree on the same kind of date, it is a private discrepancy to ask about (8.1).
+   Neither is picked, and it never goes on a published page. Built on fact kinds with an owner (6.19).
+3. **A status rubric as data** (pack config, not code):
+   - phases: intake, discovery, design, design review, then handoff, in delivery, live;
+   - the target is go-live, as a date or a quarter, never a sentence (8.1), and the handoff is a milestone;
+   - status labels map to the dashboard reader's colors, and any other label is refused (a value list, 5.4);
+   - flags: a row gone stale, a target passed, done but not archived.
+4. **Leader-owned fields and the baseline state.**
+   - Priority and capacity are person-owned fields, filled only from the leader (8.8).
+   - A project is **baselined** once its page is built from real input. Until then its values are blank or TBD, never
+     placeholders, and the weekly check-up asks the leader only about baselined projects.
+   - A project whose place on the list is itself in question stays a held draft: never published, and asked about first.
+5. **Project page sections:**
+   - a snapshot (the row's source);
+   - **key players:** name, role, team and *why they matter to our area* (the part people actually read);
+   - open issues and risks (teams own risks; who raised each is recorded);
+   - action items (people own them);
+   - decisions;
+   - milestones;
+   - links;
+   - an update log that every change adds to (an invariant).
+6. **The baseline flow, the first week** (the pack's own task kind, `workplace-pm/baseline`). Starting a workplace
+   workspace isn't an empty form:
+   - find the leader's recent work in the wiki (pages they created or edited);
+   - map each list row to its documents;
+   - list the work that isn't on the list, and the rows with no source;
+   - propose archive candidates: things that look live, or dropped;
+   - produce one baseline ask for the leader, covering priorities and capacity, unsourced rows, archive candidates and a
+     few design questions.
+
+   The leader's answers fill the person-owned fields and settle the held drafts. By hand, that took most of the running
+   version's first week.
+7. **Key-player exploration.** A weekly job scans the key players' recent wiki activity for work that touches the tracked
+   area before anyone mentions it. It keeps a dismiss list, so an irrelevant page doesn't come back, and offers a way to
+   resolve a person's account name when the lookup can't.
+8. **Preview through the dashboard's own reader.** The summary page is read by a dashboard with its own parser:
+   - fixed column names;
+   - a heading structure that can't mix direct rows and sub-groups;
+   - compact targets.
+
+   The review screen shows the page as that reader will see it, using its parser (a renderer's reader-preview hook, 3.3), and
+   says "nothing the dashboard shows" when that's true. "Dashboard readers to keep compatible with" is the setting; the
+   preview is what makes it safe.
+9. **The weekly check-up for this use** (rules in the pack's playbook, 3.8):
+   - the leader's message asks only about edits the cockpit doesn't already process (unwatched pages, their own design
+     edits);
+   - delivery dates go to the PM's list, not to the leader;
+   - suggested weekly goals are replaced by three to five real ones.
+10. **The lens: the pack's default scope** (6.18). The tracked area is a domain, followed from design through deployment:
+    what's built, where it ships and what it needs. Deployment schedules belong to someone else: their dates are reported,
+    never chased. Other domains appear only when ours owes them input or they could move the overall timeline.
+11. **Ship release, not dev sprint** (the `ship_release` fact default, 6.19):
+    - items are often pulled into an earlier release, so the release field wins over any sprint number quoted on a page;
+    - an item pointing at a release already in production but not done is usually a late patch, so it is flagged to check,
+      never dated.
+12. **Pages a group edits.** Some outputs are tables where the team edits certain columns (analysis, notes) and the tool
+    owns the rest; those are pulled back before every render (6.12). Some pages are locked to a named group, with a banner,
+    and may carry that group's restricted material (audiences, 4.1). The pack says which of its outputs use each, so
+    per-column ownership is designed for, not discovered.
+
+**Its fictional demo comes first.** The fictional workplace workspace (`workspaces/demo-a`) grows into a busy portfolio:
+- about 20 projects and 50 open actions;
+- near-namesake items;
+- the roles above;
+- a fake dashboard reader.
+
+It is built in phase L-core as the golden set's busy fixture (6.16), long before the pack, which later uses it as its
+demo (9.4).
+
 ## 9.6 Publishing: the use
 
 A small imprint or independent author brings a title to launch: a production chain with lead times (final manuscript, edit,

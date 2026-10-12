@@ -250,7 +250,9 @@ L4. **Proving it** (from the design author's review of this plan).
   - `exact: true` by default;
   - `given:` starting records, with `quoted-thread` split into "the action exists" (a date update) and "it doesn't" (an
     add);
-  - half the cases run against a busy workspace of 30 to 50 open items with near-namesakes;
+  - half the cases run against a busy workspace: the fictional workplace workspace (`demo-a`) grown into a portfolio of
+    about 20 projects and 50 open actions, with near-namesakes, three roles and a fake dashboard reader. It later becomes
+    the workplace pack's demo (design 9.5a);
   - hostile cases forbid every system-tier op and any op naming the injected person.
 
   New single-input cases:

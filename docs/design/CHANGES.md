@@ -524,6 +524,23 @@ The rest moved to **L0**, the start of L-core, which still comes before real use
 
 Phase A is now about 3.5 sessions and L-core about 11; the total is unchanged.
 
+## 21. Your review of the workplace pack (2026-10-12)
+
+All twelve points are now a new section, **9.5a**, after 9.1 to 9.5, so the existing numbers stay. Each names the core part
+it builds on: routing entries for the roles, fact kinds with owners for the two kinds of dates, value lists for the status
+rubric, person-owned fields for priority and capacity, scope for the lens, the `ship_release` fact default, and pull-edits
+and audiences for pages a group edits. The baseline flow is the pack's own task kind, `workplace-pm/baseline`. The preview
+through the dashboard's reader is a reader-preview hook beside the renderer extension point (3.3).
+
+Your practical suggestion is taken as you put it. The repository already has a fictional workplace workspace (`demo-a`,
+with 3 projects and 6 actions). In phase L-core it grows into the busy portfolio:
+- about 20 projects and 50 open actions;
+- near-namesakes;
+- three roles;
+- a fake dashboard reader.
+
+It is the golden set's busy fixture first, and the pack's demo later.
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

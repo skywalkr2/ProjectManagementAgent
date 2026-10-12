@@ -101,7 +101,7 @@ each with a test that uses it from a plugin.
 | Point | What it would add | State |
 |---|---|---|
 | Channel | an output target: `current`, `diff`, `send`, `verify`, `lock_status`, `capabilities` | not yet; it comes with the publisher (6.3). Until then a plugin has no way to send, and its ops may not be outbound |
-| Renderer | how records become content for a channel | not yet; comes with channels |
+| Renderer | how records become content for a channel | not yet; comes with channels. With it, a **reader preview**: a hook that shows an output as a downstream reader (a dashboard's parser) will see it, and says when nothing it shows changed (9.5a) |
 | Lookup | a fact the AI can ask the engine to fetch | not yet (6.19) |
 | Connector `fetch`, `search`, `capabilities` | reading one item, searching a source | not yet; a connector has `poll` only |
 | Text extractor | text from a file type (documents, spreadsheets, presentations, PDFs) | not yet; the core's own extractors come in phase L (6.2, 6.22), and the extension point with them |

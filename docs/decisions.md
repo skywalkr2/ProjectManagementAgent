@@ -3,6 +3,34 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: The workplace pack review: what the running use needed, and its demo built early as the busy fixture
+
+**Decided by:** the first design's author proposed (review of 9.1 to 9.5); project lead adopted it.
+
+**What:** A new design section, 9.5a, records the twelve things the running workplace use needed:
+- roles, as routing templates;
+- two kinds of dates by owner, with private discrepancies;
+- a status rubric as data;
+- leader-owned fields and the baseline state;
+- the project page sections, with key players and why they matter;
+- the first-week baseline flow, as its own task kind;
+- key-player exploration;
+- a preview through the dashboard's own reader;
+- the weekly check-up's rules;
+- the domain lens;
+- release over sprint;
+- pages a group edits.
+
+The fictional workplace workspace (`demo-a`) grows into a busy portfolio in L-core, as the golden set's busy fixture, and
+later becomes the pack's demo. A reader-preview hook is noted beside the renderer extension point.
+
+**Why:** 9.1 to 9.5 were too thin to be the proof that the core is complete. Most of what made the running version work
+moved into the core; what's left is what only a workplace PM needs. The busy fixture costs nothing extra this way, and makes
+the evaluation honest sooner.
+
+**Impact:** Design 9.5a (new) and 3.3 are updated; roadmap L4 names the fixture. The pack itself stays off the roadmap to
+1.0.
+
 ## 2026-10-12: Phase A re-sized to its exit test; the reviews' daily-use items move to L0
 
 **Decided by:** project lead, asked to re-size phase A with its exit test unchanged.
