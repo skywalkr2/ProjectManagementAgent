@@ -10,3 +10,5 @@
 .warn .dot { background: var(--warn); }
 .word { color: var(--text); font-weight: var(--weight-semibold); }
 .warn .word { color: var(--warn); }
+.detail { color: var(--text-muted); font-weight: var(--weight-regular); }
+:global([data-narrow]) .detail { display: none; }

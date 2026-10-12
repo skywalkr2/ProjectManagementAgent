@@ -32,6 +32,7 @@ import { WhatChanged } from "./components/WhatChanged";
 import { Welcome, type FocusStep } from "./components/Welcome";
 import { BottomBar } from "./shell/BottomBar";
 import { Header } from "./shell/Header";
+import { BackupLine } from "./shell/BackupLine";
 import { SetupLine } from "./shell/SetupLine";
 import { Sidebar, useSidebarMode } from "./shell/Sidebar";
 import { EmptyState } from "./ui/EmptyState";
@@ -144,6 +145,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
               <p>{longDay(new Date())}</p>
             </div>
             <SetupLine workspace={rc.workspace_name} onOpenGuide={openGuide} />
+            <BackupLine onOpenGuide={openGuide} />
             <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} />
           </div>
         );

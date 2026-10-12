@@ -3,6 +3,28 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: The acceptance scenario's step 7 is built as written: a Today line and the age on the header chip
+
+**Decided by:** project lead, while making the browser test check every step of the scenario as written.
+
+**What:** The scenario says that with no off-device backup, Today and the header say so, and after one succeeds the header
+shows its age. The code did less: Today never mentioned a backup, and the chip said only "Live" once one had succeeded
+(the age was in its popover). Design 4.15 and the decision of 2026-10-09 ("a Today line and header mark until one
+succeeds and the last backup's age always shown") already asked for both. Now:
+- **Today** shows one row under the setup line while no backup is set up, none has succeeded, the last failed or the last is
+  overdue, saying what to do first, with its button, and nothing once a backup is current.
+- **The chip** keeps the backup's age beside its word ("Live · Backed up 3 h ago"); a phone shows the word only.
+
+The same pass found two places where the scenario's wording and the design differ, and the design stands: Follow-ups is
+two steps (Copy, then Mark sent, decisions 2026-10-10 "two steps"), so "Mark sent records it" is right and Copy alone
+records nothing; and no screen lists facts yet (7.18's per-project knowledge is phase L-core), so step 5's "the fact is
+gone" is checked on the record route the project page will read.
+
+**Why:** A step that the product doesn't do can't pass "checked as written", and the nag that a backup is missing was
+only in a chip that is easy to miss.
+
+**Impact:** Design 7.1 and 7.7 and the wording sheet; no API, op or setting change.
+
 ## 2026-10-12: Phase A's design calls, after checking each item against the code
 
 **Decided by:** project lead, at the start of phase A.

@@ -7,6 +7,7 @@ import { RestartNotice, useRestart } from "../lib/restart";
 import { useRestartWhat } from "../lib/restart-for";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { backupChipAge, backupText } from "../lib/backup";
 import { time } from "../lib/dates";
 import type { LiveState } from "../lib/live";
 import { useTotal } from "../lib/money";
@@ -18,14 +19,6 @@ import { isWarn, worstState, type StatusKind } from "./status";
 import styles from "./StatusMenu.module.css";
 
 type T = (key: string, vars?: Record<string, string | number>) => string;
-
-function backupText(b: S["BackupStatus"], t: T): string {
-  if (!b.configured) return t("backup.none");
-  if (b.age_hours === null) return b.last_error ? t("backup.failed") : t("backup.never");
-  const h = b.age_hours;
-  const age = h < 1 ? t("age.under_hour") : h < 48 ? t("age.hours", { n: Math.floor(h) }) : t("age.days", { n: Math.floor(h / 24) });
-  return b.needs_attention ? t("backup.overdue", { age }) : t("backup.ok", { age });
-}
 
 /** The assistant's cost so far, with the limit it is near said in words; nothing until a run has cost something. */
 function spendText(sp: S["SpendStatus"], t: T, total: (usd: number) => string): { text: string; near: boolean } | null {
@@ -68,6 +61,8 @@ export function StatusMenu(props: {
   const kind = worstState({ live: props.live.state, status: status.data, restartPhase: restart.phase });
   const word = t(CHIP_WORD[kind]);
   const b = status.data?.backup;
+  // Once a backup has succeeded the chip keeps its age in view beside its word; the popover says the same in full.
+  const age = b ? backupChipAge(b, t) : null;
   const ai = status.data?.ai;
   const spend = status.data ? spendText(status.data.spend, t, total) : null;
   const restartShown = restart.phase !== "idle" || !!status.data?.restart_needed;
@@ -86,7 +81,12 @@ export function StatusMenu(props: {
       : "";
   return (
     <DialogTrigger>
-      <StatusChip tone={isWarn(kind) ? "warn" : "ok"} aria-label={t("status.chip_named", { state: word })} data-status={kind}>
+      <StatusChip
+        tone={isWarn(kind) ? "warn" : "ok"}
+        aria-label={t("status.chip_named", { state: age ? t("status.chip_with", { state: word, detail: age }) : word })}
+        data-status={kind}
+        detail={age ?? undefined}
+      >
         {word}
       </StatusChip>
       <Popover placement="bottom end" className={styles.popover}>

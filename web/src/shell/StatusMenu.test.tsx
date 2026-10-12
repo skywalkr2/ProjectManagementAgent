@@ -46,6 +46,26 @@ test("all good: the chip says Live in words, and the popover says when the scree
   expect(within(dialog).getByText("Backed up less than an hour ago")).toBeInTheDocument();
 });
 
+test("once a backup has succeeded the chip itself shows its age, and its name says it too", async () => {
+  show(statusFixture({}, { backup: { configured: true, age_hours: 3, needs_attention: false } }));
+  await chipText("Live");
+  await chipText("Backed up 3 h ago");
+  expect(await chip()).toHaveAccessibleName("Status: Live, Backed up 3 h ago");
+});
+
+test("an overdue backup keeps its age on the chip beside the warning", async () => {
+  show(statusFixture({}, { backup: { configured: true, age_hours: 100, needs_attention: true } }));
+  await chipIs("backup");
+  await chipText("Backup needed");
+  await chipText("Last backup 4 days ago");
+});
+
+test("with no backup yet the chip has no age to show", async () => {
+  show(statusFixture({}, { backup: { configured: true, age_hours: null, needs_attention: true } }));
+  await chipText("Backup needed");
+  expect(chipNow()).not.toHaveTextContent("ago");
+});
+
 test("the worst state wins on the chip: backup needed", async () => {
   show(statusFixture({}, { backup: { configured: true, needs_attention: true, age_hours: null } }));
   await chipIs("backup");
