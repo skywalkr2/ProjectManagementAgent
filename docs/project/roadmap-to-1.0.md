@@ -22,7 +22,7 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
 - [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
 - [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded.
 
-## Phase A: a baseline that works with no demo data (about 3.5 sessions)
+## Phase A: a baseline that works with no demo data (about 4.5 sessions)
 
 **Exit test:** on a fresh computer folder, the owner runs one install or update command. They then:
 1. make a workspace with no template;
@@ -58,7 +58,14 @@ A2. **The person's path, fixed where the review found it broken.**
 - [ ] **No silent stops** (design 8.5, 8.6, 8.8):
   - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived;
   - a usage limit resumes by itself at its reset;
-  - an empty or failed run is retried automatically, then goes to the person with why.
+  - an empty or failed run is retried automatically, then goes to the person with why;
+  - an agent that exits 0 with no answer is its own outcome (`no_output`), retried, never "done";
+  - held work and paused accounts show on Today: "Restart to run 7 waiting requests" as the first Decide line, and an
+    account paused until its limit resets as a Risk line with the time and the count waiting.
+- [ ] **A bare first name resolves only in context** (design 6.11): same project, or a participant in the thread; a
+  different initial or surname fragment is held.
+- [ ] **Audit design 6.8 to 6.11 against the code** before phase L starts: the questions, actions, notices and names
+  services. Fix what differs, or correct the design, so the learning loop's signals are right from the start.
 - [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command.
 
 A3. **Journey tests.** These are end to end, with a fake AI service and fake mail and calendar services, and nothing
@@ -70,7 +77,7 @@ is "ready to test" until they pass:
 - [ ] backup → restore;
 - [ ] the acceptance scenario, steps 1–7, all checked as written (step 6 included).
 
-## Phase L: the learning slice (about 10 sessions)
+## Phase L: the learning slice (about 11.5 sessions)
 
 Added on 2026-10-12 after the first design's author reviewed design 1.1 (decisions, "The learning slice"). The write side
 of learning is built; this phase builds the read side, so the assistant gets better at each project the more it sees.
@@ -99,6 +106,11 @@ L1. **Knowledge as records.**
 L2. **Every run reads what applies.**
 - [ ] The knowledge section in the stable part of every packet: rules, matching lessons, the glossary, routing, style notes.
 - [ ] Facts of the input's projects, ranked and cut at a budget, with what was left out said.
+- [ ] The knowledge split so the cached prefix holds: rules, task-kind lessons and a small glossary in the stable part; the
+  rest per input. The batch prefix is not frozen, so each input sees what the inputs before it in the batch did.
+- [ ] Facts that replace older ones (`supersedes`), proposed by the input's run; superseded facts leave the packet.
+- [ ] The `near-duplicate-question` lint, against open questions and ones answered recently.
+- [ ] Ask gets the knowledge section, with the same citation check.
 - [ ] The `search` round, at most two per run, over facts, past inputs, records and knowledge.
 - [ ] The `already-known` lint on questions, outside lookups and reports.
 - [ ] The knowledge log on each run.
@@ -114,13 +126,20 @@ L3. **Every correction teaches.**
 - [ ] Proposals from inputs gathered on one card a day, merged first, and expiring after 14 days with the count shown.
 - [ ] Facts in the packet carry their date and source.
 - [ ] Proposals from the person's own words apply at once with Undo; the rest wait for Keep.
-- [ ] Duplicates merge when proposed.
+- [ ] Duplicates merge when proposed, and near-matches of recent discards are not shown again.
+- [ ] A pasted reply is content, not the person's words: learning from it waits; only the PM's own answer applies at once.
+- [ ] Learning from a direct edit sees the inputs that came after the original run, and says "nothing to generalize"
+  unless the edit contradicts the evidence the run had.
 - [ ] The `edited` signal for the person's direct edits of what the assistant set, learned from in the batch.
 - [ ] The repeat-correction signal and the knowledge-used rate (`applied` on each changeset, checked against the knowledge
   log); the unused-entries list.
 - [ ] Fallback chains hold only checked accounts, or ones the person accepted unchecked; the first run on a fallback account
   is tagged on its cards.
-- [ ] The corrections recorded before this phase are learned from once.
+- [ ] A command-line agent's program version is recorded on each run; a new version is treated like an account change, and
+  the program's own auto-update is turned off where it allows.
+- [ ] Today's learning lines (`learned`, `learned_daily`, `learned_backlog`, `switch_failed`); probation can be ended early
+  from the quality panel.
+- [ ] The corrections recorded before this phase are learned from once, into one catch-up list.
 - [ ] On screen (7.18): the Learned line on the correction's card, and the daily Today card. The rest of 7.18 is laid out
   in phase B.
 - [ ] Take my lessons: lessons, rules and general glossary terms to a file and back into another workspace.

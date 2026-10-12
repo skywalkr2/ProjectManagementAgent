@@ -5,7 +5,8 @@ Each component is generic, configured from Part 4, and has its own tests with fi
 **Status.** A section or paragraph marked *designed, not yet built* is in the design baseline and has no code yet; the
 roadmap (`docs/project/roadmap-to-1.0.md`) says when it is due. Where the code and a section differ, the code and the decisions
 are right and the section is a gap. Sections 6.8 to 6.11 were written for the first design and have not been compared with
-the code line by line since.
+the code line by line since. They are where most corrections happen (drops, rewords, reroutes, reassignments), so the
+learning loop's signals come from them; they are audited against the code at the end of phase A, before phase L starts.
 
 ## 6.1 Plugin host
 
@@ -184,12 +185,17 @@ facts with 6.18 and 6.19.
   enter a packet.
 - **Order: stable first, request last.** The packet is laid out so the parts that are the same for every run in a batch come
   first, in a fixed order, in three layers: **static** (instructions, op reference for the task kind, playbook entries),
-  **slow-changing** (glossary, rules, active lessons) and **per batch** (all open actions and questions). The request-specific
-  parts follow: scope and facts for the items involved, related records, the date and anything else that varies, and the input
-  last. Most providers discount or cache a repeated prefix, and only an identical one: so the stable part is built once at the
-  start of a batch and frozen for the batch (changes applied during the batch show up in the next one), serialized in a
+  **slow-changing** (every active rule, the lessons targeted at the task kind, the whole glossary while it is small) and
+  **current** (all open actions and questions). The request-specific
+  parts follow: the knowledge that depends on the input (lessons targeted at its projects or people, routing, the glossary
+  terms it uses, style notes, ranked facts; 6.22), scope, related records, today's date **and the input's received date**
+  (phase A), and the input last. Most providers discount or cache a repeated prefix, and only an identical one: so each layer is serialized in a
   deterministic order with no dates, counts or other volatile values, and the batch's calls run close together because cached
-  prefixes expire after minutes. The adapter marks a cache point after each layer when its provider supports caching
+  prefixes expire after minutes. **The prefix is not frozen for a batch** (*changed after the first design author's review*):
+  each request's packet is built from the current state, so input 2 sees the action or question input 1 just created or
+  closed. Only the layer that changed loses its cache. That is usually the open items, the last stable layer, so the
+  static and knowledge layers stay cached. Two inputs about the same thing (two edits of one file, a mail and its follow-up)
+  then don't each file the same question. The code already builds each packet when its request runs. The adapter marks a cache point after each layer when its provider supports caching
   (`prompt_caching` capability, 6.16) and ignores the marks otherwise.
 - **Open items, full and compact** (*designed, not yet built*; `open_items.compact_share`, 4.9). An open action in full form is "[project] text (owner, due) → how to close it" (its id and
   the match text that closes it); in compact form it is id, owner and title, with no closing hint, since the id alone is enough
@@ -424,10 +430,19 @@ a system op, or otherwise needs a decision. Everything else is filed quietly (st
 - Enriches links automatically from item keys and known titles found in the text.
 - **Decisions are questions addressed to the PM.** Whether something is "your decision" is decided by the recipient, never by a
   stored kind. Moving a question from the PM to someone else makes it an ordinary question.
-- Answer flow: the PM types an answer or pastes the person's reply; it becomes a request carrying the question and its
-  `on_answer`; the AI records the answer as a fact, updates records, closes or narrows the question, and re-checks every other
-  open question to that person against the same answer.
-- Feedback flow ("Respond to the assistant"): reword, reroute, drop (kept in a dropped-questions register with the reason) or
+- Answer flow, in two kinds, as built:
+  - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
+    (6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.
+  - **A reply someone else sent,** pasted by the PM (`/reply`), is handed in as pasted content: untrusted, like the paste
+    box's "pasted content". Only the PM's own note beside it counts as the PM's words. So "not me, ask X" in a reply becomes
+    a routing proposal that waits for the person, never routing with the PM's authority.
+
+  A reply becomes a request carrying the question and its `on_answer`; the AI records the answer as a fact, updates
+  records, closes or narrows the question, and re-checks every other open question to that person against the same answer.
+  The PM's own answer is recorded on the question today; queuing it the same way is *designed*.
+- **Same question twice:** `near-duplicate-question` (a lint, 4.17) compares a new question with open questions and ones
+  answered in the last `checks` window, since the assistant doesn't know the `key` that deduplicates (*designed, phase L*).
+- Feedback flow (send back, or the question's own menu): reword, reroute, drop (kept in a dropped-questions register with the reason) or
   close; every op that settles a pending request clears that question's pending flag.
 - **Check a correction against the data first.** A correction ("this shouldn't be in X's list") is a claim about the data. The
   feedback task's packet carries the current state of what it names, and the run starts by stating where the item actually is.
@@ -458,8 +473,10 @@ People, teams and projects are referred to by id everywhere (5.1). Names are res
 wherever they are shown.
 
 - **Resolving** (every write path: AI ops, PM forms, edits pulled back from published pages): an id passes; a full name or
-  alias that matches one person becomes that id; the PM's aliases become the PM; a first name only one known person has
-  becomes that person; an owner written in the workspace's `owner_format` is parsed into person and team. Anything ambiguous or
+  alias that matches one person becomes that id; the PM's aliases become the PM; a bare first name only one known person has
+  becomes that person **only when the input's context matches** (the person is on the same project, or is a participant in
+  the thread); anything with a different initial or surname fragment is held (*changed after the first design author's
+  review; the code today resolves any unique first name, fixed in phase A*); an owner written in the workspace's `owner_format` is parsed into person and team. Anything ambiguous or
   unknown holds the op and files one routing decision ("Who is 'Sam'?", with the candidates and "Add a new person").
 - **Rendering:** owners in `owner_format` ("Product (Jane Doe)"), recipients by full name, greetings by first name. Changing
   the format changes every output at the next render.
@@ -550,7 +567,9 @@ started (a hash of the config files; the newest modification time of the program
 - If any changed key is not live, or the code changed, the settings in use stay as they were, no new job starts, queued AI work
   is held ("Settings or code changed since the cockpit started; restart it to use them"), and the screens say a restart is
   needed and for which settings. The person chooses **Restart now** or **Later**. **The app never restarts on its own.**
-  Old code never quietly runs new settings; nothing is half-reloaded.
+  Old code never quietly runs new settings; nothing is half-reloaded. **Held work is never a silent stop** (*phase A*): the
+  first Decide line on Today says "Restart to run 7 waiting requests", with the count, for someone who opens the laptop and
+  never looks at the header.
 - **Restart now** (`POST /api/restart`) restarts between requests, at once if none is running; locally the process re-executes
   itself. A copy that can't start itself again (it was not started by `cockpit serve`) says to close it and start it. The
   serve command stops its web server without a signal, so the restart cannot end the process by raising the stop signal
@@ -569,9 +588,9 @@ order, each line with a kind:
 
 | Group | Lines (kind) |
 |---|---|
-| **Decide** | a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
-| **Risk** | work that failed (`failed`); the PM's own overdue to-dos, as one line (`overdue`) |
-| **Review** | the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused) |
+| **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; *phase A*); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
+| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, *phase A*); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line (`overdue`) |
+| **Review** | the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
 | **Send** | messages to send, one line per person (`send`); a person who hasn't answered in `ui.today.nudge_after_days` days (`nudge`: questions sent and actions told, 4.11) |
 
 Within a group, a kind has a fixed place (decisions first, then who-is, owner, held, go, refused, questions), then the line that
@@ -722,8 +741,19 @@ model doesn't accept.
 output. Everything else works from its classification. A sign-in failure (`auth`) always becomes a question to the PM that
 includes the adapter's `sign_in_hint()` (its own login command or page), and never reaches any other path.
 
+**Exit 0 with no answer is a failure** (*phase A*). Some agents exit 0 after printing a limit or sign-in message to their
+output, with no changeset. That is its own outcome, `no_output`, never "done": it is retried, then counts toward the
+empty-run rule (8.6). Today an agent that should answer in its outbox and doesn't is already `invalid_output`, so nothing is
+marked done. The separate outcome lets the empty-run rule and the quality panel count it apart from a malformed answer.
+
 **Probation for a new account** (*designed, not yet built*; the learning check with a switch is phase L, 6.22). A switch of a
-tier's account or model offers to run the learning fixture pairs first, with their cost estimate. A newly approved account's changesets carry a "new account" tag and always wait for review
+tier's account or model offers to run the learning fixture pairs first, with their cost estimate. **A command-line agent's
+program version is part of the account:** agents update themselves, and a new version can change flags, defaults or error
+output under a passing smoke test. So each `Run` records the agent's version; a version change is treated like an account
+change (smoke test, then "first run on <account>"); and the adapter turns off the program's own auto-update where the
+program allows it, by settings in the agents catalog (data, not code). **The person can end probation early** from the
+quality panel once the account's send-back rate is below `ai.probation.end_below` over at least `ai.probation.min_runs`
+runs, because 20 reviewed runs per task kind is a lot of cards when mail arrives on its own. A newly approved account's changesets carry a "new account" tag and always wait for review
 (nothing closes on its own) for `ai.probation.runs` runs per task kind (default 20). The PM's Looks good and Send back on them
 count toward that account's evaluation score (6.20), because a model can pass the fixtures and still follow instructions too
 literally in real use.
@@ -881,8 +911,8 @@ task kind, weekly by default) proposes, as held system ops the PM confirms:
   guard that needs new code becomes a report to the maintainers (6.13). The lesson stays as the record of why.
 - **Retire** lessons and other knowledge that matched nothing for `knowledge.unused_days`.
 
-Rules carry `applies_to`, so a packet includes only the rules for its task kind and projects (6.6), and the review keeps the
-active list short enough to read.
+Rules carry `applies_to`, but every packet includes every active rule (6.22): they are few, and most failures were a rule
+the run never saw. The review keeps the active list short enough for that.
 
 ## 6.22 Knowledge and the learning loop
 
@@ -920,19 +950,31 @@ Ids matter: a fixture, a rule promotion and a later correction can each point at
 through ops (`lesson.add` and `lesson.update`, `glossary.add` and `glossary.update`, `routing.add`, `style.add`, `rule.add`,
 `fact`, and `retire` for any kind), so every change is in the ledger with Undo.
 
-**The knowledge section of every packet.** It goes in the stable part, after the playbook and before the open items (6.6), in
-this order:
-1. every active rule (they are few, and most failures were a rule the run never saw);
-2. active lessons whose target matches the task kind, or the projects and people in the input;
-3. the glossary: all of it while it is small (under `knowledge.glossary_all_below`), otherwise the terms that appear in the
-   input or belong to its projects;
-4. routing entries for the people and projects in the input;
-5. style notes for the recipient, when the task drafts something that goes out.
+**The knowledge section of every packet** is split so the cached prefix stays the same from input to input (6.6):
+- **In the stable part,** after the playbook and before the open items:
+  1. every active rule (they are few, and most failures were a rule the run never saw);
+  2. active lessons targeted at the task kind;
+  3. the whole glossary while it is small (under `knowledge.glossary_all_below`).
+- **In the per-input part,** because it depends on the input:
+  1. lessons targeted at the input's projects or people;
+  2. routing entries for the people and projects in the input;
+  3. the glossary terms the input uses, once the glossary is too large to send whole;
+  4. style notes for the recipient, when the task drafts something that goes out;
+  5. the **facts**, below.
 
-The per-input part then carries the **facts** of the projects the input touches, each with its date and source ("as of
+The facts are those of the projects the input touches, each with its date and source ("as of
 2026-09-14, from the weekly call notes"). A run can then see that a fact is old, not only that it ranks low. They are ranked:
 key facts first, then by overlap with the input's terms and ids, then newest first. The list is cut at `knowledge.facts_budget`, and what was left out
 is said ("42 more facts on this project; search for them").
+
+**A newer fact replaces an older one.** Ranking alone would still put "ships in release A" beside "moved to release B", and
+the run can pick the wrong one. A scope or a date that moves twice in a week is the most common churn. So:
+- a `fact` has an optional `supersedes` (the id of the fact it replaces);
+- the input's run proposes it when a new fact covers the same subject as an existing one (same project and field, or a high
+  overlap of words);
+- a superseded fact leaves the packet but stays findable by search, with what replaced it.
+
+The full freshness check (6.19) waits for phase D.
 
 Only active entries go in, never proposed or retired ones. An entry is presented as guidance only when its source is trusted.
 Otherwise it is shown as data with its source, as 6.6 does for anything derived from untrusted content.
@@ -983,6 +1025,10 @@ How a proposal applies follows the tier rule (6.7, 12.2):
 Before a proposal is shown, it is compared with the active entries of its kind by target and wording, so duplicates merge
 instead of piling up. This is the same overlap check as rules (6.7), shown as "Overlaps with …".
 
+**What the person discarded is remembered.** A discarded proposal is kept, with the reason if the person gave one. A new
+proposal that nearly matches a discard from the last `knowledge.discards_hold_days` (default 90) is not shown again. Otherwise
+the same glossary guess or routing entry comes back from every input that mentions it, and the daily card repeats itself.
+
 **When it runs.**
 - **At once, when the person wrote something.** That covers a send-back note, an answer to the assistant's question, or a
   rule stated in Ask. The person is looking at the card right then, and the Learned line should appear while they still
@@ -990,6 +1036,11 @@ instead of piling up. This is the same overlap check as rules (6.7), shown as "O
 - **Batched,** every `knowledge.learn_every_minutes` (default 30), for silent corrections: an undo, an edited follow-up, a
   pulled-back auto-close, a dropped question, or the person's own direct edit of something the assistant set (6.20). A direct
   edit is often the clearest correction there is.
+
+**A direct edit isn't always a correction.** Sometimes the world changed, not the assistant: a later mail moved a due date,
+or work was handed over. Learning from that gives wrong lessons ("the assistant gets due dates wrong"). So:
+- the `learn.correction` packet carries every input received after the original run that touches the same records;
+- it answers "nothing to generalize" unless the edit contradicts the evidence the run had at the time.
 
 **Which tier writes it.** A bad lesson is worse than none, because it is in every later packet. So there are two task kinds:
 - **`learn.correction`:** lessons, `lesson.update` and rules from corrections, on the stronger tier. These are rare and
@@ -999,7 +1050,8 @@ instead of piling up. This is the same overlap check as rules (6.7), shown as "O
 
 Anything proposed after a repeat correction (a guard that already failed once) always runs on the stronger tier. Both kinds
 follow cost control (6.16), each with its own budget. Corrections recorded before this was built are learned from once,
-when it arrives.
+when it arrives, into **one catch-up list** ("Learned from earlier corrections: 23 to review"), not into dozens of correction
+cards on day one.
 
 **Learning from inputs too.** Before the run, a rules-only step (no AI) lists the terms in the input that look like
 acronyms or project terms and are not in the glossary, and the packet names them. The run that processes an input may then
@@ -1140,6 +1192,10 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
 - **An ask is a core request of kind `ask`** (4.8), started from the Ask box (`POST /api/ask`) with the PM's question as its
   note, so it is trusted as the PM's own words. The worker processes it like any request, on the tier `ai.tasks.ask` or the
   `write` role gives it.
+- **Ask has the knowledge section** (*designed, phase L*, 6.22). "Who decides this?", "what does this acronym mean here?"
+  and "what did we agree about X?" are exactly what the glossary, routing, rules and facts answer. So the ask packet carries
+  the knowledge section like any other. The citation check is the same: an answer citing a knowledge entry quotes it.
+  Otherwise Ask would be the one place the assistant is as smart on day 100 as on day 1.
 - **What the person says in Ask is learned** (*designed, phase L*, 6.22). A rule or fact stated in a question ("from now on…",
   "she's the one who decides that") becomes a proposal beside the answer. It applies at once, as the person's own words, with
   the read-back and Undo.

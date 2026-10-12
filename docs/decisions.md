@@ -3,6 +3,42 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: The engine review: no frozen batch prefix, trusted answers only, facts that replace facts, no silent stops
+
+**Decided by:** the first design's author proposed (review of Part 6); project lead checked each point against the code and
+placed the work.
+
+**What:**
+- **The batch prefix is not frozen.** Each packet is built from the current state, as the code already does, so an input
+  sees what earlier inputs in the batch created. The knowledge section splits so the cached prefix holds:
+  - stable: all rules, lessons targeted at the task kind, and a small glossary;
+  - per input: everything else.
+  A `near-duplicate-question` lint is added.
+- **Only the PM's own answer counts as the PM's words.** A pasted reply is content; the code already hands it in as pasted
+  content. A held op the PM's answer releases counts as the PM's own.
+- **Facts carry `supersedes`;** superseded facts leave the packet. Ask gets the knowledge section. Discarded proposals are
+  remembered and not shown again for 90 days.
+- **Direct edits.** Learning from one sees the inputs that came after the original run, and defaults to "nothing to
+  generalize". The learning backlog arrives as one catch-up list.
+- **First names.** A bare first name resolves only in context (same project, or a participant in the thread); the code
+  resolves any unique first name today.
+- **No silent stops.**
+  - Held work shows as the first Decide line ("Restart to run N waiting requests").
+  - A paused account shows as a Risk line.
+  - An agent that exits 0 with no answer is `no_output`, retried.
+- **Agent versions.** An agent's program version is part of the account: recorded on each run, a change treated like a
+  switch, and auto-update turned off where possible.
+- **Probation** can be ended early.
+- **Audit.** Design 6.8 to 6.11 is audited against the code at the end of phase A.
+
+**Why:** Each point is a way the engine would fail in daily use. Some were seen in the first version: a question filed twice
+in one batch, a pasted reply gaining the PM's authority, a moved date read as current, a wrong person from a shared first
+name, an assistant that stopped without anyone noticing.
+
+**Impact:**
+- Design 6.6, 6.8, 6.11, 6.14, 6.15, 6.16, 6.21, 6.22, 6.25, 4.8, 4.17, 4.25 and 5.1 are updated.
+- Phase A grows to about 4.5 sessions and phase L to about 11.5.
+
 ## 2026-10-12: Product rules are the core playbook's seed lessons, with guard kinds; the first-use rules come first
 
 **Decided by:** the first design's author proposed (review of Part 8); project lead adopted it and placed the work (the

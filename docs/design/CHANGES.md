@@ -415,6 +415,30 @@ All eight points are in, as you proposed except where noted below. Phase L grows
 | Follow-up: lessons guarded by an invariant still need a line in the op reference, and frequent refusals should bring the lesson into the packet | Both adopted (Part 8, guard kinds). Every invariant puts a one-line constraint in the reference of the ops it constrains, and the self-check fails when one is missing; some of these lines already exist in the core ops' descriptions. Each run records its refusals by check. A check refusing more than 5% of a task kind's last 50 runs (a setting) brings its full seed lesson into that task kind's packets automatically, until the rate drops. The quality panel shows both. |
 | Enforce first for the first real use | Phase A: received date, usage limits resuming at reset, empty or failed runs retried. Phase L, before real use starts at its end: the knowledge rules, verbatim versus paraphrase, attribution, names from a primary source, and links checked. Scope, schedule lookups and dependencies wait for the packs. |
 
+## 15. Your review of Part 6 (2026-10-12)
+
+Each point was checked against the code first. Four were already right in the code and wrong only in the design text (1, 2, 11 and `project.add`);
+the rest are new.
+
+| You said | What we found, and what changed |
+|---|---|
+| 1. The frozen batch prefix hides earlier work in the batch; per-input knowledge breaks the cache | The code builds each packet when its request runs, so it doesn't freeze; the design text did. 6.6 now says so. The knowledge section is split as you suggested: rules, task-kind lessons and a small glossary in the stable part, the rest per input. 6.21 now agrees with 6.22: every active rule goes in. `near-duplicate-question` is a new lint (phase L). |
+| 2. Answers mix trusted and untrusted words | The code already separates them: `/answer` takes the PM's own words, and `/reply` hands in someone else's reply as pasted content. 6.8 described one flow and now describes both. Learning from a reply waits for the person, so "not me, ask X" never becomes routing on its own. |
+| 3. Facts need supersession | `fact.supersedes`, proposed by the input's run when a new fact covers the same subject; superseded facts leave the packet and stay searchable (phase L). |
+| 4. Ask has no knowledge section | It gets the section, with the same citation check (phase L). |
+| 5. Remember discards | Discards are kept with their reason, and near-matches aren't shown again for 90 days, a setting (phase L). |
+| 6. A direct edit isn't always a correction | The `learn.correction` packet carries the inputs received after the original run on the same records, and defaults to "nothing to generalize" unless the edit contradicts the evidence the run had (phase L). |
+| 7. A first name alone is risky | True of the code today: any unique first name resolves. It now resolves only in context (same project, or a participant in the thread), and a different initial or surname fragment is held. Fixed in phase A, since it affects real mail now. |
+| 8. "Restart needed" can silently stop the assistant | Held work becomes the first Decide line ("Restart to run 7 waiting requests"), and an account paused until its reset becomes a Risk line with the time (phase A). |
+| 9. Today lacks the learning lines | New kinds: `learned`, `learned_daily` and `learned_backlog` under Review; `switch_failed` under Risk; probation work marked under Review (phase L). |
+| 10. An agent's version is part of the account | Recorded on each run; a change is treated like a switch (smoke test, then "first run on"); the adapter turns off auto-update where the program allows, from the agents catalog (phase L). |
+| 11. Exit 0 with no outbox is a failure | Already a failure in the code (`invalid_output`); nothing is marked done. It becomes its own outcome, `no_output`, counted toward the empty-run rule (phase A). |
+| 12. The backlog will arrive all at once | One catch-up list, not individual cards (phase L). |
+| 13. Audit 6.8 to 6.11 before phase L | Scheduled as the last item of phase A. |
+| Both dates in the packet | Today's date and the input's received date (phase A). |
+| `project.add` from the person's own "yes" | Already so in the code: a held op the PM's answer releases is applied as the PM, trusted and confirmed by them. 6.8 now says it. |
+| Ending probation early | From the quality panel, once the send-back rate is below a set level over a minimum number of runs. |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

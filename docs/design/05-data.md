@@ -209,7 +209,9 @@ These are in the design baseline and have no record type yet. Several belong to 
 | `RoutingEntry` | id, about (a topic, area, project or kind of question), person, answers (yes, no, or "look it up at" a source), applies_to, source and evidence, learned, trust, status | phase L (6.22); 4.3 |
 | `StyleNote` | id, audience or recipient (person ids or an audience), observation, evidence (the draft-versus-sent difference, the signal it came from), learned, trust, status | phase L (6.22) |
 
-The `fact` record gains `key` (always shown first) and `as_of` in phase L. The `run` record gains its knowledge log: the ids of
+The `fact` record gains `key` (always shown first), `as_of` and `supersedes` (the fact it replaces, 6.22) in phase L.
+Discarded proposals are kept with their reason. A `run` gains the agent's program version, and the outcome `no_output`
+(6.16). The `run` record gains its knowledge log: the ids of
 the knowledge entries it was given, how many facts were left out, and its searches with what came back (6.22). A changeset
 gains `applied`, the knowledge ids it says it used, checked against that log. A `run` also records its refusals by check name
 (8, guard kinds). A `signal` gains the kind `edited` (6.20).

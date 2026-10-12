@@ -326,7 +326,9 @@ content_levels:                  # kinds of material some accounts won't take, b
   the person's go with the estimate. On a subscription there is no price, so `confirm_unpriced` makes such runs wait too. A
   project may carry its own budget, set only by the person (`Project.budget_usd`, 5.1), which covers AI work on it and
   everything inside it. Caps per record type (`per_record`) are *designed, not yet built*.
-- **Designed, not yet built:** `probation` (a new account's work always waits for review for N runs per task kind, 6.16),
+- **Designed, not yet built:** `probation` (a new account's work always waits for review for `runs` runs per task kind,
+  default 20; the person may end it early once the send-back rate is below `end_below`, default 0.05, over at least
+  `min_runs`, default 10; 6.16),
   `evaluation.required_before_switch`, `auth: keychain:NAME`, the aggregator's `routing` options, and task kinds other than
   `notes` and `ask` (change, answer, feedback, update, agenda) that the first design named.
 
@@ -566,7 +568,8 @@ the code's value is the one in use.)
 
 Lints in the first design that are *designed, not yet built*: `locale-spelling`, `fact-terms-without-asks-for` and
 `unreachable-link`. With the learning slice (phase L): `already-known` (default `return`), a question, outside lookup or report
-whose subject a plain search of the workspace's own knowledge already answers (6.22).
+whose subject a plain search of the workspace's own knowledge already answers (6.22); and `near-duplicate-question` (default
+`return`), a question close to an open one, or to one answered in the last `days` (default 14), to the same person (6.8).
 
 ## 4.18 `config/code_owners.yaml` (*designed, not yet built*)
 
@@ -715,6 +718,7 @@ knowledge:
   unused_days: 60              # an active entry that matched nothing for this long is offered for retirement
   check_on_switch: true        # offer the learning fixture pairs, with their cost, when a tier's account or model changes
   refusals_to_packet: {share: 0.05, of_last: 50}   # a check refusing this often puts its full seed lesson in the packet
+  discards_hold_days: 90       # a proposal close to one the person discarded this recently is not shown again
 ```
 
 Learning has two task kinds, so their tiers and budgets are set in `ai.yaml` like any other (4.8). `learn.correction` writes
