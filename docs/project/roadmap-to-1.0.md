@@ -86,8 +86,11 @@ A1. **Demo data off the person's path.**
   `test_local_changes_refuse_before_any_step`). Not yet run on the owner's computer.
 
 A2. **The person's path, fixed where the review found it broken.**
-- [ ] **Add-ons install from the screen:** the Install button on Add-ons, for a release of pure Python whose needs the app
-  already has, as the mail and calendar add-on is. A pack's own libraries come in phase C1.
+- [x] **Add-ons install from the screen:** the Install button on Add-ons, for a release of pure Python whose needs the app
+  already has, as the mail and calendar add-on is. A pack's own libraries come in phase C1. Built:
+  `tests/test_pack_install.py` (`test_installing_an_add_on_that_isnt_running_holds_no_work`,
+  `test_updating_an_add_on_that_is_running_waits_for_a_restart`, `test_removing_an_add_on_the_app_installed_holds_no_work`)
+  and `Addons.test.tsx`. Not yet run against the owner's real catalog.
 - [x] Runs a crash left stuck are queued again on start. Built: `tests/test_requeue.py` (queued again with the note,
   held for the person when found stuck a second time, other states and a granted approval untouched, done by the
   worker on start).
@@ -97,15 +100,18 @@ A2. **The person's path, fixed where the review found it broken.**
   the audit. **The check sits where responses leave:** in tests and dev mode, the API's response serializer refuses
   user-facing text containing `.yaml`, `env:`, a dotted key path or a command, so the journey tests fail on the first
   leak, wherever it was built, runtime messages included.
-- [ ] **The first run says what it costs:** the first run after setup shows its estimate even below the confirm amount
+- [x] **The first run says what it costs:** the first run after setup shows its estimate even below the confirm amount
   ("Reading your last day of mail: about $0.30"). The new defaults act on their own, so the first impression is a result
-  the person expected to pay for (design 7.8).
+  the person expected to pay for (design 7.8). Built as one Go for all of the first runs: `tests/test_first_go.py`
+  (e.g. `test_three_held_requests_make_one_today_line_with_the_summed_estimate`,
+  `test_go_starts_them_all_and_nothing_waits_for_it_again`) and `FirstGoRow.test.tsx`.
 - [x] **A refresh button on the mailbox** (owner, 2026-10-12): check "Came in" and the mail source now. Built: "Check
   now" on Came in, with a lock so a source is never read twice at once.
   `test_check_now_reads_every_source_and_one_that_fails_never_stops_the_rest` (`tests/test_today_dashboard.py`),
   `test_a_source_already_being_read_is_not_read_twice` (`tests/test_watch.py`) and "Check now reads the sources, shows
   the new list at once and says what arrived" (`web/src/components/TodayBoard.test.tsx`).
-- [ ] With the Install button, the Add-ons screen's introduction stops saying the app never installs anything.
+- [x] With the Install button, the Add-ons screen's introduction stops saying the app never installs anything ("the introduction says installing happens
+  here and that the app never takes payment" in `Addons.test.tsx`).
 - [x] **Local mode guards against other web pages** (design 12.1; `tests/test_local_guards.py`, e.g.
   `test_a_post_from_a_foreign_origin_is_refused_even_with_a_valid_token`,
   `test_a_foreign_host_is_refused_on_an_api_route_the_health_check_and_the_page`,

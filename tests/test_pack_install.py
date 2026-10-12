@@ -153,24 +153,32 @@ def screen(tmp_path, monkeypatch):
     return c, cfg.server.base_path.rstrip("/") + "/api", app.state.worker, place
 
 
-def test_installing_marks_a_restart_as_needed(screen):
+def test_installing_an_add_on_that_isnt_running_holds_no_work(screen):
     c, api, worker, _ = screen
     assert worker.restart_needed is None and worker.restart_for == []
+    done = c.post(f"{api}/packs/packdemo/install")
+    assert done.status_code == 200 and done.json()["needs_restart"] is True  # the row offers Restart now
+    assert worker.restart_needed is None and worker.restart_for == []  # but nothing the app runs changed
+    assert c.get(f"{api}/packs").json()["available"][0]["removable"] is True
+
+
+def test_updating_an_add_on_that_is_running_waits_for_a_restart(screen, monkeypatch):
+    c, api, worker, _ = screen
+    monkeypatch.setattr(type(worker.store.plugins), "active", lambda self, name: name == "packdemo")
     assert c.post(f"{api}/packs/packdemo/install").status_code == 200
     assert worker.restart_needed and worker.restart_for == ["add-ons"]
     status = c.get(f"{api}/status").json()
     assert status["restart_needed"] and status["restart_for"] == ["add-ons"]
-    assert c.get(f"{api}/packs").json()["available"][0]["removable"] is True
 
 
-def test_removing_an_add_on_the_app_installed_marks_a_restart_as_needed(screen):
+def test_removing_an_add_on_the_app_installed_holds_no_work(screen):
     c, api, worker, place = screen
     c.post(f"{api}/packs/packdemo/install")
-    worker.restart_needed, worker.restart_for = None, []
     done = c.post(f"{api}/packs/packdemo/uninstall")
     assert done.status_code == 200, done.text
+    assert done.json()["needs_restart"] is True
     assert not (place / "pack_demo").exists()
-    assert worker.restart_needed and worker.restart_for == ["add-ons"]
+    assert worker.restart_needed is None and worker.restart_for == []
     assert c.get(f"{api}/packs").json()["available"][0]["removable"] is False
 
 

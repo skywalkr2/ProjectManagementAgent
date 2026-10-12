@@ -379,9 +379,12 @@ freeze"). A pack's catalog entry says where its release is and how to check it. 
 - takes a read token for a private pack's release host, given once and kept as a secret reference;
 - is for a local install only. A hosted app's add-ons are installed with its deployment.
 
-The Install button is designed. On the server, installing a single release file of pure Python whose needs the app already
-has, removing it, and the read token are built. The button itself, the list of what will be added, the conflict check and a
-pack's own libraries are not yet built: the screen still shows an install command to copy. Installing code the person chose,
+**Built (phase A2):** installing a single release file of pure Python whose needs the app already has, the read token,
+the Install button, Update now for a newer release, and Remove for a pack this app installed and that is off. Installing
+or removing a pack that isn't running leaves the assistant's work going, and the row offers Restart now; updating one
+that is running holds new work until the restart, so old and new files never mix (`tests/test_pack_install.py`,
+`web/src/components/Addons.test.tsx`). **Not yet built:** the list of what will be added, the conflict check and a pack's
+own libraries (phase C1). A pack with no release still shows the publisher's install command to copy. Installing code the person chose,
 from a checked release, is not the product changing its own code (1.6).
 
 **Catalog feeds.** A feed is one index file at an HTTPS address: version, and per pack its id, name, summary,

@@ -599,8 +599,9 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 | Test source | "A stand-in source for tests" is offered under Add a source | Connectors can be marked test-only and aren't offered. **Built (A2)** |
 | Check now | The source's Read now and the schedule can read one source at the same moment; Came in has no refresh | A lock per source, and Check now on Came in (7.15). **Built (A2)** |
 | Backups | Nothing restores one | `cockpit restore --backup` makes a workspace from one dated backup (5.0). **Built (A1)** |
-| First run's cost | No notion of a first run | The first runs wait for one Go with their total (7.8, `ai.budgets.first_go`) |
+| First run's cost | No notion of a first run | The first runs wait for one Go with their total (7.8, `ai.budgets.first_go`). **Built (A2)** |
 | Local guards | No `Host` or `Origin` check; any listening address | The allowed hosts and origins, and loopback only in local mode (12.1). **Built (A2)** |
+| Install | The route existed; the screen had no button | Install, Update now and Remove (3.11). Only updating a running pack holds work until the restart. **Built (A2)** |
 | Wording | Checked only in the screens' own wording file | Screen text typed in the API models and checked when it leaves, in tests and development |
 
 ## Plugin host, API 0.1 (2026-10-09)

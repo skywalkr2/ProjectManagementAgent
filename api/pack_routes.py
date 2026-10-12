@@ -157,7 +157,9 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
             ) from None
         except pack_install.InstallError as err:
             raise HTTPException(status_code=409, detail=_sentence(str(err))) from None
-        worker.add_ons_changed()
+        if host.active(pack_id):
+            # A running add-on was updated: work waits for the restart rather than mix old and new files.
+            worker.add_ons_changed()
         return PackInstalled(name=done.name, version=done.version, needs_restart=True)
 
     @r.post("/packs/{pack_id}/uninstall")
@@ -178,7 +180,6 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
             pack_install.remove(name)
         except pack_install.InstallError as err:
             raise HTTPException(status_code=409, detail=_sentence(str(err))) from None
-        worker.add_ons_changed()
         return PackInstalled(name=name, version=version, needs_restart=True)
 
     @r.get("/packs")
