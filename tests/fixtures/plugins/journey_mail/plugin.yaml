@@ -1,0 +1,17 @@
+name: journey-mail
+version: 0.1.0
+plugin_api: '>=0.3,<0.4'
+description: A fictional mail and calendar add-on for the journey tests; it reads from a made-up service.
+depends_on: []
+interfaces: {provides: [], uses: []}
+subscribes: []
+provides:
+  sign_ins: [journey-mail/account]
+  connectors: [journey-mail/mail, journey-mail/calendar]
+config_schema: journey_mail:Config
+requires:
+  network: [127.0.0.1]
+  secrets: [client-id]
+  data_levels: [open, internal]
+  tools: []
+entry: journey_mail:register

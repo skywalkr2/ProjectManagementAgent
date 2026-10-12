@@ -2,62 +2,17 @@
 // started by the serve command, with fakes only at the outside services (tests/fake_services.py). The point is the joins
 // between steps that a test of one step misses. Each journey is a numbered test saying what the person does.
 // Names come from the fictional workspace the fake services serve, never written out here.
-import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { expect, test } from "@playwright/test";
+import { collectProblems, fakeAddress, openView, setupStep, visit, type Info, type Requests } from "./journey-helpers";
 
-const FAKE = "http://127.0.0.1:8790";
-
-interface Info {
-  token: string;
-  ai_base_url: string;
-  people: string[];
-  backup_folder: string;
-  source_folder: string;
-}
-interface Requests {
-  total: number;
-  smoke: number;
-  work: number;
-}
+const FAKE = fakeAddress("JOURNEY_FAKE_PORT", 8790);
 
 let info: Info;
 const problems: string[] = [];
 
 const requests = async (): Promise<Requests> => (await fetch(`${FAKE}/__e2e/ai-requests`)).json();
-
-async function checkAccessibility(page: Page) {
-  // The header sticks to the top, so what it covers depends on the scroll position; check from the top.
-  await page.evaluate(() => window.scrollTo(0, 0));
-  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
-  const found = results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`);
-  expect(found).toEqual([]);
-}
-
-/** What the person reads on the page: its text plus the words in its fields' placeholders, titles and labels. */
-async function readScreen(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const words = [document.body.innerText];
-    for (const el of Array.from(document.querySelectorAll("[placeholder],[title],[aria-label]"))) {
-      for (const name of ["placeholder", "title", "aria-label"]) {
-        const value = el.getAttribute(name);
-        if (value) words.push(value);
-      }
-    }
-    return words.join("\n");
-  });
-}
-
-/** A screen the person sees: it names no settings file, secret reference or command, and passes the accessibility checks. */
-async function visit(page: Page) {
-  const text = await readScreen(page);
-  expect(text).not.toMatch(/\.ya?ml\b/i);
-  expect(text).not.toMatch(/\benv:/);
-  expect(text).not.toMatch(/\bfile:\//);
-  expect(text).not.toMatch(/\bcockpit /);
-  await checkAccessibility(page);
-}
-
-const setupStep = (page: Page, name: string) => page.getByLabel(name, { exact: true });
 
 test.describe.serial("journeys", () => {
   test.beforeAll(async () => {
@@ -71,10 +26,7 @@ test.describe.serial("journeys", () => {
   test("J1. A new workspace: I name myself, add an AI account, hand in a note, press Go and see the result on Today", async ({
     page,
   }) => {
-    page.on("console", (msg) => {
-      if (msg.type() === "error") problems.push(msg.text());
-    });
-    page.on("pageerror", (err) => problems.push(String(err)));
+    collectProblems(page, problems);
 
     // I open the link the start command printed. Today is the home, and says setup has not begun.
     await page.goto(`?token=${info.token}`);
@@ -160,10 +112,7 @@ test.describe.serial("journeys", () => {
   test("J3. A folder I add on screen is read, a new file in it is handed in, and the assistant's result is on Today", async ({
     page,
   }) => {
-    page.on("console", (msg) => {
-      if (msg.type() === "error") problems.push(msg.text());
-    });
-    page.on("pageerror", (err) => problems.push(String(err)));
+    collectProblems(page, problems);
     await page.goto(`?token=${info.token}`);
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
 
@@ -200,5 +149,98 @@ test.describe.serial("journeys", () => {
     await expect(page.getByRole("heading", { level: 1, name: "What changed" })).toBeVisible();
     await expect(page.getByText(/folder-note\.txt/).first()).toBeVisible();
     await visit(page);
+  });
+
+  test("J4. An add-on from the list: I install it, restart, turn it on, restart, open its screen, then turn it off and remove it", async ({
+    page,
+  }) => {
+    test.setTimeout(240_000);
+    collectProblems(page, problems);
+    await page.goto(`?token=${info.token}`);
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+
+    // The app runs in a throwaway environment of its own, so an install from the screen can't reach the project's.
+    expect(info.install_target).toBeTruthy();
+    expect(info.install_target).not.toBe(info.project_site);
+
+    // Add-ons lists what the catalog offers: what it adds and reaches, and an Install button.
+    await openView(page, "Add-ons");
+    await expect(page.getByRole("heading", { name: "Add-ons", exact: true })).toBeVisible();
+    const row = page.locator("li.line", { hasText: "Example panel" });
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText("1 screen");
+    await expect(row).toContainText("Free");
+    await visit(page);
+    expect(existsSync(join(String(info.install_target), "journey_panel"))).toBe(false);
+
+    // Install puts it in place and says a restart is needed; it does not turn it on.
+    await row.getByRole("button", { name: "Install Example panel" }).click();
+    await expect(row.getByText(/is installed\. It is ready after a restart/)).toBeVisible();
+    expect(existsSync(join(String(info.install_target), "journey_panel"))).toBe(true);
+    await visit(page);
+
+    // Restart now: the app comes back on the same address, and the notice says so.
+    await row.getByRole("button", { name: "Restart now" }).click();
+    await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
+    await visit(page);
+
+    // After the restart the row says it is installed and off; turning it on waits for another restart.
+    await expect(row).toContainText("Installed (version 0.1.0) and off");
+    await row.getByRole("button", { name: "Turn on Example panel" }).click();
+    await expect(row).toContainText("restart");
+    await expect(page.getByRole("link", { name: /Example overview/ })).toHaveCount(0);
+    await row.getByRole("button", { name: "Restart now" }).first().click();
+    await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
+
+    // Its screen is in the sidebar (once the app has told the page about it) and opens.
+    await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Example overview" })).toBeVisible();
+    await openView(page, "Example overview");
+    await expect(page.getByRole("heading", { level: 1, name: "Example overview" })).toBeVisible();
+    await expect(page.getByText("This page comes from the example add-on.")).toBeVisible();
+    await visit(page);
+
+    // Turn it off, restart, and remove it from the row's menu; after another restart it is gone.
+    await openView(page, "Add-ons");
+    await page.getByRole("tab", { name: "Installed" }).click();
+    const installed = page.locator("li.line", { hasText: "journey-panel" });
+    await installed.getByRole("button", { name: "Turn off journey-panel" }).click();
+    await expect(installed).toContainText("Off after a restart");
+
+    // The menu offers Remove as soon as it is off. A refusal here is a screen that contradicts itself (the row says it
+    // is off, the answer says to turn it off), so it is checked softly and the journey goes on by restarting first.
+    await installed.getByRole("button", { name: "More actions for journey-panel" }).click();
+    await page.getByRole("menuitem", { name: "Remove" }).click();
+    await expect.soft(installed.getByRole("alert")).toHaveCount(0);
+    if (await installed.count()) {
+      await installed.getByRole("button", { name: "Restart now" }).first().click();
+      await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
+      await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Example overview" })).toHaveCount(0);
+      await installed.getByRole("button", { name: "More actions for journey-panel" }).click();
+      await page.getByRole("menuitem", { name: "Remove" }).click();
+    }
+
+    // Removed: the row is gone from Installed, the files are gone from the place the app installs into, and the
+    // catalog offers it again.
+    await expect(page.locator("li.line", { hasText: "journey-panel" })).toHaveCount(0);
+    expect(existsSync(join(String(info.install_target), "journey_panel"))).toBe(false);
+    await page.reload();
+    await page.getByRole("tab", { name: "Installed" }).click();
+    await expect(page.locator("li.line", { hasText: "journey-panel" })).toHaveCount(0);
+    await page.getByRole("tab", { name: "Available" }).click();
+    await expect(
+      page.locator("li.line", { hasText: "Example panel" }).getByRole("button", { name: "Install Example panel" }),
+    ).toBeVisible();
+    await visit(page);
+
+    // The project's own environment never held the add-on: nothing in it was installed from the screen.
+    const site = String(info.project_site);
+    const marked = readdirSync(site).filter(
+      (name) =>
+        name.endsWith(".dist-info") &&
+        existsSync(join(site, name, "INSTALLER")) &&
+        readFileSync(join(site, name, "INSTALLER"), "utf8").trim() === "pm-cockpit",
+    );
+    expect(marked).toEqual([]);
+    expect(existsSync(join(site, "journey_panel"))).toBe(false);
   });
 });

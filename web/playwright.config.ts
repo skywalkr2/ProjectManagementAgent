@@ -10,10 +10,41 @@ const servers = [
 ];
 
 // The journeys start the app as a person does (a new workspace, then the serve command) beside a process that plays the
-// outside services; both work in one state folder that the start-up script clears.
-const journeys = { port: 8783, fakePort: 8790, state: join(tmpdir(), "cockpit-journeys") };
+// outside services; each pair works in one state folder that the start-up script clears. Two pairs: one for the
+// journeys that share a workspace (a new workspace, a folder, an add-on installed from the list), and one for the
+// mail journey, whose workspace has the mail add-on on and has not yet pressed Go. The services answer over HTTPS
+// as well, with a certificate from a throwaway authority that the app trusts through its environment.
+const pair = (port: number, fakePort: number, httpsPort: number) => ({
+  port,
+  fakePort,
+  httpsPort,
+  state: join(tmpdir(), `cockpit-journeys-${port}`),
+});
+const journeys = pair(8783, 8790, 8791);
+const mail = pair(8784, 8792, 8793);
+
+// The browser tests ask the fake services for what they were asked; they read where from here.
+process.env.JOURNEY_FAKE_PORT = String(journeys.fakePort);
+process.env.JOURNEY_MAIL_FAKE_PORT = String(mail.fakePort);
 
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined;
+
+const freshServer = (p: ReturnType<typeof pair>, flags: string) => ({
+  command: `uv run python -m tests.e2e_fresh_server --port ${p.port} --state "${p.state}" --https-port ${p.httpsPort} ${flags}`,
+  cwd: "..",
+  url: `http://127.0.0.1:${p.port}/api/health`,
+  reuseExistingServer: false,
+  timeout: 60_000,
+});
+
+// Started after the app, which clears the state folder first.
+const fakeServices = (p: ReturnType<typeof pair>) => ({
+  command: `uv run python -m tests.fake_services --port ${p.fakePort} --https-port ${p.httpsPort} --state "${p.state}"`,
+  cwd: "..",
+  url: `http://127.0.0.1:${p.fakePort}/__e2e/info`,
+  reuseExistingServer: false,
+  timeout: 60_000,
+});
 
 export default defineConfig({
   testDir: "e2e",
@@ -37,7 +68,14 @@ export default defineConfig({
     {
       name: "journeys",
       testMatch: /journeys\.spec\.ts/,
-      use: { baseURL: `http://127.0.0.1:${journeys.port}/` },
+      // The made-up services' sign-in page is served with the throwaway authority's certificate, which this browser
+      // doesn't know; the app itself is told to trust it (see the start-up script), and the real one is never touched.
+      use: { baseURL: `http://127.0.0.1:${journeys.port}/`, ignoreHTTPSErrors: true },
+    },
+    {
+      name: "journeys-mail",
+      testMatch: /journeys-mail\.spec\.ts/,
+      use: { baseURL: `http://127.0.0.1:${mail.port}/`, ignoreHTTPSErrors: true },
     },
   ],
   webServer: [
@@ -48,19 +86,9 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 60_000,
     })),
-    {
-      command: `uv run python -m tests.e2e_fresh_server --port ${journeys.port} --state "${journeys.state}"`,
-      cwd: "..",
-      url: `http://127.0.0.1:${journeys.port}/api/health`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
-    {
-      command: `uv run python -m tests.fake_services --port ${journeys.fakePort} --state "${journeys.state}"`,
-      cwd: "..",
-      url: `http://127.0.0.1:${journeys.fakePort}/__e2e/info`,
-      reuseExistingServer: false,
-      timeout: 60_000,
-    },
+    freshServer(journeys, "--add-ons"),
+    fakeServices(journeys),
+    freshServer(mail, "--mail"),
+    fakeServices(mail),
   ],
 });

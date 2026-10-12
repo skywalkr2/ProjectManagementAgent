@@ -188,7 +188,13 @@ def remove(name: str, place: Path | None = None) -> None:
             path.unlink()
     for relative in sorted({str(PurePosixPath(p).parent) for p in paths}, key=len, reverse=True):
         directory = place / relative
-        if directory != place and directory.is_dir() and not any(directory.iterdir()):
+        if directory == place or not directory.is_dir():
+            continue
+        # The copies Python compiled of the pack's own files aren't in its record; they go with the pack.
+        cache = directory / "__pycache__"
+        if cache.is_dir() and cache.resolve().is_relative_to(place.resolve()):
+            shutil.rmtree(cache)
+        if not any(directory.iterdir()):
             directory.rmdir()
     if folder.exists():
         shutil.rmtree(folder)

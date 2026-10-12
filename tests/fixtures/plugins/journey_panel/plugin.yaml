@@ -1,0 +1,16 @@
+name: journey-panel
+version: 0.1.0
+plugin_api: '>=0.3,<0.4'
+description: A fictional add-on with one screen and nothing else, for the journey tests.
+depends_on: []
+interfaces: {provides: [], uses: []}
+subscribes: []
+provides:
+  panels: [journey-panel/overview]
+config_schema: journey_panel:Config
+requires:
+  network: []
+  secrets: []
+  data_levels: [open, internal]
+  tools: []
+entry: journey_panel:register

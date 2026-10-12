@@ -43,6 +43,19 @@ def test_a_pure_python_pack_installs_and_removes(tmp_path):
     assert not (tmp_path / "pack_demo").exists() and not list(tmp_path.glob("*.dist-info"))
 
 
+def test_removing_a_pack_that_ran_leaves_nothing_of_it_behind(tmp_path):
+    """Python writes compiled copies of a pack's files beside them once the app has run it; they aren't in the pack's
+    record, and the package folder must still go, while another pack's compiled files stay."""
+    pack_install.install(wheel(), tmp_path)
+    (tmp_path / "pack_demo" / "__pycache__").mkdir()
+    (tmp_path / "pack_demo" / "__pycache__" / "__init__.cpython-312.pyc").write_bytes(b"compiled")
+    (tmp_path / "__pycache__").mkdir()
+    (tmp_path / "__pycache__" / "other.cpython-312.pyc").write_bytes(b"compiled")
+    pack_install.remove("pack-demo", tmp_path)
+    assert not (tmp_path / "pack_demo").exists() and not list(tmp_path.glob("*.dist-info"))
+    assert (tmp_path / "__pycache__" / "other.cpython-312.pyc").is_file()
+
+
 @pytest.mark.parametrize(
     "data, problem",
     [
