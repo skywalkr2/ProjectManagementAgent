@@ -16,7 +16,7 @@ import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { restoreFocus } from "./ModalPanel";
 import { ItemFields } from "./SettingRow";
-import { NotReadingLines } from "./SignIns";
+import { SignIns } from "./SignIns";
 import { Skeleton } from "../ui/Skeleton";
 
 type Source = S["WatchSourceView"];
@@ -87,6 +87,8 @@ export function Sources(props: {
   add?: AddRequest | null;
   /** The request to add one has been taken up, so it isn't repeated the next time the screen opens. */
   onAddOpened?: () => void;
+  /** Opens Add-ons, from the accounts section when no add-on signs in to a service yet. */
+  onOpenAddons?: () => void;
 }) {
   const { t } = useWords();
   // A source that has never been read is checked on again soon: it is read within a minute of being added.
@@ -134,7 +136,10 @@ export function Sources(props: {
         </div>
       </div>
       <p className="hint">{t("sources.intro")}</p>
-      <NotReadingLines />
+      <SignIns
+        onOpenAddons={() => props.onOpenAddons?.()}
+        onChooseSource={(plugin) => setForm({ type: "add", plugin })}
+      />
       {form?.type === "add" && (
         <SourceForm
           key={`add-${seen}-${form.plugin ?? ""}`}

@@ -169,7 +169,14 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       case "records/files":
         return <Files />;
       case "sources":
-        return <Sources onAsk={(question) => setAsk({ question })} add={addSource} onAddOpened={() => setAddSource(null)} />;
+        return (
+          <Sources
+            onAsk={(question) => setAsk({ question })}
+            add={addSource}
+            onAddOpened={() => setAddSource(null)}
+            onOpenAddons={() => setView("addons")}
+          />
+        );
       case "setup":
         return (
           <Welcome

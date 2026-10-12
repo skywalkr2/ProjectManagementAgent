@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { useSignInReturn } from "../lib/sign-in-return";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
-import { Settings } from "./Settings";
+import { SignIns } from "./SignIns";
 
 function signIn(name: string, extra: Partial<S["SignInView"]> = {}): S["SignInView"] {
   return {
@@ -31,7 +31,7 @@ const LIST = [
 
 const settings = { "GET settings": () => ({ fingerprint: "fp", items: [] }) };
 const open = (onChooseSource: (plugin: string | null) => void = () => undefined) =>
-  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={onChooseSource} />);
+  renderApp(<SignIns onOpenAddons={() => undefined} onChooseSource={onChooseSource} />);
 const row = (label: string) => screen.getByText(label).closest("li") as HTMLElement;
 
 let assign: ReturnType<typeof vi.fn>;
@@ -47,9 +47,9 @@ test("with no sign-ins, the section says when they appear and offers to open Add
   const user = userEvent.setup();
   const onOpenAddons = vi.fn();
   const calls = fakeApi({ ...settings, "GET sign-ins": () => [] });
-  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={onOpenAddons} onChooseSource={() => undefined} />);
+  renderApp(<SignIns onOpenAddons={onOpenAddons} onChooseSource={() => undefined} />);
   await waitFor(() => expect(calls.some((c) => c.route === "GET sign-ins")).toBe(true));
-  const section = (await screen.findByRole("heading", { name: "Sign-ins" })).closest("section") as HTMLElement;
+  const section = (await screen.findByRole("heading", { name: "Accounts" })).closest("section") as HTMLElement;
   expect(section).toHaveTextContent("Sign-ins appear here once an add-on that signs in (mail, calendar) is turned on.");
   await user.click(within(section).getByRole("button", { name: "Open Add-ons" }));
   expect(onOpenAddons).toHaveBeenCalledTimes(1);
@@ -58,7 +58,7 @@ test("with no sign-ins, the section says when they appear and offers to open Add
 test("each status is in words, with one action per row", async () => {
   fakeApi({ ...settings, "GET sign-ins": () => LIST });
   open();
-  expect(await screen.findByRole("heading", { name: "Sign-ins" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { name: "Accounts" })).toBeInTheDocument();
   const one = row("Service demo/one");
   expect(within(one).getByText("Signed in")).toBeInTheDocument();
   // Once signed in, choosing what to read is the next step and the row's one primary action; the rest is in its menu.
@@ -498,7 +498,7 @@ describe("coming back from the service", () => {
     window.history.replaceState(null, "", "/?sign_in=failed&error=boom&detail=details");
     fakeApi({ "GET sign-ins": () => LIST });
     renderApp(<Return />);
-    await screen.findByText("The sign-in didn't finish. Try again from Settings.");
+    await screen.findByText("The sign-in didn't finish. Try again from Sources.");
     expect(screen.queryByText(/boom/)).toBeNull();
     expect(window.location.search).toBe("");
   });
@@ -511,9 +511,9 @@ describe("coming back from the service", () => {
   });
 
   test.each([
-    ["failed", "The sign-in didn't finish. Try again from Settings."],
+    ["failed", "The sign-in didn't finish. Try again from Sources."],
     ["refused", "The service didn't allow the sign-in."],
-    ["expired", "That sign-in took too long. Start it again from Settings."],
+    ["expired", "That sign-in took too long. Start it again from Sources."],
   ])("%s says so once and leaves the address clean", async (outcome, words) => {
     window.history.replaceState(null, "", `/?sign_in=${outcome}&name=demo%2Ftwo`);
     fakeApi({ "GET sign-ins": () => LIST });
@@ -527,7 +527,7 @@ describe("coming back from the service", () => {
     window.history.replaceState(null, "", "/tools/cockpit/?keep=1&sign_in=failed&name=demo%2Ftwo#/settings");
     fakeApi({ "GET sign-ins": () => LIST });
     renderApp(<Return />);
-    await screen.findByText("The sign-in didn't finish. Try again from Settings.");
+    await screen.findByText("The sign-in didn't finish. Try again from Sources.");
     expect(window.location.pathname).toBe("/tools/cockpit/");
     expect(window.location.search).toBe("?keep=1");
     expect(window.location.hash).toBe("#/settings");

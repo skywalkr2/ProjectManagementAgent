@@ -1,36 +1,38 @@
-# Fictional AI setup. Tests use only the stub account; the others show the shapes real accounts take.
+# Fictional AI setup: the stand-in account only. The commented accounts show the shapes real ones take.
 version: 1
 providers:
   stub:
     adapter: stub
     models: {default: scripted}
     allowed_data: [open, internal, restricted]
-  low-cost:
-    adapter: openai-compatible
-    base_url: https://api.deepseek.com/v1
-    auth: env:LOWCOST_AI_KEY
-    models: {small: deepseek-chat}
-    allowed_data: [open, internal]
-    content_levels: []
-  router:
-    adapter: openai-compatible
-    base_url: https://openrouter.ai/api/v1
-    auth: env:ROUTER_AI_KEY
-    models: {strong: vendor/strong-model-id}
-    allowed_data: [open]
-  coding-agent:
-    adapter: cli-agent
-    models: {default: agent-default-model}
-    allowed_data: [open]
-    agent:
-      command: [example-agent, run, --sandbox, "{scratch}", --write-only, "{outbox}", --packet, "{packet}"]
-      packet_via: file
-      output_via: outbox
-      key_env: EXAMPLE_AGENT_KEY
-      errors: {auth: ["invalid key"], exit_codes: {4: rate_limited}}
-      sign_in_hint: Check the key in the account's settings
-      home: shared                         # signed in with a key, so the home folder holds nothing it needs
-    auth: env:EXAMPLE_AGENT_KEY
+  # Examples of other accounts, left out so a new workspace lists only what it can use. Add one
+  # from the setup guide's AI step, or uncomment one here and set its key.
+  # low-cost:
+  #   adapter: openai-compatible
+  #   base_url: https://api.deepseek.com/v1
+  #   auth: env:LOWCOST_AI_KEY
+  #   models: {small: deepseek-chat}
+  #   allowed_data: [open, internal]
+  #   content_levels: []
+  # router:
+  #   adapter: openai-compatible
+  #   base_url: https://openrouter.ai/api/v1
+  #   auth: env:ROUTER_AI_KEY
+  #   models: {strong: vendor/strong-model-id}
+  #   allowed_data: [open]
+  # coding-agent:
+  #   adapter: cli-agent
+  #   models: {default: agent-default-model}
+  #   allowed_data: [open]
+  #   agent:
+  #     command: [example-agent, run, --sandbox, "{scratch}", --write-only, "{outbox}", --packet, "{packet}"]
+  #     packet_via: file
+  #     output_via: outbox
+  #     key_env: EXAMPLE_AGENT_KEY
+  #     errors: {auth: ["invalid key"], exit_codes: {4: rate_limited}}
+  #     sign_in_hint: Check the key in the account's settings
+  #     home: shared                         # signed in with a key, so the home folder holds nothing it needs
+  #   auth: env:EXAMPLE_AGENT_KEY
 tiers:
   routine: {use: stub/default, fallback: [], escalate_to: deep}
   deep: {use: stub/default}
@@ -48,8 +50,8 @@ budgets:
   warn_at: 0.8
   per_task:
     notes: {per_day_usd: 1.5}
-prices:
-  low-cost/small: {input_per_million: 0.3, output_per_million: 1.1}
+prices: {}   # price per model, for models a catalog doesn't price, e.g.:
+  # low-cost/small: {input_per_million: 0.3, output_per_million: 1.1}
 evaluation: {runs: 3, min_score: 0.9}
 rate_limits: {tries: 3, max_wait_seconds: 30}
 catalog_refresh_hours: 24

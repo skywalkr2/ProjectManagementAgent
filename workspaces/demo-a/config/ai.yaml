@@ -1,42 +1,44 @@
-# Fictional AI setup. Tests use only the stub account; the others show the shapes real accounts take.
+# Fictional AI setup: the stand-in account only. The commented accounts show the shapes real ones take.
 version: 1
 providers:
   stub:
     adapter: stub
     models: {default: scripted}
     allowed_data: [open, internal, restricted]
-  company-gateway:
-    adapter: openai-compatible
-    base_url: https://ai-gateway.example.com/v1
-    auth: env:GATEWAY_AI_KEY
-    models: {large: gateway-large-model}
-    allowed_data: [open, internal, restricted]
-    content_levels: [health]
-  local:
-    adapter: openai-compatible
-    base_url: http://localhost:11434/v1
-    models: {small: local-small-model}
-    allowed_data: [open, internal, restricted]
-  coding-agent:
-    adapter: cli-agent
-    models: {default: agent-default-model}
-    allowed_data: [open, internal]
-    timeout_seconds: 300
-    agent:
-      command: [example-agent, --print, --no-tools, --model, "{model}"]
-      packet_via: stdin
-      output_via: stdout
-      output_json: true
-      output_fields: {text: result, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens, cost_usd: cost}
-      pass_env: [EXAMPLE_AGENT_CONFIG]
-      errors:
-        auth: ["not signed in", "sign in again"]
-        rate_limited: ["too many requests"]
-        quota: ["usage limit"]
-        exit_codes: {3: auth}
-      sign_in_hint: Run example-agent login in a terminal
-      home: fresh                          # each run starts with an empty home folder, so no memory carries over
-      home_files: [.config/example-agent/credentials.json]   # all it needs to stay signed in
+  # Examples of other accounts, left out so a new workspace lists only what it can use. Add one
+  # from the setup guide's AI step, or uncomment one here and set its key.
+  # company-gateway:
+  #   adapter: openai-compatible
+  #   base_url: https://ai-gateway.example.com/v1
+  #   auth: env:GATEWAY_AI_KEY
+  #   models: {large: gateway-large-model}
+  #   allowed_data: [open, internal, restricted]
+  #   content_levels: [health]
+  # local:
+  #   adapter: openai-compatible
+  #   base_url: http://localhost:11434/v1
+  #   models: {small: local-small-model}
+  #   allowed_data: [open, internal, restricted]
+  # coding-agent:
+  #   adapter: cli-agent
+  #   models: {default: agent-default-model}
+  #   allowed_data: [open, internal]
+  #   timeout_seconds: 300
+  #   agent:
+  #     command: [example-agent, --print, --no-tools, --model, "{model}"]
+  #     packet_via: stdin
+  #     output_via: stdout
+  #     output_json: true
+  #     output_fields: {text: result, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens, cost_usd: cost}
+  #     pass_env: [EXAMPLE_AGENT_CONFIG]
+  #     errors:
+  #       auth: ["not signed in", "sign in again"]
+  #       rate_limited: ["too many requests"]
+  #       quota: ["usage limit"]
+  #       exit_codes: {3: auth}
+  #     sign_in_hint: Run example-agent login in a terminal
+  #     home: fresh                          # each run starts with an empty home folder, so no memory carries over
+  #     home_files: [.config/example-agent/credentials.json]   # all it needs to stay signed in
 tiers:
   routine: {use: stub/default, fallback: [], escalate_to: deep}
   deep: {use: stub/default}
@@ -53,8 +55,8 @@ budgets:
   warn_at: 0.8
   per_task:
     notes: {per_day_usd: 1.5}
-prices:
-  company-gateway/large: {input_per_million: 2.5, output_per_million: 10}
+prices: {}   # price per model, for models a catalog doesn't price, e.g.:
+  # company-gateway/large: {input_per_million: 2.5, output_per_million: 10}
 evaluation: {runs: 3, min_score: 0.9}
 rate_limits: {tries: 3, max_wait_seconds: 30}
 catalog_refresh_hours: 24

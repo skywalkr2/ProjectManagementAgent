@@ -11,7 +11,6 @@ import { AiAccounts } from "./AiAccounts";
 import { DataForms } from "./DataForms";
 import { useFolderListing } from "./FolderPicker";
 import { SettingRow } from "./SettingRow";
-import { SignIns } from "./SignIns";
 import { ValueLists } from "./ValueLists";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -168,7 +167,6 @@ export function Settings(props: {
       <DataForms />
       <AiAccounts />
       <ValueLists />
-      <SignIns onOpenAddons={props.onOpenAddons} onChooseSource={props.onChooseSource} />
     </section>
   );
 }

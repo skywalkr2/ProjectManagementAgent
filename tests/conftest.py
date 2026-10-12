@@ -69,3 +69,17 @@ def workspace(tmp_path: Path, demo: Path) -> Workspace:
 def _no_temp_folder_notice(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tests work in temporary folders on purpose; the command's "this folder is emptied" notice is tested directly."""
     monkeypatch.setattr("engine.cli.system_temp_roots", lambda: ())
+
+
+def add_example_account(ai_yaml: Path | dict) -> tuple[str, str, str]:
+    """Add the example AI account (tests/fixtures/ai/example-account.yaml: a key from an environment variable) to an
+    ai.yaml, a file written back or its loaded dict. The fictional workspaces list only the stand-in account, so
+    tests about keys and model names add this one. Returns (name, model, env var)."""
+    import yaml
+
+    example = yaml.safe_load((Path(__file__).parent / "fixtures" / "ai" / "example-account.yaml").read_text())
+    data = yaml.safe_load(ai_yaml.read_text()) if isinstance(ai_yaml, Path) else ai_yaml
+    data.setdefault("providers", {})[example["name"]] = example["provider"]
+    if isinstance(ai_yaml, Path):
+        ai_yaml.write_text(yaml.safe_dump(data, sort_keys=False))
+    return example["name"], example["model"], example["env"]

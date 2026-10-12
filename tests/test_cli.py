@@ -71,11 +71,10 @@ def test_evaluate_with_the_stub_checks_the_cases(capsys):
 def test_evaluate_with_a_missing_key_fails_and_says_so(tmp_path, capsys):
     import yaml
 
-    from tests.conftest import DEMO_B
+    from tests.conftest import DEMO_B, add_example_account
 
     ai = yaml.safe_load((DEMO_B / "config" / "ai.yaml").read_text())
-    real = next(name for name, p in ai["providers"].items() if p.get("auth", "").startswith("env:"))
-    model = next(iter(ai["providers"][real]["models"]))
+    real, model, _ = add_example_account(ai)
     ai["providers"][real]["auth"] = "env:COCKPIT_TEST_KEY_THAT_IS_NOT_SET"
     path = tmp_path / "ai.yaml"
     path.write_text(yaml.safe_dump(ai))
@@ -179,11 +178,11 @@ def test_ai_test_says_where_a_failing_key_was_read_from_and_never_shows_it(tmp_p
 
     target = tmp_path / "ws"
     main(["init", str(target), "--from", str(demo), "--no-git"])
+    from tests.conftest import add_example_account
+
     path = target / "config" / "ai.yaml"
     ai = yaml.safe_load(path.read_text())
-    real = next(n for n, p in ai["providers"].items() if str(p.get("auth", "")).startswith("env:"))
-    model = next(iter(ai["providers"][real]["models"]))
-    name = ai["providers"][real]["auth"].removeprefix("env:")
+    real, model, name = add_example_account(ai)
     ai["tiers"]["deep"]["use"] = f"{real}/{model}"
     path.write_text(yaml.safe_dump(ai))
     monkeypatch.delenv(name, raising=False)

@@ -1,0 +1,11 @@
+# An AI account of the shape a real one takes (a key from an environment variable), for tests about keys and model
+# names. The fictional workspaces list only the stand-in account, so tests add this one where they need it.
+name: example
+model: small
+env: EXAMPLE_TEST_AI_KEY
+provider:
+  adapter: openai-compatible
+  base_url: https://ai.example.com/v1
+  auth: env:EXAMPLE_TEST_AI_KEY
+  models: {small: example-small-model}
+  allowed_data: [open, internal]

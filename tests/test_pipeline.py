@@ -300,11 +300,15 @@ def test_blocked_wording_warns_on_internal_items_and_holds_what_goes_to_others(e
 
 
 def test_model_names_never_reach_text_people_see(env):
-    _, cfg, store = env
+    from tests.conftest import add_example_account
+
+    ws, _, store = env
+    add_example_account(ws.config_dir / "ai.yaml")
+    cfg = ws.config(env={})
     model_id = next(m for p in cfg.ai.providers.values() for m in p.models.values() if m not in ("scripted",))
     body = {"ops": [{"op": "note", "text": f"Drafted by {model_id}"}]}
     answers(body, body)
-    _, cs_id = run(env, "Anything.")
+    _, cs_id = run((ws, cfg, store), "Anything.")
     assert outcomes(store, cs_id)[0]["status"] == "refused"
 
 

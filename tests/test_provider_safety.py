@@ -5,7 +5,6 @@ import json
 from datetime import UTC, datetime
 
 import pytest
-import yaml
 
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
@@ -18,7 +17,7 @@ from engine.intake import hand_in
 from engine.storage import Store
 from engine.worker import RESTART_NEEDED, Events, Worker
 from engine.workspace import init_workspace
-from tests.conftest import DEMO_B
+from tests.conftest import DEMO_B, add_example_account
 
 NOW = datetime(2026, 10, 9, 14, 0, tzinfo=UTC)
 
@@ -71,9 +70,7 @@ def test_the_smoke_test_tries_every_tier_with_each_tasks_parameters(env):
 
 def test_the_smoke_test_reports_a_refused_parameter_and_a_missing_key(env, tmp_path):
     ws, _ = env
-    ai = yaml.safe_load((DEMO_B / "config" / "ai.yaml").read_text())
-    real = next(n for n, p in ai["providers"].items() if str(p.get("auth", "")).startswith("env:"))
-    model = next(iter(ai["providers"][real]["models"]))
+    real, model, named = add_example_account(ws.config_dir / "ai.yaml")
     cfg = ws.config(env={}, flags={"ai.tiers.deep.use": f"{real}/{model}"})
 
     def responder(task):
@@ -186,11 +183,8 @@ def test_no_account_for_any_tier_is_not_set_up(tmp_path):
 
 def test_the_smoke_test_says_where_a_refused_or_missing_key_was_read_from(env, tmp_path):
     ws, _ = env
-    ai = yaml.safe_load((DEMO_B / "config" / "ai.yaml").read_text())
-    real = next(n for n, p in ai["providers"].items() if str(p.get("auth", "")).startswith("env:"))
-    model = next(iter(ai["providers"][real]["models"]))
+    real, model, named = add_example_account(ws.config_dir / "ai.yaml")
     cfg = ws.config(env={}, flags={"ai.tiers.deep.use": f"{real}/{model}"})
-    named = ai["providers"][real]["auth"].removeprefix("env:")
     sources = [r.key_source for r in smoke_test(cfg, env={}) if r.tier == "deep"]
     assert sources and sources[0] == f"key from the environment variable {named}"
 

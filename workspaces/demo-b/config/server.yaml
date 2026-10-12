@@ -2,5 +2,5 @@ version: 1
 mode: local
 host: 127.0.0.1
 port: 8766
-base_path: /admin
+base_path: /   # the address it is served at; set a path such as /admin to serve it under one
 open_browser: false   # open the app in this computer's browser when it starts
