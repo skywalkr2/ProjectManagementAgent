@@ -60,6 +60,10 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 
 None of it takes a file edit, a second terminal command or a demo. Automated journey tests cover the same path.
 
+**Known while running it** (from the first design author): the test reads real mail before the received-date and
+first-name fixes, which are in L0. Nothing goes out during the test, so it is safe. Expect "by Friday" counted from the
+processing day, and some bare first names guessed. These are already planned and are not new bugs.
+
 **What stays in A** (re-sized 2026-10-12 after the reviews had added about a dozen items). Phase A holds only what its exit
 test needs. The local-mode guards stay as well, because the exit test is the first time the owner's real mail is in the
 app. The items the reviews added for daily use moved to L0, at the start of L-core, which still comes before real use.
@@ -432,7 +436,9 @@ Order by what protects real data first, then by what the packs ask for:
 - [ ] **The governor:** stale-item sweeps, outage handling, the scheduled export with its remote; restore to a point in
   time (a single record comes in phase L).
 - [ ] **Retention, and export and forget a person** (design 5.2, 12.4): forgetting is a recorded redaction, with the local
-  export repository rebuilt; evidence quotes survive retention.
+  export repository rebuilt; evidence quotes survive retention. The forget travels through the synced folder: the history
+  comparison treats redacted entries as matching, and the loading computer replays the forget. Undo never restores a
+  forgotten value.
 - [ ] Scope resolver (6.18), the scheduled rules and lessons review with promotion (6.21), and read-backs (6.7).
   Dependencies, baselines and RAID moved to the project management pack (C2).
 - [ ] Native AI adapters and reproducible runs (6.16).

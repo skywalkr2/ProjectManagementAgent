@@ -267,7 +267,17 @@ size and omissions, packet hash, template and playbook versions, model as served
     database as a fresh history, the one rewrite the rules allow;
   - when a remote exists (phase E), it is replaced the same way, and the screen says so;
   - backups made before the forget still hold the old data until they age out. The screen says when that will be, and the
-    person can delete older backups at once.
+    person can delete older backups at once;
+  - **it travels through the synced folder.** The forget is its own ledger entry, after the entries it redacts. Today two
+    computers' histories are compared line by line (`engine/handover.py`), so a redacted line would look like a divergence
+    and block the load. So the comparison applies every forget found in either history to both before comparing: a
+    redacted entry matches its original. The computer that loads replays the forget on its own database and ledger, so
+    its local copy is redacted too;
+  - **undo never brings a forgotten value back.** Undoing a change that touched a forgotten person restores the marker,
+    not the value (the ledger no longer has it), and the undo lists those fields as "forgotten, not restored".
+
+  A test covers each: two computers, a forget on one, the other loading without a divergence and ending up redacted; and
+  an undo after a forget.
 
   Crypto-shredding (a key per person, deleted on forget) was the other option. It would make every read and write of a
   person's values go through encryption, and it was set aside for a rare, recorded operation instead.
