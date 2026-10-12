@@ -192,6 +192,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   per connector). Today it lives only on the request.
 - [ ] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
   both, and they differ).
+- [ ] **"Look at the last day" works for a folder:** today it hands in nothing, because folder items carry no time.
+  Folder items carry the file's modified time, kept on the snapshot, so the person can hand in what is already there
+  (found by the phase A fixes; the add-source hint then points to it).
 - [ ] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
   (manifest validation, registration errors) get plain words and a test that produces each; Ask's material names
   settings without their keys, with `setting.propose` finding the key another way.
