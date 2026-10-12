@@ -892,8 +892,10 @@ class PluginHost:
                 return False
             return view.get(kind, record_id) is not None
 
+        record = view.get("project", project) if project else None
         try:
-            text = panel.render(reader, self.registrars[plugin].config.model_copy(deep=True), project)
+            settings = self.registrars[plugin].config.model_copy(deep=True)
+            text = panel.render(reader, settings, deepcopy(record) if record is not None else None)
             found = None if text is None else blocks(text, can_link)
         except (DocumentError, Exception) as err:
             self.failed(plugin, where, err)

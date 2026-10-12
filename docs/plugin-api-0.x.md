@@ -10,6 +10,27 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.53 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Screen edits go through the applier** (round 34, 171): saving a person, an organization or a project on the
+  People & projects screens is now a `record.edit` op applied as the person, so the core's checks and every running
+  plugin's validators on `record.edit` see it, as they do for edits from the synced folder.
+- **Document panels** (round 36, 174): `render(view, settings, project)` now gets the project's record (as
+  `show_for` does), or None for the workspace. A plugin that used the id reads `project.id`.
+- **Data-file forms** (round 36, 175–179):
+  - `registrar.data_form(..., pattern="*/item.yaml")` covers files matching a glob with at most one folder level
+    (default `*.yaml`); `single=True` makes the kind one file named by `pattern`, listed before it exists, with no
+    other allowed;
+  - each listed file is checked as the loader would, defaults included, and its problem shows on the list;
+  - a model-level validator's refusal comes back in its own words (no empty field location);
+  - a new file can start from another of its kind (`start_from` on save);
+  - a save writes only the keys the file had plus those the person set, never the whole model with its defaults,
+    so a left-out key (an `extends`) stays left out.
+- **Changesets carry a topic**: a few words naming what the input was about, used for the item's title on Today and
+  What changed. A task kind's answer may include `"topic"`; it is optional and cut at a word.
+
 ## What 0.3.52 adds
 
 Manifests stay `'>=0.3,<0.4'`.

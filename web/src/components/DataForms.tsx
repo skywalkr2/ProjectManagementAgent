@@ -184,7 +184,7 @@ function FileRow(props: { form: Form; file: DataFile; project: string; editing: 
       <div className="row pair">
         <div className="text">
           <strong id={titleId}>{file.file}</strong>
-          <span className="sub">{t(`dataform.layer.${file.layer}`)}</span>
+          {file.layer && <span className="sub">{t(`dataform.layer.${file.layer}`)}</span>}
           {file.problem && (
             <p className="problem-note">
               <span aria-hidden="true">! </span>

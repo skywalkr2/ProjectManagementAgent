@@ -1561,6 +1561,8 @@ class DataFormView(BaseModel):
     plugin: str
     label: str
     description: str = ""
+    pattern: str = Field("*.yaml", description="Which files are of this kind, relative to its folder.")
+    single: bool = Field(False, description="The kind is one file, named by the pattern; no other can be made.")
 
 
 class DataFile(BaseModel):
@@ -1568,7 +1570,9 @@ class DataFile(BaseModel):
 
     file: str
     layers: list[Literal["shipped", "workspace", "project"]] = Field(description="The layers that hold a copy.")
-    layer: Literal["shipped", "workspace", "project"] = Field(description="The copy in effect.")
+    layer: Literal["shipped", "workspace", "project"] | None = Field(
+        description="The copy in effect; none for a single-file kind not made yet."
+    )
     problem: str | None = Field(None, description="Why the copy in effect doesn't fit the form, if it doesn't.")
 
 
@@ -1587,10 +1591,11 @@ class DataFileView(BaseModel):
 class DataFileChange(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    file: str = Field(description="The file's name, like classic.yaml.")
+    file: str = Field(description="The file's name, like classic.yaml (or folder/item.yaml for such a kind).")
     layer: Literal["workspace", "project"] = Field(description="Which copy to write or remove; never the shipped one.")
     project: str | None = Field(None, description="The project, for its layer.")
     changes: dict[str, Any] = Field(default_factory=dict, description="New values by field (dotted for groups).")
+    start_from: str | None = Field(None, description="For a new file: another file of the kind to start from.")
 
 
 class DataFileRestore(BaseModel):

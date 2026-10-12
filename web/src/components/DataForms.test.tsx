@@ -24,11 +24,18 @@ const field = (key: string, type: Item["type"], extra: Partial<Item> = {}): Item
   ...extra,
 });
 
-const FORM: S["DataFormView"] = { name: "demo/template", plugin: "demo", label: "Templates", description: "How a book looks." };
+const FORM: S["DataFormView"] = {
+  name: "demo/template",
+  plugin: "demo",
+  label: "Templates",
+  description: "How a book looks.",
+  pattern: "*.yaml",
+  single: false,
+};
 const file = (name: string, layers: DataFile["layers"], extra: Partial<DataFile> = {}): DataFile => ({
   file: name,
   layers,
-  layer: layers[layers.length - 1],
+  layer: layers[layers.length - 1] ?? null,
   problem: null,
   ...extra,
 });

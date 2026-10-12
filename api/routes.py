@@ -1300,7 +1300,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             _same_name("person", "full_name", changes["full_name"], except_id=pid)
         if changes.get("org"):
             need("organization", changes["org"])
-        guard(lambda: _update(store, "person", pid, changes, _setup("person.edit")))
+        guard(lambda: _edit_on_screen(store, cfg, "person", pid, changes))
         changed()
         return Ok(ok=pid)
 
@@ -1357,7 +1357,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changes = body.model_dump(exclude_unset=True)
         if changes.get("name"):
             _same_name("organization", "name", changes["name"], except_id=oid)
-        guard(lambda: _update(store, "organization", oid, changes, _setup("organization.edit")))
+        guard(lambda: _edit_on_screen(store, cfg, "organization", oid, changes))
         changed()
         return Ok(ok=oid)
 
@@ -1439,7 +1439,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         if changes.get("owner"):
             need("person", changes["owner"])
         _project_fields(changes, prj)
-        guard(lambda: _update(store, "project", prj, changes, _setup("project.edit")))
+        guard(lambda: _edit_on_screen(store, cfg, "project", prj, changes))
         changed()
         return Ok(ok=prj)
 
@@ -1490,10 +1490,21 @@ def _setup(op: str) -> WriteContext:
     return WriteContext(actor="pm", trust="trusted", op=op)
 
 
-def _update(store: Store, kind: str, record_id: str, changes: dict[str, Any], ctx: WriteContext) -> None:
-    with store.transaction() as tx:
-        cur = _existing(tx, kind, record_id)
-        tx.update(kind, record_id, changes, ctx, read_version=cur.version)
+def _edit_on_screen(store: Store, cfg: Config, kind: str, record_id: str, changes: dict[str, Any]) -> None:
+    """The person's edit of a core record on screen, as a `record.edit` op through the applier, so the checks and
+    every running plugin's validators on that op see it like any other edit."""
+    from engine.applier import apply_as_person
+
+    if not changes:
+        return
+    current = _existing(store.read(), kind, record_id)
+    op = {
+        "op": "record.edit",
+        "record": {"kind": kind, "id": record_id},
+        "fields": changes,
+        "read_version": current.version,
+    }
+    apply_as_person(store, cfg, [op], "Changed on screen")
 
 
 def _remove(store: Store, kind: str, record_id: str) -> None:

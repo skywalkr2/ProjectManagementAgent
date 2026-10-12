@@ -33,7 +33,9 @@ def build_data_form_router(store: Store) -> APIRouter:
     def forms() -> list[DataFormView]:
         """The kinds of data file running add-ons let the person edit through a form."""
         return [
-            DataFormView(name=f.name, plugin=plugin, label=f.label, description=f.description)
+            DataFormView(
+                name=f.name, plugin=plugin, label=f.label, description=f.description, pattern=f.pattern, single=f.single
+            )
             for plugin, registrar in sorted(host.registrars.items())
             if host.active(plugin)
             for f in registrar.data_forms.values()
@@ -67,7 +69,9 @@ def build_data_form_router(store: Store) -> APIRouter:
     @r.post("/data-forms/{name:path}/file")
     def save(name: str, body: DataFileChange) -> DataFileSaved:
         """Save the workspace's or a project's copy with these changes, checked against the schema; `before` undoes."""
-        done = guard(lambda: data_forms.save(host, name, body.file, body.layer, body.changes, body.project))
+        done = guard(
+            lambda: data_forms.save(host, name, body.file, body.layer, body.changes, body.project, body.start_from)
+        )
         return DataFileSaved(before=done["before"])
 
     @r.post("/data-forms/{name:path}/remove")

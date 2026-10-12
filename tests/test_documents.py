@@ -81,7 +81,7 @@ CODE = FIXTURE.replace(
     "        return None\n"
     "    lines = ['# Start here', '']\n"
     "    lines += [f'- [{g.data[\"title\"]}](record:p18/goal/{g.id})' for g in goals]\n"
-    "    lines.append(f'Project: {project}')\n"
+    "    lines.append(f'Project: {project.id if project else None}')\n"
     "    return '\\n'.join(lines)\n\n"
     "def broken(view, settings, project):\n"
     "    raise RuntimeError('no')\n\n"

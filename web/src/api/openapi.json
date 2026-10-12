@@ -1786,14 +1786,21 @@
             "type": "string"
           },
           "layer": {
-            "description": "The copy in effect.",
-            "enum": [
-              "shipped",
-              "workspace",
-              "project"
+            "anyOf": [
+              {
+                "enum": [
+                  "shipped",
+                  "workspace",
+                  "project"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
             ],
-            "title": "Layer",
-            "type": "string"
+            "description": "The copy in effect; none for a single-file kind not made yet.",
+            "title": "Layer"
           },
           "layers": {
             "description": "The layers that hold a copy.",
@@ -1839,7 +1846,7 @@
             "type": "object"
           },
           "file": {
-            "description": "The file's name, like classic.yaml.",
+            "description": "The file's name, like classic.yaml (or folder/item.yaml for such a kind).",
             "title": "File",
             "type": "string"
           },
@@ -1863,6 +1870,18 @@
             ],
             "description": "The project, for its layer.",
             "title": "Project"
+          },
+          "start_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a new file: another file of the kind to start from.",
+            "title": "Start From"
           }
         },
         "required": [
@@ -2020,9 +2039,21 @@
             "title": "Name",
             "type": "string"
           },
+          "pattern": {
+            "default": "*.yaml",
+            "description": "Which files are of this kind, relative to its folder.",
+            "title": "Pattern",
+            "type": "string"
+          },
           "plugin": {
             "title": "Plugin",
             "type": "string"
+          },
+          "single": {
+            "default": false,
+            "description": "The kind is one file, named by the pattern; no other can be made.",
+            "title": "Single",
+            "type": "boolean"
           }
         },
         "required": [

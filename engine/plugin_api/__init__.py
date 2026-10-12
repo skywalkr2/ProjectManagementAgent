@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.52"
+PLUGIN_API_VERSION = "0.3.53"
 
 
 class Settings(BaseModel):
@@ -792,6 +792,8 @@ class DataFormRegistration:
     folder: str
     schema: type[BaseModel]
     description: str = ""
+    pattern: str = "*.yaml"
+    single: bool = False
 
 
 @dataclass(frozen=True)
@@ -1527,7 +1529,8 @@ class Registrar:
     ) -> None:
         """A read-only document panel (listed in `provides.panels`): a page the plugin composes from many records
         (a start-here page, a beat sheet, a timeline). `render(view, settings, project) -> str | None` returns
-        Markdown, built per call from the view (`project` is the project in view, or None for the workspace); None
+        Markdown, built per call from the view (`project` is the record of the project in view, as `show_for` gets
+        it, or None for the workspace); None
         shows that there is nothing to show yet. It must be quick and deterministic and never call AI; one that
         raises shows the panel's problem and counts as the plugin failing (failure containment).
 
@@ -1549,27 +1552,52 @@ class Registrar:
             name, str(title).strip(), "", "document", (), {}, None, (), tab, None, {}, show_for, render
         )
 
-    def data_form(self, name: str, *, label: str, folder: str, schema: type[BaseModel], description: str = "") -> None:
-        """A kind of data file the person edits through a form (listed in `provides.data_forms`): the `.yaml` files
-        in `folder` of the plugin's data layers (`view.data`), each checked against `schema` (a pydantic model;
-        every field needs a default and a description, as in `Settings`). The screens list the files with the layer
-        each comes from (shipped, the workspace's, a project's) and offer a form built from the schema, as for
-        settings: editing a shipped file saves a copy in the workspace's layer (or a project's), never the shipped
-        one; a new file starts from the schema's defaults; a copy can be removed to fall back to the less specific
-        one. Every save is checked against the schema (a refusal names the field) and offers Undo. The plugin reads
-        the files as before, with `view.data(path, project=...)`."""
+    def data_form(
+        self,
+        name: str,
+        *,
+        label: str,
+        folder: str,
+        schema: type[BaseModel],
+        description: str = "",
+        pattern: str = "*.yaml",
+        single: bool = False,
+    ) -> None:
+        """A kind of data file the person edits through a form (listed in `provides.data_forms`): the files in
+        `folder` of the plugin's data layers (`view.data`) that match `pattern`, each checked against `schema` (a
+        pydantic model; every field needs a default and a description, as in `Settings`). `pattern` is a glob
+        relative to the folder, ending in `.yaml`, with at most one level of subfolder: `*.yaml` (the default),
+        `*/item.yaml` (one folder per item, beside its own files) or `stages.yaml`. With `single=True` the form is
+        that one file (`pattern` names it): it is listed even before it exists, and no other file can be made.
+
+        The screens list the files with the layer each comes from (shipped, the workspace's, a project's) and any
+        problem each has, checked as the plugin's loader would and with defaults checked too (a required value left
+        empty shows). They offer a form built from the schema, as for settings: editing a shipped file saves a copy
+        in the workspace's layer (or a project's), never the shipped one; a new file starts from the schema's
+        defaults or from another file of the kind ("start from"); a copy can be removed to fall back to the less
+        specific one. A save writes only the keys the file already had plus those the person set, never the whole
+        model with its defaults, so keys left out stay left out (a template's `extends` keeps following its base).
+        Every save is checked against the schema (a refusal names the field, or says the file's own rule when the
+        model's validator refused it) and offers Undo. The plugin reads the files as before, with
+        `view.data(path, project=...)`."""
         self._name(name)
         folder = str(folder).strip("/")
         if name in self.data_forms or not str(label).strip():
             raise ValueError("duplicate data form or missing label")
         if not re.fullmatch(r"[a-z0-9_-]+(/[a-z0-9_-]+)*", folder):
             raise ValueError("a data form's folder is a relative path of lowercase names, like templates")
+        if not re.fullmatch(r"([a-z0-9_*-]+/)?[a-z0-9_*-]+\.yaml", str(pattern)):
+            raise ValueError("a data form's pattern ends in .yaml and has at most one folder, like */item.yaml")
+        if single and "*" in pattern:
+            raise ValueError("a single-file data form names its file in pattern, with no *")
         if not isinstance(schema, type) or not issubclass(schema, BaseModel):
             raise ValueError("a data form's schema is a pydantic model")
         for key, info in schema.model_fields.items():
             if info.is_required() or not info.description:
                 raise ValueError(f"data form field {key} needs a default and a description")
-        self.data_forms[name] = DataFormRegistration(name, " ".join(str(label).split()), folder, schema, description)
+        self.data_forms[name] = DataFormRegistration(
+            name, " ".join(str(label).split()), folder, schema, description, str(pattern), bool(single)
+        )
 
     def job(self, name: str, *, every_minutes: int, run: Callable) -> None:
         """Work on a schedule (listed in `provides.jobs`): `run(context)` with an `EventContext`, every
