@@ -170,7 +170,9 @@ class Worker:
             return False
         before = {k: v for k, v, _ in self.cfg.flat()}
         after = {k: v for k, v, _ in fresh.flat()}
-        changed = {k for k in before.keys() | after.keys() if before.get(k) != after.get(k)}
+        # A setting given on the command line stays as it was started with; the files can't change it here.
+        given = {k for k, _, layer in self.cfg.flat() if layer == "flag"}
+        changed = {k for k in before.keys() | after.keys() if before.get(k) != after.get(k)} - given
         waiting = sorted(k for k in changed if not is_live(k))
         if waiting:
             self.restart_for = sorted(set(self.restart_for) | set(waiting))

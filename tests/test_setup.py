@@ -335,6 +335,22 @@ def test_live_settings_are_taken_in_at_once_and_a_mixed_change_waits(tmp_path):
         store.close()
 
 
+def test_a_setting_given_on_the_command_line_does_not_make_a_live_change_wait_for_a_restart(tmp_path):
+    from engine.worker import Events, Worker
+
+    ws, _, store = make(tmp_path)
+    cfg = ws.config(env={}, flags={"server.port": 8123})
+    worker = Worker(ws, store, cfg, Events(), on_restart=lambda: None)
+    try:
+        ai = (ws.config_dir / "ai.yaml").read_text()
+        (ws.config_dir / "ai.yaml").write_text(set_key(ai, ["budgets", "per_run_usd"], 0.5))
+        assert worker.needs_restart() is False and worker.restart_for == []
+        assert cfg.ai.budgets.per_run_usd == 0.5  # taken in, as without the option
+        assert cfg.server.port == 8123  # and the option still in force
+    finally:
+        store.close()
+
+
 def test_a_backup_folder_is_taken_in_without_a_restart(tmp_path):
     from engine.worker import Events, Worker
 
