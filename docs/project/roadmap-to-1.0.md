@@ -78,6 +78,14 @@ Design 6.22.
 - **On the owner's AI account, started by the owner:** for every fixture pair, the later input comes out right with no
   correction repeated. The day-30 workspace's changesets differ from day 1's in the ways its history justifies.
 
+**Then the owner's real use starts** (owner, 2026-10-12), running through phases B and C beside the build. Building stays
+one stream; the owner uses it daily on their own mail, calendar and notes. For the first month, two numbers are reviewed
+weekly next to the other quality signals:
+- the repeat-correction rate, which should fall week over week;
+- the knowledge-used rate (the share of runs whose output applied a lesson, rule or fact), which should rise.
+
+If the first doesn't fall, the loop isn't closing; that is fixed before more pack work.
+
 L1. **Knowledge as records.**
 - [ ] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,
   status and an `applies_to` target. Their ops, with Undo.
@@ -103,7 +111,11 @@ L3. **Every correction teaches.**
 - [ ] Facts in the packet carry their date and source.
 - [ ] Proposals from the person's own words apply at once with Undo; the rest wait for Keep.
 - [ ] Duplicates merge when proposed.
-- [ ] The repeat-correction signal; the unused-entries list.
+- [ ] The `edited` signal for the person's direct edits of what the assistant set, learned from in the batch.
+- [ ] The repeat-correction signal and the knowledge-used rate (`applied` on each changeset, checked against the knowledge
+  log); the unused-entries list.
+- [ ] Fallback chains hold only checked accounts, or ones the person accepted unchecked; the first run on a fallback account
+  is tagged on its cards.
 - [ ] The corrections recorded before this phase are learned from once.
 - [ ] On screen (7.18): the Learned line on the correction's card, and the daily Today card. The rest of 7.18 is laid out
   in phase B.
@@ -201,8 +213,10 @@ C4. **What the packs need from the core.**
 
 ## Phase D: owner validation and real use
 
+Real use itself starts at the end of phase L; this phase is the sign-off once the packs are in.
+
 **Exit test:** the owner's own judgment, on dates the owner sets: a week of real notes, mail and pack work saved
-time, nothing went out without approval, and a backup succeeded.
+time, nothing went out without approval, a backup succeeded, and the repeat-correction rate fell over the weeks of use.
 
 - [ ] The acceptance scenario run by the owner on real material.
 - [ ] A week of real use; friction recorded in `ux-notes.md` and fixed in order of cost.

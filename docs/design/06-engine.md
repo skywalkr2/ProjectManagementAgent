@@ -678,6 +678,10 @@ plugin and an entry. Nothing else changes.
 **Routing by capability, not by name.** Each task kind declares what it needs (a screenshot needs vision; most need structured output and a context size). The router picks the tier's provider and model,
 checks that model's capabilities and the request's data level against `allowed_data`, and falls through the fallback chain if
 it can't serve the task. Fallbacks can cross accounts and vendors (a usage limit on one account moves the work to the next).
+A fallback is a switch nobody chose at that moment, so (*designed, phase L*, 6.22):
+- **Who may be in the chain:** only an account that passed the learning check, or that the person accepted unchecked.
+  Settings ask when an unchecked account is added to a chain.
+- **The first run on a fallback account** tags its cards "First run on <account label>", so its output gets a closer look.
 When the common format lacks structured output for a model, the adapter asks for JSON and the applier's checks still decide.
 
 **Escalate on failure, not on price.** Cheap models do most of the work; a tier can name `escalate_to` (another tier). When a
@@ -845,10 +849,14 @@ cases from signals and rule suggestions are *designed, not yet built*):
 | pulled back | the PM pulls an auto-closed change back ("This is ours") |
 | draft edited | the approved content differs from the assistant's draft (the difference is kept) |
 | held op declined | the PM declines a held system op or a routing guess |
+| edited | the person changes a field the assistant set (a fact, an owner, a due date, an item's project, a question's wording before it is sent). The ledger shows who set each field, so this needs no AI. A silent correction, learned from in the batch (*designed, phase L*) |
 | repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item (*designed, phase L*) |
 
 The repeat-correction rate, not the raw correction rate, says whether the assistant is learning; the quality panel shows it
-next to the others. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
+next to the others, week by week. Beside it, the **knowledge-used rate**: the share of runs whose changeset says which
+lessons, rules or facts it applied (`applied`, a list of knowledge ids). Each id is checked against the knowledge the run was
+given, so it is a checked citation, not the model's say-so. If the first rate doesn't fall, the loop isn't closing; if the
+second stays near zero, the knowledge isn't reaching the runs that need it. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
 
 - **Quality panel** (Admin tab): rates over time by task kind, provider and model (share of changesets sent back or undone,
   share of questions dropped, auto-close pull-back rate, draft edit size), with each figure linking to its examples.
@@ -979,7 +987,8 @@ instead of piling up. This is the same overlap check as rules (6.7), shown as "O
   rule stated in Ask. The person is looking at the card right then, and the Learned line should appear while they still
   remember why. Writing the learning down in the same turn as the correction is the habit that makes it stick.
 - **Batched,** every `knowledge.learn_every_minutes` (default 30), for silent corrections: an undo, an edited follow-up, a
-  pulled-back auto-close, a dropped question.
+  pulled-back auto-close, a dropped question, or the person's own direct edit of something the assistant set (6.20). A direct
+  edit is often the clearest correction there is.
 
 **Which tier writes it.** A bad lesson is worse than none, because it is in every later packet. So there are two task kinds:
 - **`learn.correction`:** lessons, `lesson.update` and rules from corrections, on the stronger tier. These are rare and
@@ -1037,7 +1046,7 @@ The scheduled review comes in phase E. It promotes a lesson whose guard is mecha
 setting, or a lint the product already has. A guard that needs new code becomes a report to the maintainers (6.13), because the
 product never changes its own code. The lesson stays as the record of why.
 
-**Proving it** (the phase L exit test):
+**Proving it** (the phase L exit test, then real use):
 - **Automated, with no AI cost (the plumbing):** a correction produces the proposal, the proposal reaches the next similar
   packet, ranked as designed, and the run's knowledge log shows it. Run on every change.
 - **On the person's own AI accounts (the behavior), in `cockpit evaluate`, and with every switch of a tier's account or
@@ -1052,7 +1061,11 @@ product never changes its own code. The lesson stays as the record of why.
   They cost money, so the person starts them, but they are offered at the moment that matters. A switch of a tier's
   account or model shows "Switch and check (about $X)" as its primary action, and "Switch without checking" in its menu. The
   check is part of the new account's probation (6.16). A pair that fails flags the switch on Today, with Switch back. A
-  provider switch is exactly when learning can be lost silently.
+  provider switch is exactly when learning can be lost silently. A fallback is a switch too (6.16).
+- **On real use, from the end of phase L:** fixtures prove the plumbing, but the loop shows only as real material
+  accumulates. The owner's daily use starts as soon as phase L is done, while the UI and packs are built. Through the first
+  month, two numbers are watched weekly: the repeat-correction rate, which should fall, and the knowledge-used rate, which
+  should rise (6.20).
 
 **Reading what arrives.** An assistant can't learn from what it can't read, and for an everyday user most facts arrive in
 mail attachments. So the text extractors (6.2) come with this slice. Reading a screenshot needs an account whose model reads

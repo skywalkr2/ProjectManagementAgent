@@ -3,6 +3,33 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Fallbacks are switches, direct edits are corrections, and real use starts after phase L
+
+**Decided by:** the first design's author proposed; project lead adopted points 1 and 2 and the two numbers; project owner
+chose when real use starts.
+
+**What:**
+- **Fallbacks are switches.** Only accounts that passed the learning check, or that the person accepted unchecked, may sit
+  in a fallback chain. The first run on a fallback account is tagged on its cards.
+- **Direct edits are corrections.** A person's own edit of a field the assistant set is an `edited` signal, learned from in
+  the 30-minute batch. The ledger shows who set each field.
+- **Two numbers.**
+  - The repeat-correction rate, which should fall.
+  - The knowledge-used rate, which should rise: changesets list the knowledge ids they applied (`applied`), checked against
+    the run's knowledge log.
+- **Real use early.** The owner's daily use starts at the end of phase L and runs beside phases B and C. The two numbers are
+  reviewed weekly for the first month, and a loop that isn't closing is fixed before more pack work. Phase D becomes the
+  sign-off once the packs are in.
+
+**Why:** A fallback is a model change nobody chose at that moment; in the first version, two batches ran on the wrong provider
+unnoticed. A direct edit is often the clearest correction, with no note. Fixtures prove the plumbing, and only real material
+shows the loop working.
+
+**Impact:**
+- Design 6.16, 6.20, 6.22 and 5.1 are updated.
+- Roadmap: phase L gains three items (in its size estimate); real use moves from phase D to the end of L; phase D's exit
+  test adds the falling rate.
+
 ## 2026-10-12: Learning-slice refinements: learn while the person is there, stronger guards, and protect what is learned
 
 **Decided by:** the first design's author proposed; project lead adopted points 1 to 6 and 8; project owner placed point 7

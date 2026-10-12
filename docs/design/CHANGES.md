@@ -394,6 +394,14 @@ All eight points are in, as you proposed except where noted below. Phase L grows
 | 7. Text extractors; encrypted backup and restoring one record | The owner moved both into phase L. The core's extractors (documents, spreadsheets, presentations, PDFs) and the extractor extension point. Encryption for backups that leave the person's control. Showing and restoring one record as it was. Screenshots need a model that reads images, so that is a capability of the account rather than an extractor. Point-in-time restore stays in phase E. |
 | 8. Knowledge travels | Every knowledge record is in the export and import. "Take my lessons" (Settings, and `cockpit knowledge export`) carries the active lessons, the rules and the glossary terms not tied to a project into another workspace, as the person's own, with Undo. Routing and style notes stay behind with the facts, because they name that workspace's people. |
 
+## 13. Close-out of the first round (2026-10-12)
+
+| You said | What changed |
+|---|---|
+| 1. A fallback is a switch too | Only accounts that passed the learning check, or that the person accepted unchecked, may sit in a fallback chain; settings ask when an unchecked one is added. The first run on a fallback account carries "First run on <account>" on its cards (6.16). |
+| 2. Direct edits are corrections | A new signal, `edited`: the person changes a field the assistant set (a fact, an owner, a due date, a project, a question's wording before sending). The ledger shows who set each field, so it needs no AI. It is a silent correction, learned from in the 30-minute batch (6.20, 6.22). |
+| 3. Prove it on real use early | The owner chose to start real use at the end of phase L, beside the UI and pack work. Both numbers are designed and reviewed weekly for the first month. The repeat-correction rate should fall. The knowledge-used rate should rise: each changeset lists the knowledge ids it applied, checked against what the run was given. A loop that isn't closing is fixed before more pack work. Phase D's sign-off adds the falling rate (6.20, roadmap). |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
