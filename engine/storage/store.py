@@ -251,6 +251,12 @@ class Tx:
         rows = self._c.execute(sql + " ORDER BY seq", args).fetchall()
         return [_ledger_row(r) for r in rows]
 
+    def changed_kinds(self, after: int) -> tuple[int, list[str]]:
+        """The ledger's last position, and the record kinds written after position `after` (for live updates)."""
+        last = self._c.execute("SELECT COALESCE(MAX(seq), 0) AS n FROM ledger").fetchone()["n"]
+        rows = self._c.execute("SELECT DISTINCT kind FROM ledger WHERE seq > ? ORDER BY kind", (after,)).fetchall()
+        return int(last), [r["kind"] for r in rows]
+
     # ---- ids ---------------------------------------------------------------------------------------------------------
 
     def new_id(self, kind: str) -> str:

@@ -1203,6 +1203,7 @@ What the assistant proposed for one request, how it was checked and what was app
 |---|---|---|---|
 | `request` | str | required | The id of the request it answers. |
 | `summary` | str | `''` | One line saying what the changeset does. |
+| `topic` | str | `''` | A few words naming what the input was about, for the item's title. |
 | `ops` | list[dict[str, Any]] | `[]` | One outcome per op: its index, the op, its status (applied, held, refused or undone), group, the records it touched and the reason it was held or refused. |
 | `status` | Literal['applied', 'held', 'rejected', 'undone', 'partly_undone'] | required | applied: all ops went through. held: some wait for the person. rejected: set aside. undone: all applied ops were undone. partly_undone: some were. |
 | `problems` | list[dict[str, Any]] | `[]` | Problems that belong to the changeset as a whole rather than to one op. |

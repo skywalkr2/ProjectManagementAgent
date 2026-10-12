@@ -613,6 +613,7 @@ def _record_changeset(
         {
             "request": ctx.inputs.request,
             "summary": cs.summary,
+            "topic": cs.topic,
             "ops": [asdict(o) for o in outcomes],
             "status": status,
             "problems": [asdict(p) for p in problems if p.op is None],

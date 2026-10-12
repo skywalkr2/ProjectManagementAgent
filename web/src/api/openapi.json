@@ -1620,6 +1620,17 @@
             "title": "State",
             "type": "string"
           },
+          "title": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemTitle"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The item's title, by the title rule."
+          },
           "version": {
             "title": "Version",
             "type": "integer"
@@ -3005,6 +3016,71 @@
           "what"
         ],
         "title": "InstalledPackView",
+        "type": "object"
+      },
+      "ItemTitle": {
+        "description": "An item's title in parts (design 7.14); the screen puts them into words: \"{kind} from {person} \u00b7 {topic}\".",
+        "properties": {
+          "kind": {
+            "description": "email, calendar or change (another watched item); note: the person's own words; pasted: someone else's words handed in; task: work the app started.",
+            "enum": [
+              "email",
+              "calendar",
+              "change",
+              "note",
+              "pasted",
+              "task"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of who it came from, when known.",
+            "title": "Person"
+          },
+          "person_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "That person's full name.",
+            "title": "Person Name"
+          },
+          "sender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who it came from as written, when not a known person.",
+            "title": "Sender"
+          },
+          "topic": {
+            "default": "",
+            "description": "A few words on what it is about; may be empty.",
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "ItemTitle",
         "type": "object"
       },
       "JobView": {
@@ -5008,6 +5084,232 @@
         "title": "ProposedOp",
         "type": "object"
       },
+      "QueueLineView": {
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts.",
+        "properties": {
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changeset"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "due": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "group": {
+            "enum": [
+              "decide",
+              "risk",
+              "review",
+              "send"
+            ],
+            "title": "Group",
+            "type": "string"
+          },
+          "key": {
+            "description": "Stable while the thing it stands for waits.",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "decision",
+              "question",
+              "who_is",
+              "owner",
+              "held",
+              "go",
+              "refused",
+              "failed",
+              "overdue",
+              "review",
+              "send",
+              "nudge"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "op": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The held item's index in its changeset.",
+            "title": "Op"
+          },
+          "outcome": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "What the assistant did, counted: actions_added, actions_closed, questions, notes, recorded, people, projects, drafts, other; and held, refused.",
+            "title": "Outcome",
+            "type": "object"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whom the line is about (send, nudge).",
+            "title": "Person"
+          },
+          "person_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person Name"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "questions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Questions",
+            "type": "array"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The decision, question, name or held item in one line.",
+            "title": "Text"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemTitle"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The input the line is about."
+          },
+          "untrusted": {
+            "default": false,
+            "description": "Built from outside content.",
+            "title": "Untrusted",
+            "type": "boolean"
+          },
+          "waiting": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the work stopped, in plain words.",
+            "title": "Waiting"
+          },
+          "waiting_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Days"
+          }
+        },
+        "required": [
+          "key",
+          "group",
+          "kind",
+          "count"
+        ],
+        "title": "QueueLineView",
+        "type": "object"
+      },
       "ReadVersion": {
         "properties": {
           "read_version": {
@@ -5290,11 +5592,33 @@
             "title": "Base Path",
             "type": "string"
           },
+          "brand_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The accent color as #rrggbb; none uses the app's own.",
+            "title": "Brand Color"
+          },
           "demo": {
             "default": false,
             "description": "The workspace holds made-up example data; every screen says so.",
             "title": "Demo",
             "type": "boolean"
+          },
+          "density": {
+            "default": "comfortable",
+            "description": "The workspace's default density.",
+            "enum": [
+              "comfortable",
+              "compact"
+            ],
+            "title": "Density",
+            "type": "string"
           },
           "feedback_to": {
             "anyOf": [
@@ -5320,6 +5644,12 @@
             "description": "Changes every time the app starts, so a screen can tell it restarted.",
             "title": "Instance"
           },
+          "logo": {
+            "default": false,
+            "description": "The workspace has a logo, served at the API's brand/logo address.",
+            "title": "Logo",
+            "type": "boolean"
+          },
           "narrow_below_px": {
             "title": "Narrow Below Px",
             "type": "integer"
@@ -5341,6 +5671,17 @@
             },
             "title": "Shortcuts",
             "type": "object"
+          },
+          "theme": {
+            "default": "system",
+            "description": "The workspace's default theme.",
+            "enum": [
+              "system",
+              "light",
+              "dark"
+            ],
+            "title": "Theme",
+            "type": "string"
           },
           "toast_seconds": {
             "title": "Toast Seconds",
@@ -12718,6 +13059,29 @@
           }
         },
         "summary": "Today Arrived"
+      }
+    },
+    "/api/today/queue": {
+      "get": {
+        "description": "What needs the person, ranked: decide, then risk, review, and send and follow up (design 7.7).",
+        "operationId": "today_queue_api_today_queue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/QueueLineView"
+                  },
+                  "title": "Response Today Queue Api Today Queue Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Today Queue"
       }
     },
     "/api/today/todo": {

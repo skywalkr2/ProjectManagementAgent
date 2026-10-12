@@ -178,7 +178,22 @@ def create_app(
             demo=cfg.workspace.demo,
             instance=instance,
             feedback_to=cfg.ui.feedback_to or product().get("feedback_to") or None,
+            brand_color=cfg.ui.brand.color,
+            logo=_logo(ws, cfg) is not None,
+            theme=cfg.ui.theme,
+            density=cfg.ui.density,
         )
+
+    @inner.get("/api/brand/logo", include_in_schema=False)
+    def brand_logo() -> Any:
+        """The workspace's logo image from its config folder, when one is set and present."""
+        found = _logo(ws, cfg)
+        if found is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        response = FileResponse(found, media_type=_LOGO_TYPES[found.suffix.lower()])
+        response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'"
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
     inner.include_router(build_router(ws, cfg, store, events, worker))
     inner.include_router(build_setup_router(ws, cfg, store, events, worker))
@@ -213,6 +228,27 @@ def create_app(
     outer.state.store = store
     outer.state.events = events
     return outer
+
+
+_LOGO_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+}
+
+
+def _logo(ws: Workspace, cfg: Config) -> Path | None:
+    """The logo file `ui.brand.logo` names in the workspace's config folder, when it is there."""
+    name = cfg.ui.brand.logo
+    if not name:
+        return None
+    folder = ws.config_dir.resolve()
+    path = (folder / name).resolve()
+    if path.parent != folder or not path.is_file() or path.suffix.lower() not in _LOGO_TYPES:
+        return None
+    return path
 
 
 def _with_base(html: str, base_path: str) -> str:

@@ -487,11 +487,24 @@ SETTABLE: dict[str, set[str]] = {
 }
 
 
+TOPIC_MAX = 60
+
+
 class ChangesetIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     summary: str = ""
+    topic: str = ""
     ops: list[Any] = Field(default_factory=list)
+
+    @field_validator("topic", mode="before")
+    @classmethod
+    def short_topic(cls, value: Any) -> str:
+        """A few words naming what the input is about, for its title: kept to one line and cut at a word."""
+        words = " ".join(str(value or "").split())
+        if len(words) <= TOPIC_MAX:
+            return words
+        return words[:TOPIC_MAX].rsplit(" ", 1)[0].rstrip(" ,;:-")
 
     @field_validator("ops", mode="before")
     @classmethod
@@ -520,6 +533,7 @@ def schema_for(op_names: list[str], registry: dict | None = None) -> dict[str, A
         "required": ["summary", "ops"],
         "properties": {
             "summary": {"type": "string"},
+            "topic": {"type": "string"},
             "ops": {"type": "array", "items": {"anyOf": [m.model_json_schema() for m in models]}},
         },
     }

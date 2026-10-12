@@ -753,6 +753,7 @@ class Changeset(Record):
 
     request: str = Field(description="The id of the request it answers.")
     summary: str = Field("", description="One line saying what the changeset does.")
+    topic: str = Field("", description="A few words naming what the input was about, for the item's title.")
     ops: list[dict[str, Any]] = Field(
         default_factory=list,
         description="One outcome per op: its index, the op, its status (applied, held, refused or undone), group, "

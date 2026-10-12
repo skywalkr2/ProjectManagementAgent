@@ -6,6 +6,7 @@ written into new config files, the settings forms and `cockpit config show`.
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from typing import Any, Literal
 
@@ -603,6 +604,14 @@ class ChecksFile(FileModel):
     )
 
 
+DEFAULT_TITLE_SKIP = (
+    r"(hi|hello|hey|dear|good (morning|afternoon|evening)|greetings)\b",
+    r"(from|to|cc|bcc|sent|date|subject|reply-to)\s*:",
+    r"(thanks|thank you|best|regards|cheers|sincerely)\b[ ,!.]*$",
+    r"-{2,}|_{2,}|>",
+)
+
+
 class MessageSettings(ConfigModel):
     greeting: str = Field("Hi {first_name},", description="The first line of a copied message.")
     actions_heading: str = Field("Action items with you:", description="The line above someone's action items.")
@@ -623,6 +632,21 @@ class LanguageFile(FileModel):
     never_shown: list[str] = Field(
         default_factory=list, description="Words that must never appear in anything people see (model names are added)."
     )
+    title_skip: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_TITLE_SKIP),
+        description="Lines an item's title never comes from: greetings, quoted mail headers, sign-offs (regular "
+        "expressions, matched at the start of a line, ignoring case). A title is taken from the first line left.",
+    )
+
+    @field_validator("title_skip")
+    @classmethod
+    def _patterns_compile(cls, value: list[str]) -> list[str]:
+        for pattern in value:
+            try:
+                re.compile(pattern)
+            except re.error as exc:
+                raise ValueError(f"{pattern!r} is not a regular expression: {exc}") from exc
+        return value
 
 
 # ---- config/ui.yaml -------------------------------------------------------------------------------------------------
@@ -638,6 +662,8 @@ DEFAULT_SHORTCUTS = {
     "hand_in": "n",
     "help": "?",
     "ask": "/",
+    "next_pane": "]",
+    "previous_pane": "[",
 }
 
 
@@ -649,6 +675,38 @@ class TodaySettings(ConfigModel):
     agenda_days_ahead: int = Field(
         1, ge=0, le=14, description="How many days after today the agenda also shows (0: today only)."
     )
+    nudge_after_days: int = Field(
+        3,
+        ge=1,
+        le=60,
+        description="After this many days with no reply, something sent to a person becomes a line on Today to "
+        "follow up.",
+    )
+
+
+class BrandSettings(ConfigModel):
+    color: str | None = Field(
+        None,
+        pattern=r"^#[0-9a-fA-F]{6}$",
+        description="The accent color for buttons, links and the selected view, as #rrggbb. Lighter and darker shades "
+        "are worked out from it; Settings warns when its contrast would fail. Empty uses the app's indigo.",
+    )
+    logo: str | None = Field(
+        None,
+        description="An image shown in place of the monogram at the top left: a PNG, JPEG, WebP or SVG file in the "
+        "workspace's config folder, by name. Empty shows the workspace's initials.",
+    )
+
+    @field_validator("logo")
+    @classmethod
+    def _logo_file(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if "/" in value or "\\" in value or value.startswith(".") or not value.strip():
+            raise ValueError("the logo is a file name in the config folder, with no folder in it")
+        if not value.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".svg")):
+            raise ValueError("the logo is a .png, .jpg, .jpeg, .webp or .svg file")
+        return value
 
 
 class UiFile(FileModel):
@@ -660,7 +718,12 @@ class UiFile(FileModel):
         default_factory=lambda: dict(DEFAULT_SHORTCUTS),
         description="Single-key shortcuts by action; they never fire while typing.",
     )
-    narrow_below_px: int = Field(900, ge=320, description="Below this width the screen uses one column.")
+    narrow_below_px: int = Field(
+        640,
+        ge=320,
+        le=1200,
+        description="Below this width the screen uses the phone layout: one pane and a bottom bar.",
+    )
     toast_seconds: float = Field(7, ge=0, description="How long an undo toast stays; 0 keeps toasts until dismissed.")
     feedback_to: str | None = Field(
         None,
@@ -670,6 +733,17 @@ class UiFile(FileModel):
     )
     today: TodaySettings = Field(
         default_factory=TodaySettings, description="What Today's agenda and its list of what came in cover."
+    )
+    brand: BrandSettings = Field(default_factory=BrandSettings, description="The accent color and logo.")
+    theme: Literal["system", "light", "dark"] = Field(
+        "system",
+        description="Light or dark screens; system follows the computer's setting. Each person can change it for "
+        "their own device from the menu under their initials.",
+    )
+    density: Literal["comfortable", "compact"] = Field(
+        "comfortable",
+        description="How much fits on screen: comfortable rows, or compact ones that show more at once. Each person "
+        "can change it for their own device; touch screens keep large targets either way.",
     )
 
     @field_validator("shortcuts")

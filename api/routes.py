@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -49,6 +50,7 @@ from api.schemas import (
     Handed,
     HandIn,
     InboxView,
+    ItemTitle,
     JobView,
     KindView,
     ListRenameIn,
@@ -74,6 +76,7 @@ from api.schemas import (
     ProjectView,
     ProposedFile,
     ProposedOp,
+    QueueLineView,
     ReadVersion,
     RecordEdit,
     RecordReference,
@@ -404,6 +407,26 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         inbox = today.arrived(store, cfg, datetime.now(UTC))
         return InboxView(items=[ArrivedView(**vars(a)) for a in inbox.items], left_out=inbox.left_out)
+
+    @r.get("/today/queue")
+    def today_queue() -> list[QueueLineView]:
+        """What needs the person, ranked: decide, then risk, review, and send and follow up (design 7.7)."""
+        from engine.today_queue import queue
+
+        people = People(store, cfg)
+        projects = {p.id: p.data["name"] for p in store.read().list("project")}
+        out = []
+        for line in queue(ws, store, cfg, datetime.now(UTC)):
+            data = {k: v for k, v in vars(line).items() if k not in ("title", "since")}
+            out.append(
+                QueueLineView(
+                    **data,
+                    title=_title_view(line.title, people),
+                    person_name=people.name(line.person) if line.person else None,
+                    project_name=projects.get(line.project or ""),
+                )
+            )
+        return out
 
     @r.get("/plugin-today")
     def plugin_today() -> list[TodayLineView]:
@@ -989,13 +1012,20 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/changes")
     def changes() -> list[ChangeItem]:
+        from engine.titles import head_of, title_for
+        from engine.today_queue import watched_kinds
+
         people = People(store, cfg)
         projects = {p.id: p.data["name"] for p in store.read().list("project")}
         sources = {s.id: s.data for s in store.read().list("source")}
+        kinds = watched_kinds(store.read())
         out: list[ChangeItem] = []
         for req in reversed(store.read().list("request")):
             d = req.data
             view = None
+            cs = None
+            source = sources.get(d.get("source") or "")
+            watched = (source or {}).get("watched") or {}
             if d.get("changeset"):
                 cs = store.read().get("changeset", d["changeset"])
                 view = ChangesetView(
@@ -1025,6 +1055,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     follows=d.get("follows"),
                     follows_summary=_summary_of(d.get("follows")),
                     changeset=view,
+                    title=_title_view(
+                        title_for(
+                            d,
+                            source,
+                            cs.data if cs is not None else None,
+                            people=people,
+                            skip=list(cfg.language.title_skip),
+                            head=head_of(ws.sources_dir, (source or {}).get("content_hash")),
+                            watched_kind=kinds.get((watched.get("source"), watched.get("key"))),
+                        ),
+                        people,
+                    ),
                 )
             )
         return out
@@ -1423,7 +1465,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/events")
     async def stream() -> StreamingResponse:
         async def gen() -> Any:
+            # Each change says which kinds of records were written since the last one, so the screen refreshes only
+            # what they affect; a change with none (a setting, a source's status) refreshes everything.
             seen = events.version
+            position, _ = store.read().changed_kinds(0)
             yield f"event: hello\ndata: {seen}\n\n"
             while not events.closed:
                 seen_now = await asyncio.to_thread(events.wait, seen, 15.0)
@@ -1431,7 +1476,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     break
                 if seen_now != seen:
                     seen = seen_now
-                    yield f"event: changed\ndata: {seen}\n\n"
+                    position, kinds = store.read().changed_kinds(position)
+                    yield f"event: changed\ndata: {json.dumps({'version': seen, 'kinds': kinds})}\n\n"
                 else:
                     yield ": keep-alive\n\n"
 
@@ -1475,6 +1521,18 @@ def _existing(tx: Any, kind: str, record_id: str) -> Any:
     if rec is None:
         raise StoreError(f"{kind} {record_id} doesn't exist")
     return rec
+
+
+def _title_view(title: Any, people: People) -> ItemTitle | None:
+    if title is None:
+        return None
+    return ItemTitle(
+        kind=title.kind,
+        person=title.person,
+        person_name=people.name(title.person) if title.person else None,
+        sender=title.sender,
+        topic=title.topic,
+    )
 
 
 def _ask(store: Store, people: People, qid: str | None) -> Ask | None:

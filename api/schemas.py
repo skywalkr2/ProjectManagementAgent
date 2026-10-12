@@ -185,6 +185,19 @@ class ChangesetView(BaseModel):
     )
 
 
+class ItemTitle(BaseModel):
+    """An item's title in parts (design 7.14); the screen puts them into words: "{kind} from {person} · {topic}"."""
+
+    kind: Literal["email", "calendar", "change", "note", "pasted", "task"] = Field(
+        description="email, calendar or change (another watched item); note: the person's own words; pasted: "
+        "someone else's words handed in; task: work the app started."
+    )
+    person: str | None = Field(None, description="The id of who it came from, when known.")
+    person_name: str | None = Field(None, description="That person's full name.")
+    sender: str | None = Field(None, description="Who it came from as written, when not a known person.")
+    topic: str = Field("", description="A few words on what it is about; may be empty.")
+
+
 class ChangeItem(BaseModel):
     id: str
     version: int
@@ -206,6 +219,7 @@ class ChangeItem(BaseModel):
     follows: str | None = Field(None, description="The change (changeset id) this work followed from, if any.")
     follows_summary: str | None = Field(None, description="That change's one-line summary, for the row.")
     changeset: ChangesetView | None
+    title: ItemTitle | None = Field(None, description="The item's title, by the title rule.")
 
 
 class UndoReport(BaseModel):
@@ -406,6 +420,10 @@ class RuntimeConfig(BaseModel):
         None, description="Changes every time the app starts, so a screen can tell it restarted."
     )
     feedback_to: str | None = Field(None, description="Where the feedback button writes its email, if anywhere.")
+    brand_color: str | None = Field(None, description="The accent color as #rrggbb; none uses the app's own.")
+    logo: bool = Field(False, description="The workspace has a logo, served at the API's brand/logo address.")
+    theme: Literal["system", "light", "dark"] = Field("system", description="The workspace's default theme.")
+    density: Literal["comfortable", "compact"] = Field("comfortable", description="The workspace's default density.")
 
 
 class PluginStatusView(BaseModel):
@@ -753,6 +771,49 @@ class TodoView(BaseModel):
     project: str | None = None
     due: date | None = None
     overdue: bool
+
+
+class QueueLineView(BaseModel):
+    """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts."""
+
+    key: str = Field(description="Stable while the thing it stands for waits.")
+    group: Literal["decide", "risk", "review", "send"]
+    kind: Literal[
+        "decision",
+        "question",
+        "who_is",
+        "owner",
+        "held",
+        "go",
+        "refused",
+        "failed",
+        "overdue",
+        "review",
+        "send",
+        "nudge",
+    ]
+    count: int
+    text: str | None = Field(None, description="The decision, question, name or held item in one line.")
+    title: ItemTitle | None = Field(None, description="The input the line is about.")
+    person: str | None = Field(None, description="Whom the line is about (send, nudge).")
+    person_name: str | None = None
+    project: str | None = None
+    project_name: str | None = None
+    due: date | None = None
+    waiting_days: int | None = None
+    waiting: str | None = Field(None, description="Why the work stopped, in plain words.")
+    request: str | None = None
+    changeset: str | None = None
+    question: str | None = None
+    op: int | None = Field(None, description="The held item's index in its changeset.")
+    actions: list[str] = Field(default_factory=list)
+    questions: list[str] = Field(default_factory=list)
+    outcome: dict[str, int] = Field(
+        default_factory=dict,
+        description="What the assistant did, counted: actions_added, actions_closed, questions, notes, recorded, "
+        "people, projects, drafts, other; and held, refused.",
+    )
+    untrusted: bool = Field(False, description="Built from outside content.")
 
 
 class InboxView(BaseModel):
