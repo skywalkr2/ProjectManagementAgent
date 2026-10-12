@@ -29,7 +29,9 @@ learning"), designed by the project lead after checking the code.
 things, and the first week of real use is the learning baseline.
 
 **Impact:**
-- Roadmap L0, before learning reads anything.
+- Roadmap L0, before learning reads anything. Later the same day, the rules part (bulk and category matchers, the
+  folder, one-click rules) moved to phase A5: the owner is getting social updates and sales mail processed now, and
+  `category:primary` matched nothing in the owner's Gmail (its tabs exist only with the Default inbox type).
 - Design 6.5, 6.20 and 7.4.
 - A new setting, `watch.sorting` (ai or rules).
 - New core matchers.

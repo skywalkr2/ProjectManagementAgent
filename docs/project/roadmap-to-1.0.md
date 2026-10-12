@@ -48,7 +48,7 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 - [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
 - [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded.
 
-## Phase A: a baseline that works with no demo data (about 3.5 sessions, with A4)
+## Phase A: a baseline that works with no demo data (about 4 sessions, with A4 and A5)
 
 Started 2026-10-12.
 
@@ -155,6 +155,21 @@ A4. **The new-start walkthrough** (owner, 2026-10-12; design 7.8). Install to fi
   - The AI screen reads "Which AI should Assistant use?" and "The settings file refers to it".
   - Choosing a backup folder doesn't make the first backup, so Today nags right after "Backups: Done".
 
+A5. **Sales and social mail set aside by rules** (owner, 2026-10-12: "right now it's processing all of it"; moved from L0
+because the exit test reads real mail, and Gmail's tabs aren't reliable). This is the rules part of design 6.5's Set
+aside folder:
+- [ ] Mail items carry `bulk` (unsubscribe or bulk headers) and `categories` (the service's own), plugin API 0.3.57.
+- [ ] Core matchers `bulk-mail`, `service-category` and `sender-rule`, on by default for new mail sources, so
+  promotions, social updates and mailing lists are set aside with no AI run.
+- [ ] The Set aside folder (Personal; Sales and promotions) and Came in's "N set aside" count.
+- [ ] One-click corrections: "Set aside: personal or sales" on any item and "This is work" in the folder, each offering
+  "always for this sender or domain" as a sorting rule with a read-back and Undo.
+- [ ] Journey: a mailbox with work mail, a social update and a sales mail. Only the work mail reaches the assistant
+  and the first Go. "This is work" hands the sales mail in.
+
+The sorting run on headers for mail the rules can't place, and the proof that learning never reads set-aside mail, stay
+in L0.
+
 ## Phase L: the learning loop, L-core (about 11.5 sessions, L0 included)
 
 Added on 2026-10-12 after the first design's author reviewed design 1.1 (decisions, "The learning slice"); split into L-core
@@ -214,7 +229,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
   per connector). Today it lives only on the request.
 - [ ] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
   both, and they differ).
-- [ ] **Personal and sales mail set aside** (owner, 2026-10-12; design 6.5). Built before learning reads anything:
+- [ ] **Personal and sales mail set aside, the rest** (owner, 2026-10-12; design 6.5; the rules part is phase A5):
   - a Set aside folder (Personal; Sales and promotions);
   - sorting by the person's sender and domain rules, then the mail's own category and bulk headers, then a low-cost
     run on sender, subject and category only (`watch.sorting`, on by default, shown in the walkthrough's Mail step);
