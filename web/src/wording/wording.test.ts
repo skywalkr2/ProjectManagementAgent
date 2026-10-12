@@ -97,6 +97,7 @@ const COMMANDS = [
   "export",
   "import",
   "init",
+  "install",
   "pack",
   "restore",
   "selfcheck",
