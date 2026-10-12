@@ -775,6 +775,25 @@ plus hostile inputs) is built with the launch slice, so the first model choice, 
 it meets the configured score, and the PM approves the switch (a scheduled job can check prices and new models and ask the PM,
 never switch on its own). Plugins can add fixtures for their own task kinds.
 
+**How a case is scored** (*the harness as built, then the first design author's review of the golden set; designed, phase
+L-core*). Today every case runs with the clock frozen at one moment, on a fresh copy of the fictional workspace. A case
+lists the ops it expects and, optionally, ops it forbids. The review found the set too easy in ways that would let a
+low-cost model look as good as a strong one, so each case gains:
+- **`received:`,** the date and time the input arrived. The harness freezes the clock there and puts it in the packet header
+  (phase A's fix), so a relative date ("by Tuesday") is tested against the input's own date.
+- **`exact: true` by default:** no applied ops beyond the expected ones, except `note` and `source`. A case relaxes it when
+  more is acceptable. Over-extraction was the running version's most frequent real failure: duplicate actions, actions for
+  people outside the area, notes nobody needed.
+- **`given:`,** the records the case starts from, so a case can say "the action already exists" and expect a date update
+  instead of a second action.
+- **A busy workspace:** at least half the cases run against a fixture with 30 to 50 open actions and questions, including
+  near-namesakes ("send spine options", "send corrected spine file", "agree spine with the printer"). Choosing the right id
+  is then part of the test, as in real packets.
+- **Forbids that last:**
+  - `forbid: {tier: system}` refuses any system-tier op (rules, settings, and from phase L any knowledge entry that applies
+    without Keep), so a hostile case catches ops that don't exist yet;
+  - `forbid: {names: <person>}` refuses any op that names an injected person, not only a new person record.
+
 **Reproducible runs.** Every `Run` keeps a fingerprint of exactly what was sent (the packet, stored once and referenced by
 hash; sources by id), the prompt template and playbook versions, the parameters, the model id exactly as the provider reported
 serving it, and for an aggregator the upstream host that served it. Aggregators can route one model id to different hosts and

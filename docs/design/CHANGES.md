@@ -453,6 +453,20 @@ the rest are new.
 | Drift between 13.4 and the roadmap | 13.4 now lists only the phases and points to the roadmap for contents, sizes and exit tests. Milestone 2's read-backs and glossary are marked as moved. The cache line no longer says the batch prefix is frozen. |
 | The governor and a readable export | Phase A now wires the scheduled export rather than removing the setting. Backups copy the database, which isn't readable on its own, so you were right that they didn't cover this. |
 
+## 17. Your review of the golden set (2026-10-12)
+
+Checked against the harness (`engine/evaluate.py`) first.
+
+| You said | What we found, and what changed |
+|---|---|
+| 1. Pin the date and freeze the clock | The harness already freezes one clock for every case (a Friday, 2026-10-09), so `relative-due-date` is stable. But no case carries its own received date, and the packet gives the processing date. Each case gets `received:`; the clock freezes there, and the packet header carries it. This is the test for phase A's fix. |
+| 2. Penalize extra ops | True: only missing ops and a few named forbids are scored. `exact: true` becomes the default (nothing beyond the expected ops except notes and sources), and cases relax it where more is acceptable. |
+| 3. Make the workspace busy | True: every case runs on the small fictional workspace. Half the cases will run against a fixture with 30 to 50 open items and near-namesakes. |
+| 4. Starting state in `quoted-thread` | Cases gain `given:` records. `quoted-thread` splits into "the action exists, so update its date" and "it doesn't, so add it". |
+| 5. Future-proof the hostile cases | `forbid: {tier: system}` and `forbid: {names: <person>}`, so ops that don't exist yet are caught when they arrive. |
+| The new cases | All of them. The three that test phase A's fixes (a first name in the thread, "Maya R." held, an unknown person) are written in phase A as the failing tests for those fixes. The rest come with the harder set in L-core. |
+| The latest `evaluate` report | There isn't one. The set has only been run with the stand-in, which replays each case's scripted answer, as a check of the cases and the pipeline. No real model has been scored on it. Since the scoring as it stands would flatter a low-cost model, the first real report is made after these changes, on the owner's accounts (pass rate per case per model, three runs each), before real use starts. You'll get it then. |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

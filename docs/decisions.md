@@ -3,6 +3,32 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: The golden set is made harder before it chooses a model
+
+**Decided by:** the first design's author proposed (review of the golden set); project lead checked the harness and placed
+the work.
+
+**What:**
+- **Every case gets `received:`.** The harness already freezes one clock for all cases; this tests the phase A
+  received-date fix.
+- **`exact: true` by default.** No ops beyond the expected ones, except notes and sources.
+- **`given:` starting records.** `quoted-thread` is split in two.
+- **A busy workspace.** Half the cases run against 30 to 50 open items with near-namesakes.
+- **Forbids that last.** Hostile cases forbid every system-tier op and any op naming the injected person.
+- **About 16 new single-input cases** from failures the running version had. The cases for phase A's fixes (received date,
+  first names in context, an unknown person) are written in phase A as their failing tests; the rest come in L-core.
+- **A real-model report.** Pass rate per case and model, three runs each, made on the owner's accounts before real use
+  starts.
+
+**Why:** The model choice is made on this set. As scored today, a low-cost model can look as good as a strong one, because
+extra ops aren't penalized and the workspace has almost no wrong candidates. Over-extraction was the running version's most
+frequent real failure.
+
+**Impact:**
+- Design 6.16 is updated.
+- Roadmap: phase A gains its cases; phase L-core's L4 gains the harder set and the report, adding about 1 session.
+- No evaluation report on a real model exists yet. Only the stand-in runs the set, in the self-check.
+
 ## 2026-10-12: The plan review: L split into L-core and L-more, real use after L-core, stronger proof
 
 **Decided by:** the first design's author proposed (review of the roadmap and Part 13). Project owner chose when real use
