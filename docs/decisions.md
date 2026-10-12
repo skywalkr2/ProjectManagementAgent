@@ -3,6 +3,32 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Product rules are the core playbook's seed lessons, with guard kinds; the first-use rules come first
+
+**Decided by:** the first design's author proposed (review of Part 8); project lead adopted it and placed the work (the
+owner had already put real use at the end of phase L, so the rules that bite in its first week land before then).
+
+**What:**
+- **Rules as data.** Part 8's rules become the core playbook's seed lessons: lesson records shipped with the product, in
+  packets like the person's own, and pointed at by fixtures. Part 8 is generated from them.
+- **Guard kinds.** Each guard is tagged invariant, lint, code or instruction. An instruction-only rule needs a fixture case,
+  and counts as partly enforced until it has one.
+- **8.7 split.** Its process rows move to 10.5.
+- **New rules.** Fifteen rules from the running deployment become rows in 8.8.
+- **Two wording fixes.** A target is a date, a quarter or TBD, never a sentence. Dates count from the day received.
+- **Order.**
+  - Phase A gains the silent-stop fixes: the received date in the packet header, a usage limit resuming at its reset, and
+    an empty or failed run retried automatically.
+  - Phase L gains the conversion, plus the writer's first-week rules: verbatim versus paraphrase, attribution, names from a
+    primary source, and links checked before they are shown.
+
+**Why:** Part 8 and 6.22 described two stores of the same knowledge. An advisory rule that reads as enforced was the
+original scope failure. The first real use is a writer's own work plus mail and calendar, so those rules bite first.
+
+**Impact:**
+- Design Part 8 (intro, 8.1, 8.5, 8.7 and a new 8.8) and 10.5 are updated.
+- Phase A grows to about 3.5 sessions and phase L to about 10, so the packs start about one more week later.
+
 ## 2026-10-12: Fallbacks are switches, direct edits are corrections, and real use starts after phase L
 
 **Decided by:** the first design's author proposed; project lead adopted points 1 and 2 and the two numbers; project owner

@@ -22,7 +22,7 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
 - [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
 - [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded.
 
-## Phase A: a baseline that works with no demo data (about 3 sessions)
+## Phase A: a baseline that works with no demo data (about 3.5 sessions)
 
 **Exit test:** on a fresh computer folder, the owner runs one install or update command. They then:
 1. make a workspace with no template;
@@ -55,6 +55,10 @@ A2. **The person's path, fixed where the review found it broken.**
 - [ ] Settings that do nothing are wired or removed: `owner_format`, the scheduled export. The near-duplicate threshold
   becomes a setting (design 4.17; the code fixes it at 0.8).
 - [ ] **A refresh button on the mailbox** (owner, 2026-10-12): check "Came in" and the mail source now.
+- [ ] **No silent stops** (design 8.5, 8.6, 8.8):
+  - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived;
+  - a usage limit resumes by itself at its reset;
+  - an empty or failed run is retried automatically, then goes to the person with why.
 - [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command.
 
 A3. **Journey tests.** These are end to end, with a fake AI service and fake mail and calendar services, and nothing
@@ -66,7 +70,7 @@ is "ready to test" until they pass:
 - [ ] backup → restore;
 - [ ] the acceptance scenario, steps 1–7, all checked as written (step 6 included).
 
-## Phase L: the learning slice (about 8.5 sessions)
+## Phase L: the learning slice (about 10 sessions)
 
 Added on 2026-10-12 after the first design's author reviewed design 1.1 (decisions, "The learning slice"). The write side
 of learning is built; this phase builds the read side, so the assistant gets better at each project the more it sees.
@@ -133,6 +137,16 @@ L5. **Reading what arrives, and protecting what is learned** (owner, 2026-10-12,
   extractor extension point for plugins.
 - [ ] Encryption for backups that leave the person's control (`backups.encrypt`).
 - [ ] Show and restore one record as it was at a past time, from the ledger.
+
+L6. **The product rules as data, and the rules that bite first** (design Part 8, from the design author's review).
+- [ ] Part 8's rules become the core playbook's seed lessons, each with a guard kind (invariant, lint, code or instruction)
+  and its fixture ids. The page is generated from them, and the self-check fails when it is stale.
+- [ ] A fixture case for every instruction-only rule.
+- [ ] Before real use:
+  - quotes only from verbatim sources, with a paraphrase labeled as one;
+  - no unattributed lines;
+  - names spelled from a primary source, with unverified spellings marked;
+  - every link checked before it is shown.
 
 ## Phase B: finish the UI/UX redesign (about 4 sessions)
 

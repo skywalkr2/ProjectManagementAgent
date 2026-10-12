@@ -8,11 +8,32 @@ means nothing in the code does what the guard column says; "(partly enforced: ..
 code and a test. Version 1 builds the missing guards in the order of the roadmap (13.4); dependencies, baselines, risks and
 escalation move to the project management pack (9.10).
 
+**These rules become data** (*designed, phase L*; decisions, 2026-10-12 "Product rules are the core playbook's seed
+lessons"). After phase L, lessons are records with ids, targets and status (6.22). The rules on this page become the core
+playbook's **seed lessons**: records shipped with the product, carried in packets like the person's own lessons, and pointed
+at by fixtures. This page is then generated from them, as the plugin guide is generated from the code. So:
+- a product rule and a learned lesson are the same kind of thing;
+- the person's own lessons and rules layer on top, and theirs win by id (3.8);
+- the test "doesn't repeat a corrected mistake" covers the shipped rules too.
+
+**Guard kinds** (*designed, phase L*). Each rule's guard has one kind:
+- **invariant:** the applier always refuses;
+- **lint:** returned once, then held or warned (4.17);
+- **code:** built into how the engine works;
+- **instruction:** text the model is given, and nothing else.
+
+An instruction is the weakest guard: the original scope failure was an advisory rule that read as if it were enforced. So:
+- every instruction-only rule has at least one fixture case in the evaluation, which a model switch reruns (6.22);
+- a rule whose only guard is an instruction counts as partly enforced until that case exists.
+
+The generated page shows the kind beside each guard. Seed lessons whose guard is an instruction or a lint go into the packets
+they apply to; those guarded by an invariant or code are kept as the record of why, and stay out of packets.
+
 ## 8.1 Publishing and content
 
 | Rule | Enforced by |
 |---|---|
-| Publish only confirmed facts. Targets aren't dates; discrepancies in someone's tracking never go on a shared output, they become questions first | applier wording check, "confirmed" field rules (not yet enforced): no confirmed-fact model and no publisher yet |
+| Publish only confirmed facts. A target is a date, a quarter or TBD, never a sentence, and the detail goes in the notes; discrepancies in someone's tracking never go on a shared output, they become questions first | applier wording check, "confirmed" field rules (not yet enforced): no confirmed-fact model and no publisher yet |
 | Actions are written as verbs that do something, never "Confirm / Check whether" | blocked phrases |
 | Record who raised each risk and whose problem it is; never turn someone else's risk into an ask for your side | risk fields `raised_by`, `owner` required (not yet enforced): risk records belong to the project management pack (9.10) |
 | Quotes and attributions only from verbatim sources; a paraphrase is labeled as one | `source` op requires `verbatim: true/false` (not yet enforced): no `source` op or verbatim flag |
@@ -78,7 +99,7 @@ escalation move to the project management pack (9.10).
 | Rule | Enforced by |
 |---|---|
 | "This week" means through the configured week end (e.g. Friday), one helper everywhere | calendar config (not yet enforced): no calendar config yet |
-| Date inputs from the day received, not the day discussed | `source` op (partly enforced: the prompt counts from the message's date line, but the packet uses the processing date) |
+| Date inputs from the day received, not the day processed: "by Friday" in a message received on Monday means that week's Friday | the packet header carries the input's received date (partly enforced: the prompt counts from the message's date line, but the packet gives the processing date; fixed in phase A) |
 | Store zoned times; never slice a timestamp string | storage layer (partly enforced: nothing requires timezone-aware values) |
 | Per-team non-working days count for that team's dates | calendar config (not yet enforced): no calendar config yet |
 
@@ -133,14 +154,50 @@ go-forward plan"; `CLAUDE.md`, "How work reaches the owner").
 
 | Rule | Enforced by |
 |---|---|
-| Every default produces a visible result for a real person, with no file editing and no second command; a brief says what the person sees in the first five minutes | the brief, the journey tests and the fresh-workspace check (10.5; planned) |
+| Every default produces a visible result for a real person, with no file editing and no second command | the brief, the journey tests and the fresh-workspace check (10.5; planned) |
 | A real workspace starts from `cockpit init` with no template; the fictional workspaces are test fixtures and the sandbox, never a starting point | docs, the setup guide, the fresh-workspace check (10.5; planned) |
 | Nothing goes out without the PM approving that exact content. This stays whatever else changes | publisher content-hash check (not yet enforced, see 8.1); until then, copy and Mark sent are the only way out |
 | Signing in is the whole setup for a mail or calendar account: the sources the add-on declares start at once and read the inbox and main calendar, and the person narrows afterwards | `sign_in(..., sources=...)`, `engine/sign_in_sources.py` |
 | A real AI account does the assistant's work as soon as it is added; an unused account offers "Use for the assistant's work" | account add flow (7.16) |
 | The app restarts only when it must and only when the person says so; a setting everything reads at the moment of use applies at once | `LIVE_KEYS` in the worker, the Restart now ask |
 | No file name, config key path, `env:` reference or command line reaches the screen on the default path, including text built by the server | wording sheet tests for the screens; the server-side string scan (10.5; planned) |
-| Nothing is "ready to test" until the journey tests pass; the message to the owner gives the exact commands and what to see | journey tests (10.5; planned) |
-| A reported problem gets a failing test of the person's path first; then everything with the same cause is found and fixed in the same change, and the reply says what was checked | process (10.3) |
-| A plan item is never marked done on a part of it: say what is left | process (10.3) |
+
+The review's rules for how the product is built (journey tests before "ready to test", a failing test first, never marking a
+plan item done on a part) don't reach a person's workspace, so they are in 10.5, not here.
+
+## 8.8 Rules added from the first design author's review of Part 8
+
+Rules from the running deployment that were in the change notes or Part 6 but not on this list (decisions, 2026-10-12). Since
+this list is what gets enforced and tested, each is a row. The guard kind is in brackets.
+
+| Rule | Enforced by |
+|---|---|
+| Unknown stays blank or TBD, never a placeholder. Some fields are filled only from one named person's input (a priority, say), and the gap becomes a question to that person | [invariant] person-owned fields in the applier (partly enforced: plugins have person-only values, 0.2; core fields have no owner yet) |
+| Out-of-scope items are parked with the reason, never dropped, and can be brought back on request | [code] a parked state and the scope sweep (not yet enforced: scope, 6.18, is phase E) |
+| If the area's expert says it isn't theirs and doesn't know whose, stop: park it, don't reroute it around the organization | [code] routing entries and the question flow (not yet enforced: routing entries come in phase L) |
+| Values written to an outside system are in its canonical form; after a publish, re-pull and check that no difference remains | [code] the publisher and connector normalizers (not yet enforced: no publisher) |
+| Adding or changing an AI account smoke-tests every tier with the exact parameters, plus the lock-down for agents; no silent default provider | [code] provider onboarding and the self-check (partly enforced: the smoke test runs every tier on request and the lock-down per agent account; it is not yet run on every change) |
+| A fallback is a switch: only checked accounts sit in a fallback chain, and the first run on one is marked | [code] the provider layer (not yet enforced: phase L, 6.16) |
+| Every file type a watched source can hold has an extractor, or is flagged once as unsupported; the person is never asked to paste a file's text | [code] extractors and the packet builder (not yet enforced: phase L, 6.2) |
+| Inputs are recognized by content, not file name: a moved or renamed file is matched to what is already registered before it is read again | [code] content hash and triage (partly enforced: pasted sources are stored by content hash; a moved file in a watched folder is not yet matched) |
+| Today shows only things the person does, each starting with the verb and saying where; status and progress never sit on Today | [code] the Today line contract (partly enforced: the queue's lines are things to do; the verb-first wording is not checked) |
+| The person sees only what needs them: a changeset with nothing to approve, decide or answer closes itself, with a way to pull it back | [code] the applier and the auto-closed list (partly enforced: watched changes are auto-closed by triage rules; a changeset with nothing to review does not yet close itself) |
+| Text the person copies to send stays clean: no provenance, internal ids or approval notes inside the copyable part | [lint] a copy-block lint in the renderer (partly enforced: follow-up messages carry none; nothing checks it) |
+| Anything with more than one item is a list, one item per line, never joined with separators | [lint] `run-on-list` |
+| Neutral wording about other people's work in shared outputs ("moved", not "slipped"); teams, not individuals, own risks | [lint] wording lint (partly enforced: `blocked-wording` takes a configured word list; no neutral-wording list ships) |
+| Learning proposals never flood the home screen: proposals from inputs come as one daily card, merged, expiring with a count | [code] 6.22, 7.18 (not yet enforced: phase L) |
+| A direct edit of something the assistant set is a correction | [code] the `edited` signal (not yet enforced: phase L, 6.20) |
+
+**What is enforced first, for the first real use.** The first real use is a writer's own work plus mail and calendar, so the
+rules that bite first are not the workplace ones:
+- **Phase A:** dates from the day received (8.5); a usage limit resuming by itself at its reset (8.6); an empty or failed run
+  retried automatically, then sent to the person (8.6). Without the last two, the assistant stops silently on the first quota
+  day and the person thinks it's broken.
+- **Phase L, before real use starts:**
+  - the knowledge rules (8.4);
+  - verbatim versus paraphrase, and unattributed lines (8.1);
+  - names spelled from a primary source (8.1);
+  - every link checked before it is shown (8.1).
+
+Scope, schedule lookups and dependencies wait for the workplace and project management packs.
 

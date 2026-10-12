@@ -111,4 +111,7 @@ server builds (`docs/project/review-2026-10-12.md`). These guardrails answer tha
 | **A fresh workspace shows no problem:** the self-check makes a workspace with no template and checks that it has no account, source or setting that shows an error | Planned (roadmap A1) |
 | **A starter separate from the fixtures:** `cockpit init` with no template is the documented start; the fictional workspaces are named as test fixtures and the sandbox | Planned (roadmap A1) |
 | **Every default produces a visible result:** a brief says what the person sees in the first five minutes | Process rule, in force (`CLAUDE.md`) |
-| **Fix the cause, then its siblings:** a failing test of the person's path first, then the same cause searched everywhere | Process rule, in force (`CLAUDE.md`) |
+| **Fix the cause, then its siblings:** a failing test of the person's path first, then the same cause searched everywhere, and the reply says what was checked | Process rule, in force (`CLAUDE.md`) |
+| **Nothing is "ready to test"** until the journey tests pass; the message to the owner gives the exact commands and what to see | Process rule, in force (`CLAUDE.md`); the journey tests are planned |
+| **A plan item is never marked done on a part of it:** say what is left | Process rule, in force (`CLAUDE.md`) |
+| **Part 8 is generated from the seed lessons**, and every instruction-only rule has a fixture case; the self-check fails when the page is stale or a case is missing (decisions, 2026-10-12) | Planned (roadmap L) |

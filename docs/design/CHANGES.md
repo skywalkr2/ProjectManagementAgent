@@ -402,6 +402,18 @@ All eight points are in, as you proposed except where noted below. Phase L grows
 | 2. Direct edits are corrections | A new signal, `edited`: the person changes a field the assistant set (a fact, an owner, a due date, a project, a question's wording before sending). The ledger shows who set each field, so it needs no AI. It is a silent correction, learned from in the 30-minute batch (6.20, 6.22). |
 | 3. Prove it on real use early | The owner chose to start real use at the end of phase L, beside the UI and pack work. Both numbers are designed and reviewed weekly for the first month. The repeat-correction rate should fall. The knowledge-used rate should rise: each changeset lists the knowledge ids it applied, checked against what the run was given. A loop that isn't closing is fixed before more pack work. Phase D's sign-off adds the falling rate (6.20, roadmap). |
 
+## 14. Your review of Part 8 (2026-10-12)
+
+| You said | What changed |
+|---|---|
+| Part 8 should be data, not prose | Its rules become the core playbook's seed lessons in phase L: records shipped with the product, in packets like the person's own, pointed at by fixtures, with the person's rules winning by id. The page is generated from them, and the self-check fails when it is stale. Seed lessons guarded by an invariant or code stay out of packets, as the record of why; instruction and lint ones go in. |
+| Say what kind of guard each is; test the soft ones | Each guard is tagged invariant, lint, code or instruction. Every instruction-only rule gets a fixture case, which a model switch reruns, and counts as partly enforced until it has one. |
+| Split 8.7 | Its process rows (journey tests before "ready to test", a failing test first, never marking a plan item done on a part) moved to 10.5. |
+| Fifteen rules from the running deployment | All are rows in 8.8, each with its guard kind and an honest state. Two are partly built today: pasted inputs are stored by content hash, and the smoke test covers every tier on request. |
+| "Targets aren't dates" | Now: a target is a date, a quarter or TBD, never a sentence; the detail goes in the notes. |
+| Date from the day received | Now says "not the day processed", and the fix (the received date in the packet header) is in phase A. |
+| Enforce first for the first real use | Phase A: received date, usage limits resuming at reset, empty or failed runs retried. Phase L, before real use starts at its end: the knowledge rules, verbatim versus paraphrase, attribution, names from a primary source, and links checked. Scope, schedule lookups and dependencies wait for the packs. |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
