@@ -8,6 +8,7 @@ subscribes: []
 provides:
   sign_ins: [journey-mail/account]
   connectors: [journey-mail/mail, journey-mail/calendar]
+  connector_reads: {journey-mail/mail: mail, journey-mail/calendar: calendar}
 config_schema: journey_mail:Config
 requires:
   network: [127.0.0.1]

@@ -10,7 +10,7 @@ from typing import Literal
 import yaml
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
 
 
 class Strict(BaseModel):
@@ -132,6 +132,12 @@ class Provides(Strict):
         default_factory=list, description="Kinds of data file the screens offer a form for, checked by a schema."
     )
     connectors: list[str] = Field(default_factory=list, description="Places the assistant can keep reading.")
+    connector_reads: dict[str, Literal["mail", "calendar"]] = Field(
+        default_factory=dict,
+        description="What each of the plugin's connectors reads, by connector: mail or calendar. The setup "
+        "walkthrough offers an add-on that signs in and reads mail or a calendar as a service to connect, also "
+        "before it is installed. A connector left out is told apart by its name.",
+    )
     triage_matchers: list[str] = Field(default_factory=list, description="Rule kinds for triaging watched changes.")
     value_lists: list[str] = Field(
         default_factory=list, description="Value lists the plugin's record fields take their values from."
@@ -152,6 +158,16 @@ class Provides(Strict):
         "manifest): what the screens call the plugin's own kinds, e.g. stages.group.<plugin>/<kind>. Every key "
         "names something in the plugin's namespace; the workspace's ui.wording overrides any of them.",
     )
+
+    @field_validator("connector_reads")
+    @classmethod
+    def _reads_name_connectors(cls, value: dict[str, str], info: ValidationInfo) -> dict[str, str]:
+        listed = info.data.get("connectors", [])
+        wild = tuple(item[:-1] for item in listed if item.endswith("/*"))
+        unknown = sorted(name for name in value if name not in listed and not name.startswith(wild))
+        if unknown:
+            raise ValueError(f"{', '.join(unknown)}: connector_reads names only connectors listed in connectors")
+        return value
 
     @field_validator("help")
     @classmethod

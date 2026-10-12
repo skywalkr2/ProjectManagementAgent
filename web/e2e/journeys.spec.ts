@@ -2,10 +2,12 @@
 // started by the serve command, with fakes only at the outside services (tests/fake_services.py). The point is the joins
 // between steps that a test of one step misses. Each journey is a numbered test saying what the person does.
 // Names come from the fictional workspace the fake services serve, never written out here.
+// The first journey goes through the walkthrough and finishes it, as a person's first visit does; the later ones run on
+// that same workspace afterwards, so they start from Today with the walkthrough finished, as a person's later days do.
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { collectProblems, fakeAddress, openView, setupStep, visit, type Info, type Requests } from "./journey-helpers";
+import { collectProblems, fakeAddress, openView, visit, type Info, type Requests } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_FAKE_PORT", 8790);
 
@@ -28,49 +30,87 @@ test.describe.serial("journeys", () => {
   }) => {
     collectProblems(page, problems);
 
-    // I open the link the start command printed. Today is the home, and says setup has not begun.
+    // I open the link the start command printed. The walkthrough opens by itself, full screen, and says nothing is
+    // spent until I press Go at the end. Nothing else is on the page: no header, no sidebar.
     await page.goto(`?token=${info.token}`);
-    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
-    await expect(page.getByText("Setup 0 of 7")).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Status: / })).toContainText("Backup needed");
-    await visit(page);
-    await page.getByRole("button", { name: "Continue setup" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Set up" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    await expect(page.getByText("About 10 minutes. Nothing is spent until you press Go at the end.")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Views" })).toHaveCount(0);
     await visit(page);
 
-    // The first step says who I am: the assistant needs a person to ask and to own my own actions.
-    const me = setupStep(page, "Name the workspace and say who you are");
-    await me.getByLabel("Workspace name").fill("Offsite team");
-    await me.getByLabel("Your full name").fill(info.people[0]);
-    await me.getByRole("button", { name: "Save" }).click();
-    await expect(me.locator(".pill")).toContainText("Done");
+    // You: my name and the workspace's name. Saving makes my own person record.
+    const main = page.locator("main#main");
+    await expect(main.getByRole("heading", { level: 2, name: "You" })).toBeVisible();
+    await main.getByLabel("Workspace name").fill("Offsite team");
+    await main.getByLabel("Your full name").fill(info.people[0]);
+    await main.getByRole("button", { name: "Save" }).click();
+    await expect(page.locator('[data-screen="you"][data-state]')).toContainText("Done");
     await visit(page);
+    await main.getByRole("button", { name: "Next" }).click();
 
-    // The AI step: a service of my own that speaks the common chat format, at the address the fake service answers on.
-    const ai = setupStep(page, "Add an AI account and test it");
-    await ai.getByText("More options").click();
-    await ai.getByLabel(/^Another service that speaks/).check();
-    await ai.getByRole("textbox", { name: "Address" }).fill(info.ai_base_url);
-    await ai.locator("#ai-key").fill("a-made-up-key");
-    await ai.getByRole("button", { name: "Check", exact: true }).click();
-    const everyday = ai.getByLabel("Model for everyday work");
+    // Your AI account: a service of my own that speaks the common chat format, at the address the fake service
+    // answers on. The screen also says what it may spend.
+    await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+    await expect(main.getByRole("form", { name: "What it may spend" })).toBeVisible();
+    await main.getByText("More options").click();
+    await main.getByLabel(/^Another service that speaks/).check();
+    await main.getByRole("textbox", { name: "Address" }).fill(info.ai_base_url);
+    await main.locator("#ai-key").fill("a-made-up-key");
+    await main.getByRole("button", { name: "Check", exact: true }).click();
+    const everyday = main.getByLabel("Model for everyday work");
     await expect(everyday.locator("option")).toHaveCount(2);
     await everyday.selectOption("fake-small");
     // The usual hand-in is internal material; an account only takes what it is allowed to see.
-    await ai.getByLabel("Internal material").check();
+    await main.getByLabel("Internal material").check();
     await visit(page);
-    await ai.getByRole("button", { name: "Add account" }).click();
-    await expect(ai.getByText("Everyday work: other — answered")).toBeVisible();
-    await ai.getByRole("button", { name: "Test again" }).click();
-    await expect(ai.getByText("Everyday work: other — answered")).toBeVisible();
-    await expect(ai.getByText("Harder work: other — answered")).toBeVisible();
-    await expect(ai.getByText(/not answer|failed/i)).toHaveCount(0);
-    // Changing an account needs no restart, and the header says nothing is waiting for one.
-    await expect(page.getByRole("button", { name: /^Status: / })).not.toContainText("Restart");
+    await main.getByRole("button", { name: "Add account" }).click();
+    await expect(main.getByText("Everyday work: other — answered")).toBeVisible();
+    await main.getByRole("button", { name: "Test again" }).click();
+    await expect(main.getByText("Everyday work: other — answered")).toBeVisible();
+    await expect(main.getByText("Harder work: other — answered")).toBeVisible();
+    await expect(main.getByText(/not answer|failed/i)).toHaveCount(0);
+    await expect(page.locator('[data-screen="ai"][data-state]')).toContainText("Done");
+    // Changing an account needs no restart, and nothing on the page is waiting for one.
+    await expect(main.getByText(/Restart/)).toHaveCount(0);
     await visit(page);
     const afterTest = await requests();
     expect(afterTest.work).toBe(0);
     expect(afterTest.smoke).toBeGreaterThan(0);
+    await main.getByRole("button", { name: "Next" }).click();
+
+    // Mail and calendar: no add-on is listed here, so the core's own forms are offered. I skip it.
+    await expect(main.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+    await expect(main.getByRole("button", { name: "Another mail or calendar" })).toBeVisible();
+    await visit(page);
+    await main.getByRole("button", { name: "Skip for now" }).click();
+
+    // Backups: a folder outside the workspace, which is checked before it is saved.
+    await expect(main.getByRole("heading", { level: 2, name: "Backups" })).toBeVisible();
+    await main.getByLabel("Folder", { exact: true }).fill(info.backup_folder);
+    await main.getByRole("button", { name: "Use this folder for backups" }).click();
+    await expect(page.locator('[data-screen="backup"][data-state]')).toContainText("Done");
+    await visit(page);
+    await main.getByRole("button", { name: "Next" }).click();
+
+    // People: skipping is fine.
+    await expect(main.getByRole("heading", { level: 2, name: "People" })).toBeVisible();
+    await visit(page);
+    await main.getByRole("button", { name: "Skip for now" }).click();
+
+    // Done: what was set up and what was skipped, then Today.
+    await expect(main.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
+    const recap = main.getByRole("list", { name: "What was set up" });
+    await expect(recap.locator('[data-step="ai"]')).toContainText("Done");
+    await expect(recap.locator('[data-step="mail"]')).toContainText("Skipped");
+    await expect(recap.locator('[data-step="people"]')).toContainText("Skipped");
+    await visit(page);
+    await main.getByRole("button", { name: "Go to Today" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    // It is finished for good: a reload doesn't open it again.
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Set up your workspace" })).toHaveCount(0);
+    await visit(page);
 
     // I hand in a short note of my own.
     await page.getByRole("button", { name: "Hand something in" }).first().click();

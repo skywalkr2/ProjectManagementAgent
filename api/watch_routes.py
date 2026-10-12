@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from api.schemas import AutoClosedView, Created, ReadVersion, WatchRunView, WatchSourceView
 from engine import watch
 from engine.config import Config
-from engine.connectors import reads
+from engine.connectors import declared_reads, reads
 from engine.storage import Store, StoreError, WriteContext
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -20,7 +20,8 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     r = APIRouter(prefix="/api")
 
     def view(source: object) -> WatchSourceView:
-        connector = watch.connectors(store).get(source.connector)
+        known = watch.connectors(store)
+        connector = known.get(source.connector)
         last = watch.last_run(store, source.id)
         failures = watch.failures_in_a_row(store, source.id)
         items = [s for s in store.read().find("snapshot", {"source": source.id}) if not s.data["gone"]]
@@ -33,7 +34,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             label=source.label or source.id,
             connector=source.connector,
             connector_label=connector.label if connector else "",
-            reads=reads(source.connector),
+            reads=reads(source.connector, declared_reads(known)),
             enabled=source.enabled,
             every_minutes=source.every_minutes,
             items=len(items),

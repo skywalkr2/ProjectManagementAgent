@@ -17,6 +17,10 @@ standard way, through `SSL_CERT_FILE` in its environment; nothing in the app cha
 - `--add-ons` points the Add-ons screen at the fake catalog (and away from the one the app came with), and runs the app
   in a throwaway virtual environment that sees the project's packages, so an install from the screen goes into the
   throwaway one and never into the project's own.
+- `--catalog-by-environment` (with `--add-ons`) names the fake catalog through the app's environment settings and
+  leaves the workspace's settings files exactly as `cockpit init` wrote them.
+- `--log` keeps what the app prints in `app.log` in the state folder (named in `info.json`), so a test can count the
+  restarts the app made.
 
 Nothing else is set in the workspace's settings; the developer switch for the wording check is the only other thing
 added to the environment, as in every test.
@@ -82,6 +86,12 @@ def use_catalog(ws: Workspace, address: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def use_catalog_by_environment(address: str) -> None:
+    """The same, through the app's environment settings; no settings file is touched."""
+    os.environ["COCKPIT__WORKSPACE__PLUGINS__CATALOG__FEEDS"] = json.dumps([f"{address}/catalog/packs.yaml"])
+    os.environ["COCKPIT__WORKSPACE__PLUGINS__CATALOG__SHIPPED_FEED"] = "false"
+
+
 def throwaway_python(state: Path) -> tuple[Path, Path]:
     """A virtual environment in the state folder that sees the project's packages (a `.pth` file lists the project's
     own search path), so packs installed from the screen land in this one. Returns its interpreter and the project's
@@ -114,6 +124,8 @@ def main() -> None:
     parser.add_argument("--https-port", type=int, default=0)
     parser.add_argument("--mail", action="store_true")
     parser.add_argument("--add-ons", action="store_true")
+    parser.add_argument("--catalog-by-environment", action="store_true")
+    parser.add_argument("--log", action="store_true")
     args = parser.parse_args()
     state = args.state.resolve()
     ws = prepare(state)
@@ -127,7 +139,7 @@ def main() -> None:
     if args.https_port:
         address = trust_services(state, args.https_port)
         if args.add_ons:
-            use_catalog(ws, address)
+            (use_catalog_by_environment(address) if args.catalog_by_environment else use_catalog(ws, address))
     if args.mail:
         add_plugin(ws, str(PLUGINS / "journey_mail"))
     if args.add_ons:
@@ -141,7 +153,14 @@ def main() -> None:
                 check=True,
             ).stdout
         )
+    if args.log:
+        info["log"] = str(state / "app.log")
     (state / "info.json").write_text(json.dumps(info), encoding="utf-8")
+    if args.log:
+        # What the app prints goes to the file, through the serve command that replaces this process.
+        with open(info["log"], "ab") as log:
+            os.dup2(log.fileno(), 1)
+            os.dup2(log.fileno(), 2)
     command = [str(python), "-m", "engine.cli", "serve", "-w", str(ws.root), "--port", str(args.port), "--no-open"]
     sys.stdout.flush()
     sys.stderr.flush()

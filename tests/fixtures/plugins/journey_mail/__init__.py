@@ -87,9 +87,15 @@ def account(context) -> str:
 
 
 def register(registrar) -> None:
-    registrar.connector("journey-mail/mail", label="Example mail", settings=InboxSettings, poll=poll_inbox)
     registrar.connector(
-        "journey-mail/calendar", label="Example calendar", settings=CalendarSettings, poll=poll_calendar
+        "journey-mail/mail", label="Example mail", settings=InboxSettings, poll=poll_inbox, reads="mail"
+    )
+    registrar.connector(
+        "journey-mail/calendar",
+        label="Example calendar",
+        settings=CalendarSettings,
+        poll=poll_calendar,
+        reads="calendar",
     )
     registrar.sign_in(
         SIGN_IN,

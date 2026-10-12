@@ -2,8 +2,11 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 
-/** Where the fake services answer over plain HTTP (the config sets the ports; a second set belongs to the mail journey). */
-export const fakeAddress = (variable: "JOURNEY_FAKE_PORT" | "JOURNEY_MAIL_FAKE_PORT", fallback: number) =>
+/** Where the fake services answer over plain HTTP (the config sets the ports; the mail and new-start journeys have their own). */
+export const fakeAddress = (
+  variable: "JOURNEY_FAKE_PORT" | "JOURNEY_MAIL_FAKE_PORT" | "JOURNEY_NEW_START_FAKE_PORT",
+  fallback: number,
+) =>
   `http://127.0.0.1:${process.env[variable] ?? fallback}`;
 
 export interface Info {
@@ -16,6 +19,8 @@ export interface Info {
   https_base: string;
   project_site?: string;
   install_target?: string;
+  /** Where the app keeps what it prints, when the start-up script was asked to (to count restarts). */
+  log?: string;
 }
 export interface Requests {
   total: number;

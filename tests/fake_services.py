@@ -19,8 +19,8 @@ With `--https-port` the process also answers over HTTPS, with a certificate from
   code and the PKCE verifier, a revoke address and a "who am I" answer;
 - `/mail/v1/...` and `/calendar/v1/...` are a small mail and calendar API that answers only to a token it issued, with
   fictional messages from example.com addresses and meetings today;
-- `/catalog/...` is an add-on catalog feed listing one add-on, and the wheel it points to, built from its fixture folder
-  at start.
+- `/catalog/...` is an add-on catalog feed listing the add-ons named by `--catalog` (fixture folders; the example panel
+  by default), and the wheels it points to, built from their fixture folders at start.
 
 The folder the app's own process works in is passed as `--state`; `tests.e2e_fresh_server` writes `info.json` there.
 """
@@ -77,7 +77,7 @@ class State:
         self.https_base = ""
         self.assets = folder / "services"
         self.catalog_text = ""
-        self.wheel: Path | None = None
+        self.wheels: dict[str, Path] = {}  # the wheels the catalog lists, by file name
         self.codes: dict[str, dict] = {}  # given and not yet used: the challenge and address each was asked with
         self.access: set[str] = set()  # access tokens the service issued and has not withdrawn
         self.refresh: set[str] = set()
@@ -396,27 +396,44 @@ def build_wheel(source: Path, out: Path) -> Path:
     return wheel
 
 
-def catalog_feed(wheel: Path, base: str) -> str:
-    """A catalog feed in the app's format listing the add-on the wheel holds, with its release address and checksum."""
-    manifest = yaml.safe_load((PLUGINS / "journey_panel" / "plugin.yaml").read_text(encoding="utf-8"))
-    entry = {
-        "id": manifest["name"],
-        "name": "Example panel",
-        "summary": "One screen with a short page, to see an add-on installed from the list.",
-        "publisher": "Example publisher",
-        "maintainers": False,
-        "updated": "2026-10-12",
-        "version": manifest["version"],
-        "plugin_api": manifest["plugin_api"],
-        "price": {"model": "free"},
-        "provides": manifest["provides"],
-        "requires": manifest["requires"],
-        "release": {
-            "url": f"{base}/catalog/{wheel.name}",
-            "sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
-        },
-    }
-    return yaml.safe_dump({"version": 1, "packs": [entry]}, sort_keys=False)
+#: The add-ons a catalog can list: the fixture folder, and the name and summary the catalog gives each.
+ADD_ONS: dict[str, tuple[str, str]] = {
+    "journey_panel": ("Example panel", "One screen with a short page, to see an add-on installed from the list."),
+    "journey_mail": (
+        "Example mail",
+        "Reads a made-up mailbox and calendar, signing in through the service's own page.",
+    ),
+}
+
+
+def catalog_feed(wheels: Path | list[Path], base: str) -> str:
+    """A catalog feed in the app's format listing the add-ons the wheels hold, each with its release address and
+    checksum. What an entry says it provides and needs is copied from its fixture's manifest, as a catalog entry is."""
+    entries = []
+    for wheel in [wheels] if isinstance(wheels, Path) else wheels:
+        folder = wheel.name.split("-")[0]
+        manifest = yaml.safe_load((PLUGINS / folder / "plugin.yaml").read_text(encoding="utf-8"))
+        name, summary = ADD_ONS[folder]
+        entries.append(
+            {
+                "id": manifest["name"],
+                "name": name,
+                "summary": summary,
+                "publisher": "Example publisher",
+                "maintainers": False,
+                "updated": "2026-10-12",
+                "version": manifest["version"],
+                "plugin_api": manifest["plugin_api"],
+                "price": {"model": "free"},
+                "provides": manifest["provides"],
+                "requires": manifest["requires"],
+                "release": {
+                    "url": f"{base}/catalog/{wheel.name}",
+                    "sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
+                },
+            }
+        )
+    return yaml.safe_dump({"version": 1, "packs": entries}, sort_keys=False)
 
 
 def catalog_routes(state: State) -> list[Route]:
@@ -424,9 +441,10 @@ def catalog_routes(state: State) -> list[Route]:
         return Response(state.catalog_text, media_type="application/yaml")
 
     async def release(request: Request) -> Response:
-        if state.wheel is None or request.path_params["name"] != state.wheel.name:
+        wheel = state.wheels.get(request.path_params["name"])
+        if wheel is None:
             return Response(status_code=404)
-        return Response(state.wheel.read_bytes(), media_type="application/octet-stream")
+        return Response(wheel.read_bytes(), media_type="application/octet-stream")
 
     return [Route("/packs.yaml", feed), Route("/{name}", release)]
 
@@ -502,13 +520,15 @@ def build_app(state: State, port: int, services: Services | None = None, helpers
     return Starlette(routes=routes)
 
 
-def start_secure(state: State, port: int) -> uvicorn.Server:
-    """Make the throwaway authority and certificate, build the add-on's wheel and the feed that lists it, and answer
-    over HTTPS on `port` from a background thread. Returns once the server is listening."""
+def start_secure(state: State, port: int, add_ons: tuple[str, ...] = ("journey_panel",)) -> uvicorn.Server:
+    """Make the throwaway authority and certificate, build the wheels of the add-ons the catalog lists (fixture folders)
+    and the feed that lists them, and answer over HTTPS on `port` from a background thread. Returns once the server is
+    listening."""
     certs = fake_tls.make(state.folder / "tls")
     state.https_base = f"https://{HOST}:{port}"
-    state.wheel = build_wheel(PLUGINS / "journey_panel", state.assets)
-    state.catalog_text = catalog_feed(state.wheel, state.https_base)
+    wheels = [build_wheel(PLUGINS / folder, state.assets) for folder in add_ons]
+    state.wheels = {wheel.name: wheel for wheel in wheels}
+    state.catalog_text = catalog_feed(wheels, state.https_base)
     config = uvicorn.Config(
         build_app(state, port, SECURE_SERVICES, helpers=False),
         host=HOST,
@@ -531,10 +551,13 @@ def main() -> None:
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--https-port", type=int, default=0)
     parser.add_argument("--state", type=Path, required=True)
+    parser.add_argument(
+        "--catalog", default="journey_panel", help="the fixture add-ons the catalog lists, comma-separated"
+    )
     args = parser.parse_args()
     state = State(args.state)
     if args.https_port:
-        start_secure(state, args.https_port)
+        start_secure(state, args.https_port, tuple(name for name in args.catalog.split(",") if name))
     uvicorn.run(build_app(state, args.port), host=HOST, port=args.port, log_level="warning")
 
 

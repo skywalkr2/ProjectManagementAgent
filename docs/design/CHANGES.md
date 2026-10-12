@@ -604,6 +604,7 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 | Install | The route existed; the screen had no button | Install, Update now and Remove (3.11). Only updating a running pack holds work until the restart. **Built (A2)** |
 | Acceptance scenario, step 7 | The header chip said "Backup needed" until a backup succeeded and then only "Live", with the age in the popover; Today never mentioned a backup | A backup line on Today while a backup needs attention, and the age on the chip itself (7.1, 7.7). **Built (A3)** |
 | Onboarding | A setup guide reached from a line on Today; mail and calendar last, add-ons installed elsewhere, a restart per step | A new-start walkthrough that opens by itself: You, AI account, Mail and calendar (install, one restart, sign in), Backups, People, Done on the first-Go line; and a getting-started page (7.8, A4) |
+| Mail and calendar services | The walkthrough told a mail or calendar connector from a word list in its name | A connector declares what it reads, in its registration and in the manifest, so an add-on in a catalog is offered too; the word list stays only for a connector that does not declare it (3.2, 3.3, 7.8; plugin API 0.3.56) |
 | Wording | Checked only in the screens' own wording file | Screen text typed in the API models and checked when it leaves, in tests and development. **Built (A2):** the audit's 47 strings and every further leak the tests found rewritten; a secret field's input hint is the one exemption until phase B |
 
 ## Plugin host, API 0.1 (2026-10-09)

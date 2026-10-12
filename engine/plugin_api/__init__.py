@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.55"
+PLUGIN_API_VERSION = "0.3.56"
 
 
 class Settings(BaseModel):
@@ -1614,7 +1614,15 @@ class Registrar:
             raise ValueError("duplicate job, invalid run function, or a schedule under 5 minutes")
         self.jobs[name] = JobRegistration(name, every_minutes, run)
 
-    def connector(self, name: str, *, label: str, settings: type[BaseModel], poll: Callable) -> None:
+    def connector(
+        self,
+        name: str,
+        *,
+        label: str,
+        settings: type[BaseModel],
+        poll: Callable,
+        reads: Literal["mail", "calendar"] | None = None,
+    ) -> None:
         """A place the assistant can keep reading (listed in `provides.connectors`). A workspace watches it by naming
         it in `watch.yaml` with its settings, which `settings` (a pydantic model) checks. `poll(settings, state,
         context) -> Poll` lists what the source holds now as `SourceItem`s (a stable key, a title, the text, who
@@ -1635,15 +1643,22 @@ class Registrar:
         and the source isn't read again before its wait ends. `context.secret(name)` reads a secret named in
         `requires.secrets` (None when it isn't set), `context.keep_secret(name, value)` keeps one on this computer,
         and `context.access_token(name)` gives a current token for one of the plugin's sign-ins. Test a connector
-        with `engine.plugin_api.testing`."""
+        with `engine.plugin_api.testing`.
+        `reads="mail"` or `reads="calendar"` says what the connector reads, so the setup walkthrough offers its
+        add-on as a mail or calendar service, also before it is installed. Say it in the manifest too, as
+        `provides.connector_reads: {<connector>: mail}`, which the registration must match. A connector that says
+        nothing is told apart by its name (mail, mailbox, email or inbox; calendar), and the app logs that it
+        should say so."""
         self._name(name)
         if name in self.connectors or not callable(poll):
             raise ValueError("duplicate connector or invalid poll function")
+        if reads not in (None, "mail", "calendar"):
+            raise ValueError("a connector reads mail or a calendar, or says nothing")
         if not isinstance(settings, type) or not issubclass(settings, BaseModel):
             raise ValueError("a connector's settings are a pydantic model")
         from engine.connectors import Connector
 
-        self.connectors[name] = Connector(name, " ".join(str(label).split()) or name, settings, poll)
+        self.connectors[name] = Connector(name, " ".join(str(label).split()) or name, settings, poll, reads=reads)
 
     def sign_in(
         self,

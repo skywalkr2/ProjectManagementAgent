@@ -1348,6 +1348,9 @@ class PluginHost:
                     connector.settings.model_validate(source["settings"])
                 except Exception as err:
                     raise ValueError(f"sign-in {sign_in.name}: settings for {source['connector']}: {err}") from None
+        said = {name: c.reads for name, c in registrar.connectors.items() if c.reads}
+        if said != dict(expected.connector_reads):
+            raise ValueError("registered connector reads do not match provides.connector_reads exactly")
         if set(manifest.interfaces.defines) != set(registrar.interface_definitions):
             raise ValueError("registered interface definitions do not match interfaces.defines exactly")
         provided = {f"{p.interface}@{p.major}" for p in registrar.interface_provisions.values()}

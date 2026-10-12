@@ -21,7 +21,7 @@ from typing import Any
 
 import yaml
 
-from engine.connectors import reads
+from engine.connectors import CORE, declared_reads, reads
 from engine.shipped import shipped
 from engine.storage import StoreError
 
@@ -85,7 +85,7 @@ def mail_plugins(store: Any) -> set[str]:
     return {
         name
         for name, manifest in store.plugins.manifests.items()
-        if any(reads(connector) for connector in manifest.provides.connectors)
+        if any(reads(connector, manifest.provides.connector_reads) for connector in manifest.provides.connectors)
     }
 
 
@@ -106,7 +106,8 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
         for name, sign_in in sign_ins.items()
     }
     mail_signed = any(signed[name] for name, sign_in in sign_ins.items() if sign_in.plugin in mail_addons)
-    mail_read = any(source.enabled and reads(source.connector) for source in cfg.watch.sources)
+    said = declared_reads({**CORE, **store.plugins.connectors()})
+    mail_read = any(source.enabled and reads(source.connector, said) for source in cfg.watch.sources)
     done = {
         "workspace": _pm_named(cfg, view) and cfg.workspace.name != "Workspace",
         "template": bool(state.get("template")) or _template_in_use(ws, cfg),

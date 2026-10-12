@@ -8,7 +8,8 @@ returns plain data and raises `ConnectorError` with a kind: `auth` (sign in agai
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import logging
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -17,6 +18,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 ErrorKind = Literal["auth", "no_access", "not_found", "outage", "offline", "throttled"]
+#: What a connector can say it reads, for the screens that offer mail and calendar services.
+ReadKind = Literal["mail", "calendar"]
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -197,19 +202,39 @@ class Connector:
     #: A kind made for tests and fixtures: sources already set up with it still read and show, but it is not offered
     #: to a person adding a source.
     test_only: bool = False
+    #: What the connector reads, when it says: "mail" or "calendar". Left out, the kind is guessed from its name.
+    reads: ReadKind | None = None
 
 
-#: Words in a connector's name (the part after the add-on's name) that say what kind of thing it reads.
+#: Words in a connector's name (the part after the add-on's name) that say what kind of thing it reads. Used only for a
+#: connector that doesn't declare what it reads.
 READS_WORDS: dict[str, tuple[str, ...]] = {
     "mail": ("mail", "mailbox", "email", "inbox"),
     "calendar": ("calendar",),
 }
 
+_guessed: set[str] = set()
 
-def reads(connector: str) -> list[str]:
-    """What a connector reads, by its name: "mail" and/or "calendar", in that order, or nothing for any other kind."""
+
+def declared_reads(connectors: Mapping[str, Connector]) -> dict[str, str | None]:
+    """What each of these connectors says it reads (None for one that doesn't say), by name."""
+    return {name: connector.reads for name, connector in connectors.items()}
+
+
+def reads(connector: str, declared: Mapping[str, str | None] | None = None) -> list[str]:
+    """What a connector reads: "mail" or "calendar", or nothing for any other kind. The declaration comes first
+    (`declared` maps a connector's name to what it says it reads: a registered connector's `reads`, or a manifest's
+    `provides.connector_reads`). A connector that says nothing is read by its name, and a match is logged once, since
+    the connector should say so itself."""
+    said = (declared or {}).get(connector)
+    if said:
+        return [said]
     last = connector.rsplit("/", 1)[-1].lower()
-    return [kind for kind, words in READS_WORDS.items() if last in words]
+    guessed = [kind for kind, words in READS_WORDS.items() if last in words]
+    if guessed and connector not in _guessed:
+        _guessed.add(connector)
+        log.warning("Connector %s doesn't declare what it reads; guessed %s from its name", connector, guessed[0])
+    return guessed
 
 
 # ---- the folder connector ------------------------------------------------------------------------------------------
@@ -290,8 +315,12 @@ def _core() -> dict[str, Connector]:
     return {
         "folder": Connector("folder", "A folder", FolderSettings, _read_folder),
         "feed": Connector("feed", "A news feed (RSS or Atom)", FeedSettings, read_feed, network=True),
-        "calendar": Connector("calendar", "A calendar (its private address)", CalendarSettings, read_calendar, True),
-        "mailbox": Connector("mailbox", "A mail folder (IMAP)", MailboxSettings, read_mailbox, network=True),
+        "calendar": Connector(
+            "calendar", "A calendar (its private address)", CalendarSettings, read_calendar, True, reads="calendar"
+        ),
+        "mailbox": Connector(
+            "mailbox", "A mail folder (IMAP)", MailboxSettings, read_mailbox, network=True, reads="mail"
+        ),
         "fake": Connector("fake", "A stand-in source for tests", FakeSettings, _read_fake, test_only=True),
     }
 

@@ -10,6 +10,18 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.56 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A connector says what it reads**: `registrar.connector(..., reads="mail")` or `reads="calendar"`, and the manifest
+  says the same in `provides.connector_reads: {<connector>: mail}` (only for connectors listed in `provides.connectors`).
+  The setup walkthrough offers an add-on that signs in and reads mail or a calendar as a service to connect from that
+  declaration, also before the add-on is installed, since a catalog entry carries it. The registration must match the
+  manifest exactly, as for every other `provides` list. A connector that says nothing is still told apart by its name
+  (mail, mailbox, email, inbox; calendar), and the app logs once that it should declare what it reads. The core's own
+  mail folder and calendar address declare it.
+
 ## What 0.3.55 adds
 
 Manifests stay `'>=0.3,<0.4'`.

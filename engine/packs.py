@@ -209,6 +209,8 @@ def summary(provides: dict[str, Any], requires: dict[str, Any]) -> dict[str, Any
     """What a manifest adds, reaches and keeps, in counts and plain names, for the screen to word."""
     tools = requires.get("tools") if isinstance(requires.get("tools"), list) else []
     levels = [lvl for lvl in _list(requires.get("data_levels")) if lvl in LEVELS] or ["open", "internal"]
+    declared = provides.get("connector_reads")
+    said = {str(k): str(v) for k, v in declared.items()} if isinstance(declared, dict) else {}
     return {
         "adds": {
             "item_types": [_words(k) for k in _list(provides.get("record_types"))],
@@ -226,7 +228,9 @@ def summary(provides: dict[str, Any], requires: dict[str, Any]) -> dict[str, Any
             "keys": len(_list(requires.get("secrets"))),
         },
         "keeps": max(levels, key=LEVELS.index),
-        "reads": [kind for kind in READS_WORDS if any(kind in reads(c) for c in _list(provides.get("connectors")))],
+        "reads": [
+            kind for kind in READS_WORDS if any(kind in reads(c, said) for c in _list(provides.get("connectors")))
+        ],
     }
 
 
