@@ -126,9 +126,11 @@ A3. **Journey tests.** These are end to end, with a fake AI service and fake mai
 is "ready to test" until they pass:
 - [x] fresh workspace → AI account → hand-in → result on Today (`journeys.spec.ts` J1, on a workspace made by
   `cockpit init` and started by `cockpit serve`, with a fake AI service);
-- [ ] sign in → mail and calendar read → assistant → review on Today;
+- [x] sign in → mail and calendar read → assistant → review on Today (`journeys-mail.spec.ts` J2: a fixture mail add-on
+  signing in to a fake service over https; one AI request per item, none before Go);
 - [x] a source added on screen → read → assistant (`journeys.spec.ts` J3);
-- [ ] an add-on installed from the screen → turned on → its screens appear;
+- [x] an add-on installed from the screen → turned on → its screens appear (`journeys.spec.ts` J4: install, Restart now,
+  turn on, restart, its screen, then turn off and Remove, in a throwaway environment);
 - [x] backup → restore (`tests/test_journeys.py::test_j5_a_backup_of_a_working_workspace_restores_to_the_same_screens_and_ledger`);
 - [x] the acceptance scenario, steps 1–7, all checked as written (step 6 included): `acceptance.spec.ts`, each test titled
   with its step, and `tests/test_export.py::test_a_workspace_used_through_the_screens_round_trips`.
