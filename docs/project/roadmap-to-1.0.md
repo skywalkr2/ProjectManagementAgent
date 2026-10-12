@@ -136,14 +136,24 @@ is "ready to test" until they pass:
   with its step, and `tests/test_export.py::test_a_workspace_used_through_the_screens_round_trips`.
 
 A4. **The new-start walkthrough** (owner, 2026-10-12; design 7.8). Install to first result in one guided path:
-- [ ] It opens by itself on a new workspace and resumes where the person left it, also after a restart.
-- [ ] Steps: You · AI account, with what it may see (Internal explained) and spend · Mail and calendar, with install,
+- [x] It opens by itself on a new workspace and resumes where the person left it, also after a restart
+  (`tests/test_walkthrough.py`, `Walkthrough.test.tsx`).
+- [x] Steps: You · AI account, with what it may see (Internal explained) and spend · Mail and calendar, with install,
   one restart and sign-in · Backups · People (optional) · Done, ending on Today's first-Go line. The template and
-  other add-ons are optional extras.
-- [ ] `docs/getting-started.md`: one page from the install command to the first result, matching the walkthrough,
+  other add-ons are optional extras. Built (`Walkthrough.test.tsx`, journeys J1, J2 and J6); add-ons say what a
+  connector reads (plugin API 0.3.56, `tests/test_connector_reads.py`).
+- [x] `docs/getting-started.md`: one page from the install command to the first result, matching the walkthrough,
   with what each step costs; linked from the README and Help.
-- [ ] Journey J6: a fresh install through the walkthrough only, to the assistant's first results. This is the
-  automated form of the exit test.
+- [x] Journey J6: a fresh install through the walkthrough only, to the assistant's first results. This is the
+  automated form of the exit test (`journeys-new-start.spec.ts`: the mail add-on installed from the catalog, exactly
+  one restart, one AI request per item and none before Go).
+- [ ] **Rough edges J6 found on the path:**
+  - Today's Go button is clipped inside the short "Needs you" card on a laptop screen.
+  - Toasts pile up across the walkthrough's screens and cover its buttons.
+  - The mail service row shows jargon ("Signs in to: account", "Internet: 127.0.0.1", "Keys you provide").
+  - The row still says "Sign in to start reading" after signing in.
+  - The AI screen reads "Which AI should Assistant use?" and "The settings file refers to it".
+  - Choosing a backup folder doesn't make the first backup, so Today nags right after "Backups: Done".
 
 ## Phase L: the learning loop, L-core (about 11.5 sessions, L0 included)
 
