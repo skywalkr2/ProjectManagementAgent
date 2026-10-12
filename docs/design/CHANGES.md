@@ -602,7 +602,7 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 | First run's cost | No notion of a first run | The first runs wait for one Go with their total (7.8, `ai.budgets.first_go`). **Built (A2)** |
 | Local guards | No `Host` or `Origin` check; any listening address | The allowed hosts and origins, and loopback only in local mode (12.1). **Built (A2)** |
 | Install | The route existed; the screen had no button | Install, Update now and Remove (3.11). Only updating a running pack holds work until the restart. **Built (A2)** |
-| Wording | Checked only in the screens' own wording file | Screen text typed in the API models and checked when it leaves, in tests and development |
+| Wording | Checked only in the screens' own wording file | Screen text typed in the API models and checked when it leaves, in tests and development. **Built (A2):** the audit's 47 strings and every further leak the tests found rewritten; a secret field's input hint is the one exemption until phase B |
 
 ## Plugin host, API 0.1 (2026-10-09)
 

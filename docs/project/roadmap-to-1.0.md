@@ -96,10 +96,12 @@ A2. **The person's path, fixed where the review found it broken.**
   worker on start).
 - [x] The test-only source kind is hidden from "Add a source". Built:
   `test_the_test_only_kind_is_not_offered_but_a_source_set_up_with_it_still_reads_and_shows` in `tests/test_watch.py`.
-- [ ] Server messages never name a settings file, a key path, `env:` or a command. About 50 of these are listed in
+- [x] Server messages never name a settings file, a key path, `env:` or a command. About 50 of these are listed in
   the audit. **The check sits where responses leave:** in tests and dev mode, the API's response serializer refuses
   user-facing text containing `.yaml`, `env:`, a dotted key path or a command, so the journey tests fail on the first
-  leak, wherever it was built, runtime messages included.
+  leak, wherever it was built, runtime messages included. Built: `api/screen_text.py`, with
+  `ScreenText` on 40 response fields and the error handler; on in every test run and the browser tests
+  (`tests/test_screen_text.py`, `web/src/wording/wording.test.ts`). What it didn't reach is an L0 item below.
 - [x] **The first run says what it costs:** the first run after setup shows its estimate even below the confirm amount
   ("Reading your last day of mail: about $0.30"). The new defaults act on their own, so the first impression is a result
   the person expected to pay for (design 7.8). Built as one Go for all of the first runs: `tests/test_first_go.py`
@@ -188,6 +190,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   per connector). Today it lives only on the request.
 - [ ] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
   both, and they differ).
+- [ ] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
+  (manifest validation, registration errors) get plain words and a test that produces each; Ask's material names
+  settings without their keys, with `setting.propose` finding the key another way.
 - [ ] Settings that do nothing are wired or removed: `owner_format`. **The scheduled export is wired** to the workspace's
   own git, so a readable copy is written regularly once real knowledge accumulates; the backups copy the database, which
   is not readable on its own. The export's remote is not offered until phase E gives it the care of backups (design 12.1).
