@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 
 from engine.config import ConfigError
+from engine.local_guards import local_address_problem
 from engine.shipped import DEMOS, demo
 from engine.storage import Store, StoreError
 from engine.storage.export import commit_export, export_data, import_data
@@ -438,6 +439,9 @@ def cmd_serve(args: argparse.Namespace) -> int:
     cfg = ws.config(flags=flags)
     if cfg.server.mode == "hosted":
         print("cockpit: hosted mode isn't available yet; set server.mode to local.", file=sys.stderr)
+        return 1
+    if problem := local_address_problem(cfg.server):
+        print(f"cockpit: {problem}", file=sys.stderr)
         return 1
     from engine.handover import Refused, open_workspace
 

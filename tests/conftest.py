@@ -71,6 +71,26 @@ def _no_temp_folder_notice(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("engine.cli.system_temp_roots", lambda: ())
 
 
+@pytest.fixture(autouse=True)
+def _client_at_the_apps_address(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The app answers only to its own address (design 12.1), so a test client built on an app starts at that address,
+    read from the app's own settings, unless the test names another one. This is the one place the tests follow the
+    rule; the product allows no test address."""
+    from starlette.testclient import TestClient
+
+    original = TestClient.__init__
+
+    def at_the_apps_address(self, app, *args, **kwargs):
+        worker = getattr(getattr(app, "state", None), "worker", None)
+        if "base_url" not in kwargs and not args and worker is not None:
+            server = worker.cfg.server
+            # The address a person would open: the listen address, or the public one when hosted.
+            kwargs["base_url"] = (server.mode == "hosted" and server.public_url) or f"http://127.0.0.1:{server.port}"
+        original(self, app, *args, **kwargs)
+
+    monkeypatch.setattr(TestClient, "__init__", at_the_apps_address)
+
+
 def add_example_account(ai_yaml: Path | dict) -> tuple[str, str, str]:
     """Add the example AI account (tests/fixtures/ai/example-account.yaml: a key from an environment variable) to an
     ai.yaml, a file written back or its loaded dict. The fictional workspaces list only the stand-in account, so

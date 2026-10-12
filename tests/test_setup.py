@@ -4,6 +4,7 @@ steps, and a restart to use what was saved."""
 
 import os
 import stat
+from pathlib import Path
 
 import pytest
 import yaml
@@ -373,7 +374,9 @@ def test_restart_is_asked_for_and_refused_when_the_app_cant_start_itself(tmp_pat
 @pytest.mark.parametrize("mode", ["hosted"])
 def test_a_hosted_app_never_takes_a_pasted_key_or_lists_folders(tmp_path, mode):
     ws, cfg, store = make(tmp_path)
-    cfg = cfg.__class__(files={**cfg.files, "server": cfg.server.model_copy(update={"mode": mode})}, sources={})
+    app_host = yaml.safe_load((Path(__file__).parent / "fixtures" / "network" / "network.yaml").read_text())["app_host"]
+    update = {"mode": mode, "public_url": "https" + f"://{app_host}"}  # the address a hosted app answers to
+    cfg = cfg.__class__(files={**cfg.files, "server": cfg.server.model_copy(update=update)}, sources={})
     c, api = client(ws, cfg, store)
     assert c.get(f"{api}/setup/folders").status_code == 403
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]

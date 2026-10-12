@@ -32,6 +32,7 @@ from api.watch_routes import build_watch_router
 from engine import __version__
 from engine.ai.router import Router
 from engine.config import Config
+from engine.local_guards import allowed_hosts, allowed_origins
 from engine.shipped import product, shipped
 from engine.storage import Store
 from engine.worker import Events, Worker
@@ -44,6 +45,8 @@ COOKIE = "cockpit_token"
 #: browser leaves the strict cookie off; it is protected instead by the single-use state only this app issued (with
 #: PKCE), and it answers with a page that takes the person back into the app from this site, where the cookie is sent.
 OPEN_PATHS = {"/api/health", "/api/sign-ins/callback"}
+#: Methods that don't change anything, so the origin rule doesn't apply to them.
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 # The UI loads nothing from elsewhere and runs no inline script, so the policy can be strict (design 12.5). The UI's
 # component library adds two fixed style rules (touch handling for pressable elements, and scroll locking on touch
@@ -157,6 +160,22 @@ def create_app(
         presented = request.cookies.get(COOKIE) or _bearer(request)
         if presented is None or not hmac.compare_digest(presented, token):
             return _unauthorized()
+        return await call_next(request)
+
+    hosts = allowed_hosts(cfg.server)
+    origins = allowed_origins(cfg.server)
+
+    # Added after the token check, so it runs first: a request for another address, or a change asked for by another
+    # web page, is refused before anything else looks at it. It covers every path, including the open ones.
+    @inner.middleware("http")
+    async def local_guards(request: Request, call_next: Any) -> Any:
+        if request.headers.get("host", "").lower() not in hosts:
+            return _refused("This address isn't the app's. Open the link the app printed when it started.")
+        if request.method not in SAFE_METHODS:
+            origin = request.headers.get("origin")
+            cross_site = request.headers.get("sec-fetch-site", "").lower() == "cross-site"
+            if cross_site or (origin is not None and origin.lower() not in origins):
+                return _refused("This request came from another web page, so the app didn't act on it.")
         return await call_next(request)
 
     # Added last so it wraps everything, including the sign-in redirects and refusals above.
@@ -282,3 +301,7 @@ def _bearer(request: Request) -> str | None:
 def _unauthorized() -> JSONResponse:
     message = "Open the link printed by `cockpit serve` to sign in on this computer."
     return JSONResponse({"error": message}, status_code=401)
+
+
+def _refused(message: str) -> JSONResponse:
+    return JSONResponse({"error": message}, status_code=403)
