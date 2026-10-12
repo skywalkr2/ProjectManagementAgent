@@ -103,3 +103,26 @@ def test_recent_means_received_or_starting_near_now():
     assert is_recent({"event": {"start": "2026-10-13", "all_day": True}}, None, now, day)
     assert not is_recent({"event": {"start": "2026-10-20T09:00:00Z"}}, None, now, day)
     assert not is_recent({}, None, now, day)
+
+
+def test_two_presses_at_once_hand_in_the_recent_items_once(tmp_path):
+    import threading
+
+    from engine.watch import _read_lock, hand_in_recent, refresh
+
+    ws, cfg, store = workspace(tmp_path, "baseline")
+    try:
+        refresh(ws, store, cfg, "box")
+        lock = _read_lock(ws, "box")
+        lock.acquire()  # a read of the source is under way: both presses wait for it, then run one after the other
+        made: list[list[str]] = []
+        presses = [threading.Thread(target=lambda: made.append(hand_in_recent(ws, store, cfg, "box"))) for _ in "ab"]
+        for press in presses:
+            press.start()
+        lock.release()
+        for press in presses:
+            press.join(timeout=30)
+        assert sorted(len(m) for m in made) == [0, 2]
+        assert handed_titles(store) == ["Printer call", "Proofs are ready"]
+    finally:
+        store.close()

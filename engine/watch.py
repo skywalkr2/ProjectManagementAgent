@@ -463,7 +463,13 @@ def _close_question(store: Any, source: str) -> None:
 def hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None = None) -> list[str]:
     """Hand the assistant what a source already holds from the recent past or near future (its `first_run_hours`
     around now) that it hasn't been handed yet: the person asks for this after a first read that only noted what was
-    there. Triage rules apply as for any change. Returns the requests made."""
+    there. Triage rules apply as for any change. Returns the requests made. It waits for a read of the same source under
+    way, and holds that source's lock while it works, so the same item is never handed in twice."""
+    with _read_lock(ws, source_id):
+        return _hand_in_recent(ws, store, cfg, source_id, now)
+
+
+def _hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None) -> list[str]:
     from engine.connectors import EventDetails, MessageDetails
 
     now = now or datetime.now(UTC)
