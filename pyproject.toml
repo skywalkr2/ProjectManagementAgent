@@ -21,6 +21,7 @@ cockpit = "engine.cli:main"
 [dependency-groups]
 dev = [
     "pytest>=8.3",
+    "pytest-xdist>=3.6",
     "ruff>=0.6",
 ]
 
@@ -47,4 +48,4 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q -n auto"  # parallel (pytest-xdist); add -n0 to run one test with a debugger or print output

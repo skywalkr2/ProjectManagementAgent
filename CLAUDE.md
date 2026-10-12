@@ -58,7 +58,7 @@ the change that records it also edits the design section it affects, and `docs/d
 
 ## Stack and commands
 - Python 3.12+ with uv, FastAPI, Pydantic v2, pytest, ruff. Web: React + TypeScript with Vite and Vitest.
-- `uv run pytest` · `uv run ruff check .` · `uv run ruff format --check .` · `uv run python -m engine.selfcheck`
+- `uv run pytest` (parallel by default; `-n0` for one test under a debugger) · `uv run ruff check .` · `uv run ruff format --check .` · `uv run python -m engine.selfcheck`
 - Web: `npm --prefix web test` · `npm --prefix web run build` (generates the API types, type-checks) ·
   `npm --prefix web run e2e` (Playwright with axe, at the root and a nested base path; build first).
 - After changing an API model, run `uv run python -m api.openapi`; the self-check fails while the schema is stale.
