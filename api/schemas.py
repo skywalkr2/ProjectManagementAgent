@@ -25,6 +25,7 @@ class HandIn(BaseModel):
 
 class SendBack(BaseModel):
     note: str
+    undo_first: bool = Field(True, description="Undo what the assistant did before it tries again (the default).")
 
 
 class UndoChoice(BaseModel):
@@ -295,6 +296,9 @@ class PersonView(BaseModel):
     aliases: list[str] = []
     status: Literal["active", "left"] = "active"
     is_pm: bool = False
+    track_only: bool = False
+    open_items: int = Field(0, description="Open actions and questions with them.")
+    last_contact: str | None = Field(None, description="When something was last sent or told to them (a date).")
 
 
 class PersonIn(BaseModel):
@@ -351,6 +355,9 @@ class ProjectView(BaseModel):
     content_levels: list[str] = Field(default_factory=list)
     budget_usd: float | None = None
     spent_usd: float = Field(0.0, description="What AI work on it and everything in it has cost.")
+    open_actions: int = 0
+    open_questions: int = 0
+    last_change: str | None = Field(None, description="When the project record last changed.")
 
 
 class NoteView(BaseModel):
@@ -474,6 +481,66 @@ class StageHistoryEntry(BaseModel):
     changeset: str | None
     request: str | None
     source: dict[str, Any] | None
+
+
+class RecordRefName(BaseModel):
+    kind: str
+    id: str
+    name: str
+
+
+class RecordDetail(BaseModel):
+    """One field of a record, with any references in it resolved to names."""
+
+    field: str
+    value: Any
+    type: Literal["date", "number", "bool", "enum", "list", "map", "text"]
+    refs: list[RecordRefName] = Field(default_factory=list)
+
+
+class OpenAction(BaseModel):
+    id: str
+    text: str
+    due: str | None = None
+    owners: list[str] = Field(default_factory=list, description="The owners' full names.")
+    project: str | None = None
+    project_name: str | None = None
+
+
+class OpenQuestion(BaseModel):
+    id: str
+    title: str
+    to: str | None = None
+    to_name: str | None = None
+    status: str | None = None
+    kind: str | None = None
+
+
+class ActivityEntry(BaseModel):
+    """One change to the record, or to something open with it."""
+
+    at: str
+    kind: str
+    id: str
+    name: str
+    op: str
+    field: str | None = None
+    actor: str
+    by_assistant: bool
+
+
+class RecordPageView(BaseModel):
+    """A record's page (design 7.14): its name, details in declared order with names resolved, what is open with
+    it, and its activity, newest first."""
+
+    kind: str
+    id: str
+    version: int
+    name: str
+    details: list[RecordDetail]
+    open_actions: list[OpenAction]
+    open_questions: list[OpenQuestion]
+    activity: list[ActivityEntry]
 
 
 class RecordView(BaseModel):

@@ -493,6 +493,61 @@
         "title": "ActionState",
         "type": "object"
       },
+      "ActivityEntry": {
+        "description": "One change to the record, or to something open with it.",
+        "properties": {
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "at": {
+            "title": "At",
+            "type": "string"
+          },
+          "by_assistant": {
+            "title": "By Assistant",
+            "type": "boolean"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "op": {
+            "title": "Op",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at",
+          "kind",
+          "id",
+          "name",
+          "op",
+          "actor",
+          "by_assistant"
+        ],
+        "title": "ActivityEntry",
+        "type": "object"
+      },
       "AgendaItemView": {
         "description": "An event from a watched calendar, on today or the next configured days.",
         "properties": {
@@ -3560,6 +3615,127 @@
         "title": "OpView",
         "type": "object"
       },
+      "OpenAction": {
+        "properties": {
+          "due": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "owners": {
+            "description": "The owners' full names.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Owners",
+            "type": "array"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "project_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project Name"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "text"
+        ],
+        "title": "OpenAction",
+        "type": "object"
+      },
+      "OpenQuestion": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "to": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To"
+          },
+          "to_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Name"
+          }
+        },
+        "required": [
+          "id",
+          "title"
+        ],
+        "title": "OpenQuestion",
+        "type": "object"
+      },
       "Option": {
         "properties": {
           "id": {
@@ -4492,9 +4668,27 @@
             "title": "Is Pm",
             "type": "boolean"
           },
+          "last_contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When something was last sent or told to them (a date).",
+            "title": "Last Contact"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "open_items": {
+            "default": 0,
+            "description": "Open actions and questions with them.",
+            "title": "Open Items",
+            "type": "integer"
           },
           "org": {
             "anyOf": [
@@ -4539,6 +4733,11 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "track_only": {
+            "default": false,
+            "title": "Track Only",
+            "type": "boolean"
           }
         },
         "required": [
@@ -4936,9 +5135,31 @@
             "title": "Language Own",
             "type": "boolean"
           },
+          "last_change": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the project record last changed.",
+            "title": "Last Change"
+          },
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "open_actions": {
+            "default": 0,
+            "title": "Open Actions",
+            "type": "integer"
+          },
+          "open_questions": {
+            "default": 0,
+            "title": "Open Questions",
+            "type": "integer"
           },
           "owner": {
             "anyOf": [
@@ -5355,6 +5576,45 @@
         "title": "ReadVersion",
         "type": "object"
       },
+      "RecordDetail": {
+        "description": "One field of a record, with any references in it resolved to names.",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "refs": {
+            "items": {
+              "$ref": "#/components/schemas/RecordRefName"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "type": {
+            "enum": [
+              "date",
+              "number",
+              "bool",
+              "enum",
+              "list",
+              "map",
+              "text"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value"
+          }
+        },
+        "required": [
+          "field",
+          "value",
+          "type"
+        ],
+        "title": "RecordDetail",
+        "type": "object"
+      },
       "RecordEdit": {
         "additionalProperties": false,
         "description": "The person's own change to fields of a shown record.",
@@ -5387,6 +5647,67 @@
         "title": "RecordEdit",
         "type": "object"
       },
+      "RecordPageView": {
+        "description": "A record's page (design 7.14): its name, details in declared order with names resolved, what is open with\nit, and its activity, newest first.",
+        "properties": {
+          "activity": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityEntry"
+            },
+            "title": "Activity",
+            "type": "array"
+          },
+          "details": {
+            "items": {
+              "$ref": "#/components/schemas/RecordDetail"
+            },
+            "title": "Details",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "open_actions": {
+            "items": {
+              "$ref": "#/components/schemas/OpenAction"
+            },
+            "title": "Open Actions",
+            "type": "array"
+          },
+          "open_questions": {
+            "items": {
+              "$ref": "#/components/schemas/OpenQuestion"
+            },
+            "title": "Open Questions",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "version",
+          "name",
+          "details",
+          "open_actions",
+          "open_questions",
+          "activity"
+        ],
+        "title": "RecordPageView",
+        "type": "object"
+      },
       "RecordRef": {
         "properties": {
           "id": {
@@ -5403,6 +5724,29 @@
           "id"
         ],
         "title": "RecordRef",
+        "type": "object"
+      },
+      "RecordRefName": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "title": "RecordRefName",
         "type": "object"
       },
       "RecordReference": {
@@ -5754,6 +6098,12 @@
           "note": {
             "title": "Note",
             "type": "string"
+          },
+          "undo_first": {
+            "default": true,
+            "description": "Undo what the assistant did before it tries again (the default).",
+            "title": "Undo First",
+            "type": "boolean"
           }
         },
         "required": [
@@ -11221,6 +11571,55 @@
           }
         },
         "summary": "Generic Record"
+      }
+    },
+    "/api/record-pages/{record_id}": {
+      "get": {
+        "description": "Any record's page: core or a plugin's, by its kind.",
+        "operationId": "record_page_api_record_pages__record_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "record_id",
+            "required": true,
+            "schema": {
+              "title": "Record Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordPageView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Page"
       }
     },
     "/api/records/edit": {

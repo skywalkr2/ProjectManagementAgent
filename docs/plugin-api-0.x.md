@@ -10,6 +10,20 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.54 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A sign-in starts its sources**: `registrar.sign_in(..., sources=[{"connector": ..., "label": ..., "settings":
+  {...}, "every_minutes": 15}])` lists what the core starts reading as soon as the person signs in (the inbox, the
+  main calendar), so signing in is the whole setup. Each is added once per sign-in, only where the workspace reads
+  nothing with that connector yet; the person's later changes and removals stand. A sign-in made before its add-on
+  declared sources gets them the next time the app starts. Settings are checked against the connector's at load.
+- **Send back can keep the work**: the review's Send back has "Undo what the assistant did first" (on by default);
+  when off, the work stays, counts as looked over, and the new run builds on it.
+- Record pages and the Projects and People tables get their data from the core (names resolved, what is open, what
+  happened); this changes nothing a plugin does.
+
 ## What 0.3.53 adds
 
 Manifests stay `'>=0.3,<0.4'`.

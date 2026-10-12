@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.53"
+PLUGIN_API_VERSION = "0.3.54"
 
 
 class Settings(BaseModel):
@@ -1660,6 +1660,7 @@ class Registrar:
         default_app_note: str | None = None,
         own_app_steps: Sequence[str | tuple[str, str]] = (),
         default_redirects: Sequence[str] = (),
+        sources: Sequence[dict[str, Any]] = (),
     ) -> None:
         """A sign-in to a service through its own sign-in page, as the person (listed in `provides.sign_ins`):
         OAuth 2.0 authorization code with PKCE. `authorize_url` and `token_url` are the service's HTTPS addresses, on
@@ -1708,7 +1709,14 @@ class Registrar:
         registration allows (`http://localhost/api/sign-ins/callback`, say; a loopback host matches any port): when
         the app's own address isn't one of them (served under another base path, or hosted), the add-on's
         registration isn't used and the person is asked for their own, with the reason. Without it, any address is
-        assumed to be allowed."""
+        assumed to be allowed.
+
+        `sources` are what the core starts reading as soon as the person signs in, so signing in is all the setup
+        there is: each is `{"connector": <one of this plugin's connectors>, "label": <a name for the list>,
+        "settings": {...}, "every_minutes": 15}` (settings checked against the connector's, defaults filling the
+        rest). Each is added once per sign-in, and only when the workspace reads nothing with that connector yet; a
+        source the person later removes or changes stays as they left it. Choose settings that read something
+        useful with no further choice (the inbox, the main calendar); the person narrows them later."""
         self._name(name)
         if name in self.sign_ins or not str(label).strip() or not scopes:
             raise ValueError("duplicate sign-in, or a sign-in without a label or scopes")
@@ -1738,6 +1746,26 @@ class Registrar:
             raise ValueError("default_redirects are full http(s) callback addresses")
         if default_redirects and not default_client_id:
             raise ValueError("default_redirects describe default_client_id's registration")
+        started = []
+        for source in sources:
+            if not isinstance(source, dict) or not set(source) <= {"connector", "label", "settings", "every_minutes"}:
+                raise ValueError("each of sources is {connector, label, settings, every_minutes}")
+            connector, title = source.get("connector"), str(source.get("label") or "").strip()
+            if not isinstance(connector, str) or not connector.startswith(self.name + "/") or not title:
+                raise ValueError("each of sources names one of this plugin's connectors and a label")
+            every = source.get("every_minutes", 15)
+            if not isinstance(every, int) or not 1 <= every <= 1440:
+                raise ValueError("a source's every_minutes is a whole number from 1 to 1440")
+            if not isinstance(source.get("settings", {}), dict):
+                raise ValueError("a source's settings are a mapping")
+            started.append(
+                {
+                    "connector": connector,
+                    "label": title,
+                    "settings": dict(source.get("settings", {})),
+                    "every_minutes": every,
+                }
+            )
         from engine.sign_in import SignIn
 
         self.sign_ins[name] = SignIn(
@@ -1758,6 +1786,7 @@ class Registrar:
             default_app_note=" ".join(default_app_note.split()) if default_app_note else None,
             own_app_steps=tuple(steps),
             default_redirects=tuple(str(a) for a in default_redirects),
+            sources=tuple(started),
         )
 
     def triage_matcher(self, name: str, *, match: Callable) -> None:

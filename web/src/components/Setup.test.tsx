@@ -19,6 +19,8 @@ const project = (id: string, name: string): S["ProjectView"] => ({
   language: "en-US",
   language_own: false,
   spent_usd: 0,
+  open_actions: 0,
+  open_questions: 0,
 });
 const note = (id: string, text: string, p: S["ProjectView"] | null): S["NoteView"] => ({
   id,
@@ -432,6 +434,8 @@ const person = (id: string, name: string, extra: Partial<S["PersonView"]> = {}):
   role: null,
   aliases: [],
   is_pm: false,
+  track_only: false,
+  open_items: 0,
   status: "active",
   ...extra,
 });

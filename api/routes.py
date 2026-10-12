@@ -79,6 +79,7 @@ from api.schemas import (
     QueueLineView,
     ReadVersion,
     RecordEdit,
+    RecordPageView,
     RecordReference,
     RecordView,
     Reply,
@@ -892,6 +893,16 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             stage_history=[StageHistoryEntry(**row) for row in stage_history(store, kind, record.id)],
         )
 
+    @r.get("/record-pages/{record_id}")
+    def record_page(record_id: str, kind: str) -> RecordPageView:
+        """Any record's page: core or a plugin's, by its kind."""
+        from engine.record_page import page
+
+        found = page(store, kind, record_id, pm=cfg.workspace.user.person)
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"There is no {kind} {record_id}.")
+        return RecordPageView(**found)
+
     @r.get("/records/{record_id}/stage-history")
     def record_stage_history(record_id: str, kind: str) -> list[StageHistoryEntry]:
         staged(kind)
@@ -1103,7 +1114,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.post("/changesets/{cs_id}/send-back")
     def sendback(cs_id: str, body: SendBack) -> Requeued:
         need("changeset", cs_id)
-        new = guard(lambda: send_back(store, cs_id, body.note))
+        new = guard(lambda: send_back(store, cs_id, body.note, undo_first=body.undo_first))
         changed()
         worker.poke()
         return Requeued(request=new)
@@ -1256,8 +1267,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/people")
     def people() -> list[PersonView]:
+        from engine.record_page import counts
+
         pm = cfg.workspace.user.person
         orgs = {o.id: o.data["name"] for o in store.read().list("organization")}
+        seen = counts(store.read())["people"]
         return [
             PersonView(
                 id=p.id,
@@ -1268,6 +1282,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 aliases=p.data.get("aliases", []),
                 status=p.data.get("status", "active"),
                 is_pm=p.id == pm,
+                track_only=bool(p.data.get("track_only")),
+                **seen.get(p.id, {}),
             )
             for p in store.read().list("person")
         ]
@@ -1377,9 +1393,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/projects")
     def projects() -> list[ProjectView]:
         from engine.projects import language_for, spent_on
+        from engine.record_page import counts
 
         names = People(store, cfg)
         view = store.read()
+        seen = counts(view)["projects"]
         return [
             ProjectView(
                 parent=p.data.get("parent"),
@@ -1398,6 +1416,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 owner=p.data.get("owner"),
                 owner_name=names.name(p.data["owner"]) if p.data.get("owner") else None,
                 summary=p.data.get("summary"),
+                **seen.get(p.id, {}),
             )
             for p in store.read().list("project")
         ]

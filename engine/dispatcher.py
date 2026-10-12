@@ -655,13 +655,21 @@ def undo_changeset(store: Store, changeset_id: str, indices: list[int] | None = 
     return report
 
 
-def send_back(store: Store, changeset_id: str, note: str, now: datetime | None = None) -> str:
-    """Undo the assistant's work and queue it again with the PM's note. Returns the new request id."""
+def send_back(
+    store: Store, changeset_id: str, note: str, now: datetime | None = None, *, undo_first: bool = True
+) -> str:
+    """Queue the work again with the PM's note, first undoing what the assistant did unless the PM keeps it (then
+    the old work counts as looked over, and the new run builds on it). Returns the new request id."""
     if not note.strip():
         raise ValueError("Say what the assistant should change.")
     now = now or datetime.now(UTC)
     cs = store.read().get("changeset", changeset_id)
-    undo(store, changeset_id)
+    if undo_first:
+        undo(store, changeset_id)
+    else:
+        with store.transaction() as tx:
+            current = tx.get("changeset", changeset_id)
+            tx.update("changeset", changeset_id, {"reviewed": True}, _PM, read_version=current.version)
     signal(store, "sent_back", [changeset_id], note=note, now=now)
     old = store.read().get("request", cs.data["request"])
     with store.transaction() as tx:

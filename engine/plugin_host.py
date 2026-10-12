@@ -1336,6 +1336,14 @@ class PluginHost:
             for secret in (sign_in.client_id, sign_in.client_secret):
                 if secret is not None and secret not in manifest.requires.secrets:
                     raise ValueError(f"sign-in {sign_in.name} reads {secret}, which requires.secrets doesn't list")
+            for source in sign_in.sources:
+                connector = registrar.connectors.get(source["connector"])
+                if connector is None:
+                    raise ValueError(f"sign-in {sign_in.name} starts {source['connector']}, which isn't its connector")
+                try:
+                    connector.settings.model_validate(source["settings"])
+                except Exception as err:
+                    raise ValueError(f"sign-in {sign_in.name}: settings for {source['connector']}: {err}") from None
         if set(manifest.interfaces.defines) != set(registrar.interface_definitions):
             raise ValueError("registered interface definitions do not match interfaces.defines exactly")
         provided = {f"{p.interface}@{p.major}" for p in registrar.interface_provisions.values()}

@@ -7,6 +7,7 @@ install token, presented once as `?token=` (which sets a cookie scoped to the ba
 from __future__ import annotations
 
 import hmac
+import logging
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -64,6 +65,9 @@ SECURITY_HEADERS = {
 }
 
 
+log = logging.getLogger(__name__)
+
+
 def create_app(
     ws: Workspace,
     cfg: Config,
@@ -99,6 +103,13 @@ def create_app(
     move_names(store)
     ensure_lists(store)
     worker = Worker(ws, store, cfg, events, router_factory, on_restart)
+    from engine.sign_in_sources import start_signed_in
+
+    try:
+        # Sources a sign-in declares, for sign-ins made before their add-on declared them; the worker takes them in.
+        start_signed_in(ws, cfg, store)
+    except Exception as err:  # never stops the app from starting
+        log.warning("Couldn't start the sources of sign-ins made earlier: %s", err)
     instance = uuid.uuid4().hex
     dist = ui_dist if ui_dist is not None else UI_DIST
 

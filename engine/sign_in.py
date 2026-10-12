@@ -60,6 +60,7 @@ class SignIn:
     default_app_note: str | None = None  # what using the add-on's own registration means for the person
     own_app_steps: tuple[tuple[str, str | None], ...] = ()  # how to make one's own registration: (step, link)
     default_redirects: tuple[str, ...] = ()  # the callback addresses the add-on's own registration allows
+    sources: tuple[dict[str, Any], ...] = ()  # sources started when the person signs in: connector, label, settings
 
 
 def address_allowed(redirect: str, allowed: tuple[str, ...]) -> bool:

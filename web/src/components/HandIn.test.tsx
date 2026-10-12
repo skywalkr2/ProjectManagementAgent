@@ -20,6 +20,8 @@ const project = (id: string, name: string, extra: Partial<S["ProjectView"]> = {}
   language: "en-US",
   language_own: false,
   spent_usd: 0,
+  open_actions: 0,
+  open_questions: 0,
   ...extra,
 });
 const PROJECTS = [

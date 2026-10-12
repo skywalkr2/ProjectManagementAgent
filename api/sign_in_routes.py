@@ -4,6 +4,7 @@ signing out."""
 
 from __future__ import annotations
 
+import logging
 from html import escape
 from urllib.parse import quote, urlencode
 
@@ -16,6 +17,8 @@ from engine.config import Config
 from engine.connectors import ConnectorError
 from engine.storage import Store
 from engine.workspace import Workspace
+
+log = logging.getLogger(__name__)
 
 
 def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
@@ -137,6 +140,12 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
         finally:
             web.close()
         host.signed_in(done, ws.root)
+        from engine.sign_in_sources import start_sources
+
+        try:
+            start_sources(ws, cfg, store, done)
+        except Exception as err:  # the sign-in stands; the person can still add the sources by hand
+            log.warning("Couldn't start the sources for %s: %s", done.name, err)
         return back(f"sign_in=done&name={quote(s.name)}")
 
     @r.delete("/sign-ins/{name:path}")

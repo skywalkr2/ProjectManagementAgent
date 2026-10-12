@@ -377,6 +377,16 @@ def test_send_back_undoes_and_queues_again_with_the_note(env):
     assert [s.data["kind"] for s in store.read().list("signal")] == ["sent_back"]
 
 
+def test_send_back_can_keep_the_work_and_build_on_it(env):
+    _, _, store = env
+    answers({"ops": [{"op": "note", "text": "Something."}]})
+    _, cs_id = run(env, "Anything at all.", note="File this")
+    new_request = send_back(store, cs_id, "Also add an action for the publicist.", undo_first=False)
+    assert store.read().get("request", new_request).data["state"] == "queued"
+    assert len(store.read().list("note")) == 1
+    assert store.read().get("changeset", cs_id).data["reviewed"] is True
+
+
 def test_looks_good_closes_the_review(env):
     _, _, store = env
     answers({"ops": []})
