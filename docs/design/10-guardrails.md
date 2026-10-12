@@ -114,4 +114,7 @@ server builds (`docs/project/review-2026-10-12.md`). These guardrails answer tha
 | **Fix the cause, then its siblings:** a failing test of the person's path first, then the same cause searched everywhere, and the reply says what was checked | Process rule, in force (`CLAUDE.md`) |
 | **Nothing is "ready to test"** until the journey tests pass; the message to the owner gives the exact commands and what to see | Process rule, in force (`CLAUDE.md`); the journey tests are planned |
 | **A plan item is never marked done on a part of it:** say what is left | Process rule, in force (`CLAUDE.md`) |
+| **"Built" means a named test passes:** checked roadmap boxes and "Built" rows cite their tests, and the self-check fails on a cited test that doesn't exist | Planned (roadmap L0) |
+| **Nothing lives only in the conversation:** commitments are written in the same turn to the roadmap or `docs/project/open-promises.md`, which a project hook shows to the session at start, resume and after a compaction | In force (`CLAUDE.md`, `.claude/settings.json`) |
+| **Screen wording checked where responses leave:** the API's response serializer refuses settings-file names, `env:`, key paths and commands in user-facing text, in tests and dev mode | Planned (roadmap A2) |
 | **Part 8 is generated from the seed lessons**, and every instruction-only rule has a fixture case; the self-check fails when the page is stale or a case is missing (decisions, 2026-10-12) | Planned (roadmap L) |

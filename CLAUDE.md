@@ -102,12 +102,17 @@ the change that records it also edits the design section it affects, and `docs/d
 - The fictional workspaces are test fixtures and the sandbox, never the owner's starting point. A real workspace starts
   from `cockpit init` with no template.
 - Every default produces a visible result for a real person with no file editing and no extra command. A brief says
-  what the person sees in their first five minutes.
+  what the person sees in their first five minutes, and what those minutes cost at most.
 - A reported problem gets a failing test of the person's path first; then everything with the same cause is found and
   fixed in the same change, and the reply says what was checked.
 - Nothing is "ready to test" until the journey tests pass. The message to the owner gives the exact commands and what
   they should see.
-- Never mark a plan item done on a part of it: say what is left.
+- Never mark a plan item done on a part of it: say what is left. "Built" means a named test exists and passes: a checked
+  roadmap box or a "Built" row cites it (the self-check enforces this from phase L0).
+- Nothing lives only in the conversation. Every commitment to the owner or a plugin builder ("I'll add X", "Y is next") is
+  written in the same turn to the roadmap or to `docs/project/open-promises.md`. That list is shown to the session when it
+  starts, resumes or comes back from a compaction (the hook in `.claude/settings.json`). Reconcile it before other work. A
+  promise leaves only when its item is checked off with its test, or the owner withdraws it.
 - Check against the code first: a design statement, a review finding or a reported problem is verified in the code before
   it is answered, designed around or fixed, and the reply says what the code does today.
 

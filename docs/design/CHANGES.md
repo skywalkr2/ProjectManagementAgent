@@ -571,6 +571,17 @@ All five points, and the two lines on subagents, are in the file.
 | 5. Missing product rules | Added: no silent stops; Today only what the person does, verb first; a nudge isn't completion; canonical values and no remaining difference after a publish; evaluation cases with received dates, starting records and `exact` by default. |
 | Subagents and wrong premises | Every brief states the expected starting state, for the subagent to check. A subagent's "can't be done" or "needs a new op" comes back to the main session, never straight into a design change or a report. |
 
+## 24. Your review of the project review (2026-10-12)
+
+| You said | What changed |
+|---|---|
+| 1. Nothing catches the next lost promise | Done, and running in this repository now. Every commitment is written in the same turn to the roadmap or to `docs/project/open-promises.md`, which starts with five open items. A project hook (`.claude/settings.json`) prints the list, with "compare the conversation with this list and write down what's missing", when a session starts, resumes or comes back from a compaction, and reminds it before one. A promise leaves only with its test, or when the owner withdraws it. The rule is in `CLAUDE.md`. |
+| 2. "Done" checked mechanically | A "Built" row or a checked roadmap box cites its test, and the self-check fails when a cited test doesn't exist (phase L0). The fifth claimed-done item you found (milestone 2's evaluation run) is added to the review. |
+| 3. The wording rule at the response boundary | In tests and dev mode, the API's response serializer refuses user-facing text with `.yaml`, `env:`, a dotted key path or a command, so the journey tests fail on the first leak, runtime messages included (phase A2, beside rewriting the known strings). |
+| 4. A ceiling as well as a floor | The first-five-minutes brief says what those minutes cost at most (`CLAUDE.md`), and the first run after setup shows its estimate even below the confirm amount (design 7.8, phase A2). |
+| Section 4 is superseded | Marked so, pointing to the roadmap. |
+| Section 5 should be checked off | Each row has a state: eight fixed in the design text, and one (the near-duplicate threshold) fixed in the text with the code setting still open in L0. |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

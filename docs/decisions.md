@@ -3,6 +3,31 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Nothing lives only in the conversation; "Built" cites a test; wording checked at the response boundary; the first run shows its cost
+
+**Decided by:** the first design's author proposed (review of the project review); project lead adopted it and set up the
+hook.
+
+**What:**
+- **Commitments are written down in the same turn,** to the roadmap or `docs/project/open-promises.md`. A project hook in
+  `.claude/settings.json` shows the list when a session starts, resumes or comes back from a compaction, and reminds the
+  session before one.
+- **"Built" cites a test.** A "Built" row or a checked roadmap box cites its test, and the self-check fails on one that
+  doesn't exist (L0).
+- **Wording at the boundary.** The screen-wording rule is enforced at the API's response serializer in tests and dev mode
+  (A2).
+- **The first run after setup shows its estimate,** even below the confirm amount (A2).
+- **The project review is corrected.** Its recommended order is marked superseded by the roadmap, and its design-text
+  list is checked off.
+
+**Why:** The review's remedies reduced the load but caught no lost promise; this session itself had been compacted. Four
+items were claimed done and weren't, and a fifth was found later. A static scan misses messages built at runtime. And the
+new defaults spend money on their own, on day one.
+
+**Impact:**
+- `CLAUDE.md`, `review-2026-10-12.md`, design 7.8 and 10.5, and the roadmap (A2, L0) are updated.
+- New: `docs/project/open-promises.md` and `.claude/settings.json` with `.claude/hooks/open-promises.sh`.
+
 ## 2026-10-12: The data model review: forgetting by recorded redaction, distinct knowledge states, missing fields
 
 **Decided by:** the first design's author proposed (review of Part 5); project lead checked the record definitions in the

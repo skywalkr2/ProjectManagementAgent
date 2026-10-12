@@ -81,7 +81,12 @@ A2. **The person's path, fixed where the review found it broken.**
 - [ ] Passwords and addresses for the core mailbox and calendar sources are entered on screen and kept like an AI key.
   Today they work only through `env:` or `file:`.
 - [ ] Server messages never name a settings file, a key path, `env:` or a command. About 50 of these are listed in
-  the audit.
+  the audit. **The check sits where responses leave:** in tests and dev mode, the API's response serializer refuses
+  user-facing text containing `.yaml`, `env:`, a dotted key path or a command, so the journey tests fail on the first
+  leak, wherever it was built, runtime messages included.
+- [ ] **The first run says what it costs:** the first run after setup shows its estimate even below the confirm amount
+  ("Reading your last day of mail: about $0.30"). The new defaults act on their own, so the first impression is a result
+  the person expected to pay for (design 7.8).
 - [ ] Settings that do nothing are wired or removed: `owner_format`. **The scheduled export is wired** to the workspace's
   own git, so a readable copy of the workspace is written regularly once real knowledge accumulates; the backups copy the
   database, which is not readable on its own. The export's remote is not offered until phase E gives it the care of
@@ -143,6 +148,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - held work and paused accounts show on Today: "Restart to run 7 waiting requests" as the first Decide line, and an
     account paused until its limit resets as a Risk line with the time and the count waiting.
 - [ ] The near-duplicate threshold becomes a setting (design 4.17; the code fixes it at 0.8).
+- [ ] **"Built" checked mechanically:** a checked box here or a "Built" row in the design's status tables cites the test
+  that proves it, and the self-check fails when a cited test doesn't exist. Rows already marked Built get their tests
+  cited in the same change (design 10.5).
 - [ ] **A bare first name resolves only in context** (design 6.11): same project, or a participant in the thread; a
   different initial or surname fragment is held.
 - [ ] The golden-set cases for these fixes are written first, as their failing tests:
