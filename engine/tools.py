@@ -297,7 +297,7 @@ class ToolBox:
         patterns return files the program wrote there. Caps and the timeout may be lowered, never raised."""
         tool = self.__declared.get(name)
         if tool is None:
-            raise ToolError(f"{name} isn't declared in requires.tools")
+            raise ToolError(f"{name} isn't one of the programs this add-on says it needs")
         status = self.__tools.probe(name, tool.probe, tool.min_version)
         if not status.found:
             raise ToolError(status.reason)

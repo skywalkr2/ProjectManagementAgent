@@ -86,7 +86,8 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
         if not local:
             raise HTTPException(
                 status_code=400,
-                detail="On a hosted app, set the registration in the workspace's settings as env: or file: references.",
+                detail="On a hosted app, the registration is set in the workspace's settings, as references to "
+                "where its values are kept.",
             )
         if host.sign_in_app(s, ws.root)[2] == "workspace":
             raise HTTPException(status_code=409, detail="The workspace's settings already set this registration.")

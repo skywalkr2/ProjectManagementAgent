@@ -22,6 +22,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from engine.connectors import ConnectorContext, ConnectorError, MessageDetails, Poll, SourceItem
 from engine.connectors.feed import plain
+from engine.secrets import SecretHint
 
 #: The longest message text kept; the rest is cut with a note.
 MAX_TEXT = 20_000
@@ -34,7 +35,8 @@ class MailboxSettings(BaseModel):
     port: int = Field(993, ge=1, le=65535, description="Its IMAP port with TLS.")
     user: str = Field(min_length=1, description="The account's user name, usually the address.")
     password: str = Field(
-        min_length=1, description="A secret reference (env:NAME or file:/path) to the password or app password."
+        min_length=1,
+        description=SecretHint("A secret reference (env:NAME or file:/path) to the password or app password."),
     )
     folder: str = Field("INBOX", description="The folder to read.")
     first_read: int = Field(20, ge=0, le=500, description="How many of the latest messages the first read takes.")

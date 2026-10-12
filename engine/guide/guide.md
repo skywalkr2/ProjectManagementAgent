@@ -102,7 +102,7 @@ lists them so you can look. Files you edit in the synced folder come back as pro
 ## Sources the assistant keeps reading
 
 Besides what you hand in, the assistant can keep reading places for you: a folder, a news feed, a calendar or a mail
-folder. Each is a source in watch.yaml with how often it is read. A source's first read only notes what is there;
+folder. Each is a source, with how often it is read. A source's first read only notes what is there;
 after that, anything new, changed or gone is handed in for the assistant to read, marked as outside content. A
 calendar is read through its private address (most calendar services offer one in their sharing settings), and the
 events in the coming weeks are followed: a moved meeting or a new invitation comes in as a change. A mail folder is

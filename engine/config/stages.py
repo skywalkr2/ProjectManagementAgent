@@ -20,22 +20,37 @@ def validate_stages(config, records, checks, tasks, running=None):
         if running is not None and _dormant(kind, running):
             continue
         if kind not in records:
-            raise ConfigError(f"stages.yaml: unknown record type {kind}")
+            raise ConfigError(
+                f"stages.yaml: unknown record type {kind}",
+                f"the stages name a kind of record that doesn't exist: {kind}",
+            )
         stages = settings.stages or []
         for stage in stages:
             for check in stage.entry:
                 if check not in checks and not (running is not None and _dormant(check, running)):
-                    raise ConfigError(f"stages.yaml: {kind}/{stage.id}: unknown entry check {check}")
+                    raise ConfigError(
+                        f"stages.yaml: {kind}/{stage.id}: unknown entry check {check}",
+                        f"the stage {stage.id!r} of {kind} needs a check that doesn't exist: {check}",
+                    )
             for check in stage.applies_if:
                 if check not in checks and not (running is not None and _dormant(check, running)):
-                    raise ConfigError(f"stages.yaml: {kind}/{stage.id}: unknown applies_if check {check}")
+                    raise ConfigError(
+                        f"stages.yaml: {kind}/{stage.id}: unknown applies_if check {check}",
+                        f"the stage {stage.id!r} of {kind} applies only after a check that doesn't exist: {check}",
+                    )
             for task in stage.starts:
                 if task not in tasks and not (running is not None and _dormant(task, running)):
-                    raise ConfigError(f"stages.yaml: {kind}/{stage.id}: unknown task kind {task}")
+                    raise ConfigError(
+                        f"stages.yaml: {kind}/{stage.id}: unknown task kind {task}",
+                        f"the stage {stage.id!r} of {kind} starts work that doesn't exist: {task}",
+                    )
         if (settings.moves or config.moves) == "rule":
             for stage in stages[1:]:
                 if not stage.entry:
-                    raise ConfigError(f"stages.yaml: {kind}/{stage.id}: {STAGE_WORDING['check_unavailable_rule']}")
+                    raise ConfigError(
+                        f"stages.yaml: {kind}/{stage.id}: {STAGE_WORDING['check_unavailable_rule']}",
+                        f"the stage {stage.id!r} of {kind}: {STAGE_WORDING['check_unavailable_rule']}",
+                    )
 
 
 def validate_declared(cfg, config_dir):
@@ -57,8 +72,14 @@ def validate_declared(cfg, config_dir):
 def validate_rules(config, checks, running=None):
     for rule in config.rules:
         if rule.id in checks:
-            raise ConfigError(f"rules.yaml: rule id collides with code check {rule.id}")
+            raise ConfigError(
+                f"rules.yaml: rule id collides with code check {rule.id}",
+                f"a standing rule has the same name as a built-in check: {rule.id}",
+            )
         if rule.check is not None and rule.check not in checks:
             if running is not None and _dormant(rule.check, running):
                 continue
-            raise ConfigError(f"rules.yaml: {rule.id}: unknown code check {rule.check}")
+            raise ConfigError(
+                f"rules.yaml: {rule.id}: unknown code check {rule.check}",
+                f"the standing rule {rule.id!r} uses a check that doesn't exist: {rule.check}",
+            )

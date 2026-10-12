@@ -397,10 +397,11 @@ function GetIt(props: { pack: Pack; onClose: () => void }) {
         {pack.install && <CopyLine text={pack.install} label={t("addons.copy_install")} />}
         {pack.install && <p className="hint">{t("addons.install_check")}</p>}
         {demo && (
-          <>
+          <details className="more-options">
+            <summary>{t("addons.for_developers")}</summary>
             <p>{t("addons.demo_intro")}</p>
             <CopyLine text={demo} label={t("addons.copy_demo")} />
-          </>
+          </details>
         )}
       </div>
       <div className="row-end">

@@ -187,7 +187,7 @@ def test_ai_test_says_where_a_failing_key_was_read_from_and_never_shows_it(tmp_p
     path.write_text(yaml.safe_dump(ai))
     monkeypatch.delenv(name, raising=False)
     assert main(["ai", "test", "-w", str(target)]) == 1
-    assert f"key from the environment variable {name}" in capsys.readouterr().out
+    assert f"key from the secret named {name}" in capsys.readouterr().out
     key_file = tmp_path / "key.txt"
     key_file.write_text("a-secret-value")
     ai["providers"][real]["auth"] = f"file:{tmp_path / 'missing.txt'}"

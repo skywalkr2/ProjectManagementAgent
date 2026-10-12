@@ -1008,7 +1008,7 @@ In the workspace's `config/workspace.yaml`; the person can change them.
 | `workspace.plugins.actions.max_previews` | int | `20` | Most previews one action may show. |
 | `workspace.plugins.actions.max_items` | int | `2000` | Most items one action may offer to keep or drop (a long file gives many). |
 | `workspace.plugins.actions.max_requests` | int | `100` | Most pieces of follow-up work one action may queue for the assistant at once. |
-| `workspace.plugins.tools` | ToolSettings | see below | Limits on the outside programs plugins run (where they are found is set per computer in .cockpit/tools.yaml). |
+| `workspace.plugins.tools` | ToolSettings | see below | Limits on the outside programs plugins run (where they are found is set per computer, not here). |
 | `workspace.plugins.tools.timeout_seconds` | float | `120` | How long a plugin's program may run if it sets no limit. |
 | `workspace.plugins.tools.max_timeout_seconds` | float | `1800` | The longest any program may run; plugins can't ask more. |
 | `workspace.plugins.tools.probe_timeout_seconds` | float | `10` | How long a program's version check may take. |
@@ -1093,7 +1093,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 | `links[].label` | str | required | What the link is, in words for the reader. |
 | `links[].url` | str | required | The address to open. |
 | `tags` | list[str] | `[]` | Free labels for finding the project. |
-| `content_levels` | list[str] | `[]` | Content levels (from ai.content_levels) its material carries, set by the person; AI work on it goes only to accounts that take them all. |
+| `content_levels` | list[str] | `[]` | Content levels (those defined for AI) its material carries, set by the person; AI work on it goes only to accounts that take them all. |
 | `parent` | str \| None | `None` | The id of the project this one belongs to (a book in its series); never itself or below it. |
 | `language` | str \| None | `None` | The language tag work on it is written in; unset means its parent's, else the workspace's. |
 | `budget_usd` | float \| None | `None` | The most AI work on it and everything in it may cost, set by the person; none for no cap. |
@@ -1157,7 +1157,7 @@ One input the workspace received, such as pasted text; the text is kept by its h
 | `projects` | list[str] | `[]` | The ids of the projects it is about. |
 | `url` | str \| None | `None` | Where it came from, when it has an address. |
 | `watched` | Watched \| None | see below | For an input a watcher found: where and what changed. |
-| `watched.source` | str | required | The id of the source in watch.yaml. |
+| `watched.source` | str | required | The id of the watched source. |
 | `watched.key` | str | required | The item's key within that source. |
 | `watched.change` | Literal['new', 'changed', 'removed'] | required | What happened to the item. |
 | `watched.author` | str \| None | `None` | Who changed it last, as the source says. |
@@ -1335,7 +1335,7 @@ One setting the person changed from the screens: which key, what it was and what
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `key` | str | required | The setting's dotted key, as in `cockpit config show`. |
+| `key` | str | required | Which setting changed. |
 | `before` | Any | `None` | Its value before the change. |
 | `after` | Any | `None` | Its value after the change. |
 | `was_default` | bool | `False` | It was at its default before the change (set in no file). |
@@ -1383,7 +1383,7 @@ What a watched item looked like when last read: its text is kept in the sources 
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `source` | str | required | The id of the source in watch.yaml. |
+| `source` | str | required | The id of the watched source. |
 | `key` | str | required | The item's key within the source. |
 | `title` | str | required | The item's title when last read. |
 | `content_hash` | str | required | Hash of its text when last read. |
@@ -1410,7 +1410,7 @@ One read of a watched source and what came of it. The watcher writes it; nothing
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `source` | str | required | The id of the source in watch.yaml. |
+| `source` | str | required | The id of the watched source. |
 | `started_at` | datetime | required | When the read started. |
 | `seconds` | float | `0.0` | How long it took. |
 | `outcome` | Literal['ok', 'baseline', 'failed', 'offline', 'throttled'] | required | ok: read and compared. baseline: a first read that only noted what is there. failed: it couldn't be read. offline: no network here, so it wasn't tried. throttled: the service asked to wait. |

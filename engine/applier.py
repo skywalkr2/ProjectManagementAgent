@@ -321,18 +321,18 @@ def setting_problem(store: Store, key: str, value: Any) -> str | None:
     try:
         current = load_config(config_dir, env=dict(os.environ))
     except ConfigError as err:
-        return f"the settings have a problem to fix first: {err}"
+        return f"the settings have a problem to fix first: {err.plain}"
     shown = {s.key: s for s in config_screens.describe(current)}
     setting = shown.get(key)
     if setting is None or not setting.editable:
-        return f"{key} isn't a setting the PM can change from the screens"
+        return "that isn't a setting the PM can change from the screens"
     name, *path = key.split(".")
     source = config_dir / f"{name}.yaml"
     text = source.read_text(encoding="utf-8") if source.exists() else "version: 1\n"
     try:
         config_screens._check_whole(config_dir, {name: set_key(text, path, value)}, dict(os.environ))
     except StoreError as err:
-        return f"{key} can't be {value!r}: {err}"
+        return f"{config_screens.screen_name(setting)} can't be {value!r}: {err}"
     return None
 
 
@@ -989,7 +989,7 @@ def _pm_question(
 ) -> str:
     pm = ctx.people.pm
     if pm is None:
-        raise StoreError("workspace.user.person isn't set, so there is no one to ask")
+        raise StoreError("you aren't set as a person in this workspace yet, so there is no one to ask")
     data = {"to": pm, "title": title, "kind": kind, "options": options, "resolves": resolves}
     return tx.create("question", data, w).id
 

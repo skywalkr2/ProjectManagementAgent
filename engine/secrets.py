@@ -7,8 +7,14 @@ from collections.abc import Mapping
 from pathlib import Path
 
 
+class SecretHint(str):
+    """The input hint of a field that takes a secret reference. It is the one text that names the `env:NAME` and
+    `file:/path` forms on screen, because the field can't be filled in without them; the wording check exempts it."""
+
+
 class SecretError(Exception):
-    """A secret reference can't be resolved. The message names the reference, never a value."""
+    """A secret reference can't be resolved. The message is plain words for the screen: it names the secret the person
+    gave (its name or its file), never a value and never the reference's syntax."""
 
 
 def resolve_secret(ref: str | None, env: Mapping[str, str] | None = None) -> str | None:
@@ -19,16 +25,16 @@ def resolve_secret(ref: str | None, env: Mapping[str, str] | None = None) -> str
     if scheme == "env":
         value = env.get(name)
         if not value:
-            raise SecretError(f"the environment variable {name} isn't set")
+            raise SecretError(f"a secret isn't set (its name: {name})")
         return value
     if scheme == "file":
         path = Path(name).expanduser()
         if not path.is_file():
-            raise SecretError(f"the secret file {path} doesn't exist")
+            raise SecretError(f"the file that holds a secret isn't there ({path})")
         return path.read_text(encoding="utf-8").strip()
     if scheme == "keychain":
-        raise SecretError("keychain references aren't supported yet; use env:NAME or file:/path")
-    raise SecretError(f"{ref.split(':', 1)[0]!r} isn't a known secret reference; use env:NAME or file:/path")
+        raise SecretError("keeping a secret in the computer's keychain isn't supported yet")
+    raise SecretError("that isn't a way of keeping a secret the app knows; use the form the field's hint shows")
 
 
 def describe_secret(ref: str | None) -> str:
@@ -37,7 +43,7 @@ def describe_secret(ref: str | None) -> str:
         return "no key is set for this account"
     scheme, _, name = ref.partition(":")
     if scheme == "env":
-        return f"key from the environment variable {name}"
+        return f"key from the secret named {name}"
     if scheme == "file":
         return f"key from the file {Path(name).expanduser()}"
-    return f"key from {scheme}"
+    return "key from another place"

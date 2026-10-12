@@ -16,8 +16,10 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from starlette.applications import Starlette
+from starlette.exceptions import HTTPException
 from starlette.routing import Mount
 from starlette.types import ASGIApp
 
@@ -26,6 +28,7 @@ from api.data_form_routes import build_data_form_router
 from api.pack_routes import build_pack_router
 from api.routes import build_router
 from api.schemas import RuntimeConfig
+from api.screen_text import refusal
 from api.setup_routes import build_setup_router
 from api.sign_in_routes import build_sign_in_router
 from api.watch_routes import build_watch_router
@@ -137,6 +140,16 @@ def create_app(
         lifespan=lifespan if base_path == "/" else None,
     )
 
+    @inner.exception_handler(HTTPException)
+    async def refuse_unfit_wording(request: Request, err: HTTPException) -> Any:
+        """While the wording check is on, an error message the screen would show that names a file, a key or a command
+        fails the response with the problem found, so it is fixed where it was written. Otherwise the usual answer."""
+        problem = refusal(err.detail) if isinstance(err.detail, str) else None
+        if problem is not None:
+            log.error("Refused to send an error message: %s", problem)
+            return JSONResponse({"detail": problem}, status_code=500)
+        return await http_exception_handler(request, err)
+
     @inner.middleware("http")
     async def require_token(request: Request, call_next: Any) -> Any:
         path = request.url.path.removeprefix(request.scope.get("root_path", "")) or "/"
@@ -219,7 +232,7 @@ def create_app(
         """The workspace's logo image from its config folder, when one is set and present."""
         found = _logo(ws, cfg)
         if found is None:
-            return JSONResponse({"error": "not found"}, status_code=404)
+            return _error("not found", 404)
         response = FileResponse(found, media_type=_LOGO_TYPES[found.suffix.lower()])
         response.headers["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'"
         response.headers["Cache-Control"] = "no-cache"
@@ -240,7 +253,7 @@ def create_app(
     def ui(path: str) -> Any:
         """The built UI: files by path, and index.html for every other route so the UI's own router takes over."""
         if path.startswith("api/"):
-            return JSONResponse({"error": "not found"}, status_code=404)
+            return _error("not found", 404)
         index = dist / "index.html"
         if not index.exists():
             return JSONResponse({"status": "running", "ui": "not built yet"})
@@ -299,9 +312,17 @@ def _bearer(request: Request) -> str | None:
 
 
 def _unauthorized() -> JSONResponse:
-    message = "Open the link printed by `cockpit serve` to sign in on this computer."
-    return JSONResponse({"error": message}, status_code=401)
+    return _error("Open the link the app printed when it started to sign in on this computer.", 401)
 
 
 def _refused(message: str) -> JSONResponse:
-    return JSONResponse({"error": message}, status_code=403)
+    return _error(message, 403)
+
+
+def _error(message: str, status_code: int) -> JSONResponse:
+    """An error body for the screen. While the wording check is on, a message that fails it fails the response."""
+    problem = refusal(message)
+    if problem is not None:
+        log.error("Refused to send an error message: %s", problem)
+        return JSONResponse({"error": problem}, status_code=500)
+    return JSONResponse({"error": message}, status_code=status_code)

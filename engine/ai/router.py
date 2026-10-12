@@ -62,18 +62,16 @@ def choices(
     tier_name = tier or (task.tier if task else "routine")
     tier_cfg = cfg.ai.tiers.get(tier_name)
     if use is None and tier_cfg is None:
-        raise NoProvider(f"the {tier_name!r} tier isn't set up in ai.yaml")
+        raise NoProvider(f"the {tier_name!r} tier isn't set up. Add an AI account to it on the AI accounts screen")
     if use is None and not tier_cfg.use:
-        raise NoProvider(
-            f"no AI account is set up for the {tier_name!r} tier; add one to ai.yaml and set tiers.{tier_name}.use"
-        )
+        raise NoProvider(f"no AI account is set up for the {tier_name!r} tier; add one on the AI accounts screen")
     picked: list[Choice] = []
     refused: list[str] = []
     for ref in [use] if use is not None else [tier_cfg.use, *tier_cfg.fallback]:
         provider_name, _, model_key = ref.partition("/")
         provider = cfg.ai.providers.get(provider_name)
         if provider is None:
-            refused.append(f"{provider_name} isn't an account in ai.yaml")
+            refused.append(f"{provider_name} isn't one of your AI accounts")
             continue
         if LEVELS.index(data_level) > max(LEVELS.index(lvl) for lvl in provider.allowed_data):
             refused.append(f"{provider_name} isn't allowed to see {data_level} material")
@@ -92,8 +90,7 @@ def choices(
             wrote = ", ".join(sorted({c.provider for c in same}))
             raise NoProvider(
                 f"this check needs an account other than the one that wrote the work ({wrote}). Add another account "
-                f"to the {tier_name!r} tier, or accept the same account for checks (roles.check.same_account in "
-                "ai.yaml)"
+                f"to the {tier_name!r} tier, or accept the same account for checks in Settings, AI roles"
             )
         picked = others + (same if independent.same_account else [])
     return picked

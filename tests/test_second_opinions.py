@@ -228,7 +228,7 @@ def test_a_kinds_own_setting_wins_over_its_role(tmp_path, monkeypatch):
 
 
 def test_a_role_must_name_a_tier(tmp_path):
-    with pytest.raises(Exception, match="roles.check.tier names 'nowhere'"):
+    with pytest.raises(Exception, match="the 'check' role names the tier 'nowhere'"):
         workspace(tmp_path, {"roles": {"check": {"tier": "nowhere"}}})
 
 

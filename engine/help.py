@@ -72,18 +72,22 @@ def chosen_sections(question: str, limit: int = 4, sections: list[Section] | Non
 
 
 def settings_lines(cfg: Any) -> list[str]:
-    """One line per setting the screens show: its key, current value, default, whether the screens can change it,
-    and what it does. Nothing that says where a key comes from."""
+    """One line per setting the screens show: what it is called and does, its current value and default, whether the
+    screens can change it, and its key (which only a setting proposal uses). Nothing that says where a key comes
+    from."""
     from engine import settings as config_screens
 
     lines = []
     for item in config_screens.describe(cfg):
         if PRIVATE_KEYS.search(item.key) or item.type == "other":
             continue
-        change = "changeable" if item.editable else "locked" if item.locked else f"changed in {item.file}.yaml"
+        change = (
+            "changeable" if item.editable else "locked" if item.locked else "changed in the settings files, not here"
+        )
+        now = json.dumps(item.value, ensure_ascii=False)
         lines.append(
-            f"{item.key} = {json.dumps(item.value, ensure_ascii=False)} (default {json.dumps(item.default)}, "
-            f"{change}): {item.description}"
+            f"{config_screens.screen_name(item)}: {item.description.rstrip('. ')}. Now {now} "
+            f"(default {json.dumps(item.default)}, {change}). Key for a setting proposal only: {item.key}"
         )
     return lines
 

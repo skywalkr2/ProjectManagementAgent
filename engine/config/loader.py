@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Mapping
+import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -23,7 +24,12 @@ LAYERS = ("default", "file", "env", "flag")
 
 
 class ConfigError(Exception):
-    """A config file or value can't be used. The message says which file and key, and why."""
+    """A config file or value can't be used. The message says which file and key, and why; it is for the terminal.
+    `plain` says the same without a file name, key or command, for the screen."""
+
+    def __init__(self, message: str, plain: str | None = None) -> None:
+        super().__init__(message)
+        self.plain = plain or "a settings file has a value that isn't allowed"
 
 
 @dataclass
@@ -112,7 +118,7 @@ def load_config(
         try:
             files[name] = model.model_validate(raw[name])
         except ValidationError as err:
-            raise ConfigError(_describe(name, err)) from None
+            raise _describe(name, err) from None
     cfg = Config(files=files, sources=sources, moved=moved)
     from engine.config.stages import validate_declared
 
@@ -141,22 +147,23 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as err:
-        raise ConfigError(f"{path.name}: not valid YAML ({err})") from None
+        raise ConfigError(f"{path.name}: not valid YAML ({err})", "a settings file isn't written correctly") from None
     if data is None:
         return {}
     if not isinstance(data, dict):
-        raise ConfigError(f"{path.name}: the top level must be a set of keys")
+        raise ConfigError(f"{path.name}: the top level must be a set of keys", "a settings file isn't laid out right")
     return data
 
 
 def _check_version(name: str, data: dict[str, Any], path: Path) -> None:
     version = data.get("version", 1)
     if not isinstance(version, int):
-        raise ConfigError(f"{path.name}: version must be a whole number")
+        raise ConfigError(f"{path.name}: version must be a whole number", "a settings file's version isn't a number")
     if version > CURRENT_VERSIONS[name]:
         raise ConfigError(
             f"{path.name} is version {version}, newer than this program understands "
-            f"({CURRENT_VERSIONS[name]}). Upgrade the program before using this workspace."
+            f"({CURRENT_VERSIONS[name]}). Upgrade the program before using this workspace.",
+            "a settings file is from a newer version of the app; update the app before using this workspace",
         )
 
 
@@ -197,12 +204,41 @@ def _flatten(data: Mapping[str, Any], prefix: str) -> list[tuple[str, Any]]:
     return rows
 
 
-def _describe(name: str, err: ValidationError) -> str:
+def plain_label(description: str) -> str:
+    """What to call a setting on screen: the first sentence of its description, minus any parenthetical."""
+    first = re.split(r"(?<=[.!?])\s+", description.strip())[0].rstrip(".!?")
+    return re.sub(r"\s*\([^)]*\)", "", first).strip()
+
+
+def field_label(model: type[BaseModel], loc: Iterable[Any]) -> str | None:
+    """The plain label of the setting a validation error points at (the innermost field known by name), or None."""
+    current: Any = model
+    label = None
+    for part in loc:
+        fields = getattr(current, "model_fields", None)
+        if not fields or part not in fields:
+            break
+        info = fields[part]
+        label = plain_label(info.description) if info.description else label
+        current = info.annotation
+    return label or None
+
+
+def refusal_text(model: type[BaseModel], err: ValidationError) -> str:
+    """A validation error as one sentence for the screen: which setting, and what is wrong with its value."""
+    first = err.errors()[0]
+    msg = first["msg"].removeprefix("Value error, ")
+    label = field_label(model, first["loc"])
+    more = f" ({len(err.errors()) - 1} more)" if len(err.errors()) > 1 else ""
+    return (f"“{label}” isn't allowed: {msg}" if label else f"a setting isn't allowed: {msg}") + more
+
+
+def _describe(name: str, err: ValidationError) -> ConfigError:
     problems = []
     for item in err.errors():
         where = ".".join(str(p) for p in item["loc"]) or "(file)"
         problems.append(f"{name}.{where}: {item['msg']}")
-    return f"{name}.yaml has problems:\n  " + "\n  ".join(problems)
+    return ConfigError(f"{name}.yaml has problems:\n  " + "\n  ".join(problems), plain=refusal_text(FILES[name], err))
 
 
 def _render_model(instance: BaseModel, model: type[BaseModel], indent: int) -> list[str]:

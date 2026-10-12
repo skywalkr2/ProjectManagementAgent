@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useSmallMoney } from "../lib/money";
 import { problemText } from "../lib/problem";
+import { asReference } from "../lib/secret-ref";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
@@ -129,7 +130,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   const keyArgs = (over?: { key?: string }) => {
     const pasted = (over?.key ?? key).trim();
     if (props.local && pasted) return { key: pasted };
-    if (keyRef.trim()) return { key_ref: keyRef.trim() };
+    if (keyRef.trim()) return { key_ref: asReference(keyRef) };
     return {};
   };
 

@@ -162,7 +162,7 @@ def check_addresses(sign_in: SignIn, network: list[str]) -> None:
     for url in (sign_in.authorize_url, sign_in.token_url, *([sign_in.revoke_url] if sign_in.revoke_url else [])):
         parts = urlsplit(url)
         if parts.scheme != "https" or not parts.hostname or not host_allowed(parts.hostname, network):
-            raise ValueError(f"{url} must be an https address on a host listed in requires.network")
+            raise ValueError(f"{url} must be an https address on a host the add-on says it reaches")
 
 
 def start(sign_in: SignIn, client_id: str, redirect: str, now: float | None = None) -> str:

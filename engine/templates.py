@@ -27,7 +27,12 @@ SHIPPED = shipped_folder("templates")
 
 
 class TemplateError(Exception):
-    """A template can't be read or applied; the message says why."""
+    """A template can't be read or applied; the message says why, for the terminal. `plain` says it without a file
+    name or command, for the screen."""
+
+    def __init__(self, message: str, plain: str | None = None) -> None:
+        super().__init__(message)
+        self.plain = plain or message
 
 
 def shipped() -> list[dict[str, Any]]:
@@ -102,16 +107,21 @@ def find(name_or_path: str) -> Path:
     shipped_path = SHIPPED / f"{name_or_path}.yaml"
     if shipped_path.is_file():
         return shipped_path
-    raise TemplateError(f"there is no template {name_or_path}; see `cockpit template list`")
+    raise TemplateError(
+        f"there is no template {name_or_path}; see `cockpit template list`", f"there is no template {name_or_path}"
+    )
 
 
 def _read(path: Path) -> dict[str, Any]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError) as err:
-        raise TemplateError(f"{path.name} can't be read: {err}") from None
+        raise TemplateError(f"{path.name} can't be read: {err}", "the template can't be read") from None
     if not isinstance(data, dict) or not data.get("name") or not isinstance(data.get("plugins", {}), dict):
-        raise TemplateError(f"{path.name} isn't a template: it needs a name and a plugins section")
+        raise TemplateError(
+            f"{path.name} isn't a template: it needs a name and a plugins section",
+            "that file isn't a template: it needs a name and a list of add-ons",
+        )
     return data
 
 
@@ -182,7 +192,10 @@ def _check(plugin: str, settings: dict[str, Any], ws: Any, bundled: Path) -> Non
     try:
         schema.model_validate(settings)
     except ValueError as err:
-        raise TemplateError(f"the template's settings for {plugin} don't fit: {err}") from None
+        raise TemplateError(
+            f"the template's settings for {plugin} don't fit: {err}",
+            f"the template's settings for the add-on {plugin} don't fit what it accepts",
+        ) from None
 
 
 def save(ws: Any, path: Path, name: str, description: str, plugins: list[str]) -> Path:

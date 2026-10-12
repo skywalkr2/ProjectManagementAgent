@@ -520,7 +520,7 @@ test("a command-line program asks for a command and how it is fed, and sends its
   expect(modelsAsked(calls)).toHaveLength(0);
 });
 
-test("an app that is not on this computer asks where the key is and sends a reference, never a key", async () => {
+test("an app that is not on this computer asks for the key's variable name and sends a reference, never a key", async () => {
   const user = userEvent.setup();
   const calls = api();
   open({ local: false });
@@ -531,7 +531,7 @@ test("an app that is not on this computer asks where the key is and sends a refe
   expect(screen.getByText(/takes keys only from its environment/)).toBeInTheDocument();
   const check = screen.getByRole("button", { name: "Check" });
   expect(check).toBeDisabled();
-  await user.type(where, "env:MODEL_KEY");
+  await user.type(where, "MODEL_KEY");
   await user.click(check);
   await screen.findByLabelText("Model for everyday work");
   expect(modelsAsked(calls)[0].body).toEqual({ endpoint: "service-a", key_ref: "env:MODEL_KEY" });

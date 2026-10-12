@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 from typing import Any
@@ -46,6 +47,11 @@ from engine.config import Config, ConfigError, load_config
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
+
+log = logging.getLogger(__name__)
+
+#: What a hosted app says to a pasted key: keys stay in the app's own environment, given by their reference.
+HOSTED_KEY = "On a hosted app, a key can't be pasted: keep it in the app's environment and give where it is instead."
 
 #: Settings an add-on's setup step may never suggest: where keys come from and which accounts get the work.
 NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "workspace.plugins.enabled", "server.")
@@ -199,7 +205,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=404, detail="That step suggests no settings.")
         barred = [k for k in found.settings if k.startswith(NEVER_SUGGESTED)]
         if barred:
-            raise HTTPException(status_code=400, detail=f"An add-on can't suggest {', '.join(barred)}.")
+            log.warning("A setup step suggested settings it may not: %s", ", ".join(barred))
+            raise HTTPException(
+                status_code=400,
+                detail="An add-on can't suggest where keys come from, which accounts get the work, or the server's "
+                "own settings.",
+            )
         now = current()
         changes = {key: _merged(now.value(key), value) for key, value in found.settings.items()}
         return saved(save(changes, [], body.fingerprint, allow=("",)))
@@ -238,7 +249,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         try:
             plugins = templates.apply(ws, body.id)
         except (templates.TemplateError, ConfigError) as err:
-            raise HTTPException(status_code=400, detail=str(err)) from None
+            log.warning("A template couldn't be applied: %s", err)
+            raise HTTPException(status_code=400, detail=err.plain) from None
         setup.template_applied(ws, body.id)
         events.changed()
         return TemplateApplied(plugins=plugins, needs_restart=worker.needs_restart())
@@ -448,7 +460,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         try:
             now = load_config(ws.config_dir)
         except ConfigError as err:
-            raise HTTPException(status_code=400, detail=str(err)) from None
+            log.warning("The settings couldn't be loaded: %s", err)
+            raise HTTPException(status_code=400, detail=err.plain) from None
         if name not in now.ai.providers:
             raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
         results = account_test(now, os.environ, name)
@@ -467,9 +480,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if body.key and body.key_ref:
             raise HTTPException(status_code=400, detail="Paste a key or give where it is, not both.")
         if body.key and not local:
-            raise HTTPException(
-                status_code=400, detail="On a hosted app, keys come from the environment: give env:NAME instead."
-            )
+            raise HTTPException(status_code=400, detail=HOSTED_KEY)
         changes: dict[str, Any] = {}
         if body.key:
             try:
@@ -527,9 +538,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if body.key and body.key_ref:
             raise HTTPException(status_code=400, detail="Paste a key or give where it is, not both.")
         if body.key and not local:
-            raise HTTPException(
-                status_code=400, detail="On a hosted app, keys come from the environment: give env:NAME instead."
-            )
+            raise HTTPException(status_code=400, detail=HOSTED_KEY)
         provider: dict[str, Any] = {
             **(kind["settings"] if kind else {}),
             **({"kind": kind["id"]} if kind else {}),
@@ -590,9 +599,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if body.key and body.key_ref:
             raise HTTPException(status_code=400, detail="Paste a key or give where it is, not both.")
         if body.key and not local:
-            raise HTTPException(
-                status_code=400, detail="On a hosted app, keys come from the environment: give env:NAME instead."
-            )
+            raise HTTPException(status_code=400, detail=HOSTED_KEY)
         try:
             key = body.key.strip() if body.key else resolve_secret(body.key_ref)
         except SecretError as err:
@@ -632,7 +639,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         try:
             current = load_config(ws.config_dir)
         except ConfigError as err:
-            raise HTTPException(status_code=400, detail=str(err)) from None
+            log.warning("The settings couldn't be loaded: %s", err)
+            raise HTTPException(status_code=400, detail=err.plain) from None
         results = smoke_test(current, os.environ)
         record(ws, results)
         events.changed()

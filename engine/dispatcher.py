@@ -4,6 +4,7 @@ then apply (design 6.6, 6.7). One input per call."""
 from __future__ import annotations
 
 import json
+import logging
 import re
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
@@ -31,6 +32,8 @@ from engine.projects import budget_problem
 from engine.storage import Store, StoreError, WriteContext
 from engine.tasks import settings as task_settings
 from engine.workspace import Workspace
+
+log = logging.getLogger(__name__)
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="request.state")
 
@@ -120,7 +123,7 @@ def process(
             request_id,
             (
                 f"Too long for one call ({len(packet.cleaned.text):,} characters; the limit is "
-                f"{cfg.dispatch.max_input_chars:,}). Split it, or raise dispatch.max_input_chars."
+                f"{cfg.dispatch.max_input_chars:,}). Split it, or raise the largest input in Settings, What comes in."
             ),
         )
     # Work the PM didn't start (stage tasks, plugin requests, outside inputs) carries no words from the PM, so nothing
@@ -157,7 +160,7 @@ def process(
             store,
             request_id,
             f"This would cost about ${estimate:.2f}, above the per-run limit of ${budgets.per_run_usd:.2f}. "
-            "Hand in less, or raise budgets.per_run_usd in ai.yaml.",
+            "Hand in less, or raise “Most one run may cost” in Settings, AI spending.",
         )
     over = budget_problem(store, req.data, estimate)
     if over:
@@ -446,8 +449,9 @@ def _rounds(
             if result.truncated:
                 stop = (
                     f"The assistant's answer was cut off at the output limit ({limit} tokens for this kind of work). "
-                    f"Raise tasks.{task.kind}.max_output in ai.yaml, or hand in a shorter piece."
+                    "Raise the output limit for this kind of work in the AI settings, or hand in a shorter piece."
                 )
+                log.warning("Output limit reached; it is set at ai.tasks.%s.max_output", task.kind)
                 return _Outcome(run_id=out.run_id, stop=stop)
             return _Outcome(run_id=out.run_id, stop=f"The assistant's answer couldn't be read: {err}.", escalate=True)
         if previous_ops is not None and _ops_of(changeset) == previous_ops:
@@ -517,8 +521,8 @@ def _drafted(
             return text, f"The draft was cut off at the output limit and couldn't be continued ({err})."
         if more.refused or more.truncated:
             return text, (
-                f"The draft was cut off at the output limit twice. Raise tasks.{task.kind}.max_output in ai.yaml, "
-                "or ask for less at a time."
+                "The draft was cut off at the output limit twice. Raise the output limit for this kind of work in "
+                "the AI settings, or ask for less at a time."
             )
         text = text + _unfenced(more.text)
     return text, None
@@ -592,7 +596,7 @@ def _ai_failure(err: AiError) -> str:
     if err.hint:
         signed_out = "The AI account isn't signed in" if err.kind == "auth" else plain
         return f"{signed_out}{when}{why}. {err.hint.rstrip('.')}, then try again."
-    return f"{plain}{when}{why}. Check the account in ai.yaml, then try again."
+    return f"{plain}{when}{why}. Check the account on the AI accounts screen, then try again."
 
 
 def _set(store: Store, request_id: str, **changes: object) -> None:

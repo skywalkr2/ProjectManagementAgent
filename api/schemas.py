@@ -11,6 +11,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from api.screen_text import ScreenText
+
 # ---- requests --------------------------------------------------------------------------------------------------------
 
 
@@ -79,7 +81,7 @@ class BackupStatus(BaseModel):
     last_success: str | None
     age_hours: float | None
     needs_attention: bool
-    last_error: str | None
+    last_error: ScreenText | None
 
 
 class RequestCounts(BaseModel):
@@ -93,7 +95,7 @@ class AiState(BaseModel):
     """Whether the assistant can do its work: set up, tested, and answering."""
 
     state: Literal["ok", "untested", "failing", "not_set_up", "stand_in"]
-    detail: str | None = Field(None, description="The provider's own reason when there is one, shortened.")
+    detail: ScreenText | None = Field(None, description="The provider's own reason when there is one, shortened.")
 
 
 class SpendStatus(BaseModel):
@@ -114,7 +116,9 @@ class Status(BaseModel):
     spend: SpendStatus
     requests: RequestCounts
     version: int
-    restart_needed: str | None = Field(None, description="Why new work waits until the cockpit restarts, if it does.")
+    restart_needed: ScreenText | None = Field(
+        None, description="Why new work waits until the cockpit restarts, if it does."
+    )
     can_restart: bool = Field(
         False, description="The app can start itself again when the person asks (POST /api/restart)."
     )
@@ -163,7 +167,7 @@ class OpView(BaseModel):
     index: int
     op: str
     status: Literal["applied", "held", "refused", "undone"]
-    reason: str | None
+    reason: ScreenText | None
     group: str
     title: str
     meta: OpMeta
@@ -204,7 +208,7 @@ class ChangeItem(BaseModel):
     version: int
     dismissed: bool
     state: Literal["queued", "running", "review", "done", "needs_you", "failed"]
-    waiting: str | None
+    waiting: ScreenText | None
     created_at: str
     note: str | None
     source: str | None
@@ -411,7 +415,7 @@ class Created(BaseModel):
 class BackupTarget(BaseModel):
     label: str | None
     last_success: str | None
-    last_error: str | None
+    last_error: ScreenText | None
 
 
 class RuntimeConfig(BaseModel):
@@ -440,9 +444,9 @@ class PluginStatusView(BaseModel):
     name: str
     state: str
     version: str | None = None
-    reason: str | None = None
-    tools: dict[str, str] = Field(default_factory=dict, description="Each declared program and what was found.")
-    notes: list[str] = Field(default_factory=list, description="What the person should know, though it loaded.")
+    reason: ScreenText | None = None
+    tools: dict[str, ScreenText] = Field(default_factory=dict, description="Each declared program and what was found.")
+    notes: list[ScreenText] = Field(default_factory=list, description="What the person should know, though it loaded.")
 
 
 class RecordReference(BaseModel):
@@ -458,7 +462,7 @@ class StageLabel(BaseModel):
 class StageCheckView(BaseModel):
     id: str
     passed: bool
-    reason: str
+    reason: ScreenText
 
 
 class StageView(BaseModel):
@@ -583,7 +587,7 @@ class StageRequestView(BaseModel):
     task: str
     state: str
     approval: Literal["required", "granted"]
-    waiting: str | None
+    waiting: ScreenText | None
     stage_start: StageTaskOrigin
     estimate_usd: float | None = Field(None, description="What the run was estimated to cost, once it has an estimate.")
 
@@ -723,7 +727,7 @@ class TakenBack(BaseModel):
 
 class FieldView(BaseModel):
     name: str
-    description: str = ""
+    description: ScreenText = ""
     long_text: str | None = Field(None, description="The long text format, for a long text field.")
     refers_to: str | None = Field(None, description="The kind of record the field holds an id of.")
     type: Literal["text", "long_text", "number", "yes_no", "date", "choice", "reference", "list", "other"] = Field(
@@ -790,14 +794,14 @@ class OutsideEditView(BaseModel):
     path: str = Field(description="The file in the synced folder.")
     proposal: str | None = Field(None, description="The changeset it became, to review.")
     version: str | None = Field(None, description="The text version it became, to review.")
-    problem: str | None = Field(None, description="Why it couldn't be read back.")
+    problem: ScreenText | None = Field(None, description="Why it couldn't be read back.")
 
 
 class SyncView(BaseModel):
     """The synced folder's state."""
 
     folder: str = Field(description="The configured folder; empty when off.")
-    problem: str | None = Field(description="Why it can't be written now, if it can't.")
+    problem: ScreenText | None = Field(description="Why it can't be written now, if it can't.")
     stopped: bool = Field(description="Another computer opened the workspace; this copy stopped writing.")
     changed_outside: list[str]
     removed_outside: list[str]
@@ -872,7 +876,7 @@ class QueueLineView(BaseModel):
     project_name: str | None = None
     due: date | None = None
     waiting_days: int | None = None
-    waiting: str | None = Field(None, description="Why the work stopped, in plain words.")
+    waiting: ScreenText | None = Field(None, description="Why the work stopped, in plain words.")
     request: str | None = None
     changeset: str | None = None
     question: str | None = None
@@ -922,7 +926,7 @@ class TodayLineView(BaseModel):
         description="action: run it as a person action (/plugin-actions); task: start it as AI work; core: one of the "
         "core's own (open, review, go, answer, move-stage) on `about`.",
     )
-    why: str = ""
+    why: ScreenText = ""
     until: str | None = None
 
 
@@ -984,7 +988,7 @@ class JobView(BaseModel):
     every_minutes: int
     last_run_at: str | None
     last_outcome: str | None
-    last_error: str | None
+    last_error: ScreenText | None
 
 
 class TaskKindView(BaseModel):
@@ -1062,7 +1066,7 @@ class ActionItem(BaseModel):
     group: str | None = None
     kept: bool
     ops: list[ProposedOp]
-    refused: str | None = Field(None, description="Why this would be refused if applied now; it starts dropped.")
+    refused: ScreenText | None = Field(None, description="Why this would be refused if applied now; it starts dropped.")
 
 
 class ActionPreviewItem(BaseModel):
@@ -1108,11 +1112,11 @@ class ActionProposalView(BaseModel):
     files: list[ProposedFile]
     previews: list[ActionPreviewItem]
     choices: list[ActionChoice]
-    notes: list[str]
+    notes: list[ScreenText]
     requests: list[ActionRequestView] = Field(
         default_factory=list, description="AI work queued when it is applied, each waiting for the person's go."
     )
-    problems: list[str] = Field(
+    problems: list[ScreenText] = Field(
         default_factory=list, description="Why parts outside the items would be refused if it were applied now."
     )
     expires_at: str
@@ -1144,7 +1148,7 @@ class SettingItem(BaseModel):
     key: str = Field(description="Its dotted key, as in `cockpit config show`.")
     file: str
     group: str = Field(description="The section it belongs to: the file, or the file and its first part.")
-    description: str
+    description: ScreenText
     type: Literal["text", "number", "integer", "yes_no", "choice", "list", "other"]
     options: list[str] = Field(default_factory=list)
     value: Any = None
@@ -1252,7 +1256,7 @@ class RestartAsked(BaseModel):
 class FolderCheckView(BaseModel):
     path: str
     ok: bool
-    problem: str | None = None
+    problem: ScreenText | None = None
     free_mb: float | None = None
 
 
@@ -1308,7 +1312,9 @@ class AiAccountView(BaseModel):
         description="saved: its key is there to use. missing: it refers to a key that isn't there (an environment "
         "variable not set, a file not found). none: no key is set.",
     )
-    key_where: str | None = Field(None, description="Where a missing key is looked for, in plain words; never a key.")
+    key_where: ScreenText | None = Field(
+        None, description="Where a missing key is looked for, in plain words; never a key."
+    )
 
 
 class AiAccountChange(BaseModel):
@@ -1343,7 +1349,7 @@ class AiModelView(BaseModel):
 
 class AiModelsView(BaseModel):
     models: list[AiModelView] = Field(default_factory=list)
-    problem: str | None = Field(None, description="Why the list couldn't be read, in plain words.")
+    problem: ScreenText | None = Field(None, description="Why the list couldn't be read, in plain words.")
 
 
 class LocalServerView(BaseModel):
@@ -1388,7 +1394,7 @@ class AiTestResult(BaseModel):
     account: str = Field(description="The account's short name, as the person named it.")
     main: bool = Field(description="It is the tier's main account; otherwise a fallback.")
     ok: bool
-    detail: str = Field(description='"answered", or what went wrong in plain words.')
+    detail: ScreenText = Field(description='"answered", or what went wrong in plain words.')
 
 
 # ---- asking the assistant --------------------------------------------------------------------------------------------
@@ -1433,7 +1439,7 @@ class AskView(BaseModel):
     id: str
     question: str
     state: Literal["queued", "running", "review", "done", "needs_you", "failed"]
-    waiting: str | None = None
+    waiting: ScreenText | None = None
     created_at: str
     changeset: str | None = None
     answer: AnswerView | None = None
@@ -1453,7 +1459,7 @@ class WatchRunView(BaseModel):
     outcome: Literal["ok", "baseline", "failed", "offline", "throttled"]
     retry_at: str | None = Field(None, description="For a throttled read: not read again before this time.")
     error_kind: str | None = None
-    error: str | None = None
+    error: ScreenText | None = None
     new: int = 0
     changed: int = 0
     removed: int = 0
@@ -1471,7 +1477,7 @@ class WatchSourceView(BaseModel):
     items: int = Field(description="Items it held at the last read.")
     last: WatchRunView | None = None
     failures: int = Field(0, description="Failed reads in a row.")
-    problem: str | None = Field(None, description="Why it can't be read, and what to do, while it fails.")
+    problem: ScreenText | None = Field(None, description="Why it can't be read, and what to do, while it fails.")
 
 
 class AutoClosedView(BaseModel):
@@ -1499,7 +1505,9 @@ class SignInView(BaseModel):
     status: Literal["signed_in", "expired", "signed_out"]
     ready: bool = Field(description="The add-on's app registration (its client id) is set, so signing in can start.")
     callback: str = Field(description="The address the service's app registration must allow to send people back to.")
-    allows: list[str] = Field(default_factory=list, description="What the person is asked to allow, in plain words.")
+    allows: list[ScreenText] = Field(
+        default_factory=list, description="What the person is asked to allow, in plain words."
+    )
     account: str | None = Field(None, description="The signed-in account, when the add-on can name it.")
     missing: list[str] = Field(
         default_factory=list, description="Scopes asked for that the person didn't allow, while signed in."
@@ -1509,7 +1517,9 @@ class SignInView(BaseModel):
         description="Where its app registration comes from: the workspace's settings, values pasted here, the "
         "add-on's own, or nowhere yet.",
     )
-    app_note: str | None = Field(None, description="What using the add-on's own registration means, while in use.")
+    app_note: ScreenText | None = Field(
+        None, description="What using the add-on's own registration means, while in use."
+    )
     can_paste: bool = Field(False, description="The person can paste their own registration here (on this computer).")
     needs_secret: bool = Field(False, description="The service issues a client secret along with the client id.")
     set_aside: bool = Field(False, description="A pasted registration was set aside and can be brought back.")
@@ -1521,7 +1531,7 @@ class SignInView(BaseModel):
     own_app_steps: list[SignInStep] = Field(
         default_factory=list, description="How to make one's own registration with the service."
     )
-    not_reading: list[str] = Field(
+    not_reading: list[ScreenText] = Field(
         default_factory=list,
         description="While signed in: what the add-on reads by default (the inbox, the calendar) that nothing reads "
         "yet; POST /api/sign-ins/{name}/sources starts them.",
@@ -1615,7 +1625,7 @@ class InstalledPackView(BaseModel):
     description: str
     enabled: bool
     state: str
-    reason: str | None
+    reason: ScreenText | None
     what: PackSummary
     removable: bool = Field(
         False, description="The app installed it from the Add-ons screen, so it can take it away again."
@@ -1624,8 +1634,8 @@ class InstalledPackView(BaseModel):
 
 class PackFeedView(BaseModel):
     domain: str
-    error: str | None
-    notes: list[str]
+    error: ScreenText | None
+    notes: list[ScreenText]
     read_at: str | None
 
 
@@ -1670,7 +1680,7 @@ class DataFile(BaseModel):
     layer: Literal["shipped", "workspace", "project"] | None = Field(
         description="The copy in effect; none for a single-file kind not made yet."
     )
-    problem: str | None = Field(None, description="Why the copy in effect doesn't fit the form, if it doesn't.")
+    problem: ScreenText | None = Field(None, description="Why the copy in effect doesn't fit the form, if it doesn't.")
 
 
 class DataFileView(BaseModel):
@@ -1681,7 +1691,7 @@ class DataFileView(BaseModel):
         description="The copy in effect; None for a new file, shown with the defaults."
     )
     layers: list[Literal["shipped", "workspace", "project"]]
-    problem: str | None = None
+    problem: ScreenText | None = None
     items: list[SettingItem]
 
 

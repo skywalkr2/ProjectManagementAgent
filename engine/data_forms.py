@@ -6,6 +6,7 @@ it can be undone. The plugin goes on reading the files through `view.data`."""
 
 from __future__ import annotations
 
+import logging
 import re
 from fnmatch import fnmatchcase
 from functools import lru_cache
@@ -16,6 +17,8 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from engine.storage import StoreError
+
+log = logging.getLogger(__name__)
 
 LAYERS = ("shipped", "workspace", "project")
 _PART = r"[a-z0-9][a-z0-9_-]{0,63}"
@@ -44,9 +47,11 @@ def _layers(host: Any, name: str, project: str | None) -> dict[str, Path]:
 def _file_name(form: Any, file: str) -> str:
     """A file of this form: a name (or folder/name) of lowercase letters, digits, - and _, matching its pattern."""
     if not _NAME.fullmatch(file or ""):
-        raise StoreError("a data file is named with lowercase letters, digits, - or _, ending in .yaml")
+        raise StoreError(
+            "a data file is named with lowercase letters, digits, - or _, ending like the others of its kind"
+        )
     if not fnmatchcase(file, form.pattern) or file.count("/") != form.pattern.count("/"):
-        raise StoreError(f"{file} isn't a file of this kind (they are named like {form.pattern})")
+        raise StoreError("that isn't a file of this kind: its name doesn't fit how the others are named")
     return file
 
 
@@ -71,7 +76,8 @@ def _raw(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError) as err:
-        return None, f"it can't be read: {err}"
+        log.warning("A data file couldn't be read: %s", err)
+        return None, "it can't be read"
     if not isinstance(data, dict):
         return None, "it isn't a set of named values"
     return data, None
@@ -165,12 +171,12 @@ def save(
     if base is None and start_from:
         base = _in_effect(layers, _file_name(form, start_from))
         if base is None:
-            raise StoreError(f"there is no {start_from} to start from")
+            raise StoreError("there is no file by that name to start from")
     values: dict[str, Any] = {}
     if base is not None:
         raw, problem = _raw(base)
         if raw is None:
-            raise StoreError(f"{file} {problem}")
+            raise StoreError(f"the file to start from {problem}")
         values = raw
     for key, value in changes.items():
         _set(values, key, value)
@@ -194,7 +200,7 @@ def remove(host: Any, name: str, file: str, layer: str, project: str | None = No
     target = _layers(host, name, project).get(layer)
     path = target / file if target is not None else None
     if path is None or not path.is_file():
-        raise StoreError(f"there is no {layer} copy of {file}")
+        raise StoreError(f"there is no {layer} copy of that file")
     before = path.read_text(encoding="utf-8")
     path.unlink()
     return {"before": before}

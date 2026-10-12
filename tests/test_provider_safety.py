@@ -186,7 +186,7 @@ def test_the_smoke_test_says_where_a_refused_or_missing_key_was_read_from(env, t
     real, model, named = add_example_account(ws.config_dir / "ai.yaml")
     cfg = ws.config(env={}, flags={"ai.tiers.deep.use": f"{real}/{model}"})
     sources = [r.key_source for r in smoke_test(cfg, env={}) if r.tier == "deep"]
-    assert sources and sources[0] == f"key from the environment variable {named}"
+    assert sources and sources[0] == f"key from the secret named {named}"
 
     key_file = tmp_path / "key.txt"
     cfg = ws.config(

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -26,6 +27,9 @@ from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
 
 TOKEN = "e2e-token"
+
+# The browser tests run with the wording check on, so a message that names a file, a key or a command fails there too.
+os.environ["COCKPIT_CHECK_WORDING"] = "1"
 
 
 def main() -> None:

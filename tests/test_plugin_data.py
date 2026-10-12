@@ -116,5 +116,5 @@ def test_a_missing_data_folder_refuses_the_plugin(tmp_path):
     settings["plugins"]["enabled"] = [*settings["plugins"]["enabled"], "p10"]
     (ws.config_dir / "workspace.yaml").write_text(yaml.safe_dump(settings))
     store = Store(ws.db_path, cfg=load_config(ws.config_dir, env={}))
-    assert "isn't a folder beside plugin.yaml" in store.plugins.status["p10"].reason
+    assert "data folder" in store.plugins.status["p10"].reason
     store.close()

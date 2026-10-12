@@ -126,10 +126,10 @@ def test_a_bad_value_or_a_locked_key_writes_nothing(tmp_path, monkeypatch):
     before = (ws.config_dir / "storage.yaml").read_text()
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
     bad = c.post(f"{api}/settings", json={"changes": {"storage.backups.keep": 0}, "fingerprint": fingerprint})
-    assert bad.status_code == 400 and "keep" in bad.json()["detail"]
+    assert bad.status_code == 400 and "How many backups to keep" in bad.json()["detail"]
     assert (ws.config_dir / "storage.yaml").read_text() == before
     locked = c.post(f"{api}/settings", json={"changes": {"ui.toast_seconds": 9}, "fingerprint": fingerprint})
-    assert locked.status_code == 400 and "environment variable" in locked.json()["detail"]
+    assert locked.status_code == 400 and "set by an environment variable" in locked.json()["detail"]
     server = c.post(f"{api}/settings", json={"changes": {"server.port": 9000}, "fingerprint": fingerprint})
     assert server.status_code == 400
 
@@ -561,7 +561,7 @@ def test_an_add_ons_settings_are_a_form_group_saved_to_its_own_file(tmp_path):
     wrong = c.post(
         f"{api}/settings", json={"changes": {"plugins/example.ask_on_add": "maybe"}, "fingerprint": fingerprint}
     )
-    assert wrong.status_code >= 400 and "ask_on_add" in wrong.text
+    assert wrong.status_code >= 400 and "File a question for the PM" in wrong.text
     unknown = c.post(f"{api}/settings", json={"changes": {"plugins/nobody.thing": 1}, "fingerprint": fingerprint})
     assert unknown.status_code >= 400
 

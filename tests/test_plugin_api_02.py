@@ -243,7 +243,7 @@ def test_a_record_type_may_be_restricted_only_if_the_manifest_says_so(env):
     other = Store(ws.root / "other.db", cfg=load_config(ws.config_dir, env={}))
     assert not other.plugins.active("p02")
     reason = other.plugins.status["p02"].reason
-    assert "requires.data_levels" in reason and "p02/entry" in reason
+    assert "doesn't say it keeps" in reason and "p02/entry" in reason
     other.close()
 
 

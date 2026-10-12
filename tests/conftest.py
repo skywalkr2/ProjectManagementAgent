@@ -17,6 +17,10 @@ from engine.selfcheck import FIXTURES
 from engine.storage import Store
 from engine.workspace import Workspace, init_workspace
 
+# Text a person reads that names a settings file, a key, a secret reference or a command fails the response while the
+# whole suite runs (api/screen_text.py).
+os.environ["COCKPIT_CHECK_WORDING"] = "1"
+
 # Run the same core suite against copied fixtures without bundled contributions.
 # Plugin contract tests are run separately with their plugins explicitly enabled.
 _CORE_FIXTURES = None

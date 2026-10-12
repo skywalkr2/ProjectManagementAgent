@@ -56,7 +56,7 @@ class Record(BaseModel):
     fixed_fields: ClassVar[tuple[str, ...]] = ()
 
     id: str = Field(description='The record\'s id: "<prefix>-<number>", never reused.')
-    stage: str | None = Field(None, description="Current configured stage id; wording lives in stages.yaml.")
+    stage: str | None = Field(None, description="Current configured stage id; its wording is set with the stages.")
     ext: dict[str, dict[str, Any]] = Field(default_factory=dict, description="Fields added by plugins, by plugin name.")
 
 
@@ -282,7 +282,7 @@ class Project(Record):
     tags: list[str] = Field(default_factory=list, description="Free labels for finding the project.")
     content_levels: list[str] = Field(
         default_factory=list,
-        description="Content levels (from ai.content_levels) its material carries, set by the person; AI work on it "
+        description="Content levels (those defined for AI) its material carries, set by the person; AI work on it "
         "goes only to accounts that take them all.",
     )
     parent: str | None = Field(
@@ -373,7 +373,7 @@ class Question(Record):
 class Watched(BaseModel):
     """Where a watched input came from: the source in watch.yaml, the item's key there, and what happened to it."""
 
-    source: str = Field(description="The id of the source in watch.yaml.")
+    source: str = Field(description="The id of the watched source.")
     key: str = Field(description="The item's key within that source.")
     change: Literal["new", "changed", "removed"] = Field(description="What happened to the item.")
     author: str | None = Field(None, description="Who changed it last, as the source says.")
@@ -521,7 +521,7 @@ class Snapshot(Record):
     record_kind: ClassVar[str] = "snapshot"
     prefix: ClassVar[str] = "SNAP"
 
-    source: str = Field(description="The id of the source in watch.yaml.")
+    source: str = Field(description="The id of the watched source.")
     key: str = Field(description="The item's key within the source.")
     title: str = Field(description="The item's title when last read.")
     content_hash: str = Field(description="Hash of its text when last read.")
@@ -542,7 +542,7 @@ class WatchRun(Record):
     record_kind: ClassVar[str] = "watch_run"
     prefix: ClassVar[str] = "WRUN"
 
-    source: str = Field(description="The id of the source in watch.yaml.")
+    source: str = Field(description="The id of the watched source.")
     started_at: datetime = Field(description="When the read started.")
     seconds: float = Field(0.0, description="How long it took.")
     outcome: Literal["ok", "baseline", "failed", "offline", "throttled"] = Field(
@@ -565,7 +565,7 @@ class SettingChange(Record):
     record_kind: ClassVar[str] = "setting_change"
     prefix: ClassVar[str] = "SETCHG"
 
-    key: str = Field(description="The setting's dotted key, as in `cockpit config show`.")
+    key: str = Field(description="Which setting changed.")
     before: Any = Field(None, description="Its value before the change.")
     after: Any = Field(None, description="Its value after the change.")
     was_default: bool = Field(False, description="It was at its default before the change (set in no file).")

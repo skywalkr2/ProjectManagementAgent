@@ -97,7 +97,7 @@ def refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None 
     """Read one source now, compare and hand in what changed. Returns what happened. A source is never read twice at
     the same moment: when another read of it is under way this one does nothing and says so (outcome "busy")."""
     if not any(s.id == source_id for s in cfg.watch.sources):
-        raise StoreError(f"there is no source {source_id} in watch.yaml")
+        raise StoreError(f"there is no source {source_id}")
     lock = _read_lock(ws, source_id)
     if not lock.acquire(blocking=False):
         return Result(source_id, "busy", note=ALREADY_READING)
@@ -112,7 +112,7 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
     clock = time.monotonic()
     source = next((s for s in cfg.watch.sources if s.id == source_id), None)
     if source is None:
-        raise StoreError(f"there is no source {source_id} in watch.yaml")
+        raise StoreError(f"there is no source {source_id}")
     worked = [
         r for r in store.read().find("watch_run", {"source": source.id}) if r.data["outcome"] in ("ok", "baseline")
     ]

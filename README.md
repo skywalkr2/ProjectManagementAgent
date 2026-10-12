@@ -78,6 +78,11 @@ uv run ruff check . && uv run pytest && uv run python -m engine.selfcheck
 npm --prefix web test && npm --prefix web run build && npm --prefix web run e2e
 ```
 
+For development, set `COCKPIT_CHECK_WORDING=1` to check the words the screen shows. With it on, a response field the
+server writes for a person to read, or an error message, that names a settings file, a secret reference, a settings key,
+a manifest field or a command is refused with the problem found. The tests and the browser tests' server turn it on
+themselves. It is a developer switch, not a setting, and does nothing when unset.
+
 ## Troubleshooting
 
 - **`Failed to spawn: cockpit`**: run the command from the repository folder (where `pyproject.toml` is), or use

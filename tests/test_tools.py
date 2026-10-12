@@ -197,7 +197,7 @@ def test_a_plugin_runs_only_declared_tools_and_each_run_is_recorded(tmp_path, pr
     ws = workspace_with(tmp_path, program, [declared()])
     store = open_store(ws)
     box = store.plugins.tool_box("p03")
-    with pytest.raises(ToolError, match="isn't declared"):
+    with pytest.raises(ToolError, match="isn't one of the programs"):
         box.run("python", ["-c", "print(1)"])
     result = box.run("fakeprog", ["build", "chapter.txt"], {"chapter.txt": b"words"}, collect=["out/book.txt"])
     assert result.files == {"out/book.txt": b"WORDS"}

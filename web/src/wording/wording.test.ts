@@ -76,3 +76,62 @@ test("no internal terms reach the screen", () => {
   const leaks = Object.entries(words).filter(([, text]) => internal.test(text.replace(/\{\w+\}/g, "")));
   expect(leaks).toEqual([]);
 });
+
+// The same patterns as the server's wording check (api/screen_text.py): text the screen shows never names a settings
+// file, a secret reference, a settings key, a manifest field or a command. The settings files' names and the command
+// line's subcommands are listed here by hand; a server test checks that this list is the command line's own.
+const SETTINGS_FILES = ["workspace", "server", "storage", "ai", "dispatch", "checks", "language", "ui", "stages", "rules", "watch"];
+const COMMANDS = [
+  "ai",
+  "backup",
+  "config",
+  "demo",
+  "evaluate",
+  "export",
+  "import",
+  "init",
+  "pack",
+  "restore",
+  "selfcheck",
+  "serve",
+  "sync",
+  "takeover",
+  "template",
+  "update",
+];
+const VCS = "pull|push|commit|clone|checkout|status|add|merge|rebase|fetch|log|diff|reset|stash|init|config|remote|tag|branch";
+
+/** Entries that may name a command because they are shown only under a "For developers" disclosure. */
+const COMMAND_ALLOWED = new Set(["addons.demo_command"]);
+
+function wordingProblems(text: string): string[] {
+  const found: string[] = [];
+  for (const m of text.matchAll(/\S*\.ya?ml\b/g)) found.push(`names a settings file: ${m[0]}`);
+  for (const m of text.matchAll(/\b(?:env|keychain):|\bfile:\/|\bfile:~/g)) found.push(`names a secret reference: ${m[0]}`);
+  for (const m of text.matchAll(/\b(?:requires|provides)\.[a-z_]+|\bplugin_api\b/g)) found.push(`names a manifest field: ${m[0]}`);
+  const key = new RegExp(`(?<![\\w.-])(?:${SETTINGS_FILES.join("|")})(?:\\.[A-Za-z_][\\w-]*)+(?![\\w-])`, "g");
+  for (const m of text.matchAll(key)) found.push(`names a settings key: ${m[0]}`);
+  for (const m of text.matchAll(/\bcockpit ([a-z][a-z-]*)/g)) if (COMMANDS.includes(m[1])) found.push(`names a command: ${m[0]}`);
+  const other = new RegExp(`\\buv (?:run|sync|lock|pip|tool)\\b|\\bnpm [a-z]+|\\bgit (?:${VCS})\\b`, "g");
+  for (const m of text.matchAll(other)) found.push(`names a command: ${m[0]}`);
+  return found;
+}
+
+test("the wording check finds what it should and lets look-alikes through", () => {
+  expect(wordingProblems("see ai.yaml").length).toBeGreaterThan(0);
+  expect(wordingProblems("use env:NAME or file:/path")).toHaveLength(2);
+  expect(wordingProblems("raise ai.budgets.per_run_usd")).toHaveLength(1);
+  expect(wordingProblems("requires.secrets and plugin_api")).toHaveLength(2);
+  expect(wordingProblems("run `cockpit serve` or uv run pytest")).toHaveLength(2);
+  expect(wordingProblems("e.g. example.com, notes.md, version 1.2.3, and the end.")).toEqual([]);
+  expect(wordingProblems("the cockpit restarts; git history stays")).toEqual([]);
+});
+
+test("no entry names a settings file, a secret reference, a settings key, a manifest field or a command", () => {
+  const leaks = Object.entries(words).flatMap(([name, text]) =>
+    wordingProblems(text)
+      .filter((p) => !(COMMAND_ALLOWED.has(name) && p.startsWith("names a command")))
+      .map((p) => `${name}: ${p}`),
+  );
+  expect(leaks).toEqual([]);
+});

@@ -15,7 +15,7 @@ from typing import Any
 from engine.ai.router import Router
 from engine.config import Config
 from engine.dispatcher import needs_you, process
-from engine.storage import Store, WriteContext
+from engine.storage import Store, StoreError, WriteContext
 from engine.workspace import Workspace
 
 CODE_ROOTS = (Path(__file__).resolve().parent, Path(__file__).resolve().parents[1] / "api")
@@ -277,8 +277,16 @@ class Worker:
                 break
             try:
                 process(self.ws, self.store, self.cfg, self.router_factory(), queued[0].id)
-            except Exception as err:  # a failure in one request must not stop the worker
-                needs_you(self.store, queued[0].id, f"Something went wrong processing this: {err}")
+            except StoreError as err:  # a write refused with a plain reason
+                log.warning("Request %s couldn't be processed: %s", queued[0].id, err)
+                needs_you(self.store, queued[0].id, f"This couldn't be processed: {str(err).rstrip('.')}.")
+            except Exception:  # a failure in one request must not stop the worker
+                log.exception("Request %s failed", queued[0].id)
+                needs_you(
+                    self.store,
+                    queued[0].id,
+                    "Something went wrong processing this. Try again; if it keeps happening, report it.",
+                )
             done += 1
             self.events.changed()
         if not self._stop.is_set() and not self._changed_since_start():
@@ -332,7 +340,13 @@ class Worker:
                 outside.forget(self.cfg)
                 self.sync_problem = None
             except (OSError, ValueError) as err:
-                self.sync_problem = str(err)
+                log.warning("The synced folder couldn't be written: %s", err)
+                reason = err.strerror if isinstance(err, OSError) and err.strerror else None
+                self.sync_problem = (
+                    f"The synced folder couldn't be written ({reason})"
+                    if reason
+                    else ("The synced folder couldn't be written")
+                )
                 return False
             self._synced_at, wrote = head, True
         if wrote or time.monotonic() - self._beat >= self.HEARTBEAT_SECONDS:

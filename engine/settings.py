@@ -11,6 +11,7 @@ the moment of use apply at once; any other change waits for the person to choose
 from __future__ import annotations
 
 import hashlib
+import logging
 import shutil
 import subprocess
 import tempfile
@@ -24,9 +25,12 @@ import yaml
 from pydantic import BaseModel
 
 from engine.config import ConfigError, load_config
+from engine.config.loader import plain_label, refusal_text
 from engine.config.schema import FILES
 from engine.config.yaml_edit import get_key, has_key, remove_key, set_key
 from engine.storage import StoreError, WriteContext
+
+log = logging.getLogger(__name__)
 
 #: Keys shown first; the rest sit behind "More settings".
 BASIC = frozenset(
@@ -88,6 +92,15 @@ class Saved:
 
 
 PLUGIN_PREFIX = "plugins/"
+
+
+def screen_name(setting: Setting | None) -> str:
+    """What to call a setting in a message the screen shows: the first sentence of its description, without a
+    parenthetical, as the form labels it when the wording sheet has no shorter label."""
+    if setting is None:
+        return "that setting"
+    first = plain_label(setting.description)
+    return f"“{first}”" if first else "that setting"
 
 
 def fingerprint(config_dir: Path) -> str:
@@ -253,7 +266,8 @@ def save(
     try:
         cfg = load_config(config_dir, env=env)
     except ConfigError as err:
-        raise SettingsError(f"the settings files have a problem to fix first: {err}") from None
+        log.warning("A save found the settings files unreadable: %s", err)
+        raise SettingsError(f"the settings files have a problem to fix first: {err.plain}") from None
     if not changes and not reset:
         return Saved(fingerprint=fingerprint(config_dir))
     plugins = getattr(store, "plugins", None)
@@ -343,29 +357,36 @@ def _check_plugin(model: type[BaseModel], text: str) -> None:
         model.model_validate(yaml.safe_load(text) or {})
     except ValidationError as err:
         first = err.errors()[0]
-        raise SettingsError(f"{'.'.join(map(str, first['loc']))}: {first['msg']}") from None
+        log.warning("An add-on's settings were refused at %s: %s", ".".join(map(str, first["loc"])), first["msg"])
+        raise SettingsError(refusal_text(model, err)) from None
 
 
 def _check_key(
     key: str, shown: dict[str, Setting], cfg: Any, allow: tuple[str, ...], models: dict[str, Any] | None = None
 ) -> None:
     name = key.split(".", 1)[0]
-    if (name not in FILES and name not in (models or {})) or "." not in key:
-        raise SettingsError(f"there is no setting {key}")
-    if key.startswith(FILE_ONLY):
-        raise SettingsError(f"{key} is set in {name}.yaml or with a flag, not here")
     setting = shown.get(key)
+    if (name not in FILES and name not in (models or {})) or "." not in key:
+        log.warning("A save named a setting that doesn't exist: %s", key)
+        raise SettingsError("there is no such setting")
+    if key.startswith(FILE_ONLY):
+        log.warning("A save named a setting only the files or flags set: %s", key)
+        raise SettingsError(f"{screen_name(setting)} is set when the app starts, not here")
     if setting is None and not key.startswith(allow):
-        raise SettingsError(f"{key} isn't a setting the screens change")
+        log.warning("A save named a setting the screens don't change: %s", key)
+        raise SettingsError("that isn't a setting the screens change")
     if setting is not None and setting.locked:
-        raise SettingsError(f"{key} is set by {'an environment variable' if setting.source == 'env' else 'a flag'}")
+        raise SettingsError(
+            f"{screen_name(setting)} is set by {'an environment variable' if setting.source == 'env' else 'a flag'}"
+        )
     if setting is not None and not setting.editable and not key.startswith(allow):
-        raise SettingsError(f"{key} is changed in {name}.yaml")
+        raise SettingsError(f"{screen_name(setting)} is changed in the workspace's settings files, not here")
     if setting is None:
         for other, layer in cfg.sources.items():
             overlaps = other == key or other.startswith(key + ".") or key.startswith(other + ".")
             if layer in ("env", "flag") and overlaps:
-                raise SettingsError(f"{other} is set by {'an environment variable' if layer == 'env' else 'a flag'}")
+                log.warning("A save named a setting that %s sets: %s", layer, other)
+                raise SettingsError(f"that is set by {'an environment variable' if layer == 'env' else 'a flag'}")
 
 
 def _check_whole(config_dir: Path, texts: dict[str, str], env: dict[str, str] | None) -> Any:
@@ -378,7 +399,8 @@ def _check_whole(config_dir: Path, texts: dict[str, str], env: dict[str, str] | 
         try:
             return load_config(trial, env=env)
         except ConfigError as err:
-            raise SettingsError(str(err)) from None
+            log.warning("A save was refused: %s", err)
+            raise SettingsError(err.plain) from None
 
 
 def _commit(root: Path, paths: list[Path], keys: list[str]) -> None:

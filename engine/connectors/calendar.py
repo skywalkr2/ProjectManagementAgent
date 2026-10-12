@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 from pydantic import BaseModel, ConfigDict, Field
 
 from engine.connectors import ConnectorContext, ConnectorError, EventDetails, Poll, SourceItem
+from engine.secrets import SecretHint
 
 _ESCAPES = {"\\n": "\n", "\\N": "\n", "\\,": ",", "\\;": ";", "\\\\": "\\"}
 
@@ -22,8 +23,10 @@ class CalendarSettings(BaseModel):
 
     address: str = Field(
         min_length=1,
-        description="Where the calendar file is: a secret reference (env:NAME or file:/path) holding its private "
-        "address, since anyone with the address can read the calendar.",
+        description=SecretHint(
+            "Where the calendar file is: a secret reference (env:NAME or file:/path) holding its private "
+            "address, since anyone with the address can read the calendar."
+        ),
     )
     days_ahead: int = Field(30, ge=1, le=366, description="How far ahead events are read.")
     days_back: int = Field(1, ge=0, le=31, description="How far back events are read.")

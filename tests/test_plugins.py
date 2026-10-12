@@ -92,11 +92,11 @@ def test_invalid_manifests_are_refused(mutate):
 @pytest.mark.parametrize(
     "edits,reason",
     [
-        (lambda d: d.update(plugin_api=">=2"), "plugin API"),
+        (lambda d: d.update(plugin_api=">=2"), "another version of the add-on interface"),
         (lambda d: d.update(depends_on=[{"name": "missing", "version": ">=1"}]), "not enabled"),
         (lambda d: d["provides"].update(ops=[]), "does not match"),
         (lambda d: d.update(subscribes=[]), "handlers do not match"),
-        (lambda d: d["provides"].update(playbook="playbook"), "not available"),
+        (lambda d: d["provides"].update(playbook="playbook"), "doesn't provide yet"),
     ],
 )
 def test_load_refusals_are_atomic(tmp_path, edits, reason):
@@ -113,7 +113,7 @@ def test_load_refusals_are_atomic(tmp_path, edits, reason):
 def test_version_checked_before_import_and_disabled_plugins_never_import(tmp_path):
     make_plugin(tmp_path, edits=lambda d: d.update(plugin_api=">=2"), source="raise RuntimeError('imported')")
     store = Store(tmp_path / "db", cfg=config(tmp_path, ["scratch"]))
-    assert "plugin API" in store.plugins.status["scratch"].reason
+    assert "another version of the add-on interface" in store.plugins.status["scratch"].reason
     store.close()
     store = Store(tmp_path / "other", cfg=config(tmp_path, []))
     assert store.plugins.status == {}

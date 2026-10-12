@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { problemText } from "../lib/problem";
+import { asReference } from "../lib/secret-ref";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
@@ -141,7 +142,7 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
     const pasted = key.trim();
     if (!pasted) return;
     const done = await save(
-      (fingerprint) => api.changeAccount(account.name, props.local ? { fingerprint, key: pasted } : { fingerprint, key_ref: pasted }),
+      (fingerprint) => api.changeAccount(account.name, props.local ? { fingerprint, key: pasted } : { fingerprint, key_ref: asReference(pasted) }),
       t("ai_accounts.key_replaced", { name: account.name }),
     );
     if (done) {

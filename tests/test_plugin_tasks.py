@@ -445,7 +445,7 @@ def test_unknown_levels_on_an_account_are_refused_in_the_settings(env):
     from engine.config import ConfigError
 
     ws, _, _ = env
-    with pytest.raises(ConfigError, match="not in content_levels"):
+    with pytest.raises(ConfigError, match="takes content levels that aren't defined"):
         ws.config(env={}, flags={"ai.providers.stub.content_levels": ["nope"]})
 
 

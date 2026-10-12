@@ -12,6 +12,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from engine.secrets import SecretHint
+
 
 class ConfigModel(BaseModel):
     """Base for config models: unknown keys are errors, so a typo never silently does nothing."""
@@ -85,8 +87,10 @@ class CatalogSettings(ConfigModel):
     )
     release_tokens: dict[str, str] = Field(
         default_factory=dict,
-        description="Read tokens for hosts that keep private packs' release files, by host name, as references "
-        "(env:NAME or file:/path, never the token itself); sent only to that host when installing.",
+        description=SecretHint(
+            "Read tokens for hosts that keep private packs' release files, by host name, as references "
+            "(env:NAME or file:/path, never the token itself); sent only to that host when installing."
+        ),
     )
 
     @field_validator("release_tokens")
@@ -94,7 +98,7 @@ class CatalogSettings(ConfigModel):
     def _references(cls, value: dict[str, str]) -> dict[str, str]:
         for host, ref in value.items():
             if not str(ref).startswith(("env:", "file:")):
-                raise ValueError(f"{host}: a read token is given as env:NAME or file:/path, never the token itself")
+                raise ValueError(f"{host}: a read token is a reference to where it is kept, never the token itself")
         return value
 
     @field_validator("feeds")
@@ -113,16 +117,17 @@ class PluginSettings(ConfigModel):
     )
     tools: ToolSettings = Field(
         default_factory=ToolSettings,
-        description="Limits on the outside programs plugins run (where they are found is"
-        " set per computer in .cockpit/tools.yaml).",
+        description="Limits on the outside programs plugins run (where they are found is set per computer, not here).",
     )
     jobs: dict[str, JobSettings] = Field(
         default_factory=dict, description="Plugins' scheduled work, by job name: on or off, and how often."
     )
     secrets: dict[str, dict[str, str]] = Field(
         default_factory=dict,
-        description="Each plugin's secrets, by plugin then secret name, as references (env:NAME or file:/path), "
-        "never the secret itself.",
+        description=SecretHint(
+            "Each plugin's secrets, by plugin then secret name, as references (env:NAME or file:/path), "
+            "never the secret itself."
+        ),
     )
     failures_before_off: int = Field(
         3,
@@ -189,7 +194,9 @@ class ServerFile(FileModel):
 class ExportSettings(ConfigModel):
     every_minutes: int = Field(60, ge=1, description="How often the readable export in data/ is written.")
     commit: bool = Field(True, description="Commit the export and config to the workspace's git repository.")
-    remote: str | None = Field(None, description="A private git remote to push the export to, for an off-site copy.")
+    remote: str | None = Field(
+        None, description="A private repository address to push the export to, for an off-site copy."
+    )
 
 
 class BackupTarget(ConfigModel):
@@ -352,7 +359,9 @@ class ProviderSettings(ConfigModel):
         None, description="The kind of account from the app's list it was made from (its id), for showing its name."
     )
     base_url: str | None = Field(None, description="The API address, for adapters that need one.")
-    auth: str | None = Field(None, description="A secret reference (env:NAME or file:/path), never the secret itself.")
+    auth: str | None = Field(
+        None, description=SecretHint("A secret reference (env:NAME or file:/path), never the secret itself.")
+    )
     models: dict[str, str] = Field(default_factory=dict, description="Short names for this account's models.")
 
     @field_validator("models", mode="before")
@@ -371,7 +380,7 @@ class ProviderSettings(ConfigModel):
     )
     content_levels: list[str] | None = Field(
         None,
-        description="The content levels this account takes (from ai.content_levels); unset means it takes every level.",
+        description="The content levels this account takes (those defined for AI); unset means it takes every level.",
     )
     timeout_seconds: int = Field(90, ge=5, description="How long to wait for an answer.")
     json_mode: bool = Field(True, description="Ask the provider for JSON output when it supports that.")
@@ -400,7 +409,7 @@ class TaskSettings(ConfigModel):
     same_account: bool | None = Field(
         None,
         description="For a check: accept a run on an account that wrote the work, as a fresh run that sees only its "
-        "packet, when no other account can take it. Unset follows roles.check.same_account.",
+        "packet, when no other account can take it. Unset follows the same choice for checks in general.",
     )
 
 
@@ -543,24 +552,24 @@ class AiFile(FileModel):
         for name, provider in self.providers.items():
             unknown = sorted(set(provider.content_levels or []) - set(self.content_levels))
             if unknown:
-                problems.append(f"providers.{name}.content_levels names {', '.join(unknown)}, not in content_levels")
+                problems.append(f"the account {name!r} takes content levels that aren't defined: {', '.join(unknown)}")
         for name, tier in self.tiers.items():
             for ref in ([tier.use] if tier.use else []) + tier.fallback:
                 provider = ref.partition("/")[0]
                 if provider not in self.providers:
-                    problems.append(f"tiers.{name} names {ref!r}, but there is no account {provider!r} in providers")
+                    problems.append(f"the {name!r} tier names {ref!r}, but there is no account {provider!r}")
             if tier.escalate_to and tier.escalate_to not in self.tiers:
-                problems.append(f"tiers.{name}.escalate_to names {tier.escalate_to!r}, which isn't a tier")
+                problems.append(f"the {name!r} tier escalates to {tier.escalate_to!r}, which isn't a tier")
         for index, rule in enumerate(self.routing):
             if rule.tier not in self.tiers:
-                problems.append(f"routing[{index}] names the tier {rule.tier!r}, which isn't a tier")
+                problems.append(f"routing rule {index + 1} names the tier {rule.tier!r}, which isn't a tier")
         for kind, task in self.tasks.items():
             if task.tier not in self.tiers:
-                problems.append(f"tasks.{kind}.tier names {task.tier!r}, which isn't a tier")
+                problems.append(f"the kind of work {kind!r} names the tier {task.tier!r}, which isn't a tier")
         for role in Roles.model_fields:
             tier = getattr(self.roles, role).tier
             if tier is not None and tier not in self.tiers:
-                problems.append(f"roles.{role}.tier names {tier!r}, which isn't a tier")
+                problems.append(f"the {role!r} role names the tier {tier!r}, which isn't a tier")
         if problems:
             raise ValueError("; ".join(problems))
         return self
@@ -718,7 +727,7 @@ class BrandSettings(ConfigModel):
 class UiFile(FileModel):
     wording: dict[str, str] = Field(
         default_factory=dict,
-        description="Overrides for the UI's wording sheet, by key (see web/src/wording/en.json for the keys).",
+        description="Overrides for the UI's wording sheet, by key (by key, from the screens' wording sheet).",
     )
     shortcuts: dict[str, str] = Field(
         default_factory=lambda: dict(DEFAULT_SHORTCUTS),

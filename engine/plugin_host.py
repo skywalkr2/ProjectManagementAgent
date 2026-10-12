@@ -752,7 +752,7 @@ class PluginHost:
             from engine.plugin_api import PluginMisuse
 
             if name not in declared:
-                raise PluginMisuse(f"{name} isn't a secret this plugin declares in requires.secrets")
+                raise PluginMisuse(f"{name} isn't one of the secrets this add-on says it needs")
             return self.plugin_secret(plugin, name, workspace_root)
 
         own_sign_ins = set(self.registrars[plugin].sign_ins) if plugin in self.registrars else set()
@@ -778,7 +778,7 @@ class PluginHost:
             from engine.plugin_api import PluginMisuse
 
             if name not in declared:
-                raise PluginMisuse(f"{name} isn't a secret this plugin declares in requires.secrets")
+                raise PluginMisuse(f"{name} isn't one of the secrets this add-on says it needs")
             keys.mkdir(parents=True, exist_ok=True)
             os.chmod(keys, 0o700)
             target = keys / name
@@ -1105,15 +1105,19 @@ class PluginHost:
             self.manifests[name] = manifest
             self.status[name] = PluginStatus(name, "loading", manifest.version, notes=list(self.notes.get(name, [])))
             if Version(PLUGIN_API_VERSION) not in SpecifierSet(manifest.plugin_api):
-                raise ValueError(f"plugin API {PLUGIN_API_VERSION} is outside {manifest.plugin_api}")
-            if manifest.provides.data and not (path.parent / manifest.provides.data).is_dir():
                 raise ValueError(
-                    f"provides.data names {manifest.provides.data}, which isn't a folder beside plugin.yaml"
+                    f"this add-on was made for another version of the add-on interface (it asks for "
+                    f"{manifest.plugin_api}; this app has {PLUGIN_API_VERSION})"
                 )
+            if manifest.provides.data and not (path.parent / manifest.provides.data).is_dir():
+                raise ValueError(f"the data folder {manifest.provides.data} that this add-on ships is missing")
             for key in NOT_YET:
                 section, _, attribute = key.partition(".")
                 if getattr(getattr(manifest, section), attribute):
-                    raise ValueError(f"{key} is not available in plugin API {PLUGIN_API_VERSION} yet")
+                    log.warning(
+                        "Add-on %s uses %s, which version %s doesn't provide yet", name, key, PLUGIN_API_VERSION
+                    )
+                    raise ValueError("this add-on uses something this version of the app doesn't provide yet")
             self._check_tools(name, manifest)
             used = {u.interface.split("@")[0] for u in manifest.interfaces.uses}
             for event in manifest.events():
@@ -1130,7 +1134,7 @@ class PluginHost:
             symbols = self._importer(path.parent, manifest.entry.split(":")[0].split(".")[0])
             schema = symbols(manifest.config_schema)
             if not isinstance(schema, type) or not issubclass(schema, Settings):
-                raise ValueError("config schema must derive from plugin_api.Settings")
+                raise ValueError("this add-on's settings aren't built the way the app requires")
             for key, info in schema.model_fields.items():
                 if info.is_required() or not info.description:
                     raise ValueError(f"config key {key} needs a default and description")
@@ -1167,7 +1171,7 @@ class PluginHost:
             kept = [t for t in kind.accept if t in accepted]
             notes.append(
                 f"file kind {kind.name}: {', '.join(dropped)} isn't accepted in this workspace "
-                f"(storage.files.accepted_types), so it accepts {', '.join(kept) if kept else 'no files at all'}"
+                f"(see Settings, Files), so it accepts {', '.join(kept) if kept else 'no files at all'}"
             )
         return notes
 
@@ -1188,7 +1192,7 @@ class PluginHost:
 
         names = [tool.name for tool in manifest.requires.tools]
         if len(names) != len(set(names)):
-            raise ValueError("declare each tool once in requires.tools")
+            raise ValueError("this add-on lists the same program more than once")
         for tool in manifest.requires.tools:
             words = shlex.split(tool.probe)
             if not words or words[0] != tool.name:
@@ -1246,7 +1250,7 @@ class PluginHost:
             for name in [m for m in sys.modules if any(m == n or m.startswith(n + ".") for n in loader._modules)]:
                 sys.modules.pop(name, None)
         if not isinstance(schema, type) or not issubclass(schema, Settings):
-            raise ValueError("config schema must derive from plugin_api.Settings")
+            raise ValueError("this add-on's settings aren't built the way the app requires")
         return schema
 
     def _importer(self, root: Path, top: str):
@@ -1335,7 +1339,7 @@ class PluginHost:
             check_addresses(sign_in, list(manifest.requires.network))
             for secret in (sign_in.client_id, sign_in.client_secret):
                 if secret is not None and secret not in manifest.requires.secrets:
-                    raise ValueError(f"sign-in {sign_in.name} reads {secret}, which requires.secrets doesn't list")
+                    raise ValueError(f"sign-in {sign_in.name} reads {secret}, which the add-on doesn't say it needs")
             for source in sign_in.sources:
                 connector = registrar.connectors.get(source["connector"])
                 if connector is None:
@@ -1390,7 +1394,7 @@ class PluginHost:
                 raise ValueError("data_level must be open, internal or restricted")
             if model.data_level not in manifest.requires.data_levels:
                 raise ValueError(
-                    f"{model.record_kind} has data_level {model.data_level}, which requires.data_levels doesn't list"
+                    f"{model.record_kind} holds {model.data_level} material, which the add-on doesn't say it keeps"
                 )
             for field, target in ref_fields(model):
                 if target not in REGISTRY and target not in registrar.records:
