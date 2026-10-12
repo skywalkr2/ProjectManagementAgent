@@ -164,6 +164,8 @@ It is sorted in this order, first match wins:
    - a sender in the person's own contacts who isn't one of the workspace's people.
 
    These are new core matchers, `bulk-mail`, `service-category` and `personal-contact`, deterministic like the others.
+   This default sorting is built in for every workspace (`watch.set_aside_defaults`, on). The person sets nothing up,
+   either in their mail service or in this app.
 3. **The assistant's sorting**, for mail the rules can't place (`watch.sorting: ai`, on by default, chosen in the
    walkthrough's Mail step):
    - a small low-cost run sees **only the sender, the subject line and the service's category**, never the body;
