@@ -505,6 +505,18 @@ time, nothing went out without approval, a backup succeeded, and the repeat-corr
 
 - [ ] The acceptance scenario run by the owner on real material.
 - [ ] A week of real use; friction recorded in `ux-notes.md` and fixed in order of cost.
+- [ ] **Microsoft mail and calendar set up as well as Google, before 1.0** (owner, 2026-10-12). The owner's exit test
+  signs in to Google; a Microsoft account must work just as smoothly through the new-start walkthrough before 1.0:
+  - personal and work or school accounts;
+  - an organization that requires an administrator's approval, with the screen saying exactly that and what to ask
+    the administrator for;
+  - the service's setup checklist in the add-on's help (the app registration, its permissions, the redirect address);
+  - "the service isn't set up" errors mapped to plain words;
+  - a live check on a real account;
+  - a journey test like J2 against a fake service that answers the way Microsoft's sign-in does, including the
+    approval-required refusal.
+
+  The core's part is the walkthrough and the sign-in flow. The add-on's builder is told in the weekly batch.
 - [ ] Learning on real material (6.22): voice per recipient beyond the first style notes, and a fact's freshness checked
   before an outward draft, with disagreements between sources recorded as private
   discrepancies to ask about.
