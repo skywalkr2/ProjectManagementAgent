@@ -69,6 +69,58 @@ def check_workspace_fixture(ws_root: Path, *, plugins: bool = True) -> list[Find
     return findings
 
 
+def check_fresh_workspace() -> list[Finding]:
+    """A workspace made with no template shows no problem: its settings load, the AI setup is simply not set up, no
+    source or data file is in trouble, no setup step is stuck, and the kinds of source offered can be listed."""
+    from engine import data_forms, setup, watch
+    from engine.ai.smoke import ai_state
+    from engine.settings import SettingsError, describe
+    from engine.workspace import init_workspace
+
+    findings: list[Finding] = []
+
+    def found(message: str) -> None:
+        findings.append(Finding("fresh", "engine/workspace.py", 0, f"a fresh workspace: {message}"))
+
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            ws = init_workspace(Path(tmp) / "fresh", git=False)
+            cfg = ws.config(env={})
+            store = Store(ws.db_path, cfg=cfg)
+        except (ConfigError, StoreError, OSError) as err:
+            return [Finding("fresh", "engine/workspace.py", 0, f"a workspace with no template can't be made: {err}")]
+        try:
+            try:
+                describe(cfg, store.plugins, ws.config_dir)
+            except (ConfigError, SettingsError) as err:
+                found(f"the settings don't load: {err}")
+            state, detail = ai_state(ws, cfg, store)
+            if state != "not_set_up":
+                found(f'the AI setup reads "{state}" ({detail or "no detail"}), not "not_set_up"')
+            for source in cfg.watch.sources:
+                last = watch.last_run(store, source.id)
+                if last is not None and last.data["outcome"] == "failed":
+                    found(f"the source {source.id} shows a problem")
+            for plugin, registrar in sorted(store.plugins.registrars.items()):
+                if not store.plugins.active(plugin):
+                    continue
+                for form in registrar.data_forms.values():
+                    for entry in data_forms.files(store.plugins, form.name):
+                        if entry["problem"]:
+                            found(f"the data file {entry['file']} of {form.name} shows a problem: {entry['problem']}")
+            steps = setup.steps(ws, cfg, store)
+            if {step.id for step in steps} < set(setup.CORE_STEPS):
+                found("a setup step is missing")
+            for step in steps:
+                if step.skipped:
+                    found(f"the setup step {step.id} starts out skipped")
+            if not watch.connectors(store):
+                found("no kind of source is offered")
+        finally:
+            store.close()
+    return findings
+
+
 def _check_references(store: Store, name: str) -> list[Finding]:
     view = store.read()
     kinds = set(REFERENCES) | {target for refs in REFERENCES.values() for _, target in refs}
@@ -100,6 +152,7 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
     ]
     checks += [(f"workspace {ws.name}", lambda ws=ws: check_workspace_fixture(ws)) for ws in FIXTURES]
     checks += [(f"core alone {ws.name}", lambda ws=ws: check_workspace_fixture(ws, plugins=False)) for ws in FIXTURES]
+    checks.append(("fresh workspace", check_fresh_workspace))
     checks.append(("bundled manifests", check_manifests))
     checks.append(("api schema", check_api_schema))
     checks.append(("plugin guide", check_plugin_guide))

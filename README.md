@@ -34,42 +34,44 @@ Needs Python 3.12 or newer with [uv](https://docs.astral.sh/uv/), and Node 22.12
 
 ```
 uv sync
-npm --prefix web ci && npm --prefix web run build            # the web UI
-uv run cockpit init ~/cockpit-try --from workspaces/demo-b  # a fictional imprint
-uv run cockpit serve --workspace ~/cockpit-try              # prints a link to open
+npm --prefix web ci && npm --prefix web run build   # the web UI
+uv run cockpit init ~/cockpit                       # your own workspace, empty
+uv run cockpit serve -w ~/cockpit                   # prints a link to open
 ```
 
-Keep the workspace in your home folder: the system's temporary folders (`/tmp`) are emptied when the computer restarts, and
-the AI setup would go with them. After a `git pull`, rebuild the web screens (`npm --prefix web run build`); the server shows
-whatever was last built, and `cockpit serve` says when that is out of date.
+The workspace starts empty. The first screen walks you through setup: you add your AI account (with a test), a backup
+folder and your sign-ins on the screen, and you never edit a file. Add `--you "Your Name" --name "My Work"` to `init`
+to name yourself and the workspace up front.
 
-The fictional workspace uses a stand-in AI that files whatever you hand in as a note. To use a real account, add it to the
-workspace's `config/ai.yaml` with its key as a reference (`auth: env:MY_AI_KEY`, never the key itself) and point the
-`routine` and `deep` tiers at it. Then check every tier with one small live call each:
+Keep the workspace in your home folder: the system's temporary folders (`/tmp`) are emptied when the computer restarts,
+and the setup would go with them. `cockpit serve` says when the web screens are out of date.
+
+To update a checkout, run `uv run cockpit update`. It pulls the newest version, brings the Python environment up to date
+without removing add-ons you installed from the screen, rebuilds the web screens, and says whether the running app
+shows Restart now. It stops if you have changes of your own in the checkout. To make a new workspace from one of your
+backups, run `uv run cockpit restore --backup <the dated backup folder> <a new folder>`; it never changes the backup.
+
+### Trying an add-on on made-up data
+
+`uv run cockpit demo` makes a sandbox workspace of made-up data and serves it, for trying an add-on
+(`cockpit demo --plugin <its folder>`). The two fictional workspaces in `workspaces/` are test fixtures and that
+sandbox, never a place to start real work.
+
+### Choosing a model
+
+Before relying on a model, score it on the fictional cases. This costs real money on your own account, so it is a
+deliberate step, not part of the start:
 
 ```
-MY_AI_KEY=... uv run cockpit ai test --workspace ~/cockpit-try
+uv run cockpit evaluate -w ~/cockpit --from workspaces/demo-b --runs 3
 ```
 
-Before relying on a model, score it on the fictional cases (a workspace made with `--from` has a copy of them in `evals/`):
+`--from workspaces/demo-b` supplies the cases; `-w` supplies your workspace's AI account. Add
+`--account <provider>/<model>` to score another account.
 
-```
-MY_AI_KEY=... uv run cockpit evaluate -w ~/cockpit-try --runs 3
-```
+### Checks
 
-Add `--account <provider>/<model>` to score another account, or `--from workspaces/demo-b` for a workspace without
-`evals/`.
-
-Your own workspace lives outside this repository (keep it on local disk, not in a synced folder):
-
-```
-uv run cockpit init ~/cockpit/my-press --you "Your Name" --name "My Press" --assistant "Quill"
-```
-
-Then copy the AI account setup into its `config/ai.yaml`, run `cockpit ai test`, start it with `cockpit serve`, and add
-your people and projects under **People & projects**.
-
-Checks, run before finishing any change:
+Run before finishing any change:
 
 ```
 uv run ruff check . && uv run pytest && uv run python -m engine.selfcheck
@@ -85,7 +87,7 @@ npm --prefix web test && npm --prefix web run build && npm --prefix web run e2e
   run `uv run python -m engine.cli ...` from the repository folder instead of `uv run cockpit ...`.
 - **"The AI account refused the key"**: the message gives the account's own reason in parentheses. Check the key with the
   provider, then run `cockpit ai test`; it says which environment variable or file the key was read from (never the key).
-- **The screens look old after `git pull`**: run `npm --prefix web run build`.
+- **The screens look old after `git pull`**: run `uv run cockpit update`, or `npm --prefix web run build`.
 
 ## License
 

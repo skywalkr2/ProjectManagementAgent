@@ -5,11 +5,12 @@ from __future__ import annotations
 import argparse
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import threading
 import webbrowser
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
@@ -80,7 +81,13 @@ def _parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("init", help="create a workspace")
     sp.add_argument("path", type=Path)
-    sp.add_argument("--from", dest="template", type=Path, help="copy config and data from this workspace (a fixture)")
+    sp.add_argument(
+        "--from",
+        dest="template",
+        type=Path,
+        help="copy config and data from this workspace. The fictional workspaces are for trying things and for "
+        "tests, not for a real start; leave this out to begin with an empty workspace",
+    )
     sp.add_argument("--no-git", action="store_true", help="don't make the workspace a git repository")
     sp.add_argument("--you", help="your full name: you become the first person and the workspace's user")
     sp.add_argument("--name", help="the workspace's display name")
@@ -98,7 +105,11 @@ def _parser() -> argparse.ArgumentParser:
     _open_args(sp)
     sp.set_defaults(func=cmd_serve)
 
-    sp = sub.add_parser("demo", help="try the app on a demo workspace of made-up data")
+    sp = sub.add_parser(
+        "demo",
+        help="try an add-on on a demo workspace of made-up data (the fictional workspaces are for trying things and "
+        "for tests, not for real work)",
+    )
     sp.add_argument(
         "folder",
         type=Path,
@@ -117,6 +128,14 @@ def _parser() -> argparse.ArgumentParser:
     )
     _open_args(sp, default=True)
     sp.set_defaults(func=cmd_demo, host=None, port=None, base_path=None)
+
+    sp = sub.add_parser("update", help="bring this source checkout up to date and rebuild the screens")
+    sp.set_defaults(func=cmd_update)
+
+    sp = sub.add_parser("restore", help="make a new workspace from one dated backup folder")
+    sp.add_argument("--backup", type=Path, required=True, help="the dated backup folder (it holds cockpit.db)")
+    sp.add_argument("path", type=Path, help="the new workspace folder; it must not hold any files")
+    sp.set_defaults(func=cmd_restore)
 
     sp = sub.add_parser("export", help="write the readable export to data/ and commit it")
     ws_arg(sp)
@@ -303,6 +322,105 @@ def cmd_init(args: argparse.Namespace) -> int:
     print(f"Workspace ready at {ws.root}")
     print(f"Start it with: cockpit serve --workspace {ws.root}")
     return 0
+
+
+def cmd_restore(args: argparse.Namespace) -> int:
+    from engine.backup import RestoreError, restore_backup
+
+    try:
+        restored = restore_backup(args.backup, args.path)
+    except RestoreError as err:
+        print(f"cockpit: {err}", file=sys.stderr)
+        return 1
+    root = restored.workspace.root
+    print(f"Restored {restored.records} records ({restored.ledger} changes in the log) into {root}")
+    print("The backup was not changed.")
+    if notice := temp_folder_notice(root, system_temp_roots()):
+        print(notice, file=sys.stderr)
+    print(f"Start it with: cockpit serve -w {root}")
+    return 0
+
+
+#: Runs one command in a folder and returns its exit code and, when asked to capture, what it printed. Updating takes
+#: one, so a test can stand in for the real thing.
+Runner = Callable[[list[str], Path, bool], tuple[int, str]]
+
+INSTALL_STEP = (
+    "This copy of PM Cockpit isn't a source checkout, so `cockpit update` can't update it. To update an installed "
+    "copy, run the install step again with the newer package file (docs/install.md):\n"
+    "  sh install.sh pm_cockpit-<version>-py3-none-any.whl                                  # macOS, Linux\n"
+    "  powershell -ExecutionPolicy Bypass -File install.ps1 pm_cockpit-<version>-py3-none-any.whl   # Windows\n"
+    "Your workspaces are separate folders and aren't touched."
+)
+LOCAL_CHANGES = (
+    "This copy has changes of its own, so it was not updated. Save or set aside your changes, then run "
+    "`cockpit update` again."
+)
+NO_NODE = (
+    "The screens were not rebuilt: Node (npm) isn't installed. Install Node 22.12 or newer and run `cockpit update` "
+    "again to rebuild them."
+)
+RESTART_NOTE = "If the app is running, it shows Restart now."
+
+
+def run_command(command: list[str], cwd: Path, capture: bool) -> tuple[int, str]:
+    """Run a command in a folder. Its output shows as it comes, unless it is captured and returned. A program that
+    can't be started gives exit code 127."""
+    try:
+        done = subprocess.run(command, cwd=cwd, capture_output=capture, text=True, check=False)  # noqa: S603
+    except OSError as err:
+        print(f"cockpit: couldn't start {command[0]} ({err}).", file=sys.stderr)
+        return 127, ""
+    return done.returncode, (done.stdout or "") if capture else ""
+
+
+def update_checkout(
+    root: Path,
+    run: Runner = run_command,
+    which: Callable[[str], str | None] = shutil.which,
+    say: Callable[[str], None] = print,
+) -> int:
+    """Bring a source checkout up to date: a fast-forward pull, the Python environment (keeping add-ons installed from
+    the screen), then the web tools and the screens' build. Refuses when the checkout has changes of its own, stops at
+    the first failing step, and says what changed and that a running app offers a restart."""
+    if not (root / ".git").exists():
+        say(INSTALL_STEP)
+        return 1
+    code, changes = run(["git", "status", "--porcelain"], root, True)
+    if code != 0:
+        say(f"cockpit: couldn't read the state of {root} (exit code {code}).")
+        return 1
+    if changes.strip():
+        say(f"cockpit: {LOCAL_CHANGES}")
+        return 1
+    _, before = run(["git", "rev-parse", "--short", "HEAD"], root, True)
+    steps: list[tuple[str, list[str]]] = [
+        ("Getting the latest version", ["git", "pull", "--ff-only"]),
+        ("Updating the Python environment", ["uv", "sync", "--inexact"]),
+    ]
+    npm = which("npm") if (root / "web").is_dir() else None
+    if (root / "web").is_dir() and npm:
+        steps += [
+            ("Installing the web tools", [npm, "--prefix", "web", "install"]),
+            ("Building the screens", [npm, "--prefix", "web", "run", "build"]),
+        ]
+    for number, (name, command) in enumerate(steps, start=1):
+        say(f"[{number}/{len(steps)}] {name} ({' '.join(command)})")
+        code, _ = run(command, root, False)
+        if code != 0:
+            say(f'cockpit: the step "{name}" failed (exit code {code}). Nothing after it was run.')
+            return 1
+    if (root / "web").is_dir() and not npm:
+        say(NO_NODE)
+    _, after = run(["git", "rev-parse", "--short", "HEAD"], root, True)
+    before, after = before.strip(), after.strip()
+    say("Already up to date." if before == after else f"Updated from {before} to {after}.")
+    say(RESTART_NOTE)
+    return 0
+
+
+def cmd_update(args: argparse.Namespace) -> int:
+    return update_checkout(repo_root(), run_command, shutil.which)
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
