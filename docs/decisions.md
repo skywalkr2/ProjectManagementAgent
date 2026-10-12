@@ -3,6 +3,20 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Signing in is the whole setup for mail and calendar
+
+**Decided by:** project owner ("it needs to just set up properly; the user shouldn't have to jump through hoops").
+
+**What:** A sign-in starts the sources its add-on declares (the inbox, the main calendar) as soon as the person signs
+in, once, and only where nothing reads with that connector yet. An add-on's mail source with nothing chosen reads the
+inbox. The person narrows what is read later; their changes and removals stand.
+
+**Why:** After signing in, nothing showed up: the mail source waited for a label to be chosen and no calendar source
+existed.
+
+**Impact:** Plugin API 0.3.54 (`sign_in(..., sources=...)`); the mail and calendar add-ons declare their defaults and
+read the inbox when nothing is chosen. Sign-ins made earlier get their sources at the next start.
+
 ## 2026-10-11: The UI redesign: a full-width shell, Today as a ranked queue with a detail pane and a context rail
 
 **Decided by:** project owner (handed over the UI/UX review in `reviews/ui-ux-2026-10/` to be carried out in full).
