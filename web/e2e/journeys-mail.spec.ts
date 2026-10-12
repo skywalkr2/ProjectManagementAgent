@@ -75,6 +75,10 @@ test.describe.serial("journey: mail", () => {
     await expect(row).toContainText("Reads your mail and calendar");
     await expect(main.getByText(/Restart to connect/)).toHaveCount(0);
     await expect(main.locator("[data-reading]")).toHaveCount(0);
+    // The step says, in one line, that social updates, promotions and mailing lists are set aside by themselves.
+    await expect(
+      main.getByText("Social updates, promotions and mailing lists are set aside; you can turn this off."),
+    ).toBeVisible();
     await visit(page);
     const before = await requests();
     expect(before.work).toBe(0);
@@ -99,10 +103,13 @@ test.describe.serial("journey: mail", () => {
     await expect(reading.getByText(/waits for your first Go/)).toBeVisible();
     await expect(page.locator('[data-screen="mail"][data-state]')).toContainText("Done");
     await visit(page);
-    const { mail, events, noted } = seen.recent_items;
+    // The mailbox also holds a social update (the service's own category) and a sales mail (a bulk flag), both from the
+    // last day: neither is work, so neither is counted in what the assistant is handed.
+    const { mail, events, noted, set_aside: aside } = seen.recent_items;
     const handedIn = mail.length + events.length;
     expect(handedIn).toBeGreaterThan(0);
     expect(noted.length).toBeGreaterThan(0);
+    expect(aside).toHaveLength(2);
 
     // Backups and People are left for later, and Done names what was skipped.
     await main.getByRole("button", { name: "Next" }).click();
@@ -128,6 +135,9 @@ test.describe.serial("journey: mail", () => {
     // Today lists the recent mail on Came in and today's meetings on the agenda; what is older or further off is not.
     for (const title of mail) await expect(came.getByText(title, { exact: true })).toBeVisible();
     for (const title of events) await expect(agenda.getByText(title, { exact: true })).toBeVisible();
+    // Came in shows only the work mail, and says how many were set aside.
+    for (const title of aside) await expect(came.getByText(title, { exact: true })).toHaveCount(0);
+    await expect(came.getByRole("button", { name: "2 set aside" })).toBeVisible();
     for (const title of noted) await expect(page.getByRole("main").getByText(title, { exact: true })).toHaveCount(0);
     seen = await service();
     expect(seen).toMatchObject({ mail_reads: 1, calendar_reads: 1, unauthorized: 0 });
@@ -158,6 +168,7 @@ test.describe.serial("journey: mail", () => {
       expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
     }
     for (const title of noted) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(0);
+    for (const title of aside) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(0);
 
     // The assistant's results are on Today for review, one for each item, under the group that says they arrived.
     const changes = page.getByRole("region", { name: "What changed" });
@@ -177,6 +188,50 @@ test.describe.serial("journey: mail", () => {
     await visit(page);
     await expect(page.getByText(/stopped, see why below/)).toHaveCount(0);
     expect((await requests()).work).toBe(handedIn);
+
+    // The Set aside folder lists both messages, each with why it was set aside.
+    const social = aside.find((t) => /neighbors/i.test(t)) ?? "";
+    const sales = aside.find((t) => /sale/i.test(t)) ?? "";
+    await came.getByRole("button", { name: "2 set aside" }).click();
+    const folder = page.locator("#set-aside");
+    await expect(folder.getByRole("heading", { level: 3, name: "Set aside" })).toBeVisible();
+    const socialRow = folder.locator("li.line", { hasText: social });
+    const salesRow = folder.locator("li.line", { hasText: sales });
+    await expect(socialRow).toContainText("Set aside because: your mail service files it under social");
+    await expect(salesRow).toContainText("Set aside because: it was sent to many people");
+    await visit(page);
+
+    // This is work on the sales mail hands it in: it gets its own request, and nothing else is asked.
+    await salesRow.getByRole("button", { name: `This is work: ${sales}` }).click();
+    await expect(page.getByText(`Handed in ${sales}.`)).toBeVisible();
+    await expect(folder.locator("li.line", { hasText: sales })).toHaveCount(0);
+    await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn + 1);
+    const handed = await requests();
+    expect(handed.inputs.filter((input) => input.includes(sales))).toHaveLength(1);
+    expect(handed.inputs.filter((input) => input.includes(social))).toHaveLength(0);
+
+    // Confirming the social update teaches the sorting about its sender and takes it out of the folder.
+    await socialRow.getByRole("button", { name: `More actions for ${social}` }).click();
+    await page.getByRole("menuitem", { name: "Confirm" }).click();
+    await expect(
+      page.getByText("From now on, mail from updates@network.example.com is set aside as sales mail."),
+    ).toBeVisible();
+    await expect(folder.locator("li.line", { hasText: social })).toHaveCount(0);
+    await visit(page);
+
+    // The next read brings a new message from that sender, saying nothing about itself: it is set aside by the new
+    // sorting, with no request for the assistant.
+    const later = await (await fetch(`${FAKE}/__e2e/mail-later`, { method: "POST" })).json();
+    await openView(page, "Today");
+    const cameIn = page.getByRole("region", { name: "Came in" });
+    await cameIn.getByRole("button", { name: "Check now" }).click();
+    await expect(cameIn.getByRole("button", { name: "1 set aside" })).toBeVisible({ timeout: 30_000 });
+    await expect(cameIn.getByText(later.subject)).toHaveCount(0);
+    await openView(page, "Sources");
+    await expect(page.locator("#set-aside").locator("li.line", { hasText: later.subject })).toContainText(
+      `Set aside because: it is from ${later.sender}`,
+    );
+    expect((await requests()).work).toBe(handedIn + 1);
     expect(await service()).toMatchObject({ unauthorized: 0, refused: 0 });
   });
 });

@@ -5,8 +5,19 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from api.schemas import AutoClosedView, Created, ReadVersion, WatchRunView, WatchSourceView
-from engine import watch
+from api.schemas import (
+    AutoClosedView,
+    Created,
+    ReadVersion,
+    SetAsideDone,
+    SetAsideFolder,
+    SetAsideIn,
+    SetAsideView,
+    UnconfirmIn,
+    WatchRunView,
+    WatchSourceView,
+)
+from engine import set_aside, watch
 from engine.config import Config
 from engine.connectors import declared_reads, reads
 from engine.storage import Store, StoreError, WriteContext
@@ -128,8 +139,113 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=409, detail=str(err)) from None
         rule = current.data["auto_closed"]["rule"]
         signal(store, "pulled_back", [request_id], f"Closed by {rule}: {current.data['auto_closed']['reason']}")
+        _show_again(request_id)
         events.changed()
         worker.poke()
         return Created(id=request_id)
+
+    def _show_again(request_id: str) -> None:
+        """A mail item handed in after all shows in Today's list of what came in again."""
+        with store.transaction() as tx:
+            request = tx.get("request", request_id)
+            source = tx.get("source", request.data["source"]) if request and request.data.get("source") else None
+            watched = (source.data.get("watched") if source else None) or {}
+            for snap in tx.find("snapshot", {"source": watched.get("source", ""), "key": watched.get("key", "")}):
+                if snap.data.get("closed_by"):
+                    tx.update(
+                        "snapshot",
+                        snap.id,
+                        {"closed_by": None},
+                        WriteContext("pm", "trusted", "triage.closer_look"),
+                        read_version=snap.version,
+                    )
+
+    # ---- mail set aside as not work ---------------------------------------------------------------------------
+
+    def folder_view() -> SetAsideFolder:
+        set_aside.purge_due(ws, store, cfg)
+        return SetAsideFolder(
+            items=[SetAsideView(**row) for row in set_aside.folder(ws, store, cfg)],
+            deleted=set_aside.deleted_count(store),
+        )
+
+    @r.get("/set-aside")
+    def set_aside_folder() -> SetAsideFolder:
+        """The Set aside folder: mail kept away from the assistant, in two sections, newest first."""
+        return folder_view()
+
+    def mail_snapshot(snapshot_id: str):
+        found = store.read().get("snapshot", snapshot_id)
+        if found is None or not found.data.get("message") or found.data.get("deleted"):
+            raise HTTPException(status_code=404, detail="That isn't a message the app is holding.")
+        return found
+
+    def done(snapshot_id: str, section: str) -> SetAsideDone:
+        snap = store.read().get("snapshot", snapshot_id)
+        address = set_aside.address_of(snap, ws)
+        return SetAsideDone(
+            id=snapshot_id,
+            version=snap.version,
+            section=section,
+            address=address,
+            domain=set_aside.domain_of(address),
+        )
+
+    @r.post("/mail/{snapshot_id}/set-aside")
+    def set_aside_mail(snapshot_id: str, body: SetAsideIn) -> SetAsideDone:
+        """Move a mail item to the Set aside folder, as personal or sales mail, and close its request if one is
+        waiting for the assistant."""
+        mail_snapshot(snapshot_id)
+        try:
+            set_aside.set_aside_item(store, snapshot_id, body.section)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return done(snapshot_id, body.section)
+
+    @r.post("/set-aside/{snapshot_id}/work")
+    def set_aside_is_work(snapshot_id: str, body: ReadVersion) -> SetAsideDone:
+        """This is work: hand the message in after all, as Take a closer look does, and keep the correction."""
+        from engine.dispatcher import signal
+
+        snap = mail_snapshot(snapshot_id)
+        mark = snap.data.get("set_aside")
+        if not mark:
+            raise HTTPException(status_code=404, detail="That isn't set aside.")
+        if snap.version != body.read_version:
+            raise HTTPException(status_code=409, detail="That message changed. Look at the folder again.")
+        try:
+            waiting = set_aside.put_back(ws, store, cfg, snapshot_id, hand_in=True)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        signal(store, "pulled_back", [waiting or snapshot_id], f"Set aside: {mark['reason']}")
+        events.changed()
+        worker.poke()
+        return done(snapshot_id, mark["section"])
+
+    @r.post("/set-aside/{snapshot_id}/put-back")
+    def set_aside_put_back(snapshot_id: str, body: ReadVersion) -> SetAsideDone:
+        """Undo a set-aside the person made by hand: the message and its request go back as they were."""
+        snap = mail_snapshot(snapshot_id)
+        if snap.version != body.read_version:
+            raise HTTPException(status_code=409, detail="That message changed. Look at it again.")
+        mark = snap.data.get("set_aside") or {}
+        try:
+            set_aside.put_back(ws, store, cfg, snapshot_id, hand_in=False)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        worker.poke()
+        return done(snapshot_id, mark.get("section", "sales"))
+
+    @r.post("/set-aside/unconfirm")
+    def set_aside_unconfirm(body: UnconfirmIn) -> Created:
+        """Undo a confirmation within its undo time: the messages are back in the folder."""
+        try:
+            set_aside.unconfirm_items(store, body.ids)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        return Created(id=body.ids[0])
 
     return r

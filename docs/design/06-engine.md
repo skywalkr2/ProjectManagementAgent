@@ -140,58 +140,83 @@ the assistant.
 
 Applies triage rules in order before queueing, using registered matchers. The rules live in `watch.yaml`, beside the sources
 they apply to (4.5; decisions, 2026-10-11, "Triage rules live beside the watched sources"); the core's matchers are `cosmetic`,
-`by-us`, `terms-absent` and `name-matches`, and plugins register more. A matcher is deterministic, never calls AI, and returns a
-reason in plain words or nothing; the first rule that matches closes the change. Each closed item records the rule and a
-readable reason, is kept as a source and a request that is already done, appears under "Auto-closed", and has a one-click way
-to send it back ("Take a closer look" queues it and records a `pulled_back` signal, so rules can be tuned, 6.20). A closed mail
-item is left out of Today's list of what came in, and counted. A matcher that fails counts as no match and is contained like
-any plugin call (6.1).
+`by-us`, `terms-absent`, `name-matches`, and for mail `bulk-mail`, `service-category` and `sender-rule`, and plugins register
+more (a matcher gets the mail item's details as `change["message"]`). A matcher is deterministic,
+never calls AI, and returns a reason in plain words or nothing; the first rule that matches closes the change. Each closed item
+records the rule and a readable reason, is kept as a source and a request that is already done, appears under "Auto-closed",
+and has a one-click way to send it back ("Take a closer look" queues it and records a `pulled_back` signal, so rules can be
+tuned, 6.20). A closed mail item is left out of Today's list of what came in, and counted. A matcher that fails counts as no
+match and is contained like any plugin call (6.1).
 
-**Setting aside personal and sales mail** (owner, 2026-10-12; phase L0, before learning reads anything). Mail that isn't
-work goes into a **Set aside** folder in the app, in two sections: *Personal*, and *Sales and promotions*. The person's
-mailbox is never changed; the add-ons read only. Set-aside mail never reaches the assistant and never feeds learning:
-- **No knowledge from it:** no request, signal, fact, glossary term, lesson or evaluation case comes from it, and the
-  repeat-correction and knowledge-used rates leave it out (6.20, 6.22).
+**Setting aside personal and sales mail** (owner, 2026-10-12; the rules part is phase A5, **built**; the sorting run and the
+proof that learning never reads it are phase L0). Mail that isn't work goes into a **Set aside** folder in the app, in two
+sections: *Personal*, and *Sales and promotions*. The person's mailbox is never changed; the add-ons read only. Set-aside mail
+never reaches the assistant and never feeds learning:
+- **No knowledge from it:** no signal, fact, glossary term, lesson or evaluation case comes from it, and the repeat-correction
+  and knowledge-used rates leave it out (6.20, 6.22). **As built,** a set-aside change is kept the way a closed one is, as a
+  source and a request that is already done (never queued, so no AI run), marked `set_aside`; it is left out of What changed,
+  and the mail item's snapshot carries the mark, which is what the folder and Today read. L0 must keep learning from reading
+  any request or snapshot with that mark.
 - **Its words never go to an AI account.**
 - **What remains is sorting:** the person's own choices about sorting.
 
-It is sorted in this order, first match wins:
-1. **The person's own rules:** "always set aside mail from this sender, or this domain, as personal (or sales)", and
-   "never set aside mail from …". These are rule records the person makes with one click on any item (below).
-2. **What the mail says about itself:**
-   - the service's own category, read and never changed (promotions, social, a personal label);
-   - bulk-mail headers (a list unsubscribe address, bulk precedence);
-   - a sender in the person's own contacts who isn't one of the workspace's people.
+A mail item carries, besides its sender, received time and unread mark, `bulk` (the message has a list-unsubscribe header or a
+bulk or list precedence; the core's mail folder reads it from the headers) and `categories` (the service's own, as read, in
+lower case). Both come from the add-on (plugin API 0.3.57) and default to unknown, so an add-on that doesn't set them works as
+before.
 
-   These are new core matchers, `bulk-mail`, `service-category` and `personal-contact`, deterministic like the others.
-   This default sorting is built in for every workspace (`watch.set_aside_defaults`, on). The person sets nothing up,
-   either in their mail service or in this app.
+It is sorted in this order, first match wins:
+1. **The person's own rules**, in the `triage:` list (4.5). A rule with `set_aside: personal` or `sales` sets mail aside in that
+   section instead of plainly closing it; `set_aside: never` keeps mail with the assistant against every set-aside rule after it
+   and against the built-in sorting. The app keeps one rule of its own per choice (a `sender-rule` with the senders and domains
+   listed), so the list stays short: "never" goes first in the list, a set-aside rule right after the last "never", and a sender
+   moves out of the other choices when the person changes their mind. A `sender-rule` matches the sender's address (read from
+   the message's sender, else its author, else the text's From line) or its domain, and a domain matches its subdomains, in any
+   case.
+2. **What the mail says about itself, built in:** after the list, and with no setting to edit, the core sets aside as sales mail
+   mail that is `bulk` (the `bulk-mail` matcher) and mail whose `categories` include promotions, social or forums (the
+   `service-category` matcher). One setting, `watch.set_aside_defaults` (on), turns this off. It applies to every workspace,
+   whenever it was made, because it isn't a rule written into the file. *Why not in the file:* a default written into a new
+   workspace's list would never reach a workspace made before, and the person edits nothing to be helped.
+   The sender in the person's contacts who isn't one of the workspace's people (`personal-contact`) is *designed, not yet
+   built* (L0).
 3. **The assistant's sorting**, for mail the rules can't place (`watch.sorting: ai`, on by default, chosen in the
-   walkthrough's Mail step):
+   walkthrough's Mail step) is *designed, not yet built* (L0):
    - a small low-cost run sees **only the sender, the subject line and the service's category**, never the body;
    - it answers work, personal or sales;
    - unsure means work, so nothing is hidden on a guess;
    - one run covers a batch of headers, not one per message.
 
-**Correcting it:**
-- **Any item in Came in or What changed** has "Set aside: personal" and "Set aside: sales" in its menu.
-- **Any set-aside item** has "This is work", which hands it in after all and records a `pulled_back` signal (6.20).
-- **Each correction offers** "Always for this sender" and "Always for this domain", which make a sorting rule with a
-  read-back and Undo.
+**Correcting it** (all built):
+- **Any item in Came in or What changed that is a mail message** has "Set aside: personal" and "Set aside: sales" in its menu.
+  The message moves to the folder at once, and a request of it that hasn't started (queued, or stopped for the person) is
+  closed, remembering where it was. Undo puts both back. What the person set aside by hand stays set aside if the message
+  changes.
+- **Any set-aside item** has "This is work", which hands it in after all (a request set aside by a rule is queued; one the
+  person had set aside goes back where it was; a message that was never handed in is handed in now) and records a `pulled_back`
+  signal (6.20). It shows in Today's Came in again. Undo sets it aside again.
+- **Each correction offers** "Always for this sender" and "Always for this domain": a sorting rule written through the settings
+  save path as the person's own change, with a read-back toast and Undo. After "This is work" they are rules to keep the
+  mail; after "Set aside" they are rules to set it aside in that section. Settings under `watch.` apply at once.
+- **Confirm** (each row's menu, and "Confirm all" for a section): the person says the mail was rightly set aside. The app
+  *learns* a sender rule for each distinct sender, in the message's section, in one save with one read-back ("From now on, mail
+  from a@example.com is set aside as sales") and one Undo; when three or more confirmed senders share a domain, the toast
+  also offers "Always for example.com". These are sorting rules and nothing else is learned from the mail. The app also
+  *deletes the message from itself*: after `watch.set_aside_keep_seconds` (60) it removes the snapshot's subject, sender name,
+  link and saved text, the saved source record's title and text, any saved text file that nothing else holds, and the earlier
+  values of those fields in the ledger (the entries stay, with who made them and when, and a write that removes the content is
+  recorded like any other). What stays is a marker: the source, the message key, the sender address, the date, the section and
+  the rule, so the next read finds the message and never hands it in again. The folder says how many were deleted. Until the
+  time passes the copy is simply held and Undo ("unconfirm") brings the message back; after it, Undo refuses and says so (it
+  doesn't copy anything for the undo, it delays the deletion). The mailbox keeps the original. Not touched: what the assistant
+  already made from the message before it was set aside (its changeset and the records that came from it), and earlier backups
+  and the export's git history, which hold the old text until they age out.
 
 Sorting corrections tune sorting only. They never become content lessons.
 
-**Confirming a set-aside** (owner, 2026-10-12). "Confirm" on a row, or "Confirm all" on a section, does two things:
-- **The app learns the sender:** a sorting rule is written at once, as the person's own change, with a read-back and
-  Undo. When three or more confirmed senders share a domain, "Always for this domain" is offered.
-- **The app deletes the message from itself:** its text, subject and body go. A marker (source, message key, sender,
-  date, section, rule) stays so the next read never hands it in again. The deletion is recorded as a redaction.
-  Within the Undo time everything comes back; after that, the mail lives only in the person's own mailbox, which the
-  app never changes.
-
-**On screen:** the folder is a filtered view beside Auto-closed, one row per message (sender, subject, date, why it was
-set aside). Today never lists set-aside mail; Came in shows a count ("6 set aside") that opens the folder. Set-aside
-mail is kept like other sources and follows retention (5.2).
+**On screen:** the folder is a section of Sources beside Auto-closed, one row per message (subject, sender, date, why it was
+set aside), grouped into Personal and Sales and promotions. Today never lists set-aside mail; Came in shows a count ("6 set
+aside") that opens the folder. Set-aside mail is kept like other sources and follows retention (5.2).
 
 ## 6.6 Dispatcher
 

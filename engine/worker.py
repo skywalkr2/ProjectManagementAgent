@@ -433,10 +433,13 @@ class Worker:
         """Read every watched source that is due. Returns how many were read."""
         from datetime import UTC, datetime
 
+        from engine.set_aside import purge_due
         from engine.watch import due, refresh
 
         if self._changed_since_start():
             return 0
+        if purge_due(self.ws, self.store, self.cfg, datetime.now(UTC)):
+            self.events.changed()
         sources = due(self.store, self.cfg, datetime.now(UTC))
         handed = 0
         for source in sources:

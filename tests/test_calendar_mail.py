@@ -118,6 +118,26 @@ def test_new_messages_are_read_without_marking_them(tmp_path, monkeypatch):
     assert again.items == []
 
 
+def test_the_mailbox_connector_marks_bulk_messages_from_their_headers(tmp_path, monkeypatch):
+    import imaplib
+
+    class BulkImap(FakeImap):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            listed = MESSAGE.replace(b"Subject:", b"List-Unsubscribe: <mailto:leave@mail.example.com>\nSubject:", 1)
+            self.messages = {7: MESSAGE, 8: listed.replace(b"msg-1", b"msg-2"), 9: MESSAGE.replace(b"msg-1", b"msg-3")}
+
+    monkeypatch.setattr(imaplib, "IMAP4_SSL", BulkImap)
+    monkeypatch.setenv("MAIL_PASSWORD", "app-password")
+    settings = MailboxSettings(host=N["mail_host"], user=N["mail_user"], password="env:MAIL_PASSWORD", first_read=3)
+    poll = read_mailbox(settings, {}, ConnectorContext(tmp_path))
+    assert {i.key: i.message.bulk for i in poll.items} == {
+        "<msg-1@mail.example.com>": False,
+        "<msg-2@mail.example.com>": True,
+        "<msg-3@mail.example.com>": False,
+    }
+
+
 def test_a_refused_password_and_a_missing_folder_are_classified(tmp_path, monkeypatch):
     import imaplib
 

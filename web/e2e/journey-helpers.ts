@@ -39,8 +39,9 @@ export interface SignInSeen {
   calendar_reads: number;
   unauthorized: number;
   tokens: number;
-  /** The titles a first read hands the assistant (messages and events within a day of now) and those it only notes. */
-  recent_items: { mail: string[]; events: string[]; noted: string[] };
+  /** The titles a first read hands the assistant (work messages and events within a day of now), the mail the app sets
+   * aside by what the service says about it, and what it only notes. */
+  recent_items: { mail: string[]; events: string[]; noted: string[]; set_aside: string[] };
 }
 
 /** Collects what the browser reports as wrong while a journey runs; a journey ends by checking the list is empty. */

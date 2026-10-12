@@ -421,7 +421,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         from engine import today
 
         inbox = today.arrived(store, cfg, datetime.now(UTC))
-        return InboxView(items=[ArrivedView(**vars(a)) for a in inbox.items], left_out=inbox.left_out)
+        return InboxView(
+            items=[ArrivedView(**vars(a)) for a in inbox.items], left_out=inbox.left_out, set_aside=inbox.set_aside
+        )
 
     @r.post("/today/arrived/check")
     def today_arrived_check() -> InboxCheckView:
@@ -452,6 +454,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         return InboxCheckView(
             items=[ArrivedView(**vars(a)) for a in inbox.items],
             left_out=inbox.left_out,
+            set_aside=inbox.set_aside,
             new_items=handed,
             sources_read=read,
             sources_failed=failed,
@@ -1088,9 +1091,16 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         projects = {p.id: p.data["name"] for p in store.read().list("project")}
         sources = {s.id: s.data for s in store.read().list("source")}
         kinds = watched_kinds(store.read())
+        mail = {
+            (s.data["source"], s.data["key"]): s.id
+            for s in store.read().list("snapshot")
+            if s.data.get("message") and not s.data.get("deleted") and not s.data.get("gone")
+        }
         out: list[ChangeItem] = []
         for req in reversed(store.read().list("request")):
             d = req.data
+            if d.get("set_aside"):
+                continue  # mail set aside as not work is listed in the Set aside folder
             view = None
             cs = None
             source = sources.get(d.get("source") or "")
@@ -1126,6 +1136,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     follows=d.get("follows"),
                     follows_summary=_summary_of(d.get("follows")),
                     changeset=view,
+                    mail_item=mail.get((watched.get("source"), watched.get("key"))) if watched else None,
                     title=_title_view(
                         title_for(
                             d,

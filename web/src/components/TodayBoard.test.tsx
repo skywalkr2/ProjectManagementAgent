@@ -60,6 +60,7 @@ const inbox: S["InboxView"] = {
     message({ title: "Invoice attached", sender: "Pat Example", unread: false, received: at("2026-10-09", 16, 40) }),
   ],
   left_out: 3,
+  set_aside: 2,
 };
 
 function routes(extra: Routes = {}): Routes {

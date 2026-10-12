@@ -193,10 +193,19 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
 - `triage`: rules, in order; the first match closes the change before the assistant reads it. Each rule has `name`, `kind`
   (a matcher), `params`, `why` (a template shown to the PM; `{reason}` is the matcher's own words) and `sources` (empty: all).
   The core's matchers are `cosmetic` (only spacing, punctuation or capitals changed), `by-us` (changed by one of
-  `workspace.our_accounts`), `terms-absent` (none of the rule's terms is in what changed) and `name-matches` (the item's key
-  or title matches a pattern). Plugins register more (`<plugin>/<name>`). The matchers the first design listed beyond these
+  `workspace.our_accounts`), `terms-absent` (none of the rule's terms is in what changed), `name-matches` (the item's key
+  or title matches a pattern) and, for mail, `bulk-mail` (the message says it was sent to many), `service-category` (the
+  mail service's category is one of the rule's `categories`) and `sender-rule` (the sender's address is one of `senders`, or
+  its domain or a domain it is inside is one of `domains`; any case). A rule may add `set_aside` (`personal`, `sales` or
+  `never`): a match then puts mail in the Set aside folder in that section instead of plainly closing it, and `never` keeps
+  the mail with the assistant against every set-aside rule after it and the built-in sorting (6.5). Plugins register more
+  (`<plugin>/<name>`). The matchers the first design listed beyond these
   (`same-edit`, `already-seen-file`, `owner-not-ours`, `other-domain`, `container-not-mapped`, `child-item`, `unknown-key`)
   are *designed, not yet built*.
+- `set_aside_defaults` (true): after the `triage` list, mail that is bulk, or that the mail service files under promotions,
+  social or forums, is set aside as sales mail with no AI run. It needs no rule in the file, so every workspace has it.
+- `set_aside_keep_seconds` (60): how long the app keeps the copy of mail the person confirmed was rightly set aside, so
+  Undo can bring it back; then its content is deleted from the app (6.5). 0 deletes at once.
 - `failures_before_asking` (3): failed reads in a row before the person is asked about a source; one question, not one per
   read.
 

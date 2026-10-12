@@ -81,6 +81,9 @@ class State:
         self.codes: dict[str, dict] = {}  # given and not yet used: the challenge and address each was asked with
         self.access: set[str] = set()  # access tokens the service issued and has not withdrawn
         self.refresh: set[str] = set()
+        #: The moment the made-up mailbox and calendar are dated from, so reading them again gives the same text.
+        self.moment = datetime.now(UTC)
+        self.later_mail: list[dict] = []  # messages that arrive after the first read (added by a helper route)
         self.seen = {
             "authorizations": 0,
             "exchanges": 0,
@@ -261,22 +264,46 @@ def stamp(moment: datetime) -> str:
     return moment.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def messages(now: datetime) -> list[dict]:
-    """Four messages: three from the last day, with the shapes the stand-in reads, and one from last week."""
+#: The sender of the social update and of the mail that comes later: a made-up network, not a person in the workspace.
+NETWORK = ("Neighborhood Network", "updates@network.example.com")
+SHOP = ("Spring Shop", "deals@shop.example.com")
+
+
+def message(
+    key: str,
+    sender: tuple[str, str],
+    subject: str,
+    age: timedelta,
+    unread: bool,
+    *lines: str,
+    now: datetime,
+    bulk: bool = False,
+    categories: tuple[str, ...] = (),
+) -> dict:
+    """One message as the made-up mail service gives it: who from, when, and what the service says about it."""
+    return {
+        "id": key,
+        "from": {"name": sender[0], "address": sender[1]},
+        "subject": subject,
+        "received": stamp(now - age),
+        "unread": unread,
+        "body": "\n".join(lines),
+        "bulk": bulk,
+        "categories": list(categories),
+    }
+
+
+def messages(now: datetime, later: list[dict] | None = None) -> list[dict]:
+    """Six messages: three work messages from the last day, with the shapes the stand-in reads, a social update with
+    the service's category and a sales mail with a bulk flag, both from the last day too, and one from last week.
+    `later` are messages that arrived after the first read."""
     me, first, second = people()[:3]
 
-    def message(key: str, sender: str, subject: str, age: timedelta, unread: bool, *lines: str) -> dict:
-        return {
-            "id": key,
-            "from": {"name": sender, "address": address_of(sender)},
-            "subject": subject,
-            "received": stamp(now - age),
-            "unread": unread,
-            "body": "\n".join(lines),
-        }
+    def work(key: str, sender: str, subject: str, age: timedelta, unread: bool, *lines: str) -> dict:
+        return message(key, (sender, address_of(sender)), subject, age, unread, *lines, now=now)
 
     return [
-        message(
+        work(
             "m-1",
             first,
             "Venue list",
@@ -285,7 +312,7 @@ def messages(now: datetime) -> list[dict]:
             f"{me} will send the venue list by 2026-11-02.",
             "Decided: the offsite is on a Friday.",
         ),  # fmt: skip
-        message(
+        work(
             "m-2",
             second,
             "Catering quote",
@@ -294,8 +321,29 @@ def messages(now: datetime) -> list[dict]:
             "We need a catering quote.",
             "To do: send the headcount by 2026-11-04.",
         ),  # fmt: skip
-        message("m-3", first, "Thanks", timedelta(hours=1), False, "Thanks for the update. See you there."),
-        message("m-4", second, "Last week's agenda", timedelta(days=6), False, "We need a printed agenda."),
+        work("m-3", first, "Thanks", timedelta(hours=1), False, "Thanks for the update. See you there."),
+        work("m-4", second, "Last week's agenda", timedelta(days=6), False, "We need a printed agenda."),
+        message(
+            "m-5",
+            NETWORK,
+            "Three neighbors posted today",
+            timedelta(hours=3),
+            True,
+            "See what your neighbors are up to.",
+            now=now,
+            categories=("social",),
+        ),
+        message(
+            "m-6",
+            SHOP,
+            "Spring sale: everything half price",
+            timedelta(hours=4),
+            True,
+            "Half price on everything this week only.",
+            now=now,
+            bulk=True,
+        ),
+        *(later or []),
     ]
 
 
@@ -332,15 +380,18 @@ def events(now: datetime) -> list[dict]:
 
 
 def recent_items(now: datetime, hours: int = 24) -> dict[str, list[str]]:
-    """The titles of the messages that came in and the events that fall within `hours` of now, which a first read
-    hands the assistant, and of those further away, which it only notes."""
+    """The titles of the work messages that came in and the events that fall within `hours` of now, which a first read
+    hands the assistant; of the mail the app sets aside by what the service says about it (bulk, or a category); and
+    of those further away, which it only notes."""
 
     def near(stamped: str) -> bool:
         return abs(datetime.fromisoformat(stamped) - now) <= timedelta(hours=hours)
 
     mail, events_ = messages(now), events(now)
+    aside = [m for m in mail if m["bulk"] or {"promotions", "social", "forums"} & set(m["categories"])]
     return {
-        "mail": [m["subject"] for m in mail if near(m["received"])],
+        "mail": [m["subject"] for m in mail if near(m["received"]) and m not in aside],
+        "set_aside": [m["subject"] for m in aside if near(m["received"])],
         "events": [e["title"] for e in events_ if near(e["start"])],
         "noted": [m["subject"] for m in mail if not near(m["received"])]
         + [e["title"] for e in events_ if not near(e["start"])],
@@ -353,7 +404,7 @@ def mail_routes(state: State) -> list[Route]:
             state.seen["unauthorized"] += 1
             return unauthorized()
         state.seen["mail_reads"] += 1
-        return JSONResponse({"messages": messages(datetime.now(UTC))})
+        return JSONResponse({"messages": messages(state.moment, state.later_mail)})
 
     return [Route("/messages", listed)]
 
@@ -364,7 +415,7 @@ def calendar_routes(state: State) -> list[Route]:
             state.seen["unauthorized"] += 1
             return unauthorized()
         state.seen["calendar_reads"] += 1
-        return JSONResponse({"events": events(datetime.now(UTC))})
+        return JSONResponse({"events": events(state.moment)})
 
     return [Route("/events", listed)]
 
@@ -479,6 +530,23 @@ def helper_routes(state: State, base: str) -> list[Route]:
             {**state.seen, "tokens": len(state.access), "recent_items": recent_items(datetime.now(UTC))}
         )
 
+    async def mail_later(_request: Request) -> JSONResponse:
+        """A new message from the social network's sender arrives, saying nothing about itself."""
+        now = datetime.now(UTC)
+        subject = f"Another update from the network ({len(state.later_mail) + 1})"
+        state.later_mail.append(
+            message(
+                f"m-later-{len(state.later_mail) + 1}",
+                NETWORK,
+                subject,
+                timedelta(minutes=10),
+                True,
+                "More news.",
+                now=now,
+            )
+        )
+        return JSONResponse({"subject": subject, "sender": NETWORK[1]})
+
     async def put_source_file(request: Request) -> JSONResponse:
         body = await request.json()
         folder = Path(state.info()["source_folder"])
@@ -490,6 +558,7 @@ def helper_routes(state: State, base: str) -> list[Route]:
         Route("/__e2e/ai-requests", requests),
         Route("/__e2e/sign-in", sign_in),
         Route("/__e2e/source-file", put_source_file, methods=["POST"]),
+        Route("/__e2e/mail-later", mail_later, methods=["POST"]),
     ]
 
 

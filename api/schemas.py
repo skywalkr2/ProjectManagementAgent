@@ -247,6 +247,9 @@ class ChangeItem(BaseModel):
     follows_summary: str | None = Field(None, description="That change's one-line summary, for the row.")
     changeset: ChangesetView | None
     title: ItemTitle | None = Field(None, description="The item's title, by the title rule.")
+    mail_item: str | None = Field(
+        None, description="For work on a mail message the app is holding: its id, for 'Set aside' on the row."
+    )
 
 
 class UndoReport(BaseModel):
@@ -924,6 +927,7 @@ class FirstGoStarted(BaseModel):
 class InboxView(BaseModel):
     items: list[ArrivedView]
     left_out: int = Field(description="Messages in the same hours that a triage rule closed (newsletters, say).")
+    set_aside: int = Field(0, description="Messages in the same hours that are in the Set aside folder.")
 
 
 class InboxCheckView(InboxView):
@@ -1552,6 +1556,83 @@ class AutoClosedView(BaseModel):
     rule: str
     reason: str
     created_at: str
+
+
+class SetAsideView(BaseModel):
+    """A mail item in the Set aside folder: left with the person, never read by the assistant."""
+
+    id: str = Field(description="The mail item's snapshot.")
+    version: int
+    section: Literal["personal", "sales"]
+    title: str
+    sender: str | None = None
+    source: str = Field(description="The watched source's label.")
+    received: str | None = Field(None, description="ISO 8601 date-time with its offset, as the service gave it.")
+    reason: str = Field(description="Why it was set aside, in plain words.")
+    address: str = Field("", description="The sender's address, when the mail holds one.")
+    domain: str = Field("", description="The sender's domain, when the mail holds an address.")
+
+
+class SetAsideFolder(BaseModel):
+    items: list[SetAsideView]
+    deleted: int = Field(0, description="Messages whose content the person had deleted from the app after confirming.")
+
+
+class SetAsideIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    section: Literal["personal", "sales"]
+
+
+class SetAsideDone(BaseModel):
+    """A mail item set aside by hand, with its sender so the screen can offer a sorting rule."""
+
+    id: str
+    version: int
+    section: Literal["personal", "sales"]
+    address: str = Field("", description="The sender's address, when the mail holds one.")
+    domain: str = Field("", description="The sender's domain, when the mail holds an address.")
+
+
+class SortingRuleIn(BaseModel):
+    """Always set aside mail from these senders and domains in a section, or never set it aside (work)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    fingerprint: str
+    choice: Literal["personal", "sales", "never"]
+    senders: list[str] = Field(default_factory=list)
+    domains: list[str] = Field(default_factory=list)
+
+
+class ConfirmIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    fingerprint: str
+    ids: list[str] = Field(min_length=1)
+
+
+class DomainOffer(BaseModel):
+    domain: str
+    senders: int = Field(description="How many of the confirmed senders are on it.")
+    section: Literal["personal", "sales"]
+
+
+class ConfirmDone(BaseModel):
+    saved: SettingsSaved
+    confirmed: int = Field(description="How many messages were confirmed.")
+    senders: list[str] = Field(description="The distinct sender addresses a rule was written for.")
+    section: Literal["personal", "sales"] | None = Field(None, description="The section, when all were in one.")
+    domain_offers: list[DomainOffer] = Field(
+        description="Domains that three or more of the confirmed senders share, for an 'always' rule."
+    )
+    ids: list[str]
+
+
+class UnconfirmIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[str] = Field(min_length=1)
 
 
 class FingerprintIn(BaseModel):

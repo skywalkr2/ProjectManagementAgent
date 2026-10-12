@@ -63,10 +63,22 @@ def message_item(raw: bytes) -> SourceItem | None:
     if attached:
         lines += ["", "Attached: " + ", ".join(attached)]
     received = _received(str(message.get("Date") or ""))
-    details = MessageDetails(sender=sender, received=received)
+    details = MessageDetails(sender=sender, received=received, bulk=is_bulk(message))
     return SourceItem(
         key, subject[:200], "\n".join(lines).strip(), sender, str(message.get("Date") or "") or None, message=details
     )
+
+
+#: Values of the Precedence header that mark a message as sent to many.
+BULK_PRECEDENCE = ("bulk", "list")
+
+
+def is_bulk(message: EmailMessage) -> bool:
+    """Whether the headers say the message was sent to many: a list-unsubscribe address, or a bulk or list
+    precedence."""
+    if str(message.get("List-Unsubscribe") or "").strip():
+        return True
+    return str(message.get("Precedence") or "").strip().lower() in BULK_PRECEDENCE
 
 
 def _received(header: str) -> str | None:

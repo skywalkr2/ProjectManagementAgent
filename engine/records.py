@@ -512,6 +512,8 @@ class SnapshotMessage(BaseModel):
     sender: str | None = None
     received: str | None = None
     unread: bool | None = None
+    bulk: bool | None = None
+    categories: list[str] = Field(default_factory=list)
 
 
 class Snapshot(Record):
@@ -533,6 +535,18 @@ class Snapshot(Record):
     message: SnapshotMessage | None = Field(None, description="For a mail item: from whom and when.")
     closed_by: str | None = Field(
         None, description="The triage rule that closed its latest change, so Today leaves it out (a newsletter, say)."
+    )
+    set_aside: dict[str, str] | None = Field(
+        None,
+        description="For a mail item set aside as not work: {section (personal or sales), rule, reason}, and "
+        "{confirmed_at} once the person confirmed it (it is then deleted from the app after a short while). Today "
+        "leaves it out and counts it; the Set aside folder lists it.",
+    )
+    deleted: bool = Field(
+        False,
+        description="The person confirmed the message was rightly set aside and its content was deleted from the app. "
+        "Only a marker is kept (the source, key, sender address, date, section and rule), so a later read doesn't "
+        "hand it in again.",
     )
 
 
@@ -749,6 +763,12 @@ class Request(Record):
     project: str | None = Field(None, description="The project the person said a hand-in is about, if they did.")
     auto_closed: dict[str, str] | None = Field(
         None, description="For a watched change a triage rule closed: {rule, reason}. Taking a closer look clears it."
+    )
+    set_aside: dict[str, str | None] | None = Field(
+        None,
+        description="For a watched mail item set aside as not work: {section, rule, reason}, and for one the person "
+        "set aside after it was handed in, {from_state, from_waiting} to put it back. It is never queued for the "
+        "assistant while this is set. This is work clears it.",
     )
     folded_into: str | None = Field(
         None, description="The newer request this one's change was folded into, so they are read in order, once."

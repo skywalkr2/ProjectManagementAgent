@@ -6,11 +6,13 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
 import { firstGoOf } from "../lib/first-go";
+import { useSetAside } from "../lib/set-aside";
 import { anyReading, latestRead } from "../lib/sources";
 import type { View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { FollowUps } from "./FollowUps";
 import { PluginToday } from "./PluginToday";
+import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
 import { useStageToday } from "./StageToday";
 import { WhatChanged, needsAttention, waitsForGo } from "./WhatChanged";
@@ -391,7 +393,11 @@ function CheckNow() {
       async () => {
         const result = await api.checkArrived();
         // Show the new list at once, without waiting for it to be fetched again.
-        client.setQueryData<S["InboxView"]>(["today", "arrived"], { items: result.items, left_out: result.left_out });
+        client.setQueryData<S["InboxView"]>(["today", "arrived"], {
+          items: result.items,
+          left_out: result.left_out,
+          set_aside: result.set_aside,
+        });
         return result;
       },
       (result) => ({ message: checkedText(result, t, tn) }),
@@ -414,6 +420,13 @@ function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () =
   const today = localDate(now);
   const items = arrived.data?.items ?? [];
   const leftOut = arrived.data?.left_out ?? 0;
+  const setAside = arrived.data?.set_aside ?? 0;
+  const { setAside: moveToFolder } = useSetAside();
+  // The folder is a section of the Sources screen; once that shows, the page goes to it.
+  const openFolder = () => {
+    props.onView("sources");
+    window.setTimeout(() => document.getElementById("set-aside")?.scrollIntoView?.({ block: "start" }), 50);
+  };
   const sourceName = useSourceNames(items.map((m) => m.source));
   const received = (iso: string) => (iso.slice(0, 10) === today ? wallTime(iso) : weekday(iso));
 
@@ -425,10 +438,19 @@ function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () =
       countText={tn("today.arrived.count", items.length)}
       action={watch.data && anyReading(watch.data) ? <CheckNow /> : undefined}
       footer={
-        leftOut > 0 && (
-          <button type="button" className="link-button" onClick={() => props.onView("sources")}>
-            {t("today.arrived.closed", { n: leftOut })}
-          </button>
+        (setAside > 0 || leftOut > 0) && (
+          <>
+            {setAside > 0 && (
+              <button type="button" className="link-button" onClick={openFolder}>
+                {t("today.arrived.set_aside", { n: setAside })}
+              </button>
+            )}
+            {leftOut > 0 && (
+              <button type="button" className="link-button" onClick={() => props.onView("sources")}>
+                {t("today.arrived.closed", { n: leftOut })}
+              </button>
+            )}
+          </>
         )
       }
     >
@@ -454,6 +476,13 @@ function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () =
                 <time className="tb-when" dateTime={message.received}>
                   {received(message.received)}
                 </time>
+                <RowMenu
+                  label={message.title}
+                  actions={[
+                    { id: "personal", label: t("setaside.menu_personal"), run: () => void moveToFolder({ id: message.snapshot, title: message.title }, "personal") },
+                    { id: "sales", label: t("setaside.menu_sales"), run: () => void moveToFolder({ id: message.snapshot, title: message.title }, "sales") },
+                  ]}
+                />
               </li>
             );
           })}

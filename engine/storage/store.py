@@ -395,6 +395,21 @@ class Tx:
         self._c.execute("UPDATE records SET version=?, deleted=0 WHERE kind=? AND id=?", (version, kind, record_id))
         self._log(self._clock(), ctx, kind, record_id, version, None, None, None)
 
+    def redact_ledger(self, kind: str, record_id: str, fields: list[str]) -> int:
+        """Blank the before and after values of these fields in every ledger entry of one record, the entries of this
+        transaction included, so a write that removes content leaves no copy of it in the history. The entries stay,
+        with their fields, versions and who made them. Returns how many entries changed."""
+        if not fields:
+            return 0
+        marks = ",".join("?" for _ in fields)
+        cursor = self._c.execute(
+            "UPDATE ledger SET before = CASE WHEN before IS NULL THEN NULL ELSE 'null' END, "
+            "after = CASE WHEN after IS NULL THEN NULL ELSE 'null' END "
+            f"WHERE kind=? AND record_id=? AND field IN ({marks})",
+            (kind, record_id, *fields),
+        )
+        return cursor.rowcount
+
     # ---- import support ----------------------------------------------------------------------------------------------
 
     def restore_record(self, stored: Stored) -> None:

@@ -44,6 +44,7 @@ class Arrived:
 class Inbox:
     items: list[Arrived]
     left_out: int  # closed by a triage rule in the same window: newsletters, automatic replies
+    set_aside: int = 0  # put in the Set aside folder in the same window: personal mail, sales and promotions
 
 
 def zone(cfg: Any) -> ZoneInfo:
@@ -109,9 +110,10 @@ def _sort_key(item: AgendaItem, here: ZoneInfo) -> str:
 
 
 def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
-    """Messages received within the configured hours, newest first, leaving out what a triage rule closed."""
+    """Messages received within the configured hours, newest first, leaving out what a triage rule closed or set
+    aside; each is counted."""
     since = now - timedelta(hours=cfg.ui.today.mail_hours)
-    found, left_out = [], 0
+    found, left_out, set_aside = [], 0, 0
     for snap in store.read().list("snapshot"):
         data = snap.data
         message = data.get("message")
@@ -122,6 +124,9 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
         except (TypeError, ValueError):
             continue
         if not since <= received <= now + timedelta(minutes=5):
+            continue
+        if data.get("set_aside"):
+            set_aside += 1
             continue
         if data.get("closed_by"):
             left_out += 1
@@ -138,7 +143,7 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
             )
         )
     found.sort(key=lambda a: moment(a.received), reverse=True)
-    return Inbox(items=found[: cfg.ui.today.mail_max], left_out=left_out)
+    return Inbox(items=found[: cfg.ui.today.mail_max], left_out=left_out, set_aside=set_aside)
 
 
 @dataclass

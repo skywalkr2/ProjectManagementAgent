@@ -55,7 +55,13 @@ def poll_inbox(settings: InboxSettings, state: dict, context) -> Poll:
                 text=text,
                 author=sender["name"],
                 changed_at=message["received"],
-                message=MessageDetails(sender=sender["name"], received=message["received"], unread=message["unread"]),
+                message=MessageDetails(
+                    sender=who,
+                    received=message["received"],
+                    unread=message["unread"],
+                    bulk=message.get("bulk"),
+                    categories=tuple(message.get("categories", ())),
+                ),
             )
         )
     return Poll(items, {})

@@ -42,12 +42,18 @@ class EventDetails:
 
 @dataclass(frozen=True)
 class MessageDetails:
-    """What a mail item is, for the day's inbox. `sender`: who it is from, as the service names them. `received`: an
-    ISO 8601 date-time with its offset. `unread`: whether the person hasn't opened it yet, when the service says."""
+    """What a mail item is, for the day's inbox. `sender`: who it is from, as the service names them, with the address
+    in angle brackets when it has one (`Name <name@example.com>`), which sender rules read. `received`: an ISO 8601
+    date-time with its offset. `unread`: whether the person hasn't opened it yet, when the service says. `bulk`:
+    whether the message says it was sent to many (it has a list-unsubscribe header, or a bulk or list precedence),
+    None when the connector can't tell. `categories`: the service's own categories or labels for it, as read and in
+    lower case (promotions, social, say); empty when it has none or doesn't say."""
 
     sender: str | None = None
     received: str | None = None
     unread: bool | None = None
+    bulk: bool | None = None
+    categories: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -177,6 +183,11 @@ def _check_details(item: SourceItem) -> None:
                 _aware(item.message.received)
             except (TypeError, ValueError) as err:
                 raise ValueError(f"message {item.key!r}: {err}") from None
+        if item.message.bulk is not None and not isinstance(item.message.bulk, bool):
+            raise ValueError(f"message {item.key!r}: bulk is true, false or left out")
+        categories = item.message.categories
+        if not isinstance(categories, (tuple, list)) or not all(isinstance(c, str) for c in categories):
+            raise ValueError(f"message {item.key!r}: categories is a list of text")
 
 
 @dataclass(frozen=True)
@@ -301,7 +312,9 @@ def _read_fake(settings: FakeSettings, state: dict[str, Any], context: Connector
             SourceItem(
                 **item,
                 event=EventDetails(**event) if event else None,
-                message=MessageDetails(**message) if message else None,
+                message=MessageDetails(**{**message, "categories": tuple(message.get("categories", ()))})
+                if message
+                else None,
             )
         )
     return Poll(items, {"reads": reads}, complete=True)

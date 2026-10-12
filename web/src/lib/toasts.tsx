@@ -9,6 +9,8 @@ export interface ToastInput {
   message: string;
   undo?: () => Promise<unknown> | void;
   action?: { label: string; run: () => Promise<unknown> | void };
+  /** More choices beside `action`, each a button of its own. */
+  more?: Array<{ label: string; run: () => Promise<unknown> | void }>;
 }
 
 interface Toast extends ToastInput {
@@ -123,12 +125,13 @@ function ToastView(props: { toast: Toast; seconds: number; onDismiss: () => void
     const timer = window.setTimeout(onDismiss, seconds * 1000);
     return () => window.clearTimeout(timer);
   }, [held, seconds, onDismiss]);
-  const action = props.toast.action;
+  const actions = [props.toast.action, ...(props.toast.more ?? [])].filter((a): a is NonNullable<typeof a> => !!a);
   return (
     <div className={styles.toast} onMouseEnter={() => setHeld(true)} onFocus={() => setHeld(true)}>
       <span className={styles.message}>{props.toast.message}</span>
-      {action && (
+      {actions.map((action) => (
         <button
+          key={action.label}
           type="button"
           className={styles.action}
           onClick={() => {
@@ -138,7 +141,7 @@ function ToastView(props: { toast: Toast; seconds: number; onDismiss: () => void
         >
           {action.label}
         </button>
-      )}
+      ))}
       {props.onUndo && (
         <button type="button" className={styles.action} onClick={props.onUndo}>
           {t("toast.undo")}

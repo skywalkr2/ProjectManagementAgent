@@ -65,6 +65,18 @@ export const api = {
   autoClosed: () => call<S["AutoClosedView"][]>("GET", "auto-closed"),
   closerLook: (req: string, readVersion: number) =>
     call<S["Created"]>("POST", `requests/${id(req)}/closer-look`, { read_version: readVersion }),
+  setAside: () => call<S["SetAsideFolder"]>("GET", "set-aside"),
+  setAsideMail: (item: string, section: S["SetAsideIn"]["section"]) =>
+    call<S["SetAsideDone"]>("POST", `mail/${id(item)}/set-aside`, { section } satisfies S["SetAsideIn"]),
+  isWork: (item: string, readVersion: number) =>
+    call<S["SetAsideDone"]>("POST", `set-aside/${id(item)}/work`, { read_version: readVersion }),
+  putBack: (item: string, readVersion: number) =>
+    call<S["SetAsideDone"]>("POST", `set-aside/${id(item)}/put-back`, { read_version: readVersion }),
+  sortingRule: (body: S["SortingRuleIn"]) => call<S["SettingsSaved"]>("POST", "watch/sorting", body),
+  confirmSetAside: (fingerprint: string, ids: string[]) =>
+    call<S["ConfirmDone"]>("POST", "set-aside/confirm", { fingerprint, ids } satisfies S["ConfirmIn"]),
+  unconfirmSetAside: (ids: string[]) =>
+    call<S["Created"]>("POST", "set-aside/unconfirm", { ids } satisfies S["UnconfirmIn"]),
 
   ask: (question: string) => call<S["Created"]>("POST", "ask", { question }),
   asks: () => call<S["AskView"][]>("GET", "asks"),

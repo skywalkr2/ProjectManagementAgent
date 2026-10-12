@@ -1635,6 +1635,18 @@
             "title": "Id",
             "type": "string"
           },
+          "mail_item": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For work on a mail message the app is holding: its id, for 'Set aside' on the row.",
+            "title": "Mail Item"
+          },
           "note": {
             "anyOf": [
               {
@@ -1835,6 +1847,89 @@
           "quote"
         ],
         "title": "CiteView",
+        "type": "object"
+      },
+      "ConfirmDone": {
+        "properties": {
+          "confirmed": {
+            "description": "How many messages were confirmed.",
+            "title": "Confirmed",
+            "type": "integer"
+          },
+          "domain_offers": {
+            "description": "Domains that three or more of the confirmed senders share, for an 'always' rule.",
+            "items": {
+              "$ref": "#/components/schemas/DomainOffer"
+            },
+            "title": "Domain Offers",
+            "type": "array"
+          },
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ids",
+            "type": "array"
+          },
+          "saved": {
+            "$ref": "#/components/schemas/SettingsSaved"
+          },
+          "section": {
+            "anyOf": [
+              {
+                "enum": [
+                  "personal",
+                  "sales"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The section, when all were in one.",
+            "title": "Section"
+          },
+          "senders": {
+            "description": "The distinct sender addresses a rule was written for.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Senders",
+            "type": "array"
+          }
+        },
+        "required": [
+          "saved",
+          "confirmed",
+          "senders",
+          "domain_offers",
+          "ids"
+        ],
+        "title": "ConfirmDone",
+        "type": "object"
+      },
+      "ConfirmIn": {
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fingerprint",
+          "ids"
+        ],
+        "title": "ConfirmIn",
         "type": "object"
       },
       "Created": {
@@ -2338,6 +2433,34 @@
           "blocks"
         ],
         "title": "DocumentView",
+        "type": "object"
+      },
+      "DomainOffer": {
+        "properties": {
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "section": {
+            "enum": [
+              "personal",
+              "sales"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "senders": {
+            "description": "How many of the confirmed senders are on it.",
+            "title": "Senders",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "domain",
+          "senders",
+          "section"
+        ],
+        "title": "DomainOffer",
         "type": "object"
       },
       "EndpointView": {
@@ -3112,6 +3235,12 @@
             "title": "New Items",
             "type": "integer"
           },
+          "set_aside": {
+            "default": 0,
+            "description": "Messages in the same hours that are in the Set aside folder.",
+            "title": "Set Aside",
+            "type": "integer"
+          },
           "sources_busy": {
             "description": "Sources that were already being read, so this read left them alone.",
             "title": "Sources Busy",
@@ -3151,6 +3280,12 @@
           "left_out": {
             "description": "Messages in the same hours that a triage rule closed (newsletters, say).",
             "title": "Left Out",
+            "type": "integer"
+          },
+          "set_aside": {
+            "default": 0,
+            "description": "Messages in the same hours that are in the Set aside folder.",
+            "title": "Set Aside",
             "type": "integer"
           }
         },
@@ -6326,6 +6461,167 @@
         "title": "SentText",
         "type": "object"
       },
+      "SetAsideDone": {
+        "description": "A mail item set aside by hand, with its sender so the screen can offer a sorting rule.",
+        "properties": {
+          "address": {
+            "default": "",
+            "description": "The sender's address, when the mail holds one.",
+            "title": "Address",
+            "type": "string"
+          },
+          "domain": {
+            "default": "",
+            "description": "The sender's domain, when the mail holds an address.",
+            "title": "Domain",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "section": {
+            "enum": [
+              "personal",
+              "sales"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "section"
+        ],
+        "title": "SetAsideDone",
+        "type": "object"
+      },
+      "SetAsideFolder": {
+        "properties": {
+          "deleted": {
+            "default": 0,
+            "description": "Messages whose content the person had deleted from the app after confirming.",
+            "title": "Deleted",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SetAsideView"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SetAsideFolder",
+        "type": "object"
+      },
+      "SetAsideIn": {
+        "additionalProperties": false,
+        "properties": {
+          "section": {
+            "enum": [
+              "personal",
+              "sales"
+            ],
+            "title": "Section",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section"
+        ],
+        "title": "SetAsideIn",
+        "type": "object"
+      },
+      "SetAsideView": {
+        "description": "A mail item in the Set aside folder: left with the person, never read by the assistant.",
+        "properties": {
+          "address": {
+            "default": "",
+            "description": "The sender's address, when the mail holds one.",
+            "title": "Address",
+            "type": "string"
+          },
+          "domain": {
+            "default": "",
+            "description": "The sender's domain, when the mail holds an address.",
+            "title": "Domain",
+            "type": "string"
+          },
+          "id": {
+            "description": "The mail item's snapshot.",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "description": "Why it was set aside, in plain words.",
+            "title": "Reason",
+            "type": "string"
+          },
+          "received": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO 8601 date-time with its offset, as the service gave it.",
+            "title": "Received"
+          },
+          "section": {
+            "enum": [
+              "personal",
+              "sales"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "sender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender"
+          },
+          "source": {
+            "description": "The watched source's label.",
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "section",
+          "title",
+          "source",
+          "reason"
+        ],
+        "title": "SetAsideView",
+        "type": "object"
+      },
       "SettingChangeView": {
         "properties": {
           "after": {
@@ -6928,6 +7224,45 @@
           "callback"
         ],
         "title": "SignInView",
+        "type": "object"
+      },
+      "SortingRuleIn": {
+        "additionalProperties": false,
+        "description": "Always set aside mail from these senders and domains in a section, or never set it aside (work).",
+        "properties": {
+          "choice": {
+            "enum": [
+              "personal",
+              "sales",
+              "never"
+            ],
+            "title": "Choice",
+            "type": "string"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "senders": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Senders",
+            "type": "array"
+          }
+        },
+        "required": [
+          "fingerprint",
+          "choice"
+        ],
+        "title": "SortingRuleIn",
         "type": "object"
       },
       "SourceView": {
@@ -8148,6 +8483,24 @@
           "overdue"
         ],
         "title": "TodoView",
+        "type": "object"
+      },
+      "UnconfirmIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "UnconfirmIn",
         "type": "object"
       },
       "UndoChoice": {
@@ -10514,6 +10867,56 @@
         "summary": "List Retire"
       }
     },
+    "/api/mail/{snapshot_id}/set-aside": {
+      "post": {
+        "description": "Move a mail item to the Set aside folder, as personal or sales mail, and close its request if one is\nwaiting for the assistant.",
+        "operationId": "set_aside_mail_api_mail__snapshot_id__set_aside_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAsideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetAsideDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Aside Mail"
+      }
+    },
     "/api/me": {
       "get": {
         "operationId": "me_api_me_get",
@@ -12607,6 +13010,203 @@
         "summary": "Runtime Config"
       }
     },
+    "/api/set-aside": {
+      "get": {
+        "description": "The Set aside folder: mail kept away from the assistant, in two sections, newest first.",
+        "operationId": "set_aside_folder_api_set_aside_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetAsideFolder"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Set Aside Folder"
+      }
+    },
+    "/api/set-aside/confirm": {
+      "post": {
+        "description": "Confirm set-aside mail was rightly set aside: a sender rule is written for each distinct sender, and the\nmessages leave the folder and are deleted from the app after their undo time.",
+        "operationId": "set_aside_confirm_api_set_aside_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Aside Confirm"
+      }
+    },
+    "/api/set-aside/unconfirm": {
+      "post": {
+        "description": "Undo a confirmation within its undo time: the messages are back in the folder.",
+        "operationId": "set_aside_unconfirm_api_set_aside_unconfirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnconfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Created"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Aside Unconfirm"
+      }
+    },
+    "/api/set-aside/{snapshot_id}/put-back": {
+      "post": {
+        "description": "Undo a set-aside the person made by hand: the message and its request go back as they were.",
+        "operationId": "set_aside_put_back_api_set_aside__snapshot_id__put_back_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetAsideDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Aside Put Back"
+      }
+    },
+    "/api/set-aside/{snapshot_id}/work": {
+      "post": {
+        "description": "This is work: hand the message in after all, as Take a closer look does, and keep the correction.",
+        "operationId": "set_aside_is_work_api_set_aside__snapshot_id__work_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "snapshot_id",
+            "required": true,
+            "schema": {
+              "title": "Snapshot Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetAsideDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Aside Is Work"
+      }
+    },
     "/api/setting-proposals/{proposal_id}/apply": {
       "post": {
         "operationId": "apply_proposal_api_setting_proposals__proposal_id__apply_post",
@@ -14091,6 +14691,45 @@
           }
         },
         "summary": "Watch Kinds"
+      }
+    },
+    "/api/watch/sorting": {
+      "post": {
+        "description": "Always set aside mail from these senders and domains as personal or sales, or never set it aside, as the\nperson's own rule, with Undo. Keeping mail goes first in the list; the rule applies to the next mail.",
+        "operationId": "sorting_rule_api_watch_sorting_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SortingRuleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sorting Rule"
       }
     },
     "/api/watch/sources": {

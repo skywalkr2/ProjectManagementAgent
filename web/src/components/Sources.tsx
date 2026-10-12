@@ -1,5 +1,6 @@
 // Sources: the places the assistant keeps reading, one row each with how often it reads and how the last read went,
-// and under them what a rule set aside without the assistant reading it, with a way to hand any of it in after all.
+// and under them the mail set aside as not work (the Set aside folder) and what a rule closed without the assistant
+// reading it, each with a way to hand it in after all.
 // A source is added from a kind (the app's own or an add-on's) with a form built from that kind's settings; a row's menu
 // reads it now, changes it, turns it off or on, and removes it, each with Undo. Sources are taken in without a restart.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { restoreFocus } from "./ModalPanel";
 import { ItemFields } from "./SettingRow";
+import { SetAside } from "./SetAside";
 import { SignIns } from "./SignIns";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -183,6 +185,7 @@ export function Sources(props: {
           ))}
         </ul>
       )}
+      <SetAside />
       <AutoClosed />
     </section>
   );

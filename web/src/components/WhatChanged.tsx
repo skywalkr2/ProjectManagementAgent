@@ -8,6 +8,7 @@ import { firstGoOf } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { showRow, useReveal } from "../lib/reveal";
 import { useEstimate } from "../lib/money";
+import { useSetAside } from "../lib/set-aside";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
@@ -172,6 +173,7 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?:
   const act = useAct();
   const afterSave = useAfterSave();
   const estimate = useEstimate();
+  const { setAside: moveToFolder } = useSetAside();
   const { item } = props;
   const gated = waitsForGo(item);
   const cs = item.changeset;
@@ -257,6 +259,13 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?:
     });
   }
   if (cs && live.length) menu.push({ id: "undoall", label: t("changes.undo_all"), run: () => void undoAll() });
+  if (item.mail_item) {
+    const mail = { id: item.mail_item, title };
+    menu.push(
+      { id: "aside-personal", label: t("setaside.menu_personal"), run: () => void moveToFolder(mail, "personal") },
+      { id: "aside-sales", label: t("setaside.menu_sales"), run: () => void moveToFolder(mail, "sales") },
+    );
+  }
 
   useRowKeys(ref, {
     toggle: () => setOpen((v) => !v),

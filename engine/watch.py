@@ -213,6 +213,8 @@ def _compare(
         listed.add(item.key)
         digest = _keep_text(ws, item.text)
         before = seen.get(item.key)
+        if before is not None and before.data.get("deleted"):
+            continue  # the person had its content deleted; only its marker is kept, so it isn't handed in again
         details = _details(item)
         if before is not None and before.data["content_hash"] == digest:
             if any(before.data.get(k) != v for k, v in details.items()):
@@ -233,7 +235,8 @@ def _compare(
                 "author": item.author,
                 "seen_at": now.isoformat(),
                 **details,
-                "closed_by": closed["rule"] if closed else None,
+                "closed_by": closed["rule"] if closed and not closed.get("section") else None,
+                "set_aside": _set_aside_of(closed) or _kept_set_aside(before),
             }
             if before is None:
                 tx.create("snapshot", data, _WATCHER)
@@ -253,7 +256,9 @@ def _compare(
             tx.update("snapshot", snapshot.id, {"gone": True}, _WATCHER, read_version=snapshot.version)
             if baseline or not source.report_removed:
                 continue
-            gone = SourceItem(key, snapshot.data["title"], "", author=None)
+            gone = SourceItem(
+                key, snapshot.data["title"], "", author=None, message=_message_of(snapshot.data.get("message"))
+            )
             text = f"{snapshot.data['title']} is no longer in {source.label or source.id}."
             facts = _change(cfg, source, gone, "removed", _read_text(ws, snapshot.data["content_hash"]))
             closed = first_match(store, cfg, facts)
@@ -272,6 +277,28 @@ def _input_text(source: Any, item: SourceItem, change: str, old: str | None) -> 
     return f"Changed in {where}: {item.title}\n\nWhat changed:\n{shown}\n\nIt now reads:\n{item.text}"
 
 
+def _message_dict(message: Any) -> dict[str, Any] | None:
+    """A message's details as plain data, the way the snapshot keeps them (categories as a list)."""
+    from dataclasses import asdict
+
+    if message is None:
+        return None
+    return {**asdict(message), "categories": list(message.categories)}
+
+
+def _set_aside_of(closed: dict[str, str] | None) -> dict[str, str] | None:
+    """A triage match that sets mail aside, as the snapshot keeps it: {section, rule, reason}."""
+    if not closed or not closed.get("section"):
+        return None
+    return {"section": closed["section"], "rule": closed["rule"], "reason": closed["reason"]}
+
+
+def _kept_set_aside(before: Any) -> dict[str, str] | None:
+    """What the person set aside by hand stays set aside when the item changes."""
+    mark = before.data.get("set_aside") if before is not None else None
+    return mark if mark and mark.get("by") == "person" else None
+
+
 def _details(item: SourceItem) -> dict[str, Any]:
     """What a calendar or mail item is, as the snapshot keeps it."""
     from dataclasses import asdict
@@ -279,7 +306,7 @@ def _details(item: SourceItem) -> dict[str, Any]:
     return {
         "link": item.link,
         "event": asdict(item.event) if item.event is not None else None,
-        "message": asdict(item.message) if item.message is not None else None,
+        "message": _message_dict(item.message),
     }
 
 
@@ -298,6 +325,7 @@ def _change(cfg: Any, source: Any, item: SourceItem, change: str, old: str | Non
         "added": [line[2:] for line in diff if line.startswith("+ ")],
         "removed": [line[2:] for line in diff if line.startswith("- ")],
         "our_accounts": list(cfg.workspace.our_accounts),
+        "message": _message_dict(item.message),
     }
 
 
@@ -350,7 +378,13 @@ def _hand_in(
         "waiting": "With the assistant, starting now",
         "created_at": now.isoformat(),
     }
-    if closed:
+    if closed and closed.get("section"):
+        data.update(
+            state="done",
+            waiting=f"Set aside: {closed['reason']}",
+            set_aside={"section": closed["section"], "rule": closed["rule"], "reason": closed["reason"]},
+        )
+    elif closed:
         data.update(state="done", waiting=f"Closed by {closed['rule']}: {closed['reason']}", auto_closed=closed)
     request = tx.create("request", data, _WATCHER)
     for older in folded:
@@ -469,8 +503,51 @@ def hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime 
         return _hand_in_recent(ws, store, cfg, source_id, now)
 
 
+def hand_in_snapshot(ws: Any, store: Any, cfg: Any, snapshot_id: str, now: datetime | None = None) -> str | None:
+    """Hand the assistant an item the source holds that was never handed in (it was noted on a first read, or set
+    aside), whatever its age. Returns the request made, or None when the item or its source isn't there."""
+    snap = store.read().get("snapshot", snapshot_id)
+    source = next((s for s in cfg.watch.sources if snap is not None and s.id == snap.data["source"]), None)
+    if snap is None or source is None or snap.data.get("deleted"):
+        return None
+    data = snap.data
+    from engine.connectors import EventDetails
+
+    item = SourceItem(
+        data["key"],
+        data["title"],
+        _read_text(ws, data["content_hash"]),
+        author=data.get("author"),
+        link=data.get("link"),
+        event=EventDetails(**data["event"]) if data.get("event") else None,
+        message=_message_of(data.get("message")),
+    )
+    with _read_lock(ws, source.id), store.transaction() as tx:
+        return _hand_in(
+            ws,
+            store,
+            tx,
+            cfg,
+            source,
+            item,
+            "new",
+            _input_text(source, item, "new", None),
+            now or datetime.now(UTC),
+            None,
+        )
+
+
+def _message_of(details: dict[str, Any] | None) -> Any:
+    """A snapshot's kept message details as the connector's own type."""
+    from engine.connectors import MessageDetails
+
+    if not details:
+        return None
+    return MessageDetails(**{**details, "categories": tuple(details.get("categories") or ())})
+
+
 def _hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None) -> list[str]:
-    from engine.connectors import EventDetails, MessageDetails
+    from engine.connectors import EventDetails
 
     now = now or datetime.now(UTC)
     source = next((s for s in cfg.watch.sources if s.id == source_id), None)
@@ -485,7 +562,9 @@ def _hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime
     made = []
     for snap in store.read().find("snapshot", {"source": source_id}):
         data = snap.data
-        if data.get("gone") or data["key"] in handed or not is_recent(data, None, now, window):
+        if data.get("gone") or data.get("deleted") or data.get("set_aside") or data["key"] in handed:
+            continue
+        if not is_recent(data, None, now, window):
             continue
         item = SourceItem(
             data["key"],
@@ -494,7 +573,7 @@ def _hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime
             author=data.get("author"),
             link=data.get("link"),
             event=EventDetails(**data["event"]) if data.get("event") else None,
-            message=MessageDetails(**data["message"]) if data.get("message") else None,
+            message=_message_of(data.get("message")),
         )
         closed = first_match(store, cfg, _change(cfg, source, item, "new", None))
         with store.transaction() as tx:

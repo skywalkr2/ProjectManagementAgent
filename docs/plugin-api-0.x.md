@@ -10,6 +10,19 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.57 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A mail item can say it is bulk mail and carry the service's categories**: `MessageDetails(..., bulk=True,
+  categories=("promotions",))`. `bulk` is true when the message has a list-unsubscribe header or a bulk or list
+  precedence, false when the connector read the headers and found none, and left out when it can't tell. `categories`
+  are the service's own categories or labels for the message, as read, in lower case. Both are optional, so an add-on
+  that doesn't set them works as before. The core sets aside mail that is bulk, or in the promotions, social or forums
+  category, with no AI run (a setting turns this off), and a person's own sender and domain rules sort the rest. A
+  matcher you register gets the item's details as `change["message"]`. The core's own mail folder fills `bulk` from the
+  message headers.
+
 ## What 0.3.56 adds
 
 Manifests stay `'>=0.3,<0.4'`.

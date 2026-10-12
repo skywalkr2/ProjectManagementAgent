@@ -954,11 +954,20 @@ class TriageRule(ConfigModel):
     kind: str = Field(
         "",
         min_length=1,
-        description='The matcher: cosmetic, by-us, terms-absent, name-matches, or a plugin\'s ("<plugin>/<name>").',
+        description="The matcher: cosmetic, by-us, terms-absent, name-matches, bulk-mail, service-category, "
+        'sender-rule, or a plugin\'s ("<plugin>/<name>").',
     )
-    params: dict[str, Any] = Field(default_factory=dict, description="The matcher's settings (terms, patterns).")
+    params: dict[str, Any] = Field(
+        default_factory=dict, description="The matcher's settings (terms, patterns, senders, domains, categories)."
+    )
     why: str = Field("", description="What the person reads; {reason} is the matcher's own words. Empty: just those.")
     sources: list[str] = Field(default_factory=list, description="The sources it applies to; empty: all of them.")
+    set_aside: Literal["personal", "sales", "never"] | None = Field(
+        None,
+        description="With a match, put mail in the Set aside folder (personal, or sales and promotions) instead of "
+        "plainly closing it; never keeps the mail with the assistant, over any set-aside rule after it and over the "
+        "built-in sorting. Empty: the rule closes the change as usual.",
+    )
 
 
 class WatchFile(FileModel):
@@ -966,6 +975,18 @@ class WatchFile(FileModel):
     triage: list[TriageRule] = Field(
         default_factory=list,
         description="Rules, in order, that close a watched change before the assistant reads it; the first match wins.",
+    )
+    set_aside_defaults: bool = Field(
+        True,
+        description="Set aside mail the mail itself says is not work, with no AI run: mailing lists and bulk mail, and "
+        "mail the mail service files under promotions, social or forums. It applies after the rules above, so a rule "
+        "that keeps mail from a sender wins.",
+    )
+    set_aside_keep_seconds: int = Field(
+        60,
+        ge=0,
+        description="After you confirm set-aside mail is not work for you, how long the app keeps its copy so Undo can "
+        "bring it back; then the copy is deleted from the app (it stays in your mailbox). 0 deletes at once.",
     )
     failures_before_asking: int = Field(
         3,

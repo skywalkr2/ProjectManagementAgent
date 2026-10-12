@@ -159,6 +159,9 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
           </button>
         </div>
       </div>
+      <p className="hint" data-set-aside="">
+        {t("walkthrough.mail.set_aside")}
+      </p>
       {read.length > 0 && (
         <div className="field" data-reading="">
           <span className="what" id="mail-read">
