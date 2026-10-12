@@ -186,6 +186,10 @@ def _parser() -> argparse.ArgumentParser:
     ws_arg(sp)
     sp.set_defaults(func=cmd_backup)
 
+    sp = sub.add_parser("install", help="install an add-on from its package file (.whl)")
+    sp.add_argument("file", type=Path, help="the add-on's package file")
+    sp.set_defaults(func=cmd_install)
+
     sp = sub.add_parser("pack", help="check a pack before asking for it to be published")
     sp.add_argument("action", choices=["check"])
     sp.add_argument(
@@ -274,6 +278,26 @@ def add_plugin(ws: Workspace, plugin: str) -> str:
     if name not in enabled:
         path.write_text(set_key(text, ["plugins", "enabled"], [*enabled, name]), encoding="utf-8")
     return name
+
+
+def cmd_install(args: argparse.Namespace) -> int:
+    """Install an add-on's package file into this copy of the app, with the same checks as the Add-ons screen's Install:
+    pure Python, needs the app already has, nothing outside its own folders. Works the same for a source copy and an
+    installed one, and `cockpit update` keeps it."""
+    from engine import pack_install
+
+    path = args.file.expanduser()
+    if not path.is_file():
+        print(f"cockpit: there is no file at {path}.", file=sys.stderr)
+        return 1
+    try:
+        done = pack_install.install(path.read_bytes())
+    except pack_install.InstallError as err:
+        print(f"cockpit: {err}.", file=sys.stderr)
+        return 1
+    print(f"Installed {done.name} {done.version}.")
+    print("Turn it on in the app (Add-ons, or the walkthrough's Mail and calendar step); it starts after a restart.")
+    return 0
 
 
 def cmd_pack(args: argparse.Namespace) -> int:

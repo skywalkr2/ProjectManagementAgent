@@ -242,3 +242,28 @@ def test_an_add_on_still_on_in_the_saved_settings_is_not_removed(screen):
     refused = c.post(f"{api}/packs/packdemo/uninstall")
     assert refused.status_code == 409 and "Turn it off first" in refused.json()["detail"]
     assert (place / "pack_demo" / "__init__.py").is_file()
+
+
+def test_the_install_command_puts_an_add_on_file_in_place(tmp_path, monkeypatch, capsys):
+    from engine.cli import main
+
+    place = tmp_path / "site"
+    place.mkdir()
+    monkeypatch.setattr(pack_install, "target", lambda: place)
+    file = tmp_path / "pack_demo-0.1.0-py3-none-any.whl"
+    file.write_bytes(wheel())
+    assert main(["install", str(file)]) == 0
+    assert (place / "pack_demo" / "__init__.py").is_file()
+    assert "Installed pack-demo 0.1.0" in capsys.readouterr().out
+    assert pack_install.installed_here("pack-demo", place)
+
+
+def test_the_install_command_refuses_a_file_that_needs_compiling_and_a_missing_file(tmp_path, monkeypatch, capsys):
+    from engine.cli import main
+
+    monkeypatch.setattr(pack_install, "target", lambda: tmp_path)
+    native = tmp_path / "native.whl"
+    native.write_bytes(wheel(tag="cp312-cp312-macosx_11_0_arm64", purelib="false"))
+    assert main(["install", str(native)]) == 1
+    assert "pure Python" in capsys.readouterr().err
+    assert main(["install", str(tmp_path / "nothing.whl")]) == 1

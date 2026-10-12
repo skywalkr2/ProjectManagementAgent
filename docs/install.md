@@ -43,6 +43,18 @@ be skipped and done later from Settings. Keep workspaces in your home folder, no
   version, or "Already up to date", and tells you that a running app shows **Restart now**. If Node isn't installed it
   skips the web steps and says the screens weren't rebuilt. On a package install it prints the install step instead.
 
+## Add an add-on from its file
+
+When an add-on's publisher gives you a package file (a `.whl`) instead of a listing with an Install button, run:
+
+```
+cockpit install <the file>
+```
+
+From a source copy, use `uv run cockpit install <the file>` in its folder. It installs the same way as the Add-ons
+screen's Install button: only add-ons of pure Python whose needs the app already has. `cockpit update` keeps it. Then
+turn it on in the app (Add-ons, or the walkthrough's Mail and calendar step); it starts after a restart.
+
 ## Restore from a backup
 
 Backups are dated folders in the backup folder you chose. To make a workspace from one:
