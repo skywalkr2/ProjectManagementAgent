@@ -31,7 +31,7 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Off-device backup with nag | must | must | 4.15 |
 | Waiting states that say why and until when | should | must | 7.6 |
 | Scope resolver and fact lookups | could | must | 6.18, 6.19 |
-| Dependencies and baselines | won't | must | 6.23 |
+| Dependencies and baselines | won't | add-on (project management pack, decisions 2026-10-12) | 6.23 |
 | Publishing pack (own private repository, decisions 2026-10-10) | won't | add-on | 9.6 to 9.9 |
 | Plugin host and plugin API 0.x | won't | must | Part 3 |
 | Read-backs, standing rules review | won't | should | 6.7, 6.21 |
@@ -42,7 +42,7 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Core playbook, first version (the guidance the notes task needs) | must | must | 3.8 |
 | Publishing playbook | won't | must | 3.8, 9.7 |
 | Ask the assistant | won't | should | 6.25 |
-| Issues and assumptions, risk fields and reviews (`raid.yaml`) | won't | could | 6.24, 4.20 |
+| Issues and assumptions, risk fields and reviews (`raid.yaml`) | won't | add-on (project management pack) | 6.24, 4.20 |
 | Escalation suggestions, communications cadence, meeting agendas | won't | could | 6.24 |
 | Automation `Issue` renamed `Problem` | n/a (naming) | must | 5.1 |
 | Native adapters (vendors with their own API format), aggregator adapter with catalog and routing options, Add account flow, models from provider catalogs | won't | must | 6.16 |

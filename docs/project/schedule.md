@@ -3,7 +3,7 @@
 Owner time is under 5 hours a week: direction, review and real use. The building is done for the owner. The launch on
 2026-12-01 never waits on the tool.
 
-The working checklist to the first public release is [`roadmap-to-1.0.md`](roadmap-to-1.0.md).
+**Superseded on 2026-10-12:** the order of work and its exit tests are in [`roadmap-to-1.0.md`](roadmap-to-1.0.md) (the go-forward plan). The calendar below is the original plan, kept for the record; its go/no-go and freeze dates no longer hold.
 
 ## Calendar
 

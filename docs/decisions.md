@@ -3,6 +3,57 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: A project management pack: an AI project manager that builds schedules and tracks the work
+
+**Decided by:** project owner ("an AI project manager will know what we are doing, build schedules, track action items").
+
+**What:** A new private pack, built in phase C before the publishing pack.
+- **The core keeps** what every kind of work needs: actions, questions, follow-ups, decisions and Today.
+- **The pack adds** planning:
+  - the plan (goals, phases, deliverables, milestones);
+  - the schedule (durations, dependencies, critical path, baselines and slips; only the person rebaselines);
+  - plans and schedules drafted by the assistant for the person to approve;
+  - daily at-risk lines on Today and a weekly status report to send;
+  - RAID;
+  - an interface (`pm/schedule@1`) through which the writing and publishing packs put their milestones into one
+    schedule.
+
+  Each pack still works alone.
+- **This is distinct from the workplace pack** (design Part 9.1–9.5), which is about wiki pages and trackers at a
+  workplace.
+
+**Why:** the owner's plan is to run the book and the launch with an AI project manager. Schedules and their follow-up
+belong to that kind of work rather than to every use of the core.
+
+**Impact:** design 6.23 (dependencies and baselines) and 6.24 (RAID and its reviews) move from the core to this pack;
+`scope.md` lists them as an add-on rather than a core must. Phase C of the roadmap grows by about three sessions. The
+publishing pack's launch plan uses the pack's schedule when both are on.
+
+## 2026-10-12: The go-forward plan: a working baseline, then the UI, then the packs
+
+**Decided by:** project owner ("we need the baseline done and working so we can get the publishing and writing packs
+working"; the UI/UX finalization near the top; the demo data "just makes things confusing").
+
+**What:** The roadmap is rewritten as phases, each ending on an exit test the owner can run:
+- **A:** a baseline that works with no demo data.
+- **B:** the UI/UX redesign finished.
+- **C:** the writing pack installed and reviewed, the publishing pack started and built, and what both need from the
+  core (the publisher, the file channel, fact lookups).
+- **D:** owner validation and real use.
+- **E:** the rest of version 1.
+
+The fictional workspaces leave the person's path. CLAUDE.md gains the rules from the review (one stream at a time,
+defaults that produce a result, journey tests before "ready to test", fixing the cause and its siblings).
+
+**Why:** the review of 2026-10-12. Small errors reached the owner because the try-it path ran on test fixtures, safe
+defaults together produced nothing, no test followed the person's journey, and too many streams ran at once. The
+owner has seen neither pack working: the writing pack loads on the current host but can't be installed from the
+screen (it needs its own libraries), and the publishing pack was never started.
+
+**Impact:** `docs/project/roadmap-to-1.0.md` replaced. The 2026-10-30 go/no-go and the November freeze in
+`schedule.md` no longer hold; phase D's dates are set by the owner. Feature work on version-1 extras waits for phases A
+to C.
+
 ## 2026-10-12: Signing in is the whole setup for mail and calendar
 
 **Decided by:** project owner ("it needs to just set up properly; the user shouldn't have to jump through hoops").

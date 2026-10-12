@@ -83,6 +83,19 @@ order of `docs/project/schedule.md`; anything it defers stays deferred.
 - The main session keeps work that needs judgment: design changes, the applier, ledger, undo, trust and plugin boundaries,
   and fixing what a review finds there.
 
+## How work reaches the owner (review, 2026-10-12)
+- The plan is `docs/project/roadmap-to-1.0.md`: one phase at a time, each ending on its exit test. One stream of work at
+  a time; plugin question rounds are answered once a week, together.
+- The fictional workspaces are test fixtures and the sandbox, never the owner's starting point. A real workspace starts
+  from `cockpit init` with no template.
+- Every default produces a visible result for a real person with no file editing and no extra command. A brief says
+  what the person sees in their first five minutes.
+- A reported problem gets a failing test of the person's path first; then everything with the same cause is found and
+  fixed in the same change, and the reply says what was checked.
+- Nothing is "ready to test" until the journey tests pass. The message to the owner gives the exact commands and what
+  they should see.
+- Never mark a plan item done on a part of it: say what is left.
+
 ## Before finishing any change
 - Run the tests and the self-check: specificity, provider, pattern and boundary scans, config coverage, manifests, both
   fictional workspaces, the core with no packs enabled, root and nested base paths, deploy checks, web build.

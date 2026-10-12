@@ -1,131 +1,201 @@
-# Roadmap to 1.0
+# Go-forward plan to 1.0
 
-The working checklist from today to the first public release. Tick items as they finish and add the date. Dates and owner
-time come from `schedule.md`; what is in each horizon comes from `scope.md`; the milestones are in `docs/design/13-build-plan.md`.
-"1.0" is the first public release, which is version 1 in the plan.
+Rewritten on 2026-10-12 after the review (`review-2026-10-12.md`), at the owner's direction.
 
-Last updated: 2026-10-12. The review of 2026-10-12 (`review-2026-10-12.md`) sets the order of the next work; its section 4 comes before anything below that isn't done.
+**The goal:** a baseline that works for a real person with no demo data, then the UI finished and out of the way, then
+three packs running in the owner's own workspace:
+- **the writing pack;**
+- **a project management pack:** an AI project manager that knows what is being done, builds schedules and tracks
+  action items;
+- **the publishing pack.**
 
-## 1. Launch slice (done)
+The owner hasn't yet seen any pack working.
 
-- [x] Built, tested and pushed; CI green on the development branch (2026-10-09).
+**How the order was chosen:** each phase makes the next one testable by the owner. The plan holds one stream of work at
+a time, and a phase ends when its exit test passes, not when its code is written.
 
-## 2a. Build on now (decided 2026-10-09; launch-slice copy is commit `49e95e7`)
+Durations are estimates in working sessions. Dates are set when a phase starts and recorded here.
 
-- [x] People and projects screens: add, edit, rename; remove when nothing refers to them; `cockpit init --you` (2026-10-09).
-- [x] Plugin host, plugin API 0.1: reviewed, fixed and merged (2026-10-10).
-- [x] Stages: reviewed, fixed and merged; API only so far (2026-10-10).
-- [x] Stage screens: Stages view; ready and waiting-for-go rows on Today (2026-10-10).
-- [x] Cost control, engine: catalog prices, cached input, routing rules, context fit, escalation, estimates, a go above
-  the configured amount, per-run limit, budgets per kind of work (2026-10-10).
-- [x] Today: first-run card, assistant state (including the stand-in), Dismiss; one-box hand-in; notes under projects;
-  Chasers "To send" / "Waiting on them" with Copy then Mark sent (2026-10-10).
-- [x] Cost screens: the go showing the estimate; a spend line in the header (2026-10-10).
-- [x] Plugin API 0.2 (decisions, 2026-10-10), see `docs/plugin-api-0.x.md`: data levels, origin and person-only values, unique fields and `find`,
-  filtered `list`, `Ref` fields, validators that see the changeset, event kind filters, `record.delete`.
-- [x] The define-your-own kit with starting templates; the demo runs on a template (decisions, 2026-10-10).
-- [x] Guided install and setup: built screens in the package, one-step install and update, first-run wizard, settings
-  screens; agent accounts; ask the assistant about the app; a user guide (2026-10-11).
-- [x] **Friends' preview**: packaged install, guided setup, labeled demo, bring-your-own AI, feedback button, download
-  (2026-10-11; `docs/install.md`; a tag builds the release).
-- [x] Plugin API 0.3 with uploads, previews and person actions (2026-10-11); now 0.3.30, see `docs/plugin-api-0.x.md`.
-- [ ] Watchers and lookups (engine and general sources in the core; product connectors as plugins). Done: the engine,
-  triage and Auto-closed, folder, feed, calendar (ICS) and mailbox (IMAP) sources, the Sources screen. Waiting on the
-  owner: product mail and calendar plugins with their own sign-in.
-- [ ] Publishing pack in its own private repository. For the 2026-12-01 launch, a publishing template built with the
-  kit is the stretch goal, alongside the manual process.
-- Every feature: run on the fictional imprint end to end with desktop and phone screenshots before hand-over; the owner's
-  weekly 15-minute try; friction in `ux-notes.md`.
+## Phase 0: the plan and the rules (done 2026-10-12)
 
-## 2. Owner validation (now to 2026-10-30)
+- [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
+- [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded.
 
-- [ ] Run it locally on the fictional imprint (README, "Try it").
-- [ ] Add an AI key, run `cockpit ai test` (every tier answers), then `cockpit evaluate`; choose a model from the report.
-- [ ] Set up the private imprint workspace and an off-device backup folder; one backup succeeds.
-- [ ] A week of real launch notes and emails through it; does it save time?
-- [ ] **Go / no-go on 2026-10-30** (criteria in `schedule.md`). Go: use it through the launch. No-go: parked until after.
+## Phase A: a baseline that works with no demo data (about 3 sessions)
 
-## 3. Freeze and launch (2026-10-31 to 2026-12-01)
+**Exit test:** on a fresh computer folder, the owner runs one install or update command. They then:
+1. make a workspace with no template;
+2. add an AI account;
+3. sign in to Google;
+4. see their recent mail and today's meetings handled by the assistant on Today;
+5. hand in a note and see the result;
+6. back up.
 
-- [ ] Fixes only on the copy in use, nothing new.
-- [ ] Launch on 2026-12-01.
+None of it takes a file edit, a second terminal command or a demo. Automated journey tests cover the same path.
 
-## 3a. Plugin host and document features early (from 2026-10-31, separate branch, about three and a half weeks)
+A1. **Demo data off the person's path.**
+- [ ] `cockpit init` with no template is the start in the README, `docs/install.md` and the setup guide.
+- [ ] The fictional workspaces stay as test fixtures and as the sandbox (`cockpit demo`), named as such.
+- [ ] A self-check: a fresh workspace shows no account, source or setting with a problem.
+- [ ] One command, `cockpit update`: it pulls, syncs without dropping installed add-ons, installs the web tools and
+  builds, then says whether a restart is needed.
 
-- [x] Plugin host: plugin API 0.x, manifests, registries, plugins working together through interfaces (3.9), one example plugin (2026-10-12).
-- [x] Long text with versions and authorship (5.0) (2026-10-11).
-- [x] Drafts with prose output; proposed versions and accepting them per passage (6.7) (2026-10-11).
-- [x] Compare view for long text, two-way and three-way (7.2) (2026-10-11; the text review screen).
-- [x] Long text formats (`plain`, `markdown`, plugin-registered) dividing text into units; paragraph-anchored drafts; lints computed in code, anchored to passages; lints on drafts count for escalation (6.7, 3.3, 6.16) (2026-10-11).
-- [x] Events: `record.changed`, `text.accepted`, and interface events (3.4) (2026-10-12).
-- [x] Working copies: hand out for the person's own tools, take back, review (5.0, 3.3) (2026-10-11; screens in the UX pass).
-- [x] Stages (6.26) (2026-10-10).
-- [x] Cost control: estimates, a go above a set amount, budgets per task kind and per project (6.16) (2026-10-11).
-- [x] Independent second opinion, with roles and same-account checks (6.16) (2026-10-12).
-- [ ] File channel (6.3). Files, uploads and outputs exist (2026-10-12); the publisher's channel waits for M6.
-- [x] Two computers through a synced folder: readable layout by project, lease in the folder, no silent merges, outside edits back for review (5.0) (2026-10-12).
-- [x] Plugin developer guide generated from the plugin API, for plugins kept in other repositories (2026-10-11).
-- [x] A sandbox workspace for trying plugins, apart from the launch workspace: `cockpit demo --plugin <folder>`
-  (2026-10-11).
+A2. **The person's path, fixed where the review found it broken.**
+- [ ] **Add-ons install from the screen.** Build the Install button on Add-ons, and install a pack's own libraries
+  (round 35). A release names every package it needs with checksums. Install shows what will be added, refuses
+  conflicts with the app's own, and Remove takes out only what that pack needed. This is what lets the writing pack
+  in.
+- [ ] Runs a crash left stuck are queued again on start.
+- [ ] The test-only source kind is hidden from "Add a source".
+- [ ] Passwords and addresses for the core mailbox and calendar sources are entered on screen and kept like an AI key.
+  Today they work only through `env:` or `file:`.
+- [ ] Server messages never name a settings file, a key path, `env:` or a command. About 50 of these are listed in
+  the audit.
+- [ ] Settings that do nothing are wired or removed: `owner_format`, the scheduled export.
+- [ ] **A refresh button on the mailbox** (owner, 2026-10-12): check "Came in" and the mail source now.
+- [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command.
 
-## 4. Retrospective (by 2026-12-11)
+A3. **Journey tests.** These are end to end, with a fake AI service and fake mail and calendar services, and nothing
+is "ready to test" until they pass:
+- [ ] fresh workspace → AI account → hand-in → result on Today;
+- [ ] sign in → mail and calendar read → assistant → review on Today;
+- [ ] a source added on screen → read → assistant;
+- [ ] an add-on installed from the screen → turned on → its screens appear;
+- [ ] backup → restore;
+- [ ] the acceptance scenario, steps 1–7, all checked as written (step 6 included).
 
-- [ ] What helped and what got in the way; lessons into design Part 8.
-- [ ] Re-plan version 1 from what the launch slice actually took.
+## Phase B: finish the UI/UX redesign (about 4 sessions)
 
-## 5. Version 1 build (from 2026-12-14)
+The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 
-- [ ] **M0: install with no manual setup (first, from 2026-12-14).** A person downloads one installer for their
-  computer and double-clicks it; nothing else is needed (decisions, 2026-10-11).
-  - Installers for macOS and Windows, signed so the system opens them without warnings; Linux keeps the package
-    file and script, with an AppImage if it is cheap.
-  - The installer carries everything the app needs (no Python, uv, Node or terminal), starts the app in the
-    background with a menu-bar or tray icon, and opens the setup guide in the browser on first run.
-  - The app updates itself from new releases, with the previous version kept to go back to; workspaces are never
-    touched by an install, an update or an uninstall.
-  - Add-ons install from the Add-ons screen with one click: moved forward, built before the freeze (decisions,
-    2026-10-11, "One-click install for add-ons comes before the freeze").
-  - Owner's part: the signing certificates for macOS and Windows (yearly fees) and where releases are hosted.
+**Exit test:** the owner reviews every screen on a laptop and a phone. Checklist items C1–C46 of
+`reviews/ui-ux-2026-10/` are marked Done or explained, with screenshots in `reviews/ui-ux-2026-10/after/`.
 
-- [ ] **M1–2: rest of the core.** The parts the launch slice trimmed (13.1).
-- [ ] **M3: scope and facts.** Scope resolver; facts looked up from configured sources, never asked (6.18, 6.19).
-- [ ] **M4: plugin host.** Finish what 3a started: the remaining `1.0` extension points and moving built-ins behind them;
-  project language (5.1), declared programs (`requires.tools`), plugin data files (4.12).
-- [ ] **M5: watchers and triage.** Inputs arrive on their own instead of being pasted.
-- [ ] **M6: records, rendering and the publisher.** Drafts, Waiting to go out with diffs, the publisher; the document
-  features come from 3a.
-- [ ] **M7: UI shell and settings.** Today as the home queue, first-run setup, the Settings panel, installable web app (Part 7).
-- [ ] **M8: publishing pack** in daily use (9.6 to 9.9).
-- [ ] **M9: workplace pack** on fictional data (9.1 to 9.5).
-- [ ] **Plugin API 1.0** declared: both packs run on it unchanged.
+- [ ] **Today:** the ranked queue (its engine is built), the inspector from 1680px, and the rail. Held items are
+  top-level. Review & copy and send back are placed as designed, and the keyboard starts on the queue.
+- [ ] **Work:** What changed and Follow-ups as list | detail. Waiting to go out is a designed screen with its empty
+  state.
+- [ ] **Records:** the Projects table and the People table with detail panes; record pages; forms in drawers. The
+  synced folder lives only in Settings.
+- [ ] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
+  language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
+- [ ] **Setup guide** as steps | step.
+- [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
+- [ ] Words and accessibility throughout: the microcopy table in the review, and axe in light and dark at four widths.
 
-## 6. Publish 1.0
+The journey tests from A3 run against the new screens as they land.
+
+## Phase C: the packs in the owner's workspace (about 9 sessions)
+
+**Exit test:** in the owner's own workspace:
+- the writing pack takes a fictional manuscript from import to a built PDF and EPUB the owner approves;
+- the project management pack holds the project's plan and builds a schedule from it, and the schedule shows what is
+  late or at risk;
+- the publishing pack starts a launch for the book, with its plan in the schedule, a listing sheet and prices;
+- the hand-offs between the packs work, and each pack also works alone.
+
+C1. **The writing pack, installed and reviewed.**
+- [ ] It installs from Add-ons with its libraries (A2).
+- [ ] Its two load notes are settled: SVG and TIFF files the workspace doesn't accept yet.
+- [ ] Its open questions are answered: 170, a review accepting a group of the assistant's changes at once; 172,
+  guide fixes.
+- [ ] A host-side review of the pack: what it registers and reaches, its rules, and its tests run against this host.
+  It is checked on 2026-10-12 to load and register on plugin API 0.3.55.
+- [ ] The owner's walkthrough on a fictional book, with what to change written down.
+
+C2. **The project management pack: started** (owner, 2026-10-12). This is an AI project manager that knows what is
+being done, builds schedules and tracks action items.
+- [ ] Create its private repository, with a brief and a builder session like the other packs.
+- [ ] The core keeps what every kind of work needs: actions with owners, questions, follow-ups, decisions, Today. The
+  pack adds planning on top, through ops and the core's records:
+  - [ ] **The plan:** goals, phases, deliverables and milestones.
+  - [ ] **The schedule:** work items with durations and dependencies, a critical path, dates worked out from the
+    dependencies, baselines, and slips against them. Only the person rebaselines.
+  - [ ] **Building it with the assistant:** from a brief, notes or another pack's milestones, the assistant drafts a
+    plan and a schedule. The person approves it as any change.
+  - [ ] **Tracking:** what is late or at risk each day goes to Today, with the action items behind it; a weekly status
+    report is drafted for the person to send.
+  - [ ] **RAID:** risks, issues, assumptions and decisions, with owners and review dates.
+  - [ ] **An interface other packs use** to put their milestones into the schedule (`pm/schedule@1`). The writing pack
+    puts in the book's chapters and edits; the publishing pack puts in the launch plan.
+- [ ] Design 6.23 (dependencies and baselines) and 6.24 (RAID, risk reviews, escalation suggestions, cadence,
+  meeting agendas) move from the core into this pack. This is a design change, recorded in decisions.
+
+C3. **The publishing pack: started.** It doesn't exist yet. Its launch plan goes into the project management pack's
+schedule when both are on, and is a plain list of milestones when it is alone.
+- [ ] Create its private repository, with a brief and a builder session like the other packs.
+- [ ] First version, from design 9.7 and the writing pack's `docs/publishing-pack.md`:
+  - the title record;
+  - a launch plan from a template, with lead times;
+  - contributors;
+  - Today lines and panels;
+  - the listing sheet per platform and the price calculator, from dated platform data;
+  - the AI-disclosure answers filled from the authorship breakdown;
+  - the `publishing/manuscript-source@1` hand-off.
+
+C4. **What the packs need from the core.**
+- [ ] **The publisher and the file channel.** Approved files are saved or shared after the person approves the exact
+  content. Waiting to go out lists them, with a diff where it applies.
+- [ ] **Fact lookups** (6.19): published dates are looked up from the configured sources, never asked.
+- [ ] Anything else either pack's builder asks for, answered in one weekly round.
+
+## Phase D: owner validation and real use
+
+**Exit test:** the owner's own judgment, on dates the owner sets: a week of real notes, mail and pack work saved
+time, nothing went out without approval, and a backup succeeded.
+
+- [ ] The acceptance scenario run by the owner on real material.
+- [ ] A week of real use; friction recorded in `ux-notes.md` and fixed in order of cost.
+
+## Phase E: the rest of version 1
+
+Order by what protects real data first, then by what the packs ask for:
+- [ ] **The governor:** stale-item sweeps, outage handling, the scheduled export with its remote; restore, including a
+  single record and a point in time.
+- [ ] Scope resolver (6.18), proposed lessons and the glossary (6.22), the rules review and read-backs (6.7, 6.21).
+  Dependencies, baselines and RAID moved to the project management pack (C2).
+- [ ] Native AI adapters and reproducible runs (6.16).
+- [ ] **M0, the desktop installer:** no Python, uv, Node or terminal; it updates itself.
+
+## Publish 1.0
 
 - [ ] Self-check against the private workspace (`cockpit selfcheck --workspace <path>`).
-- [ ] Publish as a fresh repository with one starting commit (no development history), under Apache-2.0.
-- [ ] Turn on secret scanning.
-- [ ] README and docs match what 1.0 does.
+- [ ] A fresh repository with one starting commit, under Apache-2.0; secret scanning on.
+- [ ] The README and docs match what 1.0 does.
 
 ## Not in 1.0
 
-Hosted mode and sign-in (Part 11), social, email and newsletter channels, the sales pack (13.3). A hosted website is
-the next step after the desktop installer (M0), once 1.0 is out.
+- Hosted mode and sign-in (Part 11).
+- Social, email and newsletter channels.
+- The sales pack (13.3).
+- Licensed (paid) packs: the design is accepted, but whether to charge is the owner's call, after launch.
 
-## Open items
+## Done before this plan
 
-- [ ] **The person's path works** (review 2026-10-12, section 4): Install button on Add-ons, crashed runs re-queued, the
-  test-only source hidden, secrets for core mail and calendar entered on screen, server-side wording, a starter workspace
-  and one update command, journey tests.
-- [ ] **A refresh button on the mailbox** (owner, 2026-10-12): Today's "Came in" and the mail source can be checked now,
-  without waiting for the schedule.
+Kept for the record; details are in `docs/decisions.md` and the git history.
 
-- [ ] **Provider lessons in version 1** (decisions, "Lessons from switching AI providers"): per-model parameter
-  capabilities, agent lock-down test, `sign_in_hint`, automatic restart, first-run notice, probation, canonical form for
-  channels, premise checks, `project.add`, person-owned fields, office-file extractors.
+**Core and safety:**
+- the launch slice;
+- people and projects;
+- the plugin host and plugin API 0.3.55 with the generated guide and the testing kit;
+- stages;
+- cost control;
+- guided setup and the Settings forms;
+- agent accounts;
+- ask the assistant.
 
-- [ ] **Milestone 10 overlap.** `scope.md` puts version 1 at milestones 1 to 9, but lists some milestone 10 items as version 1
-  musts: escalation on failure, budgets, native adapters. Cost control (M6) needs budgets. Decide which milestone 10 items
-  move into version 1 and update `scope.md` and the build plan to match.
+**Documents and data:**
+- long text with versions and authorship;
+- drafts, the compare view and working copies;
+- independent second opinions;
+- interfaces between plugins;
+- the synced folder.
 
-- [x] **Plugin-supplied labels.** A plugin ships wording files for its own kinds (`provides.wording`), and task kind
-  labels become `task.<kind>`; the workspace's `ui.yaml` still overrides them (plugin API 0.3.31, 2026-10-11).
+**Inputs:**
+- watchers, triage and the core folder, feed, calendar and mailbox sources;
+- sign-ins that start their sources;
+- the Google and Microsoft mail and calendar add-on, in its own repository and listed in the catalog.
+
+**The redesign:** its design, foundation and shell.
+
+**Packs:** the define-your-own kit with templates.
