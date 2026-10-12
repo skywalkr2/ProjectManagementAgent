@@ -212,8 +212,11 @@ test.describe.serial("journeys", () => {
     await page.getByRole("menuitem", { name: "Remove" }).click();
     await expect(installed.getByRole("alert")).toHaveCount(0);
     await page.getByRole("button", { name: /^Status: / }).click();
-    await page.getByRole("button", { name: "Restart now" }).first().click();
-    await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
+    await page.getByRole("dialog", { name: "Status" }).getByRole("button", { name: "Restart now" }).click();
+    await expect(page.getByText("Restarted with the new settings.").first()).toBeVisible({ timeout: 90_000 });
+    // Close the status popover with Escape before using the sidebar.
+    await page.getByRole("dialog", { name: "Status" }).press("Escape");
+    await expect(page.getByRole("dialog", { name: "Status" })).toHaveCount(0);
     await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Example overview" })).toHaveCount(0);
     await openView(page, "Add-ons");
     await page.getByRole("tab", { name: "Installed" }).click();

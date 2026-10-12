@@ -90,8 +90,8 @@ test.describe.serial("journey: mail", () => {
     // minute). Meanwhile Today says nothing was checked yet.
     const agenda = page.getByRole("region", { name: "Agenda" });
     const came = page.getByRole("region", { name: "Came in" });
-    await expect(came).toContainText("Not checked yet");
-    await expect(came.getByText(mail[0])).toBeVisible({ timeout: 120_000 });
+    // A sign-in reads its sources at once: the mail is there within seconds, not at the next minute's check.
+    await expect(came.getByText(mail[0])).toBeVisible({ timeout: 10_000 });
 
     // Today lists the recent mail on Came in and today's meetings on the agenda; what is older or further off is not.
     for (const title of mail) await expect(came.getByText(title, { exact: true })).toBeVisible();

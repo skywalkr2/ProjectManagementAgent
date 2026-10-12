@@ -1,15 +1,25 @@
 name: checks
 
+# Minutes matter (a private repository's plan has a monthly allowance), and every push here has already passed the
+# full checks, browser tests included, on the developer's computer (CLAUDE.md). So a push to a working branch runs the
+# fast checks on one Python; pull requests, pushes to main and a manual run add the second Python and the browser tests.
+# A newer push to the same branch cancels the run it supersedes, and a change to documents alone runs nothing.
 on:
   push:
+    paths-ignore: ["docs/**", "**/*.md"]
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   python:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.12", "3.13"]
+        python-version: ${{ fromJSON((github.event_name == 'push' && github.ref != 'refs/heads/main') && '["3.12"]' || '["3.12", "3.13"]') }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -44,6 +54,7 @@ jobs:
       - name: Build (generates the API types and type-checks)
         run: npm --prefix web run build
       - name: Browser tests with accessibility checks
+        if: github.event_name != 'push' || github.ref == 'refs/heads/main'
         run: |
           npx --prefix web playwright install --with-deps chromium
           npm --prefix web run e2e
