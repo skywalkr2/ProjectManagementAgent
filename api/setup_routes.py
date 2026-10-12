@@ -68,7 +68,17 @@ HOSTED_KEY = "On a hosted app, a key can't be pasted: keep it in the app's envir
 DOMAIN_OFFER_AT = 3
 NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "workspace.plugins.enabled", "server.")
 #: Keys the guided steps write that no form shows: an AI account, the tiers it does, the backup folders.
-GUIDED = ("ai.providers.", "ai.tiers.", "storage.backups.targets", "watch.triage")
+#: The keys the guided routes write (an AI account, a backup folder, the sources, sorting rules, add-ons on or off, the
+#: person's own name). The general save accepts them too, because a screen's Undo saves the values from before there.
+GUIDED = (
+    "ai.providers.",
+    "ai.tiers.",
+    "storage.backups.",
+    "watch.sources",
+    "watch.triage",
+    "workspace.plugins.enabled",
+    "workspace.user.",
+)
 
 
 #: How the first read of a source added from the screen goes: the source setting's own default, which the add route

@@ -160,18 +160,23 @@ A4. **The new-start walkthrough** (owner, 2026-10-12; design 7.8). Install to fi
 A5. **Sales and social mail set aside by rules** (owner, 2026-10-12: "right now it's processing all of it"; moved from L0
 because the exit test reads real mail, and Gmail's tabs aren't reliable). This is the rules part of design 6.5's Set
 aside folder:
-- [ ] Mail items carry `bulk` (unsubscribe or bulk headers) and `categories` (the service's own), plugin API 0.3.57.
-- [ ] Core matchers `bulk-mail`, `service-category` and `sender-rule`. The default sorting is built in for every
+- [x] Mail items carry `bulk` (unsubscribe or bulk headers) and `categories` (the service's own), plugin API 0.3.57.
+- [x] Core matchers `bulk-mail`, `service-category` and `sender-rule`. The default sorting is built in for every
   workspace, existing ones included (`watch.set_aside_defaults`, on), so promotions, social updates and mailing lists
   are set aside with no AI run and **no setup by the person**: nothing in their mail service and no settings edit.
-- [ ] The Set aside folder (Personal; Sales and promotions) and Came in's "N set aside" count.
-- [ ] One-click corrections: "Set aside: personal or sales" on any item and "This is work" in the folder, each offering
+- [x] The Set aside folder (Personal; Sales and promotions) and Came in's "N set aside" count.
+- [x] One-click corrections: "Set aside: personal or sales" on any item and "This is work" in the folder, each offering
   "always for this sender or domain" as a sorting rule with a read-back and Undo.
-- [ ] **Confirm learns and deletes** (owner, 2026-10-12): confirming a set-aside writes a sender rule (a domain rule
+- [x] **Confirm learns and deletes** (owner, 2026-10-12): confirming a set-aside writes a sender rule (a domain rule
   is offered at three senders). It also removes the message's text from the app, keeping a marker so it isn't read
   again. The mailbox is never changed.
-- [ ] Journey: a mailbox with work mail, a social update and a sales mail. Only the work mail reaches the assistant
+- [x] Journey: a mailbox with work mail, a social update and a sales mail. Only the work mail reaches the assistant
   and the first Go. "This is work" hands the sales mail in.
+
+Built: `tests/test_set_aside.py` (22 tests, including a workspace made before this change and the deleted
+text gone from the whole database and every file), `test_the_mailbox_connector_marks_bulk_messages_from_their_headers`,
+`SetAside.test.tsx`, `SetAsideCorrections.test.tsx` and journey J2. Also fixed: Undo after a guided save (a source, an
+add-on on or off, your name) was refused (`tests/test_settings_undo.py`).
 
 The sorting run on headers for mail the rules can't place, and the proof that learning never reads set-aside mail, stay
 in L0.
@@ -235,6 +240,11 @@ them are needed before the owner's daily use, which starts when L-core passes.
   per connector). Today it lives only on the request.
 - [ ] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
   both, and they differ).
+- [ ] **After A5:**
+  - "Set aside" corrections record a signal (today only "This is work" records `pulled_back`); this needs a signal kind.
+  - Learning skips any request or snapshot marked `set_aside`, proved by a learning pair.
+  - A confirmed set-aside's ledger redaction is applied to both histories before the synced folder compares them, as
+    forgetting a person is (5.2), so two computers don't read it as a divergence.
 - [ ] **Personal and sales mail set aside, the rest** (owner, 2026-10-12; design 6.5; the rules part is phase A5):
   - a Set aside folder (Personal; Sales and promotions);
   - sorting by the person's sender and domain rules, then the mail's own category and bulk headers, then a low-cost
