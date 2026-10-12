@@ -31,7 +31,7 @@
   audiences it allows (4.1, 6.7; not yet built).
 - **Audit:** the ledger (5.0) records every applied op with its actor and provenance; approvals, sends, settings changes,
   sign-ins and plugin enable or disable are recorded alongside. The readable export keeps it in git history. Built: the
-  ledger, approvals and settings changes (as `setting_change` records). **Phase A:** sign-ins, sign-outs and turning a
+  ledger, approvals and settings changes (as `setting_change` records). **Phase L0, before real use:** sign-ins, sign-outs and turning a
   plugin on or off are recorded too, before the Admin tab exists, because an audit trail that starts late misses exactly
   the period someone will want to look at. The scheduled export to the workspace's own git is wired in phase A.
 - **The export's remote is off-machine copying of everything,** raw mail and pasted text included, so it gets the care of
@@ -159,7 +159,7 @@ that becomes guidance in a packet is the most valuable thing to poison. These ar
   trusted guidance, a quieter channel than the code the person already approves (12.3). The Add-ons listing and the turn-on
   step show the pack's guidance beside what it reaches and keeps. Pack entries are marked by origin in the knowledge log.
   The order holds: invariants, then the person's own rules and lessons, then pack guidance.
-- **A shared synced folder isn't the person's own words** (*phase A*). An edit found in the synced folder arrives as the
+- **A shared synced folder isn't the person's own words** (*phase L0, before real use*). An edit found in the synced folder arrives as the
   person's own work. When the folder is shared (a team drive, a family cloud folder), someone else's edit would count as the
   person's. So the folder setting asks whether anyone else can change it (`storage.sync.shared`). When it is shared, outside
   edits are content, reviewed like any other.
@@ -178,7 +178,7 @@ that becomes guidance in a packet is the most valuable thing to poison. These ar
 |---|---|---|
 | `keychain:NAME` secrets | 12.1 | Refused with a message |
 | Audiences and restrictions on destinations | 12.1 | Not built |
-| A log of sign-ins and of turning plugins on and off | 12.1 | Not built (the ledger and settings records exist); phase A |
+| A log of sign-ins and of turning plugins on and off | 12.1 | Not built (the ledger and settings records exist); phase L0 |
 | Host and Origin checks in local mode; a loopback-only local address | 12.1 | Not built; phase A (the cookie is already strict and there are no CORS headers) |
 | Learning and trust | 12.8 | Not built; phases L-core and L-more |
 | The scheduled export to git and its remote | 12.1 | Not built; the settings are read by nothing |

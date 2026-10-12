@@ -6,7 +6,7 @@ Each component is generic, configured from Part 4, and has its own tests with fi
 roadmap (`docs/project/roadmap-to-1.0.md`) says when it is due. Where the code and a section differ, the code and the decisions
 are right and the section is a gap. Sections 6.8 to 6.11 were written for the first design and have not been compared with
 the code line by line since. They are where most corrections happen (drops, rewords, reroutes, reassignments), so the
-learning loop's signals come from them; they are audited against the code at the end of phase A, before phase L starts.
+learning loop's signals come from them; they are audited against the code first in phase L-core (L0), before the learning loop is built on them.
 
 ## 6.1 Plugin host
 
@@ -191,7 +191,7 @@ facts with 6.18 and 6.19.
   **current** (all open actions and questions). The request-specific
   parts follow: the knowledge that depends on the input (lessons targeted at its projects or people, routing, the glossary
   terms it uses, style notes, ranked facts; 6.22), scope, related records, today's date **and the input's received date**
-  (phase A), and the input last. Most providers discount or cache a repeated prefix, and only an identical one: so each layer is serialized in a
+  (phase L0, before real use), and the input last. Most providers discount or cache a repeated prefix, and only an identical one: so each layer is serialized in a
   deterministic order with no dates, counts or other volatile values, and the batch's calls run close together because cached
   prefixes expire after minutes. **The prefix is not frozen for a batch** (*changed after the first design author's review*):
   each request's packet is built from the current state, so input 2 sees the action or question input 1 just created or
@@ -478,7 +478,7 @@ wherever they are shown.
   alias that matches one person becomes that id; the PM's aliases become the PM; a bare first name only one known person has
   becomes that person **only when the input's context matches** (the person is on the same project, or is a participant in
   the thread); anything with a different initial or surname fragment is held (*changed after the first design author's
-  review; the code today resolves any unique first name, fixed in phase A*); an owner written in the workspace's `owner_format` is parsed into person and team. Anything ambiguous or
+  review; the code today resolves any unique first name, fixed in phase L0, before real use*); an owner written in the workspace's `owner_format` is parsed into person and team. Anything ambiguous or
   unknown holds the op and files one routing decision ("Who is 'Sam'?", with the candidates and "Add a new person").
 - **Rendering:** owners in `owner_format` ("Product (Jane Doe)"), recipients by full name, greetings by first name. Changing
   the format changes every output at the next render.
@@ -569,7 +569,7 @@ started (a hash of the config files; the newest modification time of the program
 - If any changed key is not live, or the code changed, the settings in use stay as they were, no new job starts, queued AI work
   is held ("Settings or code changed since the cockpit started; restart it to use them"), and the screens say a restart is
   needed and for which settings. The person chooses **Restart now** or **Later**. **The app never restarts on its own.**
-  Old code never quietly runs new settings; nothing is half-reloaded. **Held work is never a silent stop** (*phase A*): the
+  Old code never quietly runs new settings; nothing is half-reloaded. **Held work is never a silent stop** (*phase L0, before real use*): the
   first Decide line on Today says "Restart to run 7 waiting requests", with the count, for someone who opens the laptop and
   never looks at the header.
 - **Restart now** (`POST /api/restart`) restarts between requests, at once if none is running; locally the process re-executes
@@ -590,8 +590,8 @@ order, each line with a kind:
 
 | Group | Lines (kind) |
 |---|---|
-| **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; *phase A*); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
-| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, *phase A*); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line (`overdue`) |
+| **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; *phase L0, before real use*); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
+| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, *phase L0, before real use*); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line (`overdue`) |
 | **Review** | the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
 | **Send** | messages to send, one line per person (`send`); a person who hasn't answered in `ui.today.nudge_after_days` days (`nudge`: questions sent and actions told, 4.11) |
 
@@ -743,7 +743,7 @@ model doesn't accept.
 output. Everything else works from its classification. A sign-in failure (`auth`) always becomes a question to the PM that
 includes the adapter's `sign_in_hint()` (its own login command or page), and never reaches any other path.
 
-**Exit 0 with no answer is a failure** (*phase A*). Some agents exit 0 after printing a limit or sign-in message to their
+**Exit 0 with no answer is a failure** (*phase L0, before real use*). Some agents exit 0 after printing a limit or sign-in message to their
 output, with no changeset. That is its own outcome, `no_output`, never "done": it is retried, then counts toward the
 empty-run rule (8.6). Today an agent that should answer in its outbox and doesn't is already `invalid_output`, so nothing is
 marked done. The separate outcome lets the empty-run rule and the quality panel count it apart from a malformed answer.
@@ -782,7 +782,7 @@ L-core*). Today every case runs with the clock frozen at one moment, on a fresh 
 lists the ops it expects and, optionally, ops it forbids. The review found the set too easy in ways that would let a
 low-cost model look as good as a strong one, so each case gains:
 - **`received:`,** the date and time the input arrived. The harness freezes the clock there and puts it in the packet header
-  (phase A's fix), so a relative date ("by Tuesday") is tested against the input's own date.
+  (the received-date fix in L0), so a relative date ("by Tuesday") is tested against the input's own date.
 - **`exact: true` by default:** no applied ops beyond the expected ones, except `note` and `source`. A case relaxes it when
   more is acceptable. Over-extraction was the running version's most frequent real failure: duplicate actions, actions for
   people outside the area, notes nobody needed.

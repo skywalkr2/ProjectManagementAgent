@@ -48,7 +48,7 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 - [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
 - [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded.
 
-## Phase A: a baseline that works with no demo data (about 5.5 sessions)
+## Phase A: a baseline that works with no demo data (about 3.5 sessions)
 
 **Exit test:** on a fresh computer folder, the owner runs one install or update command. They then:
 1. make a workspace with no template;
@@ -59,6 +59,10 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 6. back up.
 
 None of it takes a file edit, a second terminal command or a demo. Automated journey tests cover the same path.
+
+**What stays in A** (re-sized 2026-10-12 after the reviews had added about a dozen items). Phase A holds only what its exit
+test needs. The local-mode guards stay as well, because the exit test is the first time the owner's real mail is in the
+app. The items the reviews added for daily use moved to L0, at the start of L-core, which still comes before real use.
 
 A1. **Demo data off the person's path.**
 - [ ] `cockpit init` with no template is the start in the README, `docs/install.md` and the setup guide.
@@ -81,35 +85,13 @@ A2. **The person's path, fixed where the review found it broken.**
 - [ ] Settings that do nothing are wired or removed: `owner_format`. **The scheduled export is wired** to the workspace's
   own git, so a readable copy of the workspace is written regularly once real knowledge accumulates; the backups copy the
   database, which is not readable on its own. The export's remote is not offered until phase E gives it the care of
-  backups (design 12.1). The near-duplicate threshold
-  becomes a setting (design 4.17; the code fixes it at 0.8).
+  backups (design 12.1).
 - [ ] **A refresh button on the mailbox** (owner, 2026-10-12): check "Came in" and the mail source now.
-- [ ] **Followed up** on Waiting on them (design 7.5, 6.9): the primary for an action waiting past the nudge threshold.
-  It records the chase, keeps the action open and counts it as told. Today the only button there closes the action.
 - [ ] With the Install button, the Add-ons screen's introduction stops saying the app never installs anything.
 - [ ] **Local mode guards against other web pages** (design 12.1):
   - refuse a `Host` that isn't the configured local address;
   - refuse state-changing requests from another `Origin`;
   - refuse to start in local mode on a non-loopback address.
-- [ ] **Audit from now:** sign-ins, sign-outs and turning a plugin on or off are recorded.
-- [ ] **A shared synced folder** (`storage.sync.shared`, asked when the folder is chosen): outside edits from a shared
-  folder arrive as content, not the person's own words.
-- [ ] **No silent stops** (design 8.5, 8.6, 8.8):
-  - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived;
-  - a usage limit resumes by itself at its reset;
-  - an empty or failed run is retried automatically, then goes to the person with why;
-  - an agent that exits 0 with no answer is its own outcome (`no_output`), retried, never "done";
-  - held work and paused accounts show on Today: "Restart to run 7 waiting requests" as the first Decide line, and an
-    account paused until its limit resets as a Risk line with the time and the count waiting.
-- [ ] **A bare first name resolves only in context** (design 6.11): same project, or a participant in the thread; a
-  different initial or surname fragment is held.
-- [ ] The golden-set cases for these fixes are written first, as their failing tests:
-  - a `received:` date on every case;
-  - a bare first name resolving when the person is in the thread;
-  - "Maya R." held when only another Maya is known;
-  - an unknown person producing one "who is this" decision.
-- [ ] **Audit design 6.8 to 6.11 against the code** before phase L starts: the questions, actions, notices and names
-  services. Fix what differs, or correct the design, so the learning loop's signals are right from the start.
 - [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command.
 
 A3. **Journey tests.** These are end to end, with a fake AI service and fake mail and calendar services, and nothing
@@ -119,17 +101,9 @@ is "ready to test" until they pass:
 - [ ] a source added on screen → read → assistant;
 - [ ] an add-on installed from the screen → turned on → its screens appear;
 - [ ] backup → restore;
-- [ ] the acceptance scenario, steps 1–7, all checked as written (step 6 included);
-- [ ] **no silent stops**, each with a fake provider:
-  - a usage limit, then the work resuming by itself at the reset;
-  - an agent exiting 0 with no answer;
-  - a restart needed, shown as the first Decide line;
-  - an empty run retried, then sent to the person;
-- [ ] **waking up:** the computer sleeps through a scheduled batch and wakes. The batch runs once, nothing looks fresh that
-  isn't, and nothing is filed for the lost network (design 8.6). Most people open the lid rather than start fresh, and
-  waking was where most "it just stopped" reports came from.
+- [ ] the acceptance scenario, steps 1–7, all checked as written (step 6 included).
 
-## Phase L: the learning loop, L-core (about 9 sessions)
+## Phase L: the learning loop, L-core (about 11 sessions, L0 included)
 
 Added on 2026-10-12 after the first design's author reviewed design 1.1 (decisions, "The learning slice"); split into L-core
 and L-more after his review of this plan. The write side of learning is built; this phase builds the read side, so the
@@ -156,6 +130,40 @@ How the numbers are read:
   counts swing too much to read.
 
 If the repeat-correction rate doesn't fall, the loop isn't closing, and that is fixed before more pack work.
+
+L0. **Before real use: moved from phase A** (about 2 sessions). None of these is needed for phase A's exit test. All of
+them are needed before the owner's daily use, which starts when L-core passes.
+- [ ] **Audit design 6.8 to 6.11 against the code** first, before the learning loop is built on them: the questions, actions, notices and names
+  services. Fix what differs, or correct the design, so the learning loop's signals are right from the start.
+- [ ] **No silent stops** (design 8.5, 8.6, 8.8):
+  - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived;
+  - a usage limit resumes by itself at its reset;
+  - an empty or failed run is retried automatically, then goes to the person with why;
+  - an agent that exits 0 with no answer is its own outcome (`no_output`), retried, never "done";
+  - held work and paused accounts show on Today: "Restart to run 7 waiting requests" as the first Decide line, and an
+    account paused until its limit resets as a Risk line with the time and the count waiting.
+- [ ] The near-duplicate threshold becomes a setting (design 4.17; the code fixes it at 0.8).
+- [ ] **A bare first name resolves only in context** (design 6.11): same project, or a participant in the thread; a
+  different initial or surname fragment is held.
+- [ ] The golden-set cases for these fixes are written first, as their failing tests:
+  - a `received:` date on every case;
+  - a bare first name resolving when the person is in the thread;
+  - "Maya R." held when only another Maya is known;
+  - an unknown person producing one "who is this" decision.
+- [ ] **Followed up** on Waiting on them (design 7.5, 6.9): the primary for an action waiting past the nudge threshold.
+  It records the chase, keeps the action open and counts it as told. Today the only button there closes the action.
+- [ ] **The audit trail:** sign-ins, sign-outs and turning a plugin on or off are recorded.
+- [ ] **A shared synced folder** (`storage.sync.shared`, asked when the folder is chosen): outside edits from a shared
+  folder arrive as content, not the person's own words.
+- [ ] Journey tests:
+  - **no silent stops,** each with a fake provider:
+    - a usage limit, then the work resuming by itself at the reset;
+    - an agent exiting 0 with no answer;
+    - a restart needed, shown as the first Decide line;
+    - an empty run retried, then sent to the person;
+  - **waking up:** the computer sleeps through a scheduled batch and wakes. The batch runs once, nothing looks fresh that
+    isn't, and nothing is filed for the lost network (design 8.6). Most people open the lid rather than start fresh, and
+    waking was where most "it just stopped" reports came from.
 
 L1. **Knowledge as records.**
 - [ ] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,

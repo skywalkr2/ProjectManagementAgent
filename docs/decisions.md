@@ -3,6 +3,28 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Phase A re-sized to its exit test; the reviews' daily-use items move to L0
+
+**Decided by:** project lead, asked to re-size phase A with its exit test unchanged.
+
+**What:** Phase A keeps only what its exit test needs. The local-mode guards stay too, because the exit test is the first
+time the owner's real mail is in the app. These items move to L0, the start of L-core, which still comes before real use:
+- the silent-stop fixes and their journey tests;
+- waking from sleep;
+- the received date;
+- first names in context, and their golden-set cases;
+- the near-duplicate threshold;
+- Followed up;
+- the audit records for sign-ins and plugins;
+- the shared-folder setting;
+- the 6.8 to 6.11 audit.
+
+**Why:** The reviews of sections 15 to 19 added about a dozen items to phase A, growing it from about 3 to 5.5 sessions.
+Most protect daily use, which starts after L-core, not the exit test.
+
+**Impact:** Phase A is about 3.5 sessions, and L-core about 11 with L0 (about 2). The total is unchanged. Design references
+to "phase A" for the moved items now say L0.
+
 ## 2026-10-12: The security review: learning's new roads to trusted guidance, and local mode against other web pages
 
 **Decided by:** the first design's author proposed (review of Part 12); project lead checked the code and placed the work.

@@ -506,6 +506,24 @@ Checked against the code first.
 | Hostile cases for phase L's roads | Added to the fixture list (L4): a planted lesson, a routing change, a glossary meaning that changes an instruction, an injected import. |
 | Log plugin on/off and sign-ins now | Settings saves are already recorded; sign-ins and turning plugins on or off are recorded from phase A. |
 
+## 20. Phase A re-sized (2026-10-12)
+
+Sections 15 to 19 had added about a dozen items to phase A (from about 3 to 5.5 sessions). Its exit test is unchanged.
+Phase A now holds only what that test needs, plus the local-mode guards (Host, Origin, loopback only), because the test is
+the first time the owner's real mail is in the app.
+
+The rest moved to **L0**, the start of L-core, which still comes before real use:
+- the silent-stop fixes and their journey tests, and waking from sleep;
+- the received date;
+- first names in context, with their golden-set cases;
+- the near-duplicate threshold;
+- Followed up;
+- the audit records;
+- the shared-folder setting;
+- the 6.8 to 6.11 audit.
+
+Phase A is now about 3.5 sessions and L-core about 11; the total is unchanged.
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
