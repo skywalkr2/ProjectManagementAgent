@@ -28,9 +28,10 @@ cockpit init ~/cockpit
 cockpit serve -w ~/cockpit --open
 ```
 
-The workspace starts empty, and nothing in it needs a file edited. The first screen walks you through setup on the
-screen: your name, your AI account (with a test), a backup folder and your sign-ins, then your first hand-in. Each step
-can be skipped and done later from Settings. Keep workspaces in your home folder, not in a temporary folder.
+The workspace starts empty, and nothing in it needs a file edited. The first screen is the setup walkthrough: your
+name, your AI account (with a test), your mail and calendar, a backup folder and the people you work with. Each step can
+be skipped and done later from Settings. Keep workspaces in your home folder, not in a temporary folder.
+[`getting-started.md`](getting-started.md) follows the same path step by step, with what each step costs.
 
 ## Update
 

@@ -195,17 +195,24 @@ test.describe.serial("acceptance scenario", () => {
     await expect(status).not.toContainText("cockpit");
     await checkAccessibility(page);
     await status.getByRole("button", { name: "Open the AI step" }).click();
-    await expect(page.getByRole("heading", { name: "Add an AI account and test it" })).toBeFocused();
+    await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeFocused();
     await checkAccessibility(page);
-    await go(page, "Today");
-    // Continue setup opens the guide at the next step, with focus on its heading.
+    // Finish later leaves the walkthrough, and Today's setup line stays as it was.
+    await page.getByRole("button", { name: "Finish later" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    await expect(line).toContainText("Next: Add an AI account and test it");
+    // Continue setup opens the walkthrough at the next step, with focus on its heading.
     await line.getByRole("button", { name: "Continue setup" }).click();
-    await expect(page.getByRole("heading", { name: "Add an AI account and test it" })).toBeFocused();
+    await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeFocused();
+    const screens = page.getByRole("navigation", { name: "Setup steps" });
+    await screens.getByRole("button", { name: /^Done/ }).click();
     await page.locator('[data-step="first_note"]').getByRole("button", { name: "Hand something in" }).click();
     await expect(page.getByLabel("Paste or type it here")).toBeFocused();
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Cancel" }).click();
-    await page.locator('[data-step="people"]').getByRole("button", { name: "Open People & projects" }).click();
+    await line.getByRole("button", { name: "Continue setup" }).click();
+    await screens.getByRole("button", { name: /^People/ }).click();
+    await page.getByRole("button", { name: "Add people" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "People", exact: true })).toBeVisible();
     await go(page, "Today");
     await line.getByRole("button", { name: "More actions for setup" }).click();
@@ -216,7 +223,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("region", { name: "Setup", exact: true })).toHaveCount(0);
   });
 
-  test("the setup guide and Settings are screens of their own, and pass the accessibility checks", async ({ page }) => {
+  test("the setup walkthrough and Settings are screens of their own, and pass the accessibility checks", async ({ page }) => {
     await signIn(page);
     await go(page, "Settings");
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
@@ -230,19 +237,31 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("textbox", { name: "Hours between backups" })).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Workspace name" })).toHaveCount(0);
     await page.getByRole("button", { name: "Open the setup guide" }).click();
-    await expect(page.getByRole("heading", { name: "Set up", exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Add an AI account and test it" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+    const screens = page.getByRole("navigation", { name: "Setup steps" });
+    await screens.getByRole("button", { name: /^Your AI account/ }).click();
+    await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+    await expect(page.getByRole("form", { name: "What it may spend" })).toBeVisible();
     await page.getByRole("radio").first().check();
     await expect(page.getByRole("heading", { name: "Get a key" })).toBeVisible();
     await expect(page.getByLabel("Key", { exact: true })).toBeVisible();
     await page.getByText("Advanced", { exact: true }).click();
     await expect(page.getByLabel("Account name")).toBeVisible();
     await checkAccessibility(page);
+    await screens.getByRole("button", { name: /^Mail and calendar/ }).click();
+    await expect(page.getByRole("heading", { level: 2, name: "Mail and calendar" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Another mail or calendar" })).toBeVisible();
+    await checkAccessibility(page);
+    await screens.getByRole("button", { name: /^Backups/ }).click();
     await page.getByRole("button", { name: "Choose…" }).click();
     await expect(page.getByRole("dialog", { name: "Choose a folder" })).toBeVisible();
     await checkAccessibility(page);
     await page.getByRole("button", { name: "Cancel" }).click();
-    await go(page, "Today");
+    await screens.getByRole("button", { name: /^Done/ }).click();
+    await expect(page.getByRole("region", { name: "Optional extras" })).toBeVisible();
+    await checkAccessibility(page);
+    await page.getByRole("button", { name: "Finish later" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
   });
 
   test("a demo workspace says so on every screen, and feedback is a mail draft the person sends", async ({ page }) => {

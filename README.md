@@ -27,7 +27,8 @@ real-world tested with a live AI account. See the plan in [`docs/project/`](docs
 
 ## Try it
 
-To install from a package file, without the source or Node, see [`docs/install.md`](docs/install.md). From a
+New here? [`docs/getting-started.md`](docs/getting-started.md) takes you from the install command to your first
+result, step by step, with what each step costs. To install from a package file, without the source or Node, see [`docs/install.md`](docs/install.md). From a
 checkout:
 
 Needs Python 3.12 or newer with [uv](https://docs.astral.sh/uv/), and Node 22.12 or newer with npm for the web UI.
@@ -39,8 +40,9 @@ uv run cockpit init ~/cockpit                       # your own workspace, empty
 uv run cockpit serve -w ~/cockpit                   # prints a link to open
 ```
 
-The workspace starts empty. The first screen walks you through setup: you add your AI account (with a test), a backup
-folder and your sign-ins on the screen, and you never edit a file. Add `--you "Your Name" --name "My Work"` to `init`
+The workspace starts empty. The first screen is a setup walkthrough of about 10 minutes: your name, your AI account
+(with a test), your mail and calendar (installed, turned on and signed in on the screen, with one restart you press), a
+backup folder and the people you work with. You never edit a file, and nothing is spent until you press Go at the end. Add `--you "Your Name" --name "My Work"` to `init`
 to name yourself and the workspace up front.
 
 Keep the workspace in your home folder: the system's temporary folders (`/tmp`) are emptied when the computer restarts,

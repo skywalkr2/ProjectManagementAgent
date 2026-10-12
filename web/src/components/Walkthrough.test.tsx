@@ -276,6 +276,58 @@ describe("closing", () => {
     expect(onFinishLater).not.toHaveBeenCalled();
   });
 
+  test("the last button lands on Today with the first-go line in focus, and the walkthrough is finished", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#setup";
+    let finished = false;
+    const waiting = {
+      id: "REQ-1",
+      version: 3,
+      dismissed: false,
+      stage_task: false,
+      first_go: true,
+      refused: false,
+      state: "needs_you",
+      approval: "required",
+      waiting: "Waiting for your first go.",
+      estimate_usd: 0.1,
+      created_at: "2026-10-09T14:00:00Z",
+      note: null,
+      source: null,
+      source_title: "Item REQ-1",
+      changeset: null,
+    } as S["ChangeItem"];
+    fakeApi({
+      ...routes(
+        {
+          "GET setup": () => setupView(CORE.map((id) => step(id)), { walkthrough: { open: !finished, step: "done", finished } }),
+          "POST setup/walkthrough": (body) => {
+            finished = (body as S["WalkthroughIn"]).finished ?? finished;
+            return { open: false, step: "done", closed: false, finished };
+          },
+        },
+      ),
+      "GET panels": () => [],
+      "GET asks": () => [],
+      "GET changes": () => [waiting],
+      "GET followups": () => [],
+      "GET runtime-config": () => ({ instance: null }),
+      "GET today/agenda": () => [],
+      "GET today/todo": () => [],
+      "GET today/arrived": () => ({ items: [], left_out: 0 }),
+      "GET projects": () => [],
+      "GET stages/records": () => [],
+      "GET stages/ready": () => [],
+      "GET stages/requests": () => [],
+    });
+    renderApp(<App rc={rcFixture()} />);
+    await user.click(await screen.findByRole("button", { name: "Go to Today" }));
+    const line = await screen.findByRole("listitem", { name: /^Start the assistant: 1 item/ });
+    await waitFor(() => expect(line).toHaveFocus());
+    expect(screen.queryByRole("heading", { name: "Set up your workspace" })).toBeNull();
+    expect(finished).toBe(true);
+  });
+
   test("a closed walkthrough stays closed on Today, and Continue setup brings it back at the next step", async () => {
     const user = userEvent.setup();
     window.location.hash = "";
@@ -649,8 +701,8 @@ describe("Done", () => {
     const recap = await screen.findByRole("list", { name: "What was set up" });
     const item = (id: string) => recap.querySelector(`[data-step="${id}"]`) as HTMLElement;
     expect(item("workspace")).toHaveTextContent("You");
-    expect(item("workspace")).toHaveTextContent("Set up");
-    expect(item("ai")).toHaveTextContent("Set up");
+    expect(item("workspace")).toHaveTextContent("Done");
+    expect(item("ai")).toHaveTextContent("Done");
     expect(item("mail")).toHaveTextContent("Mail and calendar");
     expect(item("mail")).toHaveTextContent("Skipped");
     expect(item("people")).toHaveTextContent("Skipped");

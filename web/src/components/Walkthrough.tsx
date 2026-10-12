@@ -45,7 +45,10 @@ export function Walkthrough(
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
   const data = setup.data;
-  const current: Screen | null = data ? (chosen ?? props.at?.screen ?? data.walkthrough.step) : null;
+  // The screen the server named when this opened stays until the person moves: finishing a step must not move them on.
+  const first = useRef<Screen | null>(null);
+  if (data && first.current === null) first.current = data.walkthrough.step;
+  const current: Screen | null = data ? (chosen ?? props.at?.screen ?? first.current) : null;
 
   /** Keep where the walkthrough stands on the server, and in the list the other screens read. */
   const keep = async (body: S["WalkthroughIn"]) => {
@@ -240,7 +243,7 @@ function DoneScreen(props: Handlers & { go: (screen: Screen) => void }) {
           const label = t(`walkthrough.screen.${screen}`);
           return (
             <li key={step.id} data-step={step.id} data-state={state}>
-              <span className="what">
+              <span className={`what ${styles.what}`}>
                 <span aria-hidden="true">{state === "done" ? "✓ " : state === "skipped" ? "– " : "○ "}</span>
                 {label}
               </span>

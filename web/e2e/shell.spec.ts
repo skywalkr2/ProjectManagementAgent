@@ -63,6 +63,26 @@ test.describe("the visual system", () => {
     });
   }
 
+  for (const scheme of ["light", "dark"] as const) {
+    test(`the setup walkthrough passes the accessibility checks in ${scheme} at every width, with no sideways scrolling`, async ({
+      page,
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      for (const width of WIDTHS) {
+        await page.setViewportSize({ width, height: HEIGHT });
+        await signIn(page, "setup");
+        await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
+        const screens = page.getByRole("navigation", { name: "Setup steps" });
+        for (const name of [/^Your AI account/, /^Mail and calendar/, /^Done/]) {
+          await screens.getByRole("button", { name }).click();
+          await expectNoViolations(page);
+          expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+        }
+        await shoot(page, `walkthrough-${scheme}-${width}`);
+      }
+    });
+  }
+
   test("the style guide's theme toggle switches the whole page", async ({ page }) => {
     await page.emulateMedia({ colorScheme: "light" });
     await page.setViewportSize({ width: 1440, height: HEIGHT });
@@ -263,7 +283,7 @@ test.describe("screen use and the shell", () => {
     await page.goto("#stages");
     await expect(page.getByRole("heading", { level: 1, name: "Stages" })).toBeVisible();
     await page.goto("#setup");
-    await expect(page.getByRole("heading", { level: 1, name: "Set up" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
   });
 
   test("changing view moves focus to the new view's heading", async ({ page }) => {

@@ -1478,7 +1478,7 @@
   "walkthrough.finish": "Go to Today",
   "walkthrough.people.open": "Add people",
   "walkthrough.done.recap": "What was set up",
-  "walkthrough.done.done": "Set up",
+  "walkthrough.done.done": "Done",
   "walkthrough.done.skipped": "Skipped",
   "walkthrough.done.todo": "Not set up yet",
   "walkthrough.done.set_up": "Set up",
@@ -1522,7 +1522,5 @@
   "welcome.spend.day": "Most to spend in a day (USD)",
   "welcome.spend.day_hint": "Starts at {amount}. New runs stop for the day above it.",
   "welcome.spend.save": "Save",
-  "welcome.spend.bad": "Use a number, such as 0.10.",
-  "help.walkthrough": "New here? The setup walkthrough takes about ten minutes.",
-  "help.walkthrough_open": "Open the setup walkthrough"
+  "welcome.spend.bad": "Use a number, such as 0.10."
 }

@@ -11,7 +11,23 @@ words, and nothing is sent by the app itself: you copy messages and send them fr
 
 Today is the home screen. It shows what needs you now: what changed since you last looked, follow-ups to send, items
 ready to move to their next stage, work waiting for your go, and lines that add-ons put there. Each row has one main
-button; everything else is in its menu (the three dots). The Start here card lists the setup steps that aren't done yet.
+button; everything else is in its menu (the three dots). While setup is unfinished, one line shows how far along it is and opens the setup walkthrough at the next step.
+
+## Setting up
+
+The first time you open a new workspace, the setup walkthrough opens by itself. It takes about ten minutes and spends
+nothing: nothing is spent until you press Go on Today. It has six screens. You: your name, the workspace's name and your
+time zone. Your AI account: pick a service, paste the key, test it, and see what it may spend (the amount it asks you
+about first, and the most it may spend in a day). Mail and calendar: pick a service to connect; if it isn't on this
+computer yet, one button installs it and turns it on, then you press Restart to connect (a few seconds), then you sign in
+on the service's own page. The assistant only reads. The last day of your mail waits for your first Go. Backups: a folder
+outside the workspace. People: optional, because names the assistant can't place become questions for you. Done: what
+was set up, what you skipped (each with a Set up button), and optional extras such as a starting template.
+
+Every screen can be skipped and done later. Finish later closes the walkthrough, and it stays closed until you open it
+again from Today's setup line, from Help or from Settings. It resumes where you left it, also after a restart. The
+walkthrough asks for at most one restart, and the app never restarts without you pressing the button.
+The Getting started page that comes with the product covers the same path from the install command.
 
 ## Handing something in
 

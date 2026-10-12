@@ -232,12 +232,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           }}
         />
       )}
-      <ShortcutHelp
-        open={help}
-        onClose={() => setHelp(false)}
-        keys={keys}
-        onOpenWalkthrough={inWalkthrough ? undefined : () => openGuide()}
-      />
+      <ShortcutHelp open={help} onClose={() => setHelp(false)} keys={keys} />
     </>
   );
   if (inWalkthrough) {
@@ -248,6 +243,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           onOpenPeople={() => setView("records/people")}
           onOpenAddons={() => setView("addons")}
           onHandIn={() => {
+            // The hand-in box takes focus itself.
+            ownFocus.current = true;
             setView("today");
             setHandIn(true);
           }}

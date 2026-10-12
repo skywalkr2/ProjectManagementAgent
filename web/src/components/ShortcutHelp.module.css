@@ -3,5 +3,3 @@
 .row { display: grid; grid-template-columns: var(--space-12) 1fr; gap: var(--space-4); align-items: baseline; }
 .row dd { margin: 0; }
 .end { display: flex; justify-content: flex-end; }
-.new { display: grid; gap: var(--space-2); justify-items: start; font-size: var(--text-sm); line-height: var(--lh-sm); }
-.new p { margin: 0; }
