@@ -1006,6 +1006,16 @@ shown in full at Keep, so Keep makes the person its author. The raw source text 
 linked evidence marked "from outside". **Order of precedence:** invariants, then the person's own rules and lessons, then a
 pack's guidance, which is marked by origin.
 
+**Plugins and the learning loop** (*designed, phase L-core*; from a survey of the add-ons built so far). A pack may hold
+material that is not workspace knowledge. A novel's facts are fiction, and its invented names are not acronyms. So:
+- a record type or task kind can declare **`learning: own`**. The core's learning from inputs, the new-term scan,
+  first-name resolution against People, and fact ranking into workspace facts then don't run on it. The pack keeps its
+  own plan records (a series bible, a kill list, book rules), which stay the plugin's;
+- a pack can still **publish** entries into core knowledge through ops (real-world research facts, say), and they are
+  marked by origin like any pack guidance (12.8);
+- when a person corrects a pack's work, the core proposes a lesson targeted at that pack's task kinds, unless the pack
+  claims the correction with its own record. One correction never yields both a pack record and a core lesson.
+
 A pack's own task kinds get the same section through one plugin API call. So a writing pack's runs see the person's lessons and
 glossary, and a pack's own knowledge (a series bible) can be offered the same way later.
 

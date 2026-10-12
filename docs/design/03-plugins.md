@@ -104,7 +104,8 @@ each with a test that uses it from a plugin.
 | Renderer | how records become content for a channel | not yet; comes with channels. With it, a **reader preview**: a hook that shows an output as a downstream reader (a dashboard's parser) will see it, and says when nothing it shows changed (9.5a) |
 | Lookup | a fact the AI can ask the engine to fetch | not yet (6.19) |
 | Connector `fetch`, `search`, `capabilities` | reading one item, searching a source | not yet; a connector has `poll` only |
-| Text extractor | text from a file type (documents, spreadsheets, presentations, PDFs) | not yet; the core's own extractors come in phase L (6.2, 6.22), and the extension point with them |
+| Text extractor | text from a file type (documents, spreadsheets, presentations, PDFs) | not yet; the core's own extractors come in phase L (6.2, 6.22), and the extension point with them. With them, **a connector's item can carry files** (a mail's attachments), which the core reads with its extractors, so a connector never parses documents itself |
+| Evaluation cases and scorers | a pack's own golden-set cases in the core's format, and deterministic scorers for what only the pack can judge | not yet (phase L-core, with the harder golden set, 6.16); the core's exact matching covers generic scoring, so a pack registers only domain scorers |
 | AI adapter | a kind of AI account: `models()`, `run()`, `classify_error()`, `sign_in_hint()`, `health()`, `lockdown_test()` (6.16) | core only: the adapters are a registry inside the core |
 | Playbook | a plugin's whole playbook (3.8) | not yet: `provides.playbook` turns the plugin off with the reason; a task kind's guidance is available |
 | Check | the plugin's own self-check | not yet |

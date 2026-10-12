@@ -3,6 +3,29 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: What the add-ons already built, against what the core will add
+
+**Decided by:** project lead, after a read-only survey of both add-on repositories against the core's plan.
+
+**What:** Very little plugin code becomes redundant. The survey mostly found what the core must add so packs fit:
+- **`learning: own` for pack material.** A novel's facts are fiction and its invented names aren't acronyms, so the core's
+  input learning, new-term scan, first-name resolution and fact ranking stay off it. One correction yields either a pack
+  record or a core lesson, never both.
+- **Pack evaluation.** Packs bring their own cases in the core's format and register only domain scorers. The generic ones
+  are the core's exact matching.
+- **Connector items that carry files,** so mail attachments go to the core's extractors.
+- **A default data level per connector,** and the received date from an item's received time, not its last-changed time.
+
+The writing pack is told not to build the generic scorers, web search or its research list, and to wait for the knowledge
+section in the guide. The mail add-on has nothing redundant.
+
+**Why:** The core's learning loop would otherwise learn fiction as fact, propose a glossary entry for every invented name,
+and propose a second lesson for a correction the pack already recorded.
+
+**Impact:**
+- Design 6.22 and 3.3 are updated, and roadmap L0, L-core L2, L4 and L5 gain items.
+- Two notes go to the builders: the writing pack now, as a heads-up; the mail add-on in the weekly batch.
+
 ## 2026-10-12: Four more items leave phase A, each to where it is first needed
 
 **Decided by:** project lead, at the owner's request ("use your best judgement").

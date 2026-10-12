@@ -158,8 +158,10 @@ them are needed before the owner's daily use, which starts when L-core passes.
   action gains `followed_up`, `done_by` and `reported_by` (design 5.1), so a chase has somewhere to be written and credit
   goes to the owner.
 - [ ] `project.priority` is person-only: the assistant may propose it, never set it.
-- [ ] Sources and files carry their `data_level`, from the hand-in's choice or the watched source's setting. Today it lives
-  only on the request.
+- [ ] Sources and files carry their `data_level`, from the hand-in's choice or the watched source's setting (with a default
+  per connector). Today it lives only on the request.
+- [ ] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
+  both, and they differ).
 - [ ] Settings that do nothing are wired or removed: `owner_format`. **The scheduled export is wired** to the workspace's
   own git, so a readable copy is written regularly once real knowledge accumulates; the backups copy the database, which
   is not readable on its own. The export's remote is not offered until phase E gives it the care of backups (design 12.1).
@@ -204,6 +206,9 @@ L2. **Every run reads what applies.**
 - [ ] Every invariant has a one-line constraint in the reference of the ops it constrains, checked by the self-check.
 - [ ] Refusals counted per check; a check that refuses often brings its seed lesson into the packet.
 - [ ] One plugin API call that gives a pack's packets the same section (phase C's exit test depends on it).
+- [ ] `learning: own` for a record type or task kind: the core's input learning, new-term scan, first-name resolution and
+  fact ranking stay off it (fiction is not workspace knowledge). A correction yields either a pack record or a core
+  lesson, never both (design 6.22).
 
 L3. **Every correction teaches.**
 - [ ] Learning from corrections (`learn.correction`, on the stronger tier): at most one proposal, or `lesson.update` when a
@@ -294,12 +299,15 @@ L4. **Proving it** (from the design author's review of this plan).
   every case above with ordinary noise (unrelated mail, re-saved files, a moved meeting), so the knowledge has to be found
   among the noise. Expected differences between day 1 and day 30 are listed first and scored like the golden set (op
   types, targets, recipients), not judged by eye afterwards.
+- [ ] Packs bring their own cases in the core's format (`provides.evals`) and register only domain scorers
+  (`registrar.scorer`); the core's exact matching covers generic scoring (plugin question 133).
 - [ ] Both run by `cockpit evaluate`, and offered with their cost on every switch of a tier's account or model, with a failed
   check shown on Today with Switch back.
 
 L5. **Reading what arrives, and protecting what is learned.**
 - [ ] Text extractors in the core: documents, spreadsheets, presentations and PDFs, so mail attachments are read. The
-  extractor extension point for plugins.
+  extractor extension point for plugins, and a connector item that carries files, so mail add-ons hand attachments to the
+  core instead of reading only their names.
 - [ ] Encryption for backups that leave the person's control (`backups.encrypt`).
 
 L6. **The rules that bite in the first week of real use** (design 8.8).
