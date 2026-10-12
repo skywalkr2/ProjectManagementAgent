@@ -4,7 +4,7 @@ The working checklist from today to the first public release. Tick items as they
 time come from `schedule.md`; what is in each horizon comes from `scope.md`; the milestones are in `docs/design/13-build-plan.md`.
 "1.0" is the first public release, which is version 1 in the plan.
 
-Last updated: 2026-10-12.
+Last updated: 2026-10-12. The review of 2026-10-12 (`review-2026-10-12.md`) sets the order of the next work; its section 4 comes before anything below that isn't done.
 
 ## 1. Launch slice (done)
 
@@ -112,6 +112,12 @@ Hosted mode and sign-in (Part 11), social, email and newsletter channels, the sa
 the next step after the desktop installer (M0), once 1.0 is out.
 
 ## Open items
+
+- [ ] **The person's path works** (review 2026-10-12, section 4): Install button on Add-ons, crashed runs re-queued, the
+  test-only source hidden, secrets for core mail and calendar entered on screen, server-side wording, a starter workspace
+  and one update command, journey tests.
+- [ ] **A refresh button on the mailbox** (owner, 2026-10-12): Today's "Came in" and the mail source can be checked now,
+  without waiting for the schedule.
 
 - [ ] **Provider lessons in version 1** (decisions, "Lessons from switching AI providers"): per-model parameter
   capabilities, agent lock-down test, `sign_in_hint`, automatic restart, first-run notice, probation, canonical form for
