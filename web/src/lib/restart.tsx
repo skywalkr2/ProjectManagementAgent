@@ -3,6 +3,7 @@
 // can't say, until the event stream connects again). If no restart came in time, or the app can't restart itself, the
 // notice says so and stays until dismissed, so nobody is left thinking it restarted.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Icon } from "../ui/Icon";
 import { api } from "./api";
 import { problemText } from "./problem";
 import { useWords } from "./wording";
@@ -152,48 +153,60 @@ export function RestartProvider(props: { hellos: number; seconds?: number; doneS
   return <RestartContext.Provider value={value}>{props.children}</RestartContext.Provider>;
 }
 
-/** The live region that asks about a restart and says it is happening. It is always on the page, so a screen reader hears the change. */
-/** `what` names what waits for the restart, when the caller knows (see `useRestartWhat`). */
-export function RestartNotice(props: { what?: string }) {
+/** The words for where a restart stands, or nothing while there is none. `what` names what waits for it, when known. */
+export function useRestartText(what = ""): string {
   const { t } = useWords();
-  const { phase, problem, busy, now, dismiss } = useRestart();
-  const what = props.what ?? "";
-  const text =
-    phase === "asking"
-      ? what
-        ? `${t("restart.ask")} ${what}`
-        : t("restart.ask")
-      : phase === "waiting"
-        ? t("restart.restarting")
-        : phase === "done"
-          ? t("restart.done")
-          : phase === "refused"
-            ? problem
-            : t("restart.stuck");
+  const { phase, problem } = useRestart();
+  if (phase === "idle") return "";
+  if (phase === "asking") return what ? `${t("restart.ask")} ${what}` : t("restart.ask");
+  if (phase === "waiting") return t("restart.restarting");
+  if (phase === "done") return t("restart.done");
+  if (phase === "refused") return problem;
+  return t("restart.stuck");
+}
+
+/** A live region that is always on the page, hidden from sight, so a screen reader hears the restart's progress even
+ * while the status popover that shows it is closed. */
+export function RestartAnnouncer(props: { what?: string }) {
   return (
-    <div className="restart-slot" role="status" aria-live="polite">
+    <div className="sr" role="status" aria-live="polite">
+      {useRestartText(props.what)}
+    </div>
+  );
+}
+
+/** Where a restart stands and what the person can do about it: Restart now and Later while asking, Dismiss when it didn't
+ * come back. It is a live region unless `live` is false (inside the status popover, where the announcer speaks).
+ * `what` names what waits for the restart, when the caller knows (see `useRestartWhat`). */
+export function RestartNotice(props: { what?: string; live?: boolean }) {
+  const { t } = useWords();
+  const { phase, busy, now, dismiss } = useRestart();
+  const text = useRestartText(props.what);
+  const live = props.live !== false;
+  return (
+    <div className="restart-slot" {...(live ? { role: "status", "aria-live": "polite" as const } : {})}>
       {phase !== "idle" && (
-        <p className="notice restart">
-          <span className="mark" aria-hidden="true">
-            {phase === "done" ? "✓" : "!"}
+        <div className="restart-line">
+          <span className="restart-mark" aria-hidden="true">
+            <Icon name={phase === "done" ? "check" : "alert"} size={16} />
           </span>
           <span className="notice-text">{text}</span>
           {phase === "asking" && (
-            <>
+            <span className="acts">
               <button type="button" className="btn primary small" disabled={busy} onClick={() => void now()}>
                 {t("restart.now")}
               </button>
               <button type="button" className="btn small" onClick={dismiss}>
                 {t("restart.later")}
               </button>
-            </>
+            </span>
           )}
           {(phase === "stuck" || phase === "refused") && (
             <button type="button" className="btn small" onClick={dismiss}>
               {t("restart.dismiss")}
             </button>
           )}
-        </p>
+        </div>
       )}
     </div>
   );

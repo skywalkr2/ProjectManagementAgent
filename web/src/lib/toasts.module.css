@@ -1,0 +1,28 @@
+/* Toasts: bottom center, at most three, an inverted fill; above the bottom bar on a phone. */
+.region {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 70;
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); width: min(560px, calc(100% - var(--space-8)));
+  pointer-events: none;
+}
+:global([data-narrow]) .region { bottom: calc(var(--bottombar-h) + var(--space-3) + env(safe-area-inset-bottom, 0px)); }
+.stack { display: grid; gap: var(--space-2); }
+.toast {
+  pointer-events: auto; display: flex; align-items: center; gap: var(--space-3);
+  background: var(--text); color: var(--canvas); border-radius: var(--radius-lg); box-shadow: var(--elev-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); font-size: var(--text-sm); line-height: var(--lh-sm);
+}
+.message { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.action {
+  min-height: var(--btn-h-sm); padding: 0 var(--space-2); border: 0; border-radius: var(--radius-sm); background: transparent; color: inherit; cursor: pointer;
+  font-family: var(--font-ui); font-size: var(--text-sm); font-weight: var(--weight-semibold); text-decoration: underline; text-underline-offset: 3px;
+}
+.dismiss {
+  display: grid; place-items: center; width: var(--btn-h-sm); height: var(--btn-h-sm); border: 0; border-radius: var(--radius-sm);
+  background: transparent; color: inherit; cursor: pointer;
+}
+.action:hover, .dismiss:hover { background: var(--text-muted); }
+.toast :focus-visible { box-shadow: 0 0 0 2px var(--text), 0 0 0 4px var(--canvas); }
+@media (prefers-reduced-motion: no-preference) {
+  .toast { animation: rise var(--dur-base) var(--ease-out); }
+  @keyframes rise { from { transform: translateY(8px); opacity: 0; } }
+}

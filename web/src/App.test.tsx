@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "./lib/api";
-import { fakeApi, renderApp } from "./test-utils";
+import { fakeApi, renderApp, statusFixture } from "./test-utils";
 import { App } from "./App";
 
 const rc = (extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeConfig"] => ({
@@ -24,19 +24,20 @@ const rc = (extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeConfig"] => ({
   ...extra,
 });
 
-test("the footer says the version and opens Send feedback, and focus comes back to it", async () => {
+test("the Help menu says the version and opens Send feedback, and focus comes back to the Help button", async () => {
   fakeApi({ "GET panels": () => [], "GET asks": () => [] });
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
-  expect(screen.getByText("Version 9.8.7")).toBeInTheDocument();
-  const button = screen.getByRole("button", { name: "Send feedback" });
-  await user.click(button);
+  const help = screen.getByRole("button", { name: "Help" });
+  await user.click(help);
+  expect(screen.getByRole("menuitem", { name: "Version 9.8.7" })).toHaveAttribute("aria-disabled", "true");
+  await user.click(screen.getByRole("menuitem", { name: "Send feedback" }));
   const dialog = screen.getByRole("dialog", { name: "Send feedback" });
   await user.type(screen.getByLabelText("What happened, or what would help?"), "Hello");
   expect((screen.getByLabelText("Message") as HTMLTextAreaElement).value).toBe("Hello\n\nApp version: 9.8.7\nScreen: Today");
   await user.keyboard("{Escape}");
   await waitFor(() => expect(dialog).not.toBeInTheDocument());
-  await waitFor(() => expect(button).toHaveFocus());
+  await waitFor(() => expect(help).toHaveFocus());
 });
 
 test("the Ask key comes from the configured shortcuts", async () => {
@@ -47,6 +48,10 @@ test("the Ask key comes from the configured shortcuts", async () => {
   expect(screen.queryByRole("dialog")).toBeNull();
   await user.keyboard("g");
   expect(await screen.findByRole("dialog", { name: "Ask Helper" })).toBeInTheDocument();
+});
+
+beforeEach(() => {
+  window.location.hash = "";
 });
 
 const today = {
@@ -71,9 +76,9 @@ test("Connect on Today's empty card opens Sources with the add form open, and on
   expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
   expect(await screen.findByRole("form", { name: "Add a source" })).toBeInTheDocument();
   // Going away and coming back by the views doesn't open it again.
-  await user.click(screen.getByRole("button", { name: "Workspace, go to Today" }));
+  await user.click(screen.getByRole("link", { name: "Workspace, go to Today" }));
   expect(await screen.findByRole("button", { name: "Connect a mailbox" })).toBeInTheDocument();
-  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("button", { name: "Sources" }));
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Sources" }));
   expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
   expect(screen.queryByRole("form", { name: "Add a source" })).toBeNull();
 });
@@ -82,8 +87,130 @@ test("the workspace name goes to Today from any screen", async () => {
   fakeApi(today);
   renderApp(<App rc={rc()} />);
   const user = userEvent.setup();
-  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("button", { name: "Sources" }));
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Sources" }));
   expect(await screen.findByRole("heading", { name: "Sources" })).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Workspace, go to Today" }));
+  await user.click(screen.getByRole("link", { name: "Workspace, go to Today" }));
   expect(await screen.findByRole("heading", { name: "Agenda" })).toBeInTheDocument();
+});
+
+const quiet = {
+  ...today,
+  "GET status": () => statusFixture(),
+  "GET changes": () => [],
+  "GET followups": () => [],
+  "GET me": () => ({ full_name: "Casey Example", person: null }),
+  "GET setup": () => ({ steps: [], finished: true, local: true }),
+  "GET runtime-config": () => ({ instance: null }),
+};
+
+test("an address names the view it opens, and the sidebar marks it", async () => {
+  window.location.hash = "#work/outgoing";
+  fakeApi(quiet);
+  renderApp(<App rc={rc()} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "Waiting to go out" })).toBeInTheDocument();
+  expect(screen.getByText("Nothing waiting to go out. Drafts appear here for your approval.")).toBeInTheDocument();
+  expect(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Waiting to go out", current: "page" })).toBeInTheDocument();
+});
+
+test("the projects and people views open the people and projects screen at their own part", async () => {
+  fakeApi({ ...quiet, "GET people": () => [], "GET organizations": () => [], "GET projects": () => [], "GET notes": () => [], "GET sync": () => ({}), "GET jobs": () => [] });
+  window.location.hash = "#records/projects";
+  const { unmount } = renderApp(<App rc={rc()} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "Projects" })).toBeInTheDocument();
+  unmount();
+  window.location.hash = "#records/people";
+  fakeApi({ ...quiet, "GET people": () => [], "GET organizations": () => [], "GET projects": () => [], "GET notes": () => [], "GET sync": () => ({}), "GET jobs": () => [] });
+  renderApp(<App rc={rc()} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "People" })).toBeInTheDocument();
+});
+
+test("older fragments still open their view", async () => {
+  window.location.hash = "#welcome";
+  fakeApi({ ...quiet, "GET setup": () => ({ steps: [], finished: false, local: true }) });
+  renderApp(<App rc={rc()} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "Set up" })).toBeInTheDocument();
+});
+
+test("going to another view moves focus to its heading, but the first load does not take focus", async () => {
+  window.location.hash = "";
+  fakeApi(quiet);
+  renderApp(<App rc={rc()} />);
+  const user = userEvent.setup();
+  expect(await screen.findByRole("heading", { level: 1, name: "Today" })).not.toHaveFocus();
+  await user.click(within(screen.getByRole("navigation", { name: "Views" })).getByRole("link", { name: "Waiting to go out" }));
+  await waitFor(() => expect(screen.getByRole("heading", { level: 1, name: "Waiting to go out" })).toHaveFocus());
+});
+
+test("Today's heading carries the date, and every view has one h1", async () => {
+  window.location.hash = "";
+  fakeApi(quiet);
+  renderApp(<App rc={rc()} />);
+  const heading = await screen.findByRole("heading", { level: 1, name: "Today" });
+  expect(heading.parentElement?.textContent).toMatch(/^Today\S.*\d/);
+  expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+});
+
+test("the style guide opens in a demo workspace, and is not there otherwise", async () => {
+  vi.stubEnv("DEV", false);
+  window.location.hash = "#styleguide";
+  fakeApi(quiet);
+  const hidden = renderApp(<App rc={rc()} />);
+  await screen.findByRole("link", { name: "Workspace, go to Today" });
+  expect(screen.queryByRole("heading", { level: 1, name: "Style guide" })).toBeNull();
+  hidden.unmount();
+  fakeApi(quiet);
+  renderApp(<App rc={rc({ demo: true })} />);
+  expect(await screen.findByRole("heading", { level: 1, name: "Style guide" })).toBeInTheDocument();
+  vi.unstubAllEnvs();
+});
+
+test("the sidebar is not in the style guide's navigation", async () => {
+  window.location.hash = "";
+  fakeApi(quiet);
+  renderApp(<App rc={rc()} />);
+  await screen.findByRole("heading", { level: 1, name: "Today" });
+  expect(within(screen.getByRole("navigation", { name: "Views" })).queryByRole("link", { name: "Style guide" })).toBeNull();
+});
+
+test("the browser going offline shows in the status chip at once", async () => {
+  window.location.hash = "";
+  fakeApi(quiet);
+  renderApp(<App rc={rc()} />);
+  await screen.findByRole("heading", { level: 1, name: "Today" });
+  act(() => {
+    window.dispatchEvent(new Event("offline"));
+  });
+  expect(await screen.findByRole("button", { name: "Status: Offline · reconnecting" })).toBeInTheDocument();
+  // The query library pauses its requests while the browser says it is offline; leave it as found.
+  act(() => {
+    window.dispatchEvent(new Event("online"));
+  });
+});
+
+test("below the configured width the sidebar gives way to the bottom bar", async () => {
+  vi.stubGlobal("matchMedia", (query: string) => ({ matches: /max-width/.test(query), addEventListener: () => undefined, removeEventListener: () => undefined }));
+  window.location.hash = "";
+  fakeApi(quiet);
+  renderApp(<App rc={rc()} />);
+  await screen.findByRole("heading", { level: 1, name: "Today" });
+  const bar = screen.getByRole("navigation", { name: "Views" });
+  expect(within(bar).getByRole("button", { name: "More" })).toBeInTheDocument();
+  expect(within(bar).queryByRole("link", { name: "Stages" })).toBeNull();
+  expect(document.documentElement).toHaveAttribute("data-narrow");
+  expect(within(screen.getByRole("banner")).queryByRole("button", { name: "Hand something in" })).toBeNull();
+  vi.unstubAllGlobals();
+  document.documentElement.removeAttribute("data-narrow");
+});
+
+test("a plugin's panel on the work tab is a sidebar entry that opens its panel", async () => {
+  window.location.hash = "";
+  fakeApi({
+    ...quiet,
+    "GET panels": () => [{ name: "demo/goals", title: "Goals", tab: "work", kind: "demo/goal", view: "table", columns: ["title"], primary_action: null, row_actions: [], new_action: null }],
+    "GET panel-rows?name=demo/goals": () => [],
+  });
+  renderApp(<App rc={rc()} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("link", { name: "Goals" }, { timeout: 4000 }));
+  expect(await screen.findByRole("heading", { level: 1, name: "Goals" })).toBeInTheDocument();
 });

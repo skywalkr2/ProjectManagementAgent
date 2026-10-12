@@ -1,7 +1,9 @@
 // Undo toasts: reversible actions happen at once and offer Undo here instead of asking first. The last undo is also
 // reachable from the keyboard. Toasts stay until dismissed when the configured time is 0 or motion is reduced.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Icon } from "../ui/Icon";
 import { useWords } from "./wording";
+import styles from "./toasts.module.css";
 
 export interface ToastInput {
   message: string;
@@ -69,8 +71,8 @@ export function ToastProvider(props: { seconds: number; children: ReactNode }) {
     <ToastContext.Provider value={value}>
       {props.children}
       {/* Marked as a top layer so a dialog that is open keeps these messages in the page's reading order for screen readers. */}
-      <section className="toasts" aria-label={t("toast.region")} data-react-aria-top-layer="">
-        <div aria-live="polite" className="toast-stack">
+      <section className={styles.region} aria-label={t("toast.region")} data-react-aria-top-layer="">
+        <div aria-live="polite" className={styles.stack}>
           {toasts.map((toast) => (
             <ToastView
               key={toast.id}
@@ -98,11 +100,12 @@ function ToastView(props: { toast: Toast; seconds: number; onDismiss: () => void
   }, [held, seconds, onDismiss]);
   const action = props.toast.action;
   return (
-    <div className="toast" onMouseEnter={() => setHeld(true)} onFocus={() => setHeld(true)}>
-      <span>{props.toast.message}</span>
+    <div className={styles.toast} onMouseEnter={() => setHeld(true)} onFocus={() => setHeld(true)}>
+      <span className={styles.message}>{props.toast.message}</span>
       {action && (
         <button
           type="button"
+          className={styles.action}
           onClick={() => {
             props.onDismiss();
             void action.run();
@@ -112,12 +115,12 @@ function ToastView(props: { toast: Toast; seconds: number; onDismiss: () => void
         </button>
       )}
       {props.onUndo && (
-        <button type="button" onClick={props.onUndo}>
+        <button type="button" className={styles.action} onClick={props.onUndo}>
           {t("toast.undo")}
         </button>
       )}
-      <button type="button" className="x" aria-label={t("toast.dismiss")} onClick={props.onDismiss}>
-        ✕
+      <button type="button" className={styles.dismiss} aria-label={t("toast.dismiss")} onClick={props.onDismiss}>
+        <Icon name="close" size={16} />
       </button>
     </div>
   );

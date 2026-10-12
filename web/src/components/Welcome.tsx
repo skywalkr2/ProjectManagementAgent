@@ -15,6 +15,7 @@ import { useActionReview } from "./ActionReview";
 import { SignInRow } from "./SignIns";
 import { WelcomeAi } from "./WelcomeAi";
 import { WelcomeBackup } from "./WelcomeBackup";
+import { Skeleton } from "../ui/Skeleton";
 
 type Step = S["SetupStepView"];
 
@@ -53,11 +54,11 @@ export function Welcome(props: {
   return (
     <section className="panel-section" aria-labelledby="welcome-title">
       <div className="heading">
-        <h2 id="welcome-title">{t("welcome.title")}</h2>
+        <h1 id="welcome-title">{t("welcome.title")}</h1>
       </div>
       <p className="hint">{t("welcome.intro")}</p>
       {setup.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : setup.isError ? (
         <p className="empty">{t("welcome.failed")}</p>
       ) : (
@@ -449,7 +450,7 @@ function TemplateStep() {
   const restart = useRestart();
   const templates = useQuery({ queryKey: ["templates"], queryFn: api.templates });
   const [busy, setBusy] = useState(false);
-  if (templates.isPending) return <p className="empty">{t("loading")}</p>;
+  if (templates.isPending) return <Skeleton />;
   if (templates.isError || !templates.data.length) return <p className="empty">{t("welcome.template.none")}</p>;
   const apply = async (template: S["TemplateView"]) => {
     setBusy(true);

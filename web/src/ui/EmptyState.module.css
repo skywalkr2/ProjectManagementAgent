@@ -1,0 +1,5 @@
+.empty { display: grid; justify-items: center; gap: var(--space-3); padding: var(--space-8) var(--space-4); text-align: center; color: var(--text-muted); }
+.icon { color: var(--text-subtle); }
+.text { margin: 0; max-width: var(--measure); font-size: var(--text-md); line-height: var(--lh-md); }
+.inline { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); text-align: left; justify-items: unset; }
+.inline .text { font-size: var(--text-sm); line-height: var(--lh-sm); flex: 1 1 auto; min-width: 0; }

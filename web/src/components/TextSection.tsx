@@ -10,6 +10,7 @@ import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
 import { SafeText } from "./SafeText";
 import { WorkingCopies } from "./WorkingCopies";
+import { Skeleton } from "../ui/Skeleton";
 
 type Review = (version: string, returnTo?: () => HTMLElement | null | undefined) => void;
 
@@ -78,7 +79,7 @@ export function TextSection(props: { kind: string; id: string; field: string; he
         )}
       </div>
       {props.help && <p className="hint">{props.help}</p>}
-      {text.isPending && <p className="empty">{t("loading")}</p>}
+      {text.isPending && <Skeleton />}
       {text.isError && (
         <p className="empty">
           {t("text.load_failed")}{" "}

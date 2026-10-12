@@ -1,0 +1,12 @@
+/* Today's setup line: one row while first-run setup is unfinished. */
+.line {
+  display: flex; align-items: center; gap: var(--space-3); min-width: 0;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  font-size: var(--text-sm); line-height: var(--lh-sm);
+}
+.progress { width: 120px; height: 6px; flex: none; border-radius: var(--radius-full); background: var(--surface-sunk); overflow: hidden; }
+.bar { display: block; height: 100%; background: var(--ok); }
+.next { margin: 0; min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; }
+.actions { display: flex; align-items: center; gap: var(--space-1); flex: none; margin-left: auto; }
+:global([data-narrow]) .progress, :global([data-narrow]) .next { display: none; }

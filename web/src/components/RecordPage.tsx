@@ -15,6 +15,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { TextSection } from "./TextSection";
 import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
+import { Skeleton } from "../ui/Skeleton";
 
 export function RecordPage(props: { kind: string; id: string; onBack: () => void }) {
   const { t } = useWords();
@@ -61,11 +62,11 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       <div className="heading">
         <div>
           <span className="kind k-review">{readableTail(kind)}</span>
-          <h2 id="record-title">{heading}</h2>
+          <h1 id="record-title">{heading}</h1>
         </div>
         {data && <Offers kind={kind} id={id} />}
       </div>
-      {record.isPending && <p className="empty">{t("loading")}</p>}
+      {record.isPending && <Skeleton />}
       {record.isError && (
         <p className="empty">
           {t("record.load_failed")}{" "}

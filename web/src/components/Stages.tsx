@@ -24,6 +24,7 @@ import { useWords } from "../lib/wording";
 import { useActionReview } from "./ActionReview";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
+import { Skeleton } from "../ui/Skeleton";
 
 export function Stages() {
   const { t } = useWords();
@@ -35,18 +36,15 @@ export function Stages() {
   for (const view of records.data ?? []) groups.set(view.record.kind, [...(groups.get(view.record.kind) ?? []), view]);
   return (
     <>
+      <div className="heading">
+        <h1 id="stages-title">{t("stages.title")}</h1>
+      </div>
       {records.isPending ? (
         <section className="panel-section" aria-labelledby="stages-title">
-          <h2 id="stages-title" className="sr">
-            {t("stages.title")}
-          </h2>
-          <p className="empty">{t("loading")}</p>
+          <Skeleton />
         </section>
       ) : records.isError ? (
         <section className="panel-section" aria-labelledby="stages-title">
-          <h2 id="stages-title" className="sr">
-            {t("stages.title")}
-          </h2>
           <p className="empty">
             {t("stages.load_failed")}{" "}
             <button type="button" className="btn" onClick={() => void records.refetch()}>
@@ -56,9 +54,6 @@ export function Stages() {
         </section>
       ) : groups.size === 0 ? (
         <section className="panel-section" aria-labelledby="stages-title">
-          <h2 id="stages-title" className="sr">
-            {t("stages.title")}
-          </h2>
           <p className="empty">{t("stages.empty")}</p>
         </section>
       ) : (

@@ -14,6 +14,8 @@ import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { ItemFields } from "./SettingRow";
+import { Skeleton } from "../ui/Skeleton";
+import { Icon } from "../ui/Icon";
 
 type Form = S["DataFormView"];
 type DataFile = S["DataFile"];
@@ -83,7 +85,7 @@ function FormFiles(props: { form: Form; project: string }) {
       <h4 id={titleId}>{t("dataform.form_title", { addon: addonLabel(form.plugin, t, has), label: form.label })}</h4>
       {form.description && <p className="hint">{form.description}</p>}
       {files.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : files.isError ? (
         <p className="empty">
           {t("dataform.load_failed")}{" "}
@@ -187,7 +189,7 @@ function FileRow(props: { form: Form; file: DataFile; project: string; editing: 
           {file.layer && <span className="sub">{t(`dataform.layer.${file.layer}`)}</span>}
           {file.problem && (
             <p className="problem-note">
-              <span aria-hidden="true">! </span>
+              <Icon name="alert" size={16} />
               {t("dataform.problem", { problem: file.problem })}
             </p>
           )}
@@ -350,7 +352,7 @@ function FileEditor(props: { form: Form; file: string; project: string; isNew: b
         <>
           {view.data.problem && (
             <p className="problem-note">
-              <span aria-hidden="true">! </span>
+              <Icon name="alert" size={16} />
               {t("dataform.problem_form", { problem: view.data.problem })}
             </p>
           )}

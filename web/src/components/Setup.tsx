@@ -18,6 +18,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeText } from "./SafeText";
 import { useTextReview } from "./TextReview";
 import { ValueSelect } from "./ValueSelect";
+import { Skeleton } from "../ui/Skeleton";
 
 /** The value lists a project's fields take their choices from. */
 const PROJECT_LISTS = {
@@ -33,12 +34,25 @@ const list = (text: string) =>
     .map((x) => x.trim())
     .filter(Boolean);
 
-export function Setup() {
+/** `lead` names the part this screen was opened for: its heading is the page's title and it comes first. */
+export function Setup(props: { lead?: "people" | "projects" }) {
+  const people = <PeoplePanel key="people" lead={props.lead === "people"} />;
+  const projects = <ProjectsPanel key="projects" lead={props.lead === "projects"} />;
   return (
     <>
-      <PeoplePanel />
-      <OrganizationsPanel />
-      <ProjectsPanel />
+      {props.lead === "projects" ? (
+        <>
+          {projects}
+          {people}
+          <OrganizationsPanel />
+        </>
+      ) : (
+        <>
+          {people}
+          <OrganizationsPanel />
+          {projects}
+        </>
+      )}
       <SyncPanel />
       <JobsPanel />
     </>
@@ -47,7 +61,7 @@ export function Setup() {
 
 // ---- people --------------------------------------------------------------------------------------------------------
 
-function PeoplePanel() {
+function PeoplePanel(props: { lead?: boolean }) {
   const { t } = useWords();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
   const [adding, setAdding] = useState(false);
@@ -57,7 +71,7 @@ function PeoplePanel() {
   return (
     <section className="panel-section" aria-labelledby="people-title">
       <div className="heading">
-        <h2 id="people-title">{t("setup.people")}</h2>
+        {props.lead ? <h1 id="people-title">{t("setup.people")}</h1> : <h2 id="people-title">{t("setup.people")}</h2>}
         {!adding && (
           <button type="button" className="btn primary" onClick={() => setAdding(true)}>
             {t("setup.add_person")}
@@ -66,7 +80,7 @@ function PeoplePanel() {
       </div>
       {adding && <PersonForm onDone={() => setAdding(false)} />}
       {people.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : rows.length === 0 ? (
         <p className="empty">{t("setup.no_people")}</p>
       ) : (
@@ -248,7 +262,7 @@ function OrganizationsPanel() {
         </form>
       )}
       {orgs.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : rows.length === 0 ? (
         <p className="empty">{t("setup.no_organizations")}</p>
       ) : (
@@ -351,7 +365,7 @@ function OrganizationRow(props: { org: S["OrganizationView"] }) {
 
 // ---- projects ------------------------------------------------------------------------------------------------------
 
-function ProjectsPanel() {
+function ProjectsPanel(props: { lead?: boolean }) {
   const { t } = useWords();
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const notes = useQuery({ queryKey: ["notes"], queryFn: api.notes });
@@ -362,7 +376,7 @@ function ProjectsPanel() {
   return (
     <section className="panel-section" aria-labelledby="projects-title">
       <div className="heading">
-        <h2 id="projects-title">{t("setup.projects")}</h2>
+        {props.lead ? <h1 id="projects-title">{t("setup.projects")}</h1> : <h2 id="projects-title">{t("setup.projects")}</h2>}
         {!adding && (
           <button type="button" className="btn primary" onClick={() => setAdding(true)}>
             {t("setup.add_project")}
@@ -371,7 +385,7 @@ function ProjectsPanel() {
       </div>
       {adding && <ProjectForm projects={projects.data ?? []} onDone={() => setAdding(false)} />}
       {projects.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : (projects.data ?? []).length === 0 ? (
         <p className="empty">{t("setup.no_projects")}</p>
       ) : (
@@ -754,7 +768,7 @@ function SyncPanel() {
         <h2 id="sync-title">{t("setup.sync")}</h2>
       </div>
       {settings.isPending || (folderSet && sync.isPending) ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : settings.isError ? (
         <p className="empty">
           {t("setup.sync_failed")}{" "}

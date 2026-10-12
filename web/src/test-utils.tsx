@@ -1,6 +1,7 @@
 // Rendering components against a fake API: routes map "METHOD path" to a handler that returns the JSON body.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
+import type { S } from "./lib/api";
 import type { ReactNode } from "react";
 import { ToastProvider } from "./lib/toasts";
 import { WordingProvider } from "./lib/wording";
@@ -45,4 +46,40 @@ export function renderApp(ui: ReactNode, overrides: Record<string, string> = {})
       </QueryClientProvider>
     </WordingProvider>,
   );
+}
+
+/** A status answer with nothing wrong, for tests to change a part of. */
+export function statusFixture(over: Partial<S["Status"]> = {}, parts: { backup?: Partial<S["BackupStatus"]>; spend?: Partial<S["SpendStatus"]>; ai?: S["AiState"] } = {}): S["Status"] {
+  return {
+    backup: { configured: false, last_success: null, age_hours: null, needs_attention: false, last_error: null, ...parts.backup },
+    ai: parts.ai ?? { state: "ok", detail: null },
+    spend: { today_usd: 0, month_usd: 0, per_day_usd: 2, per_month_usd: 30, warn: false, warn_today: false, warn_month: false, ...parts.spend },
+    requests: { queued: 0, running: 0, review: 0, needs_you: 0 },
+    version: 1,
+    restart_needed: null,
+    can_restart: false,
+    ...over,
+  };
+}
+
+/** The runtime configuration a test app starts with. */
+export function rcFixture(extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeConfig"] {
+  return {
+    api_base: "api",
+    assistant_name: "Helper",
+    base_path: "",
+    demo: false,
+    feedback_to: "feedback@example.com",
+    narrow_below_px: 640,
+    logo: false,
+    theme: "system",
+    density: "comfortable",
+    pm: null,
+    shortcuts: { undo: "u", hand_in: "n", help: "?", ask: "/" },
+    toast_seconds: 0,
+    version: "9.8.7",
+    wording: {},
+    workspace_name: "Workspace",
+    ...extra,
+  };
 }

@@ -1,30 +1,77 @@
-import { fromHash, panelView, recordView, toHash } from "./views";
+import { fromHash, panelView, parseView, recordView, toHash, viewHref } from "./views";
 
-test("core views round trip, and home has no fragment", () => {
-  expect(toHash("home")).toBe("");
-  expect(toHash("files")).toBe("files");
-  expect(fromHash("#files")).toBe("files");
-  expect(toHash("sources")).toBe("sources");
+const routes = [
+  "today",
+  "work/changed",
+  "work/followups",
+  "work/outgoing",
+  "work/stages",
+  "records/projects",
+  "records/people",
+  "records/files",
+  "sources",
+  "addons",
+  "settings",
+  "setup",
+  "styleguide",
+] as const;
+
+test("every view's fragment names it, and Today is the empty fragment's view", () => {
+  for (const view of routes) {
+    expect(toHash(view)).toBe(view);
+    expect(fromHash(`#${view}`)).toBe(view);
+  }
+  expect(fromHash("")).toBe("today");
+  expect(fromHash("#")).toBe("today");
+  expect(fromHash("#nonsense")).toBe("today");
+});
+
+test("fragments from earlier versions still open the matching view", () => {
+  expect(fromHash("#stages")).toBe("work/stages");
+  expect(fromHash("#files")).toBe("records/files");
   expect(fromHash("#sources")).toBe("sources");
-  expect(toHash("welcome")).toBe("welcome");
-  expect(fromHash("#welcome")).toBe("welcome");
   expect(fromHash("#settings")).toBe("settings");
-  expect(toHash("addons")).toBe("addons");
   expect(fromHash("#addons")).toBe("addons");
-  expect(fromHash("")).toBe("home");
-  expect(fromHash("#nonsense")).toBe("home");
+  // The guide had two names; both open it.
+  expect(fromHash("#welcome")).toBe("setup");
+  expect(fromHash("#setup")).toBe("setup");
+  expect(fromHash("#panel:demo%2Fgoals")).toBe(panelView("demo/goals", "work"));
+  expect(fromHash("#record:demo%2Fchapter:CH%201")).toBe(recordView("demo/chapter", "CH 1"));
 });
 
-test("a panel and a record round trip with awkward characters in their names", () => {
-  const panel = panelView("demo/goals");
-  expect(fromHash(toHash(panel))).toBe(panel);
+test("a plugin's panel round trips under Work or Records, with awkward characters in its name", () => {
+  for (const group of ["work", "records"] as const) {
+    const panel = panelView("demo/goals #1", group);
+    expect(parseView(panel)).toEqual({ type: "panel", group, name: "demo/goals #1" });
+    expect(toHash(panel)).not.toContain("#");
+    expect(fromHash(`#${toHash(panel)}`)).toBe(panel);
+  }
+  // A hand-typed address with the slash unencoded is understood too.
+  expect(fromHash("#work/panel/demo/goals")).toBe(panelView("demo/goals", "work"));
+});
+
+test("a record page round trips with awkward characters in its kind and id", () => {
   const record = recordView("demo/chapter", "CH 1:2#3");
-  expect(toHash(record)).not.toContain("#");
+  expect(parseView(record)).toEqual({ type: "record", kind: "demo/chapter", id: "CH 1:2#3" });
   expect(fromHash(`#${toHash(record)}`)).toBe(record);
+  expect(parseView(recordView("person", "PER-1"))).toEqual({ type: "record", kind: "person", id: "PER-1" });
+  expect(toHash(recordView("person", "PER-1"))).toBe("records/person/PER-1");
 });
 
-test("a fragment that names nothing is home", () => {
-  expect(fromHash("#panel:")).toBe("home");
-  expect(fromHash("#record:demo%2Fchapter")).toBe("home");
-  expect(fromHash("#record:%E0%A4%A:x")).toBe("home");
+test("a core view parses as one", () => {
+  expect(parseView("work/changed")).toEqual({ type: "core", view: "work/changed" });
+});
+
+test("a fragment that names nothing is Today", () => {
+  expect(fromHash("#work/panel/")).toBe("today");
+  expect(fromHash("#panel:")).toBe("today");
+  expect(fromHash("#record:demo%2Fchapter")).toBe("today");
+  expect(fromHash("#records/person")).toBe("today");
+  expect(fromHash("#records/%E0%A4%A/x")).toBe("today");
+});
+
+test("a view's link keeps this page's path and query, so it works in a new tab", () => {
+  window.history.replaceState(null, "", "/admin/?token=t");
+  expect(viewHref("work/stages")).toBe("/admin/?token=t#work/stages");
+  window.history.replaceState(null, "", "/");
 });

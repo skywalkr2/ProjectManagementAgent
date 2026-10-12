@@ -1,0 +1,16 @@
+/* Loading shows the shape of what's coming: rows in the row anatomy, shimmering unless motion is reduced. */
+.region { display: block; }
+.row { display: grid; grid-template-columns: var(--row-pill-w) minmax(0, 1fr) auto; column-gap: var(--row-gap); align-items: center; min-height: var(--row-h); padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
+.row:last-child { border-bottom: 0; }
+.block, .bar, .btn { display: block; border-radius: var(--radius-sm); background: var(--surface-sunk); }
+.block { width: 72px; height: var(--pill-h); }
+.lines { display: grid; gap: var(--space-2); }
+.bar { height: 14px; width: 60%; }
+.short { width: 36%; height: 12px; }
+.btn { width: 84px; height: var(--btn-h-sm); border-radius: var(--radius-md); }
+:global([data-narrow]) .row { grid-template-columns: minmax(0, 1fr) auto; }
+:global([data-narrow]) .block { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .block, .bar, .btn { animation: shimmer 1.4s ease-in-out infinite; }
+  @keyframes shimmer { 50% { background: var(--border); } }
+}

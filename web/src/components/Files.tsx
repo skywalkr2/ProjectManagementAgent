@@ -11,6 +11,7 @@ import { useActionReview } from "./ActionReview";
 import { AddFile } from "./AddFile";
 import { restoreFocus } from "./ModalPanel";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { Skeleton } from "../ui/Skeleton";
 
 export function Files() {
   const { t } = useWords();
@@ -25,7 +26,7 @@ export function Files() {
   return (
     <section className="panel-section" aria-labelledby="files-title">
       <div className="heading">
-        <h2 id="files-title">{t("files.title")}</h2>
+        <h1 id="files-title">{t("files.title")}</h1>
         <div className="acts wrap" role="group" aria-label={t("files.actions_label")}>
           {(workspace.data ?? []).map((action) => (
             <button
@@ -46,7 +47,7 @@ export function Files() {
         </div>
       </div>
       {files.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : files.isError ? (
         <p className="empty">
           {t("files.load_failed")}{" "}

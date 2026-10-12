@@ -1,0 +1,17 @@
+/* One grid: the header across the top, the sidebar on the left, and the content area filling the rest. The header and
+   sidebar stay in place when the view changes; only the content area does. No footer, no banner. */
+.app {
+  --nav-w: var(--sidebar-w);
+  display: grid; grid-template-columns: var(--nav-w) minmax(0, 1fr); grid-template-rows: var(--header-h) minmax(0, 1fr);
+  min-height: 100dvh; background: var(--canvas); color: var(--text);
+}
+.rail { --nav-w: var(--sidebar-w-collapsed); }
+:global([data-narrow]) .app { grid-template-columns: minmax(0, 1fr); }
+.main {
+  min-width: 0; padding: var(--page-pad); display: grid; align-content: start; gap: var(--space-6);
+}
+.main:focus { outline: none; }
+:global([data-narrow]) .main { padding-bottom: calc(var(--bottombar-h) + var(--space-6) + env(safe-area-inset-bottom, 0px)); }
+.todayHead { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
+.todayHead p { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.today { display: grid; gap: var(--space-4); min-width: 0; }

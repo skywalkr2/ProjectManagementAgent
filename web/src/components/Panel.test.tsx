@@ -45,7 +45,7 @@ test("a table has readable column headers, plain-text cells and the record's tit
   fakeApi(routes(panel()));
   renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
   const table = await screen.findByRole("table");
-  expect(screen.getByRole("heading", { level: 2, name: "Goals" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "Goals" })).toBeInTheDocument();
   expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Title", "Due date", "Status", "Actions"]);
   const first = within(table).getAllByRole("row")[1];
   expect(within(first).getByRole("rowheader")).toHaveTextContent("Finish the draft <b>soon</b>");
@@ -284,7 +284,7 @@ test("a document draws every kind of block as its own elements under the panel's
   );
   renderApp(<Panel name="demo/goals" onOpenRecord={() => {}} />);
   expect(await screen.findByRole("heading", { level: 3, name: "First" })).toBeInTheDocument();
-  expect(screen.getByRole("heading", { level: 2, name: "Goals" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { level: 1, name: "Goals" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 4, name: "Second" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { level: 5, name: "Third" })).toBeInTheDocument();
   expect(screen.getByText("bold").tagName).toBe("STRONG");

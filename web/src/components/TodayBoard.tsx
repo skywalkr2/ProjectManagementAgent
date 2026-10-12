@@ -13,6 +13,7 @@ import { PluginToday } from "./PluginToday";
 import { SafeLink } from "./SafeText";
 import { useStageToday } from "./StageToday";
 import { WhatChanged, needsAttention, waitsForGo } from "./WhatChanged";
+import { Skeleton } from "../ui/Skeleton";
 
 type T = ReturnType<typeof useWords>["t"];
 
@@ -26,14 +27,6 @@ function useNow(): Date {
   return now;
 }
 
-/** While the board shows, the page is sized to the window (the styles key off this); it is removed when the board goes. */
-function useFitsWindow() {
-  useEffect(() => {
-    document.documentElement.setAttribute("data-today", "");
-    return () => document.documentElement.removeAttribute("data-today");
-  }, []);
-}
-
 export function TodayBoard(props: {
   onView: (view: View) => void;
   /** Opens Sources with the add form open. */
@@ -41,7 +34,6 @@ export function TodayBoard(props: {
   onOpenRecord?: (kind: string, id: string) => void;
 }) {
   const { t } = useWords();
-  useFitsWindow();
   const add = props.onAddSource ?? (() => props.onView("sources"));
   return (
     <div className="today-board" role="group" aria-label={t("today.board.label")}>
@@ -182,7 +174,7 @@ function AgendaColumn(props: { onAddSource?: () => void }) {
   return (
     <Column id="agenda" title={t("today.agenda.title")} count={agenda.data ? count : null} countText={tn("today.agenda.count", count)}>
       {agenda.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : agenda.isError ? (
         <Failed text={t("today.agenda.load_failed")} retry={() => void agenda.refetch()} />
       ) : groups.length === 0 ? (
@@ -272,7 +264,7 @@ function TodoColumn() {
   return (
     <Column id="todo" title={t("today.todo.title")} count={todo.data ? items.length : null} countText={tn("today.todo.count", items.length)}>
       {todo.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : todo.isError ? (
         <Failed text={t("today.todo.load_failed")} retry={() => void todo.refetch()} />
       ) : groups.length === 0 ? (
@@ -388,7 +380,7 @@ function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () =
       }
     >
       {arrived.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : arrived.isError ? (
         <Failed text={t("today.arrived.load_failed")} retry={() => void arrived.refetch()} />
       ) : items.length === 0 ? (

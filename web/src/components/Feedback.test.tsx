@@ -12,7 +12,7 @@ const SUBJECT = "Feedback on PM Cockpit";
 function open(props: { to?: string | null; view?: View; version?: string } = {}) {
   fakeApi({ "GET panels": () => [{ name: "plan", title: "The plan", tab: "work" }] });
   const onClose = vi.fn();
-  renderApp(<Feedback onClose={onClose} view={props.view ?? "files"} version={props.version ?? "9.8.7"} to={"to" in props ? props.to : TO} />);
+  renderApp(<Feedback onClose={onClose} view={props.view ?? "records/files"} version={props.version ?? "9.8.7"} to={"to" in props ? props.to : TO} />);
   return { onClose, user: userEvent.setup() };
 }
 
@@ -49,13 +49,13 @@ test("without the version lines the body is only what was written", async () => 
 });
 
 test("the screen is a plugin panel's title or a record page's general name", async () => {
-  const first = open({ view: "panel:plan" });
+  const first = open({ view: "work/panel/plan" });
   await first.user.type(message(), "x");
   await waitFor(() => expect(preview().value).toMatch(/Screen: The plan$/));
 });
 
 test("a record page is named in general terms, never by its record", async () => {
-  const { user } = open({ view: "record:thing:abc" });
+  const { user } = open({ view: "records/thing/abc" });
   await user.type(message(), "x");
   expect(preview().value).toMatch(/Screen: A record page$/);
   expect(preview().value).not.toMatch(/abc|thing/);

@@ -7,9 +7,25 @@ import { Heading } from "react-aria-components";
 import { api } from "../lib/api";
 import { mailText, mailtoLink, tooLongForLink } from "../lib/mail";
 import { useToasts } from "../lib/toasts";
-import { parseView, type View } from "../lib/views";
+import { parseView, type CoreView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
+
+const VIEW_LABEL: Record<CoreView, string> = {
+  today: "nav.home",
+  "work/changed": "nav.changed",
+  "work/followups": "nav.followups",
+  "work/outgoing": "nav.outgoing",
+  "work/stages": "nav.stages",
+  "records/projects": "nav.projects",
+  "records/people": "nav.people",
+  "records/files": "nav.files",
+  sources: "nav.sources",
+  addons: "nav.addons",
+  settings: "nav.settings",
+  setup: "welcome.title",
+  styleguide: "nav.styleguide",
+};
 
 /** The name of the screen as the person sees it: the tab's name, a plugin panel's title, or a general name for a record page. */
 export function useScreenLabel(view: View): string {
@@ -18,7 +34,7 @@ export function useScreenLabel(view: View): string {
   const parsed = parseView(view);
   if (parsed.type === "panel") return panels.data?.find((p) => p.name === parsed.name)?.title ?? parsed.name;
   if (parsed.type === "record") return t("feedback.screen.record");
-  return parsed.view === "welcome" ? t("welcome.title") : t(`nav.${parsed.view}`);
+  return t(VIEW_LABEL[parsed.view]);
 }
 
 export function Feedback(props: { onClose: () => void; view: View; version: string; to: string | null | undefined }) {

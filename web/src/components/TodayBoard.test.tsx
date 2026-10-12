@@ -112,7 +112,6 @@ test("four columns in reading order, each with its heading and count", async () 
   await within(await column("Came in")).findByText("2 messages");
   // The pieces beside it sit one heading level down inside Needs you.
   expect(await screen.findByRole("heading", { level: 3, name: "What changed" })).toBeInTheDocument();
-  expect(document.documentElement).toHaveAttribute("data-today");
 });
 
 test("the agenda groups by day, all-day first, with times, places, called-off labels and link domains", async () => {

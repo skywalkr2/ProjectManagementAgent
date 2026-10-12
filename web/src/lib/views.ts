@@ -1,52 +1,116 @@
-// Which screen is showing. The core's screens have fixed names; a plugin's panel is "panel:<name>" and any record's
-// page is "record:<kind>:<id>". The address's #fragment carries it, each part encoded, so a refresh keeps the screen.
-export type CoreView = "home" | "stages" | "files" | "sources" | "setup" | "welcome" | "settings" | "addons";
-export type View = CoreView | `panel:${string}` | `record:${string}:${string}`;
+// Which screen is showing (design 7.1). Every view has a real link in the address's #fragment, so one build works at any
+// base path with no server routes, and a view can be bookmarked and opened in a new tab:
+//   #today  #work/changed  #work/followups  #work/outgoing  #work/stages  #work/panel/<name>
+//   #records/projects  #records/people  #records/files  #records/panel/<name>  #records/<kind>/<id>
+//   #sources  #addons  #settings  #setup (the guide)  #styleguide
+// A `View` is that fragment, written without the "#" and with each name or id encoded, so two views compare with ===.
+export type CoreView =
+  | "today"
+  | "work/changed"
+  | "work/followups"
+  | "work/outgoing"
+  | "work/stages"
+  | "records/projects"
+  | "records/people"
+  | "records/files"
+  | "sources"
+  | "addons"
+  | "settings"
+  | "setup"
+  | "styleguide";
+export type PanelGroup = "work" | "records";
+export type View = CoreView | `${PanelGroup}/panel/${string}` | `records/${string}/${string}`;
 
-const CORE: readonly string[] = ["home", "stages", "files", "sources", "setup", "welcome", "settings", "addons"];
+export const CORE_VIEWS: readonly CoreView[] = [
+  "today",
+  "work/changed",
+  "work/followups",
+  "work/outgoing",
+  "work/stages",
+  "records/projects",
+  "records/people",
+  "records/files",
+  "sources",
+  "addons",
+  "settings",
+  "setup",
+  "styleguide",
+];
 
-export const panelView = (name: string): View => `panel:${name}`;
-export const recordView = (kind: string, id: string): View => `record:${kind}:${id}`;
+/** Fragments earlier versions used, and the view each still opens. */
+const LEGACY: Record<string, CoreView> = {
+  home: "today",
+  stages: "work/stages",
+  files: "records/files",
+  sources: "sources",
+  setup: "setup",
+  welcome: "setup",
+  settings: "settings",
+  addons: "addons",
+};
+
+const enc = encodeURIComponent;
+
+export const panelView = (name: string, group: PanelGroup = "work"): View => `${group}/panel/${enc(name)}`;
+export const recordView = (kind: string, id: string): View => `records/${enc(kind)}/${enc(id)}`;
 
 export type ParsedView =
   | { type: "core"; view: CoreView }
-  | { type: "panel"; name: string }
+  | { type: "panel"; group: PanelGroup; name: string }
   | { type: "record"; kind: string; id: string };
 
 export function parseView(view: View): ParsedView {
-  if (view.startsWith("panel:")) return { type: "panel", name: view.slice("panel:".length) };
-  if (view.startsWith("record:")) {
-    const rest = view.slice("record:".length);
-    const at = rest.indexOf(":");
-    return { type: "record", kind: rest.slice(0, at), id: rest.slice(at + 1) };
+  if (view.startsWith("work/panel/") || view.startsWith("records/panel/")) {
+    const group = view.startsWith("work/") ? "work" : "records";
+    return { type: "panel", group, name: decodeURIComponent(view.slice(`${group}/panel/`.length)) };
   }
-  return { type: "core", view: view as CoreView };
+  if ((CORE_VIEWS as readonly string[]).includes(view)) return { type: "core", view: view as CoreView };
+  const [, kind, id] = view.split("/");
+  return { type: "record", kind: decodeURIComponent(kind), id: decodeURIComponent(id) };
 }
 
-/** The #fragment for a view (without the "#"). Home has none. */
-export function toHash(view: View): string {
-  const parsed = parseView(view);
-  if (parsed.type === "panel") return `panel:${encodeURIComponent(parsed.name)}`;
-  if (parsed.type === "record") return `record:${encodeURIComponent(parsed.kind)}:${encodeURIComponent(parsed.id)}`;
-  return parsed.view === "home" ? "" : parsed.view;
-}
+/** The #fragment for a view (without the "#"). */
+export const toHash = (view: View): string => view;
 
-/** The view an address's #fragment names; anything unknown is home. */
+/** The view an address's #fragment names; anything unknown is Today. */
 export function fromHash(hash: string): View {
   const text = hash.replace(/^#/, "");
+  if (!text) return "today";
+  if ((CORE_VIEWS as readonly string[]).includes(text)) return text as CoreView;
   try {
+    // Fragments from earlier versions.
     if (text.startsWith("panel:")) {
       const name = decodeURIComponent(text.slice("panel:".length));
-      return name ? panelView(name) : "home";
+      return name ? panelView(name) : "today";
     }
     if (text.startsWith("record:")) {
       const [kind, ...rest] = text.slice("record:".length).split(":");
       const id = decodeURIComponent(rest.join(":"));
       const decoded = decodeURIComponent(kind);
-      return decoded && id ? recordView(decoded, id) : "home";
+      return decoded && id ? recordView(decoded, id) : "today";
+    }
+    if (text in LEGACY) return LEGACY[text];
+    const parts = text.split("/");
+    if (parts[0] === "work" && parts[1] === "panel" && parts.length > 2) {
+      const name = decodeURIComponent(parts.slice(2).join("/"));
+      return name ? panelView(name, "work") : "today";
+    }
+    if (parts[0] === "records" && parts.length > 2) {
+      if (parts[1] === "panel") {
+        const name = decodeURIComponent(parts.slice(2).join("/"));
+        return name ? panelView(name, "records") : "today";
+      }
+      const kind = decodeURIComponent(parts[1]);
+      const id = decodeURIComponent(parts.slice(2).join("/"));
+      return kind && id ? recordView(kind, id) : "today";
     }
   } catch {
-    return "home";
+    return "today";
   }
-  return CORE.includes(text) ? (text as CoreView) : "home";
+  return "today";
+}
+
+/** An address for a view that works in a new tab and under any base path: this page's path and query, then the fragment. */
+export function viewHref(view: View): string {
+  return `${window.location.pathname}${window.location.search}#${toHash(view)}`;
 }

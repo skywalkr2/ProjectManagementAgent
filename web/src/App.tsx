@@ -1,59 +1,91 @@
-// The app shell: the header, the screen the address names, and Today, the home, as a board of columns (design 7.7).
+// The app shell (design 7.1): one grid with the header across the top, the sidebar on the left (a bottom bar on a phone) and
+// the content area, which is the only thing that changes when the view does. Every view is a link in the address's fragment.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
-import { RestartNotice, RestartProvider } from "./lib/restart";
+import { useNarrow } from "./lib/media";
+import { RestartAnnouncer, RestartProvider, useRestart } from "./lib/restart";
 import { useRestartWhat } from "./lib/restart-for";
 import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
+import { longDay } from "./lib/dates";
 import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
 import { useWords } from "./lib/wording";
 import { Addons } from "./components/Addons";
 import { Ask } from "./components/Ask";
-import { AssistantNotice } from "./components/AssistantNotice";
-import { DemoStrip } from "./components/DemoStrip";
 import { Feedback } from "./components/Feedback";
 import { Files } from "./components/Files";
+import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Panel } from "./components/Panel";
 import { restoreFocus } from "./components/ModalPanel";
 import { RecordPage } from "./components/RecordPage";
-import { Header } from "./components/Header";
 import { Settings } from "./components/Settings";
 import { Sources, type AddRequest } from "./components/Sources";
 import { Setup } from "./components/Setup";
-import { StartHere } from "./components/StartHere";
+import { StyleGuide } from "./components/StyleGuide";
 import { TodayBoard } from "./components/TodayBoard";
 import { Stages } from "./components/Stages";
 import { ShortcutHelp } from "./components/ShortcutHelp";
+import { WhatChanged } from "./components/WhatChanged";
 import { Welcome, type FocusStep } from "./components/Welcome";
+import { BottomBar } from "./shell/BottomBar";
+import { Header } from "./shell/Header";
+import { SetupLine } from "./shell/SetupLine";
+import { Sidebar, useSidebarMode } from "./shell/Sidebar";
+import { EmptyState } from "./ui/EmptyState";
+import shell from "./shell/Shell.module.css";
 
 export function App(props: { rc: S["RuntimeConfig"] }) {
-  const { t } = useWords();
   const live = useLive();
-  const { undoLast } = useToasts();
+  return (
+    <RestartProvider hellos={live.hellos}>
+      <Shell rc={props.rc} live={live} />
+    </RestartProvider>
+  );
+}
+
+/** The style guide is for development and demo workspaces only. */
+const styleGuideShown = (rc: S["RuntimeConfig"]) => rc.demo || import.meta.env.DEV;
+
+/** The first visible element that matches, so a control that exists twice (a field and an icon) is found where it shows. */
+function visible(selector: string): HTMLElement | null {
+  const all = Array.from(document.querySelectorAll<HTMLElement>(selector));
+  return all.find((el) => el.getClientRects().length > 0) ?? all[0] ?? null;
+}
+
+function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive> }) {
+  const { rc, live } = props;
+  const { t } = useWords();
+  const { undoLast, push } = useToasts();
   useSignInReturn();
+  const narrow = useNarrow(rc.narrow_below_px);
+  const sidebar = useSidebarMode();
   const [handIn, setHandIn] = useState(false);
   const [help, setHelp] = useState(false);
   const [feedback, setFeedback] = useState(false);
   // The Ask box, with the question it opens on when a screen suggests one.
   const [ask, setAsk] = useState<{ question?: string } | null>(null);
   const [view, setView] = useView();
-  // The setup guide opens at a step when Today's card sends the person to one.
+  // The setup guide opens at a step when a line elsewhere sends the person to one.
   const [guideStep, setGuideStep] = useState<FocusStep | null>(null);
   // Sources opens on the form that adds one when Today or a sign-in sends the person there.
   const [addSource, setAddSource] = useState<AddRequest | null>(null);
+  // A screen that puts focus somewhere of its own on opening (a step's heading, a form) keeps it.
+  const ownFocus = useRef(false);
   const openAddSource = (plugin: string | null = null) => {
+    ownFocus.current = true;
     setAddSource({ plugin, n: Date.now() });
     setView("sources");
   };
   const openGuide = (step?: string) => {
+    ownFocus.current = !!step;
     setGuideStep(step ? { id: step, n: Date.now() } : null);
-    setView("welcome");
+    setView("setup");
   };
   // Where a record's page goes back to: the screen it was opened from.
-  const origin = useRef<View>("home");
+  const origin = useRef<View>("today");
   const openRecord = (kind: string, id: string) => {
     if (parseView(view).type !== "record") origin.current = view;
     setView(recordView(kind, id));
@@ -63,122 +95,171 @@ export function App(props: { rc: S["RuntimeConfig"] }) {
     () => ({ undo: undoLast, hand_in: () => setHandIn(true), ask: () => setAsk({}), help: () => setHelp(true) }),
     [undoLast],
   );
-  const keys = props.rc.shortcuts;
+  const keys = rc.shortcuts;
   useShortcuts(keys, handlers);
-  useNarrow(props.rc.narrow_below_px);
   useEffect(() => {
-    document.title = props.rc.workspace_name;
-  }, [props.rc.workspace_name]);
+    document.title = rc.workspace_name;
+  }, [rc.workspace_name]);
 
-  return (
-    <RestartProvider hellos={live.hellos}>
-      <a href="#main" className="skip">
-        {t("app.skip")}
-      </a>
-      {props.rc.demo && <DemoStrip />}
-      <Header
-        workspace={props.rc.workspace_name}
-        live={live}
-        view={view}
-        onView={setView}
-        onHandIn={() => setHandIn(true)}
-        onAsk={() => setAsk({})}
-        onHelp={() => setHelp(true)}
-      />
-      <RestartAsk />
-      <main id="main" tabIndex={-1}>
-        {handIn && <HandIn onClose={() => setHandIn(false)} />}
-        {shown.type === "panel" ? (
-          <Panel key={shown.name} name={shown.name} onOpenRecord={openRecord} />
-        ) : shown.type === "record" ? (
-          <RecordPage
-            key={`${shown.kind}:${shown.id}`}
-            kind={shown.kind}
-            id={shown.id}
-            onBack={() => setView(origin.current)}
-          />
-        ) : view === "home" ? (
-          <>
-            <AssistantNotice />
-            <StartHere
-              workspace={props.rc.workspace_name}
-              onOpenGuide={openGuide}
-            />
+  // After going to another view (not on the first load), focus moves to the new view's heading.
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    window.scrollTo?.(0, 0);
+    if (ownFocus.current) {
+      ownFocus.current = false;
+      return;
+    }
+    const heading = document.querySelector<HTMLElement>("main h1");
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    }
+  }, [view]);
+
+  const restart = useRestart();
+  const what = useRestartWhat();
+  const restartNow = useRef(restart.now);
+  restartNow.current = restart.now;
+  // A change that needs a restart says so with a toast that holds the button; the status chip keeps it afterwards.
+  useEffect(() => {
+    if (restart.phase !== "asking") return;
+    push({ message: t("restart.toast"), action: { label: t("restart.now"), run: () => restartNow.current() } });
+  }, [restart.phase, push, t]);
+
+  const body = (() => {
+    if (shown.type === "panel") return <Panel key={shown.name} name={shown.name} onOpenRecord={openRecord} />;
+    if (shown.type === "record") {
+      return <RecordPage key={`${shown.kind}:${shown.id}`} kind={shown.kind} id={shown.id} onBack={() => setView(origin.current)} />;
+    }
+    switch (shown.view) {
+      case "today":
+        return (
+          <div className={shell.today}>
+            <div className={shell.todayHead}>
+              <h1>{t("nav.home")}</h1>
+              <p>{longDay(new Date())}</p>
+            </div>
+            <SetupLine workspace={rc.workspace_name} onOpenGuide={openGuide} />
             <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} />
-          </>
-        ) : view === "stages" ? (
-          <Stages />
-        ) : view === "files" ? (
-          <Files />
-        ) : view === "sources" ? (
-          <Sources onAsk={(question) => setAsk({ question })} add={addSource} onAddOpened={() => setAddSource(null)} />
-        ) : view === "welcome" ? (
+          </div>
+        );
+      case "work/changed":
+        return <WhatChanged />;
+      case "work/followups":
+        return <FollowUps />;
+      case "work/outgoing":
+        return (
+          <section className="panel-section" aria-labelledby="outgoing-title">
+            <div className="heading">
+              <h1 id="outgoing-title">{t("nav.outgoing")}</h1>
+            </div>
+            <EmptyState icon="upload" text={t("outgoing.empty")} action={{ label: t("outgoing.open_changes"), onClick: () => setView("work/changed") }} />
+          </section>
+        );
+      case "work/stages":
+        return <Stages />;
+      case "records/projects":
+        return <Setup lead="projects" />;
+      case "records/people":
+        return <Setup lead="people" />;
+      case "records/files":
+        return <Files />;
+      case "sources":
+        return <Sources onAsk={(question) => setAsk({ question })} add={addSource} onAddOpened={() => setAddSource(null)} />;
+      case "setup":
+        return (
           <Welcome
             focusStep={guideStep}
-            onOpenPeople={() => setView("setup")}
+            onOpenPeople={() => setView("records/people")}
             onOpenAddons={() => setView("addons")}
             onHandIn={() => setHandIn(true)}
             onChooseSource={openAddSource}
           />
-        ) : view === "settings" ? (
-          <Settings onOpenGuide={() => openGuide()} onOpenAddons={() => setView("addons")} onChooseSource={openAddSource} />
-        ) : view === "addons" ? (
-          <Addons onBack={() => setView("settings")} />
-        ) : (
-          <Setup />
-        )}
-        <footer className="footer">
-          <p>{t("app.footer", { key: props.rc.shortcuts.help ?? "?" })}</p>
-          <p className="footer-feedback">
-            <button type="button" className="link-button" data-feedback-button onClick={() => setFeedback(true)}>
-              {t("feedback.open")}
-            </button>
-            <span aria-hidden="true">·</span>
-            <span>{t("app.version", { version: props.rc.version })}</span>
-          </p>
-        </footer>
-      </main>
+        );
+      case "settings":
+        return <Settings onOpenGuide={() => openGuide()} onOpenAddons={() => setView("addons")} onChooseSource={openAddSource} />;
+      case "addons":
+        return <Addons onBack={() => setView("settings")} />;
+      case "styleguide":
+        return styleGuideShown(rc) ? <StyleGuide /> : null;
+      default:
+        return null;
+    }
+  })();
+
+  const skip = (event: React.MouseEvent) => {
+    event.preventDefault();
+    document.getElementById("main")?.focus();
+  };
+  const openFeedback = () => setFeedback(true);
+  return (
+    <>
+      <a href="#main" className="skip" onClick={skip}>
+        {t("app.skip")}
+      </a>
+      <div className={[shell.app, sidebar.expanded ? "" : shell.rail].filter(Boolean).join(" ")} data-nav={sidebar.expanded ? "full" : "rail"}>
+        <Header
+          rc={rc}
+          live={live}
+          narrow={narrow}
+          shortcuts={keys}
+          onHandIn={() => setHandIn(true)}
+          onAsk={() => setAsk({})}
+          onHelp={() => setHelp(true)}
+          onFeedback={openFeedback}
+          onOpenGuide={openGuide}
+        />
+        {!narrow && <Sidebar current={view} expanded={sidebar.expanded} onToggle={sidebar.toggle} />}
+        <main id="main" className={shell.main} tabIndex={-1}>
+          {handIn && <HandIn onClose={() => setHandIn(false)} />}
+          {body}
+        </main>
+      </div>
+      {narrow && (
+        <BottomBar
+          current={view}
+          version={rc.version}
+          onHandIn={() => setHandIn(true)}
+          onAsk={() => setAsk({})}
+          onHelp={() => setHelp(true)}
+          onFeedback={openFeedback}
+          onOpenGuide={() => openGuide()}
+        />
+      )}
+      <RestartAnnouncer what={what} />
       {ask && (
         <Ask
           initial={ask.question}
-          feedbackTo={props.rc.feedback_to}
+          feedbackTo={rc.feedback_to}
           onClose={() => {
             setAsk(null);
-            restoreFocus(() => document.querySelector<HTMLElement>("[data-ask-button]"));
+            restoreFocus(() => visible("[data-ask-button]"));
           }}
         />
       )}
       {feedback && (
         <Feedback
           view={view}
-          version={props.rc.version}
-          to={props.rc.feedback_to}
+          version={rc.version}
+          to={rc.feedback_to}
           onClose={() => {
             setFeedback(false);
-            restoreFocus(() => document.querySelector<HTMLElement>("[data-feedback-button]"));
+            restoreFocus(() => visible("[data-feedback-button]"));
           }}
         />
       )}
       <ShortcutHelp open={help} onClose={() => setHelp(false)} keys={keys} />
-    </RestartProvider>
+    </>
   );
-}
-
-/** One column below the configured width: a data attribute the styles key off. */
-function useNarrow(px: number) {
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia(`(max-width: ${px - 1}px)`);
-    const apply = () => document.documentElement.toggleAttribute("data-narrow", query.matches);
-    apply();
-    query.addEventListener("change", apply);
-    return () => query.removeEventListener("change", apply);
-  }, [px]);
 }
 
 export type { View } from "./lib/views";
 
-/** Which view is showing, kept in the address's #fragment so a refresh or the back button keeps it. */
+/** Which view is showing, kept in the address's #fragment so a refresh, the back button and a bookmark all keep it. */
 function useView(): [View, (v: View) => void] {
   const [view, setViewState] = useState<View>(() => fromHash(window.location.hash));
   useEffect(() => {
@@ -191,9 +272,4 @@ function useView(): [View, (v: View) => void] {
     setViewState(v);
   };
   return [view, setView];
-}
-
-/** The restart notice with what waits for the restart named in it. */
-function RestartAsk() {
-  return <RestartNotice what={useRestartWhat()} />;
 }

@@ -1,0 +1,21 @@
+/* A pane from the right edge, --detail-w wide, with a sticky footer. */
+.overlay { position: fixed; inset: 0; z-index: 60; background: var(--overlay); display: flex; justify-content: flex-end; }
+.overlay[data-entering] { animation: fade var(--dur-base) var(--ease-out); }
+.overlay[data-exiting] { animation: fade var(--dur-base) var(--ease-out) reverse; }
+.modal {
+  display: flex; flex-direction: column; width: var(--detail-w); max-width: 100%; height: 100%;
+  background: var(--surface); color: var(--text); border-left: 1px solid var(--border); box-shadow: var(--elev-3);
+}
+.wide { width: min(640px, 100%); }
+.modal[data-entering] { animation: slide var(--dur-slow) var(--ease-out); }
+.modal[data-exiting] { animation: slide var(--dur-slow) var(--ease-out) reverse; }
+:global([data-narrow]) .modal { width: 100%; border-left: 0; }
+@keyframes fade { from { opacity: 0; } }
+@keyframes slide { from { transform: translateX(100%); } }
+
+.dialog { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; outline: none; }
+.head { display: flex; align-items: center; gap: var(--space-2); min-height: var(--space-12); padding: 0 var(--space-2) 0 var(--space-4); border-bottom: 1px solid var(--border); flex: none; }
+.title { margin: 0; flex: 1; min-width: 0; font-size: var(--text-lg); line-height: var(--lh-lg); font-weight: var(--weight-semibold); }
+.body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: var(--space-4); }
+.footer { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); background: var(--surface); }
+.guard { margin: 0; flex: 1 1 100%; color: var(--text); font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-semibold); }

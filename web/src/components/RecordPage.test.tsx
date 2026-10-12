@@ -84,7 +84,7 @@ function routes(extra: Routes = {}): Routes {
 test("ordinary fields are a labelled list: readable labels, help text, names for people, one line per list item", async () => {
   fakeApi(routes());
   renderApp(<RecordPage kind={KIND} id={ID} onBack={() => {}} />);
-  expect(await screen.findByRole("heading", { level: 2, name: "The harbor" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "The harbor" })).toBeInTheDocument();
   const details = screen.getByRole("region", { name: "Details" });
   const terms = within(details).getAllByRole("term").map((x) => x.textContent);
   expect(terms).toEqual(["Title", "Owner", "Tags"]);

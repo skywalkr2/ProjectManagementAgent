@@ -11,6 +11,7 @@ import { readable, useValueLines } from "../lib/records";
 import { useWords } from "../lib/wording";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { SafeLink } from "./SafeText";
+import { Skeleton } from "../ui/Skeleton";
 
 export function Panel(props: { name: string; project?: string; onOpenRecord: (kind: string, id: string) => void }) {
   const { t, tn } = useWords();
@@ -37,7 +38,7 @@ export function Panel(props: { name: string; project?: string; onOpenRecord: (ki
   const content = isDocument ? document : rows;
   const failure = panels.error ?? content.error;
   let body;
-  if (panels.isPending || (!!panel && content.isPending)) body = <p className="empty">{t("loading")}</p>;
+  if (panels.isPending || (!!panel && content.isPending)) body = <Skeleton />;
   else if (panels.isError || content.isError || !panel) {
     body = (
       <p className="empty" role="alert">
@@ -70,7 +71,7 @@ export function Panel(props: { name: string; project?: string; onOpenRecord: (ki
   return (
     <section className="panel-section" aria-labelledby={headingId}>
       <div className="heading">
-        <h2 id={headingId}>{title}</h2>
+        {props.project ? <h3 id={headingId}>{title}</h3> : <h1 id={headingId}>{title}</h1>}
         {!isDocument && rows.data && rows.data.length > 0 && <span className="hint">{tn("panel.count", rows.data.length)}</span>}
       </div>
       {newAction && (

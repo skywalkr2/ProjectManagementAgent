@@ -27,6 +27,7 @@ import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { domainOf } from "./SafeText";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { Skeleton } from "../ui/Skeleton";
 
 type Pack = S["PackView"];
 type Feed = S["PackFeedView"];
@@ -39,7 +40,7 @@ export function Addons(props: { onBack: () => void }) {
   return (
     <section className="panel-section" aria-labelledby="addons-title">
       <div className="heading">
-        <h2 id="addons-title">{t("addons.title")}</h2>
+        <h1 id="addons-title">{t("addons.title")}</h1>
         <button type="button" className="btn" onClick={props.onBack}>
           {t("addons.back")}
         </button>
@@ -117,7 +118,7 @@ function Loaded(props: {
 }) {
   const { t } = useWords();
   const { query } = props;
-  if (query.isPending) return <p className="empty">{t("loading")}</p>;
+  if (query.isPending) return <Skeleton />;
   if (query.isError || !query.data) {
     return (
       <p className="empty">

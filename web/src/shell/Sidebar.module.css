@@ -1,0 +1,28 @@
+/* The sidebar: 232px with labels, or a 64px icon rail. Fixed in place under the header; only its own list scrolls. */
+.side {
+  position: sticky; top: var(--header-h); height: calc(100dvh - var(--header-h)); overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-2);
+  background: var(--surface); border-right: 1px solid var(--border);
+}
+.group { display: grid; gap: var(--space-1); }
+.title { margin: var(--space-4) var(--space-3) var(--space-1); color: var(--text-subtle); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
+.bottom { margin-top: auto; display: grid; gap: var(--space-1); padding-top: var(--space-3); }
+.entry {
+  display: flex; align-items: center; gap: var(--space-3); min-height: 36px; padding: 0 var(--space-3); border-radius: var(--radius-md);
+  color: var(--text-muted); text-decoration: none; font-size: var(--text-sm); line-height: var(--lh-sm); font-weight: var(--weight-medium); cursor: pointer;
+}
+.entry:hover { background: var(--surface-hover); color: var(--text); }
+.entry[aria-current="page"] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
+.sub { padding-left: var(--space-3); }
+.glyph { display: inline-grid; place-items: center; width: 18px; height: 18px; flex: none; border-radius: var(--radius-sm); background: var(--surface-sunk); color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
+.entry[aria-current="page"] .glyph { background: var(--surface); color: var(--accent-text); }
+.label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.count { margin-left: auto; font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.toggle { display: flex; justify-content: flex-start; }
+
+/* The icon rail: one icon each, with a tooltip. */
+.rail { align-items: stretch; }
+.rail .entry { justify-content: center; padding: 0; }
+.rail .label, .rail .count, .rail .title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.rail .group + .group { margin-top: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--border); }
+.rail .toggle { justify-content: center; }

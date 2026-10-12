@@ -13,6 +13,7 @@ import { AskChooser } from "./AskChooser";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { useAddOwnRequest } from "./HandIn";
 import { SafeLink, SafeText } from "./SafeText";
+import { Skeleton } from "../ui/Skeleton";
 
 type Filter = "send" | "waiting";
 const FILTERS: Filter[] = ["send", "waiting"];
@@ -26,7 +27,7 @@ const waitingActions = (s: S["FollowupSection"]) => s.actions.filter((a) => a.to
 export function FollowUps(props: { compact?: boolean }) {
   const { t } = useWords();
   const compact = !!props.compact;
-  const Heading = compact ? "h3" : "h2";
+  const Heading = compact ? "h3" : "h1";
   const [filter, setFilter] = useState<Filter>("send");
   const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
   // A Today line asking for a question to be answered: the PM's own questions show under "to send", so the row is there.
@@ -56,7 +57,7 @@ export function FollowUps(props: { compact?: boolean }) {
         </div>
       </div>
       {followups.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : followups.isError ? (
         <p className="empty">
           {t("followups.load_failed")}{" "}

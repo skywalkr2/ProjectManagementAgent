@@ -10,6 +10,7 @@ import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { restoreFocus } from "./ModalPanel";
 import { RowMenu, type MenuAction } from "./RowMenu";
+import { Icon } from "../ui/Icon";
 
 type Account = S["AiAccountView"];
 type Kind = S["EndpointView"];
@@ -202,7 +203,7 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
           <strong id={`${base}-title`}>{account.name}</strong>
           {kind && kind.name !== account.name && <span className="sub">{t("ai_accounts.service", { service: kind.name })}</span>}
           <span className={missing ? "sub key-missing" : "sub"}>
-            <span aria-hidden="true">{keyState === "saved" ? "✓ " : missing ? "! " : "– "}</span>
+            {missing ? <Icon name="alert" size={16} /> : <span aria-hidden="true">{keyState === "saved" ? "✓ " : "– "}</span>}
             {status}
           </span>
           <span className="sub">{doing}</span>

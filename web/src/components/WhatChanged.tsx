@@ -24,7 +24,7 @@ export function needsAttention(c: S["ChangeItem"]): boolean {
 
 /** `compact` is for a narrow column on Today: the heading sits one level down. */
 export function WhatChanged(props: { compact?: boolean }) {
-  const Heading = props.compact ? "h3" : "h2";
+  const Heading = props.compact ? "h3" : "h1";
   const { t, tn } = useWords();
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
   const own = useOwnRequests();

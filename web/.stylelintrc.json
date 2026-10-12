@@ -1,0 +1,24 @@
+{
+  "plugins": ["./stylelint/rules.mjs"],
+  "rules": {
+    "color-no-hex": true,
+    "color-named": "never",
+    "function-disallowed-list": ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch", "color"],
+    "declaration-property-value-disallowed-list": {
+      "text-transform": ["uppercase"]
+    },
+    "cockpit/token-values": true,
+    "cockpit/no-opacity-when-disabled": true
+  },
+  "overrides": [
+    {
+      "files": ["src/theme/tokens.css"],
+      "rules": {
+        "color-no-hex": null,
+        "color-named": null,
+        "function-disallowed-list": null,
+        "cockpit/token-values": null
+      }
+    }
+  ]
+}

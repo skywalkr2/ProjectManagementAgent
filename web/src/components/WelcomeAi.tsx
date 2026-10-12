@@ -11,6 +11,7 @@ import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { AiAccounts } from "./AiAccounts";
 import { domainOf } from "./SafeText";
+import { Skeleton } from "../ui/Skeleton";
 
 type Kind = S["EndpointView"];
 type ModelInfo = S["AiModelView"];
@@ -351,7 +352,7 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
   return (
     <div className="guide-body">
       {endpoints.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : endpoints.isError || !endpoints.data?.length ? (
         <p className="empty">{t("welcome.ai.no_kinds")}</p>
       ) : (

@@ -121,7 +121,9 @@ test("a key that isn't there says where it was looked for, in words and with a m
   const lost = await row("lost");
   expect(lost).toHaveTextContent("Key not found: the environment variable NAME");
   expect(lost).not.toHaveTextContent("Key saved");
-  expect(lost.querySelector(".key-missing")).toHaveTextContent("! Key not found");
+  // The missing key is marked by an icon as well as by words, never by color alone.
+  expect(lost.querySelector(".key-missing")).toHaveTextContent("Key not found");
+  expect(lost.querySelector('.key-missing [data-icon="alert"]')).not.toBeNull();
   expect(await row("plain")).toHaveTextContent("No key");
   expect(await row("plain")).not.toHaveTextContent("Key not found");
 });

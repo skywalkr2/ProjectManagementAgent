@@ -13,6 +13,7 @@ import { useFolderListing } from "./FolderPicker";
 import { SettingRow } from "./SettingRow";
 import { SignIns } from "./SignIns";
 import { ValueLists } from "./ValueLists";
+import { Skeleton } from "../ui/Skeleton";
 
 type Edits = Record<string, Draft>;
 
@@ -86,7 +87,7 @@ export function Settings(props: {
   return (
     <section className="panel-section" aria-labelledby="settings-title">
       <div className="heading">
-        <h2 id="settings-title">{t("settings.title")}</h2>
+        <h1 id="settings-title">{t("settings.title")}</h1>
         <div className="acts">
           <button type="button" className="btn" onClick={props.onOpenAddons}>
             {t("settings.open_addons")}
@@ -113,7 +114,7 @@ export function Settings(props: {
       </p>
       <div id={listId} className="settings-groups">
         {settings.isPending ? (
-          <p className="empty">{t("loading")}</p>
+          <Skeleton />
         ) : settings.isError ? (
           <p className="empty">{t("settings.failed")}</p>
         ) : (

@@ -8,6 +8,13 @@ export function day(iso: string | null | undefined): string {
   return dayFormat.format(new Date(y, m - 1, d));
 }
 
+const longDayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "long", day: "numeric" });
+
+/** A date in full words, "Tuesday, October 13", for a heading. */
+export function longDay(when: Date): string {
+  return longDayFormat.format(when);
+}
+
 export function dayAndTime(iso: string): string {
   const when = new Date(iso);
   return `${dayFormat.format(when)}, ${timeFormat.format(when)}`;

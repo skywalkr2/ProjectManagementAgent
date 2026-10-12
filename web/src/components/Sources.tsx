@@ -17,6 +17,7 @@ import { RowMenu, type MenuAction } from "./RowMenu";
 import { restoreFocus } from "./ModalPanel";
 import { ItemFields } from "./SettingRow";
 import { NotReadingLines } from "./SignIns";
+import { Skeleton } from "../ui/Skeleton";
 
 type Source = S["WatchSourceView"];
 type Closed = S["AutoClosedView"];
@@ -119,7 +120,7 @@ export function Sources(props: {
   return (
     <section className="panel-section" aria-labelledby="sources-title">
       <div className="heading">
-        <h2 id="sources-title">{t("sources.title")}</h2>
+        <h1 id="sources-title">{t("sources.title")}</h1>
         <div className="acts">
           <button
             type="button"
@@ -144,7 +145,7 @@ export function Sources(props: {
         />
       )}
       {sources.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : sources.isError ? (
         <p className="empty">
           {t("sources.load_failed")}{" "}
@@ -502,7 +503,7 @@ function AutoClosed() {
       </div>
       <p className="hint">{t("sources.closed.intro")}</p>
       {closed.isPending ? (
-        <p className="empty">{t("loading")}</p>
+        <Skeleton />
       ) : closed.isError ? (
         <p className="empty">
           {t("sources.closed.load_failed")}{" "}

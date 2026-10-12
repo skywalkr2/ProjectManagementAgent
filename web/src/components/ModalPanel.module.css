@@ -1,0 +1,10 @@
+/* A dialog: only for confirms that can't be undone and short questions. 560px at most, over the overlay. */
+.overlay { position: fixed; inset: 0; z-index: 60; background: var(--overlay); display: grid; place-items: center; padding: var(--space-4); }
+.overlay[data-entering] { animation: fade var(--dur-base) var(--ease-out); }
+.modal {
+  width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--elev-3); padding: var(--space-4) var(--space-5);
+}
+.dialog { outline: none; display: grid; gap: var(--space-3); }
+@keyframes fade { from { opacity: 0; } }

@@ -6,6 +6,7 @@ import { Heading } from "react-aria-components";
 import { api, ApiError } from "../lib/api";
 import { useWords } from "../lib/wording";
 import { ModalPanel } from "./ModalPanel";
+import { Skeleton } from "../ui/Skeleton";
 
 /** A folder's address inside another, using the separator the address already uses. */
 export function joinPath(base: string, name: string): string {
@@ -57,7 +58,7 @@ export function FolderPicker(props: { start?: string; onPick: (path: string) => 
           </button>
         </div>
       )}
-      {folders.isPending && <p className="empty">{t("loading")}</p>}
+      {folders.isPending && <Skeleton />}
       {folders.data && (
         <>
           <p className="path" ref={heading} tabIndex={-1}>

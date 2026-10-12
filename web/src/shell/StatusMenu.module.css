@@ -1,0 +1,15 @@
+.popover { width: min(420px, calc(100vw - var(--space-4))); }
+.popover[data-entering] { animation: pop var(--dur-fast) var(--ease-out); }
+@keyframes pop { from { opacity: 0; transform: scale(0.98); } }
+.dialog {
+  outline: none; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--elev-2); padding: var(--space-2) var(--space-4);
+}
+.states { list-style: none; margin: 0; padding: 0; display: grid; }
+.state { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-1) var(--space-3); align-items: center; padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.state:last-child { border-bottom: 0; }
+.name { grid-column: 1 / -1; margin: 0; color: var(--text-subtle); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
+.text { margin: 0; min-width: 0; font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
+.warn .text { color: var(--warn); font-weight: var(--weight-semibold); }
+.full { grid-column: 1 / -1; }
+.note { margin: 0; grid-column: 1 / -1; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); overflow-wrap: anywhere; }

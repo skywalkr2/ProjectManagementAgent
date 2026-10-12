@@ -11,7 +11,8 @@
     "dev": "vite",
     "gen:api": "openapi-typescript src/api/openapi.json -o src/api/schema.d.ts",
     "typecheck": "npm run gen:api && tsc --noEmit",
-    "build": "npm run gen:api && tsc --noEmit && vite build",
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "build": "npm run lint:css && npm run gen:api && tsc --noEmit && vite build",
     "test": "vitest run",
     "e2e": "playwright test"
   },
@@ -34,6 +35,8 @@
     "jsdom": "27.0.0",
     "openapi-typescript": "7.9.1",
     "playwright-core": "1.56.1",
+    "postcss-value-parser": "4.2.0",
+    "stylelint": "17.16.0",
     "typescript": "5.9.3",
     "vite": "7.3.7",
     "vitest": "5.0.3"

@@ -1,13 +1,14 @@
-// A modal dialog: labelled by its heading, focus kept inside, Escape closes. The marker attribute pauses the row
-// shortcuts while it is open. Where focus goes on close is up to the caller (see restoreFocus).
+// A modal dialog (design 7.12): labelled by its heading, focus kept inside, Escape closes. The marker attribute pauses the
+// row shortcuts while it is open. Where focus goes on close is up to the caller (see restoreFocus).
 import type { ReactNode } from "react";
 import { Dialog, Modal, ModalOverlay } from "react-aria-components";
+import styles from "./ModalPanel.module.css";
 
-export function ModalPanel(props: { titleId: string; onClose: () => void; children: ReactNode }) {
+export function ModalPanel(props: { titleId: string; onClose: () => void; /** A click outside closes it too. */ dismissable?: boolean; children: ReactNode }) {
   return (
-    <ModalOverlay isOpen onOpenChange={(open) => !open && props.onClose()} className="help">
-      <Modal className="panel dialog-panel" data-modal-open>
-        <Dialog aria-labelledby={props.titleId} className="help-dialog">
+    <ModalOverlay isOpen onOpenChange={(open) => !open && props.onClose()} isDismissable={props.dismissable} className={styles.overlay}>
+      <Modal className={`${styles.modal} dialog-panel`} data-modal-open>
+        <Dialog aria-labelledby={props.titleId} className={`${styles.dialog} help-dialog`}>
           {props.children}
         </Dialog>
       </Modal>
