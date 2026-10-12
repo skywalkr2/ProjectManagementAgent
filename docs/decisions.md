@@ -3,6 +3,40 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: The data model review: forgetting by recorded redaction, distinct knowledge states, missing fields
+
+**Decided by:** the first design's author proposed (review of Part 5); project lead checked the record definitions in the
+code and chose between his two options for forgetting.
+
+**What:**
+- **Forgetting is a recorded redaction** (option b). A `person.forget` op replaces the person's values everywhere, the
+  ledger's before-and-after values included, with a marker, and records that it did. The export's local git repository
+  is rebuilt from the database, the one rewrite allowed. A remote (phase E) is replaced the same way. Older backups hold
+  the old data until they age out, which the screen says.
+- **Crypto-shredding was set aside:** it would put every read and write of a person's values through encryption, for a
+  rare operation.
+- **Evidence survives retention:** quotes are kept with their ops.
+- **Knowledge records gain** `origin`, their own `text` apart from the evidence, `kept_by` and `kept_at`, and the
+  distinct states `discarded` (with a reason; it suppresses), `expired` (counted; it doesn't suppress) and `retired`. Seed
+  lessons gain `guard_kind` and `fixture_ids`.
+- **Other fields:**
+  - `project.priority` is person-only;
+  - actions gain `followed_up`, `done_by` and `reported_by`;
+  - sources and files gain `data_level` (today it lives only on the request);
+  - signals gain `run` and `changeset`;
+  - questions gain `held_for`;
+  - `person.verified` comes in L-core.
+- **Value-list values** gain a tone, and status values a meaning.
+- **Stale text in Part 5 is corrected:** the off-site claim, "applied fix", the scheduler lease, backup encryption, shared
+  folders.
+
+**Why:** Each was a contradiction with an agreed rule, or a field another part depends on. Without a forget rule, three
+statements in the design couldn't all be true.
+
+**Impact:**
+- Design 5.0, 5.1, 5.2, 5.4, 7.18 and 12.4 are updated.
+- Roadmap: L0, L-core, B and E gain items, inside their estimates.
+
 ## 2026-10-12: The workplace pack review: what the running use needed, and its demo built early as the busy fixture
 
 **Decided by:** the first design's author proposed (review of 9.1 to 9.5); project lead adopted it.

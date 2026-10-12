@@ -541,6 +541,23 @@ with 3 projects and 6 actions). In phase L-core it grows into the busy portfolio
 
 It is the golden set's busy fixture first, and the pack's demo later.
 
+## 22. Your review of Part 5 (2026-10-12)
+
+Checked against the record definitions in the code: every field gap you named is real.
+
+| You said | What changed |
+|---|---|
+| A1. Forget-a-person can't work with an append-only ledger and git that's never rewritten | Your option (b), recorded redaction (5.2). `person.forget` replaces the person's values everywhere, including the ledger's before-and-after values, with a marker, and records that it did. The export's git repository stays local until phase E's remote rules exist, and is rebuilt from the database on forget, the one rewrite allowed. A remote is replaced the same way. Backups made before the forget hold the old data until they age out; the screen says when, and offers to delete them at once. Crypto-shredding was set aside because every read and write of a person's values would go through it, for a rare operation. Retention redacts quotes the same way, except evidence kept on purpose. |
+| B2. Discarded, expired and retired | Three states: `discarded` (with `discard_reason`; it suppresses near-matches for 90 days), `expired` (counted; it suppresses nothing) and `retired`. |
+| B3. Fields the Keep rule depends on | Every knowledge record has `origin` (correction, input, ask, import, pack, seed), its own `text` (the restatement) kept apart from the evidence quote, and `kept_by` and `kept_at`. Seed lessons have `guard_kind` and `fixture_ids`. |
+| B4. Priority isn't person-only | Right: only `budget_usd` and `content_levels` were. `project.priority` is now person-only (phase L0). Capacity is a workplace pack field, not core. |
+| B5. Actions can't record who did the work | Right: the code has only `told`. Actions gain `followed_up` (a chase, separate from a notice), `done_by` and `reported_by`, with Followed up in L0. |
+| B6. Sources have no data level | Right: the level lives on the request (`sensitivity`, which only raises the record type's level) and isn't kept on the source. Sources and files gain `data_level` (phase L0); audience restrictions stay designed. |
+| B7. Out-of-date text | All five fixed: no off-site claim (the remote is phase E); "before every migration and every add-on install or update"; the scheduler lease marked designed; backup encryption; the shared-folder rule beside `text.propose`. |
+| C8. Values need a meaning | Each value has a tone, and a status value a meaning, read by the ranking, the at-risk lines and colors, never the label (phase B). |
+| C9. Retention breaks evidence | Evidence quotes are kept with their ops. The source shows "removed by retention on <date>" with the quotes visible, and `excerpts: never` is respected. |
+| C10. Smaller gaps | `question.held_for` (phase B), `signal.run` and `signal.changeset` (L-core), `person.verified` (L-core). |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

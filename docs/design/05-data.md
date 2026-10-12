@@ -12,8 +12,8 @@ database gives for free and files make you rebuild by hand. So:
 - **Sources stay files:** every input's text is saved under `sources/` by content hash and registered in the database.
 - **`data/` is a readable export and a working recovery path:** the engine writes records as JSON files under `data/` (one
   file per record type, stable ordering), long text as plain files beside them, and the ledger as append-only files under
-  `data/ledger/`, and commits them, with `config/`, to the workspace's git. That gives history, diffs, off-site backup (4.15)
-  and a plain-text view. The running engine never reads it; `cockpit import` does (recovery, fixtures, moving backends).
+  `data/ledger/`, and commits them, with `config/`, to the workspace's git. That gives history, diffs and a plain-text view; an
+  off-site copy through a remote waits for phase E, with the care of backups (12.1). The running engine never reads it; `cockpit import` does (recovery, fixtures, moving backends).
   `cockpit export` writes it today; writing it on a schedule and after each applied changeset batch (`storage.export`, 4.15)
   is designed and not yet wired (roadmap, A2).
 - **Fictional workspaces** are committed as `config/` plus `data/` JSON; tests import them into a fresh database.
@@ -55,7 +55,8 @@ offered, and a passage both changed is the person's pick.
   not optional (4.15, 11.1). While the app runs, a background thread makes a full backup whenever one is due, including right
   after the computer wakes, and tries again after a failure; it never creates a missing target folder, so a drive that isn't
   connected can't turn into a "backup" on the local disk (decisions, 2026-10-11, "Backups run on their own…"). The database
-  is copied with SQLite's online backup, with `config/`, `sources/`, `files/`, `texts/` and `plugin-data/`.
+  is copied with SQLite's online backup, with `config/`, `sources/`, `files/`, `texts/` and `plugin-data/`. A backup to a
+  target outside the person's control is encrypted (`backups.encrypt`, *phase L-core*, 12.1).
 
 **Provenance.** Each ledger entry records whether the write came from trusted or untrusted content (12.2), so every field's
 provenance is known; packets mark untrusted-derived fields as data (6.6).
@@ -68,7 +69,8 @@ writers never silently overwrite each other.
 after it closes). Ids are shown only where the PM needs a handle (logs, the Admin tab), never in labels or outgoing messages.
 
 **Jobs.** Scheduled and queued work lives in a jobs table with leases: a worker takes a job by writing a lease with an expiry,
-so a crashed worker's job is picked up again, and only one scheduler holds the scheduler lease at a time.
+so a crashed worker's job is picked up again. Only one scheduler holding the scheduler lease at a time is *designed, not
+yet built* (6.14); today the instance lease keeps a second copy of the app from running at all.
 
 **One running instance per workspace.** The engine takes an instance lease at start (instance id, host, heartbeat). A second
 instance on the same workspace (the laptop and a host at once, say) refuses to start and says who holds it. `cockpit takeover`
@@ -117,7 +119,8 @@ repositories, so neither ever lives in the synced folder:
   shown, and never loaded. Settling this, and a stale lease, from a screen instead of a command is planned (roadmap, A2).
 - **Edits made outside:** the folder is checked for changes every few seconds (`storage.sync.watch_outside_edits`). Long
   text changed in another editor comes back as a proposed version (`text.propose`, 6.7) made from the version written
-  there, marked as edited outside the cockpit. Changed fields come back as a `record.edit` held for the person; in a
+  there, marked as edited outside the cockpit. It counts as the person's own work only when the folder isn't shared; when
+  `storage.sync.shared` is on, outside edits are content, reviewed like any other (12.8, phase L0). Changed fields come back as a `record.edit` held for the person; in a
   collection file, changed entries come back as held edits and removed ones as held deletes, while added entries are
   reported (creating a record takes its plugin's op). Nothing applies silently. Each change is handled once, and once the
   person has decided, the file is written again from the records. History, sources, outputs and generated files are never
@@ -163,21 +166,21 @@ generated plugin guide lists each one with its description.
 | `person` (PER) | someone the workspace works with or tracks | full_name, aliases, role, team, org (an organization id), how_to_reach (per channel), why_they_matter, track_only, status (active, left). The PM is one of them: `workspace.user.person` points at the record, which holds their name and aliases |
 | `organization` (ORG) | a company, client or supplier, kept once so a rename shows everywhere | name (unique), aliases, notes. An older workspace whose people hold organization names is moved over when it opens |
 | `team` (TEAM) | a group of people | name, aliases, members (person ids) |
-| `project` (PRJ) | a piece of work, possibly inside another | name, group, status, phase, priority (each from a value list, 5.4), target, summary, owner (person id), links, tags, log[] (dated update lines), **parent** (a project id: a title in a series, a project in a program; never itself or one of its own parts), **language** (a tag; unset means the parent's, else `workspace.language`, 4.1), **budget_usd** (the most AI work on it and everything inside it may cost; only the person sets it), content_levels (only the person sets it) |
-| `action` (ACT) | something a person will do | project, text, owners[] (each a person id with an optional team id; at least one unless held), due, status (held until it has an owner, open, done), notes, told{person id: date}, source, evidence |
-| `question` (Q) | a question for a person; a decision is a question to the PM | to, title, text, links[], kind (question, decision, action-notice, routing, impact), projects, batch (now, later), status (open, sent, answered, dropped), sent_at, answer, source, options, resolves (what answering releases, e.g. a held op) |
+| `project` (PRJ) | a piece of work, possibly inside another | name, group, status, phase, priority (each from a value list, 5.4), target, summary, owner (person id), links, tags, log[] (dated update lines), **parent** (a project id: a title in a series, a project in a program; never itself or one of its own parts), **language** (a tag; unset means the parent's, else `workspace.language`, 4.1), **budget_usd** (the most AI work on it and everything inside it may cost; only the person sets it), content_levels (only the person sets it). **priority** is person-only too (*phase L0*): the assistant may propose it, never set it. Capacity is a workplace pack field (9.5a), not core |
+| `action` (ACT) | something a person will do | project, text, owners[] (each a person id with an optional team id; at least one unless held), due, status (held until it has an owner, open, done), notes, told{person id: date}, source, evidence. *Phase L0:* **followed_up**{person id: [dates]} (a chase, separate from `told`, which is a notice; 6.9, 7.5), **done_by** (person ids who did the work) and **reported_by** (who said it was done), so a nudge is never completion and credit goes to the owner, not to whoever reported it |
+| `question` (Q) | a question for a person; a decision is a question to the PM | to, title, text, links[], kind (question, decision, action-notice, routing, impact), projects, batch (now, later), *phase B:* **held_for** (a meeting or a send date, for the Later group, 7.5), status (open, sent, answered, dropped), sent_at, answer, source, options, resolves (what answering releases, e.g. a held op) |
 | `fact` (FACT), `note` (NOTE) | something recorded as true with its evidence; something kept from an input that is neither a fact, action nor question. Never edited | text, project, source, evidence (facts), trust |
-| `source` (SRC) | one input, saved as text; its content never changes | received_at, kind, title, content_hash, trust (trusted, untrusted; 12.2), projects, url, **watched** (for an input a watcher found: the source in `watch.yaml`, the item's key, what happened to it, author, by_us), **excerpts** (`allowed` or `never`: the person allows using the source but never quoting it beyond a word or two; set by the person only) |
+| `source` (SRC) | one input, saved as text; its content never changes | received_at, kind, title, content_hash, trust (trusted, untrusted; 12.2), projects, url, **watched** (for an input a watcher found: the source in `watch.yaml`, the item's key, what happened to it, author, by_us), **excerpts** (`allowed` or `never`: the person allows using the source but never quoting it beyond a word or two; set by the person only). *Phase L0:* **data_level** (open, internal, restricted). Today the level of an input lives on its request (`sensitivity`, which only raises the record type's level) and isn't kept on the source, so a source read later has none; it is set from the hand-in's choice or the watched source's setting. Restrictions to named audiences are designed (4.1, 12.1) |
 | `snapshot` (SNAP) | what a watched item looked like when last read; its text is in `sources/` by hash | source (id in `watch.yaml`), key, title, content_hash, author, seen_at, gone, link, **event** (for a calendar item: start, end, all-day, place, cancelled, repeats) or **message** (for a mail item: sender, received, unread), closed_by (the triage rule that closed its latest change) |
 | `watch_run` (WRUN) | one read of a watched source and what came of it | source, started_at, seconds, outcome (ok, baseline, failed, offline, throttled), retry_at, error_kind, error, new, changed, removed, state (what the connector keeps between reads) |
 | `request` (REQ) | a unit of work for the assistant | task (an AI task kind), note (the PM's own words, trusted only when `origin` is pm), source, origin (pm, input, schedule), state (queued, running, review, done, needs_you, failed), waiting (why and until when, 7.6), approval and estimate_usd (a run that asks for the person's go), about, part, use (the account the person picked), follows, sensitivity, project, auto_closed ({rule, reason} when triage closed it), folded_into, attempts, changeset, previous, dismissed |
 | `changeset` (CS) | what the assistant proposed for one request, how it was checked and what was applied | request, summary, **topic** (a few words naming what the input was about, for the item's title, 6.15), ops[] (one outcome per op: the op, its status applied, held, refused or undone, group, the records it touched, the reason), status (applied, held, rejected, undone, partly_undone), problems, trust, reviewed, run, action (the plugin action it came from) |
 | `run` (RUN) | one call to an AI provider | request, task, provider, model, tier, characters and tokens in and out, cached tokens, cost_usd, seconds, outcome (ok, invalid_output, error, **refused**), independence (other_account, same_account; for a check), error_kind, error_detail |
-| `signal` (SIG) | a correction by the PM (6.20) | kind (sent_back, undone, dropped, reworded, pulled_back, draft_edited, held_declined), refs, note, at |
-| `file` (FILE) | a file a person added or a program wrote (5.3) | name, media_type, size, sha256, file_kind, project, meta, origin (upload, tool), trust, replaces, added_at |
+| `signal` (SIG) | a correction by the PM (6.20) | kind (sent_back, undone, dropped, reworded, pulled_back, draft_edited, held_declined; *phase L-core:* edited), refs, note, at. *Phase L-core:* **run** and **changeset**, the run and changeset it corrects, so the repeat-correction rate can read that run's knowledge log; `refs` keeps the records it is about |
+| `file` (FILE) | a file a person added or a program wrote (5.3) | name, media_type, size, sha256, file_kind, project, meta, origin (upload, tool), trust, replaces, added_at. *Phase L0:* **data_level**, as on `source` |
 | `text_version` (TXT) | one version of a long text field (5.0) | owner_kind, owner_id, field, number, sha256, format, words, source (edit, draft, proposal, merge, import), status (pending, accepted, merged, discarded), base, replaces, authorship[], paragraph_map[], unmapped, questions, run |
 | `working_copy` (WC) | a long text field handed out as a file for the person's own tool, and what came back (5.0) | owner_kind, owner_id, field, format, base, file, sha256, status (out, returned, dropped), returned_file, proposal |
-| `value_list` (LIST) | the values a field may take (5.4) | name, label, values, retired |
+| `value_list` (LIST) | the values a field may take (5.4) | name, label, values, retired. *Phase B:* each value's **tone** and, for a status list, its **meaning** (5.4) |
 | `answer` (ANS), `setting_proposal` (SETPROP), `report` (RPT) | what asking the assistant (6.25) produces: an answer with the words it rests on; a setting change the person applies or sets aside; a report to the maintainers the person sends | request, text and cites[] / key, value, why, status / title, text, status (draft, sent, dismissed) |
 | `setting_change` (SETCHG) | one setting the person changed from a screen (4.22) | key, before, after, was_default, is_default, at |
 | `tool_run` (TOOL), `job_run` (JOBRUN) | one run of an outside program a plugin declared; one run of a plugin's scheduled job | plugin, tool or job, outcome, seconds, the program's exit code and the end of its error stream, or the job's error |
@@ -202,12 +205,26 @@ These are in the design baseline and have no record type yet. Several belong to 
 | risks, decisions and milestones on `Project` | risks[] (text, raised_by, owner, status and the optional fields `config/raid.yaml` turns on: probability, impact, score, mitigation, trigger, review_by), decisions[], milestones[] (each with a baseline date and a current date), players, hold flag, facts[] | the project management pack (6.23, 6.24); a project's update log and notes exist today |
 | `Change` | id, source id, title, link, diff, detected_at, who, state (new, queued, processed, done, ignored), result, auto rule, superseded_by, covers[] | today an incoming difference is a `source` plus a queued `request`, with a `snapshot` for the item (5.5) |
 | `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result | with the publisher (6.12); text drafts today are `text_version`s |
-| `Rule` | id, text, applies_to (task kinds, record types and fields, projects, people, filter), source and evidence, added, trust, status (proposed, active, retired, promoted), check (a deterministic check), promoted_to | phase L (6.22); today an entry in `rules.yaml` (4.10) |
+| `Rule` | id, text, applies_to (task kinds, record types and fields, projects, people, filter), source and evidence, added, trust, status (proposed, active, discarded, expired, retired, promoted), check (a deterministic check), promoted_to | phase L (6.22); today an entry in `rules.yaml` (4.10) |
 | `Problem` | an automation problem (not a project issue): id, summary, detail, plugin (when one raised it), status (open, reported, resolved, dismissed), report (the drafted report, if one was sent, 6.13) | with the governor (6.13) |
-| `GlossaryTerm` | id, term, aliases, meaning, project (or global), confidence (confirmed, assumed, unknown), source and evidence, learned, trust, status (proposed, active, retired), patterns (how compound ids split) | phase L (6.22) |
-| `Lesson` | id, what went wrong, why, the guard, applies_to, signal (the correction it came from), source and evidence, learned, trust, status (proposed, active, retired, promoted), promoted_to | phase L (6.22) |
+| `GlossaryTerm` | id, term, aliases, meaning, project (or global), confidence (confirmed, assumed, unknown), source and evidence, learned, trust, status (proposed, active, discarded, expired, retired), patterns (how compound ids split) | phase L (6.22) |
+| `Lesson` | id, what went wrong, why, the guard, applies_to, signal (the correction it came from), source and evidence, learned, trust, status (proposed, active, discarded, expired, retired, promoted), promoted_to | phase L (6.22) |
 | `RoutingEntry` | id, about (a topic, area, project or kind of question), person, answers (yes, no, or "look it up at" a source), applies_to, source and evidence, learned, trust, status | phase L (6.22); 4.3 |
 | `StyleNote` | id, audience or recipient (person ids or an audience), observation, evidence (the draft-versus-sent difference, the signal it came from), learned, trust, status | phase L (6.22) |
+
+**Every knowledge record** (rule, lesson, glossary term, routing entry, style note) also has:
+- **origin:** correction, input, ask, import, pack or seed;
+- **text:** the restatement, which is the entry's own wording, kept apart from the **evidence** quote, which keeps the
+  source's provenance;
+- **kept_by** and **kept_at:** who made it active, and when. Keep makes that person the author of the text (12.8).
+
+The states are distinct, because they mean different things:
+- **discarded:** the person said no. Kept with **discard_reason**, and it suppresses near-matches for 90 days.
+- **expired:** a proposal from an input that nobody reviewed in 14 days. It is counted, and suppresses nothing, because
+  nobody decided.
+- **retired:** it was active, and is no longer used or was narrowed out.
+
+Seed lessons (Part 8) also carry **guard_kind** (invariant, lint, code or instruction) and **fixture_ids**.
 
 The `fact` record gains `key` (always shown first), `as_of` and `supersedes` (the fact it replaces, 6.22) in phase L.
 Discarded proposals are kept with their reason. A `run` gains the agent's program version, and the outcome `no_output`
@@ -216,8 +233,8 @@ the knowledge entries it was given, how many facts were left out, and its search
 gains `applied`, the knowledge ids it says it used, checked against that log. A `run` also records its refusals by check name
 (8, guard kinds). A `signal` gains the kind `edited` (6.20).
 
-Also designed: on `Person`, area (derived from team and scope, 6.18), prefers, cadence, influence, interest, non_working_calendar
-and verified; on `Question`, affects, asks_for (a fact kind), on_answer, key (dedupe) and the pending flags; on `Run`, the packet
+Also designed: on `Person`, **verified** (*phase L-core*, with "names spelled from a primary source", 8.8), and later area
+(derived from team and scope, 6.18), prefers, cadence, influence, interest and non_working_calendar; on `Question`, affects, asks_for (a fact kind), on_answer, key (dedupe) and the pending flags; on `Run`, the packet
 size and omissions, packet hash, template and playbook versions, model as served and upstream host (6.16).
 
 ## 5.2 Storage rules (each one came from a real failure)
@@ -232,10 +249,30 @@ size and omissions, packet hash, template and playbook versions, model as served
 - Every write that changes knowledge goes through the applier (or a core service that writes the ledger the same way), so it is
   validated, recorded and visible.
 - Names live on their own record; everything else stores the id.
-- The export and the workspace's git history are never rewritten. The export is committed on a schedule, before every
-  migration (record or config, 4.0) and before every applied fix.
+- The ledger is append-only and the export's git history is never rewritten, **with one exception: forgetting a person**
+  (below). The export is committed on a schedule, before every migration (record or config, 4.0) and before every add-on
+  install or update.
 - Retention will follow `config/storage.yaml` (4.15; *designed, not yet built*): raw source text can be deleted after its
-  facts are recorded; the ledger keeps that a source existed and what was learned from it.
+  facts are recorded; the ledger keeps that a source existed and what was learned from it. **Evidence survives
+  retention:** each evidence quote is kept with its op (it is short), so the evidence check and "show the passage" still
+  work. The source then shows "removed by retention on <date>" with the quotes still visible. A source marked
+  `excerpts: never` keeps no more than its few words.
+- **Forgetting a person, with an append-only ledger** (*designed, phase E*; decisions, 2026-10-12 "The data model
+  review"). Without this rule, three statements contradict each other: the ledger is never edited and keeps every
+  before-and-after value; the export with raw text is committed to git and never rewritten; and forgetting a person
+  reaches everything (12.4). So forgetting is a **recorded redaction**:
+  - a `person.forget` op replaces that person's values in records, knowledge, the knowledge log, private evaluation cases
+    and the ledger's before-and-after values with a marker, and records that it did;
+  - the export's git repository is local only until phase E's remote rules exist, and on forget it is rebuilt from the
+    database as a fresh history, the one rewrite the rules allow;
+  - when a remote exists (phase E), it is replaced the same way, and the screen says so;
+  - backups made before the forget still hold the old data until they age out. The screen says when that will be, and the
+    person can delete older backups at once.
+
+  Crypto-shredding (a key per person, deleted on forget) was the other option. It would make every read and write of a
+  person's values go through encryption, and it was set aside for a rare, recorded operation instead.
+  Retention uses the same redaction for quotes in the ledger whose source text it removed, unless the quote is evidence
+  kept on purpose above.
 
 ## 5.3 Files
 
@@ -270,6 +307,10 @@ truth, value lists instead of free text…"). The core's lists today bind a proj
 - **First values.** The core ships them in `engine/defaults/value_lists.yaml` and plugins declare theirs. A workspace gets each
   list the first time it opens, with those values plus any value its records already use, so nothing that was valid becomes
   invalid. After that the list belongs to the person.
+- **Values carry meaning** (*phase B*; from the first design author's review). Each value has a **tone** (ok, warn,
+  danger, neutral). A status list's values also have a **meaning** (not_started, open, at_risk, blocked, done). The ranking,
+  the at-risk lines, a dashboard's colors and "done but not archived" read the meaning, never the label. So a person can add
+  "On hold" and it still ranks and colors correctly. Adding a value asks for its meaning, with a suggestion.
 - **Changing a list is an op with Undo:** `list.add` (adding a retired value offers it again), `list.rename` (changes every
   record that holds the value, in the same op) and `list.retire`. They are system-tier ops, and need no restart.
 - **Enforced at the storage layer.** A value not on its list is refused for any writer (a plugin op, the assistant, an edit), with the list's values in the reason. Adding a value is a deliberate act ("Add to the list"), never a side effect

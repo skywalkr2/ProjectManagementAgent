@@ -151,7 +151,12 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - "Maya R." held when only another Maya is known;
   - an unknown person producing one "who is this" decision.
 - [ ] **Followed up** on Waiting on them (design 7.5, 6.9): the primary for an action waiting past the nudge threshold.
-  It records the chase, keeps the action open and counts it as told. Today the only button there closes the action.
+  It records the chase, keeps the action open and counts it as told. Today the only button there closes the action. The
+  action gains `followed_up`, `done_by` and `reported_by` (design 5.1), so a chase has somewhere to be written and credit
+  goes to the owner.
+- [ ] `project.priority` is person-only: the assistant may propose it, never set it.
+- [ ] Sources and files carry their `data_level`, from the hand-in's choice or the watched source's setting. Today it lives
+  only on the request.
 - [ ] **The audit trail:** sign-ins, sign-outs and turning a plugin on or off are recorded.
 - [ ] **A shared synced folder** (`storage.sync.shared`, asked when the folder is chosen): outside edits from a shared
   folder arrive as content, not the person's own words.
@@ -170,6 +175,12 @@ L1. **Knowledge as records.**
   status and an `applies_to` target. Their ops, with Undo.
 - [ ] Rules become records, with `rules.yaml` as the starting set; stage checks read them.
 - [ ] Facts gain `key`, `as_of` and `supersedes`.
+- [ ] Knowledge records have:
+  - `origin`;
+  - their own `text` (the restatement), kept apart from the evidence quote;
+  - `kept_by` and `kept_at`;
+  - distinct `discarded` (with `discard_reason`), `expired` and `retired` states.
+- [ ] Signals name the `run` and `changeset` they correct.
 
 L2. **Every run reads what applies.**
 - [ ] The knowledge section, split so the cached prefix holds:
@@ -284,7 +295,7 @@ L5. **Reading what arrives, and protecting what is learned.**
 
 L6. **The rules that bite in the first week of real use** (design 8.8).
 - [ ] Quotes only from verbatim sources, with a paraphrase labeled as one; no unattributed lines.
-- [ ] Names spelled from a primary source, with unverified spellings marked.
+- [ ] Names spelled from a primary source, with unverified spellings marked (`person.verified`).
 - [ ] Every link checked before it is shown.
 
 ## Phase B: finish the UI/UX redesign (about 4 sessions)
@@ -306,7 +317,10 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
 - [ ] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
   Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago").
-- [ ] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note, kept out of To send.
+- [ ] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note (`question.held_for`), kept out of To
+  send.
+- [ ] **Value-list values carry meaning** (design 5.4): a tone for each value, and a meaning for status values, so a value the
+  person adds still ranks and colors correctly.
 - [ ] **This week at every width** (7.7): a collapsed Today section, and the inspector's view when nothing is selected.
 - [ ] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours. The targets are
   notification channels the phone already receives anywhere: the browser, mail to the person themselves, or a webhook
@@ -406,6 +420,8 @@ time, nothing went out without approval, a backup succeeded, and the repeat-corr
 Order by what protects real data first, then by what the packs ask for:
 - [ ] **The governor:** stale-item sweeps, outage handling, the scheduled export with its remote; restore to a point in
   time (a single record comes in phase L).
+- [ ] **Retention, and export and forget a person** (design 5.2, 12.4): forgetting is a recorded redaction, with the local
+  export repository rebuilt; evidence quotes survive retention.
 - [ ] Scope resolver (6.18), the scheduled rules and lessons review with promotion (6.21), and read-backs (6.7).
   Dependencies, baselines and RAID moved to the project management pack (C2).
 - [ ] Native AI adapters and reproducible runs (6.16).

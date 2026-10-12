@@ -102,7 +102,8 @@ send…"). The model can't be relied on to tell instructions from content, so th
   - the knowledge log;
   - private evaluation cases, which are copies of real inputs (6.20).
 
-  Retention applies to `evals/` too, or a deleted mail lives on as a test case.
+  Retention applies to `evals/` too, or a deleted mail lives on as a test case. How forgetting works with an append-only
+  ledger and the export's git history is in 5.2: a recorded redaction, and the local export repository rebuilt.
 - Hosted mode defaults to shorter retention for mail and replies than local mode.
 
 ## 12.5 Internet-facing hygiene (hosted)
