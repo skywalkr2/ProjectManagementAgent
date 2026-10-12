@@ -41,7 +41,7 @@ left. Not started: nothing exists here. A milestone is never marked done on a pa
    - per-task op lists with small generated schemas, JSON repair, and evidence on every claim;
    - provenance on every write, so untrusted-derived content stays marked;
    - the first evaluation set (10 to 20 fictional cases with hostile inputs, deterministic scoring, several runs each), run on a
-     low-cost model and a stronger one;
+     low-cost model and a stronger one (*the cases and the pipeline are built; no real model has been scored yet*);
    - the applier with tiers, invariants and lints for about ten ops: `source`, `note`, `fact`, `record.set`, `record.log`,
      `action.add`, `action.close`, `question.add`, `question.done`, `person.add`;
    - names resolved to ids, with routing decisions for unknown people (6.11); owners as a list, and held actions waiting for
@@ -60,8 +60,9 @@ left. Not started: nothing exists here. A milestone is never marked done on a pa
    - quality signals recorded from day one (6.20).
 
    **State: Partial.** Built: paste-in with the two kinds of words, the core playbook, the notes task through the stub and
-   OpenAI-compatible adapters, cleaning and one input per call, JSON repair and evidence, provenance, the first evaluation set
-   (14 cases in `demo-b`, three runs each), the applier for most of the ten ops, names resolved to ids, owners and held actions,
+   OpenAI-compatible adapters, cleaning and one input per call, JSON repair and evidence, provenance, the first evaluation set's cases
+   and pipeline (14 cases in `demo-b`, three runs each, checked with the stand-in only; no real model has been scored on it
+   yet, and the set is made harder in phase L-core, 6.16), the applier for most of the ten ops, names resolved to ids, owners and held actions,
    undo with op groups, the packet's open items, waiting states, backups with the nag, the minimal UI and quality signals.
    Not yet: read-backs for rules the PM states, the glossary with `glossary.add` and `lesson.add` (so proposed lessons), the
    `source` op, the clipboard as a channel (Copy exists in the screen), and the acceptance scenario's step 6 (export, import,

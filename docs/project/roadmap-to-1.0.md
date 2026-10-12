@@ -66,6 +66,10 @@ A2. **The person's path, fixed where the review found it broken.**
     account paused until its limit resets as a Risk line with the time and the count waiting.
 - [ ] **A bare first name resolves only in context** (design 6.11): same project, or a participant in the thread; a
   different initial or surname fragment is held.
+- [ ] **A "before" run of today's golden set on real models** (from the design author's review): 14 cases × 3 runs on a
+  low-cost and a stronger account, with today's scoring. It is compared with the run after the set is made harder (L4),
+  to show how much the old scoring flattered. The owner runs it on their own accounts; the reports are kept in
+  `docs/project/evals/`.
 - [ ] The golden-set cases for these fixes are written first, as their failing tests:
   - a `received:` date on every case;
   - a bare first name resolving when the person is in the thread;
