@@ -48,7 +48,7 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 - [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
 - [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded.
 
-## Phase A: a baseline that works with no demo data (about 2.5 sessions)
+## Phase A: a baseline that works with no demo data (about 3.5 sessions, with A4)
 
 Started 2026-10-12.
 
@@ -132,6 +132,16 @@ is "ready to test" until they pass:
 - [x] backup → restore (`tests/test_journeys.py::test_j5_a_backup_of_a_working_workspace_restores_to_the_same_screens_and_ledger`);
 - [x] the acceptance scenario, steps 1–7, all checked as written (step 6 included): `acceptance.spec.ts`, each test titled
   with its step, and `tests/test_export.py::test_a_workspace_used_through_the_screens_round_trips`.
+
+A4. **The new-start walkthrough** (owner, 2026-10-12; design 7.8). Install to first result in one guided path:
+- [ ] It opens by itself on a new workspace and resumes where the person left it, also after a restart.
+- [ ] Steps: You · AI account, with what it may see (Internal explained) and spend · Mail and calendar, with install,
+  one restart and sign-in · Backups · People (optional) · Done, ending on Today's first-Go line. The template and
+  other add-ons are optional extras.
+- [ ] `docs/getting-started.md`: one page from the install command to the first result, matching the walkthrough,
+  with what each step costs; linked from the README and Help.
+- [ ] Journey J6: a fresh install through the walkthrough only, to the assistant's first results. This is the
+  automated form of the exit test.
 
 ## Phase L: the learning loop, L-core (about 11.5 sessions, L0 included)
 

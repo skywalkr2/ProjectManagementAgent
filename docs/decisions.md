@@ -3,6 +3,34 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: A new-start walkthrough: install to first result in one guided path
+
+**Decided by:** project owner ("a new start user onboarding … easy install and setup"), designed by the project lead after
+checking the code.
+
+**What:** The setup guide exists, with seven steps plus each add-on's steps and sign-ins. It falls short in four ways:
+- it doesn't open by itself;
+- mail and calendar come last, and only for an add-on already installed;
+- each step that needs a restart asks separately;
+- no page covers the path from the install command.
+
+The guide becomes a walkthrough (design 7.8):
+- it opens by itself on a new workspace;
+- its steps are You, AI account (with what it may see and spend), Mail and calendar (install, one restart, sign in),
+  Backups, People (optional) and Done;
+- it resumes after a restart and ends on Today's first-Go line;
+- the template and other add-ons become optional extras;
+- `docs/getting-started.md` covers the same path from the install command.
+
+**Why:** The owner's goal is an easy install and setup. Phase A's exit test is exactly this path, so the walkthrough is
+what the owner will run.
+
+**Impact:**
+- Design 7.8 is rewritten.
+- Roadmap A4 is added before the exit test, about one session.
+- A journey that goes only through the walkthrough becomes the automated exit test.
+- No new op or setting. Setup state gains the walkthrough's current step.
+
 ## 2026-10-12: What the first journeys found on the person's path, and what changes before the exit test
 
 **Decided by:** project lead, from the phase A journey tests on a workspace made by `cockpit init` and started by
