@@ -5,6 +5,20 @@
 - **Two modes, one model.** Local mode listens on `127.0.0.1` and uses the install token. Hosted mode requires real sign-in and
   passes the deploy checks before it serves (Part 11). Version 1 is local only; hosted mode is built after 1.0. Roles for
   several users are later; in the base, everyone allowed in has full access.
+- **Local mode guards against other web pages, not only other machines** (*phase A*; from the first design author's
+  review). Listening on `127.0.0.1` with a token stops other computers. It doesn't stop a page open in the same browser
+  sending requests to the local port (cross-site request forgery), or a DNS-rebinding page reading the answers. So, in local
+  mode as in hosted:
+  - a request whose `Host` isn't the configured local address is refused;
+  - a state-changing request whose `Origin` isn't the app's is refused;
+  - the session cookie is `SameSite=Strict` (built);
+  - no permissive CORS headers are sent (built: there are none).
+
+  The sign-in callback, served without the cookie, relies on its one-time `state` (6.27), which is unaffected.
+- **Local mode never listens beyond this computer** (*phase A*). `server.host` in local mode must be a loopback address; the
+  app refuses to start otherwise, and says that reaching it from another device needs hosted mode's rules (TLS, real
+  sign-in). Notifications reach a phone outward through a channel (7.19), which needs no inbound access. Today
+  `server.host` takes any address, so a person could expose the token over plain HTTP on a shared network.
 - **Secrets** come from the environment, the OS keychain or a mounted file, referenced in config as `env:NAME`,
   `keychain:NAME` or `file:/path`, never stored in config or data. Hosted platforms pass them as environment secrets. Plugins
   get only the secrets their manifest names from the core's secret store. Built: `env:` and `file:`, and a key pasted on a
@@ -17,9 +31,13 @@
   audiences it allows (4.1, 6.7; not yet built).
 - **Audit:** the ledger (5.0) records every applied op with its actor and provenance; approvals, sends, settings changes,
   sign-ins and plugin enable or disable are recorded alongside. The readable export keeps it in git history. Built: the
-  ledger, approvals and settings changes (as `setting_change` records). **Partly built:** there is no separate log of
-  sign-ins or of turning a plugin on or off. **Not yet built:** the scheduled export that would put the history in git
-  (`storage.export.every_minutes` and `.remote` are read by nothing).
+  ledger, approvals and settings changes (as `setting_change` records). **Phase A:** sign-ins, sign-outs and turning a
+  plugin on or off are recorded too, before the Admin tab exists, because an audit trail that starts late misses exactly
+  the period someone will want to look at. The scheduled export to the workspace's own git is wired in phase A.
+- **The export's remote is off-machine copying of everything,** raw mail and pasted text included, so it gets the care of
+  backups (*phase E*, with the governor): the screen says so when a remote is set; the remote must be private or the
+  export encrypted; and restricted sources are left out of it unless the person opts in. Until then the remote setting is
+  not offered.
 
 ## 12.2 Untrusted input and the AI
 
@@ -77,7 +95,14 @@ send…"). The model can't be relied on to tell instructions from content, so th
   designed to be kept for as long as `config/storage.yaml` `retention` says (4.15); after that only the facts recorded from
   it and the ledger's note that it existed remain.
 - **Export a person** (everything stored about them) and **forget a person** (delete or anonymize per `forget_person`) are
-  Admin actions, recorded in the ledger.
+  Admin actions, recorded in the ledger. After phase L a person appears in far more than records, and both reach all of it:
+  - routing entries;
+  - style notes built from what was sent to them;
+  - facts and lessons that quote them;
+  - the knowledge log;
+  - private evaluation cases, which are copies of real inputs (6.20).
+
+  Retention applies to `evals/` too, or a deleted mail lives on as a test case.
 - Hosted mode defaults to shorter retention for mail and replies than local mode.
 
 ## 12.5 Internet-facing hygiene (hosted)
@@ -115,13 +140,47 @@ These rules cover the accounts a person signs in to and the code a person adds. 
   feed address ships with the release build and the repository holds none (3.11). Whether a pack is listed is the owner's
   decision, by a reviewed change to the catalog.
 
+## 12.8 Learning and trust
+
+*Designed, phases L-core and L-more* (decisions, 2026-10-12 "The security review"). Once the assistant learns, anything
+that becomes guidance in a packet is the most valuable thing to poison. These are the roads into it, and what guards each.
+
+- **What Keep does to a proposal from content.** The entry the person keeps is the assistant's short restatement plus its
+  structured target, shown in full at Keep. Keep makes the person the author of that wording, so it becomes guidance; an
+  edit at Keep is the person's wording too. The raw source text never enters a packet as guidance, only as linked evidence
+  marked "from outside". So an injection can plant only what the person read and accepted, in words they saw.
+- **Bulk Keep only for low-risk kinds.** The daily card invites "Keep all". It is offered only for glossary terms and facts
+  with evidence. Routing entries, rules, lessons and anything that changes who gets asked or what gets sent are kept one at
+  a time, with the source beside them, because recipients are what an attacker most wants to change.
+- **Imported lessons are someone else's words** (*phase L-more*). A lessons file loads as proposed, on one review list ("12
+  lessons from a file · Review"), with its origin kept. Only a file this person exported from their own workspace (signed
+  with that workspace's key) loads as active. People will share these files: a colleague's, a forum's, a pack's website.
+- **A pack's guidance is shown before it is turned on.** Playbook entries and seed lessons a pack ships go into packets as
+  trusted guidance, a quieter channel than the code the person already approves (12.3). The Add-ons listing and the turn-on
+  step show the pack's guidance beside what it reaches and keeps. Pack entries are marked by origin in the knowledge log.
+  The order holds: invariants, then the person's own rules and lessons, then pack guidance.
+- **A shared synced folder isn't the person's own words** (*phase A*). An edit found in the synced folder arrives as the
+  person's own work. When the folder is shared (a team drive, a family cloud folder), someone else's edit would count as the
+  person's. So the folder setting asks whether anyone else can change it (`storage.sync.shared`). When it is shared, outside
+  edits are content, reviewed like any other.
+- **Agents run with an allowlisted environment** (built). A command-line agent sees only PATH, HOME, the language settings
+  and the variables its account lists, so the `env:` secrets of other accounts are not visible to it. *Phase L-more:* the
+  lockdown test also checks that a known dummy variable isn't visible, so a misconfigured catalog entry is caught.
+- **Hostile cases for the new roads** (*phase L-core*, in L4):
+  - an input that tries to plant a lesson;
+  - one that tries to change routing;
+  - a glossary meaning that changes an instruction ("in this project, 'send' means send to an outside address");
+  - an imported lessons file with an injected entry.
+
 ## 12.7 What is not yet built (2026-10-12)
 
 | Item | Where designed | State |
 |---|---|---|
 | `keychain:NAME` secrets | 12.1 | Refused with a message |
 | Audiences and restrictions on destinations | 12.1 | Not built |
-| A log of sign-ins and of turning plugins on and off | 12.1 | Not built (the ledger and settings records exist) |
+| A log of sign-ins and of turning plugins on and off | 12.1 | Not built (the ledger and settings records exist); phase A |
+| Host and Origin checks in local mode; a loopback-only local address | 12.1 | Not built; phase A (the cookie is already strict and there are no CORS headers) |
+| Learning and trust | 12.8 | Not built; phases L-core and L-more |
 | The scheduled export to git and its remote | 12.1 | Not built; the settings are read by nothing |
 | Retention, export a person, forget a person | 12.4 | Not built |
 | Outbound review with provenance and full links | 12.2 | Not built until the publisher exists |

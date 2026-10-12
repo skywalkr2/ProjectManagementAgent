@@ -183,7 +183,9 @@ Enforced by the plugin host, the applier and the self-check, and by the publishe
 
 - **Install, update and remove** add-ons from the Add-ons screen (3.11). Installing never turns a pack on.
 - **Enable** in `config/workspace.yaml` under `plugins.enabled`, or with Turn on on the Add-ons screen, which acts with Undo and
-  shows "On after a restart" until the person chooses Restart now (2.6). At startup the host reads manifests, checks plugin API
+  shows "On after a restart" until the person chooses Restart now (2.6). Before turning a pack on, the screen shows the
+  guidance it adds to packets (playbook entries and seed lessons) beside what it reaches and keeps (12.8). Turning a plugin on
+  or off is recorded (12.1). At startup the host reads manifests, checks plugin API
   versions, dependencies and required interfaces, validates each plugin's config, then calls `register`. Registration is fixed
   until the next start.
 - **Upgrade:** record schema and config changes ship as migrations (4.0). The export is committed first and the database is

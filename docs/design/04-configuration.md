@@ -490,6 +490,8 @@ Built keys:
     not be inside it, and the self-check and start-up refuse that setup.
   - `watch_outside_edits` (true): bring back edits made to the folder's files in other programs as changes for the person to
     review; off: they are only reported.
+  - `shared` (false; asked when the folder is chosen, *phase A*): whether anyone else can change the folder. When true,
+    outside edits arrive as content, not as the person's own words (12.8).
   - `lease_stale_after_minutes` (10): how long after the other computer was last seen the workspace can be opened here
     without it closing first.
 - `backups`: full backups to somewhere off this computer, **on their own** (decisions, 2026-10-11, "Backups run on their own;

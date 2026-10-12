@@ -3,6 +3,36 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: The security review: learning's new roads to trusted guidance, and local mode against other web pages
+
+**Decided by:** the first design's author proposed (review of Part 12); project lead checked the code and placed the work.
+
+**What:**
+- **Keep authors the wording.** Keep makes the person the author of the assistant's restatement shown at Keep. The raw
+  source text enters packets only as evidence marked "from outside".
+- **Bulk Keep is limited** to glossary terms and facts with evidence. Routing, rules and lessons are kept one at a time.
+- **Imported lessons load as proposed,** unless they are the person's own signed export.
+- **A pack's guidance** is shown before it is turned on and marked by origin. Precedence: invariants, then the person's
+  rules, then pack guidance.
+- **Local mode:**
+  - refuses a foreign `Host` and state-changing requests from a foreign `Origin` (the cookie is already strict, and there
+    are no CORS headers);
+  - refuses to start on a non-loopback address.
+- **A shared synced folder's edits are content** (`storage.sync.shared`).
+- **Audit:** sign-ins and turning plugins on or off are recorded from phase A.
+- **The export remote** waits for phase E, with the care of backups.
+- **Forget and export a person** reach knowledge records and private evaluation cases.
+- **New hostile fixture cases:** a planted lesson, routing, a glossary meaning, and an injected import.
+
+**Why:** Once the assistant learns, guidance in a packet is the most valuable thing to poison. The local-mode gaps are
+reachable today by any page open in the same browser.
+
+**Impact:**
+- Design 12.1, 12.4, the new 12.8, 6.22, 7.18, 4.15 and 3.6 are updated.
+- Phase A gains the local-mode guards, the audit records and the shared-folder setting (about half a session, so about
+  5.5).
+- L-core and L-more gain items within their estimates.
+
 ## 2026-10-12: The UI review: learning made visible, Followed up, Later, This week everywhere, notifications
 
 **Decided by:** the first design's author proposed (review of Part 7); project lead checked the screens and wording and

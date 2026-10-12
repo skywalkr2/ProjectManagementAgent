@@ -1000,7 +1000,11 @@ the run can pick the wrong one. A scope or a date that moves twice in a week is 
 The full freshness check (6.19) waits for phase D.
 
 Only active entries go in, never proposed or retired ones. An entry is presented as guidance only when its source is trusted.
-Otherwise it is shown as data with its source, as 6.6 does for anything derived from untrusted content.
+Otherwise it is shown as data with its source, as 6.6 does for anything derived from untrusted content. **Keep makes a
+proposal from content trusted, in the person's words** (12.8): the kept entry is the assistant's restatement plus its target,
+shown in full at Keep, so Keep makes the person its author. The raw source text never enters a packet as guidance, only as
+linked evidence marked "from outside". **Order of precedence:** invariants, then the person's own rules and lessons, then a
+pack's guidance, which is marked by origin.
 
 A pack's own task kinds get the same section through one plugin API call. So a writing pack's runs see the person's lessons and
 glossary, and a pack's own knowledge (a series bible) can be offered the same way later.
@@ -1106,7 +1110,8 @@ lessons to another workspace (*phase L-more*). **Take my lessons** (Settings, an
 - the rules;
 - the glossary entries that are not tied to a project.
 
-Loading it into another workspace adds them as the person's own, active, with Undo. Facts, routing and style notes stay
+Loading a file the person exported from their own workspace (signed with that workspace's key) adds the entries as the
+person's own, active, with Undo. Any other file loads as proposed, on one review list, with its origin kept (12.8). Facts, routing and style notes stay
 behind, because they name that workspace's projects and people. A pack's playbook is the published form of the same idea;
 this is the private one.
 

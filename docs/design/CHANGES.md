@@ -487,6 +487,25 @@ Checked against the screens and their wording first.
 | Format-only drafts | 7.4 now says they never appear in Waiting to go out. |
 | The Add-ons introduction | It does still say "the app never installs anything itself". It is fixed with the Install button in phase A. |
 
+## 19. Your review of Part 12 (2026-10-12)
+
+Checked against the code first.
+
+| You said | What we found, and what changed |
+|---|---|
+| 1. What Keep does to a proposal from content | Your rule, as written (12.8, 6.22). The kept entry is the assistant's restatement plus its target, shown in full; Keep (or an edit at Keep) makes the person its author, so it becomes guidance. The raw source enters packets only as evidence marked "from outside". |
+| 2. Imported lessons are someone else's words | A lessons file loads as proposed, on one review list, with its origin kept. Only the person's own export, signed with their workspace's key, loads as active (phase L-more). |
+| 3. A pack's guidance | Shown before turning the pack on, beside what it reaches and keeps; marked by origin in the knowledge log. Precedence: invariants, then the person's rules and lessons, then pack guidance. |
+| 4. Origin and Host checks in local mode | Partly built: the session cookie is already `SameSite=Strict`, and the app sends no CORS headers. There is no Host or Origin check, so a DNS-rebinding page could read answers. Both are added in phase A. |
+| 5. Never open the local install to the network | True of the code today: `server.host` takes any address in local mode. Local mode will refuse a non-loopback address and say that reaching it from another device needs hosted mode's rules (phase A). Notifications go outward through a channel (7.19), so nothing needs inbound access. |
+| 6. Forget-a-person must reach knowledge and evaluations | 12.4 now lists routing entries, style notes, quoting facts and lessons, the knowledge log and private evaluation cases; retention applies to `evals/`. |
+| 7. The readable export holds raw inputs | Phase A wires the export to the workspace's own git only. The remote is not offered until phase E gives it the care of backups: the screen says so, a private remote or encryption, restricted sources left out unless the person opts in. |
+| 8. A minimal environment for agents | Already built: an agent sees only PATH, HOME, the language settings and the variables its account lists. The dummy-variable check in the lockdown test is added (phase L-more). |
+| 9. A shared synced folder | True of the code: outside edits are recorded as the person's own. A `shared` setting, asked when the folder is chosen, makes them content when the folder is shared (phase A). |
+| 10. "Keep all" fatigue | Bulk Keep only for glossary terms and facts with evidence; routing, rules and lessons one at a time, with the source beside them. |
+| Hostile cases for phase L's roads | Added to the fixture list (L4): a planted lesson, a routing change, a glossary meaning that changes an instruction, an injected import. |
+| Log plugin on/off and sign-ins now | Settings saves are already recorded; sign-ins and turning plugins on or off are recorded from phase A. |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
