@@ -17,6 +17,32 @@ a time, and a phase ends when its exit test passes, not when its code is written
 
 Durations are estimates in working sessions. Dates are set when a phase starts and recorded here.
 
+## Owner actions on the critical path
+
+Things only the owner can do, usually because they need the owner's own computer or accounts. Each says exactly what it
+blocks; everything else goes ahead without it.
+
+| # | Action | Needs | Blocks | Does not block |
+|---|---|---|---|---|
+| O1 | **The "before" run of the golden set** on real models: today's 14 cases × 3 runs, on a low-cost and a stronger account, with today's scoring. Steps below. | The owner's computer, with their AI accounts | Only L4's last step: the "after" report and its comparison with this one. That report also has to exist before real use starts. | All of phase A, and L-core's code, including the harder set itself. The run is pinned to commit `802538e`, so changing the cases, the scoring or the packet afterwards doesn't spoil it. |
+
+**O1 steps.** In the owner's copy of the repository, on their own computer:
+```
+git fetch origin claude/tender-tesla-16a8ob
+git worktree add ../cockpit-before 802538e
+cd ../cockpit-before
+uv sync
+uv run cockpit ai -w <your workspace folder>          # lists the accounts as account/model
+uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --account "<cheaper account/model>" --runs 3 --json > before-low-cost.json
+uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --account "<stronger account/model>" --runs 3 --json > before-strong.json
+```
+- **Cost:** 42 small runs per account. On an API key that is typically cents to a dollar or two; on a subscription agent
+  it is usage.
+- **One account is enough** if that's all there is.
+- **A "failed" at the end** only means the pass rate is under the approval score. It is the honest before-number.
+- **Then:** send the two files to the session. It checks them for account names or addresses before anything is
+  committed, and writes the summary in `docs/project/evals/`. After that, `git worktree remove ../cockpit-before`.
+
 ## Phase 0: the plan and the rules (done 2026-10-12)
 
 - [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
@@ -66,10 +92,6 @@ A2. **The person's path, fixed where the review found it broken.**
     account paused until its limit resets as a Risk line with the time and the count waiting.
 - [ ] **A bare first name resolves only in context** (design 6.11): same project, or a participant in the thread; a
   different initial or surname fragment is held.
-- [ ] **A "before" run of today's golden set on real models** (from the design author's review): 14 cases × 3 runs on a
-  low-cost and a stronger account, with today's scoring. It is compared with the run after the set is made harder (L4),
-  to show how much the old scoring flattered. The owner runs it on their own accounts; the reports are kept in
-  `docs/project/evals/`.
 - [ ] The golden-set cases for these fixes are written first, as their failing tests:
   - a `received:` date on every case;
   - a bare first name resolving when the person is in the thread;
@@ -214,7 +236,8 @@ L4. **Proving it** (from the design author's review of this plan).
   - a decision already made is recorded, not asked;
   - a forwarded mail under the PM's note, where only the note is trusted.
 
-  Then a report on the owner's accounts: pass rate per case per model, three runs each, before real use starts.
+  Then a report on the owner's accounts: pass rate per case per model, three runs each, before real use starts. It is
+  compared with the "before" run (owner action O1), which must exist by then; nothing else in this phase waits for it.
 - [ ] **The day-30 scenario, with its expectations written before it is run.** A month of fictional history that mixes
   every case above with ordinary noise (unrelated mail, re-saved files, a moved meeting), so the knowledge has to be found
   among the noise. Expected differences between day 1 and day 30 are listed first and scored like the golden set (op
