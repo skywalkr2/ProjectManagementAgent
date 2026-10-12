@@ -214,6 +214,15 @@ them are needed before the owner's daily use, which starts when L-core passes.
   per connector). Today it lives only on the request.
 - [ ] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
   both, and they differ).
+- [ ] **Personal and sales mail set aside** (owner, 2026-10-12; design 6.5). Built before learning reads anything:
+  - a Set aside folder (Personal; Sales and promotions);
+  - sorting by the person's sender and domain rules, then the mail's own category and bulk headers, then a low-cost
+    run on sender, subject and category only (`watch.sorting`, on by default, shown in the walkthrough's Mail step);
+  - one-click corrections that make sorting rules;
+  - mail items carry `categories` and `bulk` (plugin API).
+
+  Exit check: a learning pair and an evaluation case prove that set-aside mail produces no request, signal or
+  knowledge, and that "This is work" hands it in.
 - [ ] **"Look at the last day" works for a folder:** today it hands in nothing, because folder items carry no time.
   Folder items carry the file's modified time, kept on the snapshot, so the person can hand in what is already there
   (found by the phase A fixes; the add-source hint then points to it).

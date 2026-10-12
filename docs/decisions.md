@@ -3,6 +3,39 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Personal and sales mail is set aside, and never feeds the assistant or its learning
+
+**Decided by:** project owner ("recognize personal / sales emails and move them to a folder that won't impact
+learning"), designed by the project lead after checking the code.
+
+**What the code does today:**
+- Triage rules close a change before the assistant sees it, under Auto-closed, with "Take a closer look".
+- A mail item carries only its sender, received time and unread mark.
+- Nothing knows personal or sales mail.
+- Learning, from L-core on, has no rule to stay off it.
+
+**What changes** (design 6.5, "Setting aside personal and sales mail"):
+- **A Set aside folder in the app,** with Personal and Sales and promotions. The mailbox itself is never changed: the
+  add-ons stay read-only.
+- **Sorting order:**
+  - the person's own sender and domain rules first;
+  - then what the mail says about itself: the service's category, bulk headers, a personal contact;
+  - then, for mail still unplaced, a low-cost sorting run that sees only sender, subject and category, never the body.
+    Unsure means work.
+- **Kept out entirely:** set-aside mail never reaches the assistant, and nothing learned comes from it.
+- **Corrections tune sorting only,** with one-click "always for this sender or domain" rules.
+
+**Why:** Personal mail is private and sales mail is noise. Learning from either would teach the assistant the wrong
+things, and the first week of real use is the learning baseline.
+
+**Impact:**
+- Roadmap L0, before learning reads anything.
+- Design 6.5, 6.20 and 7.4.
+- A new setting, `watch.sorting` (ai or rules).
+- New core matchers.
+- Mail items gain `categories` and `bulk` (plugin API).
+- The mail add-on's builder is told in the weekly batch.
+
 ## 2026-10-12: A new-start walkthrough: install to first result in one guided path
 
 **Decided by:** project owner ("a new start user onboarding … easy install and setup"), designed by the project lead after

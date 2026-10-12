@@ -147,6 +147,42 @@ to send it back ("Take a closer look" queues it and records a `pulled_back` sign
 item is left out of Today's list of what came in, and counted. A matcher that fails counts as no match and is contained like
 any plugin call (6.1).
 
+**Setting aside personal and sales mail** (owner, 2026-10-12; phase L0, before learning reads anything). Mail that isn't
+work goes into a **Set aside** folder in the app, in two sections: *Personal*, and *Sales and promotions*. The person's
+mailbox is never changed; the add-ons read only. Set-aside mail never reaches the assistant and never feeds learning:
+- **No knowledge from it:** no request, signal, fact, glossary term, lesson or evaluation case comes from it, and the
+  repeat-correction and knowledge-used rates leave it out (6.20, 6.22).
+- **Its words never go to an AI account.**
+- **What remains is sorting:** the person's own choices about sorting.
+
+It is sorted in this order, first match wins:
+1. **The person's own rules:** "always set aside mail from this sender, or this domain, as personal (or sales)", and
+   "never set aside mail from …". These are rule records the person makes with one click on any item (below).
+2. **What the mail says about itself:**
+   - the service's own category, read and never changed (promotions, social, a personal label);
+   - bulk-mail headers (a list unsubscribe address, bulk precedence);
+   - a sender in the person's own contacts who isn't one of the workspace's people.
+
+   These are new core matchers, `bulk-mail`, `service-category` and `personal-contact`, deterministic like the others.
+3. **The assistant's sorting**, for mail the rules can't place (`watch.sorting: ai`, on by default, chosen in the
+   walkthrough's Mail step):
+   - a small low-cost run sees **only the sender, the subject line and the service's category**, never the body;
+   - it answers work, personal or sales;
+   - unsure means work, so nothing is hidden on a guess;
+   - one run covers a batch of headers, not one per message.
+
+**Correcting it:**
+- **Any item in Came in or What changed** has "Set aside: personal" and "Set aside: sales" in its menu.
+- **Any set-aside item** has "This is work", which hands it in after all and records a `pulled_back` signal (6.20).
+- **Each correction offers** "Always for this sender" and "Always for this domain", which make a sorting rule with a
+  read-back and Undo.
+
+Sorting corrections tune sorting only. They never become content lessons.
+
+**On screen:** the folder is a filtered view beside Auto-closed, one row per message (sender, subject, date, why it was
+set aside). Today never lists set-aside mail; Came in shows a count ("6 set aside") that opens the folder. Set-aside
+mail is kept like other sources and follows retention (5.2).
+
 ## 6.6 Dispatcher
 
 **As built.** The packet holds, stable parts first and the request last: the instructions, the op reference for the task kind,
