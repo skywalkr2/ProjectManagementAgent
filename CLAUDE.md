@@ -97,6 +97,8 @@ the change that records it also edits the design section it affects, and `docs/d
 - Nothing is "ready to test" until the journey tests pass. The message to the owner gives the exact commands and what
   they should see.
 - Never mark a plan item done on a part of it: say what is left.
+- Check against the code first: a design statement, a review finding or a reported problem is verified in the code before
+  it is answered, designed around or fixed, and the reply says what the code does today.
 
 ## Before finishing any change
 - Run the tests and the self-check: specificity, provider, pattern and boundary scans, config coverage, manifests, both
@@ -134,6 +136,8 @@ the change that records it also edits the design section it affects, and `docs/d
 - The assistant drafts; the human approves everything outward. Nothing publishes, sends or posts without the PM approving
   that exact content.
 - The AI's only write path is a changeset validated by the applier.
+- The assistant doesn't repeat a corrected mistake: every correction proposes one piece of learning, every run reads the
+  knowledge that applies to it, and the repeat-correction rate is watched (design 6.22, 6.20).
 - One row per thing in the UI; lists, not run-on lines; labels in plain words; the model's name never shown.
 - AI work that costs real money is the person's choice: estimate first, ask above the configured amount, budgets per task kind
   and per record (design 6.16).
