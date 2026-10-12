@@ -10,11 +10,12 @@ database gives for free and files make you rebuild by hand. So:
   writer, fine locally and on a persistent volume when hosted. Postgres is a later backend for multi-user (4.15).
 - **Config stays YAML** in `config/`, edited by people and committed to git (Part 4).
 - **Sources stay files:** every input's text is saved under `sources/` by content hash and registered in the database.
-- **`data/` is a readable export and a working recovery path:** on a schedule and after each applied changeset batch, the
-  engine writes records as JSON files under `data/` (one file per record type, stable ordering) and the ledger as append-only
-  files under `data/ledger/`, and commits them, with `config/`, to the workspace's git. That gives history, diffs, off-site
-  backup (4.15) and a plain-text view. The running engine never reads it; `cockpit import` does (recovery, fixtures, moving
-  backends).
+- **`data/` is a readable export and a working recovery path:** the engine writes records as JSON files under `data/` (one
+  file per record type, stable ordering), long text as plain files beside them, and the ledger as append-only files under
+  `data/ledger/`, and commits them, with `config/`, to the workspace's git. That gives history, diffs, off-site backup (4.15)
+  and a plain-text view. The running engine never reads it; `cockpit import` does (recovery, fixtures, moving backends).
+  `cockpit export` writes it today; writing it on a schedule and after each applied changeset batch (`storage.export`, 4.15)
+  is designed and not yet wired (roadmap, A2).
 - **Fictional workspaces** are committed as `config/` plus `data/` JSON; tests import them into a fresh database.
 
 **The ledger.** Every applied op is written, in the same transaction as the change itself, to an append-only ledger: changeset
@@ -33,16 +34,28 @@ assistant's spans. That serves review (what changed since I last read it, as a w
 how much of a work an AI wrote, and undo, which restores an earlier version like any other field. The export writes long text
 as plain files beside the records, so it reads well in git and survives the round trip.
 
+Each version is a `text_version` record (5.1): the record and field it belongs to, a number that is never reused, the hash of
+its text (the text itself is in the workspace's `texts/` folder), its format, how it arose (`edit`, `draft`, `proposal`,
+`merge` or `import`), whether it is `pending`, `accepted`, `merged` or `discarded`, the version it was made from, its
+authorship by passage, and for an anchored draft its paragraph map. A plugin or the assistant never writes the field
+directly: the assistant's text is always a pending draft, and the person's own edits are accepted as theirs (decisions,
+2026-10-12, "Long text is versioned…" and "Drafts are prose…"). Accepting is change by change; when the current text moved on
+since the version's base, the merge is three-way: changes only in the current text are kept, changes only in the proposal are
+offered, and a passage both changed is the person's pick.
+
 **Recovery.** Git history is only useful if it can be loaded back, so recovery is a tested feature, not an afterthought:
 
 - **Round trip:** `import(export(db))` gives back the same records, ids, versions and ledger. The self-check runs it on both
   fictional workspaces, and every record or config migration is tested through it.
-- **Point in time:** `cockpit restore --as-of <time>` imports the last export before that time and replays the ledger up to
-  it. A restore is itself recorded in the ledger, so it can be undone.
-- **One record:** the Admin tab can show any record as it was at a past time (from the ledger) and restore just that record,
-  as a changeset the PM sees.
-- **Off the machine:** local installs keep everything on one computer, so backups to somewhere else are expected, not
-  optional (4.15, 11.1).
+- **Point in time** (*designed, not yet built*; roadmap, phase E): `cockpit restore --as-of <time>` imports the last export
+  before that time and replays the ledger up to it. A restore is itself recorded in the ledger, so it can be undone.
+- **One record** (*designed, not yet built*): the Admin tab can show any record as it was at a past time (from the ledger) and
+  restore just that record, as a changeset the PM sees.
+- **Off the machine, on its own:** local installs keep everything on one computer, so backups to somewhere else are expected,
+  not optional (4.15, 11.1). While the app runs, a background thread makes a full backup whenever one is due, including right
+  after the computer wakes, and tries again after a failure; it never creates a missing target folder, so a drive that isn't
+  connected can't turn into a "backup" on the local disk (decisions, 2026-10-11, "Backups run on their own…"). The database
+  is copied with SQLite's online backup, with `config/`, `sources/`, `files/`, `texts/` and `plugin-data/`.
 
 **Provenance.** Each ledger entry records whether the write came from trusted or untrusted content (12.2), so every field's
 provenance is known; packets mark untrusted-derived fields as data (6.6).
@@ -94,13 +107,14 @@ repositories, so neither ever lives in the synced folder:
   naming the computer. Once it is released or stale, the opening install compares the two ledgers entry by entry: when the
   folder's continues this computer's, it backs up its local database, loads the folder's newer state (config and plugin data
   too; storage and server settings stay per computer), and takes the lease. A running install that finds the lease taken
-  by another stops writing to the folder. A new computer is set up with `cockpit init <path> --sync <folder>`.
+  by another stops writing to the folder. A new computer is set up with `cockpit init <path> --sync <folder>`. Plugin code
+  is not copied between computers: a plugin the folder's workspace uses that is missing here stops the load, with the reason.
 - **Only verified files load:** a load reads only files the manifest lists, each matching its recorded hash, so a folder
   still bringing in changes is refused ("try again in a minute") rather than loaded half-synced.
 - **Never a silent merge:** if both computers worked while unable to sync and their histories diverged (the folder's last
   changeset is not one the local copy has seen, and the local copy has changes the folder lacks), nothing loads. The person
   chooses which history to keep (`cockpit sync keep --here` or `--folder`); the other is saved as a backup. Duplicate files a sync service creates on conflict are found,
-  shown, and never loaded.
+  shown, and never loaded. Settling this, and a stale lease, from a screen instead of a command is planned (roadmap, A2).
 - **Edits made outside:** the folder is checked for changes every few seconds (`storage.sync.watch_outside_edits`). Long
   text changed in another editor comes back as a proposed version (`text.propose`, 6.7) made from the version written
   there, marked as edited outside the cockpit. Changed fields come back as a `record.edit` held for the person; in a
@@ -133,34 +147,69 @@ is a different problem, since ids and people are per workspace; it is left for l
 
 Records refer to each other **by id, never by name**. Names (people, projects, groups) are stored once, on their own record,
 and rendered wherever they appear: owners in the workspace's owner format, question labels from a template, page titles from
-the project's name. Renaming is then one field (6.7), and there is nothing to normalize after the fact (6.11).
+the project's name. Renaming is then one field (6.7), and there is nothing to normalize after the fact (6.11). The same rule
+holds between records and settings: every fact lives in exactly one place and everything else refers to it by id; a setting
+never repeats a record and a record never repeats a setting (4.0; decisions, 2026-10-11, "One source of truth…"). It binds
+plugins: they refer to core records with `RefTo` and never copy their names or fields.
 
-| Entity | Key fields |
-|---|---|
-| `Person` | id, full_name, aliases, role, team, org, area (derived from team and scope, 6.18), how_to_reach (per channel), prefers, cadence, influence, interest (6.24), why_they_matter, track_only, non_working_calendar, verified, status (active, left) |
-| `Team` | id, name, aliases, members (person ids), area |
-| `Project` | id, name, parent (optional project id: a project inside another, such as a title in a series or a project in a program), language (optional; overrides the workspace locale for this project and its records: wording lints, spelling list, date formats and drafting, 4.6), group (portfolio grouping; its label comes from config, e.g. "Program"), status, phase, target, priority, summary, owner (person id), links, tags, risks[] (text, raised_by, owner, status, and the optional fields `config/raid.yaml` turns on: probability, impact, score, mitigation, trigger, review_by), decisions[], milestones[] (each with a baseline date and a current date, 6.23), players (person ids), log[] (dated update log), facts[] (internal knowledge with source id), hold flag, `ext` (fields added by plugins, keyed by plugin) |
-| `Action` | id (stable key), project id, store, text, owners[] (each a person id with an optional team id; at least one), due, status (held until it has an owner, open, done), notes, told{person id: date}, followups[] |
-| `Question` | id, to (person id), title, text, links[], kind (question, decision, action-notice, routing, impact), affects (record ids), asks_for (fact kind or none), batch (now, later), projects (ids), asked_at, on_answer, key (dedupe), answer_pending, feedback_pending |
-| `Meeting` | id, title, due, attendees (person ids), agenda (per attendee, 6.24), before and after notes, status |
-| `Issue` | a project issue (a problem happening now): id, project id, text, raised_by, owners[], impact, status (open, resolved), opened, resolved, from_risk (when a risk came true) (6.24) |
-| `Assumption` | id, project id, text, source id, status (unverified, confirmed, invalid), check_by, how it will be checked (6.24) |
-| `Source` | id, received_at (zoned), from (person id or text), by_us (written by one of `our_accounts`), kind, connector instance, title, content hash, projects (ids), trust (trusted, untrusted; 12.2), restriction (a marking and the audiences allowed to see it, 4.1), url |
-| `Change` | id, source id, title, link, diff, detected_at, who, state (new, queued, processed, done, ignored), result, auto rule, superseded_by, covers[] |
-| `Request` | id, kind (an AI task kind), ref, note (the PM's own words, trusted), state, waiting (why and until when, 7.6), attempts, created, origin (input, PM, schedule) |
-| `Changeset` | id, change id?, request id?, summary, ops[] (each with an optional `group`, 6.7), read_back (applies to, doesn't change, overlaps, dry-run count; 6.7), status (applied, rejected, held, undone, proposed, discarded), problems[] (invariants and lints, 6.7), dismissed, quiet, feedback[] |
-| `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result |
-| `Rule` | id, text, applies_to (task kinds, record types and fields, filter), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) (4.10) |
-| `Problem` | an automation problem (not a project issue): id, summary, detail, plugin (when one raised it), status (open, reported, resolved, dismissed), report (the drafted report, if one was sent, 6.13) |
-| `Run` | id, request, task kind, provider, model, units, cost, time, packet size and omissions (6.6), packet hash, template and playbook versions, parameters, model as served, upstream host (aggregators), tier that produced the accepted answer, exit code, error stream (kept apart from the output), outcome (6.16) |
-| `Dependency` | id, from (the record that waits), on (the record it waits for; may be in another domain), need_by, status (on track, at risk, late, done), impact question id (6.18), notes (6.23) |
-| `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, trust (from the source), patterns (how compound ids split) (6.22) |
-| `Lesson` | id, text, learned_from (request or source), applies_to, status (proposed, active, promoted to a rule, retired), trust (6.22) |
-| `Signal` | id, kind (sent back, undone, dropped, reworded, pulled back, draft edited), record ids, note, time (6.20) |
+Every record has an id (`<prefix>-<number>`, never reused), a version that goes up on each write, and two fields the core owns:
+`stage` (6.26) and `ext` (fields plugins add, keyed by plugin). `engine/records.py` is the truth for the fields below; the
+generated plugin guide lists each one with its description.
 
-Plugins add record types in their own tables (namespaced) and fields on core records under `ext.<plugin>`. Core code never reads
-a plugin's `ext` fields; the plugin's ops, renderers and panels do. Each record type declares the ids it stores so a delete or a
-merge (two people records that turn out to be one person) can be checked and carried through.
+### Built
+
+| Record (id prefix) | What it is | Key fields |
+|---|---|---|
+| `person` (PER) | someone the workspace works with or tracks | full_name, aliases, role, team, org (an organization id), how_to_reach (per channel), why_they_matter, track_only, status (active, left). The PM is one of them: `workspace.user.person` points at the record, which holds their name and aliases |
+| `organization` (ORG) | a company, client or supplier, kept once so a rename shows everywhere | name (unique), aliases, notes. An older workspace whose people hold organization names is moved over when it opens |
+| `team` (TEAM) | a group of people | name, aliases, members (person ids) |
+| `project` (PRJ) | a piece of work, possibly inside another | name, group, status, phase, priority (each from a value list, 5.4), target, summary, owner (person id), links, tags, log[] (dated update lines), **parent** (a project id: a title in a series, a project in a program; never itself or one of its own parts), **language** (a tag; unset means the parent's, else `workspace.language`, 4.1), **budget_usd** (the most AI work on it and everything inside it may cost; only the person sets it), content_levels (only the person sets it) |
+| `action` (ACT) | something a person will do | project, text, owners[] (each a person id with an optional team id; at least one unless held), due, status (held until it has an owner, open, done), notes, told{person id: date}, source, evidence |
+| `question` (Q) | a question for a person; a decision is a question to the PM | to, title, text, links[], kind (question, decision, action-notice, routing, impact), projects, batch (now, later), status (open, sent, answered, dropped), sent_at, answer, source, options, resolves (what answering releases, e.g. a held op) |
+| `fact` (FACT), `note` (NOTE) | something recorded as true with its evidence; something kept from an input that is neither a fact, action nor question. Never edited | text, project, source, evidence (facts), trust |
+| `source` (SRC) | one input, saved as text; its content never changes | received_at, kind, title, content_hash, trust (trusted, untrusted; 12.2), projects, url, **watched** (for an input a watcher found: the source in `watch.yaml`, the item's key, what happened to it, author, by_us), **excerpts** (`allowed` or `never`: the person allows using the source but never quoting it beyond a word or two; set by the person only) |
+| `snapshot` (SNAP) | what a watched item looked like when last read; its text is in `sources/` by hash | source (id in `watch.yaml`), key, title, content_hash, author, seen_at, gone, link, **event** (for a calendar item: start, end, all-day, place, cancelled, repeats) or **message** (for a mail item: sender, received, unread), closed_by (the triage rule that closed its latest change) |
+| `watch_run` (WRUN) | one read of a watched source and what came of it | source, started_at, seconds, outcome (ok, baseline, failed, offline, throttled), retry_at, error_kind, error, new, changed, removed, state (what the connector keeps between reads) |
+| `request` (REQ) | a unit of work for the assistant | task (an AI task kind), note (the PM's own words, trusted only when `origin` is pm), source, origin (pm, input, schedule), state (queued, running, review, done, needs_you, failed), waiting (why and until when, 7.6), approval and estimate_usd (a run that asks for the person's go), about, part, use (the account the person picked), follows, sensitivity, project, auto_closed ({rule, reason} when triage closed it), folded_into, attempts, changeset, previous, dismissed |
+| `changeset` (CS) | what the assistant proposed for one request, how it was checked and what was applied | request, summary, **topic** (a few words naming what the input was about, for the item's title, 6.15), ops[] (one outcome per op: the op, its status applied, held, refused or undone, group, the records it touched, the reason), status (applied, held, rejected, undone, partly_undone), problems, trust, reviewed, run, action (the plugin action it came from) |
+| `run` (RUN) | one call to an AI provider | request, task, provider, model, tier, characters and tokens in and out, cached tokens, cost_usd, seconds, outcome (ok, invalid_output, error, **refused**), independence (other_account, same_account; for a check), error_kind, error_detail |
+| `signal` (SIG) | a correction by the PM (6.20) | kind (sent_back, undone, dropped, reworded, pulled_back, draft_edited, held_declined), refs, note, at |
+| `file` (FILE) | a file a person added or a program wrote (5.3) | name, media_type, size, sha256, file_kind, project, meta, origin (upload, tool), trust, replaces, added_at |
+| `text_version` (TXT) | one version of a long text field (5.0) | owner_kind, owner_id, field, number, sha256, format, words, source (edit, draft, proposal, merge, import), status (pending, accepted, merged, discarded), base, replaces, authorship[], paragraph_map[], unmapped, questions, run |
+| `working_copy` (WC) | a long text field handed out as a file for the person's own tool, and what came back (5.0) | owner_kind, owner_id, field, format, base, file, sha256, status (out, returned, dropped), returned_file, proposal |
+| `value_list` (LIST) | the values a field may take (5.4) | name, label, values, retired |
+| `answer` (ANS), `setting_proposal` (SETPROP), `report` (RPT) | what asking the assistant (6.25) produces: an answer with the words it rests on; a setting change the person applies or sets aside; a report to the maintainers the person sends | request, text and cites[] / key, value, why, status / title, text, status (draft, sent, dismissed) |
+| `setting_change` (SETCHG) | one setting the person changed from a screen (4.22) | key, before, after, was_default, is_default, at |
+| `tool_run` (TOOL), `job_run` (JOBRUN) | one run of an outside program a plugin declared; one run of a plugin's scheduled job | plugin, tool or job, outcome, seconds, the program's exit code and the end of its error stream, or the job's error |
+
+Plugins add record types in their own tables (namespaced `<plugin>/<name>`) and fields on core records under `ext.<plugin>`.
+Core code never reads a plugin's `ext` fields; the plugin's ops, renderers and panels do. A record type declares which fields
+refer to other records (`RefTo`, honored up to six levels deep), so a delete or a merge (two people records that turn out to be
+one person) can be checked and carried through, and a rename shows everywhere. A record type may also declare a data level, a
+`layout` for the synced folder (5.0), fields only the person sets, and unique field groups.
+
+### Designed, not yet built
+
+These are in the design baseline and have no record type yet. Several belong to the project management pack now (decisions,
+2026-10-12, "A project management pack"); the core keeps actions, questions, follow-ups, decisions and Today.
+
+| Entity | Key fields | Note |
+|---|---|---|
+| `Meeting` | id, title, due, attendees (person ids), agenda (per attendee, 6.24), before and after notes, status | agendas are 6.24 |
+| `Issue` | id, project id, text, raised_by, owners[], impact, status (open, resolved), opened, resolved, from_risk (when a risk came true) | RAID: the project management pack (6.24) |
+| `Assumption` | id, project id, text, source id, status (unverified, confirmed, invalid), check_by, how it will be checked | RAID: the project management pack (6.24) |
+| `Dependency` | id, from (the record that waits), on (the record it waits for; may be in another domain), need_by, status (on track, at risk, late, done), impact question id (6.18), notes | the project management pack (6.23) |
+| risks, decisions and milestones on `Project` | risks[] (text, raised_by, owner, status and the optional fields `config/raid.yaml` turns on: probability, impact, score, mitigation, trigger, review_by), decisions[], milestones[] (each with a baseline date and a current date), players, hold flag, facts[] | the project management pack (6.23, 6.24); a project's update log and notes exist today |
+| `Change` | id, source id, title, link, diff, detected_at, who, state (new, queued, processed, done, ignored), result, auto rule, superseded_by, covers[] | today an incoming difference is a `source` plus a queued `request`, with a `snapshot` for the item (5.5) |
+| `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result | with the publisher (6.12); text drafts today are `text_version`s |
+| `Rule` | id, text, applies_to (task kinds, record types and fields, filter), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) | today an entry in `rules.yaml` (4.10) |
+| `Problem` | an automation problem (not a project issue): id, summary, detail, plugin (when one raised it), status (open, reported, resolved, dismissed), report (the drafted report, if one was sent, 6.13) | with the governor (6.13) |
+| `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, trust (from the source), patterns (how compound ids split) | 6.22 |
+| `Lesson` | id, text, learned_from (request or source), applies_to, status (proposed, active, promoted to a rule, retired), trust | 6.22 |
+
+Also designed: on `Person`, area (derived from team and scope, 6.18), prefers, cadence, influence, interest, non_working_calendar
+and verified; on `Question`, affects, asks_for (a fact kind), on_answer, key (dedupe) and the pending flags; on `Run`, the packet
+size and omissions, packet hash, template and playbook versions, model as served and upstream host (6.16).
 
 ## 5.2 Storage rules (each one came from a real failure)
 
@@ -176,8 +225,8 @@ merge (two people records that turn out to be one person) can be checked and car
 - Names live on their own record; everything else stores the id.
 - The export and the workspace's git history are never rewritten. The export is committed on a schedule, before every
   migration (record or config, 4.0) and before every applied fix.
-- Retention follows `config/storage.yaml` (4.15): raw source text can be deleted after its facts are recorded; the ledger keeps
-  that a source existed and what was learned from it.
+- Retention will follow `config/storage.yaml` (4.15; *designed, not yet built*): raw source text can be deleted after its
+  facts are recorded; the ledger keeps that a source existed and what was learned from it.
 
 ## 5.3 Files
 
@@ -197,4 +246,38 @@ Files people add (a cover image, a logo, a manuscript, a font) and files program
   plugin API by file id, never by path.
 - **Previews** are images a plugin renders in code for one review item or question; they are kept while the item is
   open and never sent or exported.
-- **Limits** (largest file, accepted types, total per workspace) are settings with defaults.
+- **Limits** (largest file, accepted types, total per workspace) are settings with defaults (`storage.files`, 4.15).
+
+## 5.4 Value lists
+
+A field with a known set of values takes them from a named list instead of free text (decisions, 2026-10-11, "One source of
+truth, value lists instead of free text…"). The core's lists today bind a project's `status`, `phase`, `priority` and `group`
+(`project-status`, `project-phase`, `project-priority`, `project-group`); a plugin binds its own fields to lists it declares
+(`<plugin>/<name>`), and may use a core list. A person's role and organization are not lists: an organization is its own record
+(5.1), so a company is kept once.
+
+- **A list is a `value_list` record**, not a config file (4.23). It has a name, a label, the `values` offered in order, and
+  `retired` values: no longer offered, but records that hold one keep it and stay valid.
+- **First values.** The core ships them in `engine/defaults/value_lists.yaml` and plugins declare theirs. A workspace gets each
+  list the first time it opens, with those values plus any value its records already use, so nothing that was valid becomes
+  invalid. After that the list belongs to the person.
+- **Changing a list is an op with Undo:** `list.add` (adding a retired value offers it again), `list.rename` (changes every
+  record that holds the value, in the same op) and `list.retire`. They are system-tier ops, and need no restart.
+- **Enforced at the storage layer.** A value not on its list is refused for any writer (a plugin op, the assistant, an edit), with the list's values in the reason. Adding a value is a deliberate act ("Add to the list"), never a side effect
+  of typing. The assistant's packets list the values each bound field takes.
+
+## 5.5 How an input becomes records
+
+Every input arrives the same way, whether the person pasted it or a watcher found it (6.4, 6.6):
+
+1. The text is saved under `sources/` by content hash and a `source` record is made (untrusted for anything from outside; a
+   watched item also carries where it came from).
+2. A `request` is queued for the assistant, with `origin` input (or `pm`, when the person typed the note). A watched item also
+   has a `snapshot`, which is what the next read is compared with, and every read is a `watch_run`.
+3. The run is a `run` record; its answer is a `changeset` with a `topic`, one outcome per op, and the checks' problems. The ops
+   change records through the applier (6.7), each field written to the ledger in the same transaction.
+4. The person looks the changeset over (it is marked `reviewed`), sends it back (a `signal`) or undoes it.
+
+A newer change to a watched item whose earlier change has not been read yet is folded in: the older request is closed with
+`folded_into` naming the newer one, whose input holds both changes, earlier first, so the assistant reads them once, in order. A change a triage rule closed is a request that is already done,
+with `auto_closed` saying which rule and why; taking a closer look queues it and records a `pulled_back` signal.

@@ -1,14 +1,14 @@
 # Scope baseline and change control
 
-Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says what is in each horizon and how changes are made.
+The design (`docs/design/`, version 1.1 of 2026-10-12, which folds the decisions since the 1.0 baseline of 2026-10-09 into the text) is the scope baseline. The order of work is `roadmap-to-1.0.md`. This page says what is in each horizon and how changes are made.
 
 ## Horizons
 
 | Horizon | What it is | When |
 |---|---|---|
-| **Launch slice** | The smallest useful part of milestones 1 and 2 (`schedule.md`) | by the 2026-10-30 go/no-go |
+| **Launch slice** | The smallest useful part of milestones 1 and 2 (`schedule.md`) | built, except proposed lessons; the go/no-go date was set aside (decisions, 2026-10-12) |
 | **Version 1** | The core complete on its own: the define-your-own kit with templates, guided install and setup, settings screens, agent accounts, ask the assistant, watchers and lookups, the plugin API (decisions, 2026-10-10). Industry packs are add-ons in their own repositories | after the launch |
-| **Later** | Milestones 10 onward and everything in "After the base" (design 13.2) | once the publishing pack is in steady daily use |
+| **Later** | Milestones 10 onward and everything in "After the base" (design 13.2) | after 1.0 and real use (roadmap phase D) |
 
 ## Must, should, could, won't
 
@@ -40,7 +40,7 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 | Settings panel generated from schemas | won't | should | 4.0 |
 | Workplace pack and its connectors (private add-on, decisions 2026-10-10) | won't | add-on | 9.1 to 9.5 |
 | Core playbook, first version (the guidance the notes task needs) | must | must | 3.8 |
-| Publishing playbook | won't | must | 3.8, 9.7 |
+| Publishing playbook | won't | add-on (publishing pack) | 3.8, 9.7 |
 | Ask the assistant | won't | should | 6.25 |
 | Issues and assumptions, risk fields and reviews (`raid.yaml`) | won't | add-on (project management pack) | 6.24, 4.20 |
 | Escalation suggestions, communications cadence, meeting agendas | won't | could | 6.24 |
@@ -62,7 +62,8 @@ Design 1.0 (`docs/design/`, 2026-10-09) is the scope baseline. This page says wh
 ## Change control
 
 From design 1.0 on, a change to scope or design is accepted only with a one-line impact note in `docs/decisions.md`: what it
-adds, which horizon it lands in, and what it delays. During the November freeze (`schedule.md`) only fixes are accepted.
+adds, which horizon it lands in, and what it delays. The same change edits the design section it affects. The November
+freeze in `schedule.md` was set aside with the go/no-go (decisions, 2026-10-12).
 
 ## Candidate changes waiting for a decision
 

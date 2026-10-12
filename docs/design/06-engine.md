@@ -2,18 +2,67 @@
 
 Each component is generic, configured from Part 4, and has its own tests with fictional fixtures.
 
+**Status.** A section or paragraph marked *designed, not yet built* is in the design baseline and has no code yet; the
+roadmap (`docs/project/roadmap-to-1.0.md`) says when it is due. Where the code and a section differ, the code and the decisions
+are right and the section is a gap. Sections 6.8 to 6.11 were written for the first design and have not been compared with
+the code line by line since.
+
 ## 6.1 Plugin host
 
 Discovers plugins (entry points, `plugins/`, `<workspace>/plugins/`), reads manifests, checks versions and dependencies,
 validates plugin config, and calls each plugin's `register` with a registrar for every extension point (3.3). Checks that what a
-plugin registers matches its manifest. Runs the event bus (3.4). Wraps every call into plugin code so an exception becomes an
-automation `Problem` naming the plugin, not a crash.
+plugin registers matches its manifest, all or nothing. Runs the event bus (3.4). Wraps every call into plugin code so an
+exception is noted on the plugin and never crashes the core.
+
+**Failure containment (as built).** Calls come in two kinds (decisions, 2026-10-11, "Plugin API 0.3.23…").
+- A call that only reads or reacts (a Today line, an interface item, an event handler, a job) is contained one call at a time:
+  the call is skipped and a note is kept on the plugin's status, and the plugin is turned off only after
+  `workspace.plugins.failures_before_off` failures in a row there (default 3, 4.1).
+- A plugin that breaks its contract (it reaches outside what its manifest declares) or fails inside a write (an op, a
+  validator, a lint, a stage check) is turned off at once, with the reason on its status.
+- A turned-off plugin no longer blocks core ops with its validators; its jobs stop and its screens are hidden, and its data
+  stays on disk. Stage settings that name it stay in place and show as unavailable; the workspace still starts.
+- A person action's preview tries the whole proposal without keeping anything, so an item that would be refused shows why and
+  starts dropped, and other refusals are listed, instead of the action failing as a whole.
+- Turning an add-on on or off (from the Add-ons screen, with Undo) and changing a plugin's settings need a restart the person
+  chooses; registration keeps the old settings until then (4.22). Reporting these failures as automation `Problem` records with
+  a report to the maintainers waits for the governor (6.13).
+
+**Plugin screens the core draws.** A plugin declares lists (panels), read-only documents (a Markdown subset turned into plain
+blocks, never raw HTML), forms for its data files (4.12) and Today lines; the core reads the rows through the plugin API and
+draws them, so no plugin ships front-end code (7.2). The core also draws a record's own page and the counts beside its row in
+a table (6.30).
 
 ## 6.2 Connectors (inputs)
 
-The interface in 3.3. Each returns plain data; errors are typed (no-access, not-found, outage, auth). The core ships paste-in
-and upload, a local-folder connector and the fake connector. Everything else (wikis, trackers, mailboxes, calendars, feeds,
-social accounts) is a plugin. Files are read as text by the text extractors (3.3): the core ships extractors for documents, spreadsheets (cells and
+The interface in 3.3. Each returns plain data; errors are typed, and decided from status codes and the service's own error
+codes, never by guessing at message text: `auth` (sign in again), `no_access`, `not_found`, `outage` (the service is failing),
+`offline` (no network here, which is never an outage and files nothing) and `throttled` (the service said to wait: the read is
+recorded but doesn't count as a failure, and the source isn't read again before the wait ends; a connector honors the
+service's retry-after answer and never loops).
+
+**What the core ships.** Connectors that speak an open protocol and name no service: `folder` (text files in a folder),
+`feed` (RSS and Atom; a document that declares its own entities is refused), `calendar` (the events of a calendar published
+as a calendar file, which most services offer as a private address; events in the configured window are followed, so a moved
+meeting, a new invitation or a cancellation is handed in) and `mailbox` (a mail folder over IMAP with TLS, using an app
+password kept as a secret reference; messages are fetched without marking anything as read), and a `fake` one for tests
+(decisions, 2026-10-11, "Calendars and mail are read through open protocols in the core…"). Pasting and uploading are ways to
+hand something in (6.6), not connectors. Connectors for particular products and services (wikis, trackers, a named mail or
+calendar service that needs its own sign-in) are plugins (6.27).
+
+**Structured items.** A calendar or mail item carries what it is as structured fields beside its text: an event's start, end,
+place and whether it was cancelled; a message's sender, received time and whether it is unread. The watcher keeps them on the
+item's snapshot, so the agenda and the list of what came in on Today need no AI call (6.15); the text still carries everything
+the assistant reads.
+
+**Reaching the network.** A plugin's connector reaches the network only through the core's client (decisions, 2026-10-11,
+"Plugins reach the network only through the core's client…"): only hosts the manifest declares in `requires.network`, over
+HTTPS (plain HTTP only on this computer), with redirects checked against the same list and answers capped in size. It gets the
+secrets its manifest declares (references in `workspace.plugins.secrets`, or values it keeps on this computer, such as a
+refreshed token), and a current sign-in token when it asks for one. Bundled plugins may not import network modules; the scan
+enforces it.
+
+Files are read as text by the text extractors (3.3): the core ships extractors for documents, spreadsheets (cells and
 their comments), presentations (slide text, tables and speaker notes) and PDFs, and plugins add others. Packets carry the
 extracted text, so a run never asks the PM to paste what is already in a file it can read. A file type with no extractor is
 flagged to the PM once, as unsupported, not request by request.
@@ -24,7 +73,8 @@ The interface in 3.3. A channel describes its capabilities: versioned targets wi
 back, scheduled sending, length limits, media. The core ships the clipboard channel (the PM copies the approved text and pastes
 it anywhere), the **file channel** (the approved content is written to a configured folder, in whatever format a renderer
 produced: text, a document, a PDF, an ebook; with a synced folder, by default the project's `outputs/` folder, 5.0) and the fake channel. Wiki pages, email, blogs and social networks are plugins.
-Channels are called only by the publisher (6.12).
+Channels are called only by the publisher (6.12). The publisher, the file channel and the clipboard channel as channels are
+*designed, not yet built* (roadmap, phase C4); the person copies approved text from the review today.
 
 **Canonical form.** A channel normalizes values the way its system stores them (a width written as `15%` that the system
 keeps as `15.0%`), and every diff compares normalized forms. After a publish, the publisher pulls the target again and checks
@@ -33,36 +83,74 @@ format-only change can't sit in Waiting to go out forever or be published again 
 
 ## 6.4 Watchers
 
-Run on schedule through connectors; compare against snapshots; file a `Change` per real difference with a readable diff. Rules:
+Run on schedule through connectors; compare against snapshots; hand in a readable difference for each real one, as an ordinary
+input that is untrusted and marked with where it came from (decisions, 2026-10-11, "Watchers hand in differences as ordinary
+inputs; the first read is a baseline"). One path for every input keeps evidence, trust and review the same whatever the
+source. Rules:
 
-- **Check connectivity first.** A refresh starts with a quick reachability check per connector; with no network it waits
-  (6.14) instead of running a string of failing checks. No network is not an outage and files nothing.
-- An outage (many keys failing at once with the network up) is one automation problem, not a question per key. A single item is
-  asked about only after it fails on consecutive runs.
+- **No network is not an outage.** A connector that cannot reach the network reports `offline`: the read is recorded as such,
+  nothing is filed and the source is tried again on its schedule (6.14), instead of a string of failing reads being counted as
+  failures. (A quick reachability check before a whole round of refreshes is *designed*.)
+- **Failures ask once.** A source that fails `watch.failures_before_asking` reads in a row (default 3) files one question to
+  the person, not one per read, and a read that works again closes it. A throttled read does not count. An outage across many
+  keys at once, as one automation problem, waits for the governor (6.13).
 - **Our own edits are ours.** An edit or page whose author is one of `our_accounts` is recorded as `by_us` (published by the
   cockpit): it confirms a publish, it is not a new change from someone else, and lookups answer "who made this?" with "we
   did".
 - A file that moved is compared by content with what's registered before it counts as new. Spreadsheets are compared by cell
   content, not bytes, so a re-save isn't a change.
-- **Supersede:** when a newer version of the same item arrives while an older one is queued, fold them into one change (all
-  diffs, in order) so the AI never processes them out of order.
+- **Supersede:** when a newer version of the same item arrives while an older one is queued, fold them into one request (all
+  diffs, in order) so the AI never processes them out of order. The older request is closed with `folded_into`.
 - Watch lists stay complete: when a record cites an item key inside an already-configured source, that item is followed in
-  the same step (`watch.item`, a data op). Adding a new source is a system op (6.7).
-- **What is built.** Sources are listed in `watch.yaml`; each names a connector (the core's `folder`, or a plugin's)
-  and its settings. A read lists what the source holds now; the core keeps a snapshot per item (its text in the
-  sources folder by hash) and hands in a new item with its text, a changed one with a readable diff and its text now,
-  and one gone from a complete listing as gone, each as an untrusted input queued for the assistant. A source's first
-  read only notes what is there, so connecting a full folder doesn't flood the queue. Every read is recorded with its
-  outcome; the connector's own state is kept between reads.
+  the same step (`watch.item`, a data op, *designed, not yet built*). Adding a new source is a system op (6.7).
+
+**What is built.** Sources are listed in `watch.yaml` (4.5); each names a connector (the core's, or a plugin's) and its
+settings. A read lists what the source holds now. The core keeps a snapshot per item (its text in the sources folder by hash,
+with the structured fields of 6.2) and compares:
+- a **new** item is handed in with its text, a **changed** one with a readable diff and its text now, and one **gone** from a
+  complete listing as gone (a connector that cannot list everything may name the keys that were removed; a source can turn
+  reporting removals off with `report_removed`);
+- each is saved as an untrusted `source` and queued as a `request` for the assistant (5.5), unless a triage rule closes it
+  first (6.5);
+- a change only in what an item is (a message was opened, so `unread` turned false) updates what Today shows and hands in
+  nothing;
+- the connector's own state is kept between reads, and a read starts from the last read that worked;
+- every read is recorded as a `watch_run` with its outcome (`ok`, `baseline`, `failed`, `offline`, `throttled`), and any
+  source can be read at once from its row ("Read now").
+
+**First reads** (`first_run`, 4.5). What a source does on its first read is a setting, so connecting a full folder or
+mailbox neither floods the queue nor runs up cost on day one:
+- `baseline` (the default): the first read only notes what is there.
+- `recent`: it also hands in what arrived, changed or happens within `first_run_hours` of the read (24 by default): the last
+  day's mail, today's meetings. A message counts by when it was received, an event by when it starts (before or after now),
+  anything else by when it changed.
+- `all`: everything there is is handed in as new.
+- **On request**, after a first read that only noted what was there, the person can hand in the recent items from the
+  Sources screen ("Look at the last day"). The core hands in the items already read, in the same window, that haven't been
+  handed in, as if the source had been set to `recent`; triage rules apply as for any change.
+
+**Sources a sign-in starts** (6.27). Signing in to a service starts the sources its add-on declares (the inbox, the main
+calendar), with `first_run: recent`, so the first thing the person sees is their recent mail and today's meetings handled by
+the assistant.
 
 ## 6.5 Triage
 
-Applies triage rules in order before queueing, using registered matchers (the rules live in `watch.yaml`, beside the
-sources they apply to; the core's matchers are `cosmetic`, `by-us`, `terms-absent` and `name-matches`). Each closed item records the rule and a
-readable reason, appears under "Auto-closed", and has a one-click way to send it back ("This is ours", "Take a closer look");
-pulled-back items are recorded so rules can be tuned.
+Applies triage rules in order before queueing, using registered matchers. The rules live in `watch.yaml`, beside the sources
+they apply to (4.5; decisions, 2026-10-11, "Triage rules live beside the watched sources"); the core's matchers are `cosmetic`,
+`by-us`, `terms-absent` and `name-matches`, and plugins register more. A matcher is deterministic, never calls AI, and returns a
+reason in plain words or nothing; the first rule that matches closes the change. Each closed item records the rule and a
+readable reason, is kept as a source and a request that is already done, appears under "Auto-closed", and has a one-click way
+to send it back ("Take a closer look" queues it and records a `pulled_back` signal, so rules can be tuned, 6.20). A closed mail
+item is left out of Today's list of what came in, and counted. A matcher that fails counts as no match and is contained like
+any plugin call (6.1).
 
 ## 6.6 Dispatcher
+
+**As built.** The packet holds, stable parts first and the request last: the instructions, the op reference for the task kind,
+the task's playbook guidance, every open action and open question in a compact form, the people, the projects, the values each
+list-bound field takes (5.4), then the date, the PM's note (trusted) and the cleaned input (untrusted). Input cleaning, one input
+per call, the fix round, the fallback chain and the escalation tier are built. The glossary, lessons, rules, scope and looked-up
+facts below arrive as 6.18 to 6.22 are built.
 
 - Batches queued requests (batch size, scheduled batches, immediate kinds that run within a minute of the PM handing them in,
   with a short delay so a note can follow). **A batch shares the stable part of the packet; each input gets its own call.**
@@ -99,13 +187,14 @@ pulled-back items are recorded so rules can be tuned.
   deterministic order with no dates, counts or other volatile values, and the batch's calls run close together because cached
   prefixes expire after minutes. The adapter marks a cache point after each layer when its provider supports caching
   (`prompt_caching` capability, 6.16) and ignores the marks otherwise.
-- **Open items, full and compact.** An open action in full form is "[project] text (owner, due) → how to close it" (its id and
+- **Open items, full and compact** (*designed, not yet built*; `open_items.compact_share`, 4.9). An open action in full form is "[project] text (owner, due) → how to close it" (its id and
   the match text that closes it); in compact form it is id, owner and title, with no closing hint, since the id alone is enough
   to close it. Actions for the request's own projects are always in full form. Actions for other projects switch to compact
   form only when the open-items list passes `open_items.compact_share` of the budget (default 40%), so trimming is by size, not
   by rule. For scale: one PM with about 20 projects has about 50 open actions and 10 open questions, roughly 3,000 tokens in
   full form, so compact form only starts at a few hundred open actions.
-- **Size budget:** each task kind has a `max_input` in `config/dispatch.yaml`, capped by the provider's context. After the
+- **Size budget** (today one key, `dispatch.max_input_chars`, and an input longer than it is refused with a request to split it;
+  a `max_input` per task kind, capped by the provider's context, is *designed*, 4.9). After the
   stable prefix, the request-specific parts fill in order: the input (split into parts if it is larger than its share), scope
   and facts for the items involved, related records ranked (same project, then linked, then mentioned). Open actions and
   questions, the glossary and the rules are never dropped (only compacted as above); if they alone exceed the budget, an automation problem
@@ -125,9 +214,13 @@ endpoints with weak structured-output support handle reliably. Output that isn't
 repair (code fences, trailing commas, unbalanced brackets, a single top-level object); only if that fails is the run sent back.
 
 **Evidence.** Ops that claim something about the world carry `evidence`: the source id and the exact words in it that justify
-the op. Required on `action.add`, `action.close`, `question.done`, `fact`, `issue.resolve`, `assumption.update`,
-`dependency.update`, and any `record.set` that changes a date, status or owner. When the request came from the PM's own note,
-the evidence can be that note. Evidence is kept in the ledger and shown on the row ("closed because the email said: ...").
+the op. Required on `action.add`, `action.close`, `question.done`, `fact`, and any `record.set` that changes a date, status,
+owners, target or owner (and, in the project management pack, on its RAID and dependency updates). When the request came from
+the PM's own note, the evidence can be that note. Evidence exists so claims taken from inputs can be checked: a change the
+person makes on screen, or approves in a plugin's action, is not a claim and carries none (decisions, 2026-10-12, "Plugin API
+0.3.19, and evidence only for claims"). Evidence written as a bare string, or with extra keys beside the quote, is read as the
+quote; the quote is still checked word for word. Evidence is kept in the ledger and shown on the row ("closed because the
+email said: ...").
 
 **Drafts are not claims.** Some work is writing, not extracting: a proposal, a statement of work, a status update, a blurb.
 A draft has no quote to cite, so it is not held to the evidence rule; instead it is written only into a `long_text` field
@@ -177,7 +270,8 @@ A system op in a changeset whose request came from an input (an email, a page, a
 that prompted it. This is what keeps a hostile or careless input from rewriting the rules (12.2).
 
 A system op that comes from the PM's own note applies at once, because asking for a click on a rule the PM just typed is daily
-friction and the injection risk isn't there. The real risk with PM-stated rules is misreading, and misreadings came from a new
+friction and the injection risk isn't there. (Built: the tier decides, and a system op from anyone but the PM is held. The
+read-back below, the contradiction pause and the `applies_to` targets are *designed, not yet built*: review of 2026-10-12.) The real risk with PM-stated rules is misreading, and misreadings came from a new
 rule colliding with an existing one ("name teams, not individuals" meant for risks, applied to action owners, which another
 rule says must be people) or from a correction aimed at the wrong place. So the review card carries a **read-back** that shows
 effects and overlaps, not just a restatement, in four short lines next to Undo:
@@ -198,19 +292,32 @@ contradiction in meaning it sees. "Doesn't change" lists the closest records or 
 **A contradiction pauses.** If line 3 finds a contradiction, the op is held even though the PM typed it, and the card asks which
 one wins (the new rule, the existing one, or both with a narrower target). It is the one case where "apply at once" waits.
 
-**Core op types.**
-Data: `source`, `note`, `fact`, `record.set`, `record.add`, `record.del`, `record.log`, `record.rename`, `action.add`,
-`action.update`, `action.close`, `action.assign`, `decision.add`, `milestone.add`, `risk.add`, `question.add`,
-`question.update`, `question.move`, `question.done`, `question.drop`, `meeting.add`, `meeting.update`, `person.add`,
-`person.merge`, `dependency.add`, `dependency.update`, `issue.add`, `issue.update`, `issue.resolve`, `risk.realize` (a risk
-that came true becomes an issue linked to it), `assumption.add`, `assumption.update`, `meeting.agenda`, `glossary.add`, `glossary.update`, `lesson.add`, `parked`, `inbox` (set a change's state), `lookup`,
-`watch.item` (follow one more item inside an already-configured source), `doc`.
-Outbound: `draft.request` (ask for a rendered draft to a channel), `dev.request` (a report to the product's maintainers: a
-problem, or a capability no op provides; drafted for the PM to approve and send, never a code change, 6.13), `handoff` (a request for another project, drafted as a
-message or ticket for its owner, 4.18).
-System: `milestone.rebaseline` (resets a plan's baseline dates; a plan change is the PM's call), `rule.add`, `rule.retire`, `watch.add`, `watch.remove` (new or removed sources), `config.set` (any config key,
-including scope and facts), `plugin.enable`, `plugin.disable`.
-Plugins register more, namespaced, each with its tier.
+**Core op types.** The ops built today (`docs/plugin-guide.md`, "Core ops", is generated from the code and lists every
+field):
+- Data: `action.add`, `action.close`, `question.add`, `question.done`, `fact`, `note`, `person.add`, `record.set` (project
+  status, phase, target, priority, summary, parent, language and owner; action text, due and notes; question title and text;
+  person role, organization and why they matter), `record.log`.
+- The person's own: `record.edit` (any field of any record, including an edit made to a file in the synced folder, which waits
+  for the person's review there), `record.delete` (with Undo), `file.add` (made only by plugin actions, with the file's
+  bytes), and the long-text ops `text.draft` (the assistant's text, always a pending draft), `text.propose` (the person's own
+  work arriving from outside), `text.accept`, `text.discard` and `text.edit`.
+- Value lists: `list.add`, `list.rename`, `list.retire` (system tier, each with Undo, 5.4).
+- Project and stages: `project.add` (a system op: from the assistant it waits for the person) and `stage.move` (always waits
+  for the person's confirmation).
+- Asking (6.25): `answer`, `setting.propose`, `report.draft` (a report to the product's maintainers, drafted for the PM to
+  approve and send, never a code change, 6.13).
+Plugins register more, namespaced, each with its tier. Reading notes is offered every op except those that are the person's own
+or only for actions and asks (deleting, `file.add`, `project.add`, `record.edit`, the long-text ops, and the asking ops).
+
+*Designed, not yet built* (the first design's list): data ops `record.add`, `record.del`, `record.rename`, `action.update`,
+`action.assign`, `decision.add`, `milestone.add`, `risk.add`, `question.update`, `question.move`, `question.drop`,
+`meeting.add`, `meeting.update`, `person.merge`, `dependency.add`, `dependency.update`, `issue.add`, `issue.update`,
+`issue.resolve`, `risk.realize`, `assumption.add`, `assumption.update`, `meeting.agenda`, `glossary.add`, `glossary.update`,
+`lesson.add`, `parked`, `inbox`, `lookup`, `watch.item` and `doc`; outbound ops `draft.request`, `dev.request` and `handoff`
+(4.18); and system ops `milestone.rebaseline`, `rule.add`, `rule.retire`, `watch.add`, `watch.remove`, `config.set`,
+`plugin.enable` and `plugin.disable`. The dependency, milestone, risk, issue, assumption and meeting ops move to the project
+management pack with 6.23 and 6.24. Today a rule, a watched source, a plugin or a setting is changed from a screen (4.22) or
+proposed by the assistant as `setting.propose`.
 
 **Rename is one op.** `record.rename` changes the record's name field; everything inside the product shows names from the
 record (5.1), so it all follows. Outputs outside the product (a published page title, links on other people's pages) are
@@ -238,14 +345,14 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
 - **Every action names a person.** An action may have several owners (each a person, optionally with a team); a team alone or
   a blank is refused. An action whose person isn't known yet is held, with one question to the PM ("Pick an owner"), and is
   added only once it has one.
-- **Scope** (6.18): an action's owner must be in the tracked area or be the PM. An action for anyone else, or with an owner
+- **Scope** (6.18; *designed, not yet built*, it waits for the scope resolver, roadmap phase E): an action's owner must be in the tracked area or be the PM. An action for anyone else, or with an owner
   label that matches another domain's `owners` patterns, is refused with the reason, and the AI records the work as a fact on
   the observed item instead. A question to anyone outside the tracked area is refused unless `cross_domain.allow` is
   `impact-only`, it goes to that domain's `contact`, it is marked `impact`, and it names in `affects` the tracked record it is
   about. Questions to people inside another domain who aren't its contact are always refused.
-- **Facts** (6.19): a question whose `asks_for` is a fact kind with lookup sources is refused and sent back as a `lookup`; a
+- **Facts** (6.19; *designed, not yet built*, roadmap C4): a question whose `asks_for` is a fact kind with lookup sources is refused and sent back as a `lookup`; a
   question to anyone in a kind's `no_questions_to` that asks for that kind is refused. A lookup that finds nothing records TBD.
-- **Audiences:** content reaches a destination only if every source it draws on allows that destination's audience (4.1). A
+- **Audiences** (*designed, not yet built*, with the publisher): content reaches a destination only if every source it draws on allows that destination's audience (4.1). A
   restricted source can appear on a page locked to a named group that it allows, under that page's banner, and nowhere else.
 - Untrusted content never becomes a rule, a config value or a recipient on its own (12.2).
 - The model's name never appears in anything a person sees.
@@ -266,12 +373,14 @@ depends on where the item goes:
   because the PM sends questions as written and a warning on a ready-to-send item gets missed;
 - anything that **stays internal** (a note, a fact, an action's notes) applies with a **warning** on its row.
 
-- Wording on anything that reaches a shared output: blocked phrases (including "confirm / check whether" in actions), locale
-  spelling, run-on separators.
-- A question whose text matches a fact kind's `terms` but doesn't declare `asks_for`.
-- A question that links to something the recipient may not be able to open, or carries bookkeeping in its label.
-- A new action that looks like an open or done action for the same deliverable.
-- A link that doesn't respond.
+Built: `blocked-wording` (blocked phrases, including "confirm / check whether" in actions), `run-on-list` (run-on separators),
+`near-duplicate-action` and `evidence-fit`, below, plus any lint a plugin registers (4.17).
+- Wording on anything that reaches a shared output: blocked phrases, run-on separators; locale spelling (*designed*).
+- A question whose text matches a fact kind's `terms` but doesn't declare `asks_for` (*designed*, with fact lookups).
+- A question that links to something the recipient may not be able to open, or carries bookkeeping in its label (*designed*).
+- A new action that looks like an open or done action for the same deliverable (`near-duplicate-action`; the similarity
+  threshold is fixed at 0.8 in the code today and is to become a setting, 4.17).
+- A link that doesn't respond (*designed*).
 - `evidence-fit`: the quoted words don't plausibly concern the target record (its title, owner and project share nothing with
   the quote). Default `return`, which holds it for the PM if the item will reach another person.
 
@@ -280,7 +389,8 @@ Every finding is recorded on the changeset with the check's name and severity, s
 ### Normalize, apply, undo
 
 **Normalization before apply:** names in id fields resolved to ids (6.11), dates parsed to zoned values, links enriched from
-item keys and known titles.
+item keys and known titles; a value for a field bound to a value list is checked against the list and refused if it is not on
+it (5.4).
 
 **Apply** is one transaction: check record versions, apply the ops in order, write a ledger entry per field changed (5.0),
 re-render affected outputs into drafts, commit. On error the transaction rolls back and the error is recorded on the changeset.
@@ -292,6 +402,10 @@ is per field across groups but all or nothing within a group:
   notice that told its owner; a rename with the outputs it re-rendered); the AI may group others.
 - A group with a conflict (a field something else has changed since) is listed and skipped, never half restored; the PM can
   keep the current values or restore the group.
+- Undo goes newest first, so an op that refers to an earlier one's record is undone before it; an undo that would break a
+  unique field group or leave a dangling reference is skipped and reported, never half done.
+- **Send back** queues the work again with the person's note and, by default, first undoes what the assistant did; the person
+  may keep it instead, and the old work then counts as looked over and the new run builds on it.
 - **Outbound can't be undone.** Undoing a published page edit drafts a reverting edit for approval; a sent message shows as
   "already sent", with a follow-up offered if the PM wants to correct it.
 
@@ -352,6 +466,9 @@ wherever they are shown.
 
 ## 6.12 Records, renderer and publisher
 
+*Designed, not yet built* (roadmap, phase C4: the publisher and the file channel, with Waiting to go out). The product's rules
+for it, that nothing goes out without the PM approving that exact content, already bind every path that sends.
+
 - Records are the source of truth; outputs are rendered from records via templates into drafts. Never hand-edit a rendered
   output.
 - For channels that can pull edits back, edits made by others on a published output (in parts the team owns) are pulled into
@@ -373,10 +490,11 @@ wherever they are shown.
 
 ## 6.13 Governor, automation problems and reports
 
-- Every few minutes: re-queue requests whose run never finished, push work waiting too long in working hours, repair changes no
-  request carries, detect stale data and outages, run the scope sweep (6.18), the rules review (6.21) and the notices, commit
-  the readable export (5.0) hourly.
-- Problems in the automation become `Problem` records (shown as "automation problems", so "issue" keeps its project
+- *Designed, not yet built* (roadmap, phase E): every few minutes, re-queue requests whose run never finished (today a run a
+  crash left stuck is queued again when the app starts, roadmap A2), push work waiting too long in working hours, repair
+  changes no request carries, detect stale data and outages, run the scope sweep (6.18), the rules review (6.21) and the
+  notices, and commit the readable export (5.0) hourly.
+- *Designed, not yet built:* problems in the automation become `Problem` records (shown as "automation problems", so "issue" keeps its project
   meaning, 6.24), each with what happened, when, what it affects and what the cockpit is already doing about it (retrying,
   waiting for the network, paused until a limit resets).
 - **No self-modifying code.** The product never writes or applies code changes to itself or to a workspace's plugins. What
@@ -390,7 +508,9 @@ wherever they are shown.
 - **Reports, not fixes.** A problem the PM wants looked at, or a request no op can do, becomes a **report** (`dev.request`): a
   draft with what happened, the steps and records involved, the version and the relevant log lines, with workspace specifics
   left out unless the PM keeps them in. The PM reads it, approves it and sends it through `reports` (4.9): the clipboard by
-  default, or a configured channel such as the maintainers' issue tracker form.
+  default, or a configured channel such as the maintainers' issue tracker form. Built today: `report.draft`, from an ask
+  (6.25), which the person copies and sends; `dev.request`, `reports` and the validator that lists the ops considered are
+  *designed*.
 - **One place per problem:** a problem and its report show on its problem card only, and are counted there (Today, the header
   and the problem list count it once).
 - **Requests for other projects:** a request about code another project owns (4.18) becomes a `handoff` draft for that
@@ -398,42 +518,101 @@ wherever they are shown.
 - The self-check (Part 10) validates config schemas, plugin manifests, imports, the web build and the specificity guard; run it
   after any change.
 
-## 6.14 Scheduler and offline behavior
+## 6.14 Scheduler, offline behavior and restart
 
 Jobs that need the network wait while it's down and run when it returns ("Offline, waiting for the network" shown, not
 failed). After sleep, the first refresh runs on wake when data is stale, after the connectivity check (6.4). A held or failed
-job doesn't count as a run: a refresh that failed leaves the data marked stale, with its age, so nothing looks fresh that isn't. Plugin jobs follow the same rules. Jobs run in
-the process whose `server.role` is `all` or `worker`; the scheduler lease in the jobs table (5.0) makes sure only one scheduler
-runs at a time, even when a host starts more than one copy.
+job doesn't count as a run: a refresh that failed leaves the data marked stale, with its age, so nothing looks fresh that isn't.
+Plugin jobs follow the same rules.
 
-**Settings and code that change under a running process.** Before each job the process checks whether its config files or
-its own code changed since it started (file hashes, the schema version of each config file, the installed version). Config
-that changed is validated and reloaded; config that fails validation pauses the work with the reason shown. Code that changed,
-or a config schema newer than the running code, stops new jobs: the process finishes the current one and restarts itself
-(locally it re-executes; hosted, it exits for its supervisor to start the new code). Until it has restarted, waiting work
-says "Settings or code changed; restarting before the next run". Old code never quietly runs new config.
+**What runs while the app runs (as built).** The process that holds the instance lease (5.0) runs four loops, each on its own
+thread so a slow one never holds up another:
+- the **worker** takes queued requests one at a time and moves stage-ready records on;
+- the **backup** loop makes a full backup whenever one is due and retries after a failure (4.15); it goes by the wall clock, so
+  a computer waking from sleep catches up at once;
+- the **synced folder** loop writes the folder after any change and renews this install's lease, and brings outside edits
+  back for review (5.0), checking every few seconds;
+- the **jobs** loop, once a minute, runs the plugin jobs that are due (at the interval each job declares or
+  `workspace.plugins.jobs` sets) and reads the watched sources that are due (`every_minutes`, 6.4).
+A scheduler lease in the jobs table, and `server.role` (`all`, `web` or `worker`) so a host can run them separately, are
+*designed, not yet built* (hosted mode, Part 11, is not part of 1.0).
+
+**Settings and code that change under a running process, and the restart** (decisions, 2026-10-11, "The app restarts only
+when it must, and only when the person says so"). The worker notices when its config files or its own code changed since it
+started (a hash of the config files; the newest modification time of the program's source). Then:
+- If every changed key is **live** (4.22: AI accounts, tiers and budgets, who the person is, the names, the screens' wording
+  and shortcuts, the accounts counted as ours, backups, the watched sources), the changed files are validated and taken in
+  at once, and open screens are told. A file that does not validate changes nothing and is logged.
+- If any changed key is not live, or the code changed, the settings in use stay as they were, no new job starts, queued AI work
+  is held ("Settings or code changed since the cockpit started; restart it to use them"), and the screens say a restart is
+  needed and for which settings. The person chooses **Restart now** or **Later**. **The app never restarts on its own.**
+  Old code never quietly runs new settings; nothing is half-reloaded.
+- **Restart now** (`POST /api/restart`) restarts between requests, at once if none is running; locally the process re-executes
+  itself. A copy that can't start itself again (it was not started by `cockpit serve`) says to close it and start it. The
+  serve command stops its web server without a signal, so the restart cannot end the process by raising the stop signal
+  again.
 
 ## 6.15 Today builder
 
-Builds the PM's Today list, the home screen (7.7), from live data and from plugins' Today contributors. **Every line starts with
-what the PM does and says where:** answer N decisions, review and send N drafts, look over N changes, send N questions to a
-person, follow up on questions waiting N days, finish N of your overdue actions, hold N meetings this week, look at N automation
-problems, move N items to their next stage (6.26), approve N runs that need a go because of their cost (6.16). Status, progress
-and things the automation handles never appear.
+Builds the PM's Today, the home screen (7.7), from live data and from plugins' Today contributors. Nothing in it calls AI or
+reaches a service; it reads records only, and the order is computed by the engine, never by the screen. **Every line starts
+with what the PM does and says where:** answer N decisions, review and send N drafts, look over N changes, send N questions to a
+person, follow up on questions waiting N days, finish N of your overdue actions, move N items to their next stage (6.26),
+approve N runs that need a go because of their cost (6.16). Status, progress and things the automation handles never appear.
+
+**The ranked queue (as built).** `engine/today_queue.py` returns one list (`GET /api/today/queue`) in four groups, in this
+order, each line with a kind:
+
+| Group | Lines (kind) |
+|---|---|
+| **Decide** | a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
+| **Risk** | work that failed (`failed`); the PM's own overdue to-dos, as one line (`overdue`) |
+| **Review** | the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused) |
+| **Send** | messages to send, one line per person (`send`); a person who hasn't answered in `ui.today.nudge_after_days` days (`nudge`: questions sent and actions told, 4.11) |
+
+Within a group, a kind has a fixed place (decisions first, then who-is, owner, held, go, refused, questions), then the line that
+has waited longest, or is due first, comes first; a nudge goes by its longest wait. **Held items and decisions are always
+top-level lines**, never only inside a review. A line has a key that stays the same while the thing it stands for waits, the
+count it covers, the record ids it covers (actions, questions), the title of the input it is about, whether the input was
+untrusted, and why it waits, in the engine's own words (7.6). Plugin Today lines and stage lines ("ready to move on", 6.26)
+are added by the screen into their groups; a plugin line carries one action, its own or one of the core's (open, review, go,
+answer, move to the next stage). Lines the first design listed for meetings to hold this week and for automation problems are
+*designed, not yet built* (with the governor, 6.13); at-risk dependencies and risk reviews are lines the project management
+pack adds (6.23, 6.24).
+
+**The rail's feeds** are separate calls over the same records: the **agenda** (`/today/agenda`: events from watched calendars
+on today and `ui.today.agenda_days_ahead` days after, in the person's time zone, all-day events first), **your to-dos**
+(`/today/todo`: the PM's own open actions, overdue first) and **came in** (`/today/arrived`: mail received within
+`ui.today.mail_hours`, newest first, at most `mail_max`, leaving out what a triage rule closed and saying how many). They read
+the structured fields of watched items (6.2), so no AI call stands between a message arriving and the person seeing it.
+
+**Item titles** follow the title rule (7.14) and are built by `engine/titles.py`, never by the screen: "{kind} from {person} ·
+{topic}". Each part comes from structured fields first, then from the assistant's short topic, and only then from the text:
+- the **kind** is `email`, `calendar`, `change` (another watched item), `note` (the person's own words), `pasted` or `task`
+  (work the app started, such as a stage's task);
+- the **person** is a known person's id when the sender names exactly one, else the sender as written with address parts
+  removed; it comes from a watched item's author, or from the `From:` line a pasted message starts with;
+- the **topic** is a watched item's subject (with "Re:" and "Fwd:" removed), or a pasted message's `Subject:`; else the
+  **changeset's `topic`**, the few words the assistant gives for what the input was about (kept to one line, cut at a word,
+  at most 60 characters; for a plugin's person action, the proposal's topic); and only then the first meaningful line of the
+  text, with greetings, quoted headers and sign-offs skipped (`language.title_skip`, 4.6), cut at eight words.
+A title never starts with a greeting or "From:". The same title is on Today, What changed and the review.
 
 ## 6.16 AI provider layer (any model, by configuration)
 
 The PM brings their own AI accounts: a personal key with a model vendor, an aggregator that reaches many vendors with one key,
 a model running on their own computer, or a command-line agent signed in as them. The product can use one or mix several, and
-moving between them is an edit to `config/ai.yaml` (4.8). Nothing outside the adapters knows which vendor is in use.
+moving between them is an edit to `config/ai.yaml` (4.8). Nothing outside the adapters knows which vendor is in use. Adapters
+built today: `openai-compatible` (any endpoint, an aggregator, a local server), `cli-agent` and the stand-in; native vendor
+adapters are *designed, not yet built*.
 
 **Kinds of provider, and the adapters that serve them:**
 
 | Kind | What it is | Adapter |
 |---|---|---|
-| Native API | a vendor's own API, with its own features (structured output, caching, files) | one per vendor where its API differs: `anthropic`, `openai`, more as plugins |
+| Native API | a vendor's own API, with its own features (structured output, caching, files) | one per vendor where its API differs: `anthropic`, `openai`, more as plugins (*designed, not yet built*) |
 | OpenAI-compatible API | any endpoint that speaks the widely used chat-completions format: many vendors offer one (xAI, for example), as do inference hosts and local model servers | one generic `openai-compatible` adapter, configured with `base_url`, key and model ids |
-| Aggregator | one account and key for many vendors' models, with its own model catalog, prices and routing options (OpenRouter, for example) | `openrouter`, a thin layer over `openai-compatible` that reads the catalog and passes routing options |
+| Aggregator | one account and key for many vendors' models, with its own model catalog, prices and routing options (OpenRouter, for example) | `openrouter`, a thin layer over `openai-compatible` that reads the catalog and passes routing options (*designed, not yet built*; today an aggregator is an `openai-compatible` account) |
 | Local model | a model server on the PM's computer | `openai-compatible` with a local `base_url`; data never leaves the machine |
 | Command-line agent | a vendor's coding agent run as a program, signed in with the PM's own login | `cli-agent` (agent mode, below) |
 
@@ -448,9 +627,11 @@ catalog where it publishes one, otherwise from the adapter's defaults and `price
 describe is treated as having no optional capabilities until the PM says otherwise or an evaluation shows them. New models show
 up through the catalog, with no code change.
 
-**Adding an account** (Settings, AI): pick the kind; for an OpenAI-compatible endpoint, pick from known endpoints (a list the
-adapters ship as data) or enter an address; paste the key, which goes to the keychain while config keeps only the reference;
-**Test** checks the key and lists the models with their capabilities and prices; choose which models fill which tiers; set
+**Adding an account** (Settings, AI): pick the kind, by name, from a list the app ships as data (`catalog/ai-endpoints.yaml`:
+services, local servers and the common command-line agents, each agent with its command, the program's own options that keep
+its tools off, how it takes the packet and where its answer is; the screen says whether the program is installed and how to sign
+in, and the person never types a command); paste the key, which is kept on this computer while config keeps only a reference
+(the keychain is *designed, not yet built*, 12.1); **Test** checks the key and lists the models with their capabilities and prices; choose which models fill which tiers; set
 `allowed_data` (new accounts start at `open`, and the screen says who will see the data: the vendor, and for an aggregator the
 aggregator too); run the evaluation (below) before a model is approved for a tier.
 
@@ -533,7 +714,7 @@ model doesn't accept.
 output. Everything else works from its classification. A sign-in failure (`auth`) always becomes a question to the PM that
 includes the adapter's `sign_in_hint()` (its own login command or page), and never reaches any other path.
 
-**Probation for a new account.** A newly approved account's changesets carry a "new account" tag and always wait for review
+**Probation for a new account** (*designed, not yet built*). A newly approved account's changesets carry a "new account" tag and always wait for review
 (nothing closes on its own) for `ai.probation.runs` runs per task kind (default 20). The PM's Looks good and Send back on them
 count toward that account's evaluation score (6.20), because a model can pass the fixtures and still follow instructions too
 literally in real use.
@@ -559,7 +740,9 @@ never switch on its own). Plugins can add fixtures for their own task kinds.
 hash; sources by id), the prompt template and playbook versions, the parameters, the model id exactly as the provider reported
 serving it, and for an aggregator the upstream host that served it. Aggregators can route one model id to different hosts and
 builds, so `routing` (4.8) can pin preferred hosts, and the quality panel can compare by host. `cockpit replay <run>` re-runs a
-packet on any model, and any run can become an evaluation case.
+packet on any model, and any run can become an evaluation case. (*Designed, not yet built*: what a `Run` keeps today is the
+provider, the model as reported, the tier, tokens, cost, outcome and error; the packet fingerprint, `replay` and upstream-host
+routing are not built.)
 
 **Usage, limits and cost.** Every run is a `Run` record: provider, model, units and cost. A usage limit pauses that provider
 until its reset (and the fallback takes over); it is not retried in a loop. Notes and messages cost little; drafting work
@@ -581,6 +764,24 @@ never something that happens to them:
   Packs declare a typical cost per task kind, and their documentation says what a typical project costs on a low-cost and a
   strong model.
 
+**Refusals, content levels and waiting out limits (as built).**
+- A **refusal** is its own outcome. An adapter reports one only from the provider's own signal (a content-filter stop, a
+  refusal field in the answer, a content-policy code in an error body), never from the answer's words. The run is recorded as
+  `refused`, with its cost and the provider's reason, and the request is never retried, sent to another account or escalated:
+  it waits for the person with the reason and the cost, and the person may send it to another account allowed to see the
+  material (`Request.use`). Accounts are offered by their names, never by model (decisions, 2026-10-12, "A refusal is its own
+  outcome…").
+- **Content levels** route work away from accounts that would refuse it before it is sent. The workspace defines its levels
+  (`ai.content_levels`), a project or a plugin record carries the ones its material has (only the person sets them), an account
+  may list the levels it takes, and a run goes only to accounts that take all of its record's and its project's levels; if none
+  does, the request waits and says why (decisions, 2026-10-12, "Content levels route work away…").
+- **Rate limits.** When the last account in line says to slow down, the call waits and tries again (`ai.rate_limits`: tries
+  and longest wait); with another account available it moves on at once. Calls an account refused for rate reasons are
+  reported as "not run" in evaluations and left out of the score.
+- **Waiting for a go.** Anything above `budgets.confirm_above_usd` asks first; `budgets.confirm_unpriced` makes runs whose cost
+  can't be estimated (a subscription) ask too, so spending stays the person's choice even where "ask above an amount" never
+  asks; plugin work can be declared to always wait for the go.
+
 **Data handling.** Each provider has `allowed_data` levels. Inputs marked restricted only go to providers allowed to see them; if
 none is, the request goes to the PM instead. Secrets come from secret references (Part 12), never from config files.
 
@@ -596,7 +797,7 @@ none is, the request goes to the PM instead. Secrets come from secret references
 
 ## 6.18 Scope
 
-One resolver answers "whose area is this?" for any person, team, item or project: tracked, a named domain (with its contact),
+*Designed, not yet built* (roadmap, phase E). One resolver answers "whose area is this?" for any person, team, item or project: tracked, a named domain (with its contact),
 observed, parked or unknown, from `config/scope.yaml` and people data. The applier, triage, routing, notices, Today, the
 check-up and the UI all ask it; no other part of the product decides scope on its own.
 
@@ -611,7 +812,7 @@ check-up and the UI all ask it; no other part of the product decides scope on it
 
 ## 6.19 Facts and lookups
 
-Some facts have a published home. In the reference pack's setup, for example, a work item's release lives in a tracker field
+*Designed, not yet built* (roadmap, phase C4). Some facts have a published home. In the reference pack's setup, for example, a work item's release lives in a tracker field
 and a release's production date on a schedule page; which tracker, which field and which pages are settings.
 Asking a person for them wastes their time and goes stale. `config/facts.yaml` (4.16) names those kinds and where each is
 looked up.
@@ -627,7 +828,8 @@ looked up.
 ## 6.20 Quality signals
 
 The PM's corrections are the best measure of whether the assistant is doing well, and the best source of test cases. Each one
-is recorded as a `Signal` (5.1) at the moment it happens:
+is recorded as a `signal` record (5.1) at the moment it happens (the recording is built; the quality panel, private evaluation
+cases from signals and rule suggestions are *designed, not yet built*):
 
 | Signal | Recorded when |
 |---|---|
@@ -647,7 +849,7 @@ is recorded as a `Signal` (5.1) at the moment it happens:
 
 ## 6.21 Standing rules review
 
-Standing rules (`config/rules.yaml`, 4.10) are useful until there are too many, they contradict each other, or a rule is
+*Designed, not yet built* (roadmap, phase E). Standing rules (`config/rules.yaml`, 4.10) are useful until there are too many, they contradict each other, or a rule is
 really a setting that only the model is enforcing (the original scope failure was exactly that). A scheduled review (an AI
 task kind, weekly by default) proposes, as held system ops the PM confirms:
 
@@ -661,7 +863,7 @@ active list short enough to read.
 
 ## 6.22 Glossary, lessons and search
 
-Runs used to read reference material on demand and write to it when they learned something. The packet now carries it, and
+*Designed, not yet built* (roadmap, phase E). Runs used to read reference material on demand and write to it when they learned something. The packet now carries it, and
 ops record what is learned:
 
 - **Glossary:** terms and acronyms with meaning, status (confirmed, assumed, unknown), source and split patterns for compound
@@ -679,6 +881,14 @@ ops record what is learned:
 
 ## 6.23 Dependencies and baselines
 
+**Provided by the project management pack (9.10).** Dependencies and baselines now belong to the project management pack, an add-on,
+not to the core (decisions, 2026-10-12, "A project management pack: an AI project manager that builds schedules and tracks the
+work"). The core keeps actions, questions, follow-ups, decisions and Today. The pack adds the plan, the schedule with
+durations, dependencies, a critical path, baselines and slips (only the person rebaselines), plans and schedules the assistant
+drafts for the person to approve, and an interface (`pm/schedule@1`) through which the writing and publishing packs put their
+milestones into one schedule; each pack still works alone. The design below is kept as the pack's starting point; the
+`Dependency` record and the `milestone.rebaseline` op are the pack's, and nothing here is built in the core.
+
 A plan is a chain of things waiting on other things, and slips are measured against what was planned. Both are core concepts,
 used by any pack.
 
@@ -693,7 +903,13 @@ used by any pack.
 
 ## 6.24 Project management support
 
-Core support for running projects, kept light and switchable (`config/raid.yaml`, 4.20). The cockpit keeps these current from
+**Provided by the project management pack (9.10).** RAID, risk reviews, escalation suggestions, communications cadence and meeting
+agendas are provided by the project management pack, an add-on (decisions, 2026-10-12, "A project management pack…"), with its
+settings in the pack's own file (4.20). The core keeps actions, questions, follow-ups, decisions and Today; a question
+unanswered for a while is a nudge on Today today (6.15). The design below is kept as the pack's starting point and is not built
+in the core.
+
+Support for running projects, kept light and switchable (`config/raid.yaml`, 4.20). The cockpit keeps these current from
 the inputs and surfaces what needs attention; the PM decides.
 
 - **RAID:** risks, issues (problems happening now), assumptions and dependencies (6.23), alongside decisions. A risk that comes
@@ -714,21 +930,38 @@ the inputs and surfaces what needs attention; the PM decides.
 ## 6.25 Asking the assistant
 
 Not every need deserves a built-in feature. The PM can ask the assistant anything about the workspace ("what's on the critical
-path for the launch?", "which contributors haven't replied this week?", "draft a risk review") from an Ask box.
+path for the launch?", "which contributors haven't replied this week?", "draft a risk review") or about the app ("how do I
+change how often mail is read?") from an Ask box. The ask answers **from quoted material only** (decisions, 2026-10-10, "The
+core is complete on its own…", and 2026-10-11, "Asking the assistant answers from quoted material only").
 
-- An ask is a request of kind `ask` (4.8): its packet has the playbooks, the records the question concerns (found with search
-  lookups, 6.22) and the open items, like any other run.
-- The answer is a note on the request, with links to the records it used. If the answer suggests changes (a new risk, a
-  reassigned action), they come as ops in a changeset under the usual tiers and checks (6.7); a draft for someone else waits for
-  approval like any other.
+- **An ask is a core request of kind `ask`** (4.8), started from the Ask box (`POST /api/ask`) with the PM's question as its
+  note, so it is trusted as the PM's own words. The worker processes it like any request, on the tier `ai.tasks.ask` or the
+  `write` role gives it.
+- **Its packet holds only what an answer may quote:**
+  - the sections of the **user guide** that share the most words with the question (up to four; a section's title counts
+    double; the overview when nothing matches), plus the help files add-ons ship (`provides.help`). The guide
+    (`engine/guide/guide.md`) is the only source for how the app works;
+  - the **settings**, one line each: key, current value, default, whether the person can change it, is locked or is changed in
+    a file, and what it does. Nothing says where a key comes from, and keys that name a credential are left out;
+  - **what this install can do:** each add-on's kinds of AI work, actions, screens, setup steps and item types, or why it is
+    off;
+  - the **records** the question concerns and the open items, like any other run. Text in records came from inputs and is
+    material, never instructions.
+- **The answer is an `answer` op** (an `answer` record). Its `cites` are the exact words the answer rests on, and each must
+  appear in that material (whitespace and quote marks aside), the same check as evidence (6.7). A made-up button, setting or
+  feature can't be cited, so it is refused; when the material doesn't answer, the answer says so and cites the closest words.
+  Links back to the records it used are shown beside it.
+- **A setting the person can change** comes as a `setting.propose` op (a `setting_proposal`): the key, the new value and why.
+  Nothing changes until the person applies it, with one click, through the same settings save as any change (the files'
+  fingerprint, validation, the record of the change, 4.22), so it can be undone. A locked key, or one changed only in a file, is
+  never proposed; the answer says where it is changed instead.
+- **Something the product can't do** comes as a `report.draft` op (a `report`) to the maintainers, written without names from
+  the records, which the person reviews and sends themselves (6.13). The product never changes its own code.
+- **Changes** the question asks for (a new action, a decision, a note) come as ops in a changeset under the usual tiers and
+  checks (6.7), with the ops reading notes uses; a draft for someone else waits for approval like any other. Plugins' ops are
+  not offered to asks.
+- With no account set up, the stand-in answers by quoting the first guide passage chosen for the question (7.8).
 - An ask that comes up again and again is a signal (6.20): it may deserve a Today line, a panel or a playbook entry.
-- **Asking about the app.** The same box answers questions about the product. The packet holds what this install can do
-  (each add-on's kinds of work, actions, screens and setup steps), the settings with their values, defaults and
-  descriptions (never where keys come from), the records, and the sections of the user guide that share the most words
-  with the question. The answer is an `answer` op whose cited words must be in that material, so a made-up button or
-  setting can't be cited. A setting the person can change comes as a `setting.propose` op, applied with one click and
-  Undo; something the product can't do comes as a `report.draft` to the maintainers (6.13), written without names from
-  the records, which the person reviews and sends.
 
 ## 6.26 Stages
 
@@ -749,3 +982,122 @@ Moving a record is an op (`stage.move`), so it is in the ledger and can be undon
 shows "ready to move on" for it (6.15), once it is in a stage (starting one is done from Stages); when they fail, the record shows which ones and why. Stages are data on the record,
 so a title's or a deal's history of stages is a query, and dependencies and baselines (6.23) can refer to them.
 
+## 6.27 Sign-ins to services
+
+Some services (a mailbox, a calendar) let a person in only through their own sign-in page. The core runs that for plugins, so no
+plugin handles a password or a refresh token (decisions, 2026-10-11, "Mail and calendar from named services are plugins in a
+private repository; the core signs in"). The mechanism is generic: an add-on declares a sign-in (`registrar.sign_in`, listed in
+`provides.sign_ins`) and the core does the rest. Core code names no service.
+
+- **What an add-on declares:** the addresses of the service's sign-in page and token endpoint (HTTPS, on hosts in
+  `requires.network`), the scopes it asks for, what the person is asked to allow in plain words (shown before they leave the
+  app), the names of its declared secrets that hold the app registration, a way to name the signed-in account, an address where
+  signing out withdraws access, optionally its own app registration (below), and the sources to start (below).
+- **The flow** is OAuth 2.0 authorization code with PKCE, the flow for apps on a person's computer. The person starts it from the
+  Sign-ins row, or from the setup step the core adds for each sign-in. The core makes a one-time `state` and a PKCE verifier,
+  kept in memory for ten minutes, and gives the screen the service's page. The service sends the person back to
+  `<server.public_url, else http://host:port><base_path>/api/sign-ins/callback`, built from settings (4.13), so it works under a
+  nested base path; the app registration must allow exactly that address (the Sign-ins row shows it).
+- **The callback is served without the app's cookie.** The person arrives from the service's page, and a browser may leave a
+  strict cookie off such a navigation. It is safe because the route does nothing without a `state` this app issued, unexpired
+  and unused, which PKCE ties to the verifier. It answers with a page that takes the person back into the app from the app's
+  own address, where the cookie is sent. When the service refuses, its error code and description are kept and shown as text,
+  never as markup.
+- **Tokens stay on this computer**, in the workspace's private folder beside the plugin's other kept secrets, readable by their
+  owner only (4.24); never in a settings file, the export or the synced folder. The plugin never sees the refresh token. Its
+  connector asks the core for a current access token (`context.access_token(name)`); the core renews it when it is about to run
+  out. A sign-in that can't be renewed reads as an `auth` failure, so the person is asked to sign in again. When the service
+  refuses a renewal, the row says "Sign in again" at once and later reads get `auth` without asking the service again; a
+  service that is down or out of reach is not a refusal and the sign-in stands. Signing out withdraws the access at the service
+  when it offers a way (RFC 7009, best effort) and forgets the tokens. The row shows the scopes asked for that the service did
+  not grant.
+- **Whose app registration is used**, in this order (decisions, 2026-10-11, "Signing in needs no app registration from the
+  person"; the id and its secret always come from the same place):
+  1. **the workspace's**: references in `workspace.plugins.secrets` (4.1). A hosted app uses these;
+  2. **the person's own**, pasted on the Sign-ins row beside a numbered list of steps with links that the add-on supplies. It is
+     kept on this computer (local mode only), changing it starts the sign-in over (the service ties tokens to the
+     registration), and it can be set aside and brought back. No settings file or environment variable to edit;
+  3. **the add-on's own default**, so the person only signs in. An add-on ships one only for a registration the service issues
+     to apps on a person's computer, and says what using it means. It allows certain callback addresses (loopback addresses
+     match on any port); at any other address (another base path, a hosted app) the person is asked for their own, with the
+     reason.
+- **Signing in is the whole setup** (decisions, 2026-10-12). The add-on lists the sources its sign-in starts (the inbox, the
+  main calendar), each with its connector, label, settings and interval. As soon as the person signs in, the core adds them to
+  `watch.sources` (4.5) **once per sign-in, and only where the workspace reads nothing with that connector yet**, with
+  `first_run: recent` (6.4). A mail source with nothing chosen reads the inbox, so nothing has to be chosen first. The person
+  narrows, adds or removes sources afterwards, and their changes and removals stand. Which sign-ins have had their sources
+  started is kept on this computer; a sign-in made before its add-on declared any gets them at the next start.
+- **"Not reading".** If the person later removed the sources, the Sign-ins row says what it is not reading and offers **Start
+  reading**, which adds them again with one click.
+
+## 6.28 Live updates
+
+The app tells open screens when something changed, so they refresh without the person asking (`GET /api/events`, a stream of
+server-sent events). A change counter is bumped after any write the app makes, whether from a screen, the worker, a source
+read, a backup or a restart request. Each `changed` event carries the new version and **the record kinds written since the
+previous event**, read from the ledger: `{"version": 12, "kinds": ["person", "request"]}`. A screen then refreshes only the
+queries those kinds affect. A change that wrote no records (a setting, a source's status) names none, and the screen refreshes
+everything; a bare number from an older server reads the same way. A keep-alive line is sent every 15 seconds, and the stream
+ends when the app closes.
+
+## 6.29 Add-ons: catalog feeds and one-click install
+
+(3.11 describes the screen; this is the engine.)
+
+- **Feeds.** A feed is one index file (YAML or JSON, at most 2 MB, at most 200 entries) at an https address. The engine reads
+  the maintainers' feed shipped with the build, unless `workspace.plugins.catalog.shipped_feed` is off, and the workspace's
+  own `feeds`; and only when the person opens Available (when the kept copy is older than `refresh_hours`) or presses Refresh.
+  The copy is kept in the workspace's private folder for offline use, and a feed that can't be read falls back to it, with the
+  reason. Everything in a feed is untrusted: text stays text, links are https only, and nothing in it becomes a rule, a
+  setting or an instruction. An entry that doesn't fit the format is left out with a note; the rest of the feed still shows.
+- **An entry** has an id, name, one-line summary, publisher, whether the maintainers made it, when it was updated, its version,
+  the `plugin_api` range it works with (checked against the running version), a price as the publisher states it, a homepage,
+  how to get it, whether it can be tried in the demo, its typical AI jobs, its manifest's `provides` and `requires` copied
+  exactly, and, to be installable here, a **`release`**: an https address of a release file and its SHA-256 checksum.
+- **What it adds, reaches and keeps** is written by the core from the manifest (never from the pack's own description): counts
+  and names of item types, screens, Today lines, kinds of AI work, actions, setup steps and sources it adds; the sign-ins,
+  hosts, programs and secrets it reaches; and the most private data level it uses. **What its AI work costs here** is each
+  typical job priced on the person's own accounts for its role (the price when the model's prices are known, else only the
+  size of the work, or "no account is set up for this work").
+- **Install** (decisions, 2026-10-11, "One-click install for add-ons comes before the freeze"; local mode only; a hosted app's
+  add-ons come with its deployment): `POST /api/packs/{id}/install` downloads the release file from the entry's address
+  (https, at most 50 MB), checks it against the entry's checksum **before touching anything**, and installs it beside the app.
+  A private pack's release host takes a read token the person gives once, kept as a secret reference
+  (`workspace.plugins.catalog.release_tokens`, by host name); it is sent only to that host and never on a redirect to another.
+  Only a wheel of pure Python whose needs the app already has (each requirement present at an allowed version) is installed
+  this way; anything else is refused with what to do instead. Installing a pack's own libraries is planned (roadmap, A2).
+  Paths outside the install place are refused. An earlier install of the same pack is replaced only if it was installed from
+  here (the install marks its metadata).
+- **Update** is the same call. **Remove** (`POST /api/packs/{id}/uninstall`) takes away only the files an install from here
+  recorded, and only once the pack is turned off; its records and settings stay.
+- **Installing never turns a pack on.** Turn on is a separate step (`POST /api/packs/{name}/on`, with Undo), and the app uses
+  the pack after the restart the person chooses (6.14). The app never handles payment.
+
+## 6.30 Record pages and table counts
+
+The core draws a page for any record it holds, its own types and a plugin's, and the counts beside each row of the Projects and
+People tables (7.14). `engine/record_page.py` only reads; nothing calls AI. For a record it gives:
+- its **name**, taken from the record (full name, name, title or text), never its id;
+- its **details**: the fields its type declares, in the order it declares them, leaving out empty values, long text, aliases and
+  the core's own `id`, `stage` and `ext`; each with a type the screen uses to show it (date, number, yes or no, choice, list,
+  map or text), and every reference resolved to the referred record's name and a link;
+- what is **still open with it**: for a person, the open actions they own and the open questions to them; for a project, those
+  in the project; for an organization, those of its people;
+- what **happened to it**, newest first: the ledger's entries for it and for what is open with it, one entry per record and
+  change (not per field written), whether the assistant or the person did it, at most the latest 60.
+For the tables, `counts` gives per person the open items with them and when they were last contacted (the latest day an action
+was told or a question sent), and per project its open actions, open questions and when it last changed.
+
+## 6.31 Value lists
+
+(5.4 says what a list is and 4.23 why it is not config; this is how the engine keeps them.)
+- **Created when a workspace opens.** For every list the core ships (`engine/defaults/value_lists.yaml`) and every list a
+  running plugin declares, a workspace that lacks it gets a `value_list` record with the first values plus any value its
+  records already hold, so nothing that was valid becomes invalid. After that the list is the person's.
+- **Changed only by its three ops** (`list.add`, `list.rename`, `list.retire`), each a system op with Undo and each in the
+  ledger. A rename writes the list first and then every record that holds the value, in the same transaction.
+- **Enforced where records are written,** not on a screen: the storage layer refuses an off-list value from any writer, naming
+  the list's values, and lets a record keep a value that was retired after it was set.
+- **Seen by the assistant:** a packet lists the values each list-bound field takes (6.6), so a proposal names a real value.
+  Adding a value is a deliberate act ("Add to the list"), never a side effect of writing a new value; the assistant may only
+  propose it, as a system op that waits for the person.

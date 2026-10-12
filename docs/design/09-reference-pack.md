@@ -1,9 +1,26 @@
-# Part 9. Packs: workplace PM (reference) and publishing
+# Part 9. Packs: workplace PM (reference), publishing, project management and writing
 
-Two bundled packs. The **workplace PM** pack (9.1 to 9.5) is the use this design came from, built as a pack
-(`plugins/workplace-pm/`) on fictional data: the most proven design and the main test that the core is complete. The
-**publishing** pack (9.6 to 9.9) is the first pack in real use, for a small imprint bringing titles to launch. Everything here is generic for workplace status reporting; the organization's specifics still
-live in a workspace.
+Packs are **add-ons in their own repositories**, not bundled with the core (decisions, 2026-10-10 "The core is complete on
+its own", 2026-10-11 "Packs are found on an Add-ons screen"). The core is a complete product without them; this repository
+holds the core, the define-your-own kit, its templates and the example plugin. A person finds a pack on the Add-ons screen
+(3.11) and installs it from there (7.15). Each pack works alone and uses another pack only through the core's interfaces
+(3.9). The packs prove that the plugin API is enough for very different kinds of work.
+
+This part keeps two designs in full (the first two below) and adds two short entries:
+- the **workplace PM** pack (9.1 to 9.5), the use this design came from: the most proven design and the main test that the
+  core is complete;
+- the **publishing** pack (9.6 to 9.9), for a small imprint bringing titles to launch;
+- the **project management** pack (9.10), decided 2026-10-12;
+- a **writing** pack (9.11).
+
+Everything here is generic; an organization's specifics live in a workspace.
+
+| Pack | Where it lives | State (2026-10-12) |
+|---|---|---|
+| Workplace PM (9.1 to 9.5) | A private add-on in its own repository | Not started. The design is kept as the worked example; it is not on the roadmap to 1.0 |
+| Publishing (9.6 to 9.9) | A private add-on in its own repository | Designed; not started. Phase C of the roadmap (C3), after the project management pack |
+| Project management (9.10) | A private add-on in its own repository, to be created | Decided; not started. Phase C of the roadmap (C2) |
+| Writing (9.11) | A private add-on in its own repository | Built far enough to load and register on the current plugin API; it cannot yet be installed from the screen (phase A2), and its review is phase C1 |
 
 ## 9.1 The use
 
@@ -40,8 +57,9 @@ kinds, not on one vendor: a wiki vendor's connector and channel live in their ow
 
 ## 9.4 Fictional demo setup
 
-Both fictional workspaces enable the pack with different organizations, programs, people and vocabulary, a fake wiki and a fake
-tracker backed by fixtures.
+Designed, not built. The pack carries a fictional demo of its own, with a fake wiki and a fake tracker backed by fixtures,
+for "Try it in the demo" on the Add-ons screen (`cockpit demo --plugin`, 3.11). The repository's two fictional workspaces do
+not enable it today; they run the example plugin and the kit.
 
 ## 9.5 Pack-specific rules
 
@@ -62,10 +80,11 @@ promotion copy. The PM is the publisher; contributors never use the tool and get
 ## 9.7 Publishing: what it registers
 
 - **Record type** `publishing/title`: working title, formats, stage (core stages, 6.26, with the pack's defaults in
-  `config/stages.yaml`), launch date (with baseline, 6.23), identifier status,
+  `config/stages.yaml`), launch date (with a baseline when the project management pack is on, 9.10), identifier status,
   contributors (person ids by role).
 - **Launch plan template** (`config/plugins/publishing.yaml`): the milestones of a launch, each with an offset from the launch
-  date (its lead time) and the milestones it depends on. The pack ships a starting template the PM edits; every milestone name,
+  date (its lead time) and the milestones it depends on. When the project management pack is on, the launch plan's milestones
+  go into its schedule through `pm/schedule@1`; alone, the plan is a plain list of milestones. The pack ships a starting template the PM edits; every milestone name,
   lead time and dependency is config. `publishing/plan-from-template` creates a title's milestones and dependencies from it.
 - **Scope defaults:** the imprint's own work and its contracted contributors are the tracked area; a vendor's internal process
   (a printer's queue, a distributor's listing pipeline) is a domain with the account contact as its one contact (4.4).
@@ -87,8 +106,12 @@ promotion copy. The PM is the publisher; contributors never use the tool and get
     milestones that depend on the files; when page count or trim size changes, asks the PM, since it changes the spine
     width and the print price; fills the platforms' AI-disclosure answers from the authorship breakdown, for the PM to
     check; on `withdrawn`, marks the launch milestones that depend on the files as at risk.
-- **Today lines:** launch countdown, milestones due within the configured window, dependencies at risk (6.23).
-- **Panels:** launch timeline (baseline against current dates, with dependencies), contributors by role.
+- **Today lines:** launch countdown, milestones due within the configured window, and, with the project management pack,
+  dependencies at risk.
+- **Panels:** launch timeline (with the project management pack: baseline against current dates, with dependencies),
+  contributors by role.
+- **Listing sheet and prices:** a listing sheet per platform and a price calculator, both from dated platform data in
+  config, never in code (roadmap C3).
 - **Channels:** clipboard only at first; email, newsletter and social channels are later plugins.
 - **Playbook** (3.8): launch practice for a small imprint: typical lead times and the order of production steps (as defaults
   for the launch template), what to confirm with each kind of contributor and when, how to write to editors, reviewers and
@@ -103,6 +126,35 @@ connector or channel.
 
 ## 9.9 Publishing: fictional demo setup
 
-`demo-b` is a fictional small imprint with one title, a launch plan made from the template, contributors in each role, and
-fixture emails from them. The owner's real imprint runs in a private workspace outside this repository.
+The two fictional workspaces are **test fixtures and the sandbox**, never a person's starting point; a real workspace starts
+from `cockpit init` with no template (decisions, 2026-10-12). `demo-b` is a fictional small imprint. Today it holds people,
+projects, evaluation cases and a content-calendar kit configuration; it has no title record or launch plan, because the pack
+does not exist yet. The pack will carry its own demo (one title, a launch plan made from the template, contributors in each
+role and fixture emails from them), as every pack does (3.11). The owner's real imprint runs in a private workspace outside
+this repository.
+
+## 9.10 Project management pack
+
+An AI project manager for any project: it knows what is being done, builds schedules and tracks the action items (decisions,
+2026-10-12 "A project management pack"). A private add-on in its own repository; not started (roadmap C2). It is distinct from
+the workplace pack (9.1 to 9.5), which is about wiki pages and trackers at a workplace.
+- **The core keeps** what every kind of work needs: actions with owners, questions, follow-ups, decisions and Today.
+- **The pack adds planning,** through ops and core records:
+  - the plan: goals, phases, deliverables and milestones;
+  - the schedule: durations, dependencies, a critical path, dates worked out from the dependencies, baselines and slips
+    against them (only the person rebaselines);
+  - plans and schedules drafted by the assistant from a brief, notes or another pack's milestones, for the person to approve
+    like any change;
+  - daily at-risk lines on Today, with the action items behind them, and a weekly status report drafted to send;
+  - RAID: risks, issues, assumptions and decisions, with owners and review dates.
+- **An interface for other packs:** `pm/schedule@1`, through which the writing and publishing packs put their milestones
+  into one schedule (3.9). Each pack still works alone.
+- **What moves out of the core:** dependencies and baselines (6.23) and RAID with its reviews, escalation suggestions,
+  cadence and meeting agendas (6.24) are this pack's work, not the core's.
+
+## 9.11 Writing pack
+
+A writing pack takes a writer from an idea, or from a finished manuscript, to a finished book, and hands the finished book to
+the publishing pack through `publishing/manuscript-source@1` (9.7). A private add-on in its own repository; its review is
+phase C1 of the roadmap.
 

@@ -416,6 +416,9 @@ the next screens step. No change to scope.
 
 ## 2026-10-11: Settings are saved from the screens, and the app restarts itself to use them
 
+**Superseded in part** by "The app restarts only when it must, and only when the person says so" (same day): the app
+no longer restarts itself.
+
 **Decided by:** project lead, following design 4.0, 6.14 and 7.8.
 
 **What:**

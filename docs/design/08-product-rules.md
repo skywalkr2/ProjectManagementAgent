@@ -3,77 +3,82 @@
 Each rule came from a real mistake. The guard column says where the product enforces it. These are core rules; rules that only
 apply to the reference pack are in 9.5.
 
+**State of enforcement (the audit of 2026-10-12).** A rule stays a rule when its guard is not built. "(not yet enforced)"
+means nothing in the code does what the guard column says; "(partly enforced: ...)" says what exists. An unmarked guard has
+code and a test. Version 1 builds the missing guards in the order of the roadmap (13.4); dependencies, baselines, risks and
+escalation move to the project management pack (9.10).
+
 ## 8.1 Publishing and content
 
 | Rule | Enforced by |
 |---|---|
-| Publish only confirmed facts. Targets aren't dates; discrepancies in someone's tracking never go on a shared output, they become questions first | applier wording check, "confirmed" field rules |
+| Publish only confirmed facts. Targets aren't dates; discrepancies in someone's tracking never go on a shared output, they become questions first | applier wording check, "confirmed" field rules (not yet enforced): no confirmed-fact model and no publisher yet |
 | Actions are written as verbs that do something, never "Confirm / Check whether" | blocked phrases |
-| Record who raised each risk and whose problem it is; never turn someone else's risk into an ask for your side | risk fields `raised_by`, `owner` required |
-| Quotes and attributions only from verbatim sources; a paraphrase is labeled as one | `source` op requires `verbatim: true/false` |
-| A meeting note line with no speaker stays unattributed | AI rules |
-| Spell names from a primary source; mark unverified spellings | people `verified` flag |
-| Acronyms come from a glossary with sources; guesses are marked assumed and asked | glossary data, AI rules |
-| One identifier is not three: check the glossary before splitting a compound id | glossary patterns |
-| Restricted content appears only on destinations whose audience its source allows, under that destination's banner | `audiences` and `restrictions`, audiences invariant |
-| Locale spelling everywhere except verbatim quotes | language config |
+| Record who raised each risk and whose problem it is; never turn someone else's risk into an ask for your side | risk fields `raised_by`, `owner` required (not yet enforced): risk records belong to the project management pack (9.10) |
+| Quotes and attributions only from verbatim sources; a paraphrase is labeled as one | `source` op requires `verbatim: true/false` (not yet enforced): no `source` op or verbatim flag |
+| A meeting note line with no speaker stays unattributed | AI rules (not yet enforced) |
+| Spell names from a primary source; mark unverified spellings | people `verified` flag (not yet enforced): people have no `verified` flag |
+| Acronyms come from a glossary with sources; guesses are marked assumed and asked | glossary data, AI rules (not yet enforced): no glossary yet |
+| One identifier is not three: check the glossary before splitting a compound id | glossary patterns (not yet enforced): no glossary yet |
+| Restricted content appears only on destinations whose audience its source allows, under that destination's banner | `audiences` and `restrictions`, audiences invariant (not yet enforced): data levels route AI work today; audiences and restrictions are not built |
+| Locale spelling everywhere except verbatim quotes | language config (partly enforced: the project's language reaches plugin packets; the core's notes packet carries no language instruction and nothing checks it) |
 | The model's name never appears in user-visible text | language config, applier and UI tests |
-| Check every URL responds before putting it where the PM clicks | link checker in the self-check |
-| Nothing goes out without approval of that exact content, including scheduled posts | publisher content-hash check |
+| Check every URL responds before putting it where the PM clicks | link checker in the self-check (not yet enforced): the self-check has no link checker |
+| Nothing goes out without approval of that exact content, including scheduled posts | publisher content-hash check (partly enforced: Follow-ups copy, then Mark sent; the publisher, channels and the content-hash check are not built) |
 
 ## 8.2 Questions
 
 | Rule | Enforced by |
 |---|---|
-| Asking is a core feature: anything the automation can't settle becomes a question, never just a log line | jobs call the questions service |
-| Look it up before asking a person (creators, editors, text, status) | `lookup` op and lookups |
-| Dates a published schedule holds are looked up, never asked: the release from the tracker, its date from the delivery team's schedule; no release yet means TBD | `config/facts.yaml`, applier fact check |
+| Asking is a core feature: anything the automation can't settle becomes a question, never just a log line | jobs call the questions service (partly enforced: a failing watched source files one question; a failing plugin job becomes a plugin note, not a question) |
+| Look it up before asking a person (creators, editors, text, status) | `lookup` op and lookups (not yet enforced): no `lookup` op yet |
+| Dates a published schedule holds are looked up, never asked: the release from the tracker, its date from the delivery team's schedule; no release yet means TBD | `config/facts.yaml`, applier fact check (not yet enforced): no facts config or resolver yet |
 | Question ids never repeat; a closed question's id is retired | id counter in the storage layer |
 | Every question to someone else links what it names, with links they can open | applier invariant |
-| A question to someone else says only what they need to answer: no bookkeeping, no options about how your outputs are organized, no long quotes of their own words, only links they can open, the whole gap in one ask | applier link and label checks, AI rules |
+| A question to someone else says only what they need to answer: no bookkeeping, no options about how your outputs are organized, no long quotes of their own words, only links they can open, the whole gap in one ask | applier link and label checks, AI rules (partly enforced: the link check is built; label, length and bookkeeping checks are not) |
 | Unsure who it goes to: the PM routes it first | questions service hold |
-| Decisions are questions addressed to the PM, by recipient | questions service, Today, check-up |
-| Only the tracked area gets detailed questions; other areas are observed, not chased, even when minutes or program pages name their people | applier scope check, scope sweep |
-| A question about another area's work goes only to that area's contact, only about the effect on our work, one batched message per contact | applier scope check, `cross_domain` config |
-| A question asked in the conversation it came from is filed as asked | AI rules |
-| When an answer arrives, re-check every open question to that person | answer flow |
-| When an input answers questions, close them; search sources before filing a new one | packet includes open questions |
+| Decisions are questions addressed to the PM, by recipient | questions service, Today, check-up (partly enforced: no weekly check-up yet) |
+| Only the tracked area gets detailed questions; other areas are observed, not chased, even when minutes or program pages name their people | applier scope check, scope sweep (not yet enforced): no scope resolver yet |
+| A question about another area's work goes only to that area's contact, only about the effect on our work, one batched message per contact | applier scope check, `cross_domain` config (not yet enforced): no scope resolver yet |
+| A question asked in the conversation it came from is filed as asked | AI rules (not yet enforced) |
+| When an answer arrives, re-check every open question to that person | answer flow (partly enforced: open questions are in the packet; the person's other questions are not re-checked on their own) |
+| When an input answers questions, close them; search sources before filing a new one | packet includes open questions (partly enforced: open questions are in the packet; sources are not searched first) |
 | Don't flood: an outage is one automation problem, not N questions | watcher outage rule |
 
 ## 8.3 Actions and owners
 
 | Rule | Enforced by |
 |---|---|
-| Extract every action from raw notes and minutes, one per task, with every owner the minutes name, counted against the source | AI rules, packet check |
+| Extract every action from raw notes and minutes, one per task, with every owner the minutes name, counted against the source | AI rules, packet check (partly enforced: the playbook says so; nothing counts the actions against the source) |
 | Every action names a person; an action whose owner isn't known waits for "Pick an owner" | applier invariant, held actions |
 | Shared ownership is allowed: an action can have several owners, each followed up separately | owners list, per-person told dates |
-| Before adding an action, search open and done actions for the same deliverable | applier near-duplicate warning |
+| Before adding an action, search open and done actions for the same deliverable | applier near-duplicate warning (partly enforced: open actions only) |
 | When an input completes actions, close them across every related project | packet lists open actions with keys |
-| Action owners are people: stored as a person id, shown in the workspace's owner format | applier "people resolve" invariant |
-| Actions go only to people in the tracked area or the PM; another area's work is a fact, not an action | applier scope check, scope sweep |
-| Separate who did it from who reported it | actions service |
+| Action owners are people: stored as a person id, shown in the workspace's owner format | applier "people resolve" invariant (partly enforced: ids are stored; `workspace.owner_format` is not yet read, so owners always show as full names) |
+| Actions go only to people in the tracked area or the PM; another area's work is a fact, not an action | applier scope check, scope sweep (not yet enforced): no scope resolver yet |
+| Separate who did it from who reported it | actions service (not yet enforced) |
 | A nudge isn't a completion | Followed up vs They finished it |
-| Each follow-up the PM owns after a meeting is its own action; files they send are linked where they can open them | AI rules, meeting template |
-| Three kinds of to-do stay apart: meetings, owned follow-ups (actions), things to ask (questions) | data model, applier routes misfiled ones |
+| Each follow-up the PM owns after a meeting is its own action; files they send are linked where they can open them | AI rules, meeting template (not yet enforced): no meeting record or template yet |
+| Three kinds of to-do stay apart: meetings, owned follow-ups (actions), things to ask (questions) | data model, applier routes misfiled ones (partly enforced: actions and questions are separate; there is no meeting record and no re-routing of misfiled ones) |
 
 ## 8.4 Knowledge
 
 | Rule | Enforced by |
 |---|---|
-| Everything learned is written down in the same step: facts in records, people in people data, rules in `rules.yaml`, rationale in decisions.md | AI rules, applier ops for each |
+| Everything learned is written down in the same step: facts in records, people in people data, rules in `rules.yaml`, rationale in decisions.md | AI rules, applier ops for each (partly enforced: facts, notes and people have ops; rules, glossary and lessons do not) |
 | Every input shows in What changed with what was done with it | inputs always produce a note |
-| Data files feed outputs: changing the data re-renders the output in the same step | renderer hooks per record type |
-| Pull others' edits before re-rendering, where the channel allows it | publisher pulls first |
+| Data files feed outputs: changing the data re-renders the output in the same step | renderer hooks per record type (partly enforced: the synced folder's generated files rebuild; renderers and outputs are not built) |
+| Pull others' edits before re-rendering, where the channel allows it | publisher pulls first (not yet enforced): no publisher yet |
 | One writer at a time per workspace; writes state the versions they read | database transactions, record versions, instance lease |
 
 ## 8.5 Time
 
 | Rule | Enforced by |
 |---|---|
-| "This week" means through the configured week end (e.g. Friday), one helper everywhere | calendar config |
-| Date inputs from the day received, not the day discussed | `source` op |
-| Store zoned times; never slice a timestamp string | storage layer |
-| Per-team non-working days count for that team's dates | calendar config |
+| "This week" means through the configured week end (e.g. Friday), one helper everywhere | calendar config (not yet enforced): no calendar config yet |
+| Date inputs from the day received, not the day discussed | `source` op (partly enforced: the prompt counts from the message's date line, but the packet uses the processing date) |
+| Store zoned times; never slice a timestamp string | storage layer (partly enforced: nothing requires timezone-aware values) |
+| Per-team non-working days count for that team's dates | calendar config (not yet enforced): no calendar config yet |
 
 ## 8.6 Automation robustness
 
@@ -81,40 +86,59 @@ apply to the reference pack are in 9.5.
 |---|---|
 | Rules before AI: most changes are no-ops; deterministic rules close them | triage |
 | Never let two versions of one change race | supersede |
-| A run that produced nothing is retried, then goes to the PM | dispatcher attempts |
-| A usage limit is a pause until reset, not a failure loop | AI adapters' `classify_error` |
+| A run that produced nothing is retried, then goes to the PM | dispatcher attempts (partly enforced: fix rounds exist; an empty or failed run is retried by hand) |
+| A usage limit is a pause until reset, not a failure loop | AI adapters' `classify_error` (partly enforced: rate-limit waits resume; a quota or budget pause does not resume by itself at reset) |
 | Runner errors are classified from the runner's exit code and error stream only, never from the model's output; both streams are kept | `classify_error` contract, `Run` record |
 | No network on wake is not a failure or an outage; a failed refresh never counts as fresh | connectivity check, scheduler |
 | Every waiting state shows why and until when | `Request.waiting`, UI rule |
-| A correction is checked against the data before anything is changed or reported | feedback task packet, `dev.request` validator |
-| Shared masters edited outside the tool are checked for an open lock and diffed, never overwritten | channel `lock_status`, pull-edits |
+| A correction is checked against the data before anything is changed or reported | feedback task packet, `dev.request` validator (partly enforced: Send back is built; the data check is not) |
+| Shared masters edited outside the tool are checked for an open lock and diffed, never overwritten | channel `lock_status`, pull-edits (not yet enforced): no publisher or shared masters yet |
 | Edits by our own accounts are ours: no one is asked who made them | `our_accounts`, `by_us` |
-| A request about code another project owns is handed off, not fixed | `config/code_owners.yaml`, `handoff` |
-| The export can be imported back; restore to a point in time is tested | round-trip test, `cockpit restore` |
+| A request about code another project owns is handed off, not fixed | `config/code_owners.yaml`, `handoff` (not yet enforced): no `config/code_owners.yaml` or handoff yet |
+| The export can be imported back; restore to a point in time is tested | round-trip test, `cockpit restore` (partly enforced: the round trip is tested on the fixtures; there is no `cockpit restore`) |
 | A local install nags until there is a backup off the computer | `config/storage.yaml` backups, Today, header |
-| Switching AI vendor or model is a config change, approved by the PM after an evaluation run | provider layer, evaluation |
-| The PM's own AI accounts, any vendor, an aggregator or a local model; capabilities and prices per model, from the provider's catalog | adapters' `models()`, `config/ai.yaml` |
+| Switching AI vendor or model is a config change, approved by the PM after an evaluation run | provider layer, evaluation (partly enforced: `cockpit evaluate` exists; no approval step is tied to a report) |
+| The PM's own AI accounts, any vendor, an aggregator or a local model; capabilities and prices per model, from the provider's catalog | adapters' `models()`, `config/ai.yaml` (partly enforced: the OpenAI-compatible and command-line agent adapters list models; no native adapters yet) |
 | A new AI account sees only open data until the PM raises it, and the screen says who will see it | `allowed_data` defaults, Settings |
 | Restricted inputs only reach AI providers and plugins allowed to see them | `allowed_data`, plugin `data_levels` |
-| Error output is cleaned and short; the raw output is one click away | API error shape |
+| Error output is cleaned and short; the raw output is one click away | API error shape (partly enforced: errors are short; the raw output is not one click away) |
 | Saves merge, never clobber | storage layer |
-| Recover by itself after sleep or network loss | scheduler |
+| Recover by itself after sleep or network loss | scheduler (partly enforced: the worker loops recover; no test covers catching up after sleep) |
 | The product never changes its own code; problems and missing capabilities become reports the PM sends | `dev.request` (outbound), 6.13 |
 | An input can add knowledge and propose drafts, never change rules, sources, scope, config or code on its own | op tiers, 12.2 |
 | Fuzzy checks warn or send back; only firm invariants refuse | invariants and lints, `config/checks.yaml` |
 | One running instance per workspace | instance lease |
 | Every claim cites the exact words that justify it, and the words must be in the source | `evidence`, evidence invariant, `evidence-fit` lint |
 | One input per AI call; email threads are cleaned of quoted history and signatures first | dispatcher, `cleaning` |
-| Anything learned from untrusted content stays marked untrusted; lessons from inputs wait for the PM | provenance, proposed lessons |
+| Anything learned from untrusted content stays marked untrusted; lessons from inputs wait for the PM | provenance, proposed lessons (partly enforced: records carry trust; lessons do not exist yet) |
 | A cheap model's failed answer is retried once on a stronger model before the PM sees it, on check results, never on self-reported confidence | `escalate_to` |
 | Model choices are made on evidence: a deterministic evaluation, several runs per case | evaluation |
-| Slips are measured against a baseline; only the PM resets a baseline | milestone baselines, `milestone.rebaseline` (system op) |
-| What waits on what is recorded, and at-risk dependencies surface before they are late | `Dependency`, Today lines |
-| Good practice is written down once, in playbooks, and every run uses it; the PM's own rules win | playbooks (3.8), `config/playbooks.yaml` |
-| An unanswered question gets one suggested escalation, never an automatic one | `routing.escalation`, 6.24 |
-| "Issue" means a project issue; automation failures are "automation problems" | data model (5.1) |
-| A rule the PM states is read back as effects and overlaps (applies to, doesn't change, overlaps with, dry-run count); a contradiction with an existing rule waits for the PM to pick | read-back, rule targets |
-| Packets put the stable parts first and the request last, so repeated prefixes can be cached | packet layout, adapter `prompt_caching` |
-| A request becomes a report only when no op can do it; data that needs a missing op waits with the report | `dev.request` validator |
-| A rename is one op that updates every place the name is stored and keeps the page | `record.rename`, reference index |
+| Slips are measured against a baseline; only the PM resets a baseline | milestone baselines, `milestone.rebaseline` (system op) (not yet enforced): moved to the project management pack (9.10) |
+| What waits on what is recorded, and at-risk dependencies surface before they are late | `Dependency`, Today lines (not yet enforced): moved to the project management pack (9.10) |
+| Good practice is written down once, in playbooks, and every run uses it; the PM's own rules win | playbooks (3.8), `config/playbooks.yaml` (partly enforced: the core playbook for notes exists; there is no `config/playbooks.yaml` to override entries by id) |
+| An unanswered question gets one suggested escalation, never an automatic one | `routing.escalation`, 6.24 (not yet enforced): moved to the project management pack (9.10) |
+| "Issue" means a project issue; automation failures are "automation problems" | data model (5.1) (partly enforced: failures spread over questions, `needs_you` and plugin notes; there is no Problem record) |
+| A rule the PM states is read back as effects and overlaps (applies to, doesn't change, overlaps with, dry-run count); a contradiction with an existing rule waits for the PM to pick | read-back, rule targets (not yet enforced): there is no read-back yet |
+| Packets put the stable parts first and the request last, so repeated prefixes can be cached | packet layout, adapter `prompt_caching` (partly enforced: the layout is built; adapters have no `prompt_caching` capability yet) |
+| A request becomes a report only when no op can do it; data that needs a missing op waits with the report | `dev.request` validator (partly enforced: `report.draft` exists; data waiting with the report does not) |
+| A rename is one op that updates every place the name is stored and keeps the page | `record.rename`, reference index (partly enforced: ids and the reference index exist; there is no `record.rename` op) |
 | A failing plugin is an automation problem, not an outage | plugin host |
+
+## 8.7 Rules from the review of 2026-10-12
+
+The review asked why small errors kept reaching the owner. Each rule below answers one cause (decisions, 2026-10-12 "The
+go-forward plan"; `CLAUDE.md`, "How work reaches the owner").
+
+| Rule | Enforced by |
+|---|---|
+| Every default produces a visible result for a real person, with no file editing and no second command; a brief says what the person sees in the first five minutes | the brief, the journey tests and the fresh-workspace check (10.5; planned) |
+| A real workspace starts from `cockpit init` with no template; the fictional workspaces are test fixtures and the sandbox, never a starting point | docs, the setup guide, the fresh-workspace check (10.5; planned) |
+| Nothing goes out without the PM approving that exact content. This stays whatever else changes | publisher content-hash check (not yet enforced, see 8.1); until then, copy and Mark sent are the only way out |
+| Signing in is the whole setup for a mail or calendar account: the sources the add-on declares start at once and read the inbox and main calendar, and the person narrows afterwards | `sign_in(..., sources=...)`, `engine/sign_in_sources.py` |
+| A real AI account does the assistant's work as soon as it is added; an unused account offers "Use for the assistant's work" | account add flow (7.16) |
+| The app restarts only when it must and only when the person says so; a setting everything reads at the moment of use applies at once | `LIVE_KEYS` in the worker, the Restart now ask |
+| No file name, config key path, `env:` reference or command line reaches the screen on the default path, including text built by the server | wording sheet tests for the screens; the server-side string scan (10.5; planned) |
+| Nothing is "ready to test" until the journey tests pass; the message to the owner gives the exact commands and what to see | journey tests (10.5; planned) |
+| A reported problem gets a failing test of the person's path first; then everything with the same cause is found and fixed in the same change, and the reply says what was checked | process (10.3) |
+| A plan item is never marked done on a part of it: say what is left | process (10.3) |
+

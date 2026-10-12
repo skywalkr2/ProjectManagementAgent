@@ -13,9 +13,10 @@ version for coding agents; `CHANGES.md` in this folder summarizes how this desig
 
 **Where this design came from.** It grew out of one use: a program manager supporting a technical leader at a large
 organization, with status on wiki pages and work in an issue tracker. That use is kept, fully specified, as the **reference
-pack** (Part 9): the most proven pack, built on fictional data, and the main test that the core is complete. The first pack in
-real use is **publishing support** for a small imprint (9.6). Other uses (personal projects, social media) are plugins on the
-same core (3.7).
+pack** (Part 9), the most proven design. The core is complete on its own, and the free version is the core plus a
+"define your own" kit (3.10). Packs are add-ons in their own repositories. The first in real use are a writing pack, a
+project management pack and a publishing pack for a small imprint (Part 9, roadmap phase C). Other uses are plugins on
+the same core (3.7).
 
 **Version.** Design 1.1, 2026-10-12: design 1.0 (the scope baseline of 2026-10-09) with every decision since folded
 in. Sections that are designed but not built say so. `CHANGES.md` section 10 lists what changed and what was dropped
@@ -28,19 +29,19 @@ Section numbers are stable: "6.18" is section 18 of Part 6, in `06-engine.md`.
 
 | Part | File | What it covers |
 |---|---|---|
-| 1 | [01-product.md](01-product.md) | What the product is, the core loop, what's core and what's a plugin, non-goals |
-| 2 | [02-architecture.md](02-architecture.md) | Layers, repository and workspace layout, where things go, technology choices |
-| 3 | [03-plugins.md](03-plugins.md) | Plugin kinds, manifest, extension points, rules for plugins, lifecycle, worked examples, playbooks, plugins working together |
+| 1 | [01-product.md](01-product.md) | What the product is, the core loop, what's core and what's a plugin, non-goals, the everyday assistant, what ships in the core and what is an add-on |
+| 2 | [02-architecture.md](02-architecture.md) | Layers, repository and workspace layout, where things go, technology choices, where a person starts, restarts and live settings |
+| 3 | [03-plugins.md](03-plugins.md) | Plugin kinds, manifest, extension points (built and not yet), rules for plugins, lifecycle, worked examples, playbooks, plugins working together, the define-your-own kit, the Add-ons screen and install, signing in to a service, the developer guide and testing kit, publishing a pack |
 | 4 | [04-configuration.md](04-configuration.md) | Configuration principles and every config file |
 | 5 | [05-data.md](05-data.md) | Storage model (database, ledger, ids), entities, storage rules |
 | 6 | [06-engine.md](06-engine.md) | Every core component: plugin host, connectors, channels, applier, questions, scope, facts, AI layer, quality signals |
 | 7 | [07-ui.md](07-ui.md) | UI principles, shell, Today, panels, What changed, Waiting to go out, Follow-ups, first run, settings, accessibility, front-end architecture |
 | 8 | [08-product-rules.md](08-product-rules.md) | Lessons as product rules, each with where it is enforced |
-| 9 | [09-reference-pack.md](09-reference-pack.md) | The packs: workplace PM (reference) and publishing (first in use) |
+| 9 | [09-reference-pack.md](09-reference-pack.md) | The packs, all add-ons in their own repositories: workplace PM (reference), publishing, project management, writing |
 | 10 | [10-guardrails.md](10-guardrails.md) | Keeping specifics out of code: the boundary, scans, process, review checklist |
 | 11 | [11-deployment.md](11-deployment.md) | Local and hosted modes, base path, sign-in, deploy checks, packaging |
 | 12 | [12-security.md](12-security.md) | Security and privacy, including untrusted input and op tiers |
-| 13 | [13-build-plan.md](13-build-plan.md) | Milestones, starting with a walking skeleton |
+| 13 | [13-build-plan.md](13-build-plan.md) | The catalog of work by milestone, with what is built; the order is the roadmap's phases (13.4) |
 
 ## What to read for a task
 
@@ -53,7 +54,7 @@ Section numbers are stable: "6.18" is section 18 of Part 6, in `06-engine.md`.
 | UI | Part 7 (7.0 first), and 6.x for the data a panel shows |
 | AI tasks, prompts, providers | 6.6, 6.7, 6.16, Part 12 |
 | Deployment, sign-in | Parts 11 and 12 |
-| Planning | Part 13 |
+| Planning | `docs/project/roadmap-to-1.0.md`, then Part 13 |
 
 ## Terms
 
@@ -76,10 +77,10 @@ Section numbers are stable: "6.18" is section 18 of Part 6, in `06-engine.md`.
 | Read-back | How the assistant restates a rule or setting the PM just gave, with what it changed and Undo (6.7) |
 | Playbook | Built-in practice for a kind of work (core: project support; each pack: its field), switchable entry by entry (3.8) |
 | Handoff | A request about code another project owns, drafted for that project's owner instead of fixed here (4.18) |
-| Connector | A plugin component that brings inputs in (a wiki, a tracker, a mailbox, a feed) |
-| Channel | A plugin component that takes approved drafts out (a wiki page, an email, a blog, a social network) |
+| Connector | A component that brings inputs in. The core ships open-protocol ones (a folder, a feed, a calendar address, a mailbox over IMAP); plugins add others (a wiki, a tracker, a named mail service) |
+| Channel | A component that takes approved drafts out (a file, a wiki page, an email, a blog). Designed, not yet built (6.3) |
 | Plugin | A package that registers components at the core's extension points |
-| Pack | A plugin that bundles record types, ops, templates, prompts, panels and default config for one kind of work |
+| Pack | A plugin that bundles record types, ops, templates, prompts, panels and default config for one kind of work. Packs are add-ons in their own repositories, found on the Add-ons screen (3.11) |
 | AI task | One call to the AI provider layer: a task kind, a packet, an output schema (6.16) |
 | Packet | Everything an AI task is given, each part marked trusted or untrusted (6.6, 12.2) |
 | Meeting | A meeting the PM sets up or runs, with attendees and notes |

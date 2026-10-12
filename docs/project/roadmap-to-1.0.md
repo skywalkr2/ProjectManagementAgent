@@ -51,7 +51,8 @@ A2. **The person's path, fixed where the review found it broken.**
   Today they work only through `env:` or `file:`.
 - [ ] Server messages never name a settings file, a key path, `env:` or a command. About 50 of these are listed in
   the audit.
-- [ ] Settings that do nothing are wired or removed: `owner_format`, the scheduled export.
+- [ ] Settings that do nothing are wired or removed: `owner_format`, the scheduled export. The near-duplicate threshold
+  becomes a setting (design 4.17; the code fixes it at 0.8).
 - [ ] **A refresh button on the mailbox** (owner, 2026-10-12): check "Came in" and the mail source now.
 - [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command.
 

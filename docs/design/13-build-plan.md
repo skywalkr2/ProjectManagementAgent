@@ -4,15 +4,21 @@ Two principles. **Use it early:** the PM works with a thin end-to-end version wi
 milestone is judged against real use (with the PM's corrections as the measure, 6.20). **Build the safety first:** the ledger,
 the tiers and the invariants are in the first usable version, because they are much harder to add once data and habits exist.
 
-**Earn the breadth:** packs beyond the first two, hosted mode and social media are a lot of product for a tool whose first
-deployment has one user. Milestones 12 onward (and every pack after the second) start only once the publishing pack has been in
-daily use and its quality signals (6.20) are steady.
+**Earn the breadth:** hosted mode, social media and any pack beyond the three in the plan are a lot of product for a tool whose
+first deployment has one user. They come after 1.0 and after real use (13.2).
 
-**Dates and the launch slice.** The calendar, the go/no-go and the smaller "launch slice" of milestones 1 and 2 (what is built
-before the first real deadline and what is deferred) are in `docs/project/schedule.md`. This part lists the milestones in
-order; the project plan says when.
+**The order and the dates are in `docs/project/roadmap-to-1.0.md`** (13.4): phases A to E, each ending on an exit test the owner
+can run. This part is the **catalog of work**: what each milestone contains and whether it is built. It is no longer the order
+of work. The go/no-go of 2026-10-30 and the freeze before the 2026-12-01 launch that `docs/project/schedule.md` still lists no
+longer hold (decisions, 2026-10-09 "Real use starts with the publishing pack" and 2026-10-12 "The go-forward plan"); phase D's
+dates are set by the owner when it starts. `schedule.md` is kept for the record, with its launch slice and its acceptance
+scenario.
 
-Each milestone ends with tests passing against both fictional workspaces, the core passing alone, and the scans green.
+Each milestone ends with tests passing against both fictional workspaces, the core passing alone, and the scans green. Under
+the review of 2026-10-12 a milestone also ends with its journey tests (10.5), and nothing is "ready to test" before they pass.
+
+**State key (the audit of 2026-10-12).** Built: the code and a test exist. Partial: part of it exists; the line says what is
+left. Not started: nothing exists here. A milestone is never marked done on a part of it.
 
 ## 13.1 Milestones
 
@@ -20,6 +26,11 @@ Each milestone ends with tests passing against both fictional workspaces, the co
    versions, the ledger, id sequences, the instance lease, the readable export and the export → import round trip with point-in-time restore (5.0); config schemas with versions, layers,
    profiles and `cockpit config show` / `explain` (4.0); the scans and the self-check (10.2); both fictional workspaces as
    importable fixtures; `cockpit serve` in local mode with the install token and base-path support.
+
+   **State: Partial.** Built: layout and tooling, the database with versions, ledger, id sequences and the lease, the readable
+   export and the import round trip, config schemas and layers, `cockpit config show`, both fixtures importable, local serve
+   with the token and base path. Not yet: point-in-time restore (`cockpit restore`), profiles and `config explain`; the scans
+   are partial (10.2).
 
 2. **Walking skeleton (the first version the PM uses).** One path through the whole loop, on real work:
    - paste-in with "your note" and "pasted content" (12.2);
@@ -47,16 +58,34 @@ Each milestone ends with tests passing against both fictional workspaces, the co
      scenario with axe checks (Part 7);
    - quality signals recorded from day one (6.20).
 
+   **State: Partial.** Built: paste-in with the two kinds of words, the core playbook, the notes task through the stub and
+   OpenAI-compatible adapters, cleaning and one input per call, JSON repair and evidence, provenance, the first evaluation set
+   (14 cases in `demo-b`, three runs each), the applier for most of the ten ops, names resolved to ids, owners and held actions,
+   undo with op groups, the packet's open items, waiting states, backups with the nag, the minimal UI and quality signals.
+   Not yet: read-backs for rules the PM states, the glossary with `glossary.add` and `lesson.add` (so proposed lessons), the
+   `source` op, the clipboard as a channel (Copy exists in the screen), and the acceptance scenario's step 6 (export, import,
+   identical), with steps 2, 4, 5 and 7 checked less than the scenario says.
+
 3. **Scope and facts.** The scope resolver and its invariants, the scope sweep (6.18); the fact resolver with paste-in and
    local-folder lookups (6.19); search lookups (6.22); audiences and restrictions; the remaining question and action ops;
    action notices; Reassign; checking corrections against the data.
+
+   **State: Not started.** No scope resolver or sweep, fact resolver, search lookups, audiences and restrictions, action
+   notices, Reassign, or checking corrections against the data. The remaining question and action ops are not built.
 
 4. **Plugin host and the plugin API (0.x).** Manifests, registries for the `1.0` extension points (3.3), the fake plugin;
    move the walking skeleton's built-ins behind the same interfaces. Plugins working together (3.9): interfaces with
    schemas and versions, event subscriptions, requests for another plugin's task kinds, and two fake plugins that use each
    other in tests.
 
+   **State: Built, except one item.** Manifests, registries, the fake plugin, interfaces, events, requests for another plugin's
+   task kinds and two fake plugins that use each other are built and tested (plugin API 0.3.55, with a generated guide). Not
+   yet: the walking skeleton's built-ins (AI adapters, channels) behind the same registries; adapters are a fixed list.
+
 5. **Watchers, triage, supersede.** Fake connectors with fixture changes; the matcher registry; the auto-closed list.
+
+   **State: Built.** Fake connectors, the matcher registry and the auto-closed list, and beyond the milestone the core's folder,
+   feed, calendar-file and mailbox connectors (the core ships them; 1.4 and 6.2 are corrected by another writer).
 
 6. **Records, rendering and the publisher.** Core record types and `ext` fields, templates, render-time ordering, roll-ups,
    drafts, content-hash approval, scheduled drafts, concurrency check, shared masters (lock status, outside edits as changes),
@@ -65,15 +94,30 @@ Each milestone ends with tests passing against both fictional workspaces, the co
    stages (6.26), independent reviews (6.16), and cost control: estimates, a go above the configured amount, budgets per task
    kind and per record (6.16).
 
+   **State: Partial.** Built: core record types and `ext` fields, drafts, the concurrency check, long text with versions and
+   authorship, drafts with prose output, stages, independent reviews and cost control. Not yet: templates, render ordering and
+   roll-ups, content-hash approval and scheduled drafts, shared masters, reverting drafts after an undone publish, the fake
+   page channel, Waiting to go out with the diff renderer, and the file channel. These are the publisher (roadmap C4).
+
 7. **UI shell and settings.** Today as the home queue (7.7), the first-run setup (7.8), panel registry with declarative panels,
    branding, the Settings panel (7.9), the Admin tab including Quality, side-by-side diffs, virtualized lists, phone-friendly
    approval flows and installing as a web app.
 
-8. **The publishing pack** (9.6 to 9.9), the first in real use, with its playbook, dependencies and baselines (6.23), using
-   only the plugin API.
+   **State: Partial.** Built: the shell and visual system, the first-run setup, the panel registry with declarative panels,
+   branding and the Settings forms generated from the schemas. Today as the queue has its engine and API but the screen still
+   shows the earlier board. Not yet: the Admin tab with Quality, side-by-side diffs (the long-text compare exists), virtualized
+   lists, the phone review mode and the installable web app. Phase B finishes this (7.17).
+
+8. **The publishing pack** (9.6 to 9.9), the first in real use, with its playbook, using
+   only the plugin API. Dependencies and baselines (6.23) belong to the project management pack (9.10); the pack lives in its
+   own repository, not in this one.
+
+   **State: Not started.** The pack lives in its own private repository and is not yet created (roadmap C3; 9.6 to 9.9).
 
 9. **The workplace reference pack** (9.1 to 9.5) on fictional data, to prove the extension points serve a very different kind
-   of work. Anything either pack needs that the API lacks becomes a generic extension point, not a special case.
+   of work. It is an add-on in its own repository. Anything either pack needs that the API lacks becomes a generic extension point, not a special case.
+
+   **State: Not started.** A private add-on in its own repository (9.1 to 9.5); not on the roadmap to 1.0.
 
 10. **AI breadth and evaluation.** Escalation on failure, the three-layer cache layout with frozen batch prefixes,
     reproducible runs and `cockpit replay`, native adapters for vendors with their own API format, the aggregator adapter with its catalog and routing options, `models()` from provider
@@ -81,26 +125,48 @@ Each milestone ends with tests passing against both fictional workspaces, the co
     budgets; the golden fixture set with hostile inputs (12.2) and `evaluate`. A second vendor's adapter needs no change outside
     its adapter and `config/ai.yaml` (a test proves it with two adapters).
 
+    **State: Partial.** Built: escalation on failed checks, `models()` from provider catalogs, the Add account flow, the
+    command-line agent adapter, budgets, data-level routing and `evaluate`. Partial: the cache layout, the aggregator adapter
+    (a catalog entry through the OpenAI-compatible adapter, with no routing options), capability routing, packet budgets and the
+    golden fixtures. Not yet: reproducible runs and `cockpit replay`, native adapters, and the test that a second vendor's
+    adapter needs no change elsewhere.
+
 11. **Governor, scheduler, offline behavior (connectivity first, honest staleness), automation problems and reports**,
     error classification from the runner's own streams, handoffs for code other projects own (4.18), the rules review (6.21).
 
-12. **Hosted deployment** (after the publishing pack is in daily use). Auth providers (password with a second factor, passkeys, OpenID Connect, identity-aware proxy),
+    **State: Partial.** Built: the scheduler, reports and error classification from the runner's own streams. Partial: offline
+    behavior and automation problems. Not yet: the governor (re-queue of crashed runs, stale-item sweeps, outage handling, the
+    scheduled export), handoffs for code other projects own, and the rules review.
+
+12. **Hosted deployment** (after 1.0). Auth providers (password with a second factor, passkeys, OpenID Connect, identity-aware proxy),
     sessions, CSRF, lockout, hiding, the deploy checks, the Security panel, retention and forget-a-person, the container image
     and the first two recipes.
+
+    **State: Not started.** After 1.0 (Part 11).
 
 13. **Today builder, meetings, weekly check-up, update writer**, and project management support (6.24): issues, assumptions,
     risk fields and reviews, escalation suggestions, communications cadence, meeting agendas; the Ask box (6.25).
 
+    **State: Partial.** Built: the Today builder (the queue and the agenda) and the Ask box. Not yet: meetings, the weekly
+    check-up and the update writer. Issues, assumptions, risk fields and reviews, escalation suggestions, cadence and meeting
+    agendas (6.24) moved to the project management pack (9.10).
+
 14. **Real connectors and channels** (one wiki, one tracker) as plugins, configured only through config.
 
-**Plugin API 1.0** is declared when both packs run on it unchanged. Until then it is 0.x and may change.
+    **State: Not started here.** The core ships the folder, feed, calendar-file and mailbox connectors. A mail and calendar
+    add-on that signs in to two named services is built in its own private repository and listed in the catalog. A wiki and a
+    tracker connector are not built.
+
+**Plugin API 1.0** is declared when the packs of the plan (writing, project management, publishing) run on it unchanged. Until
+then it is 0.x and may change. It is at 0.3.55 and not declared.
 
 ## 13.2 After the base
 
-Each a pack, plugin or recipe, in whatever order is useful: publishing support, social media channels, mailbox and calendar
-connectors, more AI vendors, more deploy recipes, Postgres for multi-user, the `planned` extension points (event handlers, API
-routes) and opening `core only` ones (auth providers, storage backends) to plugins, running plugins out of process with
-enforced limits, roles for several users.
+Each a pack, plugin or recipe, in whatever order is useful, and none of it in 1.0: hosted mode and its sign-in (Part 11),
+social media, email and newsletter channels, more AI vendors, more deploy recipes, Postgres for multi-user, the `planned`
+extension points (event handlers, API routes) and opening `core only` ones (auth providers, storage backends) to plugins,
+running plugins out of process with enforced limits, roles for several users. Publishing support and the mail and calendar
+connectors are already in the plan or built (13.1, 13.4).
 
 ## 13.3 Candidate packs
 
@@ -124,3 +190,21 @@ signed work.
 place: long text with versions and authorship (5.0), drafts and prose output (6.7), the file channel (6.3), stages (6.26), the
 independent second opinion (6.16), and cost control with estimates, a go above a configured amount and budgets per task kind
 and per record (6.16, 4.8).
+
+## 13.4 The plan to 1.0
+
+The current plan is `docs/project/roadmap-to-1.0.md`, rewritten on 2026-10-12 after the review (decisions, 2026-10-12 "The
+go-forward plan: a working baseline, then the UI, then the packs"). One phase at a time, one stream of work at a time, and a phase
+ends when its exit test passes, not when its code is written. Durations are estimates in working sessions; dates are set when a
+phase starts.
+
+| Phase | What | Exit test (short) |
+|---|---|---|
+| A | **A baseline that works with no demo data** (about 3 sessions): a starter apart from the fixtures; `cockpit update`; the Install button on Add-ons; crashed runs re-queued; server messages that name no file or key; settings that do nothing wired or removed; a refresh button on the mailbox; the journey tests | On a fresh folder, one install or update command, then: a workspace with no template, an AI account, a sign-in, recent mail and today's meetings handled on Today, a hand-in, a backup, with no file edit |
+| B | **The UI/UX redesign finished** (about 4 sessions): Today as the queue with the inspector and rail, Work as list \| detail, the Projects and People tables, Settings as nav \| form \| help, the setup guide, the Stages board, the phone review mode, words and accessibility (Part 7) | The owner reviews every screen on a laptop and a phone; the checklist of `reviews/ui-ux-2026-10/` is Done or explained |
+| C | **The packs in the owner's workspace** (about 9 sessions): the writing pack installed and reviewed (C1), the project management pack started (C2, 9.10), the publishing pack started (C3, 9.6 to 9.9), and what they need from the core (C4): the publisher and file channel, fact lookups | A fictional manuscript to a built PDF and EPUB the owner approves; the plan and a schedule that shows what is late or at risk; a launch with its plan in the schedule; the hand-offs work and each pack also works alone |
+| D | **Owner validation and real use** | The owner's own judgment, on dates the owner sets: a week of real notes, mail and pack work saved time, nothing went out without approval, a backup succeeded |
+| E | **The rest of version 1**, in the order that protects real data first: the governor and restore; the scope resolver, proposed lessons and the glossary, the rules review and read-backs; native AI adapters and reproducible runs; **M0, the desktop installer** (11.7) | No single test; each item has its own. Publish 1.0 follows: the self-check against the private workspace, a fresh repository under Apache-2.0, README and docs matching what 1.0 does |
+
+**Not in 1.0:** hosted mode and sign-in (Part 11), social, email and newsletter channels, the sales pack (13.3), and licensed
+(paid) packs, which are the owner's call after launch.

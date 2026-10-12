@@ -4,9 +4,13 @@ The same code runs on the PM's own computer or on a web host. What differs is co
 `config/auth.yaml`, `config/storage.yaml`, a profile) and packaging (`deploy/`). Nothing in the engine, API or UI checks which
 host it is on; every difference is a setting the code reads, tested both ways.
 
+**Version 1 is local mode only.** Hosted mode is designed here and built after 1.0 (decisions, 2026-10-11; roadmap, "Not in
+1.0"); until then the app refuses to start with `server.mode: hosted`. The sections below say what is built (local) and what
+is designed for later (hosted). 11.7 covers installing, updating and restarting, which version 1 does need.
+
 ## 11.1 Modes
 
-| | Local | Hosted |
+| | Local (version 1) | Hosted (after 1.0; designed, not built) |
 |---|---|---|
 | Where it runs | the PM's computer | a server, a container platform, or a machine behind a tunnel, reached at the PM's own domain |
 | Who can reach it | only this machine (`127.0.0.1`) | anyone on the internet who gets past sign-in |
@@ -18,6 +22,9 @@ host it is on; every difference is a setting the code reads, tested both ways.
 | Start-up checks | config validation | config validation and the deploy checks (11.5); start is refused if any fail |
 
 ## 11.2 Serving under a path, and hiding
+
+The base path is built and tested at the root and under a nested path (end-to-end and API tests). Hiding is designed and not
+built (no `server.hide` key yet).
 
 The app can live at the root of its own domain or under a path on a site that serves something else: for example
 `https://example.com/admin` while the public site stays at `https://example.com/`. `server.base_path` sets it. What makes that
@@ -40,9 +47,15 @@ Everything in this part is set through config files, environment variables or fl
 page is enough: `COCKPIT_PROFILE=hosted`, `COCKPIT__SERVER__PUBLIC_URL=https://example.com`,
 `COCKPIT__SERVER__BASE_PATH=/admin`, and secrets stored as platform secrets and referenced by `env:` names.
 `cockpit init --profile hosted` writes a starting profile with every key commented, and `cockpit deploy check` lists what is
-missing before the first start.
+missing before the first start. Environment variables for nested keys are built; profiles, `init --profile hosted` and
+`cockpit deploy check` are not (hosted, after 1.0).
 
 ## 11.4 Sign-in
+
+Built: the install token and its session cookie scoped to the base path (HTTP-only, same-site; the secure flag only when
+hosted). Not built, because they are for hosted mode: passwords with a second factor, passkeys, recovery codes, OpenID
+Connect, the identity-aware proxy, idle and absolute timeouts, sign out everywhere, CSRF tokens, lockout, the sign-in log and
+the Security panel. Not to be confused with the sign-ins an add-on makes to a service such as a mail account (12.1, 7.15).
 
 Sign-in methods are auth providers, an extension point (3.3). The core ships:
 
@@ -61,6 +74,9 @@ Every state-changing request carries a CSRF token. Failed sign-ins are rate limi
 sign-in and failure is logged and shown on the Security panel (7.1).
 
 ## 11.5 Deploy checks
+
+Designed; none are built yet, and nothing in version 1 depends on them. Hosted mode, when built, refuses to start unless they
+pass, and no check is weakened to get a deployment running.
 
 `cockpit deploy check` runs these; the self-check runs them against both fictional workspaces with a hosted profile; a hosted
 server runs them at start and refuses to serve if any fail.
@@ -81,6 +97,9 @@ Warnings that don't block start: command-line AI agents unavailable, budgets uns
 breaks).
 
 ## 11.6 Packaging and recipes
+
+Built: `cockpit serve --workspace <path>` in local mode. Not built: start-at-login files, the container image and the two
+recipes below (hosted, after 1.0). Installing the app on a person's computer is 11.7.
 
 The engine needs long-running jobs, a file system and git, so it runs as a process or a container, not as short-lived edge
 functions.
@@ -106,3 +125,39 @@ First recipes, in order:
 
 The UI build can also be served from a static host with the API elsewhere (it reads its API address from config), but that is
 not a first recipe.
+
+## 11.7 Installing, updating and restarting (version 1)
+
+**Install scripts.** `deploy/install.sh` (macOS, Linux) and `deploy/install.ps1` (Windows) install or update the app from the
+package file with `uv tool install --force`. The package carries the built screens, the starting templates, the AI account
+catalog and the two fictional demo workspaces, so a person needs no Node and no copy of the repository. A version tag builds the
+package, checks that it installs and starts the demo, and attaches it to a release with the scripts and `docs/install.md`
+(decisions, 2026-10-11 "The package carries its screens, templates and demos"). A workspace is a separate folder and is never
+touched by an install or an update. The scripts exist and are not yet tested.
+
+**One update command.** `cockpit update` is planned (roadmap phase A1). It pulls, syncs the Python environment without dropping
+installed add-ons, installs the web tools, builds, and then says whether a restart is needed, so updating never needs a list of
+commands (review of 2026-10-12).
+
+**A starting workspace.** The start is `cockpit init` with no template, then `cockpit serve --open` (`docs/install.md` shows
+it; the README still sends a person to a fictional workspace, which roadmap A1 corrects). `cockpit demo` makes a labeled demo of fictional data for trying the app; it is the
+sandbox, never the start.
+
+**One-click add-on install.** The Add-ons screen installs a pack from its catalog entry: the app downloads the release the
+entry names, checks its checksum, installs it beside itself and offers Turn on with the usual restart ask. Update and Remove work
+the same way. A private pack's release host takes a read token the person gives once, kept as a secret reference (12.1). Only
+packs of pure Python whose needs the app already has are installed this way until phase A2 adds a pack's own libraries (shown
+before install, conflicts refused, Remove taking out only what the pack needed). The server side is built; the button is not
+yet (7.15). This replaces "the app never installs code into itself" in 3.11.
+
+**The desktop installer (M0).** Signed installers for macOS and Windows that carry everything the app needs (no Python, uv, Node
+or terminal), run it in the background, open the setup guide on first run and update themselves. The decision of 2026-10-11
+made it the first item after the launch; the later go-forward plan (2026-10-12) places it in phase E, after the packs, and
+that plan holds. Not built.
+It costs the owner signing certificates and release hosting. A hosted website stays after 1.0.
+
+**The restart rule.** The app restarts only when it must, and only when the person says so (decisions, 2026-10-11). A setting
+that everything reads at the moment of use applies at once (`LIVE_KEYS` in `engine/worker.py`: AI accounts, tiers and budgets,
+who the person is, names, wording and shortcuts, the accounts counted as ours). Any other change, or a change to the app's code,
+is said in words, holds new AI work, and waits for the person to choose Restart now or Later. The app never restarts on its
+own. A copy that cannot start itself again says to close and start it.

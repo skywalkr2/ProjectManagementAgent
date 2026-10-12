@@ -106,8 +106,8 @@ the change that records it also edits the design section it affects, and `docs/d
 
 ## Data and safety model
 - SQLite is the system of record; every applied op is written to the ledger in the same transaction; `data/` is a readable
-  export that `cockpit import` and `cockpit restore` load back, and the round trip is tested (design 5.0). The running engine
-  never reads `data/`. Writes state the record versions they read.
+  export that `cockpit import` loads back (and `cockpit restore`, designed, not yet built), and the round trip is tested
+  (design 5.0). The running engine never reads `data/`. Writes state the record versions they read.
 - Records refer to people, teams and projects by id; names live on their own record and are rendered (design 5.1, 6.11).
 - Every op has a tier: data, outbound or system. System ops from an input or the assistant's own initiative never apply
   automatically; the PM confirms them. System ops from the PM's own note apply at once with a read-back (applies to, doesn't change,

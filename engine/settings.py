@@ -4,8 +4,8 @@ into the config files.
 A save names the fingerprint of the files the form was built from, so two saves never race; it refuses keys locked by an
 environment variable or a flag, and keys that only the files or flags set (the server's address and mode, the storage
 backend). The changed files are checked as a whole config before anything is written, written keeping their comments,
-committed to the workspace's git when it has one, and each change is recorded as a `setting_change`. A running app
-restarts itself to use saved settings (6.14).
+committed to the workspace's git when it has one, and each change is recorded as a `setting_change`. Settings read at
+the moment of use apply at once; any other change waits for the person to choose a restart (6.14).
 """
 
 from __future__ import annotations

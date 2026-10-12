@@ -294,6 +294,9 @@ means the design still holds and the work is scheduled; the phase letters refer 
 | **The workplace reference pack bundled** (Part 9.1–9.5) | A private add-on in its own repository, not started. The core proves itself through the define-your-own kit and the example plugin | The core must be complete with no pack; industry depth is sold separately. |
 | **The publishing pack bundled** (9.6–9.7) | An add-on in its own repository, not started (phase C3). A writing pack is being built by its own builder | Same decision. |
 | **"The app never installs code into itself"** (3.11, in 1.0) | Changed: one-click install from the Add-ons screen, with checksums. The server side is built; the button is not (phase A) | Installing from a terminal was a pain for the people the owner shares it with. |
+| **Approving what a pack adds, reaches and keeps when it is turned on, and again on update** (3.6, 3.11) | Designed, not built. Turn on acts at once, and the Add-ons listing shows the summary beforehand | Comes with the Install button (phase A). |
+| **Screenshots, office files and PDFs read as inputs** (1.3, 6.6) | Not built: no text extractors and no image reading yet. Pasted text, text files and watched sources are read | No pack has needed it yet. |
+| **The desktop installer** (decided 2026-10-11 as the first item after launch) | Phase E of the roadmap, after the packs | The later plan puts the packs in the owner's hands first. |
 | **Hosted mode** (Part 11) | After 1.0. Base paths and public addresses are kept working, since a local install uses them too | One person on their own computer first. |
 | **Triage rules in `triage.yaml`** (4.5) | A `triage:` list in `watch.yaml`, beside the sources they name | Fewer files. |
 | **A first read hands in nothing** (6.4, the baseline) | A setting: baseline, recent (the last day, the default for a sign-in) or all | A baseline meant a person who just signed in saw nothing at all. |
