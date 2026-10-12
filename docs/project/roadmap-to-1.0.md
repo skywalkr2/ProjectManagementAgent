@@ -50,6 +50,8 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 
 ## Phase A: a baseline that works with no demo data (about 2.5 sessions)
 
+Started 2026-10-12.
+
 **Exit test:** on a fresh computer folder, the owner runs one install or update command. They then:
 1. make a workspace with no template;
 2. add an AI account;

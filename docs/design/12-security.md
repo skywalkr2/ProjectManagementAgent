@@ -24,7 +24,7 @@
   get only the secrets their manifest names from the core's secret store. Built: `env:` and `file:`, and a key pasted on a
   screen, which is kept in a private folder of the workspace that only its owner can read and referred to as `file:`. **Not yet
   built:** `keychain:NAME` is refused with a message, and the core mailbox and calendar sources still take their secrets only as
-  `env:` or `file:` references, to be entered on screen like an AI key (roadmap A2).
+  `env:` or `file:` references, to be entered on screen like an AI key (roadmap phase B).
 - **Outbound is gated:** content leaves only through the publisher after the PM approves the exact content (6.12, 8.1).
 - **Data levels** (open, internal, restricted) decide which AI providers and plugins may see a source (6.16, 3.5; built).
   **Audiences** decide where its content may appear: each destination is open or a named group, and each restriction names the
@@ -33,7 +33,7 @@
   sign-ins and plugin enable or disable are recorded alongside. The readable export keeps it in git history. Built: the
   ledger, approvals and settings changes (as `setting_change` records). **Phase L0, before real use:** sign-ins, sign-outs and turning a
   plugin on or off are recorded too, before the Admin tab exists, because an audit trail that starts late misses exactly
-  the period someone will want to look at. The scheduled export to the workspace's own git is wired in phase A.
+  the period someone will want to look at. The scheduled export to the workspace's own git is wired in phase L0 too.
 - **The export's remote is off-machine copying of everything,** raw mail and pasted text included, so it gets the care of
   backups (*phase E*, with the governor): the screen says so when a remote is set; the remote must be private or the
   export encrypted; and restricted sources are left out of it unless the person opts in. Until then the remote setting is
