@@ -415,7 +415,8 @@ These are all live (4.22).
 **Designed, not yet built:** tab order, hidden or reordered panels and header quick links (the sidebar of 7.1 replaced tabs;
 plugins add entries only under Work or Records); `config/status.yaml` (the status labels in use, their colors, and which count
 as open, done or at risk; a project's status is today a value list, 4.23); `config/calendar.yaml` (the week end that "this
-week" runs through, holidays, and per-team non-working days).
+week" runs through, holidays, and per-team non-working days); `ui.notifications` (phase B, 7.19): `enabled` (false),
+`quiet_hours` (`{from: "20:00", to: "08:00"}`, in the person's time zone).
 
 ## 4.12 `config/plugins/<plugin>.yaml`
 

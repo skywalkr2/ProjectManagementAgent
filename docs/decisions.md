@@ -3,6 +3,36 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: The UI review: learning made visible, Followed up, Later, This week everywhere, notifications
+
+**Decided by:** the first design's author proposed (review of Part 7); project lead checked the screens and wording and
+placed the work.
+
+**What:**
+- **Learning made visible** (phase L-core, because the loop isn't trusted without it):
+  - the knowledge an output applied is shown on its evidence line, with "This doesn't apply here" to narrow or retire it;
+  - "Keep for: this project ▾" on the Learned line, defaulting to the narrowest target;
+  - a Review line for proposals from silent corrections.
+- **Use counts** on knowledge rows (phase B).
+- **"Followed up"** on Waiting on them (phase A). It is designed in 6.9 but missing from the screen, where the only button
+  closes the action.
+- **Follow-ups' Later group** for questions held for a meeting or a weekly note; the question's `batch` field already
+  exists (phase B).
+- **This week at every width** (phase B).
+- **Opt-in notifications** for the Decide group only, with quiet hours (phase B). A phone gets them only when it can reach
+  the app.
+- **Small fixes:**
+  - format-only differences never appear in Waiting to go out;
+  - restart and pause lines stay on Today even when the status chip shows them;
+  - the Add-ons introduction is fixed with the Install button.
+
+**Why:** Showing which lesson shaped an output, and letting the person narrow it there, is the fastest cure for
+over-application, the running version's worst learning failure. Without "Followed up", chasing someone closes their action.
+
+**Impact:**
+- Design 7.4, 7.5, 7.7, 7.18 and the new 7.19, plus 4.11, are updated.
+- Roadmap: A, L-core and B gain items, inside their estimates except L-core's screen work (about half a session).
+
 ## 2026-10-12: The golden set is made harder before it chooses a model
 
 **Decided by:** the first design's author proposed (review of the golden set); project lead checked the harness and placed

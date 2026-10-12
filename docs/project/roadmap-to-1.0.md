@@ -83,6 +83,9 @@ A2. **The person's path, fixed where the review found it broken.**
   readable on its own. The near-duplicate threshold
   becomes a setting (design 4.17; the code fixes it at 0.8).
 - [ ] **A refresh button on the mailbox** (owner, 2026-10-12): check "Came in" and the mail source now.
+- [ ] **Followed up** on Waiting on them (design 7.5, 6.9): the primary for an action waiting past the nudge threshold.
+  It records the chase, keeps the action open and counts it as told. Today the only button there closes the action.
+- [ ] With the Install button, the Add-ons screen's introduction stops saying the app never installs anything.
 - [ ] **No silent stops** (design 8.5, 8.6, 8.8):
   - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived;
   - a usage limit resumes by itself at its reset;
@@ -186,8 +189,13 @@ L3. **Every correction teaches.**
 - [ ] The corrections recorded before this phase are learned from once, into one catch-up list.
 - [ ] Fallback chains hold only checked accounts, or ones the person accepted unchecked; the first run on a fallback account
   is tagged on its cards.
-- [ ] On screen (7.18): the Learned line on the correction's card, the daily card, the catch-up list, and a failed switch
-  check. The rest of 7.18 is laid out in phase B.
+- [ ] On screen (7.18), the parts the loop can't be trusted without:
+  - the Learned line on the correction's card, with **Keep for: this project ▾**, defaulting to the narrowest target;
+  - the knowledge each output applied, on its evidence line, with **This doesn't apply here** (narrow or retire);
+  - the Review line for proposals from silent corrections;
+  - the daily card, the catch-up list, and a failed switch check.
+
+  Use counts are kept in the knowledge log; the rest of 7.18 is laid out in phase B.
 
 L4. **Proving it** (from the design author's review of this plan).
 - [ ] **15 to 20 fictional fixture pairs, about a third negative.** A negative pair's later input must not change; a loop
@@ -273,7 +281,10 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **Setup guide** as steps | step.
 - [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
 - [ ] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
-  Knowledge screen under Records.
+  Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago").
+- [ ] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note, kept out of To send.
+- [ ] **This week at every width** (7.7): a collapsed Today section, and the inspector's view when nothing is selected.
+- [ ] **Notifications for "needs you" only** (7.19): opt-in, the Decide group's items, quiet hours.
 - [ ] Words and accessibility throughout: the microcopy table in the review, and axe in light and dark at four widths.
 
 The journey tests from A3 run against the new screens as they land.

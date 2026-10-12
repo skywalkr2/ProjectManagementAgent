@@ -468,6 +468,24 @@ Checked against the harness (`engine/evaluate.py`) first.
 | Follow-up: run it now, before the scoring changes, as a before-number; fix milestone 2 | Both. A "before" run of today's set on a low-cost and a stronger account is owner action O1 in the roadmap. It's pinned to today's commit, so the harder set can be built meanwhile, and it only has to exist before the "after" report it's compared with. It runs on the owner's accounts, since the keys live on their computer; the reports go in `docs/project/evals/`. Milestone 2 (13.1) now says the cases and pipeline are built and no real model has been scored yet. |
 | The latest `evaluate` report | There isn't one. The set has only been run with the stand-in, which replays each case's scripted answer, as a check of the cases and the pipeline. No real model has been scored on it. Since the scoring as it stands would flatter a low-cost model, the first real report is made after these changes, on the owner's accounts (pass rate per case per model, three runs each), before real use starts. You'll get it then. |
 
+## 18. Your review of Part 7 (2026-10-12)
+
+Checked against the screens and their wording first.
+
+| You said | What we found, and what changed |
+|---|---|
+| 1. Show which knowledge shaped each output | Adopted for phase L-core: the evidence line shows "Because you told me: …", linked to the entry, and the entry's menu has **This doesn't apply here** (narrow or retire). |
+| 2. Set a lesson's reach when keeping it | **Keep for: this project ▾** on the Learned line, defaulting to the narrowest target the correction supports (phase L-core). |
+| 3. Silent corrections need a Today line | Right: 7.18 contradicted 6.15. Proposals from silent corrections get one Review line; ones made while the person was there stay on their cards. |
+| 4. Follow-ups is missing "Followed up" | True of the screen: Waiting on them offers only They finished it and Record reply, and recording a chase is designed (6.9) but not built. **Followed up** becomes the primary for actions past the nudge threshold, keeping the action open. Phase A, because today the only button closes the action. |
+| 5. A "later" batch | Questions already carry `batch` (now or later), but the screen doesn't use it. Follow-ups gets **Later**, per person and collapsed; with meetings, "Hold for <meeting>" (phase B). |
+| 6. "This week" at every width | A collapsed Today section, and what the inspector shows when nothing is selected; in the rail from 2560px (phase B). |
+| 7. Notifications for "needs you" only | 7.19: opt-in, the Decide group's items only, one line leading with the action, quiet hours (phase B). One limit: a phone gets them only when it can reach the app, which for a local install means the same network; anywhere else waits for hosted mode. |
+| 8. Knowledge rows show use | "Used 12 times · last 2 days ago" or "Never used", from the knowledge log (phase B). |
+| The status chip | The restart and pause lines stay on Today even when the chip shows them. |
+| Format-only drafts | 7.4 now says they never appear in Waiting to go out. |
+| The Add-ons introduction | It does still say "the app never installs anything itself". It is fixed with the Install button in phase A. |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
