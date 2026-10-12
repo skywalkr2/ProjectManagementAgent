@@ -10,6 +10,15 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.55 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A person action's topic** (round 37, 180): `Proposal(..., topic="...")` names what it is about for its title on
+  Today and What changed, as a task kind's answer can.
+- **Data forms** (181, 182): the guide now says the plugin's loader must read the files with the form's schema (a key
+  left out takes the schema's default), and that the list shows each file's first problem.
+
 ## What 0.3.54 adds
 
 Manifests stay `'>=0.3,<0.4'`.

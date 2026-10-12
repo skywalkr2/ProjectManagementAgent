@@ -66,7 +66,7 @@ def add_build(op, writer, cfg):
     writer.create("p04/build", {"work": op.work, "file": op.file})
 
 def new_work(target, context, choices):
-    return Proposal("Start a work", ops=[{"op": "p04/add-work", "title": "Harbor Lights"}])
+    return Proposal("Start a work", ops=[{"op": "p04/add-work", "title": "Harbor Lights"}], topic="new work")
 
 def finish(target, context, choices):
     status = choices.get("status", "final")
@@ -275,6 +275,12 @@ def test_a_person_action_applies_as_the_person(env):
     assert request["origin"] == "pm" and request["changeset"] == cs_id
     entries = [e for e in store.read().ledger() if e["record_id"] == work["id"] and e["field"] == "status"]
     assert entries[-1]["actor"] == "pm" and entries[-1]["after"] == "final"
+
+
+def test_a_proposals_topic_names_its_changeset(env):
+    _, _, store = env
+    cs_id = apply(env, run(env, "p04/new-work"))
+    assert store.read().get("changeset", cs_id).data["topic"] == "new work"
 
 
 def test_flipping_a_choice_runs_the_action_again(env):

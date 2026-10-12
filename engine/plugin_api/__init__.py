@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.54"
+PLUGIN_API_VERSION = "0.3.55"
 
 
 class Settings(BaseModel):
@@ -671,6 +671,8 @@ class Proposal:
 
     summary: str
     ops: list[dict[str, Any]] = field(default_factory=list)  # always applied
+    #: A few words naming what it is about, for its title on Today and What changed (cut at a word to 60 characters).
+    topic: str = ""
     files: list[NewFile] = field(default_factory=list)
     previews: list[Preview] = field(default_factory=list)
     choices: list[Choice] = field(default_factory=list)
@@ -1578,8 +1580,10 @@ class Registrar:
         specific one. A save writes only the keys the file already had plus those the person set, never the whole
         model with its defaults, so keys left out stay left out (a template's `extends` keeps following its base).
         Every save is checked against the schema (a refusal names the field, or says the file's own rule when the
-        model's validator refused it) and offers Undo. The plugin reads the files as before, with
-        `view.data(path, project=...)`."""
+        model's validator refused it) and offers Undo. The list shows each file's first problem; opening the file
+        shows the form with it. The plugin reads the files as before, with `view.data(path, project=...)`, and must
+        read them with this same schema: a key left out of a file takes the schema's default, so a loader with other
+        defaults (or a field it requires that the form defaults) sees a different file than the form checked."""
         self._name(name)
         folder = str(folder).strip("/")
         if name in self.data_forms or not str(label).strip():

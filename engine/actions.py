@@ -64,6 +64,7 @@ class Pending:
     all_or_nothing: bool = False
     requests: list[dict[str, Any]] = field(default_factory=list)  # task, about {kind, id} or None, note
     problems: list[str] = field(default_factory=list)  # why ops outside the items would be refused, if applied now
+    topic: str = ""  # a few words for the item's title
     created: float = field(default_factory=time.monotonic)
     expires_at: str = ""
 
@@ -421,6 +422,7 @@ def _checked(
         target=target,
         choices={c["id"]: c["value"] for c in choice_list},
         summary=summary,
+        topic=str(getattr(result, "topic", "") or ""),
         ops=ops,
         files=files,
         previews=previews,
@@ -580,9 +582,11 @@ def _file_ops(files: list[dict[str, Any]], ids: list[str]) -> list[dict[str, Any
     return [{"op": "file.add", "id": file_id, **f} for f, file_id in zip(files, ids, strict=True)]
 
 
-def _validated(ops: list[dict[str, Any]], store: Store, summary: str) -> Any:
+def _validated(ops: list[dict[str, Any]], store: Store, summary: str, topic: str = "") -> Any:
     try:
-        return CHANGESET.validate_python({"summary": summary, "ops": ops}, context={"op_models": store.plugins.ops})
+        return CHANGESET.validate_python(
+            {"summary": summary, "topic": topic, "ops": ops}, context={"op_models": store.plugins.ops}
+        )
     except ValidationError as err:
         first = err.errors()[0]
         raise StoreError(f"{'.'.join(map(str, first['loc']))}: {first['msg']}") from None
@@ -653,7 +657,7 @@ def apply(
             },
             WriteContext("pm", "trusted", "action.request"),
         )
-    changeset = _validated(to_apply(pending, ids), store, pending.summary)
+    changeset = _validated(to_apply(pending, ids), store, pending.summary, pending.topic)
     ctx = _person_context(store, cfg, pending.plugin, request.id)
     action = {
         "name": pending.action,
