@@ -48,6 +48,13 @@ the change that records it also edits the design section it affects, and `docs/d
   never hard-code a model id or assume a capability from a vendor's name.
 - A new vendor is a new adapter plus config. If a feature seems to need a vendor-specific call outside an adapter, add a
   capability to the adapter interface instead.
+- Lessons from switching providers (design 6.16); a quick fix must never undo these:
+  - there is no silent default provider: never "just use the first account";
+  - adding or changing an account smoke-tests every tier with the exact parameters, plus the lock-down test for agents;
+  - an agent's program version is part of the account;
+  - only checked accounts, or ones the person accepted unchecked, sit in a fallback chain;
+  - `classify_error` is the only place that reads vendor text;
+  - agents start with an allowlisted environment.
 
 ## Stack and commands
 - Python 3.12+ with uv, FastAPI, Pydantic v2, pytest, ruff. Web: React + TypeScript with Vite and Vitest.
@@ -84,6 +91,10 @@ the change that records it also edits the design section it affects, and `docs/d
   anything is committed.
 - The main session keeps work that needs judgment: design changes, the applier, ledger, undo, trust and plugin boundaries,
   and fixing what a review finds there.
+- A subagent follows its brief literally, so every brief states the expected starting state (which files, records and
+  functions exist) for the subagent to check before it builds on it.
+- A subagent's "this can't be done" or "this needs a new op" comes back to the main session, never straight into a design
+  change or a report.
 
 ## How work reaches the owner (review, 2026-10-12)
 - The plan is `docs/project/roadmap-to-1.0.md`: one phase at a time, each ending on its exit test. One stream of work at
@@ -124,6 +135,14 @@ the change that records it also edits the design section it affects, and `docs/d
   stays internal.
 - Checks are invariants (always refuse, not configurable) or lints (severity in `config/checks.yaml`). Don't make a fuzzy check
   an invariant, and never lower an invariant.
+- Local mode listens only on loopback, and checks `Host` and `Origin` on every request (design 12.1).
+- Keep makes the person the author of the restatement shown. Raw outside text enters a packet only as evidence marked "from
+  outside", never as guidance (12.8).
+- Imported lessons, a pack's guidance and seed lessons are marked by origin. Only the person's own Keep, or their own signed
+  export, makes guidance active.
+- Forgetting a person and retention reach knowledge records, the knowledge log and private evaluation cases; forgetting is a
+  recorded redaction (5.2, 12.4).
+- Notification targets get counts, not content, unless a target is allowed for the data level (7.19).
 
 ## UI rules (design Part 7)
 - Today is the home; panels are filtered views. One primary action per row, the rest in its menu.
@@ -132,12 +151,32 @@ the change that records it also edits the design section it affects, and `docs/d
 - Keyboard and phone both work; WCAG 2.2 AA; status never by color alone.
 - Never render raw HTML; links from untrusted content show their real domain. The API client is generated from OpenAPI.
 
+## Not built yet: don't call it or assume it
+The rules below describe the target. These parts don't exist in the code yet, so never call them, and never skip a check
+because one of them "handles it". Remove a line in the change that builds it.
+- The scope resolver (design 6.18; phase E): nothing enforces scope today.
+- Fact lookups (6.19; phase C4): facts are only recorded, never looked up.
+- Read-backs and the rules review (6.7, 6.21; phase E).
+- The publisher and channels other than Copy (6.3, 6.12; phase C4).
+- `record.rename` (6.7): ids make most renames unnecessary, but there is no general rename op.
+- The governor: stale sweeps, outage handling, point-in-time restore (6.13; phase E).
+- Knowledge in packets, learning proposals and the search round (6.22; phase L-core). Today no run reads facts, rules,
+  lessons or a glossary.
+- The silent-stop fixes, Followed up and first names in context (phase L0).
+
 ## Product rules that shape every feature
 - The assistant drafts; the human approves everything outward. Nothing publishes, sends or posts without the PM approving
   that exact content.
 - The AI's only write path is a changeset validated by the applier.
 - The assistant doesn't repeat a corrected mistake: every correction proposes one piece of learning, every run reads the
-  knowledge that applies to it, and the repeat-correction rate is watched (design 6.22, 6.20).
+  knowledge that applies to it, and the repeat-correction rate is watched (design 6.22, 6.20). New work keeps the loop
+  whole:
+  - every AI task kind, core or plugin, gets the knowledge section and writes its knowledge log; from L-core, a task kind
+    without them fails the self-check;
+  - every way a person can change, undo, reject or redo the assistant's work records a signal; a new button that edits the
+    assistant's output without one is a bug;
+  - a wrong behavior of the assistant gets a fixture, not only a code test: a learning pair (the mistake and the corrected
+    later case) for learning, or a golden-set case for extraction.
 - One row per thing in the UI; lists, not run-on lines; labels in plain words; the model's name never shown.
 - AI work that costs real money is the person's choice: estimate first, ask above the configured amount, budgets per task kind
   and per record (design 6.16).
@@ -152,6 +191,14 @@ the change that records it also edits the design section it affects, and `docs/d
 - Ids never repeat. A rename is one op that updates every reference. The product never changes its own code: a request no op can do becomes a
   report the PM sends to the maintainers (design 6.13). Developing the product happens in this repository, outside any install.
 - Rules before AI; never let two versions of a change race; saves merge, never clobber; recover after sleep and outages.
+- No silent stops: anything that stops the assistant's work (a restart waiting, a provider paused, a run that keeps failing)
+  is a Today line, not only a status chip.
+- Today shows only what the person does, each line starting with the verb. Status and progress never go there.
+- A nudge isn't completion: "Followed up" keeps the action open, and finished work is credited to its owner, with who
+  reported it.
+- Values written to an outside system are in its canonical form, and a publish leaves no remaining difference.
+- Evaluation cases carry their received date and starting records, and score extra ops by default. Relaxing `exact` needs
+  a comment saying why.
 
 ## Demo data
 - Only the two fictional workspaces. No real names, companies, systems or URLs anywhere in the repository.

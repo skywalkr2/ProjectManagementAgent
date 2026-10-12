@@ -558,6 +558,19 @@ Checked against the record definitions in the code: every field gap you named is
 | C9. Retention breaks evidence | Evidence quotes are kept with their ops. The source shows "removed by retention on <date>" with the quotes visible, and `excerpts: never` is respected. |
 | C10. Smaller gaps | `question.held_for` (phase B), `signal.run` and `signal.changeset` (L-core), `person.verified` (L-core). |
 
+## 23. Your review of the repository's CLAUDE.md (2026-10-12)
+
+All five points, and the two lines on subagents, are in the file.
+
+| You said | What changed |
+|---|---|
+| 1. Separate rules in force from rules only designed | A new section, "Not built yet: don't call it or assume it", sits right before the product rules. One line each, with its phase: the scope resolver, fact lookups, read-backs and the rules review, the publisher and channels, `record.rename`, the governor, knowledge in packets, and the L0 fixes. A line is removed in the change that builds it. |
+| 2. Rules that keep the learning loop whole | Under the learning rule: every AI task kind gets the knowledge section and writes its knowledge log (a self-check failure from L-core); every way to change, undo, reject or redo the assistant's work records a signal; a wrong behavior gets a fixture, not only a code test. |
+| 3. The lessons from switching providers | Added to "AI providers", with "a quick fix must never undo these". |
+| 4. Section 19's safety rules | Added to "Data and safety model": loopback with Host and Origin checks; Keep authors the restatement; origin marking and what makes guidance active; forgetting and retention reaching knowledge and evaluations; notification counts. |
+| 5. Missing product rules | Added: no silent stops; Today only what the person does, verb first; a nudge isn't completion; canonical values and no remaining difference after a publish; evaluation cases with received dates, starting records and `exact` by default. |
+| Subagents and wrong premises | Every brief states the expected starting state, for the subagent to check. A subagent's "can't be done" or "needs a new op" comes back to the main session, never straight into a design change or a report. |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
