@@ -365,6 +365,9 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
 - [ ] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
   Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago").
+- [ ] **Found by the phase A journeys** (decisions, 2026-10-12, "What the first journeys found"): a new AI account's
+  suggested name is the service's name, not its catalog id; a custom address needs no key when the service takes
+  none; Follow-ups' Copy shows the message it will copy before copying, as 7.5 says (today it copies at once).
 - [ ] **Mailbox and calendar passwords and addresses entered on screen** and kept like an AI key, for the core's own
   mail and calendar sources (moved from phase A; today they work only through `env:` or `file:`). The exit test and the
   owner's real use sign in to a named service instead.

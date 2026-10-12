@@ -664,7 +664,9 @@ its tools off, how it takes the packet and where its answer is; the screen says 
 in, and the person never types a command); paste the key, which is kept on this computer while config keeps only a reference
 (the keychain is *designed, not yet built*, 12.1); **Test** checks the key and lists the models with their capabilities and prices; choose which models fill which tiers; set
 `allowed_data` (new accounts start at `open`, and the screen says who will see the data: the vendor, and for an aggregator the
-aggregator too); run the evaluation (below) before a model is approved for a tier.
+aggregator too; it also says that notes, mail and meetings are internal, so the assistant can work on them only once
+Internal is ticked, and a run stopped because no account may see its material offers "Let <account> see internal
+material" as its action, the person's own one-click raise, phase A); run the evaluation (below) before a model is approved for a tier.
 
 **One provider-neutral contract.** Every call is an `AiTask`:
 

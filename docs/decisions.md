@@ -3,6 +3,32 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: What the first journeys found on the person's path, and what changes before the exit test
+
+**Decided by:** project lead, from the phase A journey tests on a workspace made by `cockpit init` and started by
+`cockpit serve`.
+
+**What:** The journeys ran the owner's exit-test path with a fake AI service. Four things stop or mislead a new person:
+- **A new account may see only open material, but notes and mail are internal.**
+  - The rule stays: a new account sees only open data until the person raises it (product rules, 8).
+  - The dead end goes. The add-account screen says plainly that the person's notes, mail and meetings are internal, so
+    the assistant can work on them only once Internal is ticked.
+  - A run stopped because no account may see its material offers "Let <account> see internal material" as its one
+    action, and runs again once the person chooses it.
+- **Handing in before saying who you are spent money and then failed.** Without a person set for the workspace, a run
+  now waits before any AI call, with "Say who you are first" and the setup step as its action.
+- **Check now said "Nothing new" when a folder file had just been handed in.** Came in lists mail only; Check now's
+  count now covers everything any source handed in.
+- **A folder's first read hands nothing in.** That is kept (a folder may hold years of files), and the add-source form
+  says so, pointing to "Look at the last day".
+
+Also fixed: a setting given on the command line (`--port`) made any later change to a live setting wait for a restart.
+
+**Why:** These are the joins unit tests miss: each piece worked, and the path didn't.
+
+**Impact:** Design 6.16. No new setting or op. Phase A gains these fixes before its exit test. The account's suggested
+name (the catalog id) and a key being required for a custom address are phase B screen work.
+
 ## 2026-10-12: The acceptance scenario's step 7 is built as written: a Today line and the age on the header chip
 
 **Decided by:** project lead, while making the browser test check every step of the scenario as written.
