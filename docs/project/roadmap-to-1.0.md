@@ -124,12 +124,14 @@ A2. **The person's path, fixed where the review found it broken.**
 
 A3. **Journey tests.** These are end to end, with a fake AI service and fake mail and calendar services, and nothing
 is "ready to test" until they pass:
-- [ ] fresh workspace → AI account → hand-in → result on Today;
+- [x] fresh workspace → AI account → hand-in → result on Today (`journeys.spec.ts` J1, on a workspace made by
+  `cockpit init` and started by `cockpit serve`, with a fake AI service);
 - [ ] sign in → mail and calendar read → assistant → review on Today;
-- [ ] a source added on screen → read → assistant;
+- [x] a source added on screen → read → assistant (`journeys.spec.ts` J3);
 - [ ] an add-on installed from the screen → turned on → its screens appear;
-- [ ] backup → restore;
-- [ ] the acceptance scenario, steps 1–7, all checked as written (step 6 included).
+- [x] backup → restore (`tests/test_journeys.py::test_j5_a_backup_of_a_working_workspace_restores_to_the_same_screens_and_ledger`);
+- [x] the acceptance scenario, steps 1–7, all checked as written (step 6 included): `acceptance.spec.ts`, each test titled
+  with its step, and `tests/test_export.py::test_a_workspace_used_through_the_screens_round_trips`.
 
 ## Phase L: the learning loop, L-core (about 11.5 sessions, L0 included)
 
