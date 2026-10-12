@@ -5,7 +5,7 @@
 - **Two modes, one model.** Local mode listens on `127.0.0.1` and uses the install token. Hosted mode requires real sign-in and
   passes the deploy checks before it serves (Part 11). Version 1 is local only; hosted mode is built after 1.0. Roles for
   several users are later; in the base, everyone allowed in has full access.
-- **Local mode guards against other web pages, not only other machines** (*phase A*; from the first design author's
+- **Local mode guards against other web pages, not only other machines** (*built, phase A*; from the first design author's
   review). Listening on `127.0.0.1` with a token stops other computers. It doesn't stop a page open in the same browser
   sending requests to the local port (cross-site request forgery), or a DNS-rebinding page reading the answers. So, in local
   mode as in hosted:
@@ -17,10 +17,11 @@
   - no permissive CORS headers are sent (built: there are none).
 
   The sign-in callback, served without the cookie, relies on its one-time `state` (6.27), which is unaffected.
-- **Local mode never listens beyond this computer** (*phase A*). `server.host` in local mode must be a loopback address; the
+- **Local mode never listens beyond this computer** (*built, phase A*). `server.host` in local mode must be a loopback address; the
   app refuses to start otherwise, and says that reaching it from another device needs hosted mode's rules (TLS, real
-  sign-in). Notifications reach a phone outward through a channel (7.19), which needs no inbound access. Today
-  `server.host` takes any address, so a person could expose the token over plain HTTP on a shared network.
+  sign-in). Notifications reach a phone outward through a channel (7.19), which needs no inbound access. Before
+  phase A, `server.host` took any address, so a person could expose the token over plain HTTP on a shared network
+  (`tests/test_local_guards.py`).
 - **Secrets** come from the environment, the OS keychain or a mounted file, referenced in config as `env:NAME`,
   `keychain:NAME` or `file:/path`, never stored in config or data. Hosted platforms pass them as environment secrets. Plugins
   get only the secrets their manifest names from the core's secret store. Built: `env:` and `file:`, and a key pasted on a

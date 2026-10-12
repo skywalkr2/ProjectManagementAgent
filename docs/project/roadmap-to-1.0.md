@@ -106,7 +106,10 @@ A2. **The person's path, fixed where the review found it broken.**
   `test_a_source_already_being_read_is_not_read_twice` (`tests/test_watch.py`) and "Check now reads the sources, shows
   the new list at once and says what arrived" (`web/src/components/TodayBoard.test.tsx`).
 - [ ] With the Install button, the Add-ons screen's introduction stops saying the app never installs anything.
-- [ ] **Local mode guards against other web pages** (design 12.1):
+- [x] **Local mode guards against other web pages** (design 12.1; `tests/test_local_guards.py`, e.g.
+  `test_a_post_from_a_foreign_origin_is_refused_even_with_a_valid_token`,
+  `test_a_foreign_host_is_refused_on_an_api_route_the_health_check_and_the_page`,
+  `test_serve_refuses_to_start_on_another_address_and_says_why`):
   - refuse a `Host` that isn't the configured local address;
   - refuse state-changing requests from another `Origin`;
   - refuse to start in local mode on a non-loopback address.
