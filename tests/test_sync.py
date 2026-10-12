@@ -287,3 +287,13 @@ def test_a_snapshot_doesnt_see_writes_made_meanwhile(env):
         writer.join()
         assert len(view.list("project")) == before and len(store.read().list("project")) == before
     assert len(store.read().list("project")) == before + 1
+
+
+def test_another_workspaces_folder_is_not_a_synced_folder(tmp_path):
+    from engine.sync import folder_problem
+
+    other, _, other_store = workspace(tmp_path, name="other")
+    other_store.close()
+    ws, cfg, store = workspace(tmp_path, name="ws", folder=other.root)
+    store.close()
+    assert "another workspace's own folder" in folder_problem(ws, cfg)

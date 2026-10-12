@@ -556,6 +556,10 @@ def folder_problem(ws: Any, cfg: Any) -> str | None:
     folder = Path(cfg.storage.sync.folder).expanduser().resolve()
     if not folder.is_dir():
         return f"the synced folder {folder} isn't there (is the drive or sync service connected?)"
+    if (folder / "config" / "workspace.yaml").is_file():
+        # Another workspace's folder: its own private files would read as a sync service's conflict copies, and
+        # writing there would mix this workspace's copy into that one.
+        return f"the synced folder {folder} is another workspace's own folder; choose an empty folder for syncing"
     return None
 
 
