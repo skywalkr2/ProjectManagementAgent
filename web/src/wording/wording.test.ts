@@ -33,8 +33,11 @@ test("every literal key exists", () => {
 });
 
 test("key families built at run time are complete", () => {
-  const s = (schema as { components: { schemas: Record<string, { properties: Record<string, { enum?: string[] }> }> } })
-    .components.schemas;
+  const s = (
+    schema as {
+      components: { schemas: Record<string, { properties: Record<string, { enum?: string[]; items?: { enum?: string[] } }> }> };
+    }
+  ).components.schemas;
   const states = s.ChangeItem.properties.state.enum ?? [];
   const opStatuses = s.OpView.properties.status.enum ?? [];
   const expected = [
@@ -51,7 +54,11 @@ test("key families built at run time are complete", () => {
     "changes.second.same_account",
     ...["ok", "failed"].map((x) => `setup.job_${x}`),
     "setup.job_other",
-    ...["workspace", "template", "ai", "backup", "people", "first_note", "addons"].flatMap((x) => [`setup_step.${x}`, `setup_step.${x}.explanation`]),
+    ...["workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons"].flatMap((x) => [`setup_step.${x}`, `setup_step.${x}.explanation`]),
+    ...(s.WalkthroughView.properties.step.enum ?? []).flatMap((x) => [`walkthrough.screen.${x}`, `walkthrough.why.${x}`]),
+    ...["done", "skipped", "todo"].flatMap((x) => [`walkthrough.state.${x}`, `walkthrough.done.${x}`]),
+    ...["not_installed", "off", "restart", "problem", "ready"].map((x) => `walkthrough.mail.state.${x}`),
+    ...(s.PackSummary.properties.reads.items?.enum ?? []).map((x) => `walkthrough.mail.reads.${x}`),
     ...["stdin", "file"].map((x) => `welcome.ai.packet_via.${x}`),
     ...["stdout", "outbox"].map((x) => `welcome.ai.output_via.${x}`),
     ...["open", "internal", "restricted"].map((x) => `welcome.ai.data.${x}`),

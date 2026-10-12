@@ -18,6 +18,7 @@ import {
   priceText,
   reachesLines,
   updateOffered,
+  waitsForRestart,
   type Summary,
 } from "../lib/packs";
 import { problemText } from "../lib/problem";
@@ -504,10 +505,6 @@ function FeedLine(props: { feed: Feed }) {
     </li>
   );
 }
-
-/** An add-on whose saved setting and running state differ without a reason given: one just turned on isn't running yet,
- * one just turned off still is, and either changes at the next restart. */
-const waitsForRestart = (item: Installed) => (item.enabled ? item.state !== "enabled" && !item.reason : item.state === "enabled");
 
 /** The same for a pack in the Available list, read from the installed add-on of that name. */
 const restartNeeded = (pack: Pack, installed: Installed[]) => {

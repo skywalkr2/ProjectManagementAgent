@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "./lib/api";
-import { fakeApi, renderApp, statusFixture } from "./test-utils";
+import { fakeApi, renderApp, setupView, statusFixture } from "./test-utils";
 import { App } from "./App";
 
 const rc = (extra: Partial<S["RuntimeConfig"]> = {}): S["RuntimeConfig"] => ({
@@ -99,7 +99,7 @@ const quiet = {
   "GET changes": () => [],
   "GET followups": () => [],
   "GET me": () => ({ full_name: "Casey Example", person: null }),
-  "GET setup": () => ({ steps: [], finished: true, local: true }),
+  "GET setup": () => setupView([], { finished: true }),
   "GET runtime-config": () => ({ instance: null }),
 };
 
@@ -126,9 +126,9 @@ test("the projects and people views open the people and projects screen at their
 
 test("older fragments still open their view", async () => {
   window.location.hash = "#welcome";
-  fakeApi({ ...quiet, "GET setup": () => ({ steps: [], finished: false, local: true }) });
+  fakeApi({ ...quiet, "GET setup": () => setupView([], { finished: false }), "GET packs": () => ({ enabled: true, feeds: [], available: [], installed: [] }) });
   renderApp(<App rc={rc()} />);
-  expect(await screen.findByRole("heading", { level: 1, name: "Set up" })).toBeInTheDocument();
+  expect(await screen.findByRole("heading", { level: 1, name: "Set up your workspace" })).toBeInTheDocument();
 });
 
 test("going to another view moves focus to its heading, but the first load does not take focus", async () => {

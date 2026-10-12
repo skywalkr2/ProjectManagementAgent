@@ -1233,7 +1233,7 @@ class DataLevelAllowed(BaseModel):
 
 class SetupStepView(BaseModel):
     id: str = Field(
-        description='A core step ("workspace", "template", "ai", "backup", "people", "first_note") or a plugin\'s step.'
+        description="A core step (workspace, ai, mail, backup, people, template, first_note, addons) or a plugin's."
     )
     done: bool
     skipped: bool
@@ -1245,12 +1245,38 @@ class SetupStepView(BaseModel):
         default_factory=dict, description="Core settings a plugin step suggests, applied with the step's Apply."
     )
     sign_in: str | None = Field(None, description="For a step the core adds per sign-in: the sign-in's name.")
+    group: Literal["you", "ai", "mail", "backup", "people", "done"] = Field(
+        "done",
+        description="The walkthrough screen the step is on. A step on the last screen is an optional extra.",
+    )
+    counted: bool = Field(False, description="The step counts toward finishing the setup.")
+
+
+WalkthroughScreen = Literal["you", "ai", "mail", "backup", "people", "done"]
+
+
+class WalkthroughView(BaseModel):
+    """Where the new-start walkthrough stands, kept on this computer so it resumes after a restart."""
+
+    open: bool = Field(description="It should open by itself now: not closed, not finished, setup still to do.")
+    step: WalkthroughScreen = Field(description="The screen to open at.")
+    closed: bool = Field(description="The person chose Finish later; it stays closed until they open it again.")
+    finished: bool = Field(description="The person pressed the last button.")
+
+
+class WalkthroughIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    step: WalkthroughScreen | None = None
+    closed: bool | None = None
+    finished: bool | None = None
 
 
 class SetupView(BaseModel):
     steps: list[SetupStepView]
-    finished: bool = Field(description="Every step is done or skipped.")
+    finished: bool = Field(description="Every step that counts is done or skipped; the optional extras never count.")
     local: bool = Field(description="The app runs on the person's own computer, so folders can be picked here.")
+    walkthrough: WalkthroughView
 
 
 class TemplateAdds(BaseModel):
@@ -1501,6 +1527,9 @@ class WatchSourceView(BaseModel):
     label: str
     connector: str
     connector_label: str = Field(description="What kind of place it is, in words; empty when no connector runs it.")
+    reads: list[Literal["mail", "calendar"]] = Field(
+        default_factory=list, description="Whether the place is mail, a calendar, or neither (empty)."
+    )
     enabled: bool
     every_minutes: int
     items: int = Field(description="Items it held at the last read.")
@@ -1606,6 +1635,9 @@ class PackSummary(BaseModel):
     adds: PackAdds
     reaches: PackReaches
     keeps: Literal["open", "internal", "restricted"] = Field(description="The most private material it holds.")
+    reads: list[Literal["mail", "calendar"]] = Field(
+        default_factory=list, description="Whether the places it can keep reading are mail, a calendar, or both."
+    )
 
 
 class PackCost(BaseModel):

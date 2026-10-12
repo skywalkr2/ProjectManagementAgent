@@ -76,3 +76,8 @@ export const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
 export function updateOffered(pack: S["PackView"]): boolean {
   return pack.installed_version != null && !!pack.version && pack.installed_version !== pack.version;
 }
+
+/** An add-on whose saved setting and running state differ without a reason given: one just turned on isn't running yet,
+ * one just turned off still is, and either changes at the next restart. */
+export const waitsForRestart = (item: S["InstalledPackView"]) =>
+  item.enabled ? item.state !== "enabled" && !item.reason : item.state === "enabled";

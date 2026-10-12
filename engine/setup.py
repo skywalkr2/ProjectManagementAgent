@@ -1,7 +1,10 @@
 """The first-run setup (design 7.8): a short list of steps, each skippable and repeatable, plus the steps plugins add.
 
-A step is done when the workspace shows it (a name and the person's own name, an AI account that passed its test, a
-backup folder, a few people, a first note); skipping is remembered on this computer, in the workspace's private folder.
+A step is done when the workspace shows it (a name and the person's own name, an AI account that passed its test, mail
+or a calendar being read, a backup folder, a few people, a first note); skipping is remembered on this computer, in the
+workspace's private folder. The new-start walkthrough is a view of these steps: each belongs to one of its screens
+(`group`), the ones that count toward finishing are marked, and the screen the person is on is kept beside the skips so
+it resumes where they left it, also after a restart.
 Also here: checking a folder for backups, listing folders to pick one on this computer, and adding an AI account, whose
 pasted key is kept in the private folder and referred to from `ai.yaml`, never written there.
 """
@@ -18,11 +21,16 @@ from typing import Any
 
 import yaml
 
+from engine.connectors import reads
 from engine.shipped import shipped
 from engine.storage import StoreError
 
 STATE_FILE = "setup.json"
-CORE_STEPS = ("workspace", "template", "ai", "backup", "people", "first_note", "addons")
+CORE_STEPS = ("workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons")
+#: The walkthrough's screens, in order. The last one lists what was set up and what is optional.
+WALKTHROUGH_STEPS = ("you", "ai", "mail", "backup", "people", "done")
+#: The walkthrough screen a core step belongs to; a core step not listed is an optional extra, on the last screen.
+CORE_GROUPS = {"workspace": "you", "ai": "ai", "mail": "mail", "backup": "backup", "people": "people"}
 CATALOG = shipped("catalog") / "ai-endpoints.yaml"
 
 
@@ -37,6 +45,8 @@ class Step:
     plugin: str | None = None
     settings: dict[str, Any] = field(default_factory=dict)  # core settings a plugin step suggests
     sign_in: str | None = None  # a step the core adds per sign-in: the sign-in's name
+    group: str = "done"  # the walkthrough screen it belongs to (one of WALKTHROUGH_STEPS)
+    counted: bool = False  # whether it counts toward finishing the walkthrough
 
 
 @dataclass
@@ -70,24 +80,53 @@ def _save_state(ws: Any, data: dict[str, Any]) -> None:
     (ws.private_dir / STATE_FILE).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
 
+def mail_plugins(store: Any) -> set[str]:
+    """The running add-ons that provide a source of mail or of a calendar."""
+    return {
+        name
+        for name, manifest in store.plugins.manifests.items()
+        if any(reads(connector) for connector in manifest.provides.connectors)
+    }
+
+
 def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
-    """Every setup step with whether it is done or skipped: the core's, then each running plugin's."""
+    """Every setup step with whether it is done or skipped: the core's, then each running plugin's. An add-on's own
+    steps and sign-ins belong to the mail and calendar screen when it provides a source of mail or of a calendar."""
     from engine.ai.smoke import ai_state
+    from engine.sign_in import status
 
     state = _state(ws)
     skipped = set(state.get("skipped", []))
     view = store.read()
     people = view.list("person")
+    mail_addons = mail_plugins(store)
+    sign_ins = store.plugins.sign_ins()
+    signed = {
+        name: status(ws.root / ".cockpit" / "keys" / sign_in.plugin, sign_in) == "signed_in"
+        for name, sign_in in sign_ins.items()
+    }
+    mail_signed = any(signed[name] for name, sign_in in sign_ins.items() if sign_in.plugin in mail_addons)
+    mail_read = any(source.enabled and reads(source.connector) for source in cfg.watch.sources)
     done = {
         "workspace": _pm_named(cfg, view) and cfg.workspace.name != "Workspace",
         "template": bool(state.get("template")) or _template_in_use(ws, cfg),
         "ai": ai_state(ws, cfg, store)[0] == "ok",
+        "mail": mail_signed or mail_read,
         "backup": bool(cfg.storage.backups.targets),
         "people": len(people) >= 2,
         "first_note": any(r.data.get("origin") == "pm" for r in view.list("request")),
         "addons": not set(addons_off(ws, cfg)) - set(state.get("addons_decided", [])),
     }
-    found = [Step(step, done[step], step in skipped and not done[step]) for step in CORE_STEPS]
+    found = [
+        Step(
+            step,
+            done[step],
+            step in skipped and not done[step],
+            group=CORE_GROUPS.get(step, "done"),
+            counted=step in CORE_GROUPS,
+        )
+        for step in CORE_STEPS
+    ]
     for plugin, step in store.plugins.setup_steps():
         finished = store.plugins.setup_step_done(plugin, step)
         found.append(
@@ -100,24 +139,76 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
                 action=step.action,
                 plugin=plugin,
                 settings=dict(step.settings),
+                group="mail" if plugin in mail_addons else "done",
             )
         )
-    from engine.sign_in import status
-
-    for name, sign_in in store.plugins.sign_ins().items():
-        signed = status(ws.root / ".cockpit" / "keys" / sign_in.plugin, sign_in) == "signed_in"
+    for name, sign_in in sign_ins.items():
         found.append(
             Step(
                 name,
-                signed,
-                name in skipped and not signed,
+                signed[name],
+                name in skipped and not signed[name],
                 label=sign_in.label,
                 explanation="; ".join(sign_in.allows),
                 plugin=sign_in.plugin,
                 sign_in=name,
+                group="mail" if sign_in.plugin in mail_addons else "done",
             )
         )
     return found
+
+
+def finished(found: list[Step]) -> bool:
+    """Every step that counts toward finishing is done or skipped. The optional extras never count."""
+    return all(s.done or s.skipped for s in found if s.counted)
+
+
+# ---- the walkthrough -------------------------------------------------------------------------------------------------
+
+
+@dataclass
+class Walkthrough:
+    open: bool  # it should open by itself now
+    step: str  # the screen to open at (one of WALKTHROUGH_STEPS)
+    closed: bool  # the person chose Finish later
+    finished: bool  # the person pressed the last button
+
+
+def walkthrough(ws: Any, cfg: Any, found: list[Step]) -> Walkthrough:
+    """Where the walkthrough stands. It opens by itself until the person closes it or finishes it, on a workspace whose
+    setup is not finished (or that it was already started on, so it doesn't vanish when the last step is done), and
+    never on the sandbox workspaces. It resumes at the screen kept from the last visit, else at the first one with a
+    step still to do."""
+    mine = _state(ws).get("walkthrough")
+    mine = mine if isinstance(mine, dict) else {}
+    closed, ended, started = bool(mine.get("closed")), bool(mine.get("finished")), bool(mine.get("started"))
+    step = mine.get("step")
+    if step not in WALKTHROUGH_STEPS:
+        todo = next((s for s in found if s.counted and not (s.done or s.skipped)), None)
+        step = todo.group if todo else "done"
+    return Walkthrough(
+        open=not closed and not ended and not cfg.workspace.demo and (started or not finished(found)),
+        step=step,
+        closed=closed,
+        finished=ended,
+    )
+
+
+def keep_walkthrough(ws: Any, step: str | None = None, closed: bool | None = None, ended: bool | None = None) -> None:
+    """Keep where the walkthrough stands: the screen the person is on, that they closed it for now (it then stays closed
+    until they open it again), or that they finished it."""
+    if step is not None and step not in WALKTHROUGH_STEPS:
+        raise StoreError(f"there is no walkthrough screen {step}")
+    state = _state(ws)
+    mine = dict(state["walkthrough"]) if isinstance(state.get("walkthrough"), dict) else {}
+    if step is not None:
+        mine["step"], mine["started"] = step, True
+    if closed is not None:
+        mine["closed"] = closed
+    if ended is not None:
+        mine["finished"] = ended
+    state["walkthrough"] = mine
+    _save_state(ws, state)
 
 
 def addons_off(ws: Any, cfg: Any) -> list[str]:

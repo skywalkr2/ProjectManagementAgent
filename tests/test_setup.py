@@ -151,7 +151,7 @@ def test_steps_say_what_is_done_and_can_be_skipped(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
     steps = {s["id"]: s for s in c.get(f"{api}/setup").json()["steps"]}
-    assert list(steps)[:7] == ["workspace", "template", "ai", "backup", "people", "first_note", "addons"]
+    assert list(steps)[:8] == ["workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons"]
     assert not steps["first_note"]["done"]
     assert c.post(f"{api}/setup/first_note/skip").status_code == 200
     view = c.get(f"{api}/setup").json()

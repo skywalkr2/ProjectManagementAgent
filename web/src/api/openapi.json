@@ -4317,6 +4317,18 @@
           },
           "reaches": {
             "$ref": "#/components/schemas/PackReaches"
+          },
+          "reads": {
+            "description": "Whether the places it can keep reading are mail, a calendar, or both.",
+            "items": {
+              "enum": [
+                "mail",
+                "calendar"
+              ],
+              "type": "string"
+            },
+            "title": "Reads",
+            "type": "array"
           }
         },
         "required": [
@@ -6597,6 +6609,12 @@
             "description": "A plugin step's person action, if it has one.",
             "title": "Action"
           },
+          "counted": {
+            "default": false,
+            "description": "The step counts toward finishing the setup.",
+            "title": "Counted",
+            "type": "boolean"
+          },
           "done": {
             "title": "Done",
             "type": "boolean"
@@ -6606,8 +6624,22 @@
             "title": "Explanation",
             "type": "string"
           },
+          "group": {
+            "default": "done",
+            "description": "The walkthrough screen the step is on. A step on the last screen is an optional extra.",
+            "enum": [
+              "you",
+              "ai",
+              "mail",
+              "backup",
+              "people",
+              "done"
+            ],
+            "title": "Group",
+            "type": "string"
+          },
           "id": {
-            "description": "A core step (\"workspace\", \"template\", \"ai\", \"backup\", \"people\", \"first_note\") or a plugin's step.",
+            "description": "A core step (workspace, ai, mail, backup, people, template, first_note, addons) or a plugin's.",
             "title": "Id",
             "type": "string"
           },
@@ -6662,7 +6694,7 @@
       "SetupView": {
         "properties": {
           "finished": {
-            "description": "Every step is done or skipped.",
+            "description": "Every step that counts is done or skipped; the optional extras never count.",
             "title": "Finished",
             "type": "boolean"
           },
@@ -6677,12 +6709,16 @@
             },
             "title": "Steps",
             "type": "array"
+          },
+          "walkthrough": {
+            "$ref": "#/components/schemas/WalkthroughView"
           }
         },
         "required": [
           "steps",
           "finished",
-          "local"
+          "local",
+          "walkthrough"
         ],
         "title": "SetupView",
         "type": "object"
@@ -8262,6 +8298,95 @@
         "title": "ValueListView",
         "type": "object"
       },
+      "WalkthroughIn": {
+        "additionalProperties": false,
+        "properties": {
+          "closed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Closed"
+          },
+          "finished": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "enum": [
+                  "you",
+                  "ai",
+                  "mail",
+                  "backup",
+                  "people",
+                  "done"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          }
+        },
+        "title": "WalkthroughIn",
+        "type": "object"
+      },
+      "WalkthroughView": {
+        "description": "Where the new-start walkthrough stands, kept on this computer so it resumes after a restart.",
+        "properties": {
+          "closed": {
+            "description": "The person chose Finish later; it stays closed until they open it again.",
+            "title": "Closed",
+            "type": "boolean"
+          },
+          "finished": {
+            "description": "The person pressed the last button.",
+            "title": "Finished",
+            "type": "boolean"
+          },
+          "open": {
+            "description": "It should open by itself now: not closed, not finished, setup still to do.",
+            "title": "Open",
+            "type": "boolean"
+          },
+          "step": {
+            "description": "The screen to open at.",
+            "enum": [
+              "you",
+              "ai",
+              "mail",
+              "backup",
+              "people",
+              "done"
+            ],
+            "title": "Step",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open",
+          "step",
+          "closed",
+          "finished"
+        ],
+        "title": "WalkthroughView",
+        "type": "object"
+      },
       "WatchKindView": {
         "description": "A kind of source the assistant can keep reading, with the form its settings take.",
         "properties": {
@@ -8554,6 +8679,18 @@
             ],
             "description": "Why it can't be read, and what to do, while it fails.",
             "title": "Problem"
+          },
+          "reads": {
+            "description": "Whether the place is mail, a calendar, or neither (empty).",
+            "items": {
+              "enum": [
+                "mail",
+                "calendar"
+              ],
+              "type": "string"
+            },
+            "title": "Reads",
+            "type": "array"
           }
         },
         "required": [
@@ -12774,6 +12911,45 @@
           }
         },
         "summary": "Folders"
+      }
+    },
+    "/api/setup/walkthrough": {
+      "post": {
+        "description": "Keep where the walkthrough stands: its screen, that it was closed, or that it was finished.",
+        "operationId": "walkthrough_keep_api_setup_walkthrough_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalkthroughIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalkthroughView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Walkthrough Keep"
       }
     },
     "/api/setup/{step}/apply-settings": {

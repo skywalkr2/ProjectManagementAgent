@@ -199,6 +199,19 @@ class Connector:
     test_only: bool = False
 
 
+#: Words in a connector's name (the part after the add-on's name) that say what kind of thing it reads.
+READS_WORDS: dict[str, tuple[str, ...]] = {
+    "mail": ("mail", "mailbox", "email", "inbox"),
+    "calendar": ("calendar",),
+}
+
+
+def reads(connector: str) -> list[str]:
+    """What a connector reads, by its name: "mail" and/or "calendar", in that order, or nothing for any other kind."""
+    last = connector.rsplit("/", 1)[-1].lower()
+    return [kind for kind, words in READS_WORDS.items() if last in words]
+
+
 # ---- the folder connector ------------------------------------------------------------------------------------------
 
 

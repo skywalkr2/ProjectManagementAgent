@@ -3,19 +3,8 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { RestartNotice, RestartProvider } from "../lib/restart";
-import { Refuse, fakeApi, renderApp } from "../test-utils";
-import { Welcome } from "./Welcome";
-
-const step = (id: string, extra: Partial<S["SetupStepView"]> = {}): S["SetupStepView"] => ({
-  id,
-  done: false,
-  skipped: false,
-  label: "",
-  explanation: "",
-  action: null,
-  plugin: null,
-  ...extra,
-});
+import { Refuse, fakeApi, renderApp, setupStep as step, setupView } from "../test-utils";
+import { StepList } from "./Welcome";
 
 const setting = (key: string, value: unknown, extra: Partial<S["SettingItem"]> = {}): S["SettingItem"] => ({
   key,
@@ -38,11 +27,11 @@ const ITEMS = [
   setting("workspace.user.timezone", "UTC"),
 ];
 
-const CORE = ["workspace", "template", "ai", "backup", "people", "first_note", "addons"];
+const CORE = ["workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons"];
 
 function api(steps: S["SetupStepView"][], extra: Record<string, (body: unknown) => unknown> = {}) {
   return fakeApi({
-    "GET setup": () => ({ steps, finished: false, local: true }),
+    "GET setup": () => setupView(steps),
     "GET settings": () => ({ fingerprint: "fp-1", items: ITEMS }),
     "GET me": () => ({ person: null, full_name: "" }),
     "GET templates": () => [
@@ -64,13 +53,13 @@ function api(steps: S["SetupStepView"][], extra: Record<string, (body: unknown) 
   });
 }
 
-const open = (props: Partial<Parameters<typeof Welcome>[0]> = {}) => {
+const open = (props: Partial<Parameters<typeof StepList>[0]> = {}) => {
   const onOpenPeople = vi.fn();
   const onOpenAddons = vi.fn();
   const onHandIn = vi.fn();
   const onChooseSource = vi.fn();
   const view = renderApp(
-    <Welcome focusStep={null} onOpenPeople={onOpenPeople} onOpenAddons={onOpenAddons} onHandIn={onHandIn} onChooseSource={onChooseSource} {...props} />,
+    <StepList focusStep={null} onOpenPeople={onOpenPeople} onOpenAddons={onOpenAddons} onHandIn={onHandIn} onChooseSource={onChooseSource} {...props} />,
   );
   return { onOpenPeople, onOpenAddons, onHandIn, onChooseSource, ...view };
 };
@@ -100,7 +89,7 @@ test("Skip posts the step and turns into a way back; Reopen undoes it", async ()
   const user = userEvent.setup();
   let skipped = false;
   const calls = fakeApi({
-    "GET setup": () => ({ steps: [step("backup", { skipped })], finished: false, local: true }),
+    "GET setup": () => setupView([step("backup", { skipped })]),
     "GET settings": () => ({ fingerprint: "fp-1", items: ITEMS }),
     "POST setup/backup/skip": () => {
       skipped = true;
@@ -182,7 +171,7 @@ test("the template step applies one template and asks before the app restarts", 
   renderApp(
     <RestartProvider hellos={1}>
       <RestartNotice />
-      <Welcome focusStep={null} onOpenPeople={() => undefined} onOpenAddons={() => undefined} onHandIn={() => undefined} onChooseSource={() => undefined} />
+      <StepList focusStep={null} onOpenPeople={() => undefined} onOpenAddons={() => undefined} onHandIn={() => undefined} onChooseSource={() => undefined} />
     </RestartProvider>,
   );
   expect(await screen.findByText("Chapters and drafts.")).toBeInTheDocument();

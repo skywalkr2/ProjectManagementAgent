@@ -1,4 +1,4 @@
-// The list of keyboard shortcuts, from the configured keys.
+// Help: a way into the setup walkthrough for someone new, and the list of keyboard shortcuts, from the configured keys.
 import { Heading } from "react-aria-components";
 import { Button } from "../ui/Button";
 import { useWords } from "../lib/wording";
@@ -7,7 +7,13 @@ import styles from "./ShortcutHelp.module.css";
 
 const ORDER = ["next", "previous", "primary", "send_back", "copy", "edit", "undo", "hand_in", "ask", "help"];
 
-export function ShortcutHelp(props: { open: boolean; onClose: () => void; keys: Record<string, string> }) {
+export function ShortcutHelp(props: {
+  open: boolean;
+  onClose: () => void;
+  keys: Record<string, string>;
+  /** Opens the setup walkthrough; left out where it is already open. */
+  onOpenWalkthrough?: () => void;
+}) {
   const { t } = useWords();
   if (!props.open) return null;
   return (
@@ -15,6 +21,19 @@ export function ShortcutHelp(props: { open: boolean; onClose: () => void; keys: 
       <Heading slot="title" id="help-title" className={styles.title}>
         {t("help.title")}
       </Heading>
+      {props.onOpenWalkthrough && (
+        <div className={styles.new}>
+          <p>{t("help.walkthrough")}</p>
+          <Button
+            onClick={() => {
+              props.onClose();
+              props.onOpenWalkthrough?.();
+            }}
+          >
+            {t("help.walkthrough_open")}
+          </Button>
+        </div>
+      )}
       <dl className={styles.list}>
         {ORDER.filter((a) => props.keys[a]).map((action) => (
           <div key={action} className={styles.row}>

@@ -19,6 +19,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from engine.config import Config
+from engine.connectors import READS_WORDS, reads
 
 #: The largest feed read, in bytes.
 MAX_FEED_BYTES = 2_000_000
@@ -225,6 +226,7 @@ def summary(provides: dict[str, Any], requires: dict[str, Any]) -> dict[str, Any
             "keys": len(_list(requires.get("secrets"))),
         },
         "keeps": max(levels, key=LEVELS.index),
+        "reads": [kind for kind in READS_WORDS if any(kind in reads(c) for c in _list(provides.get("connectors")))],
     }
 
 

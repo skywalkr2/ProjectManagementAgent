@@ -33,7 +33,8 @@ export function SetupLine(props: { workspace: string; onOpenGuide: (step: string
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
   const [gone, setGone] = useState(() => hidden(props.workspace));
   if (gone || !setup.data || setup.data.finished) return null;
-  const steps = setup.data.steps;
+  // Only the steps that count toward finishing are on the line; the optional extras are not.
+  const steps = setup.data.steps.filter((s) => s.counted);
   const next = steps.find((s) => !s.done && !s.skipped);
   if (!next) return null;
   const finished = steps.filter((s) => s.done || s.skipped).length;

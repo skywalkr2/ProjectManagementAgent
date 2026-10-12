@@ -250,6 +250,8 @@ export const api = {
   settings: () => call<S["SettingsView"]>("GET", "settings"),
   saveSettings: (body: S["SettingsSave"]) => call<S["SettingsSaved"]>("POST", "settings", body),
   setup: () => call<S["SetupView"]>("GET", "setup"),
+  /** Keeps where the walkthrough stands on the server: its screen, that it was closed, or that it was finished. */
+  keepWalkthrough: (body: S["WalkthroughIn"]) => call<S["WalkthroughView"]>("POST", "setup/walkthrough", body),
   me: () => call<S["MeView"]>("GET", "me"),
   saveMe: (fullName: string) => call<S["MeView"]>("POST", "me", { full_name: fullName }),
   applyStepSettings: (step: string, fingerprint: string) =>

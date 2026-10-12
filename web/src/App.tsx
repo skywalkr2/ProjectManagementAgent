@@ -1,7 +1,8 @@
 // The app shell (design 7.1): one grid with the header across the top, the sidebar on the left (a bottom bar on a phone) and
 // the content area, which is the only thing that changes when the view does. Every view is a link in the address's fragment.
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { S } from "./lib/api";
+import { api, type S } from "./lib/api";
 import { useShortcuts } from "./lib/keys";
 import { useLive } from "./lib/live";
 import { useNarrow } from "./lib/media";
@@ -11,6 +12,7 @@ import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
 import { longDay } from "./lib/dates";
 import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
+import { screenOf, type Screen } from "./lib/walkthrough";
 import { useWords } from "./lib/wording";
 import { Addons } from "./components/Addons";
 import { Ask } from "./components/Ask";
@@ -29,7 +31,7 @@ import { TodayBoard } from "./components/TodayBoard";
 import { Stages } from "./components/Stages";
 import { ShortcutHelp } from "./components/ShortcutHelp";
 import { WhatChanged } from "./components/WhatChanged";
-import { Welcome, type FocusStep } from "./components/Welcome";
+import { Walkthrough } from "./components/Walkthrough";
 import { BottomBar } from "./shell/BottomBar";
 import { Header } from "./shell/Header";
 import { BackupLine } from "./shell/BackupLine";
@@ -69,8 +71,10 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
   // The Ask box, with the question it opens on when a screen suggests one.
   const [ask, setAsk] = useState<{ question?: string } | null>(null);
   const [view, setView] = useView();
-  // The setup guide opens at a step when a line elsewhere sends the person to one.
-  const [guideStep, setGuideStep] = useState<FocusStep | null>(null);
+  // The setup walkthrough opens at a screen when a line elsewhere sends the person to a step.
+  const [guideAt, setGuideAt] = useState<{ screen: Screen; n: number } | null>(null);
+  const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
+  const focusFirstGo = useFocusFirstGo();
   // Sources opens on the form that adds one when Today or a sign-in sends the person there.
   const [addSource, setAddSource] = useState<AddRequest | null>(null);
   // A screen that puts focus somewhere of its own on opening (a step's heading, a form) keeps it.
@@ -81,8 +85,10 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     setView("sources");
   };
   const openGuide = (step?: string) => {
-    ownFocus.current = !!step;
-    setGuideStep(step ? { id: step, n: Date.now() } : null);
+    // The walkthrough puts focus on its own heading.
+    ownFocus.current = true;
+    const screen = step && setup.data ? screenOf(setup.data.steps, step) : null;
+    setGuideAt(screen ? { screen, n: Date.now() } : null);
     setView("setup");
   };
   // Where a record's page goes back to: the screen it was opened from.
@@ -92,6 +98,16 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     setView(recordView(kind, id));
   };
   const shown = parseView(view);
+  const inWalkthrough = shown.type === "core" && shown.view === "setup";
+  // A new workspace's first visit opens the walkthrough by itself, once: the server says whether it should (it has not
+  // been closed or finished, and setup is not done). A person who arrives at another screen is not taken from it.
+  const autoOpened = useRef(false);
+  useEffect(() => {
+    if (autoOpened.current || !setup.data) return;
+    autoOpened.current = true;
+    if (setup.data.walkthrough?.open && shown.type === "core" && shown.view === "today") setView("setup");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setup.data]);
   const handlers = useMemo(
     () => ({ undo: undoLast, hand_in: () => setHandIn(true), ask: () => setAsk({}), help: () => setHelp(true) }),
     [undoLast],
@@ -180,15 +196,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           />
         );
       case "setup":
-        return (
-          <Welcome
-            focusStep={guideStep}
-            onOpenPeople={() => setView("records/people")}
-            onOpenAddons={() => setView("addons")}
-            onHandIn={() => setHandIn(true)}
-            onChooseSource={openAddSource}
-          />
-        );
+        return null;
       case "settings":
         return <Settings onOpenGuide={() => openGuide()} onOpenAddons={() => setView("addons")} onChooseSource={openAddSource} />;
       case "addons":
@@ -199,6 +207,62 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return null;
     }
   })();
+
+  const overlays = (
+    <>
+      <RestartAnnouncer what={what} />
+      {ask && (
+        <Ask
+          initial={ask.question}
+          feedbackTo={rc.feedback_to}
+          onClose={() => {
+            setAsk(null);
+            restoreFocus(() => visible("[data-ask-button]"));
+          }}
+        />
+      )}
+      {feedback && (
+        <Feedback
+          view={view}
+          version={rc.version}
+          to={rc.feedback_to}
+          onClose={() => {
+            setFeedback(false);
+            restoreFocus(() => visible("[data-feedback-button]"));
+          }}
+        />
+      )}
+      <ShortcutHelp
+        open={help}
+        onClose={() => setHelp(false)}
+        keys={keys}
+        onOpenWalkthrough={inWalkthrough ? undefined : () => openGuide()}
+      />
+    </>
+  );
+  if (inWalkthrough) {
+    return (
+      <>
+        <Walkthrough
+          at={guideAt}
+          onOpenPeople={() => setView("records/people")}
+          onOpenAddons={() => setView("addons")}
+          onHandIn={() => {
+            setView("today");
+            setHandIn(true);
+          }}
+          onChooseSource={openAddSource}
+          onFinishLater={() => setView("today")}
+          onDone={() => {
+            setView("today");
+            focusFirstGo();
+          }}
+        />
+        {handIn && <HandIn onClose={() => setHandIn(false)} />}
+        {overlays}
+      </>
+    );
+  }
 
   const skip = (event: React.MouseEvent) => {
     event.preventDefault();
@@ -239,29 +303,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
           onOpenGuide={() => openGuide()}
         />
       )}
-      <RestartAnnouncer what={what} />
-      {ask && (
-        <Ask
-          initial={ask.question}
-          feedbackTo={rc.feedback_to}
-          onClose={() => {
-            setAsk(null);
-            restoreFocus(() => visible("[data-ask-button]"));
-          }}
-        />
-      )}
-      {feedback && (
-        <Feedback
-          view={view}
-          version={rc.version}
-          to={rc.feedback_to}
-          onClose={() => {
-            setFeedback(false);
-            restoreFocus(() => visible("[data-feedback-button]"));
-          }}
-        />
-      )}
-      <ShortcutHelp open={help} onClose={() => setHelp(false)} keys={keys} />
+      {overlays}
     </>
   );
 }
@@ -281,4 +323,27 @@ function useView(): [View, (v: View) => void] {
     setViewState(v);
   };
   return [view, setView];
+}
+
+/** Puts focus on Today's first-go line once it is on the page, after the walkthrough closes onto Today. The line may take a
+ * moment to appear; the wait is short and gives up quietly when there is no such line. */
+function useFocusFirstGo(): () => void {
+  const [asked, setAsked] = useState(0);
+  useEffect(() => {
+    if (!asked) return;
+    let tries = 0;
+    const timer = window.setInterval(() => {
+      const row = document.getElementById("first-go-text")?.closest<HTMLElement>("li");
+      tries += 1;
+      if (row) {
+        window.clearInterval(timer);
+        row.scrollIntoView?.({ block: "center" });
+        row.focus();
+      } else if (tries >= 25) {
+        window.clearInterval(timer);
+      }
+    }, 200);
+    return () => window.clearInterval(timer);
+  }, [asked]);
+  return () => setAsked(Date.now());
 }

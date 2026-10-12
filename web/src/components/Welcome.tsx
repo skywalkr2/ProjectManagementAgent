@@ -1,6 +1,7 @@
-// The setup guide (design 7.8): one section per step, in the order the server gives, each saying in words whether it is
-// done or skipped, with its own controls and a way to skip it or come back to it. The core's steps have fixed controls;
-// a plugin's step shows its own words and starts its action.
+// The setup steps (design 7.8) as sections: one per step, in the order the server gives, each saying in words whether it
+// is done or skipped, with its own controls and a way to skip it or come back to it. The core's steps have fixed controls;
+// a plugin's step shows its own words and starts its action. The walkthrough shows the steps it has no screen of its own
+// for (the optional extras and an add-on's own steps) through this list, and uses the pieces that are exported here.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, ApiError, type S } from "../lib/api";
@@ -27,8 +28,10 @@ export interface FocusStep {
   n: number;
 }
 
-export function Welcome(props: {
-  focusStep: FocusStep | null;
+export function StepList(props: {
+  /** Which steps to list; all of them when left out. */
+  include?: (step: Step) => boolean;
+  focusStep?: FocusStep | null;
   onOpenPeople: () => void;
   onOpenAddons: () => void;
   onHandIn: () => void;
@@ -40,7 +43,7 @@ export function Welcome(props: {
   const focused = useRef<number | null>(null);
   const loaded = !!setup.data;
 
-  // Opening the guide at a step scrolls to it and puts focus on its heading.
+  // Opening the list at a step scrolls to it and puts focus on its heading.
   useEffect(() => {
     const want = props.focusStep;
     if (!want || !loaded || focused.current === want.n) return;
@@ -51,77 +54,70 @@ export function Welcome(props: {
     heading.focus();
   }, [props.focusStep, loaded]);
 
+  if (setup.isPending) return <Skeleton />;
+  if (setup.isError) return <p className="empty">{t("welcome.failed")}</p>;
+  const shown = setup.data.steps.filter((step) => !props.include || props.include(step));
   return (
-    <section className="panel-section" aria-labelledby="welcome-title">
-      <div className="heading">
-        <h1 id="welcome-title">{t("welcome.title")}</h1>
-      </div>
-      <p className="hint">{t("welcome.intro")}</p>
-      {setup.isPending ? (
-        <Skeleton />
-      ) : setup.isError ? (
-        <p className="empty">{t("welcome.failed")}</p>
-      ) : (
-        <ol className="guide">
-          {setup.data.steps.map((step) => {
-            // A sign-in's step is worded by the guide from the service's label; its explanation lists what is asked.
-            const label = step.sign_in
-              ? t("welcome.sign_in.title", { label: step.label || step.sign_in })
-              : step.label || (has(`setup_step.${step.id}`) ? t(`setup_step.${step.id}`) : step.id);
-            const why = step.sign_in
-              ? step.explanation
-                ? t("welcome.sign_in.explanation", { allows: step.explanation })
-                : ""
-              : step.explanation || (has(`setup_step.${step.id}.explanation`) ? t(`setup_step.${step.id}.explanation`) : "");
-            return (
-              <StepSection key={step.id} step={step} label={label} explanation={why}>
-                {step.sign_in ? (
-                  <SignInStep name={step.sign_in} label={step.label || step.sign_in} done={step.done} onChooseSource={props.onChooseSource} />
-                ) : step.id === "workspace" ? (
-                  <WorkspaceStep />
-                ) : step.id === "template" ? (
-                  <TemplateStep />
-                ) : step.id === "ai" ? (
-                  <WelcomeAi local={setup.data.local} done={step.done} />
-                ) : step.id === "backup" ? (
-                  <WelcomeBackup local={setup.data.local} />
-                ) : step.id === "people" ? (
-                  <div className="row-end">
-                    <button type="button" className="btn" onClick={props.onOpenPeople}>
-                      {t("welcome.people.open")}
-                    </button>
-                  </div>
-                ) : step.id === "addons" ? (
-                  <AddonsStep onOpen={props.onOpenAddons} />
-                ) : step.id === "first_note" ? (
-                  <div className="row-end">
-                    <button type="button" className="btn" onClick={props.onHandIn}>
-                      {t("handin.open")}
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    {hasSettings(step) && <SuggestedSettings step={step} />}
-                    {step.action && (
-                      <div className="row-end">
-                        <button
-                          type="button"
-                          className="btn"
-                          onClick={() => start({ name: step.action!, label, on: null }, null)}
-                        >
-                          {label}
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </StepSection>
-            );
-          })}
-        </ol>
-      )}
+    <>
+      <ol className="guide">
+        {shown.map((step) => {
+          // A sign-in's step is worded by the list from the service's label; its explanation lists what is asked.
+          const label = step.sign_in
+            ? t("welcome.sign_in.title", { label: step.label || step.sign_in })
+            : step.label || (has(`setup_step.${step.id}`) ? t(`setup_step.${step.id}`) : step.id);
+          const why = step.sign_in
+            ? step.explanation
+              ? t("welcome.sign_in.explanation", { allows: step.explanation })
+              : ""
+            : step.explanation || (has(`setup_step.${step.id}.explanation`) ? t(`setup_step.${step.id}.explanation`) : "");
+          return (
+            <StepSection key={step.id} step={step} label={label} explanation={why}>
+              {step.sign_in ? (
+                <SignInStep name={step.sign_in} label={step.label || step.sign_in} done={step.done} onChooseSource={props.onChooseSource} />
+              ) : step.id === "workspace" ? (
+                <WorkspaceStep />
+              ) : step.id === "template" ? (
+                <TemplateStep />
+              ) : step.id === "ai" ? (
+                <WelcomeAi local={setup.data.local} done={step.done} />
+              ) : step.id === "backup" ? (
+                <WelcomeBackup local={setup.data.local} />
+              ) : step.id === "people" ? (
+                <div className="row-end">
+                  <button type="button" className="btn" onClick={props.onOpenPeople}>
+                    {t("welcome.people.open")}
+                  </button>
+                </div>
+              ) : step.id === "addons" ? (
+                <AddonsStep onOpen={props.onOpenAddons} />
+              ) : step.id === "first_note" ? (
+                <div className="row-end">
+                  <button type="button" className="btn" onClick={props.onHandIn}>
+                    {t("handin.open")}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {hasSettings(step) && <SuggestedSettings step={step} />}
+                  {step.action && (
+                    <div className="row-end">
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={() => start({ name: step.action!, label, on: null }, null)}
+                      >
+                        {label}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </StepSection>
+          );
+        })}
+      </ol>
       {review}
-    </section>
+    </>
   );
 }
 
@@ -318,7 +314,8 @@ function browserZone(): string {
   }
 }
 
-function WorkspaceStep() {
+/** The name of the person and of the workspace, and the time zone, in one form. */
+export function WorkspaceStep() {
   const { t } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();

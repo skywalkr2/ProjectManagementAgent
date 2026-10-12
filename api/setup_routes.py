@@ -38,6 +38,8 @@ from api.schemas import (
     TemplateApplied,
     TemplateApply,
     TemplateView,
+    WalkthroughIn,
+    WalkthroughView,
     WatchKindView,
     WatchSourceChange,
     WatchSourceIn,
@@ -210,12 +212,22 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.get("/setup")
     def setup_view() -> SetupView:
-        steps = setup.steps(ws, current(), store)
+        now = current()
+        steps = setup.steps(ws, now, store)
         return SetupView(
             steps=[SetupStepView(**vars(s)) for s in steps],
-            finished=all(s.done or s.skipped for s in steps),
+            finished=setup.finished(steps),
             local=local,
+            walkthrough=WalkthroughView(**vars(setup.walkthrough(ws, now, steps))),
         )
+
+    @r.post("/setup/walkthrough")
+    def walkthrough_keep(body: WalkthroughIn) -> WalkthroughView:
+        """Keep where the walkthrough stands: its screen, that it was closed, or that it was finished."""
+        setup.keep_walkthrough(ws, body.step, body.closed, body.finished)
+        events.changed()
+        now = current()
+        return WalkthroughView(**vars(setup.walkthrough(ws, now, setup.steps(ws, now, store))))
 
     @r.post("/setup/{step:path}/apply-settings")
     def setup_apply_settings(step: str, body: FingerprintIn) -> SettingsSaved:
