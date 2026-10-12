@@ -18,7 +18,8 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   source now prevents that.
 - **The Install button:** the install route exists; the screen has no button. Install appears on a listed add-on whose
   release this app can install. Remove appears in the menu of one the app installed, once it is off. A new install
-  says a restart is needed, as turning one on does.
+  offers Restart now, as turning one on does. Only updating an add-on that is running holds new work until then, so
+  old and new files never mix; installing or removing one that isn't running changes nothing the app uses.
 - **The first run's cost is one Go:** until the person's first go in a workspace, AI runs wait. Today then shows one
   line: how many items, and the total estimate. One Go starts them all; after that the usual confirm amount applies. A
   new setting, `ai.budgets.first_go` (on), turns this off. Only showing the estimate after the money is spent wouldn't
