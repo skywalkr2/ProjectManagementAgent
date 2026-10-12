@@ -439,6 +439,20 @@ the rest are new.
 | `project.add` from the person's own "yes" | Already so in the code: a held op the PM's answer releases is applied as the PM, trusted and confirmed by them. 6.8 now says it. |
 | Ending probation early | From the quality panel, once the send-back rate is below a set level over a minimum number of runs. |
 
+## 16. Your review of the roadmap and Part 13 (2026-10-12)
+
+| You said | What changed |
+|---|---|
+| 1. Start real use after phase A | The owner chose your fallback: real use starts after **L-core**. Your argument for an earlier start is recorded, and the first week of real use serves as the baseline. |
+| 2. Split phase L | Done. **L-core** holds the loop, extractors, backup encryption and the writer's first-week rules. It also keeps a few small items you had put in L-more, because real use starts right after it: invariant constraint lines, refusal counts, the catch-up list, fallback-chain checks, and the failed-switch line. **L-more** comes after the packs: Ask's knowledge and learning from Ask, Take my lessons, Part 8 as seed lessons, agent versions, early probation, the unused list, and single-record restore. The exit test applies to L-core. |
+| 3. More pairs, and negative ones | 15 to 20 pairs, about a third negative. Your sixteen generic cases are written into the roadmap (L4) as the list to build from. |
+| 4. Write the day-30 expectations first | Expected differences are listed before the run and scored like the golden set. The month mixes every case with ordinary noise. |
+| 5. Journey tests for silent stops and waking | Added to phase A: limit then resume, exit 0 with no answer, restart as the first Decide line, empty run retried, and the computer sleeping through a batch and waking. |
+| 6. Phase C's exit test should include learning | It now requires a correction in a pack's own work to produce a proposal, and a later similar input in that pack to come out right. |
+| Volume for the weekly review | A task kind's week counts only with at least 10 corrections (a setting); the first week is the baseline. |
+| Drift between 13.4 and the roadmap | 13.4 now lists only the phases and points to the roadmap for contents, sizes and exit tests. Milestone 2's read-backs and glossary are marked as moved. The cache line no longer says the batch prefix is frozen. |
+| The governor and a readable export | Phase A now wires the scheduled export rather than removing the setting. Backups copy the database, which isn't readable on its own, so you were right that they didn't cover this. |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

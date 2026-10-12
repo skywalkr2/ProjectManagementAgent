@@ -719,6 +719,7 @@ knowledge:
   check_on_switch: true        # offer the learning fixture pairs, with their cost, when a tier's account or model changes
   refusals_to_packet: {share: 0.05, of_last: 50}   # a check refusing this often puts its full seed lesson in the packet
   discards_hold_days: 90       # a proposal close to one the person discarded this recently is not shown again
+  min_corrections_per_week: 10 # a task kind's week counts in the learning rates only with at least this many corrections
 ```
 
 Learning has two task kinds, so their tiers and budgets are set in `ai.yaml` like any other (4.8). `learn.correction` writes

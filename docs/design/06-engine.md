@@ -748,10 +748,10 @@ marked done. The separate outcome lets the empty-run rule and the quality panel 
 
 **Probation for a new account** (*designed, not yet built*; the learning check with a switch is phase L, 6.22). A switch of a
 tier's account or model offers to run the learning fixture pairs first, with their cost estimate. **A command-line agent's
-program version is part of the account:** agents update themselves, and a new version can change flags, defaults or error
+program version is part of the account** (*phase L-more*): agents update themselves, and a new version can change flags, defaults or error
 output under a passing smoke test. So each `Run` records the agent's version; a version change is treated like an account
 change (smoke test, then "first run on <account>"); and the adapter turns off the program's own auto-update where the
-program allows it, by settings in the agents catalog (data, not code). **The person can end probation early** from the
+program allows it, by settings in the agents catalog (data, not code). **The person can end probation early** (*phase L-more*) from the
 quality panel once the account's send-back rate is below `ai.probation.end_below` over at least `ai.probation.min_runs`
 runs, because 20 reviewed runs per task kind is a lot of cards when mail arrives on its own. A newly approved account's changesets carry a "new account" tag and always wait for review
 (nothing closes on its own) for `ai.probation.runs` runs per task kind (default 20). The PM's Looks good and Send back on them
@@ -916,7 +916,9 @@ the run never saw. The review keeps the active list short enough for that.
 
 ## 6.22 Knowledge and the learning loop
 
-*Designed, not yet built* (roadmap, phase L, next after phase A; decisions, 2026-10-12 "The learning slice"). This is what
+*Designed, not yet built* (roadmap: the loop in phase L-core, next after phase A, after which real use starts; Ask's
+knowledge, Take my lessons, agent versions, early probation, the unused list and single-record restore in phase L-more,
+after the packs; decisions, 2026-10-12 "The learning slice" and "The plan review"). This is what
 makes the assistant better at each project the more it sees. It has four parts:
 - knowledge is kept as records;
 - every run reads the knowledge that applies to it;
@@ -1078,7 +1080,7 @@ words, so it applies at once, with the read-back and Undo. In practice, many sta
 aside.
 
 **Knowledge travels.** Every knowledge record is in the export and import like any record (5.0). A person can also take their
-lessons to another workspace. **Take my lessons** (Settings, and `cockpit knowledge export`) writes one file holding:
+lessons to another workspace (*phase L-more*). **Take my lessons** (Settings, and `cockpit knowledge export`) writes one file holding:
 - the active lessons;
 - the rules;
 - the glossary entries that are not tied to a project.
@@ -1091,7 +1093,8 @@ this is the private one.
 later: an approved draft edited before publishing), the difference from the draft is kept as a `draft edited` signal. The learn
 task turns a pattern in it into a style note for that recipient or audience. The next draft for them starts from it.
 
-**Consolidation.** Lessons join the standing rules review (6.21). Two parts come in phase L:
+**Consolidation.** Lessons join the standing rules review (6.21). Merging duplicates comes in phase L-core, and the
+unused list in phase L-more:
 - merging duplicates when a proposal is made (above);
 - a list of active entries that matched nothing for `knowledge.unused_days` (default 60), offered for retirement.
 
@@ -1192,11 +1195,11 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
 - **An ask is a core request of kind `ask`** (4.8), started from the Ask box (`POST /api/ask`) with the PM's question as its
   note, so it is trusted as the PM's own words. The worker processes it like any request, on the tier `ai.tasks.ask` or the
   `write` role gives it.
-- **Ask has the knowledge section** (*designed, phase L*, 6.22). "Who decides this?", "what does this acronym mean here?"
+- **Ask has the knowledge section** (*designed, phase L-more*, 6.22). "Who decides this?", "what does this acronym mean here?"
   and "what did we agree about X?" are exactly what the glossary, routing, rules and facts answer. So the ask packet carries
   the knowledge section like any other. The citation check is the same: an answer citing a knowledge entry quotes it.
   Otherwise Ask would be the one place the assistant is as smart on day 100 as on day 1.
-- **What the person says in Ask is learned** (*designed, phase L*, 6.22). A rule or fact stated in a question ("from now on…",
+- **What the person says in Ask is learned** (*designed, phase L-more*, 6.22). A rule or fact stated in a question ("from now on…",
   "she's the one who decides that") becomes a proposal beside the answer. It applies at once, as the person's own words, with
   the read-back and Undo.
 - **Its packet holds only what an answer may quote:**

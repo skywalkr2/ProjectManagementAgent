@@ -3,6 +3,39 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: The plan review: L split into L-core and L-more, real use after L-core, stronger proof
+
+**Decided by:** the first design's author proposed (review of the roadmap and Part 13). Project owner chose when real use
+starts (after L-core; he had suggested after phase A) and placed L-more after the packs. Project lead adopted the rest.
+
+**What:**
+- **Phase L splits.**
+  - **L-core:** the loop itself, extractors, backup encryption and the writer's first-week rules. It ends on "the assistant
+    doesn't repeat a corrected mistake", and the owner's real use starts then.
+  - **L-more,** after the packs: Ask's knowledge and learning from Ask, Take my lessons, Part 8 as seed lessons, agent
+    versions, early probation, the unused list and single-record restore.
+- **Proof.** 15 to 20 fixture pairs, about a third negative (over-application, another project, the world changed, a
+  discard, injection), from the author's generic cases. The day-30 scenario's expected differences are written before it
+  runs, scored like the golden set, and the history mixes the cases with ordinary noise.
+- **The weekly review.** The first week of real use is the baseline. A task kind's week counts only with at least 10
+  corrections.
+- **Phase A.** Journey tests for each silent stop and for waking from sleep. The scheduled export is wired, not removed, so
+  a readable copy is written as knowledge accumulates.
+- **Phase C** also proves that packs learn.
+- **13.4** no longer repeats the roadmap's contents, so the two can't drift; milestone 2's stale lines are marked as moved.
+
+**Why:**
+- Phase L had grown to about 11.5 sessions, and much of it isn't needed for the loop to work.
+- Five pairs can pass by luck, and a loop that over-learns does harm: the author's worst learning failure was a rule for
+  risks applied to action owners.
+- Waking from sleep was where most "it just stopped" reports came from.
+- Without a learning test in phase C, the core could learn while the packs don't.
+
+**Impact:**
+- `roadmap-to-1.0.md` is restructured. Sizes: A about 5 sessions, L-core about 8, L-more about 4. The packs start about
+  3 sessions sooner than in the previous plan.
+- Design 13.1, 13.4, 6.22, 6.16, 6.25, 5.0, 7.18, Part 8 and 4.25 are updated.
+
 ## 2026-10-12: The engine review: no frozen batch prefix, trusted answers only, facts that replace facts, no silent stops
 
 **Decided by:** the first design's author proposed (review of Part 6); project lead checked each point against the code and

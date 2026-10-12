@@ -8,7 +8,7 @@ means nothing in the code does what the guard column says; "(partly enforced: ..
 code and a test. Version 1 builds the missing guards in the order of the roadmap (13.4); dependencies, baselines, risks and
 escalation move to the project management pack (9.10).
 
-**These rules become data** (*designed, phase L*; decisions, 2026-10-12 "Product rules are the core playbook's seed
+**These rules become data** (*designed, phase L-more*; decisions, 2026-10-12 "Product rules are the core playbook's seed
 lessons"). After phase L, lessons are records with ids, targets and status (6.22). The rules on this page become the core
 playbook's **seed lessons**: records shipped with the product, carried in packets like the person's own lessons, and pointed
 at by fixtures. This page is then generated from them, as the plugin guide is generated from the code. So:
