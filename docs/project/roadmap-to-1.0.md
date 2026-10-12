@@ -147,7 +147,9 @@ A4. **The new-start walkthrough** (owner, 2026-10-12; design 7.8). Install to fi
 - [x] Journey J6: a fresh install through the walkthrough only, to the assistant's first results. This is the
   automated form of the exit test (`journeys-new-start.spec.ts`: the mail add-on installed from the catalog, exactly
   one restart, one AI request per item and none before Go).
-- [ ] **Rough edges J6 found on the path:**
+- [x] **Rough edges J6 found on the path** (fixed: `shell.spec.ts` Go in view and toasts clear of the buttons at
+  1280×720 and 390×844, `tests/test_first_backup.py`, `Walkthrough.test.tsx`, `WelcomeAi.test.tsx`, and J2/J6
+  assertions):
   - Today's Go button is clipped inside the short "Needs you" card on a laptop screen.
   - Toasts pile up across the walkthrough's screens and cover its buttons.
   - The mail service row shows jargon ("Signs in to: account", "Internet: 127.0.0.1", "Keys you provide").
@@ -430,6 +432,8 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention
   empty while Needs you counts 5, and only one review opens by default, so an owner question can sit closed. The
   Today redesign makes the first results one clear list. After Remove, the add-on's row vanishes along with its note.
+- [ ] **An unnamed assistant reads as one:** with the default name, lines say "Assistant is on it". The `.unnamed`
+  wording variant (built for the AI screen's heading) is used for the other `{assistant}` lines.
 - [ ] **Found by the phase A journeys** (decisions, 2026-10-12, "What the first journeys found"): a new AI account's
   suggested name is the service's name, not its catalog id; a custom address needs no key when the service takes
   none; Follow-ups' Copy shows the message it will copy before copying, as 7.5 says (today it copies at once).
