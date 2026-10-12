@@ -386,7 +386,7 @@ def update_checkout(
     if not (root / ".git").exists():
         say(INSTALL_STEP)
         return 1
-    code, changes = run(["git", "status", "--porcelain"], root, True)
+    code, changes = run(["git", "status", "--porcelain", "--untracked-files=no"], root, True)
     if code != 0:
         say(f"cockpit: couldn't read the state of {root} (exit code {code}).")
         return 1

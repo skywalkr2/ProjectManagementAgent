@@ -29,7 +29,7 @@ left. Not started: nothing exists here. A milestone is never marked done on a pa
 
    **State: Partial.** Built: layout and tooling, the database with versions, ledger, id sequences and the lease, the readable
    export and the import round trip, config schemas and layers, `cockpit config show`, both fixtures importable, local serve
-   with the token and base path. Not yet: point-in-time restore (`cockpit restore`), profiles and `config explain`; the scans
+   with the token and base path. Not yet: point-in-time restore (`cockpit restore --as-of`), profiles and `config explain`; the scans
    are partial (10.2).
 
 2. **Walking skeleton (the first version the PM uses).** One path through the whole loop, on real work:

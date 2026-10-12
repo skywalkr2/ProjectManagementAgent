@@ -126,7 +126,7 @@ they apply to. Those guarded by an invariant or code still give the model their 
 | Shared masters edited outside the tool are checked for an open lock and diffed, never overwritten | channel `lock_status`, pull-edits (not yet enforced): no publisher or shared masters yet |
 | Edits by our own accounts are ours: no one is asked who made them | `our_accounts`, `by_us` |
 | A request about code another project owns is handed off, not fixed | `config/code_owners.yaml`, `handoff` (not yet enforced): no `config/code_owners.yaml` or handoff yet |
-| The export can be imported back; restore to a point in time is tested | round-trip test, `cockpit restore` (partly enforced: the round trip is tested on the fixtures; there is no `cockpit restore`) |
+| The export can be imported back; restore to a point in time is tested | round-trip test, `cockpit restore` (partly enforced: the round trip is tested on the fixtures, and a whole backup restores with `cockpit restore --backup`; restoring to a point in time isn't built) |
 | A local install nags until there is a backup off the computer | `config/storage.yaml` backups, Today, header |
 | Switching AI vendor or model is a config change, approved by the PM after an evaluation run | provider layer, evaluation (partly enforced: `cockpit evaluate` exists; no approval step is tied to a report) |
 | The PM's own AI accounts, any vendor, an aggregator or a local model; capabilities and prices per model, from the provider's catalog | adapters' `models()`, `config/ai.yaml` (partly enforced: the OpenAI-compatible and command-line agent adapters list models; no native adapters yet) |

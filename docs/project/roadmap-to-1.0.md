@@ -71,13 +71,19 @@ test needs. The local-mode guards stay as well, because the exit test is the fir
 app. The items the reviews added for daily use moved to L0, at the start of L-core, which still comes before real use.
 
 A1. **Demo data off the person's path.**
-- [ ] `cockpit init` with no template is the start in the README, `docs/install.md` and the setup guide.
-- [ ] The fictional workspaces stay as test fixtures and as the sandbox (`cockpit demo`), named as such.
-- [ ] A self-check: a fresh workspace shows no account, source or setting with a problem.
-- [ ] **A whole backup restores:** `cockpit restore --backup <backup folder> <new folder>` (design 5.0), so the
-  backup → restore journey has something to call.
-- [ ] One command, `cockpit update`: it pulls, syncs without dropping installed add-ons, installs the web tools and
-  builds, then says whether a restart is needed.
+- [x] `cockpit init` with no template is the start in the README and `docs/install.md` (there is no separate setup
+  guide; the screen's setup is 7.8). Docs only, checked by reading.
+- [x] The fictional workspaces stay as test fixtures and as the sandbox (`cockpit demo`), named as such in the README,
+  `docs/install.md` and the commands' help.
+- [x] A self-check: a fresh workspace shows no account, source or setting with a problem (`check_fresh_workspace`;
+  `test_a_fresh_workspace_shows_no_problem`, `test_the_fresh_workspace_check_reports_an_account_that_reads_as_failing`).
+- [x] **A whole backup restores:** `cockpit restore --backup <backup folder> <new folder>` (design 5.0), so the
+  backup → restore journey has something to call (`test_a_restored_backup_has_the_same_records_and_ledger_and_opens_as_a_workspace`
+  and the refusal tests beside it).
+- [x] One command, `cockpit update`: it pulls, syncs without dropping installed add-ons, installs the web tools and
+  builds, then says whether a restart is needed (`tests/test_update_restore.py`, e.g.
+  `test_a_clean_checkout_runs_the_four_steps_in_order_and_ends_with_the_commits`,
+  `test_local_changes_refuse_before_any_step`). Not yet run on the owner's computer.
 
 A2. **The person's path, fixed where the review found it broken.**
 - [ ] **Add-ons install from the screen:** the Install button on Add-ons, for a release of pure Python whose needs the app
