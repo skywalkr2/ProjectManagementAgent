@@ -522,7 +522,13 @@ The rest moved to **L0**, the start of L-core, which still comes before real use
 - the shared-folder setting;
 - the 6.8 to 6.11 audit.
 
-Phase A is now about 3.5 sessions and L-core about 11; the total is unchanged.
+Phase A is now about 3.5 sessions and L-core about 11; the total is unchanged. Afterwards, four of A's original items
+also moved to where each is first needed:
+- a pack's own libraries to C1;
+- mailbox passwords on screen to B;
+- the two-computer divergence screen and the scheduled export to L0.
+
+Phase A is now about 2.5 sessions.
 
 ## 21. Your review of the workplace pack (2026-10-12)
 

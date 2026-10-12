@@ -48,7 +48,7 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 - [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
 - [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded.
 
-## Phase A: a baseline that works with no demo data (about 3.5 sessions)
+## Phase A: a baseline that works with no demo data (about 2.5 sessions)
 
 **Exit test:** on a fresh computer folder, the owner runs one install or update command. They then:
 1. make a workspace with no template;
@@ -72,14 +72,10 @@ A1. **Demo data off the person's path.**
   builds, then says whether a restart is needed.
 
 A2. **The person's path, fixed where the review found it broken.**
-- [ ] **Add-ons install from the screen.** Build the Install button on Add-ons, and install a pack's own libraries
-  (round 35). A release names every package it needs with checksums. Install shows what will be added, refuses
-  conflicts with the app's own, and Remove takes out only what that pack needed. This is what lets the writing pack
-  in.
+- [ ] **Add-ons install from the screen:** the Install button on Add-ons, for a release of pure Python whose needs the app
+  already has, as the mail and calendar add-on is. A pack's own libraries come in phase C1.
 - [ ] Runs a crash left stuck are queued again on start.
 - [ ] The test-only source kind is hidden from "Add a source".
-- [ ] Passwords and addresses for the core mailbox and calendar sources are entered on screen and kept like an AI key.
-  Today they work only through `env:` or `file:`.
 - [ ] Server messages never name a settings file, a key path, `env:` or a command. About 50 of these are listed in
   the audit. **The check sits where responses leave:** in tests and dev mode, the API's response serializer refuses
   user-facing text containing `.yaml`, `env:`, a dotted key path or a command, so the journey tests fail on the first
@@ -87,17 +83,12 @@ A2. **The person's path, fixed where the review found it broken.**
 - [ ] **The first run says what it costs:** the first run after setup shows its estimate even below the confirm amount
   ("Reading your last day of mail: about $0.30"). The new defaults act on their own, so the first impression is a result
   the person expected to pay for (design 7.8).
-- [ ] Settings that do nothing are wired or removed: `owner_format`. **The scheduled export is wired** to the workspace's
-  own git, so a readable copy of the workspace is written regularly once real knowledge accumulates; the backups copy the
-  database, which is not readable on its own. The export's remote is not offered until phase E gives it the care of
-  backups (design 12.1).
 - [ ] **A refresh button on the mailbox** (owner, 2026-10-12): check "Came in" and the mail source now.
 - [ ] With the Install button, the Add-ons screen's introduction stops saying the app never installs anything.
 - [ ] **Local mode guards against other web pages** (design 12.1):
   - refuse a `Host` that isn't the configured local address;
   - refuse state-changing requests from another `Origin`;
   - refuse to start in local mode on a non-loopback address.
-- [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command.
 
 A3. **Journey tests.** These are end to end, with a fake AI service and fake mail and calendar services, and nothing
 is "ready to test" until they pass:
@@ -108,7 +99,7 @@ is "ready to test" until they pass:
 - [ ] backup → restore;
 - [ ] the acceptance scenario, steps 1–7, all checked as written (step 6 included).
 
-## Phase L: the learning loop, L-core (about 11 sessions, L0 included)
+## Phase L: the learning loop, L-core (about 11.5 sessions, L0 included)
 
 Added on 2026-10-12 after the first design's author reviewed design 1.1 (decisions, "The learning slice"); split into L-core
 and L-more after his review of this plan. The write side of learning is built; this phase builds the read side, so the
@@ -165,6 +156,12 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [ ] `project.priority` is person-only: the assistant may propose it, never set it.
 - [ ] Sources and files carry their `data_level`, from the hand-in's choice or the watched source's setting. Today it lives
   only on the request.
+- [ ] Settings that do nothing are wired or removed: `owner_format`. **The scheduled export is wired** to the workspace's
+  own git, so a readable copy is written regularly once real knowledge accumulates; the backups copy the database, which
+  is not readable on its own. The export's remote is not offered until phase E gives it the care of backups (design 12.1).
+  Moved from phase A, because knowledge starts accumulating in L-core.
+- [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command. Moved from phase
+  A: the exit test uses one computer, but real use may not.
 - [ ] **The audit trail:** sign-ins, sign-outs and turning a plugin on or off are recorded.
 - [ ] **A shared synced folder** (`storage.sync.shared`, asked when the folder is chosen): outside edits from a shared
   folder arrive as content, not the person's own words.
@@ -325,6 +322,9 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
 - [ ] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
   Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago").
+- [ ] **Mailbox and calendar passwords and addresses entered on screen** and kept like an AI key, for the core's own
+  mail and calendar sources (moved from phase A; today they work only through `env:` or `file:`). The exit test and the
+  owner's real use sign in to a named service instead.
 - [ ] **Follow-ups' Later** (7.5): questions held for a meeting or the weekly note (`question.held_for`), kept out of To
   send.
 - [ ] **Value-list values carry meaning** (design 5.4): a tone for each value, and a meaning for status values, so a value the
@@ -349,7 +349,10 @@ The journey tests from A3 run against the new screens as they land.
   comes out right. This proves the plugin API call in L2 carries the knowledge to packs.
 
 C1. **The writing pack, installed and reviewed.**
-- [ ] It installs from Add-ons with its libraries (A2).
+- [ ] **A pack's own libraries install from the screen** (round 35, moved from phase A): a release names every package it
+  needs with checksums. Install shows what will be added, refuses conflicts with the app's own, and Remove takes out only
+  what that pack needed. Answered with plugin question 183 (file types a pack needs).
+- [ ] It installs from Add-ons with its libraries.
 - [ ] Its two load notes are settled: SVG and TIFF files the workspace doesn't accept yet.
 - [ ] Its open questions are answered: 170, a review accepting a group of the assistant's changes at once; 172,
   guide fixes.

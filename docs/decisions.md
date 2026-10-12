@@ -3,6 +3,21 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Four more items leave phase A, each to where it is first needed
+
+**Decided by:** project lead, at the owner's request ("use your best judgement").
+
+**What:**
+- A pack's own libraries move to C1, where the writing pack needs them. They are answered with plugin question 183.
+- Mailbox and calendar passwords on screen move to B. The owner signs in to a named service, so these are for people
+  using the core's own mail and calendar sources.
+- The screen for a divergence between two computers moves to L0, because real use may span two computers.
+- The scheduled export moves to L0, because knowledge starts accumulating there.
+
+**Why:** None is needed for phase A's exit test.
+
+**Impact:** Phase A is about 2.5 sessions and L-core about 11.5.
+
 ## 2026-10-12: Nothing lives only in the conversation; "Built" cites a test; wording checked at the response boundary; the first run shows its cost
 
 **Decided by:** the first design's author proposed (review of the project review); project lead adopted it and set up the
