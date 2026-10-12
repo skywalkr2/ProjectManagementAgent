@@ -556,6 +556,14 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             if short not in models:
                 raise HTTPException(status_code=400, detail=f"{short} isn't one of this account's models.")
             changes[f"ai.tiers.{tier}.use"] = f"{body.name}/{short}"
+        # Unless the person said what it is for, a real account takes over every tier still on the stand-in, so the
+        # assistant does real work once one is added; tiers on another real account stay where the person put them.
+        now = current().ai
+        for tier_name, tier in now.tiers.items() if not (body.use_for or body.use) else ():
+            key = f"ai.tiers.{tier_name}.use"
+            on = now.providers.get(tier.use.split("/", 1)[0])
+            if key not in changes and on is not None and on.adapter == "stub":
+                changes[key] = f"{body.name}/{first}"
         try:
             result = save(changes, [], body.fingerprint, allow=("ai.providers.", "ai.tiers."))
         except HTTPException:

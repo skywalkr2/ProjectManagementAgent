@@ -707,6 +707,8 @@
   "ai_accounts.test": "Test",
   "ai_accounts.test_named": "Test {name}",
   "ai_accounts.testing": "Testing…",
+  "ai_accounts.use_for_work": "Use for the assistant's work",
+  "ai_accounts.used_for_work": "{assistant} now works with {name}",
   "ai_accounts.replace_key": "Replace key",
   "ai_accounts.change_models": "Change models",
   "ai_accounts.remove": "Remove",

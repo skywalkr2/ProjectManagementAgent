@@ -847,3 +847,25 @@ def test_a_list_written_at_its_keys_own_indent_is_edited_in_place():
         "last": True,
     }
     assert edited.startswith("# kept")
+
+
+def test_a_real_account_takes_over_the_tiers_still_on_the_stand_in(tmp_path):
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    assert {t.use.split("/")[0] for t in cfg.ai.tiers.values()} == {"stub"}
+    account = {
+        "name": "mine",
+        "adapter": COMMON,
+        "base_url": "http://localhost:11434/v1",
+        "key": "not-a-real-key",
+        "models": {"small": "small-model"},
+        "allowed_data": ["open", "internal"],
+        "fingerprint": c.get(f"{api}/settings").json()["fingerprint"],
+    }
+    assert c.post(f"{api}/ai/accounts", json=account).status_code == 200
+    tiers = load_config(ws.config_dir, env={}).ai.tiers
+    assert {name: t.use for name, t in tiers.items()} == {name: "mine/small" for name in tiers}
+    # A second account leaves the tiers on the first.
+    second = {**account, "name": "other", "fingerprint": c.get(f"{api}/settings").json()["fingerprint"]}
+    assert c.post(f"{api}/ai/accounts", json=second).status_code == 200
+    assert {t.use for t in load_config(ws.config_dir, env={}).ai.tiers.values()} == {"mine/small"}

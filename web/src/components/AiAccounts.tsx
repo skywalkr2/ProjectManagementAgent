@@ -176,7 +176,22 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
     }
   };
 
+  // Make this account do the assistant's work: everyday work on its first model, harder work on its harder one.
+  const useForWork = () => {
+    const shorts = Object.keys(account.models);
+    if (shorts.length === 0) return;
+    const everyday = shorts.find((s) => s !== HARDER) ?? shorts[0];
+    const deep = HARDER in account.models ? HARDER : everyday;
+    void save(
+      (fingerprint) => api.changeAccount(account.name, { fingerprint, use: { routine: everyday, deep } }),
+      t("ai_accounts.used_for_work", { name: account.name }),
+    );
+  };
+
   const actions: MenuAction[] = [
+    ...(account.adapter !== "stub" && account.used_for.length === 0
+      ? [{ id: "use", label: t("ai_accounts.use_for_work"), run: useForWork, disabled: busy }]
+      : []),
     { id: "key", label: t("ai_accounts.replace_key"), run: () => open("key") },
     { id: "models", label: t("ai_accounts.change_models"), run: () => open("models") },
     { id: "remove", label: t("ai_accounts.remove"), run: remove },
