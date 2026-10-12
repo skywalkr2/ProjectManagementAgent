@@ -8,6 +8,7 @@ import { firstGoOf } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { showRow, useReveal } from "../lib/reveal";
 import { useEstimate } from "../lib/money";
+import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
 import { FirstGoRow } from "./FirstGoRow";
@@ -24,8 +25,9 @@ export function needsAttention(c: S["ChangeItem"]): boolean {
   return ATTENTION.has(c.state) || !!c.changeset?.ops.some((o) => o.ask?.status === "open");
 }
 
-/** `compact` is for a narrow column on Today: the heading sits one level down. */
-export function WhatChanged(props: { compact?: boolean }) {
+/** `compact` is for a narrow column on Today: the heading sits one level down. `onOpenGuide` opens the setup guide at a
+ * step, for a stopped line whose way on is a step of the guide. */
+export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: string) => void }) {
   const Heading = props.compact ? "h3" : "h1";
   const { t, tn } = useWords();
   const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
@@ -122,7 +124,12 @@ export function WhatChanged(props: { compact?: boolean }) {
           {firstLine && <FirstGoRow first={first} />}
           {filter === "attention" && <StageTodayRows today={stageToday} />}
           {rows.map((item) => (
-            <ChangeRow key={item.id} item={item} reveal={revealed?.id === item.id ? revealed.n : 0} />
+            <ChangeRow
+              key={item.id}
+              item={item}
+              reveal={revealed?.id === item.id ? revealed.n : 0}
+              onOpenGuide={props.onOpenGuide}
+            />
           ))}
         </ol>
       )}
@@ -160,9 +167,10 @@ export function waitsForGo(c: S["ChangeItem"]): boolean {
   return c.approval === "required" && !c.stage_task && c.state === "needs_you" && !c.dismissed;
 }
 
-function ChangeRow(props: { item: S["ChangeItem"]; reveal: number }) {
-  const { t, tn } = useWords();
+function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?: (step: string) => void }) {
+  const { t, tn, has } = useWords();
   const act = useAct();
+  const afterSave = useAfterSave();
   const estimate = useEstimate();
   const { item } = props;
   const gated = waitsForGo(item);
@@ -198,6 +206,17 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number }) {
 
   const retry = () => void act(() => api.retry(item.id), () => ({ message: t("toast.retrying") }));
 
+  // A stop with a cause the screen can clear offers that one action in place of Try again, which could not work.
+  const cause = item.state === "needs_you" || item.state === "failed" ? item.cause : null;
+  const allowing = cause?.kind === "data_level" && cause.account && cause.level ? { account: cause.account, level: cause.level } : null;
+  const naming = cause?.kind === "no_person" && props.onOpenGuide ? props.onOpenGuide : null;
+  const levelWord = (level: string) => (has(`changes.level.${level}`) ? t(`changes.level.${level}`) : level);
+  const allow = async () => {
+    if (!allowing) return;
+    const done = await act(() => api.allowData(item.id));
+    if (done) await afterSave(done.saved, { message: t("toast.allowed_data", { account: done.account, level: levelWord(done.level) }) });
+  };
+
   const dismiss = () =>
     void act(
       () => api.dismiss(item.id, item.version),
@@ -211,6 +230,9 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number }) {
       label: t("changes.go"),
       run: () => void act(() => api.stageGo(item.id, item.version), () => ({ message: t("toast.go") })),
     };
+  else if (allowing)
+    primary = { label: t("changes.allow_data", { account: allowing.account, level: levelWord(allowing.level) }), run: () => void allow() };
+  else if (naming) primary = { label: t("changes.say_who"), run: () => naming("workspace") };
   else if (item.state === "needs_you" || item.state === "failed")
     primary = item.refused
       ? {

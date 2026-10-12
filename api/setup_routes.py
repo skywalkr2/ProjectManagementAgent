@@ -18,6 +18,7 @@ from api.schemas import (
     AiModelView,
     AiTestResult,
     BackupFolderAdd,
+    DataLevelAllowed,
     EndpointView,
     FingerprintIn,
     FolderCheckView,
@@ -44,6 +45,7 @@ from api.schemas import (
 from engine import settings as config_screens
 from engine import setup, templates
 from engine.config import Config, ConfigError, load_config
+from engine.config.schema import WatchSource
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
 from engine.workspace import Workspace
@@ -57,6 +59,11 @@ HOSTED_KEY = "On a hosted app, a key can't be pasted: keep it in the app's envir
 NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "workspace.plugins.enabled", "server.")
 #: Keys the guided steps write that no form shows: an AI account, the tiers it does, the backup folders.
 GUIDED = ("ai.providers.", "ai.tiers.", "storage.backups.targets")
+
+
+#: How the first read of a source added from the screen goes: the source setting's own default, which the add route
+#: leaves untouched.
+NEW_SOURCE_FIRST_RUN = WatchSource.model_fields["first_run"].get_default()
 
 
 def _defaults(model: Any) -> dict[str, Any]:
@@ -142,7 +149,18 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.post("/settings")
     def settings_save(body: SettingsSave) -> SettingsSaved:
         # The keys the guided steps write are accepted here too, so their Undo (the values from before) works.
-        return saved(save(body.changes, body.reset, body.fingerprint, allow=GUIDED))
+        result = saved(save(body.changes, body.reset, body.fingerprint, allow=GUIDED))
+        if "workspace.user.person" in body.changes:
+            person_named()
+        return result
+
+    def person_named() -> None:
+        """Work that waited for the workspace to have a person is queued again by itself."""
+        from engine.dispatcher import requeue_waiting_for_person
+
+        if requeue_waiting_for_person(store):
+            events.changed()
+            worker.poke()
 
     # ---- the person the app is for --------------------------------------------------------------------------------
 
@@ -185,6 +203,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 config_screens.fingerprint(ws.config_dir),
                 allow=("workspace.user.",),
             )
+            person_named()
         return MeView(person=pid, full_name=name)
 
     # ---- setup steps ---------------------------------------------------------------------------------------------
@@ -318,7 +337,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             plugin = name.split("/", 1)[0] if "/" in name else None
             found.append(
                 WatchKindView(
-                    name=name, label=connector.label, plugin=plugin, items=[SettingItem(**vars(i)) for i in items]
+                    name=name,
+                    label=connector.label,
+                    plugin=plugin,
+                    first_run=NEW_SOURCE_FIRST_RUN,
+                    items=[SettingItem(**vars(i)) for i in items],
                 )
             )
         return found
@@ -501,6 +524,43 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if not changes:
             raise HTTPException(status_code=400, detail="Nothing to change.")
         return saved(save(changes, [], body.fingerprint, allow=("ai.providers.", "ai.tiers.")))
+
+    @r.post("/requests/{request_id}/allow-data")
+    def request_allow_data(request_id: str) -> DataLevelAllowed:
+        """Let the account that would take a stopped request see its material's level, at once and with Undo, then
+        queue the request again. Only a request stopped because no account may see its level."""
+        from engine.ai.router import LEVELS
+        from engine.dispatcher import retry
+
+        req = store.read().get("request", request_id)
+        if req is None:
+            raise HTTPException(status_code=404, detail="There is no such request.")
+        cause = req.data.get("cause") or {}
+        if req.data["state"] not in ("needs_you", "failed") or cause.get("kind") != "data_level":
+            raise HTTPException(status_code=409, detail="This isn't waiting for an account to be allowed more.")
+        level = cause["level"]
+        providers = current().ai.providers
+        name = next(
+            (ref.partition("/")[0] for ref in cause.get("accounts") or [] if ref.partition("/")[0] in providers), None
+        )
+        if name is None:
+            raise HTTPException(status_code=409, detail="The account that would take this isn't set up any more.")
+        have = set(providers[name].allowed_data)
+        allowed = [lv for lv in LEVELS if lv in have or LEVELS.index(lv) <= LEVELS.index(level)]
+        fingerprint = config_screens.fingerprint(ws.config_dir)
+        if allowed == sorted(have, key=LEVELS.index):
+            done = SettingsSaved(changes=[], fingerprint=fingerprint, needs_restart=False)
+        else:
+            done = saved(
+                save({f"ai.providers.{name}.allowed_data": allowed}, [], fingerprint, allow=("ai.providers.",))
+            )
+        try:
+            retry(store, request_id)
+        except (ValueError, StoreError) as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        events.changed()
+        worker.poke()
+        return DataLevelAllowed(request=request_id, account=name, level=level, saved=done)
 
     @r.post("/ai/accounts/{name}/remove")
     def ai_account_remove(name: str, body: FingerprintIn) -> SettingsSaved:

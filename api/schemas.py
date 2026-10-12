@@ -203,6 +203,24 @@ class ItemTitle(BaseModel):
     topic: str = Field("", description="A few words on what it is about; may be empty.")
 
 
+class StopCauseView(BaseModel):
+    """Why a stopped request waits, when the screen has one action that clears it."""
+
+    kind: Literal["data_level", "no_person"] = Field(
+        description="data_level: no AI account may see the material, so `account` can be allowed to "
+        "(POST /api/requests/{id}/allow-data). no_person: no one is set as the person the app is for; the setup "
+        "step 'workspace' names them, and the request runs again by itself once they are."
+    )
+    level: Literal["open", "internal", "restricted"] | None = Field(
+        None, description="For data_level: the data level of the material."
+    )
+    account: str | None = Field(
+        None,
+        description="For data_level: the short name of the account the tier would use first, which the action lets "
+        "see that level.",
+    )
+
+
 class ChangeItem(BaseModel):
     id: str
     version: int
@@ -224,6 +242,7 @@ class ChangeItem(BaseModel):
     refused: bool = Field(
         False, description="The account declined it under its own policy; it can be sent to another account."
     )
+    cause: StopCauseView | None = Field(None, description="For a stopped request: the cause an action can clear.")
     follows: str | None = Field(None, description="The change (changeset id) this work followed from, if any.")
     follows_summary: str | None = Field(None, description="That change's one-line summary, for the row.")
     changeset: ChangesetView | None
@@ -907,7 +926,10 @@ class InboxView(BaseModel):
 class InboxCheckView(InboxView):
     """Came in after reading every source now, with what the read found."""
 
-    new_items: int = Field(description="Messages that were not in the list before this read.")
+    new_items: int = Field(
+        description="Everything the sources handed in during this read (new, changed or gone), wherever it shows: in "
+        "Came in or only in What changed."
+    )
     sources_read: int = Field(description="How many sources were read.")
     sources_failed: int = Field(description="Sources that could not be read this time; their problem shows on Sources.")
     sources_busy: int = Field(description="Sources that were already being read, so this read left them alone.")
@@ -1200,6 +1222,13 @@ class SettingsSaved(BaseModel):
         description="These settings take effect after a restart. Nothing restarts until the person chooses to: ask "
         "them first, then POST /api/restart. False when the change is in use already (AI accounts are)."
     )
+
+
+class DataLevelAllowed(BaseModel):
+    request: str = Field(description="The request, queued again.")
+    account: str = Field(description="The account that was let see the level.")
+    level: Literal["open", "internal", "restricted"]
+    saved: SettingsSaved = Field(description="What changed in the settings, for the read-back and Undo.")
 
 
 class SetupStepView(BaseModel):
@@ -1727,6 +1756,11 @@ class WatchKindView(BaseModel):
     name: str
     label: str
     plugin: str | None = Field(None, description="The add-on it comes from; None for the app's own.")
+    first_run: Literal["baseline", "recent", "all"] = Field(
+        "baseline",
+        description="What the first read of a source of this kind added here does: baseline only notes what is "
+        "there, recent also hands in the last day's, all hands everything in.",
+    )
     items: list[SettingItem]
 
 

@@ -38,7 +38,14 @@ class Choice:
 
 
 class NoProvider(Exception):
-    """No configured account can do this task. The message says why in plain words."""
+    """No configured account can do this task. The message says why in plain words. When the only thing in the way is
+    the material's data level, `level` is that level and `blocked` the accounts ("provider/model") that would take the
+    work if allowed to see it, in the order the tier tries them."""
+
+    def __init__(self, message: str, *, level: str | None = None, blocked: tuple[str, ...] = ()):
+        super().__init__(message)
+        self.level = level
+        self.blocked = blocked
 
 
 class BudgetReached(Exception):
@@ -67,6 +74,7 @@ def choices(
         raise NoProvider(f"no AI account is set up for the {tier_name!r} tier; add one on the AI accounts screen")
     picked: list[Choice] = []
     refused: list[str] = []
+    blocked: list[str] = []
     for ref in [use] if use is not None else [tier_cfg.use, *tier_cfg.fallback]:
         provider_name, _, model_key = ref.partition("/")
         provider = cfg.ai.providers.get(provider_name)
@@ -75,6 +83,8 @@ def choices(
             continue
         if LEVELS.index(data_level) > max(LEVELS.index(lvl) for lvl in provider.allowed_data):
             refused.append(f"{provider_name} isn't allowed to see {data_level} material")
+            if takes(provider, content):
+                blocked.append(ref)
             continue
         if not takes(provider, content):
             refused.append(f"{provider_name} doesn't take {', '.join(sorted(content))} material")
@@ -82,7 +92,11 @@ def choices(
         model_id = provider.models.get(model_key, model_key) if provider.adapter != "stub" else "stub"
         picked.append(Choice(tier_name, provider_name, model_key, model_id))
     if not picked:
-        raise NoProvider("no AI account can take this: " + "; ".join(refused))
+        raise NoProvider(
+            "no AI account can take this: " + "; ".join(refused),
+            level=data_level if blocked else None,
+            blocked=tuple(blocked),
+        )
     if independent is not None and use is None:
         others = [c for c in picked if c.provider not in independent.avoid]
         same = [c for c in picked if c.provider in independent.avoid]

@@ -207,3 +207,23 @@ def test_the_persons_own_open_actions_come_overdue_first(tmp_path):
         assert all(t.overdue == (t.due is not None and t.due < NOW.date()) for t in found)
     finally:
         store.close()
+
+
+def test_check_now_counts_everything_handed_in_not_only_what_lists_in_came_in(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+
+    plain = [
+        {"key": "one", "title": "First file", "text": "its words"},
+        {"key": "two", "title": "Second file", "text": "other words"},
+    ]
+    ws, cfg, store = make(tmp_path, plain)
+    store.close()
+    c = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    c.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    body = c.post(f"{api}/today/arrived/check").json()
+    assert body["items"] == [] and body["new_items"] == 2  # files go to What changed, and still count
+    assert len(c.get(f"{api}/changes").json()) == 2
+    assert c.post(f"{api}/today/arrived/check").json()["new_items"] == 0

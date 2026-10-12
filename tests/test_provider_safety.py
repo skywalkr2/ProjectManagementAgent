@@ -14,7 +14,7 @@ from engine.config import ConfigError
 from engine.config.yaml_edit import set_key
 from engine.dispatcher import process, send_back
 from engine.intake import hand_in
-from engine.storage import Store
+from engine.storage import Store, WriteContext
 from engine.worker import RESTART_NEEDED, Events, Worker
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, add_example_account
@@ -36,6 +36,10 @@ def test_a_fresh_workspace_has_no_ai_account_and_says_so(tmp_path):
     cfg = ws.config(env={})
     assert cfg.ai.providers == {} and cfg.ai.tiers["routine"].use == ""
     store = Store(ws.db_path)
+    with store.transaction() as tx:
+        cfg.workspace.user.person = tx.create(
+            "person", {"full_name": "Someone"}, WriteContext("pm", "trusted", "test")
+        ).id
     req = hand_in(ws, store, note="file this", now=NOW).request
     assert process(ws, store, cfg, Router(cfg, store, env={}), req, now=NOW) is None
     waiting = store.read().get("request", req).data["waiting"]

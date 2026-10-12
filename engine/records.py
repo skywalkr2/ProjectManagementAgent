@@ -683,6 +683,24 @@ class About(BaseModel):
     id: str = Field(description="The record's id.")
 
 
+class StopCause(BaseModel):
+    """Why a request stopped, in a form the screen can act on."""
+
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["data_level", "no_person"] = Field(
+        description="data_level: no AI account may see the request's material, and `accounts` would take it if "
+        "allowed. no_person: the workspace has no person set yet, so the work waits before any AI call."
+    )
+    level: Literal["open", "internal", "restricted"] | None = Field(
+        None, description="For data_level: the data level of the material."
+    )
+    accounts: list[str] = Field(
+        default_factory=list,
+        description='For data_level: the accounts ("provider/model") that would take the material if allowed its '
+        "level, in the order the tier tries them.",
+    )
+
+
 class Request(Record):
     """A unit of work for the assistant. The engine creates it when something is handed in, a stage starts a task or
     a schedule fires, and moves it through its states; the person can send back or dismiss it."""
@@ -713,6 +731,9 @@ class Request(Record):
         "person. done: finished. needs_you: stopped until the person acts. failed: ended with an error.",
     )
     waiting: str | None = Field(None, description="Why it is waiting and until when, in plain words.")
+    cause: StopCause | None = Field(
+        None, description="For a request waiting on the person: the cause the screen can offer an action for, if any."
+    )
     follows: str | None = Field(
         None, description="The change (a changeset id) whose event a plugin answered with this work, if any."
     )

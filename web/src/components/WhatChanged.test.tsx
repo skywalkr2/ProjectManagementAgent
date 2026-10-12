@@ -1,5 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp } from "../test-utils";
 import { WhatChanged } from "./WhatChanged";
@@ -310,4 +311,46 @@ test("with no other account, the chooser says so and points to the AI settings",
   expect(within(chooser).getAllByRole("button").map((b) => b.textContent)).toEqual(["Cancel"]);
   await user.click(within(chooser).getByRole("button", { name: "Cancel" }));
   expect(screen.queryByRole("group", { name: /No other account/ })).toBeNull();
+});
+
+test("a request stopped because no account may see its level offers one action that lets the account see it, with Undo", async () => {
+  const user = userEvent.setup();
+  const key = "ai.providers.first.allowed_data";
+  const calls = fakeApi({
+    "GET changes": () => [stopped({ cause: { kind: "data_level", level: "internal", account: "first" } })],
+    "POST requests/REQ-9/allow-data": () => ({
+      request: "REQ-9",
+      account: "first",
+      level: "internal",
+      saved: {
+        changes: [{ key, before: ["open"], after: ["open", "internal"], was_default: false, is_default: false }],
+        fingerprint: "fp-2",
+        needs_restart: false,
+      },
+    }),
+    "POST settings": () => ({ changes: [], fingerprint: "fp-3", needs_restart: false }),
+  });
+  renderApp(<WhatChanged />);
+  const row = await screen.findByRole("listitem", { name: "File the printer's dates" });
+  expect(within(row).queryByRole("button", { name: "Try again" })).toBeNull();
+  await user.click(within(row).getByRole("button", { name: "Let first see internal material" }));
+  expect(await screen.findByText("first can now see internal material. Trying again.")).toBeInTheDocument();
+  expect(calls.filter((c) => c.route === "POST requests/REQ-9/allow-data")).toHaveLength(1);
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST settings")?.body).toEqual({ changes: { [key]: ["open"] }, reset: [], fingerprint: "fp-2" }));
+});
+
+test("a request waiting for the person to be named offers Say who you are, which opens the setup guide at that step", async () => {
+  const user = userEvent.setup();
+  const open = vi.fn();
+  const calls = fakeApi({
+    "GET changes": () => [stopped({ waiting: "Say who you are first", cause: { kind: "no_person" } })],
+  });
+  renderApp(<WhatChanged onOpenGuide={open} />);
+  const row = await screen.findByRole("listitem", { name: "File the printer's dates" });
+  expect(within(row).queryByRole("button", { name: "Try again" })).toBeNull();
+  expect(within(row).getByText("Say who you are first")).toBeInTheDocument();
+  await user.click(within(row).getByRole("button", { name: "Say who you are" }));
+  expect(open).toHaveBeenCalledWith("workspace");
+  expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
 });

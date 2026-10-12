@@ -760,3 +760,15 @@ test("after adding an app, a sign-in failure shows the hint from its test", asyn
   const line = await screen.findByText(/didn't answer/);
   expect(line).toHaveTextContent("Everyday work: app-a — didn't answer: Sign in once in a terminal. ✗");
 });
+
+test("the level choice says that notes, mail and meetings are internal, beside the line on who sees what, and Open stays the only default tick", async () => {
+  const user = userEvent.setup();
+  api();
+  open();
+  await pick(user, "App B");
+  const levels = screen.getByRole("group", { name: "What it may see" });
+  expect(within(levels).getByText("Material marked with a level goes only to accounts allowed to see that level.")).toBeInTheDocument();
+  expect(
+    within(levels).getByText("Your notes, mail and meetings are internal, so the assistant can work on them only once Internal is ticked."),
+  ).toBeInTheDocument();
+});

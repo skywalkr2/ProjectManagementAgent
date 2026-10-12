@@ -1187,6 +1187,10 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `origin` | Literal['pm', 'input', 'schedule'] | required | Who started it: pm, the person (handing something in or sending work back); input, an outside input; schedule, a schedule or a stage entry. |
 | `state` | Literal['queued', 'running', 'review', 'done', 'needs_you', 'failed'] | `'queued'` | queued: waiting its turn. running: with the assistant. review: its changeset awaits the person. done: finished. needs_you: stopped until the person acts. failed: ended with an error. |
 | `waiting` | str \| None | `None` | Why it is waiting and until when, in plain words. |
+| `cause` | StopCause \| None | see below | For a request waiting on the person: the cause the screen can offer an action for, if any. |
+| `cause.kind` | Literal['data_level', 'no_person'] | required | data_level: no AI account may see the request's material, and `accounts` would take it if allowed. no_person: the workspace has no person set yet, so the work waits before any AI call. |
+| `cause.level` | Optional[Literal['open', 'internal', 'restricted']] | `None` | For data_level: the data level of the material. |
+| `cause.accounts` | list[str] | `[]` | For data_level: the accounts ("provider/model") that would take the material if allowed its level, in the order the tier tries them. |
 | `follows` | str \| None | `None` | The change (a changeset id) whose event a plugin answered with this work, if any. |
 | `sensitivity` | Optional[Literal['open', 'internal', 'restricted']] | `None` | How sensitive the person said what they handed in is; it only ever raises the level. |
 | `part` | dict[str, Any] \| None | `None` | The part of a long text the work is about: {first, last} paragraphs (by number) an anchored draft revises or other work reads, or {after} a draft adds new text after (0: at the start; "end": at the end); with the {base} version number they refer to. |

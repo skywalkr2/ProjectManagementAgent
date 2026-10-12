@@ -146,11 +146,11 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             </div>
             <SetupLine workspace={rc.workspace_name} onOpenGuide={openGuide} />
             <BackupLine onOpenGuide={openGuide} />
-            <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} />
+            <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} onOpenGuide={openGuide} />
           </div>
         );
       case "work/changed":
-        return <WhatChanged />;
+        return <WhatChanged onOpenGuide={openGuide} />;
       case "work/followups":
         return <FollowUps />;
       case "work/outgoing":

@@ -335,6 +335,17 @@ test("Check now reads the sources, shows the new list at once and says what arri
   expect(within(col).getByRole("button", { name: "Check now" })).toBeEnabled();
 });
 
+test("Check now counts everything the sources handed in, even when none of it lists in Came in", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  open({
+    "GET watch": () => [watched("a")],
+    "POST today/arrived/check": () => checked({ items: inbox.items, new_items: 2 }),
+  });
+  await user.click(await within(await column("Came in")).findByRole("button", { name: "Check now" }));
+  expect(await screen.findByText("2 new items")).toBeInTheDocument();
+  expect(screen.queryByText("Nothing new")).toBeNull();
+});
+
 test("Check now is disabled and says it is working while it reads, and can be used again after", async () => {
   open({ "GET watch": () => [watched("a")], "POST today/arrived/check": () => checked() });
   const col = await column("Came in");

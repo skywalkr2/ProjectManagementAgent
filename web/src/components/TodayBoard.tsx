@@ -33,6 +33,8 @@ export function TodayBoard(props: {
   /** Opens Sources with the add form open. */
   onAddSource?: () => void;
   onOpenRecord?: (kind: string, id: string) => void;
+  /** Opens the setup guide at a step. */
+  onOpenGuide?: (step: string) => void;
 }) {
   const { t } = useWords();
   const add = props.onAddSource ?? (() => props.onView("sources"));
@@ -40,7 +42,7 @@ export function TodayBoard(props: {
     <div className="today-board" role="group" aria-label={t("today.board.label")}>
       <AgendaColumn onAddSource={add} />
       <TodoColumn />
-      <NeedsColumn onOpenRecord={props.onOpenRecord} />
+      <NeedsColumn onOpenRecord={props.onOpenRecord} onOpenGuide={props.onOpenGuide} />
       <ArrivedColumn onView={props.onView} onAddSource={add} />
     </div>
   );
@@ -345,12 +347,12 @@ function useNeedsCount(): number {
   return work + firstGo + stage.count + (lines.data?.length ?? 0) + messages;
 }
 
-function NeedsColumn(props: { onOpenRecord?: (kind: string, id: string) => void }) {
+function NeedsColumn(props: { onOpenRecord?: (kind: string, id: string) => void; onOpenGuide?: (step: string) => void }) {
   const { t, tn } = useWords();
   const count = useNeedsCount();
   return (
     <Column id="needs" title={t("today.needs.title")} count={count} countText={tn("today.needs.count", count)}>
-      <WhatChanged compact />
+      <WhatChanged compact onOpenGuide={props.onOpenGuide} />
       <PluginToday compact onOpenRecord={props.onOpenRecord} />
       <FollowUps compact />
     </Column>

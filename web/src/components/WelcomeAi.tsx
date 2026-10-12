@@ -685,6 +685,9 @@ export function WelcomeAi(props: { local: boolean; done: boolean }) {
                   ))}
                 </div>
                 <p className="hint">{t("welcome.ai.data_hint")}</p>
+                <p className="hint" data-internal-note="">
+                  {t("welcome.ai.data_internal_note")}
+                </p>
               </fieldset>
               <label className="check-line">
                 <input type="checkbox" checked={useForWork} onChange={(e) => setUseForWork(e.target.checked)} />

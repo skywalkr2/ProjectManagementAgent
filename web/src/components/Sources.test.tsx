@@ -59,7 +59,13 @@ const field = (key: string, type: Item["type"], extra: Partial<Item> = {}): Item
   editable: true,
   ...extra,
 });
-const kind = (name: string, label: string, plugin: string | null, items: Item[]): S["WatchKindView"] => ({ name, label, plugin, items });
+const kind = (
+  name: string,
+  label: string,
+  plugin: string | null,
+  items: Item[],
+  first_run: S["WatchKindView"]["first_run"] = "baseline",
+): S["WatchKindView"] => ({ name, label, plugin, items, first_run });
 
 const KINDS = [
   kind("folder", "A folder", null, [field("path", "text"), field("patterns", "list", { value: [], default: [] })]),
@@ -68,7 +74,7 @@ const KINDS = [
     field("days_ahead", "integer", { value: 30, default: 30 }),
     field("options.depth", "integer", { value: 1, default: 1 }),
   ]),
-  kind("demo/mailbox", "A mailbox", "demo", [field("folder", "text")]),
+  kind("demo/mailbox", "A mailbox", "demo", [field("folder", "text")], "recent"),
   kind("other/feed", "A feed", "other", [field("url", "text")]),
 ];
 
@@ -266,6 +272,19 @@ describe("adding a source", () => {
     await user.click(within(form).getByRole("radio", { name: "A mailbox" }));
     expect(within(form).queryByLabelText("About address")).toBeNull();
     expect(within(form).getByLabelText("About folder")).toBeInTheDocument();
+  });
+
+  test("a kind whose first read only notes what is there says so, read from how the kind starts, not its name", async () => {
+    const user = userEvent.setup();
+    open([]);
+    await user.click(await screen.findByRole("button", { name: "Add a source" }));
+    const form = await screen.findByRole("form", { name: "Add a source" });
+    expect(form.querySelector("[data-first-read]")).toBeNull();
+    await user.click(within(form).getByRole("radio", { name: "A folder" }));
+    expect(within(form).getByText("Items already there are noted, not handed in. New ones go to the assistant.")).toBeInTheDocument();
+    // A kind that also hands in the recent past has nothing to explain.
+    await user.click(within(form).getByRole("radio", { name: "A mailbox" }));
+    expect(form.querySelector("[data-first-read]")).toBeNull();
   });
 
   test("how often is 15, 30, 60 or 240 minutes", async () => {

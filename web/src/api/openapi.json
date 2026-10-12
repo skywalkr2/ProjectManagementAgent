@@ -1560,6 +1560,17 @@
             "description": "Whether the request waits for the person's go or has had it.",
             "title": "Approval"
           },
+          "cause": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StopCauseView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a stopped request: the cause an action can clear."
+          },
           "changeset": {
             "anyOf": [
               {
@@ -2123,6 +2134,41 @@
           "label"
         ],
         "title": "DataFormView",
+        "type": "object"
+      },
+      "DataLevelAllowed": {
+        "properties": {
+          "account": {
+            "description": "The account that was let see the level.",
+            "title": "Account",
+            "type": "string"
+          },
+          "level": {
+            "enum": [
+              "open",
+              "internal",
+              "restricted"
+            ],
+            "title": "Level",
+            "type": "string"
+          },
+          "request": {
+            "description": "The request, queued again.",
+            "title": "Request",
+            "type": "string"
+          },
+          "saved": {
+            "$ref": "#/components/schemas/SettingsSaved",
+            "description": "What changed in the settings, for the read-back and Undo."
+          }
+        },
+        "required": [
+          "request",
+          "account",
+          "level",
+          "saved"
+        ],
+        "title": "DataLevelAllowed",
         "type": "object"
       },
       "DocumentBlock": {
@@ -3062,7 +3108,7 @@
             "type": "integer"
           },
           "new_items": {
-            "description": "Messages that were not in the list before this read.",
+            "description": "Everything the sources handed in during this read (new, changed or gone), wherever it shows: in Came in or only in What changed.",
             "title": "New Items",
             "type": "integer"
           },
@@ -7345,6 +7391,54 @@
         "title": "Status",
         "type": "object"
       },
+      "StopCauseView": {
+        "description": "Why a stopped request waits, when the screen has one action that clears it.",
+        "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For data_level: the short name of the account the tier would use first, which the action lets see that level.",
+            "title": "Account"
+          },
+          "kind": {
+            "description": "data_level: no AI account may see the material, so `account` can be allowed to (POST /api/requests/{id}/allow-data). no_person: no one is set as the person the app is for; the setup step 'workspace' names them, and the request runs again by itself once they are.",
+            "enum": [
+              "data_level",
+              "no_person"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "open",
+                  "internal",
+                  "restricted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For data_level: the data level of the material.",
+            "title": "Level"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "StopCauseView",
+        "type": "object"
+      },
       "SyncView": {
         "description": "The synced folder's state.",
         "properties": {
@@ -8171,6 +8265,17 @@
       "WatchKindView": {
         "description": "A kind of source the assistant can keep reading, with the form its settings take.",
         "properties": {
+          "first_run": {
+            "default": "baseline",
+            "description": "What the first read of a source of this kind added here does: baseline only notes what is there, recent also hands in the last day's, all hands everything in.",
+            "enum": [
+              "baseline",
+              "recent",
+              "all"
+            ],
+            "title": "First Run",
+            "type": "string"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/SettingItem"
@@ -12007,6 +12112,46 @@
           }
         },
         "summary": "Request Accounts"
+      }
+    },
+    "/api/requests/{request_id}/allow-data": {
+      "post": {
+        "description": "Let the account that would take a stopped request see its material's level, at once and with Undo, then\nqueue the request again. Only a request stopped because no account may see its level.",
+        "operationId": "request_allow_data_api_requests__request_id__allow_data_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataLevelAllowed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Allow Data"
       }
     },
     "/api/requests/{request_id}/closer-look": {

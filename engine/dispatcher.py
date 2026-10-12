@@ -111,7 +111,17 @@ def process(
         from engine.stages import wording
 
         return needs_you(store, request_id, wording(cfg, "waiting"))
-    _set(store, request_id, state="running", waiting="With the assistant now", attempts=req.data["attempts"] + 1)
+    if not person_is_set(store, cfg):
+        # Nothing is estimated or asked before the person is named: the assistant's work needs someone to address.
+        return needs_you(store, request_id, SAY_WHO_FIRST, cause={"kind": "no_person"})
+    _set(
+        store,
+        request_id,
+        state="running",
+        waiting="With the assistant now",
+        cause=None,
+        attempts=req.data["attempts"] + 1,
+    )
 
     try:
         packet = build(ws, store, cfg, request_id, now.date())
@@ -247,9 +257,9 @@ def process(
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
     if outcome.changeset is None:
-        return needs_you(store, request_id, outcome.stop or "The assistant couldn't finish this.")
+        return needs_you(store, request_id, outcome.stop or "The assistant couldn't finish this.", cause=outcome.cause)
     if outcome.stop is not None:
-        return needs_you(store, request_id, outcome.stop)
+        return needs_you(store, request_id, outcome.stop, cause=outcome.cause)
     changeset, problems, run_id = outcome.changeset, outcome.problems, outcome.run_id
     assert changeset is not None
     cs_id = apply_changeset(
@@ -257,6 +267,12 @@ def process(
     )
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
     return cs_id
+
+
+def person_is_set(store: Store, cfg: Config) -> bool:
+    """Whether the workspace has a person it is for: one set in the settings whose record exists."""
+    person = cfg.workspace.user.person
+    return bool(person) and store.read().get("person", person) is not None
 
 
 def _has_account(
@@ -355,6 +371,7 @@ class _Outcome:
     problems: list = field(default_factory=list)
     run_id: str | None = None
     stop: str | None = None  # why the PM is needed instead of a changeset
+    cause: dict | None = None  # what the screen can offer to clear the stop, when it has a way to
     escalate: bool = False  # the answer still fails its checks: a stronger tier may do better
 
 
@@ -390,7 +407,13 @@ def _rounds(
                 independent=independent,
             )
         except (BudgetReached, NoProvider) as err:
-            return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=str(err))
+            return _Outcome(
+                changeset=out.changeset,
+                problems=out.problems,
+                run_id=out.run_id,
+                stop=str(err),
+                cause=_data_level_cause(err),
+            )
         except AiError as err:
             stop = _refused(store, None, err.detail) if err.kind == "refused" else _ai_failure(err)
             return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=stop)
@@ -471,6 +494,8 @@ def _rounds(
     return out
 
 
+#: What a run waits on while the workspace has no person set; the setup step that names them clears it.
+SAY_WHO_FIRST = "Say who you are first"
 UNPRICED_GO = "Its cost can't be estimated on this account. Waiting for your go."
 #: What a run waits on until the person's first go in the workspace; Today gathers every such request into one line.
 FIRST_GO = "Waiting for your first go."
@@ -599,14 +624,24 @@ def _ai_failure(err: AiError) -> str:
     return f"{plain}{when}{why}. Check the account on the AI accounts screen, then try again."
 
 
+def _data_level_cause(err: Exception) -> dict | None:
+    """When a stop is only that no account may see the material's level: that level and the accounts that would take
+    it if allowed."""
+    if isinstance(err, NoProvider) and err.level and err.blocked:
+        return {"kind": "data_level", "level": err.level, "accounts": list(err.blocked)}
+    return None
+
+
 def _set(store: Store, request_id: str, **changes: object) -> None:
     with store.transaction() as tx:
         cur = tx.get("request", request_id)
         tx.update("request", request_id, changes, _ENGINE, read_version=cur.version)
 
 
-def needs_you(store: Store, request_id: str, why: str) -> None:
-    _set(store, request_id, state="needs_you", waiting=why)
+def needs_you(store: Store, request_id: str, why: str, cause: dict | None = None) -> None:
+    """Stop a request for the person, with why in plain words and, when the screen can offer an action that clears it,
+    the cause."""
+    _set(store, request_id, state="needs_you", waiting=why, cause=cause)
     return None
 
 
@@ -628,6 +663,25 @@ def grant_first_go(store: Store) -> int:
     return started
 
 
+def requeue_waiting_for_person(store: Store) -> int:
+    """Queue again every request that waited for the workspace to have a person, now that one is set. Returns how
+    many."""
+    queued = 0
+    with store.transaction() as tx:
+        for req in tx.list("request"):
+            cause = req.data.get("cause") or {}
+            if req.data["state"] == "needs_you" and not req.data.get("dismissed") and cause.get("kind") == "no_person":
+                tx.update(
+                    "request",
+                    req.id,
+                    {"state": "queued", "waiting": "With the assistant, next in line", "cause": None},
+                    _ENGINE,
+                    read_version=req.version,
+                )
+                queued += 1
+    return queued
+
+
 def retry(store: Store, request_id: str, use: str | None = None) -> None:
     """Queue a request that stopped (an AI account problem, an unreadable answer, a refusal) to be processed again,
     optionally on an account the person picked (`use`, a "provider/model" from the AI settings)."""
@@ -646,7 +700,7 @@ def retry(store: Store, request_id: str, use: str | None = None) -> None:
             raise ValueError(wording(store.plugins.cfg, "retry_blocked"))
         if cur.data["state"] not in ("needs_you", "failed"):
             raise ValueError("this isn't waiting on you")
-        changes: dict[str, object] = {"state": "queued", "waiting": "With the assistant, next in line"}
+        changes: dict[str, object] = {"state": "queued", "waiting": "With the assistant, next in line", "cause": None}
         if use is not None:
             changes["use"] = use
         tx.update("request", request_id, changes, _ENGINE, read_version=cur.version)

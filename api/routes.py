@@ -101,6 +101,7 @@ from api.schemas import (
     StageRequestView,
     StageView,
     Status,
+    StopCauseView,
     SyncView,
     TakenBack,
     TaskKindView,
@@ -428,7 +429,6 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         stops the others; its problem shows on the source as after any read."""
         from engine import today, watch
 
-        before = {a.snapshot for a in today.arrived(store, cfg, datetime.now(UTC)).items}
         read = failed = busy = handed = 0
         for source in [s for s in cfg.watch.sources if s.enabled]:
             try:
@@ -452,7 +452,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         return InboxCheckView(
             items=[ArrivedView(**vars(a)) for a in inbox.items],
             left_out=inbox.left_out,
-            new_items=sum(1 for a in inbox.items if a.snapshot not in before),
+            new_items=handed,
             sources_read=read,
             sources_failed=failed,
             sources_busy=busy,
@@ -1122,6 +1122,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     first_go=waits_on_first_go(d),
                     estimate_usd=d.get("estimate_usd"),
                     refused=d["state"] == "needs_you" and _last_refused(req.id),
+                    cause=_cause_view(d),
                     follows=d.get("follows"),
                     follows_summary=_summary_of(d.get("follows")),
                     changeset=view,
@@ -1610,6 +1611,19 @@ def _existing(tx: Any, kind: str, record_id: str) -> Any:
     if rec is None:
         raise StoreError(f"{kind} {record_id} doesn't exist")
     return rec
+
+
+def _cause_view(request: dict[str, Any]) -> StopCauseView | None:
+    """A stopped request's cause for the screen: for a data level, the account the tier would use first."""
+    cause = request.get("cause")
+    if not cause or request.get("state") not in ("needs_you", "failed"):
+        return None
+    accounts = cause.get("accounts") or []
+    return StopCauseView(
+        kind=cause["kind"],
+        level=cause.get("level"),
+        account=accounts[0].partition("/")[0] if accounts else None,
+    )
 
 
 def _title_view(title: Any, people: People) -> ItemTitle | None:

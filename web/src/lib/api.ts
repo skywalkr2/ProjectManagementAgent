@@ -100,6 +100,7 @@ export const api = {
   reply: (q: string, text: string) => call<S["Handed"]>("POST", `questions/${id(q)}/reply`, { text }),
   retry: (req: string, use?: string) =>
     call<S["Ok"]>("POST", `requests/${id(req)}/retry`, use ? { use } : undefined),
+  allowData: (req: string) => call<S["DataLevelAllowed"]>("POST", `requests/${id(req)}/allow-data`),
   requestAccounts: (req: string) => call<S["AccountChoice"][]>("GET", `requests/${id(req)}/accounts`),
   dismiss: (req: string, readVersion: number) =>
     call<S["RequestChanged"]>("POST", `requests/${id(req)}/dismiss`, { read_version: readVersion }),
