@@ -45,6 +45,7 @@ function pack(id: string, extra: Partial<Pack> = {}): Pack {
     demo: false,
     compatible: null,
     installed_version: null,
+    removable: false,
     enabled: false,
     feed: HOST,
     what: summary(),
@@ -387,9 +388,10 @@ test("Installed lists one row per pack with its version, description, status and
           enabled: true,
           state: "enabled",
           reason: null,
+          removable: false,
           what: summary({ adds: { screens: 1 }, reaches: { hosts: [SITE] }, keeps: "restricted" }),
         },
-        { name: "beta", version: null, description: "", enabled: false, state: "off", reason: null, what: summary() },
+        { name: "beta", version: null, description: "", enabled: false, state: "off", reason: null, removable: false, what: summary() },
         {
           name: "gamma",
           version: "1.0.0",
@@ -397,6 +399,7 @@ test("Installed lists one row per pack with its version, description, status and
           enabled: true,
           state: "disabled",
           reason: "it needs a newer version of the app",
+          removable: false,
           what: summary(),
         },
       ],
@@ -460,7 +463,7 @@ const SAVED = (needsRestart: boolean) => ({
   needs_restart: needsRestart,
 });
 const installedRows = (enabled: boolean): Packs["installed"] => [
-  { name: "beta", version: "1.0.0", description: "", enabled, state: enabled ? "enabled" : "off", reason: null, what: summary() },
+  { name: "beta", version: "1.0.0", description: "", enabled, state: enabled ? "enabled" : "off", reason: null, removable: false, what: summary() },
 ];
 
 test("an installed add-on that is off has Turn on as its one action: it acts at once with the fingerprint, and reads back with Undo", async () => {
@@ -599,4 +602,137 @@ test("turning on refetches the add-ons list so the row reads what was saved", as
   const before = calls.calls.filter((c) => c.route === "GET packs").length;
   await user.click(within(await row("beta")).getByRole("button", { name: "Turn on beta" }));
   await waitFor(() => expect(calls.calls.filter((c) => c.route === "GET packs").length).toBeGreaterThan(before));
+});
+
+const INSTALLED = (name: string, version = "1.0.0") => ({ name, version, needs_restart: true });
+
+test("an add-on with a release has Install as its one action: it installs, then says a restart is needed and offers Restart now", async () => {
+  const user = userEvent.setup();
+  let done = false;
+  const calls = fakeApi({
+    "GET packs": () => view({ available: [pack("tool", { installable: true, installed_version: done ? "1.0.0" : null })] }),
+    "GET status": () => ({ restart_needed: done ? "add-ons" : null, can_restart: true, restart_for: done ? ["add-ons"] : [] }),
+    "POST packs/tool/install": () => {
+      done = true;
+      return INSTALLED("tool");
+    },
+    "POST restart": () => ({ restarting: true }),
+  });
+  renderApp(
+    <RestartProvider hellos={1}>
+      <Addons onBack={() => undefined} />
+    </RestartProvider>,
+  );
+  const tool = await row("Name of tool");
+  expect(within(tool).getAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Install Name of tool"]);
+  expect(within(tool).queryByRole("button", { name: /How to get/ })).toBeNull();
+  await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST packs/tool/install")).toBe(true));
+  const note = await within(tool).findByText(/Name of tool is installed\. It is ready after a restart\. Then turn it on\./);
+  expect(note).toBeInTheDocument();
+  expect(within(tool).queryByRole("button", { name: "Install Name of tool" })).toBeNull();
+  // The restart is the person's choice: nothing restarted by itself.
+  expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+  await user.click(await within(tool).findByRole("button", { name: "Restart now" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
+});
+
+test("a refusal to install is the server's own words, with Install still there to try again", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET packs": () => view({ available: [pack("tool", { installable: true })] }),
+    "POST packs/tool/install": () => new Refuse(409, "The file doesn't match the checksum, so it wasn't installed."),
+  });
+  renderApp(<Addons onBack={() => undefined} />);
+  const tool = await row("Name of tool");
+  const install = within(tool).getByRole("button", { name: "Install Name of tool" });
+  await user.click(install);
+  expect(await within(tool).findByRole("alert")).toHaveTextContent("The file doesn't match the checksum, so it wasn't installed.");
+  expect(within(tool).getByRole("button", { name: "Install Name of tool" })).toBeEnabled();
+  expect(calls.filter((c) => c.route === "POST packs/tool/install")).toHaveLength(1);
+});
+
+test("while an install runs the button says so and can't be pressed again", async () => {
+  const user = userEvent.setup();
+  let finish: () => void = () => undefined;
+  const hold = new Promise<void>((resolve) => (finish = resolve));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const route = `${init?.method ?? "GET"} ${String(input).replace(/^api\//, "")}`;
+      if (route === "POST packs/tool/install") {
+        await hold;
+        return new Response(JSON.stringify(INSTALLED("tool")), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      const body = route === "GET packs" ? view({ available: [pack("tool", { installable: true })] }) : {};
+      return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    }),
+  );
+  renderApp(<Addons onBack={() => undefined} />);
+  const tool = await row("Name of tool");
+  await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
+  const busy = await within(tool).findByRole("button", { name: "Install Name of tool" });
+  expect(busy).toHaveTextContent("Installing…");
+  expect(busy).toBeDisabled();
+  finish();
+  expect(await within(tool).findByText(/is installed\./)).toBeInTheDocument();
+});
+
+test("an add-on with no release keeps the install text to copy, and has no Install button", async () => {
+  open(view({ available: [pack("bare", { installable: false }), pack("unsaid")] }));
+  for (const name of ["Name of bare", "Name of unsaid"]) {
+    const bare = await row(name);
+    expect(within(bare).getByRole("button", { name: `How to get ${name}` })).toBeInTheDocument();
+    expect(within(bare).queryByRole("button", { name: /^Install/ })).toBeNull();
+  }
+});
+
+test("Remove is in the menu only for an add-on the app installed that is off, and it acts at once with the restart note", async () => {
+  const user = userEvent.setup();
+  const calls = open(
+    view({
+      available: [
+        pack("mine", { installed_version: "1.0.0", enabled: false, removable: true }),
+        pack("running", { installed_version: "1.0.0", enabled: true, removable: true }),
+        pack("other", { installed_version: "1.0.0", enabled: false, removable: false }),
+      ],
+    }),
+    { "POST packs/mine/uninstall": () => INSTALLED("mine") },
+  );
+  expect(within(await row("Name of running")).queryByRole("button", { name: /More actions/ })).toBeNull();
+  expect(within(await row("Name of other")).queryByRole("button", { name: /More actions/ })).toBeNull();
+  const mine = await row("Name of mine");
+  await user.click(within(mine).getByRole("button", { name: "More actions for Name of mine" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/mine/uninstall")).toBe(true));
+  expect(await within(mine).findByText(/Name of mine is removed\. The app lets go of it after a restart\./)).toBeInTheDocument();
+});
+
+test("on Installed, Remove is offered for an add-on the app installed that is off", async () => {
+  const user = userEvent.setup();
+  const calls = open(
+    view({
+      installed: [
+        { ...installedRows(false)[0], name: "mine", removable: true },
+        { ...installedRows(false)[0], name: "other", removable: false },
+        { ...installedRows(true)[0], name: "on", removable: true },
+      ],
+    }),
+    { "POST packs/mine/uninstall": () => INSTALLED("mine") },
+  );
+  await user.click(await screen.findByRole("tab", { name: "Installed" }));
+  expect(within(await row("other")).queryByRole("button", { name: /More actions/ })).toBeNull();
+  expect(within(await row("on")).queryByRole("button", { name: /More actions/ })).toBeNull();
+  await user.click(within(await row("mine")).getByRole("button", { name: "More actions for mine" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Remove" }));
+  await waitFor(() => expect(calls.calls.some((c) => c.route === "POST packs/mine/uninstall")).toBe(true));
+  expect(await within(await row("mine")).findByText(/mine is removed\./)).toBeInTheDocument();
+});
+
+test("the introduction says installing happens here and that the app never takes payment", async () => {
+  open(view());
+  const intro = await screen.findByText(/Packs add a whole kind of work/);
+  expect(intro).toHaveTextContent("Installing one from the list happens here");
+  expect(intro).toHaveTextContent("never takes payment");
+  expect(intro).not.toHaveTextContent("never installs");
 });

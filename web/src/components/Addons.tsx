@@ -1,8 +1,9 @@
 // Add-ons: where packs are found and what the ones already here do. Available lists packs the configured catalogs
 // offer, each with what it does, what it adds, reaches and keeps, what its AI work would cost on the person's own
 // accounts, and how to get it; Installed lists the packs this copy of the app has. Everything a catalog says is shown
-// as text, and the only address that can be opened is a pack's own page, with its real domain beside it. The app
-// never installs anything itself.
+// as text, and the only address that can be opened is a pack's own page, with its real domain beside it. A listed pack
+// with a release the app can install has an Install button; one the app installed can be removed once it is off. Both
+// need a restart before the app uses the change, and neither turns anything on.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState, type ReactNode } from "react";
 import { Heading, Tab, TabList, TabPanel, Tabs } from "react-aria-components";
@@ -92,6 +93,61 @@ function useSwitch(name: string, label: string) {
     }
   };
   return { busy, problem, run };
+}
+
+/** Installing, updating or removing an add-on from the screen: acts at once, then the row says a restart is needed. A
+ * refusal is kept for the row to show in the server's own words; `note` is what the row says after a success. */
+function usePackChange(packId: string, name: string, focusRow: () => void) {
+  const { t } = useWords();
+  const client = useQueryClient();
+  const [busy, setBusy] = useState<"install" | "remove" | null>(null);
+  const [problem, setProblem] = useState("");
+  const [done, setDone] = useState<"installed" | "removed" | null>(null);
+  const run = async (what: "install" | "remove") => {
+    setBusy(what);
+    setProblem("");
+    try {
+      await (what === "install" ? api.installPack : api.removePack)(packId);
+      setDone(what === "install" ? "installed" : "removed");
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["packs"] }),
+        client.invalidateQueries({ queryKey: ["status"] }),
+      ]);
+      focusRow();
+    } catch (err) {
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    } finally {
+      setBusy(null);
+    }
+  };
+  return {
+    busy,
+    problem,
+    note: done ? t(done === "installed" ? "addons.installed_note" : "addons.removed_note", { name }) : "",
+    installed: done === "installed",
+    install: () => run("install"),
+    remove: () => run("remove"),
+  };
+}
+
+/** What a row says once an install or removal needs the restart, with the same Restart now the other rows have. */
+function RestartLine(props: { text: string }) {
+  const { t } = useWords();
+  const restart = useRestart();
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  return (
+    <p className="sub pack-restart" role="status">
+      {props.text}
+      {status.data?.can_restart && (
+        <>
+          {" "}
+          <button type="button" className="btn quiet small" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+            {t("restart.now")}
+          </button>
+        </>
+      )}
+    </p>
+  );
 }
 
 /** The row's one primary action for an installed add-on: Turn on when it is off, Turn off when it is on. */
@@ -224,9 +280,20 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
   const safeHomepage = pack.homepage && pack.homepage_domain && domainOf(pack.homepage) ? pack.homepage : null;
   const size = (n: number) => n.toLocaleString();
   const power = useSwitch(pack.id, pack.name);
+  const change = usePackChange(pack.id, pack.name, () =>
+    restoreFocus(() => document.getElementById(`pack-row-${index}`)),
+  );
+  const problem = change.problem || power.problem;
 
   const actions: MenuAction[] = [];
-  if (installed && update) actions.push({ id: "update", label: t("addons.get_update"), run: props.onGet });
+  if (installed && update && pack.installable) {
+    actions.push({ id: "update", label: t("addons.update_now"), run: () => void change.install() });
+  } else if (installed && update) {
+    actions.push({ id: "update", label: t("addons.get_update"), run: props.onGet });
+  }
+  if (installed && !pack.enabled && pack.removable) {
+    actions.push({ id: "remove", label: t("addons.remove"), run: () => void change.remove() });
+  }
   if (safeHomepage) {
     actions.push({
       id: "homepage",
@@ -268,9 +335,10 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
               {t("addons.update", { from: pack.installed_version ?? "", to: pack.version })}
             </p>
           )}
-          {power.problem && (
+          {change.note && <RestartLine text={change.note} />}
+          {problem && (
             <p className="problem-note" role="alert">
-              {power.problem}
+              {problem}
             </p>
           )}
           {safeHomepage && (
@@ -278,7 +346,20 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
           )}
         </div>
         <div className="acts">
-          {!installed && (
+          {!installed && pack.installable && !change.installed && (
+            <button
+              type="button"
+              id={`pack-install-${index}`}
+              className="btn primary"
+              data-key="primary"
+              disabled={change.busy !== null}
+              aria-label={t("addons.install_named", { name: pack.name })}
+              onClick={() => void change.install()}
+            >
+              {t(change.busy === "install" ? "addons.installing" : "addons.install")}
+            </button>
+          )}
+          {!installed && !pack.installable && (
             <button
               type="button"
               id={`pack-get-${index}`}
@@ -450,6 +531,14 @@ function InstalledRow(props: { item: Installed; index: number }) {
   const { item } = props;
   const base = `installed-${props.index}`;
   const power = useSwitch(item.name, item.name);
+  const change = usePackChange(item.name, item.name, () =>
+    restoreFocus(() => document.getElementById(`${base}-row`)),
+  );
+  const problem = change.problem || power.problem;
+  const actions: MenuAction[] = [];
+  if (!item.enabled && item.removable) {
+    actions.push({ id: "remove", label: t("addons.remove"), run: () => void change.remove() });
+  }
   const isOn = item.enabled;
   const restart = useRestart();
   const status = useQuery({ queryKey: ["status"], queryFn: api.status });
@@ -462,7 +551,7 @@ function InstalledRow(props: { item: Installed; index: number }) {
         ? t("addons.state.because", { reason: item.reason })
         : t("addons.state.off");
   return (
-    <li className="line" data-row tabIndex={-1} aria-labelledby={`${base}-name`}>
+    <li className="line" id={`${base}-row`} data-row tabIndex={-1} aria-labelledby={`${base}-name`}>
       <div className="row pair">
         <div className="text pack">
           <strong id={`${base}-name`}>{item.name}</strong>
@@ -479,15 +568,17 @@ function InstalledRow(props: { item: Installed; index: number }) {
               </>
             )}
           </p>
-          {power.problem && (
+          {change.note && <RestartLine text={change.note} />}
+          {problem && (
             <p className="problem-note" role="alert">
-              {power.problem}
+              {problem}
             </p>
           )}
           <WhatLines what={item.what} base={base} />
         </div>
         <div className="acts">
           <SwitchButton on={isOn} label={item.name} busy={power.busy} onRun={() => void power.run(!isOn)} />
+          <RowMenu label={item.name} actions={actions} />
         </div>
       </div>
     </li>

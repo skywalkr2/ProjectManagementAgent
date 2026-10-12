@@ -10,6 +10,7 @@ function change(id: string, extra: Partial<S["ChangeItem"]> = {}): S["ChangeItem
     version: 4,
     dismissed: false,
     stage_task: false,
+    first_go: false,
     refused: false,
     state: "review",
     waiting: null,

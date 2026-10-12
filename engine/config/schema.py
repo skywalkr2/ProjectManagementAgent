@@ -440,6 +440,12 @@ class Budgets(ConfigModel):
         description="Ask for a go before a run whose cost can't be estimated (an account with no prices, such as a "
         "subscription), too.",
     )
+    first_go: bool = Field(
+        True,
+        description="Until you give your first go in a workspace, AI runs wait. Today shows one line with how many "
+        "items are waiting and about what they cost, and one Go starts them all. After that, the amount to ask "
+        "above applies.",
+    )
     confirm_above_usd: float = Field(
         0.10,
         ge=0,

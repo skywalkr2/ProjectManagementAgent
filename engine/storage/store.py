@@ -218,6 +218,11 @@ class Tx:
         items = [_stored(r) for r in rows if include_deleted or not r["deleted"]]
         return sorted(items, key=lambda s: (id_number(s.id) or 0, s.id))
 
+    def has(self, kind: str) -> bool:
+        """Whether any live record of the kind exists."""
+        row = self._c.execute("SELECT 1 FROM records WHERE kind=? AND deleted=0 LIMIT 1", (kind,)).fetchone()
+        return row is not None
+
     def find(self, kind: str, equals: dict[str, Any]) -> list[Stored]:
         """Live records of a kind whose top-level fields equal the given values, matched in the database."""
         sql, args = "SELECT * FROM records WHERE kind=? AND deleted=0", [kind]

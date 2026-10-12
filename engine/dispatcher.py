@@ -10,7 +10,16 @@ from datetime import UTC, datetime
 
 from pydantic import ValidationError
 
-from engine.ai.router import LEVELS, BudgetReached, Independence, NoProvider, Router, escalation_tier, route
+from engine.ai.router import (
+    LEVELS,
+    BudgetReached,
+    Independence,
+    NoProvider,
+    Router,
+    choices,
+    escalation_tier,
+    route,
+)
 from engine.ai.task import AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.cleaning import quoted_messages
@@ -157,6 +166,20 @@ def process(
     if unpriced and req.data.get("approval") != "granted":
         _set(store, request_id, state="needs_you", approval="required", waiting=UNPRICED_GO)
         return None
+    if (
+        budgets.first_go
+        and req.data.get("approval") != "granted"
+        and (estimate is None or estimate > 0)
+        and not store.read().has("run")
+        and _has_account(cfg, packet.task.kind, level, tier, use, content, independent)
+    ):
+        # Nothing has run in this workspace yet: the first runs wait for one go that covers all of them. A request
+        # no account can take isn't held for a go it couldn't use; the run says what is missing.
+        held: dict[str, object] = {"state": "needs_you", "approval": "required", "waiting": FIRST_GO}
+        if estimate is not None:
+            held["estimate_usd"] = round(estimate, 4)
+        _set(store, request_id, **held)
+        return None
     if estimate is not None and estimate > budgets.confirm_above_usd and req.data.get("approval") != "granted":
         # Spending above the configured amount is the person's choice: wait for their go with the estimate shown.
         _set(
@@ -231,6 +254,23 @@ def process(
     )
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
     return cs_id
+
+
+def _has_account(
+    cfg: Config,
+    kind: str,
+    level: str,
+    tier: str,
+    use: str | None,
+    content: frozenset[str],
+    independent: Independence | None,
+) -> bool:
+    """Whether some account is set up to take this work."""
+    try:
+        choices(cfg, kind, level, tier=tier, use=use, content=content, independent=independent)
+    except NoProvider:
+        return False
+    return True
 
 
 def _data_level(store: Store, request: dict) -> str:
@@ -428,6 +468,16 @@ def _rounds(
 
 
 UNPRICED_GO = "Its cost can't be estimated on this account. Waiting for your go."
+#: What a run waits on until the person's first go in the workspace; Today gathers every such request into one line.
+FIRST_GO = "Waiting for your first go."
+
+
+def waits_on_first_go(request: dict) -> bool:
+    """Whether a request's data says it waits for the person's first go."""
+    return (
+        request["state"] == "needs_you" and request.get("approval") == "required" and request.get("waiting") == FIRST_GO
+    )
+
 
 CONTINUE = (
     "Your answer was cut off at the output limit. Here is what you wrote so far:\n<so-far>\n{text}\n</so-far>\n"
@@ -554,6 +604,24 @@ def _set(store: Store, request_id: str, **changes: object) -> None:
 def needs_you(store: Store, request_id: str, why: str) -> None:
     _set(store, request_id, state="needs_you", waiting=why)
     return None
+
+
+def grant_first_go(store: Store) -> int:
+    """The person's first go: every request waiting on it is approved and queued. Returns how many were."""
+    ctx = WriteContext(actor="pm", trust="trusted", op="request.first_go")
+    started = 0
+    with store.transaction() as tx:
+        for req in tx.list("request"):
+            if waits_on_first_go(req.data):
+                tx.update(
+                    "request",
+                    req.id,
+                    {"approval": "granted", "state": "queued", "waiting": None},
+                    ctx,
+                    read_version=req.version,
+                )
+                started += 1
+    return started
 
 
 def retry(store: Store, request_id: str, use: str | None = None) -> None:

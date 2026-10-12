@@ -40,6 +40,7 @@ BASIC = frozenset(
         "storage.backups.automatic",
         "storage.sync.folder",
         "ai.budgets.per_run_usd",
+        "ai.budgets.first_go",
         "ai.budgets.confirm_above_usd",
         "ai.budgets.confirm_unpriced",
         "ai.budgets.per_day_usd",

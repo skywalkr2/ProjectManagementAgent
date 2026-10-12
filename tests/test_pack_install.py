@@ -122,3 +122,77 @@ def test_the_install_route_uses_the_catalog_entry(tmp_path, monkeypatch):
     assert (place / "pack_demo" / "__init__.py").is_file()
     assert c.post(f"{api}/packs/bare/install").status_code == 409
     assert c.post(f"{api}/packs/nothing/install").status_code == 404
+
+
+@pytest.fixture
+def screen(tmp_path, monkeypatch):
+    """The app with a catalog listing one installable add-on, the download faked, and a folder to install into."""
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine import packs
+    from tests.test_setup import make
+
+    data = wheel()
+    entry = packs.Entry(
+        id="packdemo",
+        name="Pack demo",
+        release={"url": RELEASE, "sha256": hashlib.sha256(data).hexdigest()},
+    )
+    monkeypatch.setattr(packs, "read_feeds", lambda *a, **k: [packs.Feed(RELEASE, [entry])])
+    monkeypatch.setattr(pack_install, "download", lambda url, sha, token=None, client=None: data)
+    place = tmp_path / "site"
+    place.mkdir()
+    monkeypatch.setattr(pack_install, "target", lambda: place)
+    monkeypatch.syspath_prepend(str(place))
+    ws, cfg, store = make(tmp_path)
+    store.close()
+    app = create_app(ws, cfg, "t", start_worker=False)
+    c = TestClient(app)
+    c.headers["Authorization"] = "Bearer t"
+    return c, cfg.server.base_path.rstrip("/") + "/api", app.state.worker, place
+
+
+def test_installing_marks_a_restart_as_needed(screen):
+    c, api, worker, _ = screen
+    assert worker.restart_needed is None and worker.restart_for == []
+    assert c.post(f"{api}/packs/packdemo/install").status_code == 200
+    assert worker.restart_needed and worker.restart_for == ["add-ons"]
+    status = c.get(f"{api}/status").json()
+    assert status["restart_needed"] and status["restart_for"] == ["add-ons"]
+    assert c.get(f"{api}/packs").json()["available"][0]["removable"] is True
+
+
+def test_removing_an_add_on_the_app_installed_marks_a_restart_as_needed(screen):
+    c, api, worker, place = screen
+    c.post(f"{api}/packs/packdemo/install")
+    worker.restart_needed, worker.restart_for = None, []
+    done = c.post(f"{api}/packs/packdemo/uninstall")
+    assert done.status_code == 200, done.text
+    assert not (place / "pack_demo").exists()
+    assert worker.restart_needed and worker.restart_for == ["add-ons"]
+    assert c.get(f"{api}/packs").json()["available"][0]["removable"] is False
+
+
+def test_an_add_on_the_app_didnt_install_is_not_removed_from_the_screen(screen):
+    c, api, worker, place = screen
+    c.post(f"{api}/packs/packdemo/install")
+    (place / "pack_demo-0.1.0.dist-info" / "INSTALLER").write_text("pip\n")
+    worker.restart_needed, worker.restart_for = None, []
+    assert c.get(f"{api}/packs").json()["available"][0]["removable"] is False
+    refused = c.post(f"{api}/packs/packdemo/uninstall")
+    assert refused.status_code == 409 and "another way" in refused.json()["detail"]
+    assert (place / "pack_demo" / "__init__.py").is_file()
+    assert worker.restart_needed is None and worker.restart_for == []
+
+
+def test_a_refused_install_says_why_in_a_sentence_and_marks_no_restart(screen, monkeypatch):
+    c, api, worker, _ = screen
+
+    def refuse(*args, **kwargs):
+        raise InstallError("the file doesn't match")
+
+    monkeypatch.setattr(pack_install, "download", refuse)
+    refused = c.post(f"{api}/packs/packdemo/install")
+    assert refused.status_code == 409 and refused.json()["detail"] == "The file doesn't match."
+    assert worker.restart_needed is None

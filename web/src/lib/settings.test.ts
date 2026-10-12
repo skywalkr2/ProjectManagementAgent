@@ -98,6 +98,7 @@ const words: Record<string, string> = {
   "restart.for": "Restart to use: {what}.",
   "restart.for_more": "{list} and {n} more",
   "restart.for_code": "an update to the app",
+  "restart.for_addons": "a change to the add-ons",
   "restart.for_other": "other settings",
 };
 const tw = (key: string, vars: Record<string, string | number> = {}) =>
@@ -128,6 +129,7 @@ test("a key is named by its setting's label, else its group's, else a general ph
 test("what waits for a restart lists up to three names without repeats, then how many more", () => {
   expect(restartWhat([], [], tw, hasWord)).toBe("");
   expect(restartWhat(["code"], [], tw, hasWord)).toBe("Restart to use: an update to the app.");
+  expect(restartWhat(["add-ons"], [], tw, hasWord)).toBe("Restart to use: a change to the add-ons.");
   expect(restartWhat(["demo.known", "demo.known"], [], tw, hasWord)).toBe("Restart to use: Known setting.");
   expect(restartWhat(["demo.known", "demo.a", "code", "plugins/p.q", "mystery.thing"], [], tw, hasWord)).toBe(
     "Restart to use: Known setting, Demo group, an update to the app and 2 more.",

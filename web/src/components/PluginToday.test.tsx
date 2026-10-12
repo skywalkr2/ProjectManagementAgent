@@ -127,6 +127,7 @@ function change(extra: Partial<S["ChangeItem"]> = {}): S["ChangeItem"] {
     version: 7,
     dismissed: false,
     stage_task: false,
+    first_go: false,
     refused: false,
     state: "needs_you",
     approval: "required",

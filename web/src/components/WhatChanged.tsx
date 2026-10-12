@@ -4,11 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { dayAndTime, day } from "../lib/dates";
+import { firstGoOf } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { showRow, useReveal } from "../lib/reveal";
 import { useEstimate } from "../lib/money";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
+import { FirstGoRow } from "./FirstGoRow";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Highlighted } from "./SafeText";
 import { StageTodayRows, useStageToday } from "./StageToday";
@@ -66,14 +68,18 @@ export function WhatChanged(props: { compact?: boolean }) {
   }, [waiting.length, tn]);
 
   // A stage task waiting for the go has its own row below; its plain request row would only offer a retry.
+  // Runs waiting for the first go are one line together while the list shows what needs attention.
   const waitingGo = new Set(stageToday.waiting.map((w) => w.request.id));
+  const first = firstGoOf(changes.data);
+  const firstLine = filter === "attention" && first.count > 0;
   const rows = (changes.data ?? []).filter(
     (c) =>
       shown?.has(c.id) &&
       !waitingGo.has(c.id) &&
+      !(firstLine && c.first_go) &&
       (filter === "all" || (filter === "attention") === needsAttention(c)),
   );
-  const stageRows = filter === "attention" ? stageToday.count : 0;
+  const stageRows = (filter === "attention" ? stageToday.count : 0) + (firstLine ? 1 : 0);
   const filters: Filter[] = ["attention", "done", "all"];
 
   return (
@@ -113,6 +119,7 @@ export function WhatChanged(props: { compact?: boolean }) {
         <p className="empty">{t(filter === "attention" ? "changes.empty_attention" : "changes.empty")}</p>
       ) : (
         <ol className="queue">
+          {firstLine && <FirstGoRow first={first} />}
           {filter === "attention" && <StageTodayRows today={stageToday} />}
           {rows.map((item) => (
             <ChangeRow key={item.id} item={item} reveal={revealed?.id === item.id ? revealed.n : 0} />

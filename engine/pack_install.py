@@ -56,8 +56,8 @@ def download(url: str, expected_sha256: str, token: str | None = None, client: A
         with client.stream("GET", url, headers=headers) as response:
             if response.status_code in (401, 403, 404):
                 raise InstallError(
-                    "the release file couldn't be read: it may be private, so the app needs a read token for its "
-                    "host (Add-ons, read tokens), or the address is wrong"
+                    "the release file couldn't be read: it may be private, so the app needs a read token for the "
+                    "place it is kept, or the address is wrong"
                 )
             if response.status_code >= 400:
                 raise InstallError(f"the release host answered {response.status_code}; try again later")
@@ -67,8 +67,8 @@ def download(url: str, expected_sha256: str, token: str | None = None, client: A
                 if size > MAX_BYTES:
                     raise InstallError("the release file is larger than an add-on may be")
                 chunks.append(chunk)
-    except httpx.HTTPError as err:
-        raise InstallError(f"the release file couldn't be downloaded: {err}") from None
+    except httpx.HTTPError:
+        raise InstallError("the release file couldn't be downloaded; check the connection and try again") from None
     finally:
         if own:
             client.close()
@@ -152,6 +152,13 @@ def _info_dir(name: str, place: Path) -> Path | None:
         if folder.name.split("-", 1)[0].lower() == wanted:
             return folder
     return None
+
+
+def installed_here(name: str, place: Path | None = None) -> bool:
+    """Whether a pack of this name was installed from here, so it can be removed from here."""
+    folder = _info_dir(name, place or target())
+    marker = folder / "INSTALLER" if folder is not None else None
+    return marker is not None and marker.is_file() and marker.read_text(encoding="utf-8").strip() == INSTALLER
 
 
 def _remove_earlier(name: str, place: Path) -> None:

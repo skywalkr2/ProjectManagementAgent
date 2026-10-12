@@ -213,6 +213,9 @@ class ChangeItem(BaseModel):
         None, description="Whether the request waits for the person's go or has had it."
     )
     stage_task: bool = Field(False, description="The request was started by a stage, so the stage views show its go.")
+    first_go: bool = Field(
+        False, description="The request waits for the person's first go in the workspace, which starts every such run."
+    )
     estimate_usd: float | None = Field(None, description="What the run was estimated to cost when it asked for a go.")
     refused: bool = Field(
         False, description="The account declined it under its own policy; it can be sent to another account."
@@ -852,6 +855,7 @@ class QueueLineView(BaseModel):
         "owner",
         "held",
         "go",
+        "first_go",
         "refused",
         "failed",
         "overdue",
@@ -881,6 +885,14 @@ class QueueLineView(BaseModel):
         "people, projects, drafts, other; and held, refused.",
     )
     untrusted: bool = Field(False, description="Built from outside content.")
+    estimate_usd: float | None = Field(
+        None, description="The estimated cost of everything the line starts (first_go), when any has a price."
+    )
+    unpriced: int = Field(0, description="How many of the things the line starts have no price (first_go).")
+
+
+class FirstGoStarted(BaseModel):
+    started: int = Field(description="How many runs the first go started.")
 
 
 class InboxView(BaseModel):
@@ -1594,6 +1606,7 @@ class PackView(BaseModel):
     installable: bool | None = Field(
         None, description="True when the app can install it from here (POST /api/packs/{id}/install)."
     )
+    removable: bool = Field(False, description="The app installed it from this screen, so it can take it away again.")
 
 
 class InstalledPackView(BaseModel):
@@ -1604,6 +1617,9 @@ class InstalledPackView(BaseModel):
     state: str
     reason: str | None
     what: PackSummary
+    removable: bool = Field(
+        False, description="The app installed it from the Add-ons screen, so it can take it away again."
+    )
 
 
 class PackFeedView(BaseModel):

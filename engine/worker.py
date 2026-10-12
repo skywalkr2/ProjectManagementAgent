@@ -25,6 +25,8 @@ INTERRUPTED = "The app closed while this ran; it runs again now."
 INTERRUPTED_TWICE = "Stopped twice when the app closed during it"
 _REQUEUE_OP = "worker.requeue"
 _INTERRUPTED_OP = "worker.interrupted"
+#: What `Worker.restart_for` names when an add-on that is running was updated from the screen.
+ADD_ONS = "add-ons"
 
 
 #: Settings the running app takes in at once, without a restart: everything that reads them reads the shared config
@@ -242,6 +244,16 @@ class Worker:
         """Whether changed settings or code wait for a restart. Live settings are taken in first, so they never
         count. Nothing restarts until the person asks (`request_restart`)."""
         return self._changed_since_start()
+
+    def add_ons_changed(self) -> None:
+        """An add-on that is running was replaced on disk from the screen: the running app must not mix its old and new
+        files, so a restart is waiting, with the add-ons named as what it is for. Installing or removing one that isn't
+        running changes nothing the app is using, so it doesn't come here."""
+        if ADD_ONS not in self.restart_for:
+            self.restart_for.append(ADD_ONS)
+        if self.restart_needed is None:
+            self.restart_needed = RESTART_NEEDED
+        self.events.changed()
 
     @property
     def can_restart(self) -> bool:

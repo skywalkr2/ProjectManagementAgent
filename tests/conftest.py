@@ -60,9 +60,18 @@ def store(tmp_path: Path, demo: Path) -> Store:
     s.close()
 
 
+def without_first_go(config_dir: Path) -> None:
+    """Let AI runs start on their own in a workspace's copy of the fixture settings. The first runs wait for one go
+    by default (`first_go`), which only the tests about that wait should see."""
+    path = config_dir / "ai.yaml"
+    path.write_text(path.read_text().replace("first_go: true", "first_go: false"))
+
+
 @pytest.fixture
 def workspace(tmp_path: Path, demo: Path) -> Workspace:
-    return init_workspace(tmp_path / "ws", template=demo)
+    ws = init_workspace(tmp_path / "ws", template=demo)
+    without_first_go(ws.config_dir)
+    return ws
 
 
 @pytest.fixture(autouse=True)

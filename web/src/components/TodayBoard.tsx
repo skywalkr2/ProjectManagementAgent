@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
+import { firstGoOf } from "../lib/first-go";
 import { anyReading, latestRead } from "../lib/sources";
 import type { View } from "../lib/views";
 import { useWords } from "../lib/wording";
@@ -340,7 +341,8 @@ function useNeedsCount(): number {
     (n, s) => n + (s.is_pm ? s.questions.filter((q) => q.status === "open").length : s.to_send),
     0,
   );
-  return work + stage.count + (lines.data?.length ?? 0) + messages;
+  const firstGo = firstGoOf(changes.data).count > 0 ? 1 : 0;
+  return work + firstGo + stage.count + (lines.data?.length ?? 0) + messages;
 }
 
 function NeedsColumn(props: { onOpenRecord?: (kind: string, id: string) => void }) {

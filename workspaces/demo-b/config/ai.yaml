@@ -43,6 +43,7 @@ roles:
   research: {tier: routine}
 budgets:
   per_run_usd: 0.25
+  first_go: false
   confirm_above_usd: 0.10
   confirm_unpriced: false
   per_day_usd: 2

@@ -44,6 +44,7 @@ from api.schemas import (
     FieldView,
     FileKindView,
     FileView,
+    FirstGoStarted,
     FollowupAction,
     FollowupQuestion,
     FollowupSection,
@@ -126,7 +127,16 @@ from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.backup import run_backup, state
 from engine.config import Config
-from engine.dispatcher import dismiss, looks_good, retry, send_back, undismiss, undo_changeset
+from engine.dispatcher import (
+    dismiss,
+    grant_first_go,
+    looks_good,
+    retry,
+    send_back,
+    undismiss,
+    undo_changeset,
+    waits_on_first_go,
+)
 from engine.followups import mark_sent, sections, unmark_sent
 from engine.intake import IntakeError, hand_in, source_text
 from engine.names import People
@@ -997,6 +1007,15 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         return Ok(ok="queued")
 
+    @r.post("/runs/first-go")
+    def first_go() -> FirstGoStarted:
+        """The person's first go: every run waiting for it starts, and no run waits for it again."""
+        started = grant_first_go(store)
+        if started:
+            worker.poke()
+            changed()
+        return FirstGoStarted(started=started)
+
     @r.get("/status")
     def status() -> Status:
         reqs = [x.data for x in store.read().list("request")]
@@ -1100,6 +1119,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     source_title=sources.get(d.get("source"), {}).get("title"),
                     approval=d.get("approval"),
                     stage_task=bool(d.get("stage_start")),
+                    first_go=waits_on_first_go(d),
                     estimate_usd=d.get("estimate_usd"),
                     refused=d["state"] == "needs_you" and _last_refused(req.id),
                     follows=d.get("follows"),

@@ -22,6 +22,7 @@ from engine.plugin_manifest import Manifest, read_manifest
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.export import export_data, import_data
 from engine.workspace import init_workspace
+from tests.conftest import without_first_go
 
 EXAMPLE = read_manifest(BUNDLED / "example" / "plugin.yaml")
 KIND = EXAMPLE.provides.record_types[0]
@@ -350,6 +351,7 @@ def test_core_pipeline_runs_with_and_without_plugins(tmp_path, demo, enabled):
             if directory.is_dir():
                 shutil.rmtree(directory)
     ws = init_workspace(tmp_path / "core", template=template, git=False)
+    without_first_go(ws.config_dir)
     cfg = ws.config(env={})
     store = Store(ws.db_path)
     set_responder(lambda task: '{"ops":[{"op":"note","text":"A core note"}]}')

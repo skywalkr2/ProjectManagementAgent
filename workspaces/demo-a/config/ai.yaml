@@ -48,6 +48,7 @@ roles:
   check: {tier: deep}
 budgets:
   per_run_usd: 0.5
+  first_go: true
   confirm_above_usd: 0.10
   confirm_unpriced: false
   per_day_usd: 5

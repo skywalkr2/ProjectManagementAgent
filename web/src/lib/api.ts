@@ -207,6 +207,12 @@ export const api = {
 
   packs: () => call<S["PacksView"]>("GET", "packs"),
   refreshPacks: () => call<S["PacksView"]>("POST", "packs/refresh"),
+  /** Installs (or updates) an add-on from the release its catalog entry names. It isn't turned on, and it is used after a restart. */
+  installPack: (name: string) => call<S["PackInstalled"]>("POST", `packs/${id(name)}/install`),
+  /** Takes away an add-on the app installed from the screen; it has to be off first. Used after a restart. */
+  removePack: (name: string) => call<S["PackInstalled"]>("POST", `packs/${id(name)}/uninstall`),
+  /** The person's first go: starts every run waiting for it. */
+  firstGo: () => call<S["FirstGoStarted"]>("POST", "runs/first-go"),
   /** Adds an installed add-on to the ones that run; its code runs after the restart the person chooses. With Undo. */
   packOn: (name: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `packs/${id(name)}/on`, { fingerprint } satisfies S["FingerprintIn"]),

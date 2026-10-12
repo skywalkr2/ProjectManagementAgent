@@ -16,10 +16,17 @@ from engine.plugin_api import PLUGIN_API_VERSION
 from engine.plugin_manifest import declared_plugins
 from engine.shipped import product
 from engine.storage import Store
+from engine.worker import Worker
 from engine.workspace import Workspace
 
 
-def build_pack_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
+def _sentence(text: str) -> str:
+    """A refusal as a sentence: capitalized, with its full stop."""
+    text = text.strip()
+    return (text[:1].upper() + text[1:]).rstrip(".") + "."
+
+
+def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
     host = store.plugins
 
@@ -38,6 +45,16 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
         return found
 
     def view(refresh: bool) -> PacksView:
+        from importlib.metadata import entry_points
+
+        from engine import pack_install
+
+        # Which add-ons the app installed from this screen (and so can take away again), by the name they run under.
+        mine = {
+            ep.name
+            for ep in entry_points(group="pm_cockpit.plugins")
+            if ep.dist is not None and pack_install.installed_here(ep.dist.name)
+        }
         settings = cfg.workspace.plugins.catalog
         feeds = packs.read_feeds(
             packs.feed_urls(cfg, product()), ws.private_dir, settings.refresh_hours, refresh=refresh
@@ -71,6 +88,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
                         enabled=entry.id in enabled,
                         what=PackSummary(**packs.summary(entry.provides, entry.requires)),
                         installable=entry.release is not None and cfg.server.mode == "local",
+                        removable=entry.id in mine,
                         costs=costs(entry),
                         feed=urlsplit(feed.url).hostname or "",
                     )
@@ -84,6 +102,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
                 state=host.status[name].state if name in host.status else "off",
                 reason=host.status[name].reason if name in host.status else None,
                 what=PackSummary(**packs.manifest_summary(manifest)),
+                removable=name in mine,
             )
             for name, manifest in sorted({**on_disk, **host.manifests}.items())
         ]
@@ -131,10 +150,14 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
             token = resolve_secret(ref) if ref else None
             data = pack_install.download(entry.release.url, entry.release.sha256, token)
             done = pack_install.install(data)
-        except SecretError as err:
-            raise HTTPException(status_code=409, detail=f"The read token for {host_name} isn't there: {err}") from None
+        except SecretError:
+            raise HTTPException(
+                status_code=409,
+                detail=f"The read token for {host_name} isn't available, so the release file can't be read.",
+            ) from None
         except pack_install.InstallError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from None
+            raise HTTPException(status_code=409, detail=_sentence(str(err))) from None
+        worker.add_ons_changed()
         return PackInstalled(name=done.name, version=done.version, needs_restart=True)
 
     @r.post("/packs/{pack_id}/uninstall")
@@ -149,11 +172,14 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store) -> APIRouter:
         found = next((ep for ep in entry_points(group="pm_cockpit.plugins") if ep.name == pack_id), None)
         if found is None or found.dist is None:
             raise HTTPException(status_code=404, detail=f"{pack_id} isn't installed as a package.")
+        # Read before the files go: the package's metadata is among them.
+        name, version = found.dist.name, found.dist.version
         try:
-            pack_install.remove(found.dist.name)
+            pack_install.remove(name)
         except pack_install.InstallError as err:
-            raise HTTPException(status_code=409, detail=str(err)) from None
-        return PackInstalled(name=found.dist.name, version=found.dist.version, needs_restart=True)
+            raise HTTPException(status_code=409, detail=_sentence(str(err))) from None
+        worker.add_ons_changed()
+        return PackInstalled(name=name, version=version, needs_restart=True)
 
     @r.get("/packs")
     def listed() -> PacksView:

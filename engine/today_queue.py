@@ -41,10 +41,11 @@ _OUTCOME = {
 class Line:
     """One line of the queue. `key` is stable while the thing it stands for waits. `kind`: decision, question (one
     the person was asked), who_is (a name the assistant couldn't place), owner (an action with no owner), held (an
-    item waiting for the person's yes), go (a run waiting for the person's go), refused, failed, overdue, review,
-    send or nudge. `count` is how many things the line covers; `text` the decision, question or held item in one
-    line; `title` the input the line is about; `outcome` what the assistant did, counted by kind; `waiting` why the
-    work stopped, as the engine said it."""
+    item waiting for the person's yes), go (a run waiting for the person's go), first_go (every run waiting for the
+    first go in the workspace, as one line: `estimate_usd` is their total estimate and `unpriced` how many have
+    none), refused, failed, overdue, review, send or nudge. `count` is how many things the line covers; `text` the
+    decision, question or held item in one line; `title` the input the line is about; `outcome` what the assistant
+    did, counted by kind; `waiting` why the work stopped, as the engine said it."""
 
     key: str
     group: str
@@ -65,6 +66,8 @@ class Line:
     questions: list[str] = field(default_factory=list)
     outcome: dict[str, int] = field(default_factory=dict)
     untrusted: bool = False
+    estimate_usd: float | None = None
+    unpriced: int = 0
     since: str = ""
 
 
@@ -155,9 +158,15 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime) -> list[Line]:
                     since=str(req.data.get("created_at") or ""),
                 )
             )
+    from engine.dispatcher import FIRST_GO, waits_on_first_go
+
+    first_go: list[Any] = []
     for req in requests.values():
         d = req.data
         if d.get("dismissed") or d.get("state") not in ("needs_you", "failed"):
+            continue
+        if waits_on_first_go(d):
+            first_go.append(req)
             continue
         if d["state"] == "failed":
             kind, group = "failed", "risk"
@@ -174,6 +183,21 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime) -> list[Line]:
                 request=req.id,
                 waiting=d.get("waiting"),
                 since=str(d.get("created_at") or ""),
+            )
+        )
+
+    if first_go:
+        priced = [r.data["estimate_usd"] for r in first_go if r.data.get("estimate_usd") is not None]
+        lines.append(
+            Line(
+                key="first_go",
+                group="decide",
+                kind="first_go",
+                count=len(first_go),
+                estimate_usd=round(sum(priced), 4) if priced else None,
+                unpriced=len(first_go) - len(priced),
+                waiting=FIRST_GO,
+                since=min(str(r.data.get("created_at") or "") for r in first_go),
             )
         )
 
@@ -275,6 +299,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime) -> list[Line]:
 
 
 _KIND_ORDER = {
+    "first_go": -1,
     "decision": 0,
     "who_is": 1,
     "owner": 2,
