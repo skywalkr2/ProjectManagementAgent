@@ -165,6 +165,9 @@ aside folder:
 - [ ] The Set aside folder (Personal; Sales and promotions) and Came in's "N set aside" count.
 - [ ] One-click corrections: "Set aside: personal or sales" on any item and "This is work" in the folder, each offering
   "always for this sender or domain" as a sorting rule with a read-back and Undo.
+- [ ] **Confirm learns and deletes** (owner, 2026-10-12): confirming a set-aside writes a sender rule (a domain rule
+  is offered at three senders). It also removes the message's text from the app, keeping a marker so it isn't read
+  again. The mailbox is never changed.
 - [ ] Journey: a mailbox with work mail, a social update and a sales mail. Only the work mail reaches the assistant
   and the first Go. "This is work" hands the sales mail in.
 

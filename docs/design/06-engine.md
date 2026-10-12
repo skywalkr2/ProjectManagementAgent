@@ -181,6 +181,14 @@ It is sorted in this order, first match wins:
 
 Sorting corrections tune sorting only. They never become content lessons.
 
+**Confirming a set-aside** (owner, 2026-10-12). "Confirm" on a row, or "Confirm all" on a section, does two things:
+- **The app learns the sender:** a sorting rule is written at once, as the person's own change, with a read-back and
+  Undo. When three or more confirmed senders share a domain, "Always for this domain" is offered.
+- **The app deletes the message from itself:** its text, subject and body go. A marker (source, message key, sender,
+  date, section, rule) stays so the next read never hands it in again. The deletion is recorded as a redaction.
+  Within the Undo time everything comes back; after that, the mail lives only in the person's own mailbox, which the
+  app never changes.
+
 **On screen:** the folder is a filtered view beside Auto-closed, one row per message (sender, subject, date, why it was
 set aside). Today never lists set-aside mail; Came in shows a count ("6 set aside") that opens the folder. Set-aside
 mail is kept like other sources and follows retention (5.2).
