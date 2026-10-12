@@ -49,7 +49,7 @@ offered, and a passage both changed is the person's pick.
   fictional workspaces, and every record or config migration is tested through it.
 - **Point in time** (*designed, not yet built*; roadmap, phase E): `cockpit restore --as-of <time>` imports the last export
   before that time and replays the ledger up to it. A restore is itself recorded in the ledger, so it can be undone.
-- **One record** (*designed, not yet built*): the Admin tab can show any record as it was at a past time (from the ledger) and
+- **One record** (*designed, not yet built*; roadmap, phase L): the Admin tab can show any record as it was at a past time (from the ledger) and
   restore just that record, as a changeset the PM sees.
 - **Off the machine, on its own:** local installs keep everything on one computer, so backups to somewhere else are expected,
   not optional (4.15, 11.1). While the app runs, a background thread makes a full backup whenever one is due, including right

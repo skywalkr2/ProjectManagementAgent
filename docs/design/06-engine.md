@@ -62,7 +62,7 @@ secrets its manifest declares (references in `workspace.plugins.secrets`, or val
 refreshed token), and a current sign-in token when it asks for one. Bundled plugins may not import network modules; the scan
 enforces it.
 
-Files are read as text by the text extractors (3.3): the core ships extractors for documents, spreadsheets (cells and
+Files are read as text by the text extractors (3.3; *designed, not yet built*, roadmap phase L, 6.22): the core ships extractors for documents, spreadsheets (cells and
 their comments), presentations (slide text, tables and speaker notes) and PDFs, and plugins add others. Packets carry the
 extracted text, so a run never asks the PM to paste what is already in a file it can read. A file type with no extractor is
 flagged to the PM once, as unsupported, not request by request.
@@ -718,7 +718,8 @@ model doesn't accept.
 output. Everything else works from its classification. A sign-in failure (`auth`) always becomes a question to the PM that
 includes the adapter's `sign_in_hint()` (its own login command or page), and never reaches any other path.
 
-**Probation for a new account** (*designed, not yet built*). A newly approved account's changesets carry a "new account" tag and always wait for review
+**Probation for a new account** (*designed, not yet built*; the learning check with a switch is phase L, 6.22). A switch of a
+tier's account or model offers to run the learning fixture pairs first, with their cost estimate. A newly approved account's changesets carry a "new account" tag and always wait for review
 (nothing closes on its own) for `ai.probation.runs` runs per task kind (default 20). The PM's Looks good and Send back on them
 count toward that account's evaluation score (6.20), because a model can pass the fixtures and still follow instructions too
 literally in real use.
@@ -919,8 +920,9 @@ this order:
 4. routing entries for the people and projects in the input;
 5. style notes for the recipient, when the task drafts something that goes out.
 
-The per-input part then carries the **facts** of the projects the input touches. They are ranked: key facts first, then by
-overlap with the input's terms and ids, then newest first. The list is cut at `knowledge.facts_budget`, and what was left out
+The per-input part then carries the **facts** of the projects the input touches, each with its date and source ("as of
+2026-09-14, from the weekly call notes"). A run can then see that a fact is old, not only that it ranks low. They are ranked:
+key facts first, then by overlap with the input's terms and ids, then newest first. The list is cut at `knowledge.facts_budget`, and what was left out
 is said ("42 more facts on this project; search for them").
 
 Only active entries go in, never proposed or retired ones. An entry is presented as guidance only when its source is trusted.
@@ -960,8 +962,8 @@ It returns **at most one** proposal op, or "nothing to generalize":
 - or `lesson.update`, when an existing lesson should have caught it but didn't. A repeat means the guard was wrong, and fixing
   it beats adding a second one.
 
-The proposal shows on the correction's own card as one line: "Learned: … · Keep · Edit · Discard" (7.18). Pending proposals
-are also gathered on Today ("Review 3 things the assistant learned").
+The proposal shows on the correction's own card as one line: "Learned: … · Keep · Edit · Discard" (7.18). It stays there
+until the person decides, and never expires.
 
 How a proposal applies follows the tier rule (6.7, 12.2):
 - **From the person's own words** (their send-back note, their answer to the assistant's question): it applies at once,
@@ -972,11 +974,26 @@ How a proposal applies follows the tier rule (6.7, 12.2):
 Before a proposal is shown, it is compared with the active entries of its kind by target and wording, so duplicates merge
 instead of piling up. This is the same overlap check as rules (6.7), shown as "Overlaps with …".
 
-Learning runs cost money, so they follow cost control (6.16). They use their own task kind with the low-cost tier and a budget,
-and they can be batched (`knowledge.learn`: `each`, `batched` or `off`; default `batched`, every 30 minutes). Corrections
-recorded before this was built are learned from once, when it arrives.
+**When it runs.**
+- **At once, when the person wrote something.** That covers a send-back note, an answer to the assistant's question, or a
+  rule stated in Ask. The person is looking at the card right then, and the Learned line should appear while they still
+  remember why. Writing the learning down in the same turn as the correction is the habit that makes it stick.
+- **Batched,** every `knowledge.learn_every_minutes` (default 30), for silent corrections: an undo, an edited follow-up, a
+  pulled-back auto-close, a dropped question.
 
-**Learning from inputs too.** The run that processes an input may also propose:
+**Which tier writes it.** A bad lesson is worse than none, because it is in every later packet. So there are two task kinds:
+- **`learn.correction`:** lessons, `lesson.update` and rules from corrections, on the stronger tier. These are rare and
+  high-value.
+- **`learn.input`:** glossary entries, routing and facts proposed from inputs. These come out of the input's own run, on its
+  tier, which is usually the low-cost one.
+
+Anything proposed after a repeat correction (a guard that already failed once) always runs on the stronger tier. Both kinds
+follow cost control (6.16), each with its own budget. Corrections recorded before this was built are learned from once,
+when it arrives.
+
+**Learning from inputs too.** Before the run, a rules-only step (no AI) lists the terms in the input that look like
+acronyms or project terms and are not in the glossary, and the packet names them. The run that processes an input may then
+propose:
 - glossary entries for new acronyms or terms. An assumed or unknown one that blocks understanding can carry one short question
   to whoever routing says knows it.
 - routing entries when the input shows who answers what ("not me, ask X" in a reply). A question the person reroutes by hand
@@ -984,6 +1001,29 @@ recorded before this was built are learned from once, when it arrives.
 - facts, as it already does.
 
 Since these come from content, they wait for the person.
+
+**Keeping the proposals from flooding.** With mail and calendar read on their own, an everyday assistant proposes a lot. If
+Today fills with "Learned" lines, people discard everything and the loop dies quietly. So:
+- **Proposals from inputs** are gathered into one review card per day ("The assistant learned 7 things today"), merged with
+  each other and with active entries before they are shown.
+- **Unreviewed proposals from inputs** expire after `knowledge.proposals_expire_days` (default 14). The count shows on the
+  next day's card ("4 expired unreviewed"), never silently.
+- **Proposals from corrections** always stay on the correction's own card and never expire.
+
+**Learning from what is said in Ask.** When the person states a rule or a fact while asking the assistant something ("from
+now on…", "she's the one who decides that"), the answer proposes it like any correction (6.25). These are the person's own
+words, so it applies at once, with the read-back and Undo. In practice, many standing rules come from exactly this kind of
+aside.
+
+**Knowledge travels.** Every knowledge record is in the export and import like any record (5.0). A person can also take their
+lessons to another workspace. **Take my lessons** (Settings, and `cockpit knowledge export`) writes one file holding:
+- the active lessons;
+- the rules;
+- the glossary entries that are not tied to a project.
+
+Loading it into another workspace adds them as the person's own, active, with Undo. Facts, routing and style notes stay
+behind, because they name that workspace's projects and people. A pack's playbook is the published form of the same idea;
+this is the private one.
 
 **Style from what was actually sent.** When the person sends their own version of a draft (today: the text pasted at Mark sent;
 later: an approved draft edited before publishing), the difference from the draft is kept as a `draft edited` signal. The learn
@@ -1000,7 +1040,8 @@ product never changes its own code. The lesson stays as the record of why.
 **Proving it** (the phase L exit test):
 - **Automated, with no AI cost (the plumbing):** a correction produces the proposal, the proposal reaches the next similar
   packet, ranked as designed, and the run's knowledge log shows it. Run on every change.
-- **On the person's own AI accounts, in `cockpit evaluate` (the behavior):** pairs of fictional fixtures, at least one per kind
+- **On the person's own AI accounts (the behavior), in `cockpit evaluate`, and with every switch of a tier's account or
+  model:** pairs of fictional fixtures, at least one per kind
   (a lesson, a glossary term, a routing entry, a style note, and a fact that avoids an outside lookup). Each pair is:
   - (a) an input, the wrong output, the correction and the expected proposal;
   - (b) a later, similar input that must come out right with no correction repeated.
@@ -1008,7 +1049,21 @@ product never changes its own code. The lesson stays as the record of why.
   Plus one **day 1 versus day 30** scenario: the same input against an empty workspace and against one with a month of
   fictional history. The expected changesets must differ in the ways the history justifies.
 
-  These run on every model or prompt change. They cost money, so the person starts them.
+  They cost money, so the person starts them, but they are offered at the moment that matters. A switch of a tier's
+  account or model shows "Switch and check (about $X)" as its primary action, and "Switch without checking" in its menu. The
+  check is part of the new account's probation (6.16). A pair that fails flags the switch on Today, with Switch back. A
+  provider switch is exactly when learning can be lost silently.
+
+**Reading what arrives.** An assistant can't learn from what it can't read, and for an everyday user most facts arrive in
+mail attachments. So the text extractors (6.2) come with this slice. Reading a screenshot needs an account whose model reads
+images, which is a capability of the account (6.16), not an extractor.
+
+**Protecting it.** Once the assistant learns, the knowledge is the most valuable part of the workspace and the part that can't
+be rebuilt. Losing a month of lessons is losing the product. So this slice also brings:
+- encryption for backups that leave the person's control (4.15);
+- showing and restoring one record as it was at a past time (5.0).
+
+Both land before the owner's real use (phase D).
 
 The knowledge records are in 5.1, the packet layout in 6.6, the signal in 6.20, the settings in 4.25, and the screens in
 7.18.
@@ -1071,6 +1126,9 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
 - **An ask is a core request of kind `ask`** (4.8), started from the Ask box (`POST /api/ask`) with the PM's question as its
   note, so it is trusted as the PM's own words. The worker processes it like any request, on the tier `ai.tasks.ask` or the
   `write` role gives it.
+- **What the person says in Ask is learned** (*designed, phase L*, 6.22). A rule or fact stated in a question ("from now on…",
+  "she's the one who decides that") becomes a proposal beside the answer. It applies at once, as the person's own words, with
+  the read-back and Undo.
 - **Its packet holds only what an answer may quote:**
   - the sections of the **user guide** that share the most words with the question (up to four; a section's title counts
     double; the overview when nothing matches), plus the help files add-ons ship (`provides.help`). The guide

@@ -66,7 +66,7 @@ is "ready to test" until they pass:
 - [ ] backup → restore;
 - [ ] the acceptance scenario, steps 1–7, all checked as written (step 6 included).
 
-## Phase L: the learning slice (about 6 sessions)
+## Phase L: the learning slice (about 8.5 sessions)
 
 Added on 2026-10-12 after the first design's author reviewed design 1.1 (decisions, "The learning slice"). The write side
 of learning is built; this phase builds the read side, so the assistant gets better at each project the more it sees.
@@ -93,21 +93,34 @@ L2. **Every run reads what applies.**
 - [ ] One plugin API call that gives a pack's packets the same section.
 
 L3. **Every correction teaches.**
-- [ ] The `learn` task on each signal, batched by default: at most one proposal, or `lesson.update` when a lesson should
-  have caught it.
-- [ ] Learning from inputs: new terms, "not me, ask X", rerouted questions.
+- [ ] Learning from corrections (`learn.correction`, on the stronger tier): at most one proposal, or `lesson.update` when a
+  lesson should have caught it.
+  - It runs at once when the person wrote something: a send-back note, an answer to the assistant, a rule stated in Ask.
+  - Silent corrections are batched.
+- [ ] Learning from inputs (`learn.input`), with a rules-only scan for terms missing from the glossary: new terms, "not me,
+  ask X", rerouted questions.
+- [ ] Proposals from inputs gathered on one card a day, merged first, and expiring after 14 days with the count shown.
+- [ ] Facts in the packet carry their date and source.
 - [ ] Proposals from the person's own words apply at once with Undo; the rest wait for Keep.
 - [ ] Duplicates merge when proposed.
 - [ ] The repeat-correction signal; the unused-entries list.
 - [ ] The corrections recorded before this phase are learned from once.
-- [ ] On screen: the Learned line on the correction's card and the Today line (7.18). The rest of 7.18 is laid out in
-  phase B.
+- [ ] On screen (7.18): the Learned line on the correction's card, and the daily Today card. The rest of 7.18 is laid out
+  in phase B.
+- [ ] Take my lessons: lessons, rules and general glossary terms to a file and back into another workspace.
 
 L4. **Proving it.**
 - [ ] Fictional fixture pairs, at least one per kind: a lesson, a glossary term, a routing entry, a style note, and a fact
   that avoids an outside lookup.
 - [ ] A month of fictional history for the day-30 scenario.
-- [ ] Both run by `cockpit evaluate`.
+- [ ] Both run by `cockpit evaluate`, and offered with their cost on every switch of a tier's account or model, with a failed
+  check shown on Today with Switch back.
+
+L5. **Reading what arrives, and protecting what is learned** (owner, 2026-10-12, from the design author's review).
+- [ ] Text extractors in the core: documents, spreadsheets, presentations and PDFs, so mail attachments are read. The
+  extractor extension point for plugins.
+- [ ] Encryption for backups that leave the person's control (`backups.encrypt`).
+- [ ] Show and restore one record as it was at a past time, from the ledger.
 
 ## Phase B: finish the UI/UX redesign (about 4 sessions)
 
@@ -193,15 +206,15 @@ time, nothing went out without approval, and a backup succeeded.
 
 - [ ] The acceptance scenario run by the owner on real material.
 - [ ] A week of real use; friction recorded in `ux-notes.md` and fixed in order of cost.
-- [ ] Learning on real material (6.22): voice per recipient beyond the first style notes, acronyms checked on every input,
-  and a fact's freshness checked before an outward draft, with disagreements between sources recorded as private
+- [ ] Learning on real material (6.22): voice per recipient beyond the first style notes, and a fact's freshness checked
+  before an outward draft, with disagreements between sources recorded as private
   discrepancies to ask about.
 
 ## Phase E: the rest of version 1
 
 Order by what protects real data first, then by what the packs ask for:
-- [ ] **The governor:** stale-item sweeps, outage handling, the scheduled export with its remote; restore, including a
-  single record and a point in time.
+- [ ] **The governor:** stale-item sweeps, outage handling, the scheduled export with its remote; restore to a point in
+  time (a single record comes in phase L).
 - [ ] Scope resolver (6.18), the scheduled rules and lessons review with promotion (6.21), and read-backs (6.7).
   Dependencies, baselines and RAID moved to the project management pack (C2).
 - [ ] Native AI adapters and reproducible runs (6.16).

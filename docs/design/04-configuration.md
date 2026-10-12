@@ -499,7 +499,8 @@ Built keys:
     it shows the age of the last one, and "overdue" past twice `every_hours` (11.1).
 
 Designed, not yet built: `path` (where the workspace lives; today it is the `--workspace` folder or `COCKPIT_WORKSPACE`),
-`sources_store` (an object store), `backups.encrypt` (a key reference for any target outside the PM's control), `sync.layout`
+`sources_store` (an object store), `backups.encrypt` (a key reference for any target outside the PM's control; phase L,
+6.22), `sync.layout`
 (`by_project` is the only layout today), `sync.sources` (include, encrypt above a data level, or exclude above one; every
 source is copied until sources and files carry a data level) and `sync.outputs_folder` (fixed as `outputs` today), and
 `retention`: per source kind and restriction level, how long raw text is kept after its facts are recorded, and
@@ -708,11 +709,13 @@ knowledge:
   facts_budget: 4000           # characters of ranked facts per input; the rest is counted and searchable
   search_rounds: 2             # how many times a run may ask for a search before it must answer
   search_results: 20           # results per search
-  learn: batched               # each, batched or off: when corrections are turned into proposals
-  learn_every_minutes: 30      # how often a batch of corrections is learned from
+  learn: on                    # on or off; corrections with the person's words are learned from at once either way when on
+  learn_every_minutes: 30      # how often silent corrections (undo, edited follow-up, pulled back) are learned from
+  proposals_expire_days: 14    # unreviewed proposals from inputs expire after this, counted on the next day's card
   unused_days: 60              # an active entry that matched nothing for this long is offered for retirement
+  check_on_switch: true        # offer the learning fixture pairs, with their cost, when a tier's account or model changes
 ```
 
-The learning task has its own task kind (`learn`), so its tier and budget are set in `ai.yaml` like any other (4.8); it
-defaults to the low-cost tier.
+Learning has two task kinds, so their tiers and budgets are set in `ai.yaml` like any other (4.8). `learn.correction` writes
+lessons and rules and defaults to the stronger tier. `learn.input` is part of an input's own run, so it uses that run's tier.
 

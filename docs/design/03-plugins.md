@@ -104,7 +104,7 @@ each with a test that uses it from a plugin.
 | Renderer | how records become content for a channel | not yet; comes with channels |
 | Lookup | a fact the AI can ask the engine to fetch | not yet (6.19) |
 | Connector `fetch`, `search`, `capabilities` | reading one item, searching a source | not yet; a connector has `poll` only |
-| Text extractor | text from a file type (documents, spreadsheets, presentations, PDFs) | not yet |
+| Text extractor | text from a file type (documents, spreadsheets, presentations, PDFs) | not yet; the core's own extractors come in phase L (6.2, 6.22), and the extension point with them |
 | AI adapter | a kind of AI account: `models()`, `run()`, `classify_error()`, `sign_in_hint()`, `health()`, `lockdown_test()` (6.16) | core only: the adapters are a registry inside the core |
 | Playbook | a plugin's whole playbook (3.8) | not yet: `provides.playbook` turns the plugin off with the reason; a task kind's guidance is available |
 | Check | the plugin's own self-check | not yet |

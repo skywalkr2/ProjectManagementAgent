@@ -3,6 +3,39 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Learning-slice refinements: learn while the person is there, stronger guards, and protect what is learned
+
+**Decided by:** the first design's author proposed; project lead adopted points 1 to 6 and 8; project owner placed point 7
+in phase L.
+
+**What:**
+1. **When learning runs.** A correction where the person wrote something (a send-back note, an answer to the assistant, a
+   rule stated in Ask) is learned from at once, and the Learned line appears on that card. Silent corrections are batched.
+2. **Which tier writes it.** Lessons, lesson updates and rules come from `learn.correction` on the stronger tier, and so does
+   anything after a repeat correction. Terms, routing and facts proposed from inputs use the input's own tier.
+3. **Checking on a switch.** A switch of a tier's account or model offers the learning fixture pairs with their cost
+   ("Switch and check"), as part of probation. A failed check shows on Today with Switch back.
+4. **Brought forward.** Facts in the packet carry their date and source, and a rules-only scan finds terms missing from the
+   glossary before each input's run.
+5. **No flooding.** Proposals from inputs come as one card a day, merged first, and expire after 14 days with the count
+   shown. Proposals from corrections keep their own card.
+6. **Learning from Ask.** Rules and facts stated in Ask become proposals that apply at once, with Undo.
+7. **Placed in phase L by the owner.** Text extractors for documents, spreadsheets, presentations and PDFs; encryption for
+   backups that leave the person's control; showing and restoring one record as it was.
+8. **Knowledge travels.** It is in the export like every record. "Take my lessons" carries lessons, rules and general
+   glossary terms to another workspace; facts, routing and style notes stay behind.
+
+**Why:** Learning written down in the same turn as the correction sticks; half an hour later it is a chore. A bad lesson is
+in every later packet, so the guards get the stronger model. A model switch is when learning can be lost silently. An
+assistant can't learn from attachments it can't read, and once it learns, the knowledge is what can't be rebuilt. A flooded
+review queue gets discarded wholesale, which kills the loop quietly.
+
+**Impact:**
+- Design 6.22, 6.2, 6.16, 6.25, 4.15, 4.25, 5.0, 3.3 and 7.18 are updated.
+- Phase L grows from about 6 to about 8.5 sessions, so the packs start about one more week later.
+- `scope.md`: extractors, encrypted backups and restoring one record become version-1 musts in phase L.
+- Phase E keeps point-in-time restore.
+
 ## 2026-10-12: The learning slice: the assistant gets better at each project, and is built next after the baseline
 
 **Decided by:** project owner (the placement: after phase A, before the UI); proposed by the first design's author in his

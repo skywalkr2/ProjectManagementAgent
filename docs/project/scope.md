@@ -35,6 +35,7 @@ The design (`docs/design/`, version 1.1 of 2026-10-12, which folds the decisions
 | Publishing pack (own private repository, decisions 2026-10-10) | won't | add-on | 9.6 to 9.9 |
 | Plugin host and plugin API 0.x | won't | must | Part 3 |
 | Read-backs, standing rules review | won't | should (merging duplicates and listing unused entries: must, phase L) | 6.7, 6.21 |
+| Text extractors (documents, spreadsheets, presentations, PDFs); encrypted off-machine backups; restoring one record | won't | must (phase L) | 6.2, 4.15, 5.0 |
 | The learning loop: knowledge records (lessons, glossary, routing, style notes, rules as records), the knowledge section in every packet, the search round, a learning proposal from every correction (decisions, 2026-10-12) | won't | must (phase L) | 6.22 |
 | Quality panel and private evaluation cases | won't (signals recorded only) | should | 6.20 |
 | Settings panel generated from schemas | won't | should | 4.0 |

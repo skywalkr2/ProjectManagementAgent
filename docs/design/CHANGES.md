@@ -283,8 +283,8 @@ means the design still holds and the work is scheduled; the phase letters refer 
 | **The publisher and channels** (6.3, 6.12): the wiki page channel, content-hash approval, Waiting to go out, `external_editors` and lock checks | Not built. The file channel comes first (phase C4); social, email and newsletter channels are not in 1.0 | Copy and Mark sent covers follow-ups today. The first outbound need is saving approved files. |
 | **Read-backs for system ops from the PM's note** (6.7, your second round): Applies to, Doesn't change, Overlaps with, dry-run count | Not built (phase E). System ops from the PM apply with Undo but no read-back | Rules and their structured targets aren't built yet, so there is nothing to compute the lines from. |
 | **Glossary and proposed lessons in every packet** (6.22, your first round, question 1) | Not built; moved to phase L after your review (section 11). Packets carry the open actions and questions, people, projects and value lists, stable parts first | Lessons were a launch-slice item and were missed. The review of 2026-10-12 lists this. |
-| **Restore as of a time, and restore one record** (5.0, your caution on git as recovery) | Not built (phase E). Export and import round-trip and are tested; backups run to folders on their own | Comes with the governor. |
-| **Encrypted off-machine backups** (4.15) | Partly built: backups go to the folders the person picks (a synced folder works); there is no encryption and no object store yet | As above. |
+| **Restore as of a time, and restore one record** (5.0, your caution on git as recovery) | Not built. One record moved to phase L after your follow-up (section 12); a point in time stays in phase E. Export and import round-trip and are tested; backups run to folders on their own | Comes with the governor. |
+| **Encrypted off-machine backups** (4.15) | Encryption moved to phase L (section 12). Partly built today: backups go to the folders the person picks (a synced folder works); there is no encryption and no object store yet | As above. |
 | **Audiences and the restricted-content invariant** (4.1, 6.7, 12.1) | Not built. The other invariants on your must-refuse list are in place: model name never shown, links a recipient can open, actions need a person, evidence quotes must exist | Needs the publisher. |
 | **Code owners and hand-off drafts** (4.18, 6.13) | Not built | Needs requests about other projects, which come with the workplace pack. |
 | **The governor** (6.14): stale-item sweeps, outage handling, scheduled export with its remote | Not built (phase E). Crashed runs are not yet re-queued on start (phase A) | Deferred behind the person's path working. |
@@ -295,7 +295,7 @@ means the design still holds and the work is scheduled; the phase letters refer 
 | **The publishing pack bundled** (9.6–9.7) | An add-on in its own repository, not started (phase C3). A writing pack is being built by its own builder | Same decision. |
 | **"The app never installs code into itself"** (3.11, in 1.0) | Changed: one-click install from the Add-ons screen, with checksums. The server side is built; the button is not (phase A) | Installing from a terminal was a pain for the people the owner shares it with. |
 | **Approving what a pack adds, reaches and keeps when it is turned on, and again on update** (3.6, 3.11) | Designed, not built. Turn on acts at once, and the Add-ons listing shows the summary beforehand | Comes with the Install button (phase A). |
-| **Screenshots, office files and PDFs read as inputs** (1.3, 6.6) | Not built: no text extractors and no image reading yet. Pasted text, text files and watched sources are read | No pack has needed it yet. |
+| **Screenshots, office files and PDFs read as inputs** (1.3, 6.6) | Office files and PDFs moved to phase L (section 12); screenshots need a model that reads images. Not built today: no text extractors and no image reading yet. Pasted text, text files and watched sources are read | No pack has needed it yet. |
 | **The desktop installer** (decided 2026-10-11 as the first item after launch) | Phase E of the roadmap, after the packs | The later plan puts the packs in the owner's hands first. |
 | **Hosted mode** (Part 11) | After 1.0. Base paths and public addresses are kept working, since a local install uses them too | One person on their own computer first. |
 | **Triage rules in `triage.yaml`** (4.5) | A `triage:` list in `watch.yaml`, beside the sources they name | Fewer files. |
@@ -378,6 +378,21 @@ The fuller ideas from your first note come later, when real material has accumul
 - checking a fact's freshness before an outward draft, with disagreements recorded as private discrepancies.
 
 Scope (6.18) and looking up before asking from outside sources (6.19) wait for a workplace pack, as you suggested.
+
+## 12. Your follow-up on section 11 (2026-10-12)
+
+All eight points are in, as you proposed except where noted below. Phase L grows from about 6 to about 8.5 sessions.
+
+| You said | What changed |
+|---|---|
+| 1. Learn at the moment of correction when the person is there | A correction where the person wrote something (a send-back note, an answer to the assistant's question, a rule stated in Ask) is learned from at once. The Learned line appears on that card within seconds. Silent corrections are batched every 30 minutes (6.22, 7.18). We have no separate "Respond to the assistant" action; its equivalents here are the send-back note and the answer to a question the assistant asked. |
+| 2. Don't let the cheapest model write the guards | Two task kinds. `learn.correction` writes lessons, lesson updates and rules on the stronger tier. `learn.input` proposes terms, routing and facts on the input's own tier. Anything after a repeat correction always uses the stronger tier (6.22, 4.25). |
+| 3. Run the fixture pairs on a model or account switch | The switch's primary action is "Switch and check (about $X)", with "Switch without checking" in its menu. This is part of probation (6.16). A failed pair shows on Today with Switch back. We kept it an offer, not automatic, because spending is the person's choice; but it is offered at the switch, which is the moment you named. |
+| 4. Fact date and source in the packet; acronyms with inputs | Each fact in the packet reads "as of <date>, from <source>". Before each input's run, a rules-only scan lists the terms missing from the glossary, and the run proposes them, with one short question when a term blocks understanding (6.22). |
+| 5. Keep the proposal queue from flooding | Proposals from inputs come as one card a day ("The assistant learned 7 things today"), merged before they are shown. Unreviewed ones expire after 14 days, with the count shown on the next card. Proposals from corrections stay on their own card and never expire (6.22, 7.18). |
+| 6. Learn from Ask | A rule or fact stated in Ask becomes a proposal beside the answer. It applies at once as the person's own words, with the read-back and Undo (6.25). |
+| 7. Text extractors; encrypted backup and restoring one record | The owner moved both into phase L. The core's extractors (documents, spreadsheets, presentations, PDFs) and the extractor extension point. Encryption for backups that leave the person's control. Showing and restoring one record as it was. Screenshots need a model that reads images, so that is a capability of the account rather than an extractor. Point-in-time restore stays in phase E. |
+| 8. Knowledge travels | Every knowledge record is in the export and import. "Take my lessons" (Settings, and `cockpit knowledge export`) carries the active lessons, the rules and the glossary terms not tied to a project into another workspace, as the person's own, with Undo. Routing and style notes stay behind with the facts, because they name that workspace's people. |
 
 ## Plugin host, API 0.1 (2026-10-09)
 
