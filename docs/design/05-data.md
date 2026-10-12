@@ -47,6 +47,9 @@ offered, and a passage both changed is the person's pick.
 
 - **Round trip:** `import(export(db))` gives back the same records, ids, versions and ledger. The self-check runs it on both
   fictional workspaces, and every record or config migration is tested through it.
+- **A whole backup** (*phase A*): `cockpit restore --backup <backup folder> <new folder>` makes a workspace from one dated
+  backup. It checks the database before copying, never writes into a folder that has files, and never touches the
+  running workspace (decisions, 2026-10-12, "Phase A's design calls").
 - **Point in time** (*designed, not yet built*; roadmap, phase E): `cockpit restore --as-of <time>` imports the last export
   before that time and replays the ledger up to it. A restore is itself recorded in the ledger, so it can be undone.
 - **One record** (*designed, not yet built*; roadmap, phase L-more): the Admin tab can show any record as it was at a past time (from the ledger) and

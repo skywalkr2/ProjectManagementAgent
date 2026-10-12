@@ -3,6 +3,57 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Phase A's design calls, after checking each item against the code
+
+**Decided by:** project lead, at the start of phase A.
+
+**What:** The code was checked item by item first. What it does today, and what phase A builds:
+- **A crashed run stays stuck forever today:** the worker takes only queued requests, and nothing looks at ones left
+  running. On start, each is queued again. One found stuck a second time waits for the person ("Stopped twice when the
+  app closed during it"), so a request that crashes the app can't loop.
+- **The test-only source kind is offered to people today.** A connector gains a test-only mark, and "Add a source" leaves
+  such kinds out. Sources already set up keep working.
+- **The mailbox refresh:** a "Check now" button on Came in reads every enabled source at once and shows what arrived. A
+  source is never read twice at the same moment. Today the source's "Read now" and the schedule can overlap; a lock per
+  source now prevents that.
+- **The Install button:** the install route exists; the screen has no button. Install appears on a listed add-on whose
+  release this app can install. Remove appears in the menu of one the app installed, once it is off. A new install
+  says a restart is needed, as turning one on does.
+- **The first run's cost is one Go:** until the person's first go in a workspace, AI runs wait. Today then shows one
+  line: how many items, and the total estimate. One Go starts them all; after that the usual confirm amount applies. A
+  new setting, `ai.budgets.first_go` (on), turns this off. Only showing the estimate after the money is spent wouldn't
+  let the person expect the cost.
+- **Local mode's guards:** the allowed `Host` is the configured address, `localhost`, `127.0.0.1` or `[::1]`, each with
+  the configured port; in hosted mode it is the public address. A state-changing request is refused when its `Origin`
+  is another site, or when the browser marks it cross-site. A request with no `Origin` (not from a browser) still
+  needs the token. Local mode refuses to start on a non-loopback address.
+- **The wording check:** text fields the screen shows are typed as screen text in the API's models. In tests and in
+  development, sending one that names a settings file, a secret reference, a real settings key, a manifest field or a
+  command is refused, and so is an error message that does. Terminal output may name commands; the screen may not.
+- **`cockpit update`:**
+  - **in a git checkout:** a fast-forward pull, `uv sync --inexact` so installed add-ons stay, then the web tools and
+    the build. It ends by saying what changed and that a running app shows Restart now. It refuses when there are
+    local changes.
+  - **in a packaged install:** it names the install step instead.
+- **A whole backup can be restored:** a backup that can't be loaded back isn't one, and the phase A journey "backup →
+  restore" had nothing to call. `cockpit restore --backup <backup folder> <new folder>` makes a workspace from one
+  dated backup:
+  - it checks the database first;
+  - it never writes into a folder that has files;
+  - it never touches the running workspace.
+
+  Restoring to a point in time (phase E) and one record (L-more) stay where they are.
+- **A fresh workspace is checked:** the self-check makes one with no template and verifies that no account, source,
+  setting or data file shows a problem.
+
+**Why:** Each was verified in the code before it was designed around. Three gaps were worse than the plan said: a stuck
+run never recovers, the test source is offered, and backups had no restore.
+
+**Impact:**
+- **Design:** 5.0 (whole-backup restore), 6.13 (re-queue on start), 7.8 (the first Go), 4.x (`ai.budgets.first_go`), and
+  12.1 (the allowed hosts and origins).
+- **Roadmap:** A1 gains the restore. Scope grows by one small command.
+
 ## 2026-10-12: What the add-ons already built, against what the core will add
 
 **Decided by:** project lead, after a read-only survey of both add-on repositories against the core's plan.

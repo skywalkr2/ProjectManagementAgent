@@ -514,7 +514,7 @@ for it, that nothing goes out without the PM approving that exact content, alrea
 ## 6.13 Governor, automation problems and reports
 
 - *Designed, not yet built* (roadmap, phase E): every few minutes, re-queue requests whose run never finished (today a run a
-  crash left stuck is queued again when the app starts, roadmap A2), push work waiting too long in working hours, repair
+  crash left stuck is queued again when the app starts, and one found stuck a second time waits for the person; roadmap A2), push work waiting too long in working hours, repair
   changes no request carries, detect stale data and outages, run the scope sweep (6.18), the rules review (6.21) and the
   notices, and commit the readable export (5.0) hourly.
 - *Designed, not yet built:* problems in the automation become `Problem` records (shown as "automation problems", so "issue" keeps its project

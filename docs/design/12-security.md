@@ -9,8 +9,10 @@
   review). Listening on `127.0.0.1` with a token stops other computers. It doesn't stop a page open in the same browser
   sending requests to the local port (cross-site request forgery), or a DNS-rebinding page reading the answers. So, in local
   mode as in hosted:
-  - a request whose `Host` isn't the configured local address is refused;
-  - a state-changing request whose `Origin` isn't the app's is refused;
+  - a request whose `Host` isn't the configured local address is refused: in local mode the configured address,
+    `localhost`, `127.0.0.1` or `[::1]` with the configured port; in hosted mode the public address;
+  - a state-changing request whose `Origin` isn't the app's, or that the browser marks cross-site, is refused; a request
+    with no `Origin` (not from a browser) still needs the token;
   - the session cookie is `SameSite=Strict` (built);
   - no permissive CORS headers are sent (built: there are none).
 

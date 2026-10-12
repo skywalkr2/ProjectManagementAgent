@@ -589,6 +589,19 @@ All five points, and the two lines on subagents, are in the file.
 | Section 4 is superseded | Marked so, pointing to the roadmap. |
 | Section 5 should be checked off | Each row has a state: eight fixed in the design text, and one (the near-duplicate threshold) fixed in the text with the code setting still open in L0. |
 
+## 25. Phase A starts: what the code showed (2026-10-12)
+
+Each phase A item was checked in the code before it was designed. Three gaps were worse than the plan said.
+
+| Item | What the code does today | What phase A builds |
+|---|---|---|
+| Crashed runs | A run left `running` by a crash is never picked up again | Queued again on start; held for the person if found stuck twice (6.13) |
+| Test source | "A stand-in source for tests" is offered under Add a source | Connectors can be marked test-only and aren't offered |
+| Backups | Nothing restores one | `cockpit restore --backup` makes a workspace from one dated backup (5.0) |
+| First run's cost | No notion of a first run | The first runs wait for one Go with their total (7.8, `ai.budgets.first_go`) |
+| Local guards | No `Host` or `Origin` check; any listening address | The allowed hosts and origins, and loopback only in local mode (12.1) |
+| Wording | Checked only in the screens' own wording file | Screen text typed in the API models and checked when it leaves, in tests and development |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

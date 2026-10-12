@@ -74,6 +74,8 @@ A1. **Demo data off the person's path.**
 - [ ] `cockpit init` with no template is the start in the README, `docs/install.md` and the setup guide.
 - [ ] The fictional workspaces stay as test fixtures and as the sandbox (`cockpit demo`), named as such.
 - [ ] A self-check: a fresh workspace shows no account, source or setting with a problem.
+- [ ] **A whole backup restores:** `cockpit restore --backup <backup folder> <new folder>` (design 5.0), so the
+  backup → restore journey has something to call.
 - [ ] One command, `cockpit update`: it pulls, syncs without dropping installed add-ons, installs the web tools and
   builds, then says whether a restart is needed.
 

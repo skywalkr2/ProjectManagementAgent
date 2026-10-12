@@ -294,6 +294,7 @@ budgets:
   per_run_usd: 0.25              # never start a single run estimated above this
   confirm_above_usd: 0.10        # a run estimated above this asks first, with the estimate (6.16)
   confirm_unpriced: false        # also ask before a run whose cost can't be estimated (a subscription account)
+  first_go: true                 # the first runs in a workspace wait for one Go with their total (7.8)
   per_day_usd: 2
   per_month_usd: 30
   warn_at: 0.8
