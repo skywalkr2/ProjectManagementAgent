@@ -211,7 +211,8 @@ These are in the design baseline and have no record type yet. Several belong to 
 
 The `fact` record gains `key` (always shown first) and `as_of` in phase L. The `run` record gains its knowledge log: the ids of
 the knowledge entries it was given, how many facts were left out, and its searches with what came back (6.22). A changeset
-gains `applied`, the knowledge ids it says it used, checked against that log. A `signal` gains the kind `edited` (6.20).
+gains `applied`, the knowledge ids it says it used, checked against that log. A `run` also records its refusals by check name
+(8, guard kinds). A `signal` gains the kind `edited` (6.20).
 
 Also designed: on `Person`, area (derived from team and scope, 6.18), prefers, cadence, influence, interest, non_working_calendar
 and verified; on `Question`, affects, asks_for (a fact kind), on_answer, key (dedupe) and the pending flags; on `Run`, the packet

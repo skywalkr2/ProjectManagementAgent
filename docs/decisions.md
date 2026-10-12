@@ -25,6 +25,12 @@ owner had already put real use at the end of phase L, so the rules that bite in 
 **Why:** Part 8 and 6.22 described two stores of the same knowledge. An advisory rule that reads as enforced was the
 original scope failure. The first real use is a writer's own work plus mail and calendar, so those rules bite first.
 
+**Update (same day, the author's follow-up):**
+- **Constraint lines.** Seed lessons guarded by an invariant or code still put a one-line constraint in the reference of the
+  ops they constrain. The self-check fails when an invariant has none.
+- **Refusals per check.** Refusals are counted per check on each run. A check that refuses more than 5% of a task kind's
+  last 50 runs brings its full seed lesson into that task kind's packets until the rate drops.
+
 **Impact:**
 - Design Part 8 (intro, 8.1, 8.5, 8.7 and a new 8.8) and 10.5 are updated.
 - Phase A grows to about 3.5 sessions and phase L to about 10, so the packs start about one more week later.

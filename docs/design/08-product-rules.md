@@ -27,7 +27,15 @@ An instruction is the weakest guard: the original scope failure was an advisory 
 - a rule whose only guard is an instruction counts as partly enforced until that case exists.
 
 The generated page shows the kind beside each guard. Seed lessons whose guard is an instruction or a lint go into the packets
-they apply to; those guarded by an invariant or code are kept as the record of why, and stay out of packets.
+they apply to. Those guarded by an invariant or code still give the model their constraint, but only as one line:
+- **In the op reference.** Each one adds a line to the reference of the ops it constrains ("every action names a person",
+  "a question to someone else carries a link they can open"). Otherwise runs keep producing changesets the applier refuses,
+  and each refusal costs a retry. The self-check fails when an invariant has no such line. Some of these lines exist today
+  in the core ops' own descriptions.
+- **Refusals counted per check.** Each run records its refusals by check name. When one check refuses more than
+  `knowledge.refusals_to_packet` of a task kind's recent runs (default 5% of the last 50), its full seed lesson joins that
+  task kind's packets automatically. It leaves again once the rate drops. The quality panel lists refusals per check and
+  which lessons were added this way (6.20).
 
 ## 8.1 Publishing and content
 

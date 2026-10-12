@@ -142,6 +142,9 @@ L6. **The product rules as data, and the rules that bite first** (design Part 8,
 - [ ] Part 8's rules become the core playbook's seed lessons, each with a guard kind (invariant, lint, code or instruction)
   and its fixture ids. The page is generated from them, and the self-check fails when it is stale.
 - [ ] A fixture case for every instruction-only rule.
+- [ ] Every invariant has a one-line constraint in the reference of the ops it constrains, checked by the self-check.
+- [ ] Refusals counted per check on each run. A check that refuses often brings its seed lesson into that task kind's packets
+  automatically, and the quality panel shows it.
 - [ ] Before real use:
   - quotes only from verbatim sources, with a paraphrase labeled as one;
   - no unattributed lines;

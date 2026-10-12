@@ -412,6 +412,7 @@ All eight points are in, as you proposed except where noted below. Phase L grows
 | Fifteen rules from the running deployment | All are rows in 8.8, each with its guard kind and an honest state. Two are partly built today: pasted inputs are stored by content hash, and the smoke test covers every tier on request. |
 | "Targets aren't dates" | Now: a target is a date, a quarter or TBD, never a sentence; the detail goes in the notes. |
 | Date from the day received | Now says "not the day processed", and the fix (the received date in the packet header) is in phase A. |
+| Follow-up: lessons guarded by an invariant still need a line in the op reference, and frequent refusals should bring the lesson into the packet | Both adopted (Part 8, guard kinds). Every invariant puts a one-line constraint in the reference of the ops it constrains, and the self-check fails when one is missing; some of these lines already exist in the core ops' descriptions. Each run records its refusals by check. A check refusing more than 5% of a task kind's last 50 runs (a setting) brings its full seed lesson into that task kind's packets automatically, until the rate drops. The quality panel shows both. |
 | Enforce first for the first real use | Phase A: received date, usage limits resuming at reset, empty or failed runs retried. Phase L, before real use starts at its end: the knowledge rules, verbatim versus paraphrase, attribution, names from a primary source, and links checked. Scope, schedule lookups and dependencies wait for the packs. |
 
 ## Plugin host, API 0.1 (2026-10-09)

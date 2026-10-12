@@ -714,6 +714,7 @@ knowledge:
   proposals_expire_days: 14    # unreviewed proposals from inputs expire after this, counted on the next day's card
   unused_days: 60              # an active entry that matched nothing for this long is offered for retirement
   check_on_switch: true        # offer the learning fixture pairs, with their cost, when a tier's account or model changes
+  refusals_to_packet: {share: 0.05, of_last: 50}   # a check refusing this often puts its full seed lesson in the packet
 ```
 
 Learning has two task kinds, so their tiers and budgets are set in `ai.yaml` like any other (4.8). `learn.correction` writes

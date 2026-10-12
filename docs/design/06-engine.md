@@ -853,7 +853,8 @@ cases from signals and rule suggestions are *designed, not yet built*):
 | repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item (*designed, phase L*) |
 
 The repeat-correction rate, not the raw correction rate, says whether the assistant is learning; the quality panel shows it
-next to the others, week by week. Beside it, the **knowledge-used rate**: the share of runs whose changeset says which
+next to the others, week by week. Refusals are counted per check too, and a check that refuses often brings its seed
+lesson into the packet (Part 8, guard kinds). Beside the repeat-correction rate, the **knowledge-used rate**: the share of runs whose changeset says which
 lessons, rules or facts it applied (`applied`, a list of knowledge ids). Each id is checked against the knowledge the run was
 given, so it is a checked citation, not the model's say-so. If the first rate doesn't fall, the loop isn't closing; if the
 second stays near zero, the knowledge isn't reaching the runs that need it. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
