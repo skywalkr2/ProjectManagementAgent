@@ -20,7 +20,7 @@ the same core (3.7).
 
 **Version.** Design 1.1, 2026-10-12: design 1.0 (the scope baseline of 2026-10-09) with every decision since folded
 in. Sections that are designed but not built say so. `CHANGES.md` section 10 lists what changed and what was dropped
-or deferred. Changes from here go through the change control in `docs/project/scope.md`, and a decision is done only
+or deferred, and section 11 the learning loop added after the first design's author reviewed 1.1. Changes from here go through the change control in `docs/project/scope.md`, and a decision is done only
 once the section it affects says it.
 
 ## Parts

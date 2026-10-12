@@ -65,7 +65,9 @@ escalation move to the project management pack (9.10).
 
 | Rule | Enforced by |
 |---|---|
-| Everything learned is written down in the same step: facts in records, people in people data, rules in `rules.yaml`, rationale in decisions.md | AI rules, applier ops for each (partly enforced: facts, notes and people have ops; rules, glossary and lessons do not) |
+| Everything learned is written down in the same step: facts, rules, lessons, glossary entries, routing and style notes as records with ids, people in people data, rationale in decisions.md | AI rules, applier ops for each (partly enforced: facts, notes and people have ops; the rest come in phase L, 6.22) |
+| **The assistant doesn't repeat a corrected mistake.** Every correction proposes one piece of learning, and every later run reads the knowledge that applies to it | the learn task on every signal, the knowledge section of the packet, the repeat-correction signal, and the fixture pairs and day-30 scenario in the evaluation (6.22; not yet enforced: phase L, whose exit test this is) |
+| Search what is already known before asking a person, looking outside or reporting to the maintainers | the `search` round and the `already-known` lint (6.22, 4.17; not yet enforced: phase L) |
 | Every input shows in What changed with what was done with it | inputs always produce a note |
 | Data files feed outputs: changing the data re-renders the output in the same step | renderer hooks per record type (partly enforced: the synced folder's generated files rebuild; renderers and outputs are not built) |
 | Pull others' edits before re-rendering, where the channel allows it | publisher pulls first (not yet enforced): no publisher yet |

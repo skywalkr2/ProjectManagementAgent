@@ -34,8 +34,8 @@ The design (`docs/design/`, version 1.1 of 2026-10-12, which folds the decisions
 | Dependencies and baselines | won't | add-on (project management pack, decisions 2026-10-12) | 6.23 |
 | Publishing pack (own private repository, decisions 2026-10-10) | won't | add-on | 9.6 to 9.9 |
 | Plugin host and plugin API 0.x | won't | must | Part 3 |
-| Read-backs, standing rules review | won't | should | 6.7, 6.21 |
-| Glossary, lessons, search lookups | won't | should | 6.22 |
+| Read-backs, standing rules review | won't | should (merging duplicates and listing unused entries: must, phase L) | 6.7, 6.21 |
+| The learning loop: knowledge records (lessons, glossary, routing, style notes, rules as records), the knowledge section in every packet, the search round, a learning proposal from every correction (decisions, 2026-10-12) | won't | must (phase L) | 6.22 |
 | Quality panel and private evaluation cases | won't (signals recorded only) | should | 6.20 |
 | Settings panel generated from schemas | won't | should | 4.0 |
 | Workplace pack and its connectors (private add-on, decisions 2026-10-10) | won't | add-on | 9.1 to 9.5 |

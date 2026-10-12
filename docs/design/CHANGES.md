@@ -282,7 +282,7 @@ means the design still holds and the work is scheduled; the phase letters refer 
 | **Facts a schedule holds are looked up, never asked** (6.19) | Designed, not built (phase C4) | Waits for the first pack with a published schedule to read. |
 | **The publisher and channels** (6.3, 6.12): the wiki page channel, content-hash approval, Waiting to go out, `external_editors` and lock checks | Not built. The file channel comes first (phase C4); social, email and newsletter channels are not in 1.0 | Copy and Mark sent covers follow-ups today. The first outbound need is saving approved files. |
 | **Read-backs for system ops from the PM's note** (6.7, your second round): Applies to, Doesn't change, Overlaps with, dry-run count | Not built (phase E). System ops from the PM apply with Undo but no read-back | Rules and their structured targets aren't built yet, so there is nothing to compute the lines from. |
-| **Glossary and proposed lessons in every packet** (6.22, your first round, question 1) | Not built (phase E). Packets carry the open actions and questions, people, projects and value lists, stable parts first | Lessons were a launch-slice item and were missed. The review of 2026-10-12 lists this. |
+| **Glossary and proposed lessons in every packet** (6.22, your first round, question 1) | Not built; moved to phase L after your review (section 11). Packets carry the open actions and questions, people, projects and value lists, stable parts first | Lessons were a launch-slice item and were missed. The review of 2026-10-12 lists this. |
 | **Restore as of a time, and restore one record** (5.0, your caution on git as recovery) | Not built (phase E). Export and import round-trip and are tested; backups run to folders on their own | Comes with the governor. |
 | **Encrypted off-machine backups** (4.15) | Partly built: backups go to the folders the person picks (a synced folder works); there is no encryption and no object store yet | As above. |
 | **Audiences and the restricted-content invariant** (4.1, 6.7, 12.1) | Not built. The other invariants on your must-refuse list are in place: model name never shown, links a recipient can open, actions need a person, evidence quotes must exist | Needs the publisher. |
@@ -324,6 +324,60 @@ These hold in the code as you asked:
 1. **Anything in 10.2 you think is more urgent than its phase.** Scope (6.18) and fact lookups (6.19) came from your
    running deployment. Both are scheduled after the packs.
 2. **Anything you designed that this summary doesn't mention.** That is the case we are most worried about.
+
+## 11. Your review of 1.1: the learning loop (2026-10-12)
+
+Thank you. You said the soul of the first version was that the assistant got smarter about each project the more it saw,
+and that 1.1 had built the write side of that loop and deferred the read side. You were right.
+
+### Your questions, answered from the code
+
+| You asked | The answer |
+|---|---|
+| Where do a project's accumulated facts go in the packet, how many fit, and is there a ranking? | Nowhere yet. Facts are records with text, project, source, evidence and trust, but the packet carries only the op reference, the task's guidance, value lists, every open action and question, people and projects. There is no ranking and no size limit on the open items. |
+| Is there any path from a send-back or an edited-then-sent draft to something the next run reads? | No. A send-back's note reaches the re-run of that one item. Every correction is recorded as a signal, and an edited follow-up keeps the text actually sent, but no later run reads any of it. |
+| Are lessons records with ids, or text? | Neither: lessons and the glossary did not exist. Rules had the shape you describe (id, text, a structured target, source, date, status) but lived in a settings file that only stage checks read. |
+
+### What changed
+
+The owner put your learning slice next, after the baseline and before the UI: **phase L** of the roadmap, with your exit
+test, "the assistant doesn't repeat a corrected mistake". Section 6.22 is rewritten from your slice:
+- the four knowledge record types beside facts and rules;
+- the knowledge section in your order;
+- facts ranked, cut at a budget, with what was left out counted;
+- the knowledge log on each run;
+- one learning proposal per correction, with `lesson.update` when a guard failed;
+- learning from inputs;
+- the repeat-correction signal;
+- consolidation into the rules review;
+- your fixture pairs and the day-30 scenario.
+
+Your sizing (about 85 lessons, 80 terms, 25 people with routing, 70 facts on the busiest records) fits: everything but the facts
+stays in the stable part of the packet.
+
+| You proposed | What we did differently, and why |
+|---|---|
+| A bounded `search` the run can use | A search **round**: the run asks, the engine searches and runs the task again with the results, at most twice. Live tool calls don't work on every kind of account the person may use, and command-line agents are among them. |
+| Enforce searching before a lookup, a question or a code request | A lint, `already-known`: a question, lookup or report that a plain search already answers is sent back once with the match. Matching is fuzzy, so it can't be an invariant. |
+| Rules beside the new records | Rules **become** records, as value lists did: history and Undo, no restart, and they travel with the workspace. The settings file stays as the starting set. |
+| Promote a lesson to a rule, a setting or an invariant | A rule with a deterministic check, a setting, or a lint the product already has. A guard that needs new code becomes a report to the maintainers, because the product no longer changes its own code (your fixer lessons, section 9). The lesson keeps the why. |
+| Run the fixture pairs on every model change | They run on the person's own AI accounts when the person starts them, because each run costs money. The plumbing (the correction reaches the next similar packet, ranked, logged) is tested on every change at no cost. |
+| A small learn task on every signal | Its own task kind, on the low-cost tier, with a budget, batched every 30 minutes by default. Corrections recorded before phase L are learned from once when it arrives. |
+
+On screen (7.18), there are four places:
+- a proposal is one line on the correction's own card ("Learned: … · Keep · Edit · Discard");
+- a Today line gathers the pending ones;
+- each project's page shows what the assistant knows and what is still unknown, each unknown with its routed question;
+- a Knowledge screen lists every entry.
+
+The Learned line comes with phase L; the rest is laid out with the redesigned screens in phase B.
+
+The fuller ideas from your first note come later, when real material has accumulated. They are phase D, the owner's real use:
+- voice per recipient beyond the first style notes;
+- acronyms as a daily habit;
+- checking a fact's freshness before an outward draft, with disagreements recorded as private discrepancies.
+
+Scope (6.18) and looking up before asking from outside sources (6.19) wait for a workplace pack, as you suggested.
 
 ## Plugin host, API 0.1 (2026-10-09)
 

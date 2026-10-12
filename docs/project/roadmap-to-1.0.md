@@ -2,7 +2,8 @@
 
 Rewritten on 2026-10-12 after the review (`review-2026-10-12.md`), at the owner's direction.
 
-**The goal:** a baseline that works for a real person with no demo data, then the UI finished and out of the way, then
+**The goal:** a baseline that works for a real person with no demo data, then an assistant that learns (phase L), then the
+UI finished and out of the way, then
 three packs running in the owner's own workspace:
 - **the writing pack;**
 - **a project management pack:** an AI project manager that knows what is being done, builds schedules and tracks
@@ -65,6 +66,49 @@ is "ready to test" until they pass:
 - [ ] backup → restore;
 - [ ] the acceptance scenario, steps 1–7, all checked as written (step 6 included).
 
+## Phase L: the learning slice (about 6 sessions)
+
+Added on 2026-10-12 after the first design's author reviewed design 1.1 (decisions, "The learning slice"). The write side
+of learning is built; this phase builds the read side, so the assistant gets better at each project the more it sees.
+Design 6.22.
+
+**Exit test: the assistant doesn't repeat a corrected mistake.**
+- **Automated, on every change:** a correction produces a proposal; once kept, it reaches the next similar packet, ranked as
+  designed; and the run's knowledge log shows it.
+- **On the owner's AI account, started by the owner:** for every fixture pair, the later input comes out right with no
+  correction repeated. The day-30 workspace's changesets differ from day 1's in the ways its history justifies.
+
+L1. **Knowledge as records.**
+- [ ] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,
+  status and an `applies_to` target. Their ops, with Undo.
+- [ ] Rules become records, with `rules.yaml` as the starting set; stage checks read them.
+- [ ] Facts gain `key` and `as_of`.
+
+L2. **Every run reads what applies.**
+- [ ] The knowledge section in the stable part of every packet: rules, matching lessons, the glossary, routing, style notes.
+- [ ] Facts of the input's projects, ranked and cut at a budget, with what was left out said.
+- [ ] The `search` round, at most two per run, over facts, past inputs, records and knowledge.
+- [ ] The `already-known` lint on questions, outside lookups and reports.
+- [ ] The knowledge log on each run.
+- [ ] One plugin API call that gives a pack's packets the same section.
+
+L3. **Every correction teaches.**
+- [ ] The `learn` task on each signal, batched by default: at most one proposal, or `lesson.update` when a lesson should
+  have caught it.
+- [ ] Learning from inputs: new terms, "not me, ask X", rerouted questions.
+- [ ] Proposals from the person's own words apply at once with Undo; the rest wait for Keep.
+- [ ] Duplicates merge when proposed.
+- [ ] The repeat-correction signal; the unused-entries list.
+- [ ] The corrections recorded before this phase are learned from once.
+- [ ] On screen: the Learned line on the correction's card and the Today line (7.18). The rest of 7.18 is laid out in
+  phase B.
+
+L4. **Proving it.**
+- [ ] Fictional fixture pairs, at least one per kind: a lesson, a glossary term, a routing entry, a style note, and a fact
+  that avoids an outside lookup.
+- [ ] A month of fictional history for the day-30 scenario.
+- [ ] Both run by `cockpit evaluate`.
+
 ## Phase B: finish the UI/UX redesign (about 4 sessions)
 
 The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
@@ -82,6 +126,8 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
 - [ ] **Setup guide** as steps | step.
 - [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
+- [ ] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
+  Knowledge screen under Records.
 - [ ] Words and accessibility throughout: the microcopy table in the review, and axe in light and dark at four widths.
 
 The journey tests from A3 run against the new screens as they land.
@@ -147,13 +193,16 @@ time, nothing went out without approval, and a backup succeeded.
 
 - [ ] The acceptance scenario run by the owner on real material.
 - [ ] A week of real use; friction recorded in `ux-notes.md` and fixed in order of cost.
+- [ ] Learning on real material (6.22): voice per recipient beyond the first style notes, acronyms checked on every input,
+  and a fact's freshness checked before an outward draft, with disagreements between sources recorded as private
+  discrepancies to ask about.
 
 ## Phase E: the rest of version 1
 
 Order by what protects real data first, then by what the packs ask for:
 - [ ] **The governor:** stale-item sweeps, outage handling, the scheduled export with its remote; restore, including a
   single record and a point in time.
-- [ ] Scope resolver (6.18), proposed lessons and the glossary (6.22), the rules review and read-backs (6.7, 6.21).
+- [ ] Scope resolver (6.18), the scheduled rules and lessons review with promotion (6.21), and read-backs (6.7).
   Dependencies, baselines and RAID moved to the project management pack (C2).
 - [ ] Native AI adapters and reproducible runs (6.16).
 - [ ] **M0, the desktop installer:** no Python, uv, Node or terminal; it updates itself.

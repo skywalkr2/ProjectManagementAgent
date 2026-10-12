@@ -107,6 +107,10 @@ follow-ups and stages.
 - **Signing in is the whole setup** for mail and calendar from a named service. A sign-in starts reading the inbox and the
   main calendar at once. Nothing has to be chosen first; the person narrows, adds or removes sources afterwards, and their
   changes stand (3.12; decisions, 2026-10-12).
+- **It gets better at each project the more it sees.** Who answers what, what a term means here, which facts matter, how
+  the person edits drafts for each reader, and every corrected mistake are written down as they are learned, and every later
+  run reads them. Without this it is an inbox processor that is as smart on day 100 as on day 1 (6.22; decisions,
+  2026-10-12 "The learning slice").
 - **A visible result in the first five minutes.** Every default is chosen so that a real person sees a result with no file
   editing, no extra command and no demo data. After the guided setup and one sign-in, Today shows the day's agenda and what
   came in, with the assistant's work on it. A real workspace starts from `cockpit init` with no template (2.5).

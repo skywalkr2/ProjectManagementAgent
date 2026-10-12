@@ -3,6 +3,46 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: The learning slice: the assistant gets better at each project, and is built next after the baseline
+
+**Decided by:** project owner (the placement: after phase A, before the UI); proposed by the first design's author in his
+review of design 1.1; project lead (the adjustments below).
+
+**What:** A new roadmap phase L, between A (baseline) and B (UI), builds the read side of learning (design 6.22):
+- **knowledge records:** lessons, glossary entries, routing entries and style notes, each with an id, source and evidence,
+  date, trust, status and an `applies_to` target; rules become records too;
+- **the knowledge section** in every packet, with the project's facts ranked and cut at a budget;
+- **a search round** before asking anyone, and the `already-known` lint;
+- **a knowledge log** on each run;
+- **one learning proposal** from every correction and from inputs;
+- **the repeat-correction signal;**
+- **fixture pairs and a day-30 scenario** in the evaluation.
+
+Exit test: the assistant doesn't repeat a corrected mistake.
+
+**Adjustments to the author's proposal:**
+- **Search is a round the engine runs** and feeds back, not a live tool call, so it works on every kind of account.
+- **"Search before asking" is a lint,** because matching is fuzzy.
+- **Rules become records,** like value lists: history, Undo, no restart, and they travel with the workspace's data.
+  `rules.yaml` stays as the starting set.
+- **A lesson whose guard needs new code** becomes a report to the maintainers, since the product never changes its own code.
+- **The model-behavior evaluations** run on the person's own accounts, when they start them. The plumbing is tested on
+  every change.
+- **Learning runs** have their own task kind on the low-cost tier, with a budget, and are batched by default.
+
+**Why:** The write side of learning is built (sources, facts with evidence, corrections recorded as signals), but no later
+run reads what was learned. The assistant would be as smart on day 100 as on day 1, and a person would feel that within two
+weeks. A test workspace with fictional data never shows it, because nothing accumulates. In the first version, this loop was
+what made the assistant worth using.
+
+**Impact:**
+- Design 6.22 is rewritten; 1.7, 4.3, 4.10, 4.17, 5.1, 6.6, 6.19, 6.20, 6.21, 7.17 and Part 8 are updated; 4.25 and 7.18 are
+  added.
+- `roadmap-to-1.0.md` gains phase L (about 6 sessions), and the packs start about two weeks later.
+- `scope.md`: the learning loop becomes a version-1 must.
+- `CLAUDE.md`: standing rules are rule records.
+- Plugin API: one call for a pack's packets to include the knowledge section.
+
 ## 2026-10-12: A project management pack: an AI project manager that builds schedules and tracks the work
 
 **Decided by:** project owner ("an AI project manager will know what we are doing, build schedules, track action items").

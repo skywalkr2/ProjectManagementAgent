@@ -21,8 +21,8 @@ the change that records it also edits the design section it affects, and `docs/d
 - Code comments describe what the code does in general terms. They never quote a user, name a person or carry a date.
   Rationale goes in `docs/decisions.md` (product) or the workspace's `docs/decisions.md` (deployment).
 - When a user states a rule, decide first: concept (core), extension (plugin or new extension point), setting (config key with
-  schema and default), fact (data), standing instruction (`rules.yaml`) or custom to one deployment (private plugin). Say which in
-  your reply. Default to config or `rules.yaml`.
+  schema and default), fact (data), standing rule (a rule record; `rules.yaml` is the starting set) or custom to one
+  deployment (private plugin). Say which in your reply. Default to config or a rule.
 
 ## Plugins
 - Plugins import only `engine.plugin_api`, declare what they provide and what they may reach in `plugin.yaml`, and namespace

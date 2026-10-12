@@ -202,10 +202,15 @@ These are in the design baseline and have no record type yet. Several belong to 
 | risks, decisions and milestones on `Project` | risks[] (text, raised_by, owner, status and the optional fields `config/raid.yaml` turns on: probability, impact, score, mitigation, trigger, review_by), decisions[], milestones[] (each with a baseline date and a current date), players, hold flag, facts[] | the project management pack (6.23, 6.24); a project's update log and notes exist today |
 | `Change` | id, source id, title, link, diff, detected_at, who, state (new, queued, processed, done, ignored), result, auto rule, superseded_by, covers[] | today an incoming difference is a `source` plus a queued `request`, with a `snapshot` for the item (5.5) |
 | `Draft` | id, channel instance, target, output type, content, base version, diff, content_hash, status (draft, approved, scheduled, sent, failed, superseded), approved_at, send_at, sent_at, result | with the publisher (6.12); text drafts today are `text_version`s |
-| `Rule` | id, text, applies_to (task kinds, record types and fields, filter), source (request or PM), added, status (active, retired, promoted), promoted_to (config key) | today an entry in `rules.yaml` (4.10) |
+| `Rule` | id, text, applies_to (task kinds, record types and fields, projects, people, filter), source and evidence, added, trust, status (proposed, active, retired, promoted), check (a deterministic check), promoted_to | phase L (6.22); today an entry in `rules.yaml` (4.10) |
 | `Problem` | an automation problem (not a project issue): id, summary, detail, plugin (when one raised it), status (open, reported, resolved, dismissed), report (the drafted report, if one was sent, 6.13) | with the governor (6.13) |
-| `GlossaryTerm` | id, term, aliases, meaning, status (confirmed, assumed, unknown), source id, trust (from the source), patterns (how compound ids split) | 6.22 |
-| `Lesson` | id, text, learned_from (request or source), applies_to, status (proposed, active, promoted to a rule, retired), trust | 6.22 |
+| `GlossaryTerm` | id, term, aliases, meaning, project (or global), confidence (confirmed, assumed, unknown), source and evidence, learned, trust, status (proposed, active, retired), patterns (how compound ids split) | phase L (6.22) |
+| `Lesson` | id, what went wrong, why, the guard, applies_to, signal (the correction it came from), source and evidence, learned, trust, status (proposed, active, retired, promoted), promoted_to | phase L (6.22) |
+| `RoutingEntry` | id, about (a topic, area, project or kind of question), person, answers (yes, no, or "look it up at" a source), applies_to, source and evidence, learned, trust, status | phase L (6.22); 4.3 |
+| `StyleNote` | id, audience or recipient (person ids or an audience), observation, evidence (the draft-versus-sent difference, the signal it came from), learned, trust, status | phase L (6.22) |
+
+The `fact` record gains `key` (always shown first) and `as_of` in phase L. The `run` record gains its knowledge log: the ids of
+the knowledge entries it was given, how many facts were left out, and its searches with what came back (6.22).
 
 Also designed: on `Person`, area (derived from team and scope, 6.18), prefers, cadence, influence, interest, non_working_calendar
 and verified; on `Question`, affects, asks_for (a fact kind), on_answer, key (dedupe) and the pending flags; on `Run`, the packet

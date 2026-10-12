@@ -122,6 +122,10 @@ Designed, not yet built: communication fields (`prefers` a channel and time, `ca
 
 ## 4.3 `config/routing.yaml` (*designed, not yet built*)
 
+Learned routing comes first: who answers what is kept as routing entries (records, 6.22, phase L), proposed when a reply says
+"not me, ask X" or the person reroutes a question. The rules below are for routing a person sets up in advance; when both
+match, the person's rule wins.
+
 Ordered rules that choose a recipient for a question by topic, project, owner team or kind:
 `when: {topic: requirements, project_field: product_owner} then: {to: "{project.product_owner}"}`.
 A rule can say `ask_user_first` (unsure: the PM routes it). Unmatched questions go to the PM as a routing decision, never to a
@@ -349,7 +353,17 @@ switch to compact form, default 0.4); `config/governor.yaml` with its thresholds
 outage when more than N keys fail); and `reports`: where reports to the product's maintainers go (`clipboard` by default, or a
 channel and target the PM configures) (6.13). Today a drafted report is shown for the person to copy and send.
 
-## 4.10 `config/rules.yaml`
+## 4.10 `config/rules.yaml` and rule records
+
+**Rules become records** (*designed, phase L*; decisions, 2026-10-12 "The learning slice"). Like value lists (4.23), rules
+move into the database as `rule` records (5.1), beside the other knowledge (6.22). A rule then has:
+- history and Undo, like any change;
+- no restart when one is added;
+- a place in the workspace's data, so it travels with it;
+- the same `applies_to` target and status (proposed, active, retired, promoted) as lessons.
+
+`config/rules.yaml` stays as the starting set: its entries are loaded once as rule records, and the workspace's file is then
+left as it was. Until phase L, rules live in the file as below.
 
 Plain-language standing rules the PM states while working ("record who raised each risk"), each one an entry rather than a
 line in a growing file:
@@ -369,7 +383,7 @@ rules:
     check: <id of a deterministic check>          # optional; prose alone never lets a stage move
 ```
 
-Built: the file, its schema and its use by stages: a rule that names a deterministic `check` can be an entry check or an
+Built: the file, its schema and its use by stages (the stage check reads rule records once they exist): a rule that names a deterministic `check` can be an entry check or an
 applies-if for a stage (4.21, 6.26); a prose rule never allows a move. Designed, not yet built: rules reaching the AI tasks they
 apply to (6.6), adding one as a system op (6.7), so a rule is never added from an input without the PM confirming it, and the
 rules review (6.21), which keeps the list short and moves rules that are really settings into config.
@@ -550,7 +564,8 @@ with a default, is to be added; the first design's example value of 0.85 does no
 the code's value is the one in use.)
 
 Lints in the first design that are *designed, not yet built*: `locale-spelling`, `fact-terms-without-asks-for` and
-`unreachable-link`.
+`unreachable-link`. With the learning slice (phase L): `already-known` (default `return`), a question, outside lookup or report
+whose subject a plain search of the workspace's own knowledge already answers (6.22).
 
 ## 4.18 `config/code_owners.yaml` (*designed, not yet built*)
 
@@ -682,3 +697,22 @@ the workspace's private folder, `<workspace>/.cockpit/`, which the workspace's g
   started.
 
 What the synced folder carries instead is in 5.0.
+
+## 4.25 Knowledge (`knowledge:` in `config/dispatch.yaml`)
+
+*Designed, phase L* (6.22). The settings of the learning loop, with their defaults:
+
+```yaml
+knowledge:
+  glossary_all_below: 150      # the whole glossary goes in every packet while it has fewer terms than this
+  facts_budget: 4000           # characters of ranked facts per input; the rest is counted and searchable
+  search_rounds: 2             # how many times a run may ask for a search before it must answer
+  search_results: 20           # results per search
+  learn: batched               # each, batched or off: when corrections are turned into proposals
+  learn_every_minutes: 30      # how often a batch of corrections is learned from
+  unused_days: 60              # an active entry that matched nothing for this long is offered for retirement
+```
+
+The learning task has its own task kind (`learn`), so its tier and budget are set in `ai.yaml` like any other (4.8); it
+defaults to the low-cost tier.
+

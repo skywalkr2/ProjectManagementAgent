@@ -149,8 +149,9 @@ any plugin call (6.1).
 **As built.** The packet holds, stable parts first and the request last: the instructions, the op reference for the task kind,
 the task's playbook guidance, every open action and open question in a compact form, the people, the projects, the values each
 list-bound field takes (5.4), then the date, the PM's note (trusted) and the cleaned input (untrusted). Input cleaning, one input
-per call, the fix round, the fallback chain and the escalation tier are built. The glossary, lessons, rules, scope and looked-up
-facts below arrive as 6.18 to 6.22 are built.
+per call, the fix round, the fallback chain and the escalation tier are built. **No knowledge reaches the packet yet:** facts,
+rules, lessons, the glossary, routing and style notes arrive with the learning slice (6.22, phase L), and scope and looked-up
+facts with 6.18 and 6.19.
 
 - Batches queued requests (batch size, scheduled batches, immediate kinds that run within a minute of the PM handing them in,
   with a short delay so a note can follow). **A batch shares the stable part of the packet; each input gets its own call.**
@@ -164,11 +165,14 @@ facts below arrive as 6.18 to 6.22 are built.
   - the input, and the related records in full;
   - **every** open action and open question, with ids, in a compact one-line form, not only the related ones, so the AI can
     close what the input completed anywhere;
-  - the playbook entries for this task kind (3.8), the glossary and the active lessons (6.22), and the rules that apply to
-    this task kind and these projects (6.21);
+  - the playbook entries for this task kind (3.8), then the knowledge section (6.22): every active rule, the active lessons
+    whose target matches, the glossary (all of it while small), routing for the people and projects in the input, and style
+    notes for the recipient of an outward draft;
+  - the facts of the projects the input touches, ranked (key facts, overlap with the input, newest) and cut at a budget, with
+    what was left out said (6.22);
   - the area each related person and item is in, with each domain's contact (6.18), and looked-up facts (6.19);
   - which recent edits and pages were made by `our_accounts` ("published by the cockpit", so nobody is asked who made them);
-  - the op reference (core and enabled plugins' ops) and the search lookups available (6.22).
+  - the op reference (core and enabled plugins' ops) and how to ask for a search (6.22).
   A plugin's AI task kind builds its own packet with the same parts available.
 - **Trusted and untrusted parts** (12.2): the PM's own note, config-derived context, rules, playbooks and the op reference are
   trusted. Everything that came from outside (connector content, pasted third-party text, replies, files) is untrusted, **and
@@ -812,7 +816,8 @@ check-up and the UI all ask it; no other part of the product decides scope on it
 
 ## 6.19 Facts and lookups
 
-*Designed, not yet built* (roadmap, phase C4). Some facts have a published home. In the reference pack's setup, for example, a work item's release lives in a tracker field
+*Designed, not yet built* (roadmap, phase C4). Before any outside lookup, a run searches what the workspace already knows
+(6.22, phase L). Some facts have a published home. In the reference pack's setup, for example, a work item's release lives in a tracker field
 and a release's production date on a schedule page; which tracker, which field and which pages are settings.
 Asking a person for them wastes their time and goes stale. `config/facts.yaml` (4.16) names those kinds and where each is
 looked up.
@@ -839,45 +844,174 @@ cases from signals and rule suggestions are *designed, not yet built*):
 | pulled back | the PM pulls an auto-closed change back ("This is ours") |
 | draft edited | the approved content differs from the assistant's draft (the difference is kept) |
 | held op declined | the PM declines a held system op or a routing guess |
+| repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item (*designed, phase L*) |
+
+The repeat-correction rate, not the raw correction rate, says whether the assistant is learning; the quality panel shows it
+next to the others. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
 
 - **Quality panel** (Admin tab): rates over time by task kind, provider and model (share of changesets sent back or undone,
   share of questions dropped, auto-close pull-back rate, draft edit size), with each figure linking to its examples.
 - **Private evaluation cases:** the PM can turn any signal into a case in `<workspace>/evals/` (the input, what the assistant
   did, what was right). `evaluate` runs these alongside the fictional golden set, so a model or prompt change is judged on the
   PM's real work. They never leave the workspace; the product's committed fixtures stay fictional.
-- **Rule suggestions:** when send-back notes repeat a point, the rules review (6.21) proposes a rule from them.
+- **Learning proposals:** each correction proposes at most one lesson, rule, fact, glossary entry, routing entry or style
+  note, on the correction's own card (6.22). This replaces suggesting rules only when send-back notes repeat.
 
 ## 6.21 Standing rules review
 
-*Designed, not yet built* (roadmap, phase E). Standing rules (`config/rules.yaml`, 4.10) are useful until there are too many, they contradict each other, or a rule is
+*Designed, not yet built.* Merging duplicates as they are proposed and listing unused entries come with the learning slice
+(phase L, 6.22); the scheduled review is phase E. It covers lessons as well as rules. Standing rules (records, 4.10) are useful until there are too many, they contradict each other, or a rule is
 really a setting that only the model is enforcing (the original scope failure was exactly that). A scheduled review (an AI
 task kind, weekly by default) proposes, as held system ops the PM confirms:
 
 - **Merge or retire** duplicates and rules that no longer apply; **flag conflicts** between rules, side by side.
 - **Promote** a rule that names a person, team, domain, source or fact kind into the config key that enforces it (a scope
   domain, a routing rule, a fact source), and mark the rule `promoted` with the key it became.
-- **Add** a rule from repeated send-back notes (6.20).
+- **Promote a lesson** whose guard is mechanical into a rule with a deterministic check, a setting or a lint the product has; a
+  guard that needs new code becomes a report to the maintainers (6.13). The lesson stays as the record of why.
+- **Retire** lessons and other knowledge that matched nothing for `knowledge.unused_days`.
 
 Rules carry `applies_to`, so a packet includes only the rules for its task kind and projects (6.6), and the review keeps the
 active list short enough to read.
 
-## 6.22 Glossary, lessons and search
+## 6.22 Knowledge and the learning loop
 
-*Designed, not yet built* (roadmap, phase E). Runs used to read reference material on demand and write to it when they learned something. The packet now carries it, and
-ops record what is learned:
+*Designed, not yet built* (roadmap, phase L, next after phase A; decisions, 2026-10-12 "The learning slice"). This is what
+makes the assistant better at each project the more it sees. It has four parts:
+- knowledge is kept as records;
+- every run reads the knowledge that applies to it;
+- every correction proposes one piece of learning;
+- tests prove a corrected mistake is not repeated.
 
-- **Glossary:** terms and acronyms with meaning, status (confirmed, assumed, unknown), source and split patterns for compound
-  ids. Every packet includes it. `glossary.add` and `glossary.update` record new terms; an assumed or unknown term can become
-  one question to whoever the routing rules say knows it. A meaning that came from untrusted content is shown to the model as
-  data ("reported meaning, from <source>"), never as guidance, until the PM confirms it.
-- **Lessons:** things a run learned about how this workspace works ("minutes from this group list owners after the dash").
-  Because lessons become guidance in every later packet, they are the obvious place for an injected instruction to persist. So
-  `lesson.add` records a lesson as **proposed**; it becomes **active** only when the PM accepts it (a Today line collects them:
-  "Review 3 proposed lessons"). A lesson from the PM's own note is active at once, with a read-back. Active lessons go into the
-  packets they apply to; the rules review (6.21) can promote a lesson to a standing rule or retire it.
-- **Search lookups:** a bounded `lookup` over the workspace, in the same loop as fact lookups (6.16): full-text search over
-  sources and records ("has this been asked or answered before?"), and the previous version of a source ("what did this page
-  say last time?"). Results come back in the next call, with a limit on calls per run.
+The write side is built: sources with provenance, facts with evidence, ids instead of names, and the corrections recorded as
+signals (6.20). This section is the read side.
+
+**Knowledge records.** Six kinds:
+- **Fact** (built), plus `key` (the facts that matter most, always shown first) and `as_of`.
+- **Rule** (4.10), now a record.
+- **Lesson:** what went wrong, why, and the guard. Created from a correction and linked to the signal it came from.
+- **Glossary entry:** a term or acronym, its meaning, project or global, and a confidence (confirmed, assumed or unknown). It
+  may also carry patterns for splitting compound ids.
+- **Routing entry:** a topic, area, project or kind of question → the person who answers it. Negatives too: "doesn't answer
+  this", or "never ask them about that; look it up at <source>".
+- **Style note:** an audience or recipient → an observation ("replaces names with roles", "cuts delivery claims"). Its evidence
+  is the difference between the assistant's draft and what was actually sent.
+
+Every entry has:
+- an id;
+- a source and its evidence (the request, signal or input it came from, and the words);
+- the date it was learned;
+- a trust level from its source;
+- a status: proposed, active or retired;
+- the same structured target that rules have (`applies_to`: task kinds, record types and fields, projects, people, and a
+  filter).
+
+Ids matter: a fixture, a rule promotion and a later correction can each point at the exact lesson. Entries change only
+through ops (`lesson.add` and `lesson.update`, `glossary.add` and `glossary.update`, `routing.add`, `style.add`, `rule.add`,
+`fact`, and `retire` for any kind), so every change is in the ledger with Undo.
+
+**The knowledge section of every packet.** It goes in the stable part, after the playbook and before the open items (6.6), in
+this order:
+1. every active rule (they are few, and most failures were a rule the run never saw);
+2. active lessons whose target matches the task kind, or the projects and people in the input;
+3. the glossary: all of it while it is small (under `knowledge.glossary_all_below`), otherwise the terms that appear in the
+   input or belong to its projects;
+4. routing entries for the people and projects in the input;
+5. style notes for the recipient, when the task drafts something that goes out.
+
+The per-input part then carries the **facts** of the projects the input touches. They are ranked: key facts first, then by
+overlap with the input's terms and ids, then newest first. The list is cut at `knowledge.facts_budget`, and what was left out
+is said ("42 more facts on this project; search for them").
+
+Only active entries go in, never proposed or retired ones. An entry is presented as guidance only when its source is trusted.
+Otherwise it is shown as data with its source, as 6.6 does for anything derived from untrusted content.
+
+A pack's own task kinds get the same section through one plugin API call. So a writing pack's runs see the person's lessons and
+glossary, and a pack's own knowledge (a series bible) can be offered the same way later.
+
+**Search before asking.** A run that needs more than its packet holds asks for it with a `search` request: words, ids, a
+project, which kinds (facts, past inputs, records, knowledge). It is not a live tool call, so it works on every kind of AI
+account, command-line agents included. The engine runs the search, deterministically and bounded (`knowledge.search_results`),
+and runs the task again with the results, at most `knowledge.search_rounds` times (default 2). The instructions say to search
+the workspace's own knowledge before an outside lookup (6.19), a question to a person, or a report to the maintainers.
+
+It is also checked where it can be. A `question.add`, an outside lookup or a `report.draft` whose subject a plain search
+already answers gets the lint `already-known` (4.17), which sends it back once with the match. It is a lint, not an invariant,
+because matching is fuzzy.
+
+**The knowledge log.** Each `Run` records:
+- which knowledge entries it was given, by id;
+- how many facts were left out;
+- what it searched for and what came back.
+
+A bad result can then be traced to knowledge that was missing (not in the packet) or ignored (in the packet, and the answer
+went against it). The repeat-correction signal (6.20) is computed from this log.
+
+**Every correction proposes one piece of learning.** When a signal is recorded (sent back, undone, dropped, reworded, pulled
+back, draft edited, held op declined, or the person's answer to a question the assistant asked them), a small `learn` task runs. Its packet holds:
+- the item;
+- the assistant's original output;
+- the correction: the note, what was undone, or the text as edited or sent;
+- the knowledge entries the original run was given;
+- the active lessons and rules.
+
+It returns **at most one** proposal op, or "nothing to generalize":
+- a new lesson, rule, fact, glossary entry, routing entry or style note;
+- or `lesson.update`, when an existing lesson should have caught it but didn't. A repeat means the guard was wrong, and fixing
+  it beats adding a second one.
+
+The proposal shows on the correction's own card as one line: "Learned: … · Keep · Edit · Discard" (7.18). Pending proposals
+are also gathered on Today ("Review 3 things the assistant learned").
+
+How a proposal applies follows the tier rule (6.7, 12.2):
+- **From the person's own words** (their send-back note, their answer to the assistant's question): it applies at once,
+  with the read-back and Undo.
+- **From the assistant's own generalization, or from content:** it waits for Keep. Learning proposed from untrusted content
+  never applies without the person.
+
+Before a proposal is shown, it is compared with the active entries of its kind by target and wording, so duplicates merge
+instead of piling up. This is the same overlap check as rules (6.7), shown as "Overlaps with …".
+
+Learning runs cost money, so they follow cost control (6.16). They use their own task kind with the low-cost tier and a budget,
+and they can be batched (`knowledge.learn`: `each`, `batched` or `off`; default `batched`, every 30 minutes). Corrections
+recorded before this was built are learned from once, when it arrives.
+
+**Learning from inputs too.** The run that processes an input may also propose:
+- glossary entries for new acronyms or terms. An assumed or unknown one that blocks understanding can carry one short question
+  to whoever routing says knows it.
+- routing entries when the input shows who answers what ("not me, ask X" in a reply). A question the person reroutes by hand
+  proposes one as well.
+- facts, as it already does.
+
+Since these come from content, they wait for the person.
+
+**Style from what was actually sent.** When the person sends their own version of a draft (today: the text pasted at Mark sent;
+later: an approved draft edited before publishing), the difference from the draft is kept as a `draft edited` signal. The learn
+task turns a pattern in it into a style note for that recipient or audience. The next draft for them starts from it.
+
+**Consolidation.** Lessons join the standing rules review (6.21). Two parts come in phase L:
+- merging duplicates when a proposal is made (above);
+- a list of active entries that matched nothing for `knowledge.unused_days` (default 60), offered for retirement.
+
+The scheduled review comes in phase E. It promotes a lesson whose guard is mechanical into a rule with a deterministic check, a
+setting, or a lint the product already has. A guard that needs new code becomes a report to the maintainers (6.13), because the
+product never changes its own code. The lesson stays as the record of why.
+
+**Proving it** (the phase L exit test):
+- **Automated, with no AI cost (the plumbing):** a correction produces the proposal, the proposal reaches the next similar
+  packet, ranked as designed, and the run's knowledge log shows it. Run on every change.
+- **On the person's own AI accounts, in `cockpit evaluate` (the behavior):** pairs of fictional fixtures, at least one per kind
+  (a lesson, a glossary term, a routing entry, a style note, and a fact that avoids an outside lookup). Each pair is:
+  - (a) an input, the wrong output, the correction and the expected proposal;
+  - (b) a later, similar input that must come out right with no correction repeated.
+
+  Plus one **day 1 versus day 30** scenario: the same input against an empty workspace and against one with a month of
+  fictional history. The expected changesets must differ in the ways the history justifies.
+
+  These run on every model or prompt change. They cost money, so the person starts them.
+
+The knowledge records are in 5.1, the packet layout in 6.6, the signal in 6.20, the settings in 4.25, and the screens in
+7.18.
 
 ## 6.23 Dependencies and baselines
 
