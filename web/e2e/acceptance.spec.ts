@@ -356,7 +356,7 @@ test.describe.serial("acceptance scenario", () => {
     // A row's menu: read now, change, turn off or on, remove; Change opens the same form filled in.
     const first = sources.getByRole("listitem").first();
     await first.getByRole("button", { name: /^More actions for / }).click();
-    await expect(page.getByRole("menuitem")).toHaveText(["Read now", "Change", /^Turn o(ff|n)$/, "Remove"]);
+    await expect(page.getByRole("menuitem")).toHaveText(["Read now", "Look at the last day", "Change", /^Turn o(ff|n)$/, "Remove"]);
     await page.getByRole("menuitem", { name: "Change" }).click();
     const change = page.getByRole("form", { name: /^Change / });
     await expect(change).toBeVisible();
