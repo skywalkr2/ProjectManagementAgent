@@ -43,6 +43,29 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 - **Then:** send the two files to the session. It checks them for account names or addresses before anything is
   committed, and writes the summary in `docs/project/evals/`. After that, `git worktree remove ../cockpit-before`.
 
+## The plugin API's road to 1.0
+
+The pack builders plan against this table (owner, 2026-10-13). The contract stays `docs/plugin-guide.md`, generated from
+the code; each version's changes are in `docs/plugin-api-0.x.md`; builders hear of each change in the weekly round.
+Within 0.3 every change is additive: a pack built for an earlier 0.3 version keeps working, and manifests keep
+`plugin_api: '>=0.3,<0.4'`. A minor version (0.4) may break, and is announced a round ahead with what to change.
+
+| When (phase) | What the plugin API gains | Version | Breaks anything? |
+|---|---|---|---|
+| L0, now | Data levels on sources and files, when a watched item last changed, the audit trail | 0.3.60, done | No |
+| L-core: L2 | One call that gives a pack's packets the knowledge section; `learning: own` for a record type or task kind | 0.3.x | No |
+| L-core: L4 | Packs' own evaluation cases (`provides.evals`) and domain scorers (`registrar.scorer`) | 0.3.x | No |
+| L-core: L5 | The text-extractor extension point; a connector item that carries files (mail attachments) | 0.3.x | No |
+| B | Nothing planned: panels, Today lines and jobs keep their contract through the redesign | none | No |
+| C1 to C3 | What the packs' builders ask for, answered in the weekly round; interfaces between packs (such as `pm/schedule@1`) belong to the packs | 0.3.x | No |
+| C4 | The publisher and the file channel for a pack's outputs, and fact lookups from configured sources. Whether a pack's "send" changes shape is decided here; if it does, this is 0.4 | 0.3.x or 0.4 | Only if 0.4, announced a round ahead |
+| D | Frozen: no new names, only fixes, anything deprecated removed | 0.9 | Removals only, listed a round ahead |
+| Publish 1.0 | 1.0 once the writing pack and the project management pack run on it unchanged through phase D's week of real use | 1.0 | No |
+
+At the estimates below, the packs can count on: the L-core additions in about 9 sessions, a stable contract for the
+redesign (4 sessions), the publisher and fact lookups at the end of phase C (about 9 sessions more), and the freeze at
+the start of phase D. Dates are recorded here as each phase starts.
+
 ## Phase 0: the plan and the rules (done 2026-10-12)
 
 - [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`). Process item, checked by reading.

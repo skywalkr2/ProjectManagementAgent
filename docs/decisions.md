@@ -3,6 +3,14 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: The plugin API has its own road to 1.0 in the plan
+
+**Decided by:** project owner ("the API updates ... are important to define timeline plan on"). **What:** the roadmap
+gains a table of what the plugin API gains in each phase, the version each lands in, whether it breaks anything, and the
+freeze (0.9 in phase D) and 1.0 (at Publish 1.0, once the writing and project management packs run unchanged through
+phase D). **Why:** the pack builders plan their work against it. **Impact:** roadmap only; the versioning rule in
+`docs/plugin-api-0.x.md` is unchanged.
+
 ## 2026-10-13: Copy puts formatted text and plain text on the clipboard; no generated page to copy from
 
 **Decided by:** the technical PM, on the owner's request to decide as a UI/UX question (the work version opens a
