@@ -1,5 +1,6 @@
 id: date-change
 title: A due date moves
+received: '2026-10-09'
 pasted: 'Jacket update: the back-cover copy is now due Friday Oct 16 instead of Wednesday.'
 expect:
 - op: record.set

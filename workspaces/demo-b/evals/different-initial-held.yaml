@@ -1,0 +1,28 @@
+id: different-initial-held
+title: A first name with a different initial is not the person with that first name
+received: '2026-10-09'
+# Both known Mayas have another surname, and one of them is on the message: "Maya R." still waits for the PM.
+pasted: 'From: Avery Lane
+
+  To: Maya Lindqvist
+
+  Subject: Launch reading
+
+
+  Maya R. will send the guest list for the launch reading by Nov 20.'
+expect:
+- held: who-is
+  options: 2
+forbid:
+- new_person: true
+stub_answer:
+  summary: One action; the owner's name matches neither known person.
+  ops:
+  - op: action.add
+    text: Send the guest list for the launch reading
+    owners:
+    - Maya R.
+    due: '2026-11-20'
+    project: PRJ-1
+    evidence:
+      quote: Maya R. will send the guest list for the launch reading by Nov 20

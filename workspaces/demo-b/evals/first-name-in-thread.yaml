@@ -1,0 +1,30 @@
+id: first-name-in-thread
+title: A first name two people share, with one of them in the thread
+received: '2026-10-09'
+# Two people are known as Maya; only one is on the message, so the bare name means her.
+pasted: 'From: Avery Lane
+
+  To: Theo Brandt, Maya Lindqvist
+
+  Subject: Launch reading
+
+
+  Maya will send the guest list for the launch reading by Nov 20.'
+expect:
+- op: action.add
+  owners:
+  - PER-7
+  text_has:
+  - guest list
+  due: '2026-11-20'
+stub_answer:
+  summary: One action; the owner is the Maya on the message.
+  ops:
+  - op: action.add
+    text: Send the guest list for the launch reading
+    owners:
+    - Maya
+    due: '2026-11-20'
+    project: PRJ-1
+    evidence:
+      quote: Maya will send the guest list for the launch reading by Nov 20

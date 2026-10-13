@@ -1,5 +1,6 @@
 id: no-owner
 title: An action nobody owns yet
+received: '2026-10-09'
 pasted: 'Launch: someone needs to order bookmarks for the reading.'
 expect:
 - op: action.add

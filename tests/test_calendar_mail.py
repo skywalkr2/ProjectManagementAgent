@@ -67,6 +67,34 @@ def test_a_message_becomes_an_item_with_its_plain_text():
     assert datetime.fromisoformat(item.message.received) == datetime(2030, 3, 5, 9, 15, tzinfo=UTC)
 
 
+def test_a_message_lists_who_else_is_on_it_from_its_to_and_cc_headers():
+    raw = (
+        b"Message-ID: <msg-2@mail.example.com>\r\nFrom: Odile Fenwick <odile@example.com>\r\n"
+        b'To: Rafael Quist <rafael@example.com>, "Quist, Marta" <marta@example.com>\r\n'
+        b"Cc: plain@example.com,\r\n Rafael Quist <rafael@example.com>\r\n"
+        b"Date: Tue, 05 Mar 2030 09:15:00 +0000\r\nSubject: Plan\r\n\r\nBody\r\n"
+    )
+    details = message_item(raw).message
+    assert details.participants == (
+        "Rafael Quist <rafael@example.com>",
+        "Quist, Marta <marta@example.com>",
+        "plain@example.com",
+    ), "to then cc, each person once, the address with the name when there is one"
+    assert message_item(MESSAGE).message.participants == ("Rafael Quist <rafael@example.com>",)
+    bare = b"Message-ID: <m3@x>\r\nFrom: a@example.com\r\nSubject: S\r\n\r\nBody\r\n"
+    assert message_item(bare).message.participants == ()
+
+
+def test_a_connector_that_gives_participants_other_than_text_is_refused():
+    from engine.connectors import MessageDetails, Poll, SourceItem, checked_poll
+
+    ok = SourceItem("k", "t", "x", message=MessageDetails(participants=("A <a@example.com>",)))
+    checked_poll(Poll([ok]))
+    bad = SourceItem("k", "t", "x", message=MessageDetails(participants=("A", 3)))  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="participants"):
+        checked_poll(Poll([bad]))
+
+
 class FakeImap:
     """A stand-in IMAP server holding three messages in INBOX, recording what was asked of it."""
 
