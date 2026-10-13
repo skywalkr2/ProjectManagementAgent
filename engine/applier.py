@@ -1220,7 +1220,7 @@ def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> U
         for group in chosen:
             members = groups[group]
             idx = {o["index"] for o in members}
-            mine = [e for e in entries if _op_index(e["op"]) in idx]
+            mine = _with_answers(store, tx, [e for e in entries if _op_index(e["op"]) in idx])
             conflict = _conflict(tx, mine) or _breaks_rules(store, tx, mine)
             if conflict:
                 report.skipped.append({"ops": sorted(idx), "reason": conflict})
@@ -1241,6 +1241,30 @@ def undo(store: Store, changeset_id: str, indices: list[int] | None = None) -> U
     if report.restored:
         store.plugins.publish("changeset.undone", {"id": changeset_id, "ops": report.restored}, follows=changeset_id)
     return report
+
+
+#: The person's answer to a routing question writes its choice onto the op's own record under this op name.
+ANSWER_OPS = ("action.assign",)
+
+
+def _with_answers(store: Store, tx: Tx, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """What undoing an op reverts: its own ledger entries, without the routing question it waited on (the person's
+    answer stands, and other ops may share the question), and with the person's answer written onto the op's own
+    records (an owner picked), which belongs to the op and would otherwise read as a later change."""
+    kept = []
+    for e in entries:
+        if e["kind"] == "question":
+            q = tx.get("question", e["record_id"], include_deleted=True)
+            if q is not None and q.data.get("kind") == "routing":
+                continue
+        kept.append(e)
+    records = {(e["kind"], e["record_id"]) for e in kept if e["kind"] != "question"}
+    seen = {e["seq"] for e in kept}
+    for kind, rid in sorted(records):
+        for e in store.read().ledger(kind=kind, record_id=rid):
+            if e["op"] in ANSWER_OPS and e["seq"] not in seen:
+                kept.append(e)
+    return kept
 
 
 def _breaks_rules(store: Store, tx: Tx, entries: list[dict[str, Any]]) -> str | None:

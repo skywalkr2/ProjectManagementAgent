@@ -248,11 +248,14 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - undoing the person's own release records no signal against the assistant (done:
     `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does`);
   - `near-duplicate-action` compares with done actions too, as 4.17 says (done, `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too`).
-- [ ] **Undo after answering "who is this?" restores nothing** (found while fixing the audit's items): the release's
+- [x] **Undo after answering "who is this?" restores nothing** (found while fixing the audit's items): the release's
   Undo selects the op's ledger entries by index, which include the question the engine made when the changeset was
   applied; the answer changed that question, so the whole group is skipped as changed since. Undoing a release should
   undo only what the release wrote (the op applied, the answer) and put the op back to waiting on its question. The
-  toast must never offer an Undo that does nothing. Main session (undo).
+  toast must never offer an Undo that does nothing. Main session (undo). Fixed: an op's undo leaves the routing
+  question it waited on (the answer stands, other ops may share it) and takes along the owner the person picked for it
+  (`tests/test_pipeline.py::test_an_action_released_by_saying_who_someone_is_can_be_undone`,
+  `tests/test_pipeline.py::test_an_action_given_an_owner_by_pick_an_owner_can_be_undone`).
 - [ ] **What the audit found, put right in the design:** 6.8 to 6.11 describe in the present tense what isn't built:
   question `key` dedupe, `on_answer`, link enrichment, reroute proposals, the pending flag, Reassign, meeting sync, the
   notice baseline date, `track_only`, `owner_format` parsing and `person.merge`. Each gets "designed" and its phase.

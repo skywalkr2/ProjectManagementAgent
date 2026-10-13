@@ -652,3 +652,34 @@ def test_today_in_the_packet_is_the_persons_day_like_the_received_date(env):
     process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=late)
     tomorrow = (late + timedelta(days=1)).date().isoformat()
     assert f"Today is {tomorrow}" in asked[0].request and f"received on {tomorrow}" in asked[0].request
+
+
+def test_an_action_released_by_saying_who_someone_is_can_be_undone(env):
+    """The person's path: they say who a name is, the action is filed, then they press Undo this on it. The action is
+    removed; their answer stands."""
+    _, cfg, store = env
+    stranger = "Jordan " + "Pike"
+    pasted, body = _two_actions_for(stranger, stranger)
+    answers(body)
+    _, cs_id = run(env, pasted)
+    question = outcomes(store, cs_id)[0]["question"]
+    release(store, cfg, cs_id, 0, person=person("Publicist")["id"])
+    action_id = outcomes(store, cs_id)[0]["records"][0]["id"]
+    report = undo_changeset(store, cs_id, [0])
+    assert report.restored == [0], report.skipped
+    assert store.read().get("action", action_id) is None
+    assert store.read().get("question", question).data["status"] == "answered"
+    assert outcomes(store, cs_id)[1]["status"] == "applied"
+
+
+def test_an_action_given_an_owner_by_pick_an_owner_can_be_undone(env):
+    _, cfg, store = env
+    answers(
+        {"ops": [{"op": "action.add", "text": "Book a photographer", "evidence": {"quote": "book a photographer"}}]}
+    )
+    _, cs_id = run(env, "Launch: someone should book a photographer.")
+    (outcome,) = outcomes(store, cs_id)
+    pick_owner(store, outcome["question"], person("Publicist")["id"])
+    report = undo_changeset(store, cs_id, [0])
+    assert report.restored == [0], report.skipped
+    assert store.read().get("action", outcome["records"][0]["id"]) is None
