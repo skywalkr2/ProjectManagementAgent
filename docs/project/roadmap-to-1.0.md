@@ -48,7 +48,7 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 - [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
 - [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded.
 
-## Phase A: a baseline that works with no demo data (about 4 sessions, with A4 and A5)
+## Phase A: a baseline that works with no demo data (done 2026-10-13)
 
 Started 2026-10-12.
 
@@ -62,8 +62,9 @@ Started 2026-10-12.
 
 None of it takes a file edit, a second terminal command or a demo. Automated journey tests cover the same path.
 
-**Status (owner, 2026-10-13):** the owner has done steps 1 to 4 and 6 on their own workspace, with fixes along the
-way. Phase A's exit test counts as passed once the owner hands in a note on the next run (step 5) and sees the result.
+**Passed (owner, 2026-10-13):** the owner ran it on their own workspace and marked phase A done ("things are working so
+much better"). Every box below is checked with its test. What the run showed for the assistant and the screens is in
+L0, L3b and phase B; open promise P9 stays until mail set aside is seen in daily use.
 
 **Known while running it** (from the first design author): the test reads real mail before the received-date and
 first-name fixes, which are in L0. Nothing goes out during the test, so it is safe. Expect "by Friday" counted from the
@@ -364,6 +365,29 @@ L3. **Every correction teaches.**
 
   Use counts are kept in the knowledge log; the rest of 7.18 is laid out in phase B.
 
+L3b. **The obvious next step from what came in** (owner, 2026-10-13: "standard obvious things"). When the assistant
+meets something new, it offers the obvious way to record it, as one click, instead of a question the person has to work
+around. Each is the person's choice, with Undo, and each answer is learned (L3). What the code does today is noted.
+- [ ] **"Who is this?" offers "Add a new person"** beside picking someone, filled in from the input (the name as
+  written, and the organization, role or address the input gives), saved as the person's own. Today the chooser only
+  picks an existing person.
+- [ ] **A project it hasn't heard of becomes "Add a project <name>?"**, with "It's part of <a project>" and "Not a
+  project" beside it. Reading notes may then propose `project.add`, which waits for the person as a system op (design
+  6.7). Today reading notes can't propose a project at all (`NOT_FROM_NOTES`), so the work is filed with no project.
+  "Part of" and "Not a project" are learned as names for the project, or as words that aren't one.
+- [ ] **Dates go under their project:** a date for something becomes a dated entry in the app's calendar under its
+  project (L0, `event.add`), and a milestone in that project's plan when the project management pack is on (C2).
+- [ ] **The rest of the obvious set,** each the same way:
+  - an organization it hasn't heard of is added with the person;
+  - an address or phone number in a sender's signature is offered for their record;
+  - an action with a date in the input gets that due date;
+  - a reply that answers an open question proposes marking it answered;
+  - a meeting invitation shows on the agenda, under its project.
+- [ ] **Exit check:** a golden-set case for each kind and a learning pair for each answer kind (the second time, no
+  question). A journey test presses each button and sees the record made and Undo work.
+
+The buttons are laid out with the rest of the screens in phase B; their behavior and tests are here.
+
 L4. **Proving it** (from the design author's review of this plan).
 - [ ] **15 to 20 fictional fixture pairs, about a third negative.** A negative pair's later input must not change; a loop
   that over-learns is as harmful as one that doesn't learn. Each pair is (a) an input, the wrong output, the correction and
@@ -470,6 +494,8 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   whose values are known is a list to pick from. Audit each free-text field and convert it, with a test per screen. The
   time zone is done (`test_the_time_zone_setting_is_a_list_of_known_time_zones`; the Settings screen and the
   walkthrough). Settings name their lists with `choices`.
+- [ ] **The obvious next steps on screen** (L3b): "Add a new person" in the who-is-this chooser, "Add a project",
+  "It's part of" and "Not a project", and the other one-click offers, in the row's menu or as its primary.
 - [ ] **The app's own kit, offered where it's wanted** (owner, 2026-10-13: "i dont want to see these fake plugins"): the
   add-ons that come with the app (the define-your-own kit and the example) no longer show in setup or on the Add-ons
   screen while off. The kit is offered where a person asks for kinds of items of their own (Ask, the record forms),

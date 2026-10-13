@@ -392,6 +392,15 @@ field):
 Plugins register more, namespaced, each with its tier. Reading notes is offered every op except those that are the person's own
 or only for actions and asks (deleting, `file.add`, `project.add`, `record.edit`, the long-text ops, and the asking ops).
 
+*Designed, phase L-core (L3b): the obvious next step* (owner, 2026-10-13). When an input names something new, the
+assistant offers the obvious way to record it, as one click the person confirms, and the answer is learned (6.22):
+"Who is this?" offers "Add a new person" filled in from the input; a project it hasn't heard of becomes "Add a project
+<name>?" with "It's part of <a project>" and "Not a project" (reading notes may then propose `project.add`, which waits
+for the person); a date goes under its project as a calendar entry; an unknown organization is added with the person;
+a signature's address or number is offered for the sender's record; an action gets the date the input gives; a reply
+that answers an open question proposes marking it answered; a meeting invitation shows on the agenda under its
+project.
+
 *Designed, phase L0:* `event.add`, a calendar entry in the app's own calendar (a date or a date range, a title, the
 project it belongs to, and evidence), recorded when an input that isn't set aside names a date for something (a delivery
 window, a deadline, an appointment), beside the fact. It is never written to a calendar service (owner, 2026-10-13).

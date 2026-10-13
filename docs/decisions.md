@@ -3,6 +3,31 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: Phase A done; the obvious next step from what came in is planned
+
+**Decided by:** project owner ("I think we can mark A done"; "when the AI asks who someone is it should allow you to
+add a new person, if it reads something that looks like a project that it hasn't heard about it should ask if it
+should add a new project, if it sees dates it should create dates/milestones under that project, etc. Basically
+standard obvious things. Doesn't need to be right now, but needs to be part of the plan").
+
+**What:**
+- Phase A is done, on the owner's own run of its exit test.
+- **The obvious next step from what came in** is planned as L3b in L-core, with its buttons in phase B:
+  - "Who is this?" offers "Add a new person".
+  - A project it hasn't heard of becomes "Add a project <name>?", with "It's part of" and "Not a project".
+  - Dates go under their project (calendar entries; milestones with the project management pack).
+  - The rest of the obvious set: organizations, signature details, due dates, answered questions, invitations.
+- Reading notes will be offered `project.add` (still a system op that waits for the person). That reverses the rule
+  that only actions and plugin work start projects.
+
+**Why:** Today the assistant asks questions the person has to work around: "who is this?" offers only existing people,
+and an unknown project leaves work filed with no project.
+
+**Impact:**
+- Design 6.7 (`project.add` from notes; the obvious-next-step list).
+- The roadmap gains L3b and a phase B item.
+- No new setting.
+
 ## 2026-10-13: The walkthrough, the app's own add-ons, answers on screen, and dated items in the calendar
 
 **Decided by:** project owner ("if a person doesnt want to add other people at the beginning they shouldn't keep
