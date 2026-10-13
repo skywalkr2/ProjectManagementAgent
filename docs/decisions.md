@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: The original designer's lessons from running, placed in the plan
+
+**Decided by:** the original designer (lessons from running the work version, relayed by the owner); placed by the
+technical PM. **What:** L0 gains three items (every place the person types text reaches the assistant; wording checks
+skip links; a retry that applies retires the attempts before it); L3 gains "a correction that will apply again is
+knowledge, never a code request"; L3b gains "don't guess who something was sent to"; phase B gains the source link's
+targets, on hold isn't due, and a header that always shows the assistant is alive (two rows, tested at 1,000 px); the
+project management pack gains bulk extracts before item-by-item calls; C4 gains the rules for writing into a shared
+file. The lost-network rules and one line per person were already placed. **Why:** each was found in a day's real use.
+**Impact:** L0 grows by three items before it closes; the rest is in its phase.
+
 ## 2026-10-13: The hosted end state is an organization install with roles
 
 **Decided by:** project owner ("an organization level install - like publisher where approved users from the people list

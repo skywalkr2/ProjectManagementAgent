@@ -640,6 +640,22 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - the header's status line shows the offline state while it lasts;
   - the Today line appears after `dispatch.offline_line_after_minutes`, default 60 (most waits clear within minutes
     of opening the lid).
+- [ ] **Every place the person types text reaches the assistant** (the original designer's lessons from running, 2026-10-13): their worst one. A teammate's reply typed into
+  "They finished it" (a two-phase plan, a link, a question back) was saved to the action's history and read by nothing;
+  seven more notes were lost the same way in five days (a key link, a new due date, a standing rule, two actions closed
+  while still under way). A note typed on Mark done, They finished it, Followed up, Reassign, or in an action's or a
+  question's notes is an input: saved as a source with the item as its context and sent to the assistant, unless it is a
+  bare confirmation (under four words and no link). The assistant decides whether it changes anything. Check what each
+  route does today first. A self-check lists every route that takes free text from the person and fails when one
+  neither makes a request nor is declared local-only. A golden case: a "They finished it" note with a link and a new
+  date produces a fact, a source and a moved date.
+- [ ] **Wording checks skip links** (the original designer's lessons from running, 2026-10-13): a check on words runs on the words, with links and the person's own quoted
+  text taken out first; today the screen-text check would refuse a dotted domain or a file name the person typed. A test
+  with a link that has a query string and a dotted domain, for the screen-text check and for every wording lint.
+- [ ] **A retry that applies retires the attempts before it** (the original designer's lessons from running, 2026-10-13): attempts are linked by the request they answer, never
+  by their names; when one applies, the earlier failed or refused attempts for that request are dismissed, their lines
+  and issues close, and a proposed fix for them is discarded. Before any costly follow-up (a fix round, a re-run) starts,
+  it checks that its cause still stands. Check what the code does today first.
 - [ ] **Text where text belongs** (the original designer's review, 2026-10-13: a change written as YAML turned
   "Team wireless: KEY-1 release on top" in a table cell into a mapping, and its commas split one title across three
   columns, and it was published that way). Every text field in an op is a string: an op with a mapping or a list where
@@ -689,6 +705,11 @@ L2. **Every run reads what applies.**
   lesson, never both (design 6.22).
 
 L3. **Every correction teaches.**
+- [ ] **A correction that will apply again is knowledge, never a code request** (the original designer's lessons from running, 2026-10-13): feedback on a question (Respond to
+  the assistant) proposes a rule or a lesson whenever the correction generalizes, stated as the general case ("rows
+  scoped to another team get no impact question unless they name our work"), not just this instance. A report to the
+  maintainers (`report.draft`) whose content is a rule is refused and turned into that proposal. Dates are evidence: a
+  thing that launched today or earlier needs no question about whether it needs work. A learning pair for each.
 - [ ] A correction the person undid within its undo time doesn't teach: signals stay immutable, so learning nets out a
   signal whose action was undone (a set-aside undone, a send-back withdrawn) instead of deleting it.
 - [ ] Learning from corrections (`learn.correction`, on the stronger tier): at most one proposal, or `lesson.update` when a
@@ -747,6 +768,9 @@ around. Each is the person's choice, with Undo, and each answer is learned (L3).
   - a reply that answers an open question proposes marking it answered;
   - a meeting invitation shows on the agenda, under its project.
   - an input saying a blocker is gone proposes unblocking the action that waited on it.
+- [ ] **Don't guess who something was sent to** (the original designer's lessons from running, 2026-10-13): when the person reports something they already sent or asked and
+  doesn't name the recipient, that is a "who did you send this to?" decision, never inferred from the nearest name. A
+  golden case.
 - [ ] **Exit check:** a golden-set case for each kind and a learning pair for each answer kind (the second time, no
   question). A journey test presses each button and sees the record made and Undo work.
 
@@ -849,6 +873,11 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
 - [ ] **Setup guide** as steps | step.
+- [ ] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
+  account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
+  tooltip; amber or red when something is wrong. The held-work and paused lines cover the bad case; this covers "is it
+  alive?". The header is two rows when it needs them (title, views and primary buttons on top; status and the person's
+  links small below), tested at about 1,000 px wide.
 - [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
 - [ ] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
   Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago").
@@ -870,7 +899,12 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   and where it came from; every open question with who it's waiting on and since when. Filter by project, person and
   state; edit, close and reassign from the row, with Undo; duplicates offered for merging; anything stale or with no
   owner surfaced on Today. From the original designer's review (2026-10-13): "where it came from" is a link that opens
-  the source, not a label; a note typed on any action button reaches the assistant; each row carries its project (and
+  the source, not a label (the original page if the source has one, else the input's saved text or its registered
+  summary, else the change that made the item with the request behind it; provenance is already in the ledger);
+  **on hold isn't due** (the original designer's lessons from running, 2026-10-13): a held action is out of due and overdue everywhere (Today, counts, reports, the weekly
+  review), shows "on hold" with its old date in a tooltip and names what it waits for, and when the input that ends the
+  hold arrives the assistant takes it off hold and gives it a new date in the same change (a status value's `meaning`,
+  with `held` ranked below open and never due); a note typed on any action button reaches the assistant; each row carries its project (and
   parent project) tag, with its notes on hover; actions are worded to stand on their own (a playbook rule and a lint
   on the assistant's wording); and the follow-up rule above. Exit check: the owner works through their own open items on a laptop and a phone.
 - [ ] **When something is due a follow-up** (the original designer's review, 2026-10-13: counting from when a notice
@@ -992,6 +1026,9 @@ being done, builds schedules and tracks action items.
     dependencies, baselines, and slips against them. Only the person rebaselines.
   - [ ] **Building it with the assistant:** from a brief, notes or another pack's milestones, the assistant drafts a
     plan and a schedule. The person approves it as any change.
+  - [ ] **A system of record's bulk extract before item-by-item calls** (the original designer's lessons from running, 2026-10-13): a source declares a bulk extract (a team
+    dashboard's full export of epics and stories, say) and its refresh time; the assistant reads it before asking anyone
+    for status, cites its timestamp, and treats an old one as old.
   - [ ] **Tracking:** what is late or at risk each day goes to Today, with the action items behind it; a weekly status
     report is drafted for the person to send.
   - [ ] **A project update on request** (owner's screens, 2026-10-13): pick a project (or a parent and everything under
@@ -1062,6 +1099,13 @@ private repository and builder like the other packs, and works with the project 
 C4. **What the packs need from the core.**
 - [ ] **The publisher and the file channel.** Approved files are saved or shared after the person approves the exact
   content. Waiting to go out lists them, with a diff where it applies.
+- [ ] **Writing into a shared file someone else uses** (the original designer's lessons from running, 2026-10-13): write only the target cells or parts and copy every other
+  part byte for byte, with a test that validations, conditional formats and formulas survive; "is it open?" checks for a
+  process holding the file, not only a lock file (autosave on a synced cloud file leaves none); when it is open, hold the
+  change and retry on a timer, then after writing wait for the sync to settle, re-read, and rewrite once if it was
+  overwritten; after a few tries, go to the person once. Text written into someone else's table stays short and
+  scannable (a key, a status word, a few words), explanations go in the assistant's own notes, and a cell where nothing
+  was found stays blank.
 - [ ] **Fact lookups** (6.19): published dates are looked up from the configured sources, never asked.
 - [ ] Anything else either pack's builder asks for, answered in one weekly round.
 - [ ] **Round 39 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
