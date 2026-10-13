@@ -3,6 +3,25 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-12: Pick, don't type; and a new workspace's defaults count as not chosen
+
+**Decided by:** project owner ("nearly everything should have dropdowns, and time zone is a prime candidate"; "the name
+field especially looks rough").
+
+**What:**
+- **Pick, don't type.** A field with a known set of values is a list to pick from. Settings name their list with
+  `choices`; the time zone is the first, from the computer's own time zone list, in Settings and in the walkthrough.
+  The rest of the screens are audited in phase B.
+- **Found while checking the screenshot:**
+  - **The cause:** the walkthrough offered the person's own time zone only while the setting was still at its default.
+    `cockpit init` writes every default into the new workspace's files, so the step showed "UTC", and saving it would
+    have put every date in UTC. The "Workspace" name had the same cause.
+  - **The fix:** a value still equal to its built-in default now counts as not chosen, wherever it is kept. Your own
+    name comes first, the workspace name is optional (a placeholder, not the word "Workspace"), and the step is done
+    once you've named yourself.
+
+**Impact:** Design 7.0. CLAUDE.md's UI rules. Phase B gains "Lists, not typing" and "The walkthrough's look".
+
 ## 2026-10-12: Personal and sales mail is set aside, and never feeds the assistant or its learning
 
 **Decided by:** project owner ("recognize personal / sales emails and move them to a folder that won't impact

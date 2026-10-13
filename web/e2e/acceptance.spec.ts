@@ -195,7 +195,11 @@ test.describe.serial("acceptance scenario", () => {
     await expect(status).not.toContainText("cockpit");
     await checkAccessibility(page);
     await status.getByRole("button", { name: "Open the AI step" }).click();
-    await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeFocused();
+    await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+    // The cursor starts in the screen's first field (design 7.0, "the cursor starts where you type").
+    await expect
+      .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")))
+      .toBe(true);
     await checkAccessibility(page);
     // Finish later leaves the walkthrough, and Today's setup line stays as it was.
     await page.getByRole("button", { name: "Finish later" }).click();
@@ -203,7 +207,10 @@ test.describe.serial("acceptance scenario", () => {
     await expect(line).toContainText("Next: Add an AI account and test it");
     // Continue setup opens the walkthrough at the next step, with focus on its heading.
     await line.getByRole("button", { name: "Continue setup" }).click();
-    await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeFocused();
+    await expect(page.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")))
+      .toBe(true);
     const screens = page.getByRole("navigation", { name: "Setup steps" });
     await screens.getByRole("button", { name: /^Done/ }).click();
     await page.locator('[data-step="first_note"]').getByRole("button", { name: "Hand something in" }).click();

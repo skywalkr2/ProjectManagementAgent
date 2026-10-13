@@ -209,6 +209,8 @@ describe("opening", () => {
     expect(screen.getByText("About 10 minutes. Nothing is spent until you press Go at the end.")).toBeInTheDocument();
     expect(await screenTitle()).toHaveTextContent("You");
     expect(await screen.findByLabelText("Your full name")).toBeInTheDocument();
+    // The cursor starts where the person types, not on a label or the step list.
+    await waitFor(() => expect(screen.getByLabelText("Your full name")).toHaveFocus());
     expect(window.location.hash).toBe("#setup");
   });
 

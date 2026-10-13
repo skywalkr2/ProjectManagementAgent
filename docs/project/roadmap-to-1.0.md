@@ -442,6 +442,22 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention
   empty while Needs you counts 5, and only one review opens by default, so an owner question can sit closed. The
   Today redesign makes the first results one clear list. After Remove, the add-on's row vanishes along with its note.
+- [ ] **The cursor starts where you type** (owner, 2026-10-12; design 7.0): every screen, step, form and dialog opens
+  with the cursor in its first main field. The walkthrough does already (`Walkthrough.test.tsx`); the redesign applies
+  it everywhere, with a browser check per screen.
+- [ ] **Lists, not typing** (owner, 2026-10-12: "nearly everything should have dropdowns"): every field on every screen
+  whose values are known is a list to pick from. Audit each free-text field and convert it, with a test per screen. The
+  time zone is done (`test_the_time_zone_setting_is_a_list_of_known_time_zones`; the Settings screen and the
+  walkthrough). Settings name their lists with `choices`.
+- [ ] **The walkthrough's look** (owner, 2026-10-12: "this looks rough"):
+  - fields sized to what they hold, not the full page width;
+  - one clear primary button per screen ("Save and continue"), with Skip as a quiet link;
+  - the step list without "Not done yet" on every row;
+  - the current step marked as "you are here", not styled like a focused button (owner: it read as focus). The
+    cursor already starts in the screen's first field (`Walkthrough.test.tsx`);
+  - the page using its width.
+
+  It goes through the redesign's components and screenshots like every other screen.
 - [ ] **An unnamed assistant reads as one:** with the default name, lines say "Assistant is on it". The `.unnamed`
   wording variant (built for the AI screen's heading) is used for the other `{assistant}` lines.
 - [ ] **Found by the phase A journeys** (decisions, 2026-10-12, "What the first journeys found"): a new AI account's

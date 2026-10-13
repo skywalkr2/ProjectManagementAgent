@@ -109,7 +109,7 @@ def steps(ws: Any, cfg: Any, store: Any) -> list[Step]:
     said = declared_reads({**CORE, **store.plugins.connectors()})
     mail_read = any(source.enabled and reads(source.connector, said) for source in cfg.watch.sources)
     done = {
-        "workspace": _pm_named(cfg, view) and cfg.workspace.name != "Workspace",
+        "workspace": _pm_named(cfg, view),  # the workspace's own name is optional; naming yourself is what counts
         "template": bool(state.get("template")) or _template_in_use(ws, cfg),
         "ai": ai_state(ws, cfg, store)[0] == "ok",
         "mail": mail_signed or mail_read,

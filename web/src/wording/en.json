@@ -625,6 +625,7 @@
   "welcome.reopened": "Back on the list: {label}.",
   "welcome.people.open": "Open People & projects",
   "welcome.workspace.name": "Workspace name",
+  "welcome.workspace.name_placeholder": "For example, Spring launch or My projects",
   "welcome.workspace.full_name": "Your full name",
   "welcome.workspace.full_name_hint": "As it should appear to other people.",
   "welcome.workspace.timezone": "Your time zone",

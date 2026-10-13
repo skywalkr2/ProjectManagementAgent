@@ -35,7 +35,11 @@ class UserSettings(ConfigModel):
         None,
         description="The PM's own person record id, e.g. PER-1. Their name and other names live on that record only.",
     )
-    timezone: str = Field("UTC", description="The PM's time zone, as an IANA name such as Europe/Lisbon.")
+    timezone: str = Field(
+        "UTC",
+        description="The PM's time zone, as an IANA name such as Europe/Lisbon.",
+        json_schema_extra={"choices": "time_zones"},
+    )
 
 
 class ToolSettings(ConfigModel):

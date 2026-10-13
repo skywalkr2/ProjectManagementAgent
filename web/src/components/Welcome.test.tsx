@@ -153,6 +153,52 @@ test("the workspace step starts the time zone from this browser while it is stil
   vi.restoreAllMocks();
 });
 
+test("on a workspace made by the init command, the defaults written in its files still count as not chosen", async () => {
+  // `cockpit init` writes every default into the new workspace's files, so the settings say "file", not "default".
+  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({ timeZone: "America/Chicago" } as Intl.ResolvedDateTimeFormatOptions);
+  api([step("workspace")], {
+    "GET settings": () => ({
+      fingerprint: "fp-1",
+      items: [
+        setting("workspace.name", "Workspace", { source: "file" }),
+        setting("workspace.user.timezone", "UTC", { source: "file" }),
+      ],
+    }),
+  });
+  open();
+  expect(await screen.findByLabelText("Your time zone")).toHaveValue("America/Chicago");
+  expect(screen.getByLabelText("Workspace name")).toHaveValue("");
+  vi.restoreAllMocks();
+});
+
+test("the time zone is picked from a list when the setting offers one", async () => {
+  const user = userEvent.setup();
+  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({ timeZone: "America/Chicago" } as Intl.ResolvedDateTimeFormatOptions);
+  const zones = ["America/Chicago", "America/New_York", "Europe/Paris", "UTC"];
+  const calls = api([step("workspace")], {
+    "GET settings": () => ({
+      fingerprint: "fp-1",
+      items: [
+        setting("workspace.name", "Workspace", { source: "file" }),
+        setting("workspace.user.timezone", "UTC", { source: "file", type: "choice", options: zones }),
+      ],
+    }),
+    "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }),
+    "POST me": () => ({ person: "PER-1", full_name: "Sam Tester" }),
+  });
+  open();
+  const zone = await screen.findByRole("combobox", { name: "Your time zone" });
+  expect(zone).toHaveValue("America/Chicago");
+  expect(screen.getByRole("option", { name: "America/New York" })).toBeInTheDocument();
+  await user.selectOptions(zone, "Europe/Paris");
+  await user.type(screen.getByLabelText("Your full name"), "Sam Tester");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+  const body = calls.find((c) => c.route === "POST settings")!.body as { changes: Record<string, string> };
+  expect(body.changes).toEqual({ "workspace.user.timezone": "Europe/Paris" });
+  vi.restoreAllMocks();
+});
+
 test("the workspace step shows the server's words when a value is refused, and keeps what was typed", async () => {
   const user = userEvent.setup();
   api([step("workspace")], { "POST settings": () => new Refuse(400, "That time zone isn't one we know.") });

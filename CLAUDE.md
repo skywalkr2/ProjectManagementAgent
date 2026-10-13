@@ -154,6 +154,10 @@ the change that records it also edits the design section it affects, and `docs/d
 
 ## UI rules (design Part 7)
 - Today is the home; panels are filtered views. One primary action per row, the rest in its menu.
+- When a screen, step or form opens, the cursor is in its first main field (owner); only a screen with no field puts it
+  on its heading. Shortcut keys never fire while the cursor is in a field.
+- A field with a known set of values is a list to pick from, never a box to type in (owner): time zones, people,
+  projects, value lists, accounts, models, folders. A text setting names its list with `json_schema_extra={"choices": …}`.
 - Reversible actions act at once with an undo toast; only send, publish, post and spending above the configured amount confirm.
 - No hard-coded user-facing text: everything comes from the wording sheet and config. No internal terms on screen.
 - Keyboard and phone both work; WCAG 2.2 AA; status never by color alone.

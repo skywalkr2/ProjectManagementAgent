@@ -888,3 +888,14 @@ def test_a_real_account_takes_over_the_tiers_still_on_the_stand_in(tmp_path):
     second = {**account, "name": "other", "fingerprint": c.get(f"{api}/settings").json()["fingerprint"]}
     assert c.post(f"{api}/ai/accounts", json=second).status_code == 200
     assert {t.use for t in load_config(ws.config_dir, env={}).ai.tiers.values()} == {"mine/small"}
+
+
+def test_the_time_zone_setting_is_a_list_of_known_time_zones():
+    from engine.config import Config
+    from engine.config.schema import FILES
+    from engine.settings import describe
+
+    cfg = Config(files={name: model() for name, model in FILES.items()})
+    zone = next(s for s in describe(cfg) if s.key == "workspace.user.timezone")
+    assert zone.type == "choice"
+    assert "UTC" in zone.options and len(zone.options) > 100

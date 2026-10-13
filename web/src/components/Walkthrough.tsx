@@ -81,9 +81,23 @@ export function Walkthrough(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.at?.n]);
 
-  // The open screen's heading takes focus, on opening and on every move, so a keyboard or screen reader starts there.
+  // On opening and on every move, the cursor goes to the screen's first field, so the person can start typing; a screen
+  // with no field puts it on its heading instead. A screen's fields can arrive a moment later, so it waits briefly.
   useEffect(() => {
-    if (current) heading.current?.focus();
+    if (!current) return;
+    let tries = 0;
+    let timer = 0;
+    const place = () => {
+      const main = heading.current?.closest("main");
+      const field = main?.querySelector<HTMLElement>(
+        "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])",
+      );
+      if (field) field.focus();
+      else if (tries++ < 10) timer = window.setTimeout(place, 50);
+      else heading.current?.focus();
+    };
+    place();
+    return () => window.clearTimeout(timer);
   }, [current]);
 
   // What a screen said in a toast is about that screen: moving to another one clears it.

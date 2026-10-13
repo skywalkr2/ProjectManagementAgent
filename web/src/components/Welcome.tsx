@@ -336,8 +336,11 @@ export function WorkspaceStep() {
   const current = (key: string): string => {
     const found = item(key);
     const value = found?.value == null ? "" : String(found.value);
-    // The time zone is offered from this browser while it is still the default.
-    if (key === TIMEZONE && found && found.source === "default" && found.value === found.default) return browserZone() || value;
+    // A value still equal to its built-in default counts as not chosen, whether or not the workspace's files hold it (a
+    // new workspace's files hold every default): the time zone is offered from this browser, the name starts empty.
+    const unchosen = found != null && found.source !== "env" && found.source !== "flag" && found.value === found.default;
+    if (key === TIMEZONE && unchosen) return browserZone() || value;
+    if (key === NAME && unchosen) return "";
     return value;
   };
   const shown = (key: string) => edits[key] ?? current(key);
@@ -345,6 +348,8 @@ export function WorkspaceStep() {
   const changes: Record<string, string> = {};
   for (const key of [NAME, TIMEZONE]) {
     const found = item(key);
+    // An empty name leaves the stored default alone rather than saving an empty one.
+    if (key === NAME && shown(key).trim() === "") continue;
     if (found && found.editable && !found.locked && shown(key).trim() !== stored(key)) changes[key] = shown(key).trim();
   }
   const empty = Object.values(changes).some((v) => v === "") || (nameChanged && !fullName.trim());
@@ -376,22 +381,40 @@ export function WorkspaceStep() {
     }
   };
 
-  const field = (key: string, labelKey: string, hintKey: string | null) => {
+  const field = (key: string, labelKey: string, hintKey: string | null, placeholderKey?: string) => {
     const found = item(key);
     const off = !found || found.locked || !found.editable;
     const id = `workspace-${key.replace(/\./g, "-")}`;
     return (
       <div className="field">
         <label htmlFor={id}>{t(labelKey)}</label>
-        <input
-          id={id}
-          type="text"
-          value={shown(key)}
-          disabled={off}
-          autoComplete="off"
-          aria-describedby={hintKey ? `${id}-hint` : undefined}
-          onChange={(e) => setEdits({ ...edits, [key]: e.target.value })}
-        />
+        {found?.type === "choice" && found.options?.length ? (
+          // A setting with a known set of values is a list to pick from, never a box to type in.
+          <select
+            id={id}
+            value={shown(key)}
+            disabled={off}
+            aria-describedby={hintKey ? `${id}-hint` : undefined}
+            onChange={(e) => setEdits({ ...edits, [key]: e.target.value })}
+          >
+            {((found.options ?? []).includes(shown(key)) ? (found.options ?? []) : [shown(key), ...(found.options ?? [])]).map((o) => (
+              <option key={o} value={o}>
+                {o.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            id={id}
+            type="text"
+            value={shown(key)}
+            disabled={off}
+            autoComplete="off"
+            placeholder={placeholderKey ? t(placeholderKey) : undefined}
+            aria-describedby={hintKey ? `${id}-hint` : undefined}
+            onChange={(e) => setEdits({ ...edits, [key]: e.target.value })}
+          />
+        )}
         {hintKey && (
           <p className="hint" id={`${id}-hint`}>
             {t(hintKey)}
@@ -409,7 +432,6 @@ export function WorkspaceStep() {
         if (pending && !empty) void save();
       }}
     >
-      {field(NAME, "welcome.workspace.name", null)}
       <div className="field">
         <label htmlFor="workspace-full-name">{t("welcome.workspace.full_name")}</label>
         <input
@@ -424,6 +446,7 @@ export function WorkspaceStep() {
           {t("welcome.workspace.full_name_hint")}
         </p>
       </div>
+      {field(NAME, "welcome.workspace.name", null, "welcome.workspace.name_placeholder")}
       {field(TIMEZONE, "welcome.workspace.timezone", "welcome.workspace.timezone_hint")}
       {problem && (
         <p className="problem-note" role="alert">

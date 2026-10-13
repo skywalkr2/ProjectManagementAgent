@@ -181,6 +181,9 @@ def _walk(
             continue
         kind, options = _kind(info.annotation)
         extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
+        named = CHOICE_LISTS.get(str(extra.get("choices"))) if extra.get("choices") else None
+        if named is not None and (listed := named()):
+            kind, options = "choice", listed
         switch = extra.get("enabled_by")
         if isinstance(switch, str) and "." not in switch:
             switch = ".".join([*path, switch])
@@ -204,6 +207,21 @@ def _walk(
                 picker=extra.get("picker") if isinstance(extra.get("picker"), str) else None,
             )
         )
+
+
+def _time_zones() -> list[str]:
+    """The time zones this computer knows, by their IANA names, for a setting that holds one."""
+    import zoneinfo
+
+    try:
+        return sorted(zoneinfo.available_timezones())
+    except Exception:  # no time zone data on this computer: the setting stays a typed name
+        return []
+
+
+#: Lists of choices a text setting can name (`json_schema_extra={"choices": ...}`), so the screens offer a list
+#: instead of a box to type in.
+CHOICE_LISTS = {"time_zones": _time_zones}
 
 
 def _source(dotted: str, sources: dict[str, str]) -> str:
