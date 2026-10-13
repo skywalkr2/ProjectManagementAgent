@@ -3,6 +3,21 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: A business analysis pack and a systems architect pack are planned
+
+**Decided by:** project owner ("two more obvious plugins ... Business Analysis and Systems Architect ... they can be used
+to submit change requests to you for system improvements").
+
+**What:** Two packs in the plan (roadmap C3c), each in its own private repository. They draft the outputs of those roles
+from inputs and work with the other packs through interfaces. Change requests for this product go through the core's
+`report.draft`, which the person reviews and sends to the maintainers; the product still never changes its own code
+(design 6.13).
+
+**Why:** Both roles' outputs are what most kinds of work need beside a project plan, and well-formed change requests
+make improving the product faster.
+
+**Impact:** The roadmap gains C3c. No change to the core's scope; `report.draft` already exists.
+
 ## 2026-10-13: Where the code and the design differed, decided (phase L0)
 
 **Decided by:** the technical PM (roadmap, phase L0). **What:** a question's stored kind stays and the screen follows it

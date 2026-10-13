@@ -773,6 +773,23 @@ schedule when both are on, and is a plain list of milestones when it is alone.
   - the AI-disclosure answers filled from the authorship breakdown;
   - the `publishing/manuscript-source@1` hand-off.
 
+C3c. **A business analysis pack and a systems architect pack** (owner, 2026-10-14: "pretty much barely disguised
+standard AI that would take inputs and generate outputs that those roles would typically do ... they would also fit
+hand in hand with nearly every other plugin ... they can be used to submit change requests ... for system
+improvements"). Each in its own private repository with a builder, like the other packs; neither is scheduled before
+the project management pack's first version.
+- [ ] **Business analysis:** from notes, transcripts or a brief, drafts what a business analyst writes: requirements,
+  user stories with acceptance criteria, process maps in words, gap and impact analysis, questions for stakeholders.
+  Drafts are the person's to review; checkable facts in them carry evidence.
+- [ ] **Systems architect:** drafts what an architect writes: a solution outline, architecture decision records,
+  interface and data descriptions, risks and trade-offs, and review notes on a design handed in.
+- [ ] **Working with the other packs** through versioned interfaces only (design 3.9): requirements and decisions to
+  the project management pack's plan and RAID; a pack's own records as inputs to both.
+- [ ] **Change requests for this product:** both packs can turn a need into a well-formed request (the problem, the
+  requirement, acceptance criteria, the impact) through the core's `report.draft`, which the person reviews and sends
+  to the maintainers (design 6.13). The product never changes its own code; the request goes out only after the
+  person approves its exact text.
+
 C3b. **A sales support pack** (owner, 2026-10-13): for a family member's sales job. Waiting on its functional
 requirements from its user; nothing is designed or scheduled before they arrive. When they do, it gets its own
 private repository and builder like the other packs, and works with the project management pack through interfaces.
