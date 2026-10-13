@@ -148,7 +148,7 @@ and has a one-click way to send it back ("Take a closer look" queues it and reco
 tuned, 6.20). A closed mail item is left out of Today's list of what came in, and counted. A matcher that fails counts as no
 match and is contained like any plugin call (6.1).
 
-**Setting aside personal and sales mail** (owner, 2026-10-12; the rules part is phase A5, **built**; the sorting run and the
+**Setting aside personal and sales mail** (owner, 2026-10-12; the rules part is phase A5, **built**, `tests/test_set_aside.py`; the sorting run and the
 proof that learning never reads it are phase L0). Mail that isn't work goes into a **Set aside** folder in the app, in two
 sections: *Personal*, and *Sales and promotions*. The person's mailbox is never changed; the add-ons read only. Set-aside mail
 never reaches the assistant and never feeds learning:
@@ -602,7 +602,7 @@ for it, that nothing goes out without the PM approving that exact content, alrea
   after it was already put back once goes to needs you instead ("Stopped twice when the app closed during it"), its
   approval untouched, so Try again and Dismiss apply and a request that stops the app can't loop. The number of
   interruptions is counted from the request's own history (the ledger), not from `attempts`, which also counts a
-  person's Try again.
+  person's Try again. Built: `tests/test_requeue.py`.
 - *Designed, not yet built* (roadmap, phase E): every few minutes, re-queue requests whose run never finished (the same
   rule, while the app runs), push work waiting too long in working hours, repair
   changes no request carries, detect stale data and outages, run the scope sweep (6.18), the rules review (6.21) and the

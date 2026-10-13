@@ -45,8 +45,9 @@ uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --ac
 
 ## Phase 0: the plan and the rules (done 2026-10-12)
 
-- [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`).
-- [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded.
+- [x] Review: built, missing, and why small errors reached the owner (`review-2026-10-12.md`, `audit-2026-10-12/`). Process item, checked by reading.
+- [x] This plan; the rules in `CLAUDE.md` ("How work reaches the owner"); a decision recorded. Process item,
+  checked by reading.
 
 ## Phase A: a baseline that works with no demo data (done 2026-10-13)
 
@@ -78,7 +79,7 @@ A1. **Demo data off the person's path.**
 - [x] `cockpit init` with no template is the start in the README and `docs/install.md` (there is no separate setup
   guide; the screen's setup is 7.8). Docs only, checked by reading.
 - [x] The fictional workspaces stay as test fixtures and as the sandbox (`cockpit demo`), named as such in the README,
-  `docs/install.md` and the commands' help.
+  `docs/install.md` and the commands' help. Docs and help text, checked by reading.
 - [x] A self-check: a fresh workspace shows no account, source or setting with a problem (`check_fresh_workspace`;
   `test_a_fresh_workspace_shows_no_problem`, `test_the_fresh_workspace_check_reports_an_account_that_reads_as_failing`).
 - [x] **A whole backup restores:** `cockpit restore --backup <backup folder> <new folder>` (design 5.0), so the
@@ -147,7 +148,7 @@ A4. **The new-start walkthrough** (owner, 2026-10-12; design 7.8). Install to fi
   other add-ons are optional extras. Built (`Walkthrough.test.tsx`, journeys J1, J2 and J6); add-ons say what a
   connector reads (plugin API 0.3.56, `tests/test_connector_reads.py`).
 - [x] `docs/getting-started.md`: one page from the install command to the first result, matching the walkthrough,
-  with what each step costs; linked from the README and Help.
+  with what each step costs; linked from the README and Help. Docs only, checked by reading.
 - [x] Journey J6: a fresh install through the walkthrough only, to the assistant's first results. This is the
   automated form of the exit test (`journeys-new-start.spec.ts`: the mail add-on installed from the catalog, exactly
   one restart, one AI request per item and none before Go).
@@ -164,18 +165,29 @@ A4. **The new-start walkthrough** (owner, 2026-10-12; design 7.8). Install to fi
 A5. **Sales and social mail set aside by rules** (owner, 2026-10-12: "right now it's processing all of it"; moved from L0
 because the exit test reads real mail, and Gmail's tabs aren't reliable). This is the rules part of design 6.5's Set
 aside folder:
-- [x] Mail items carry `bulk` (unsubscribe or bulk headers) and `categories` (the service's own), plugin API 0.3.57.
+- [x] Mail items carry `bulk` (unsubscribe or bulk headers) and `categories` (the service's own), plugin API 0.3.57. Built:
+  `tests/test_calendar_mail.py::test_the_mailbox_connector_marks_bulk_messages_from_their_headers`,
+  `tests/test_set_aside.py::test_the_mailbox_connector_fills_bulk_from_the_headers`.
 - [x] Core matchers `bulk-mail`, `service-category` and `sender-rule`. The default sorting is built in for every
   workspace, existing ones included (`watch.set_aside_defaults`, on), so promotions, social updates and mailing lists
-  are set aside with no AI run and **no setup by the person**: nothing in their mail service and no settings edit.
-- [x] The Set aside folder (Personal; Sales and promotions) and Came in's "N set aside" count.
+  are set aside with no AI run and **no setup by the person**: nothing in their mail service and no settings edit. Built: `tests/test_set_aside.py`
+  (`test_bulk_mail_matches_only_a_message_that_says_it_is_bulk`,
+  `test_service_category_matches_any_of_the_rules_categories_in_any_case`,
+  `test_sender_rule_matches_an_address_or_a_domain_and_its_subdomains_in_any_case`,
+  `test_a_workspace_with_its_own_rules_or_written_earlier_still_sets_aside_bulk_and_category_mail`).
+- [x] The Set aside folder (Personal; Sales and promotions) and Came in's "N set aside" count. Built:
+  `SetAside.test.tsx`, `SetAsideCorrections.test.tsx` and `tests/test_set_aside.py::test_the_folder_lists_what_was_set_aside_with_its_sender_and_reason`.
 - [x] One-click corrections: "Set aside: personal or sales" on any item and "This is work" in the folder, each offering
-  "always for this sender or domain" as a sorting rule with a read-back and Undo.
+  "always for this sender or domain" as a sorting rule with a read-back and Undo. Built:
+  `SetAsideCorrections.test.tsx`, `SetAside.test.tsx` and
+  `tests/test_set_aside.py::test_a_rule_written_by_the_corrections_route_applies_to_the_next_matching_item`.
 - [x] **Confirm learns and deletes** (owner, 2026-10-12): confirming a set-aside writes a sender rule (a domain rule
   is offered at three senders). It also removes the message's text from the app, keeping a marker so it isn't read
-  again. The mailbox is never changed.
+  again. The mailbox is never changed. Built:
+  `tests/test_set_aside.py::test_confirming_writes_a_sender_rule_and_the_next_mail_from_that_sender_is_set_aside` and
+  `tests/test_set_aside.py::test_after_the_undo_time_no_text_of_a_confirmed_message_remains_and_it_is_never_handed_in_again`.
 - [x] Journey: a mailbox with work mail, a social update and a sales mail. Only the work mail reaches the assistant
-  and the first Go. "This is work" hands the sales mail in.
+  and the first Go. "This is work" hands the sales mail in (`journeys-mail.spec.ts`, J2).
 
 Built: `tests/test_set_aside.py` (22 tests, including a workspace made before this change and the deleted
 text gone from the whole database and every file), `test_the_mailbox_connector_marks_bulk_messages_from_their_headers`,
