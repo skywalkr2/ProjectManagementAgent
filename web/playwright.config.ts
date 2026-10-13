@@ -52,8 +52,10 @@ const fakeServices = (p: ReturnType<typeof pair>, flags = "") => ({
 export default defineConfig({
   testDir: "e2e",
   timeout: 60_000,
+  // One lane per server: each project has its own server and workspace, so projects run side by side, while the tests
+  // inside a project (and the two that share a server, below) run in order. PW_WORKERS lowers it on a small machine.
   fullyParallel: false,
-  workers: 1,
+  workers: Number(process.env.PW_WORKERS) || 5,
   reporter: [["list"]],
   use: {
     ...devices["Desktop Chrome"],
@@ -63,11 +65,14 @@ export default defineConfig({
     contextOptions: { reducedMotion: "reduce" },
   },
   projects: [
-    ...servers.map((s) => ({
-      name: s.name,
-      testMatch: /(acceptance|shell)\.spec\.ts/,
-      use: { baseURL: `http://127.0.0.1:${s.port}${s.base === "/" ? "/" : `${s.base}/`}` },
-    })),
+    // The acceptance scenario and the shell checks share a server, so the shell checks wait for the scenario to finish.
+    ...servers.flatMap((s) => {
+      const use = { baseURL: `http://127.0.0.1:${s.port}${s.base === "/" ? "/" : `${s.base}/`}` };
+      return [
+        { name: s.name, testMatch: /acceptance\.spec\.ts/, use },
+        { name: `${s.name}-shell`, testMatch: /shell\.spec\.ts/, use, dependencies: [s.name] },
+      ];
+    }),
     {
       name: "journeys",
       testMatch: /journeys\.spec\.ts/,
