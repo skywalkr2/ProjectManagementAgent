@@ -445,6 +445,8 @@ L2. **Every run reads what applies.**
   lesson, never both (design 6.22).
 
 L3. **Every correction teaches.**
+- [ ] A correction the person undid within its undo time doesn't teach: signals stay immutable, so learning nets out a
+  signal whose action was undone (a set-aside undone, a send-back withdrawn) instead of deleting it.
 - [ ] Learning from corrections (`learn.correction`, on the stronger tier): at most one proposal, or `lesson.update` when a
   lesson should have caught it.
   - It runs at once when the person wrote something: a send-back note, or an answer to the assistant.
