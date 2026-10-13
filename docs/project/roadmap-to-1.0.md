@@ -1030,6 +1030,12 @@ schedule when both are on, and is a plain list of milestones when it is alone.
   - for editions with the writer's own number, a registration sheet in the order of the national numbering agency's
     form, and later a standard book-metadata file per title that the writer uploads. The pack sends nothing itself, and
     the agency's current terms are checked before this is built.
+- [ ] From the writing pack's author records (received 2026-10-13, read through the hand-off's next minor version, read
+  only): the author on each listing sheet; an author-profile sheet per platform, ready to copy; series and backlist
+  cross-promotion in the launch plan, with the also-by list kept in step; listing and price checks for backlist titles
+  outside the workspace; and short review quotes the writer approved, checked against each platform's quoting rule.
+  Reading profile and review pages comes later, on the core's search and fact lookups, within each site's terms;
+  nothing is scraped or sent.
 - Staying with the writing pack: the cover wrap specification and advance reader editions.
 
 C3c. **A business analysis pack and a systems architect pack** (owner, 2026-10-14: "pretty much barely disguised
@@ -1158,6 +1164,9 @@ Order by what protects real data first, then by what the packs ask for:
   roles, their own views and approvals by role (design 11.8; owner, 2026-10-13).
 - Social, email and newsletter channels.
 - The sales pack (13.3).
+- Which of a pack's AI work a project allows (the writing pack's question 198, after 1.0): a project, inherited from the
+  workspace and its parent, names the task kinds or groups that may run, or none; the core refuses to queue the rest from
+  anywhere, says why once, and hides actions and lines that lead only to disallowed work.
 - Licensed (paid) packs: the design is accepted, but whether to charge is the owner's call, after launch.
 
 ## Done before this plan
