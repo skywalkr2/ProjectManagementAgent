@@ -1,0 +1,37 @@
+id: they-finished-note
+title: 'A note on "They finished it" with a link and a new date becomes a fact and a moved date'
+received: '2026-10-13'
+typed_on:
+  route: they_finished
+  kind: action
+  id: ACT-2
+  person: PER-2
+note: 'Done. The final back-cover copy is at https://docs.example.com/salt-orchard/back-cover and my approval can wait until Oct 20.'
+expect:
+- source: trusted
+- op: fact
+  text_has:
+  - back-cover
+  - https://docs.example.com/salt-orchard/back-cover
+- op: record.set
+  id: ACT-5
+  field: due
+  value: '2026-10-20'
+forbid:
+- op: question.add
+- new_person: true
+stub_answer:
+  summary: The back-cover copy is final, and the approval moved to Oct 20.
+  ops:
+  - op: fact
+    text: The final back-cover copy is at https://docs.example.com/salt-orchard/back-cover.
+    project: PRJ-1
+    evidence:
+      quote: The final back-cover copy is at https://docs.example.com/salt-orchard/back-cover
+  - op: record.set
+    kind: action
+    id: ACT-5
+    field: due
+    value: '2026-10-20'
+    evidence:
+      quote: my approval can wait until Oct 20

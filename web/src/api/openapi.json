@@ -478,6 +478,12 @@
       },
       "ActionState": {
         "properties": {
+          "note": {
+            "default": "",
+            "description": "Anything the person wrote with the change, in their own words; the assistant reads it.",
+            "title": "Note",
+            "type": "string"
+          },
           "status": {
             "enum": [
               "open",
@@ -2967,6 +2973,18 @@
             ],
             "description": "The day they were told before it, for undoing the chase.",
             "title": "Previous Told"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The work queued for the assistant from the note that came with the chase, if there was one.",
+            "title": "Request"
           }
         },
         "required": [
@@ -3888,6 +3906,18 @@
         "title": "NetworkWait",
         "type": "object"
       },
+      "NoteIn": {
+        "properties": {
+          "note": {
+            "default": "",
+            "description": "Anything the person wrote with the change, in their own words; the assistant reads it.",
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "title": "NoteIn",
+        "type": "object"
+      },
       "NoteView": {
         "properties": {
           "created_at": {
@@ -3949,6 +3979,31 @@
           "trust"
         ],
         "title": "NoteView",
+        "type": "object"
+      },
+      "Noted": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "string"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The work queued for the assistant from the note that came with the change, if there was one.",
+            "title": "Request"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "Noted",
         "type": "object"
       },
       "Ok": {
@@ -4429,6 +4484,29 @@
           "path"
         ],
         "title": "OutsideEditView",
+        "type": "object"
+      },
+      "OwnerPick": {
+        "properties": {
+          "note": {
+            "default": "",
+            "description": "Anything the person wrote with the choice, in their own words; the assistant reads it.",
+            "title": "Note",
+            "type": "string"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          }
+        },
+        "title": "OwnerPick",
         "type": "object"
       },
       "PackAdds": {
@@ -9671,7 +9749,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Ok"
+                  "$ref": "#/components/schemas/Noted"
                 }
               }
             },
@@ -10928,7 +11006,7 @@
     },
     "/api/followups/{person}/actions/{action_id}/finished": {
       "post": {
-        "description": "Close an action because the person it waits on finished it: credited to them, reported by the PM.",
+        "description": "Close an action because the person it waits on finished it: credited to them, reported by the PM. A note\ntyped with it goes to the assistant.",
         "operationId": "action_they_finished_api_followups__person__actions__action_id__finished_post",
         "parameters": [
           {
@@ -10950,12 +11028,29 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NoteIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Ok"
+                  "$ref": "#/components/schemas/Noted"
                 }
               }
             },
@@ -10977,7 +11072,7 @@
     },
     "/api/followups/{person}/actions/{action_id}/followed-up": {
       "post": {
-        "description": "Record that the PM chased a person about an open action: it stays open and counts as told again.",
+        "description": "Record that the PM chased a person about an open action: it stays open and counts as told again. A note\ntyped with it goes to the assistant.",
         "operationId": "action_followed_up_api_followups__person__actions__action_id__followed_up_post",
         "parameters": [
           {
@@ -10999,6 +11094,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/NoteIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -12771,7 +12883,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Ok"
+                  "$ref": "#/components/schemas/Noted"
                 }
               }
             },
@@ -12809,7 +12921,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PersonChoice"
+                "$ref": "#/components/schemas/OwnerPick"
               }
             }
           },
@@ -12820,7 +12932,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Ok"
+                  "$ref": "#/components/schemas/Noted"
                 }
               }
             },

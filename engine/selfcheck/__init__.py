@@ -10,6 +10,7 @@ from pathlib import Path
 from engine.config import ConfigError, load_config
 from engine.records import REFERENCES, values_at
 from engine.selfcheck.built_claims import scan_built_claims
+from engine.selfcheck.free_text import check_free_text
 from engine.selfcheck.scans import (
     REPO,
     Finding,
@@ -157,6 +158,7 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
     checks.append(("fresh workspace", check_fresh_workspace))
     checks.append(("bundled manifests", check_manifests))
     checks.append(("api schema", check_api_schema))
+    checks.append(("free text", check_free_text))
     checks.append(("plugin guide", check_plugin_guide))
     failed = 0
     for label, check in checks:

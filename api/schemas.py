@@ -53,6 +53,22 @@ class Reply(BaseModel):
 
 class ActionState(BaseModel):
     status: Literal["open", "done"]
+    note: str = Field(
+        "", description="Anything the person wrote with the change, in their own words; the assistant reads it."
+    )
+
+
+class NoteIn(BaseModel):
+    note: str = Field(
+        "", description="Anything the person wrote with the change, in their own words; the assistant reads it."
+    )
+
+
+class OwnerPick(BaseModel):
+    person: str | None = None
+    note: str = Field(
+        "", description="Anything the person wrote with the choice, in their own words; the assistant reads it."
+    )
 
 
 class Unfollow(BaseModel):
@@ -67,9 +83,19 @@ class Ok(BaseModel):
     ok: str
 
 
+class Noted(BaseModel):
+    ok: str
+    request: str | None = Field(
+        None, description="The work queued for the assistant from the note that came with the change, if there was one."
+    )
+
+
 class FollowedUp(BaseModel):
     on: str = Field(description="The day the chase was recorded (a date).")
     previous_told: str | None = Field(None, description="The day they were told before it, for undoing the chase.")
+    request: str | None = Field(
+        None, description="The work queued for the assistant from the note that came with the chase, if there was one."
+    )
 
 
 class RequestChanged(BaseModel):

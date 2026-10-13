@@ -13,7 +13,7 @@ from pathlib import Path
 SCHEMA_PATH = Path(__file__).resolve().parents[1] / "web" / "src" / "api" / "openapi.json"
 
 
-def build() -> str:
+def build_schema() -> dict:
     from api.app import create_app
     from engine.workspace import init_workspace
 
@@ -22,10 +22,13 @@ def build() -> str:
         cfg = ws.config(env={}, flags={"server.base_path": "/"})
         app = create_app(ws, cfg, "schema-only")
         try:
-            schema = app.openapi()
+            return app.openapi()
         finally:
             app.state.store.close()
-    return json.dumps(schema, indent=2, sort_keys=True) + "\n"
+
+
+def build() -> str:
+    return json.dumps(build_schema(), indent=2, sort_keys=True) + "\n"
 
 
 def main(argv: list[str] | None = None) -> int:

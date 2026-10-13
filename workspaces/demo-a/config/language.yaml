@@ -6,6 +6,8 @@ never_shown: []
 self_words: [me, myself, I]
 # Lines an item's title is never taken from: greetings, quoted headers, sign-offs.
 title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to|cc|sent|date|subject)\s*:', '(thanks|best|regards|cheers)\b[ ,!.]*$', '-{2,}|>']
+# Notes under this many words with no link are bare confirmations and stay with the change.
+bare_confirmation_words: 4
 messages:
   greeting: "Hi {first_name},"
   actions_heading: "Action items with you:"

@@ -152,7 +152,10 @@ def process(
     # Work the PM didn't start (stage tasks, plugin requests, outside inputs) carries no words from the PM, so nothing
     # in it is trusted.
     scheduled = req.data["origin"] != "pm"
-    trust = "untrusted" if req.data.get("source") or scheduled or packet.untrusted_material else "trusted"
+    # An input is outside content unless its saved source is marked as the person's own words.
+    saved = store.read().get("source", req.data["source"]) if req.data.get("source") else None
+    outside = bool(req.data.get("source")) and (saved is None or saved.data["trust"] != "trusted")
+    trust = "untrusted" if outside or scheduled or packet.untrusted_material else "trusted"
     inputs = Inputs(request_id, req.data.get("source"), packet.raw_input, packet.note, trust, cites=packet.cites)
     allowed = store.plugins.task_kind(req.data["task"]).ops
     if req.data["task"] == "notes":

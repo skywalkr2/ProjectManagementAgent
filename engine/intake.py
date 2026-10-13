@@ -2,14 +2,20 @@
 
 Pasted content is saved as a file by content hash and marked untrusted. The PM's own note stays on the request and is
 trusted.
+
+A note typed on a button of an action or a question (Mark done, They finished it, Followed up, an answer) is an input
+too: `note_as_input` saves it as a trusted source with the item as its context and queues the usual notes work, unless
+it is a bare confirmation.
 """
 
 from __future__ import annotations
 
 import hashlib
+import re
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from engine.config import Config
 from engine.storage import Store, WriteContext
 from engine.workspace import Workspace
 
@@ -89,3 +95,87 @@ def source_text(ws: Workspace, store: Store, source_id: str | None) -> str:
         return ""
     path = ws.sources_dir / f"{src.data['content_hash']}.txt"
     return path.read_text(encoding="utf-8") if path.exists() else ""
+
+
+#: The buttons a note can be typed on, each with the words the assistant is told it was typed under.
+NOTE_ROUTES = {
+    "mark_done": "marked the action done",
+    "reopened": "reopened the action",
+    "they_finished": "said the person it waits on finished the action",
+    "followed_up": "chased the person the action waits on",
+    "owner_picked": "picked the owner of the action",
+    "notes_edited": "added to the notes of the record",
+    "answered": "answered the question",
+}
+
+_LINK = re.compile(r"(?i)(?:[a-z][a-z0-9+.-]*://|www\.)\S+|\b[\w-]+(?:\.[\w-]+)+/\S*")
+
+
+def is_bare_confirmation(text: str, words: int) -> bool:
+    """Whether a note says too little to be worth the assistant's time: fewer than `words` words and no link."""
+    note = text.strip()
+    return len(note.split()) < words and not _LINK.search(note)
+
+
+def note_as_input(
+    ws: Workspace,
+    store: Store,
+    cfg: Config,
+    *,
+    item: tuple[str, str],
+    text: str,
+    route: str,
+    now: datetime | None = None,
+) -> str | None:
+    """Hand in the note typed on a button of `item` (a kind and an id) as the person's own words, once the button's
+    own change is saved. A bare confirmation is kept with the change and makes no request. Otherwise the note is saved
+    as a trusted source whose context is the item and its project, and the usual notes work is queued about the item,
+    under the usual cost rules. Returns the request's id, or None for a bare confirmation. Undoing the button's change
+    never takes the note back: it is the person's words, and what the assistant makes of it is reviewed and undone on
+    its own."""
+    if route not in NOTE_ROUTES:
+        raise ValueError(f"unknown route {route}")
+    note = text.strip()
+    if not note or is_bare_confirmation(note, cfg.language.bare_confirmation_words):
+        return None
+    record = store.read().get(*item)
+    if record is None:
+        raise IntakeError(f"There is no {item[0]} {item[1]}.")
+    project = record.data.get("project")
+    if not isinstance(project, str) or store.read().get("project", project) is None:
+        project = None
+    now = now or datetime.now(UTC)
+    digest = hashlib.sha256(note.encode("utf-8")).hexdigest()
+    ws.sources_dir.mkdir(parents=True, exist_ok=True)
+    path = ws.sources_dir / f"{digest}.txt"
+    if not path.exists():
+        path.write_text(note, encoding="utf-8")
+    ctx = WriteContext(actor="pm", trust="trusted", op=f"note.{route}")
+    with store.transaction() as tx:
+        source = tx.create(
+            "source",
+            {
+                "received_at": now.isoformat(),
+                "kind": f"note:{route}",
+                "title": " ".join(note.split())[:120],
+                "content_hash": digest,
+                "trust": "trusted",
+                "projects": [project] if project else [],
+            },
+            ctx,
+        )
+        request = tx.create(
+            "request",
+            {
+                "task": "notes",
+                "source": source.id,
+                "about": {"kind": item[0], "id": item[1]},
+                "origin": "pm",
+                "state": "queued",
+                "waiting": "With the assistant, starting now",
+                "created_at": now.isoformat(),
+                **({"project": project} if project else {}),
+            },
+            ctx,
+        )
+    return request.id

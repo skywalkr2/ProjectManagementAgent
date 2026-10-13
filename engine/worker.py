@@ -45,6 +45,7 @@ LIVE_KEYS = (
     "storage.export.every_minutes",
     "storage.sync.shared",
     "watch.",
+    "language.bare_confirmation_words",
 )
 
 

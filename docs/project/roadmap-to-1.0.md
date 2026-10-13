@@ -648,7 +648,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - [x] the Today line appears after `dispatch.offline_line_after_minutes`, default 60 (most waits clear within minutes
     of opening the lid; the journey now waits the configured time). Built: `tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`,
     `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`.
-- [ ] **Every place the person types text reaches the assistant** (the original designer's lessons from running, 2026-10-13): their worst one. A teammate's reply typed into
+- [x] **Every place the person types text reaches the assistant** (the original designer's lessons from running, 2026-10-13): their worst one. A teammate's reply typed into
   "They finished it" (a two-phase plan, a link, a question back) was saved to the action's history and read by nothing;
   seven more notes were lost the same way in five days (a key link, a new due date, a standing rule, two actions closed
   while still under way). A note typed on Mark done, They finished it, Followed up, Reassign, or in an action's or a
@@ -657,6 +657,24 @@ them are needed before the owner's daily use, which starts when L-core passes.
   route does today first. A self-check lists every route that takes free text from the person and fails when one
   neither makes a request nor is declared local-only. A golden case: a "They finished it" note with a link and a new
   date produces a fact, a source and a moved date.
+  **Built (the engine, the API and the check):** what each route did first: none of the action and question routes took
+  a note at all (the screens send none), the hand-in, Ask, send-back, reply and task-start routes already queued the
+  person's text, and everything else is a name, a setting or a choice. `engine.intake.note_as_input` hands a note in as a
+  trusted source about the item (`language.bare_confirmation_words`, 4, a link always counts), the routes Mark done, They
+  finished it, Followed up, pick an owner (the built form of Reassign, which has no route until phase B), an answer and a
+  notes edit use it, and `api/free_text.py` declares every other route. Tests:
+  `tests/test_note_input.py::test_a_note_under_four_words_with_no_link_makes_no_request`,
+  `tests/test_note_input.py::test_a_short_note_with_a_link_makes_a_request`,
+  `tests/test_note_input.py::test_mark_done_with_a_note_makes_one_request_about_the_action`,
+  `tests/test_note_input.py::test_they_finished_it_with_a_note_makes_one_request_and_the_note_survives_the_undo`,
+  `tests/test_note_input.py::test_followed_up_with_a_note_makes_one_request_and_without_a_body_none`,
+  `tests/test_note_input.py::test_picking_an_owner_with_a_note_makes_one_request_about_the_action`,
+  `tests/test_note_input.py::test_adding_to_an_actions_notes_hands_in_only_what_was_added`,
+  `tests/test_note_input.py::test_answering_a_question_in_words_makes_one_request_about_the_question`,
+  `tests/test_note_input.py::test_a_note_with_a_link_and_a_new_date_comes_back_as_a_fact_and_a_moved_date_the_person_can_trust`,
+  `tests/test_free_text_check.py::test_a_route_with_free_text_that_is_neither_wired_nor_declared_fails_the_check`, and the
+  golden case `workspaces/demo-b/evals/they-finished-note.yaml`. Moved to phase B: the note box on the buttons themselves and
+  Reassign (the action-items item below: "a note typed on any action button reaches the assistant").
 - [x] **Wording checks skip links** (the original designer's lessons from running, 2026-10-13): a check on words runs on the words, with links and the person's own quoted
   text taken out first; today the screen-text check would refuse a dotted domain or a file name the person typed. A test
   with a link that has a query string and a dotted domain, for the screen-text check and for every wording lint.
@@ -940,7 +958,7 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   **on hold isn't due** (the original designer's lessons from running, 2026-10-13): a held action is out of due and overdue everywhere (Today, counts, reports, the weekly
   review), shows "on hold" with its old date in a tooltip and names what it waits for, and when the input that ends the
   hold arrives the assistant takes it off hold and gives it a new date in the same change (a status value's `meaning`,
-  with `held` ranked below open and never due); a note typed on any action button reaches the assistant; each row carries its project (and
+  with `held` ranked below open and never due); a note box on every action button (the helper and the routes are built, L0: the screens send no note yet), so a note typed on any action button reaches the assistant; each row carries its project (and
   parent project) tag, with its notes on hover; actions are worded to stand on their own (a playbook rule and a lint
   on the assistant's wording); and the follow-up rule above. Exit check: the owner works through their own open items on a laptop and a phone.
 - [ ] **When something is due a follow-up** (the original designer's review, 2026-10-13: counting from when a notice

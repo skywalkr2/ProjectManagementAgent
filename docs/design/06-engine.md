@@ -256,6 +256,25 @@ Sorting corrections tune sorting only. They never become content lessons.
 set aside), grouped into Personal and Sales and promotions. Today never lists set-aside mail; Came in shows a count ("6 set
 aside") that opens the folder and counts what the folder lists, so a confirmed message is no longer in it. Set-aside mail is kept like other sources and follows retention (5.2).
 
+**A note typed on a button is an input** (phase L0, **built**). Anything the person types that could change the work reaches the
+assistant. A note typed with Mark done, They finished it, Followed up, the choice of an owner, an answer to a question, or
+added to an action's notes is handed in by one helper (`engine.intake.note_as_input`) once the button's own change is
+saved. Unless it is a bare confirmation (fewer than `language.bare_confirmation_words` words, default 4, and no link; it
+stays with the change), the note is saved as a **source marked trusted** (kind `note:<button>`; the person's own words, not
+pasted outside content, so it is never wrapped as outside material) whose projects are the item's project, and a request of
+the usual notes work is queued **about the item**, under the usual cost rules (the first go, estimates, budgets). The run's
+packet puts the person's note in a `<note>` block and the item beside it as data (its text, owners, due date, project,
+status, notes, who did it, the days it was chased; for a question, who it went to and its answer), so the assistant
+decides whether anything changes beyond the button's own change: a fact with its link, a moved date, a reopened or closed
+action, a rule proposal. Its facts and dates are the person's own words and apply at once with Undo; a **change to how the product
+behaves** (a system op: a rule, a value list, a recipient) from a typed note **waits for the person**, as from any input,
+because the note may carry someone else's reply (6.7, 12.2). **Undo** of the button's change does not
+take the input back: the words stay saved and the queued work stays; what the assistant makes of it is a changeset the
+person reviews and undoes on its own. An edit of an action's notes hands in only what was added after the old text. A
+refused or conflicting change hands in nothing. Every other route that takes free text is declared in one place
+(`api/free_text.py`) as `to_assistant` or `local_only` with a reason, and the self-check (`engine.selfcheck.free_text`)
+fails for a route whose request has free text and no declaration. **Built:** `tests/test_note_input.py::test_a_note_under_four_words_with_no_link_makes_no_request`, `tests/test_note_input.py::test_a_short_note_with_a_link_makes_a_request`, `tests/test_note_input.py::test_mark_done_with_a_note_makes_one_request_about_the_action`, `tests/test_note_input.py::test_they_finished_it_with_a_note_makes_one_request_and_the_note_survives_the_undo`, `tests/test_note_input.py::test_followed_up_with_a_note_makes_one_request_and_without_a_body_none`, `tests/test_note_input.py::test_picking_an_owner_with_a_note_makes_one_request_about_the_action`, `tests/test_note_input.py::test_adding_to_an_actions_notes_hands_in_only_what_was_added`, `tests/test_note_input.py::test_answering_a_question_in_words_makes_one_request_about_the_question`, `tests/test_note_input.py::test_the_packet_carries_the_item_and_the_note_as_the_persons_own_words`, `tests/test_note_input.py::test_a_note_with_a_link_and_a_new_date_comes_back_as_a_fact_and_a_moved_date_the_person_can_trust`, `tests/test_free_text_check.py::test_a_route_with_free_text_that_is_neither_wired_nor_declared_fails_the_check`, `tests/test_free_text_check.py::test_the_apis_routes_with_free_text_are_all_declared`, and the golden case `workspaces/demo-b/evals/they-finished-note.yaml` (run by `tests/test_followups_backup_eval.py::test_every_case_passes_with_its_ideal_answer`). *Not built:* the note box on the screens' buttons (phase B); today the API takes the note and the screens send none.
+
 ## 6.6 Dispatcher
 
 **As built.** The packet holds, stable parts first and the request last: the instructions, the op reference for the task kind,
@@ -286,7 +305,8 @@ facts with 6.18 and 6.19.
   - which recent edits and pages were made by `our_accounts` ("published by the cockpit", so nobody is asked who made them);
   - the op reference (core and enabled plugins' ops) and how to ask for a search (6.22).
   A plugin's AI task kind builds its own packet with the same parts available.
-- **Trusted and untrusted parts** (12.2): the PM's own note, config-derived context, rules, playbooks and the op reference are
+- **Trusted and untrusted parts** (12.2): the PM's own note (including a note typed on a button, saved as a trusted source and
+  shown in a `<note>` block beside the action or question it was typed on, 6.5), config-derived context, rules, playbooks and the op reference are
   trusted. Everything that came from outside (connector content, pasted third-party text, replies, files) is untrusted, **and
   so is anything derived from it**: every record field carries the provenance of the write that set it (the ledger has it), and
   the formatter marks untrusted-derived fields, glossary meanings and proposed lessons as data wherever they appear, including
@@ -661,6 +681,9 @@ is marked *designed*, with the phase.
   `tests/test_pipeline.py::test_closing_an_action_from_a_sender_nobody_knows_leaves_reported_by_empty`). The generic status route reopening an action clears both.
   Marking an action done from a row credits its owners and records the PM as the reporter
   (`tests/test_routes.py::test_marking_an_action_done_credits_its_owners_and_records_the_pm_as_the_reporter`).
+  A note typed with Mark done, They finished it, Followed up or the choice of an owner is an input like any other (6.5): it is
+  handed to the assistant after the change is saved, unless it is a bare confirmation, and undoing the change leaves it
+  (`tests/test_note_input.py::test_they_finished_it_with_a_note_makes_one_request_and_the_note_survives_the_undo`).
   **Told again after a change:** an action's told day is per person, and when the action's text or due date differs from
   what it was at that person's told day (read from the ledger), it counts as to send again for that person: it leaves
   Waiting on them and joins their next message. Putting the value back to what they were told reverts it, and Mark sent

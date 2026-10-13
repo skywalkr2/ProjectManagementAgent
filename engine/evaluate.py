@@ -19,10 +19,12 @@ from typing import Any
 
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
+from engine.config import Config
 from engine.dispatcher import process
-from engine.intake import hand_in
+from engine.followups import they_finished
+from engine.intake import hand_in, note_as_input
 from engine.storage import Store
-from engine.workspace import init_workspace
+from engine.workspace import Workspace, init_workspace
 from engine.yaml_load import load_yaml
 
 RECEIVED_HOUR = 14  # a case that gives only a day is received at this hour, UTC
@@ -187,18 +189,18 @@ def _run_case(
         try:
             people_before = len(store.read().list("person"))
             now = received_of(case)
-            handed = hand_in(ws, store, note=case.get("note", ""), pasted=case.get("pasted", ""), now=now)
-            cs_id = process(ws, store, cfg, Router(cfg, store, env=env, on_wait=on_wait), handed.request, now=now)
+            request_id = _hand_in_case(ws, store, cfg, case, now)
+            cs_id = process(ws, store, cfg, Router(cfg, store, env=env, on_wait=on_wait), request_id, now=now)
             runs = [r.data for r in store.read().list("run")]
             cost = sum(r.get("cost_usd") or 0.0 for r in runs)
             seconds = sum(r.get("seconds") or 0.0 for r in runs)
             if cs_id is None:
-                why = store.read().get("request", handed.request).data.get("waiting")
+                why = store.read().get("request", request_id).data.get("waiting")
                 last = runs[-1] if runs else {}
                 refused = last.get("error_kind") in ("rate_limited", "quota")
                 return RunResult(case["id"], n, False, error=why, cost_usd=cost, seconds=seconds, not_run=refused)
             outcomes = store.read().get("changeset", cs_id).data["ops"]
-            missing = [_describe(e) for e in case.get("expect", []) if not _matches(e, outcomes, store)]
+            missing = [_describe(e) for e in case.get("expect", []) if not _matches(e, outcomes, store, request_id)]
             forbidden = [_describe(f) for f in case.get("forbid", []) if _forbidden(f, outcomes, store, people_before)]
             passed = not missing and not forbidden
             return RunResult(
@@ -216,6 +218,22 @@ def _run_case(
         finally:
             store.close()
             set_responder(None)
+
+
+def _hand_in_case(ws: Workspace, store: Store, cfg: Config, case: dict[str, Any], now: datetime) -> str:
+    """Hand a case's input in. A case with `typed_on` is a note typed on a button of an action or question: it names
+    the item (`kind`, `id`), the button (`route`) and, for They finished it, the person it waited on. The button's own
+    change is made first, as the screen does, then the note is handed in as the person's own words."""
+    on = case.get("typed_on")
+    if on is None:
+        return hand_in(ws, store, note=case.get("note", ""), pasted=case.get("pasted", ""), now=now).request
+    if on["route"] == "they_finished":
+        they_finished(store, cfg, on["id"], on["person"])
+    item = (on["kind"], on["id"])
+    request = note_as_input(ws, store, cfg, item=item, text=case["note"], route=on["route"], now=now)
+    if request is None:
+        raise ValueError(f"case {case['id']}: its note is a bare confirmation, so nothing reaches the assistant")
+    return request
 
 
 # ---- matching --------------------------------------------------------------------------------------------------------
@@ -238,7 +256,12 @@ def _has_words(text: str, words: list[str]) -> bool:
     return all(w.lower() in text.lower() for w in words)
 
 
-def _matches(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store) -> bool:
+def _matches(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, request_id: str = "") -> bool:
+    if "source" in e:
+        # The input was saved as a source of this trust ("trusted": the person's own words).
+        request = store.read().get("request", request_id)
+        saved = store.read().get("source", request.data["source"]) if request and request.data.get("source") else None
+        return saved is not None and saved.data["trust"] == e["source"]
     if e.get("held") == "who-is":
         asked = set()
         for o in outcomes:

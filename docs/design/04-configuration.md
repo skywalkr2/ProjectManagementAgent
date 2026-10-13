@@ -245,6 +245,8 @@ Built keys:
 - `never_shown`: words that must never appear in anything people see; model names are added to it.
 - `title_skip`: regular expressions, matched at the start of a line, ignoring case, for lines an item's title never comes
   from: greetings, quoted mail headers, sign-offs. A title is taken from the first line left (7.14).
+- `bare_confirmation_words` (4, 1 to 20; applies at once): a note typed on a button with fewer words than this and no link is a
+  bare confirmation and is not sent to the assistant (6.5).
 
 The language and variety of the workspace is `workspace.language` (4.1) and of a project `Project.language` (5.1). The
 `languages:` map in this file, keyed by language tag (`en-GB`, `en-US`), with a spelling list, wording lints and date formats

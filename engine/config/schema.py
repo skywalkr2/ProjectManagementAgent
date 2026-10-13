@@ -760,6 +760,14 @@ class LanguageFile(FileModel):
         description="Lines an item's title never comes from: greetings, quoted mail headers, sign-offs (regular "
         "expressions, matched at the start of a line, ignoring case). A title is taken from the first line left.",
     )
+    bare_confirmation_words: int = Field(
+        4,
+        ge=1,
+        le=20,
+        description="A note typed on a button (Mark done, They finished it, Followed up, an answer) with fewer words "
+        "than this and no link is a bare confirmation: it is kept with the change and not sent to the assistant. A "
+        "longer note, or one with a link, is handed in as the person's own words.",
+    )
 
     @field_validator("title_skip")
     @classmethod

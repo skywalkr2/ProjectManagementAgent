@@ -306,10 +306,23 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 break
         # tiers
         request = view.get("request", ctx.inputs.request)
-        from_pm = request is not None and request.data["origin"] == "pm" and ctx.inputs.trust == "trusted"
+        # A note typed on an item's button is the person's own words for facts and dates, but it may carry someone
+        # else's reply, so a change to how the product behaves from it waits for the person like any input.
+        from_pm = (
+            request is not None
+            and request.data["origin"] == "pm"
+            and ctx.inputs.trust == "trusted"
+            and not str(_source_kind(view, request) or "").startswith("note:")
+        )
         if ctx.store.plugins.tiers.get(name) == "system" and not from_pm and not ctx.confirmed_by_pm:
             problems.append(Problem("tier", "hold", i, "changes how the product behaves; needs your confirmation"))
     return problems
+
+
+def _source_kind(view: Any, request: Any) -> str | None:
+    """The kind of the source a request was made from, if it has one."""
+    source = view.get("source", request.data["source"]) if request.data.get("source") else None
+    return source.data.get("kind") if source is not None else None
 
 
 def _quotes_in(op: OpModel, ctx: Context) -> list[str]:

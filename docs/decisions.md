@@ -2955,7 +2955,9 @@ setting, no change to scope. Roadmap L0: the instance-lease sub-item is built.
 - **No request:** `Run.request` is optional; a run that serves no request, such as sorting, has none.
 - **Learning pair:** no learning-pair fixture format exists, so the pair is a test (`tests/test_mail_sorting.py`).
 
-**Decided by:** the technical PM's brief; the choices above were made by the builder and are for review.
+**Decided by:** the technical PM's brief; the choices above were made by the builder and reviewed by the technical PM, who
+changed one: a system op (a rule, a value list, a recipient) from a typed note waits for the person, as from any input,
+because the note may carry someone else's reply (`tests/test_note_input.py::test_a_change_to_how_the_product_behaves_from_a_typed_note_waits_for_the_person`).
 
 **Why:** Newsletters and personal mail the rules miss should land in Set aside within a read, at a fraction of a cent, and
 a guess must never hide mail.
@@ -3006,3 +3008,26 @@ try queued for a request that had since applied would have run and cost money.
 
 **Impact:** Design 6.7, 5.1 (the `request` record, one optional field), 10 (the screen check) and CHANGES section 44. The
 plugin guide is regenerated (a core record changed). No new setting. No change to scope.
+
+## 2026-10-13: A note on a button is the person's own words, handed in after the change (phase L0)
+
+**Decision:** A note typed with Mark done, They finished it, Followed up, the choice of an owner, an answer, or added to an
+action's notes is saved as a source marked `trusted` (kind `note:<button>`, the item's project) and queued as the usual notes
+work with the item as its `about`, unless it is a bare confirmation (fewer than `language.bare_confirmation_words`, 4,
+words and no link). The dispatcher now takes a request's trust from its source: outside content stays untrusted; a source
+that is the person's own words does not make the run untrusted. Undo of the button's change leaves the note and its request.
+Each route that takes free text is declared `to_assistant` or `local_only` in `api/free_text.py`, and the self-check fails
+for an undeclared one. "Reassign" has no route yet (phase B); the built form of giving an action an owner, picking one for a
+held action, takes the note. A question has no notes field; its written answer is the note.
+
+**Decided by:** the technical PM's brief; the choices above were made by the builder and are for review.
+
+**Why:** A reply typed into a button was saved to the action's history and read by nothing; the same loss recurred for a
+link, a new due date and a standing rule. The note is the person's, so the changes it leads to are the person's own note's
+(system ops apply with the usual read-back once built, and a rule that contradicts one waits). The risk to review: a
+teammate's reply pasted into the note box is outside content typed as if it were the person's own; the hand-in box is
+where pasted material belongs (it stays untrusted there).
+
+**Impact:** Design 6.5, 6.6, 6.9, 4.6 and CHANGES section 43. New setting `language.bare_confirmation_words` (live) with demo
+values in both workspaces. API: optional `note` on the action status, They finished it, Followed up and pick-owner
+routes; `request` on their responses. No change to scope.

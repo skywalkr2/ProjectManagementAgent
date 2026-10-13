@@ -64,6 +64,8 @@ from api.schemas import (
     ListRenameIn,
     ListValueIn,
     NetworkWait,
+    Noted,
+    NoteIn,
     NoteView,
     Ok,
     Option,
@@ -72,6 +74,7 @@ from api.schemas import (
     OrganizationPatch,
     OrganizationView,
     OutsideEditView,
+    OwnerPick,
     PanelRow,
     PanelView,
     PersonActionView,
@@ -147,7 +150,7 @@ from engine.dispatcher import (
     waits_on_first_go,
 )
 from engine.followups import follow_up, mark_sent, sections, they_finished, undo_follow_up, unmark_sent
-from engine.intake import IntakeError, hand_in, source_text
+from engine.intake import IntakeError, hand_in, note_as_input, source_text
 from engine.names import People
 from engine.ops import StageMoveOp
 from engine.plugin_api import CORE_LINE_ACTIONS
@@ -216,6 +219,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             return fn()
         except (StoreError, IntakeError, ValueError, KeyError) as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
+
+    def hand_note(item: tuple[str, str], text: str | None, route: str) -> str | None:
+        """Hand the note typed with a change to the assistant as the person's own words, once the change is saved."""
+        request = guard(lambda: note_as_input(ws, store, cfg, item=item, text=text or "", route=route))
+        if request is not None:
+            worker.poke()
+        return request
 
     def file_view(record: Any) -> FileView:
         kinds = store.plugins.file_kinds()
@@ -375,7 +385,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             "fields": body.fields,
             "read_version": body.read_version,
         }
+        before = store.read().get(body.kind, body.id)
         cs_id = guard(lambda: apply_as_person(store, cfg, [op], "Changed on screen"))
+        saved = store.read().get("changeset", cs_id).data["ops"][0]["status"] == "applied"
+        if saved and body.kind == "action" and "notes" in body.fields and before is not None:
+            added = _added_text(before.data.get("notes"), body.fields["notes"])
+            hand_note(("action", body.id), added, "notes_edited")
         changed()
         return Applied(changeset=cs_id)
 
@@ -1292,16 +1307,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         return Ok(ok=cs_id)
 
     @r.post("/questions/{qid}/pick-owner")
-    def owner(qid: str, body: PersonChoice) -> Ok:
+    def owner(qid: str, body: OwnerPick) -> Noted:
         need("question", qid)
         if not body.person:
             raise HTTPException(status_code=422, detail="Choose a person.")
         guard(lambda: pick_owner(store, qid, body.person))
+        action = store.read().get("question", qid).data["resolves"]["action"]
+        request = hand_note(("action", action), body.note, "owner_picked")
         changed()
-        return Ok(ok=qid)
+        return Noted(ok=qid, request=request)
 
     @r.post("/questions/{qid}/answer")
-    def answer(qid: str, body: Answer) -> Ok:
+    def answer(qid: str, body: Answer) -> Noted:
         """Answer a question to the PM. A question asking who (who a name is, who owns an action) takes a person and
         lets the item it holds go ahead; any other question takes a written answer."""
         need("question", qid)
@@ -1327,8 +1344,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     )
 
             guard(do)
+        request = hand_note(("question", qid), body.text, "answered")
         changed()
-        return Ok(ok=qid)
+        return Noted(ok=qid, request=request)
 
     @r.post("/questions/{qid}/reply")
     def reply(qid: str, body: Reply) -> Handed:
@@ -1345,7 +1363,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         return Handed(request=handed.request, source=handed.source)
 
     @r.post("/actions/{action_id}/status")
-    def action_status(action_id: str, body: ActionState) -> Ok:
+    def action_status(action_id: str, body: ActionState) -> Noted:
         need("action", action_id)
 
         def do() -> None:
@@ -1363,17 +1381,20 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 tx.update("action", action_id, change, _PM, read_version=cur.version)
 
         guard(do)
+        request = hand_note(("action", action_id), body.note, "mark_done" if body.status == "done" else "reopened")
         changed()
-        return Ok(ok=action_id)
+        return Noted(ok=action_id, request=request)
 
     @r.post("/followups/{person}/actions/{action_id}/followed-up")
-    def action_followed_up(person: str, action_id: str) -> FollowedUp:
-        """Record that the PM chased a person about an open action: it stays open and counts as told again."""
+    def action_followed_up(person: str, action_id: str, body: NoteIn | None = None) -> FollowedUp:
+        """Record that the PM chased a person about an open action: it stays open and counts as told again. A note
+        typed with it goes to the assistant."""
         need("person", person)
         need("action", action_id)
         done = guard(lambda: follow_up(store, action_id, person))
+        request = hand_note(("action", action_id), body.note if body else "", "followed_up")
         changed()
-        return FollowedUp(**done)
+        return FollowedUp(**done, request=request)
 
     @r.post("/followups/{person}/actions/{action_id}/unfollow")
     def action_unfollowed(person: str, action_id: str, body: Unfollow) -> Ok:
@@ -1384,13 +1405,15 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         return Ok(ok=action_id)
 
     @r.post("/followups/{person}/actions/{action_id}/finished")
-    def action_they_finished(person: str, action_id: str) -> Ok:
-        """Close an action because the person it waits on finished it: credited to them, reported by the PM."""
+    def action_they_finished(person: str, action_id: str, body: NoteIn | None = None) -> Noted:
+        """Close an action because the person it waits on finished it: credited to them, reported by the PM. A note
+        typed with it goes to the assistant."""
         need("person", person)
         need("action", action_id)
         guard(lambda: they_finished(store, cfg, action_id, person))
+        request = hand_note(("action", action_id), body.note if body else "", "they_finished")
         changed()
-        return Ok(ok=action_id)
+        return Noted(ok=action_id, request=request)
 
     @r.get("/requests/{request_id}/accounts")
     def request_accounts(request_id: str) -> list[AccountChoice]:
@@ -1702,6 +1725,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-store"})
 
     return r
+
+
+def _added_text(before: Any, after: Any) -> str:
+    """What an edit added to a text: the part after the old text when the edit kept it, else the whole new text."""
+    old = str(before or "").strip()
+    new = str(after or "").strip()
+    return new[len(old) :].strip() if old and new.startswith(old) else new
 
 
 def _setup(op: str) -> WriteContext:
