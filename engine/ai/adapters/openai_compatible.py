@@ -49,7 +49,7 @@ class OpenAICompatibleAdapter:
         except httpx.TimeoutException as err:
             raise AiError("timeout", str(err)) from None
         except httpx.TransportError as err:
-            raise AiError("provider_down", str(err)) from None
+            raise transport_error(err) from None
         seconds = time.monotonic() - started
         if response.status_code >= 400:
             raise classify_http_error(response)
@@ -96,7 +96,7 @@ class OpenAICompatibleAdapter:
         except httpx.TimeoutException as err:
             raise AiError("timeout", str(err)) from None
         except httpx.TransportError as err:
-            raise AiError("provider_down", str(err)) from None
+            raise transport_error(err) from None
         if response.status_code >= 400:
             raise classify_http_error(response)
         try:
@@ -174,6 +174,13 @@ def classify_http_error(response: httpx.Response) -> AiError:
     if status >= 500:
         return AiError("provider_down", detail, retry_after=retry_after)
     return AiError("other", detail)
+
+
+def transport_error(err: httpx.TransportError) -> AiError:
+    """A call that got no answer, from the kind of transport failure: no connection could be made at all (the name
+    didn't resolve, or the connection couldn't be opened) is `offline`; any other break in the exchange is
+    `provider_down`."""
+    return AiError("offline" if isinstance(err, httpx.ConnectError) else "provider_down", str(err))
 
 
 def _retry_after(response: httpx.Response) -> float | None:

@@ -17,6 +17,7 @@ from engine.ai.router import (
     AccountPaused,
     BudgetReached,
     Independence,
+    NetworkOffline,
     NoProvider,
     Router,
     choices,
@@ -119,6 +120,8 @@ def process(
     if not person_is_set(store, cfg):
         # Nothing is estimated or asked before the person is named: the assistant's work needs someone to address.
         return needs_you(store, request_id, SAY_WHO_FIRST, cause={"kind": "no_person"})
+    before = req.data.get("cause") or {}
+    offline_since = before.get("since") if before.get("kind") == "offline" else None
     _set(
         store,
         request_id,
@@ -263,6 +266,10 @@ def process(
         )
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
+    if outcome.cause and outcome.cause.get("kind") == "offline":
+        # The network is down: the request stays in line, no try is counted, and it is looked at again after a short
+        # wait. Since when is kept from the first time it found no network.
+        return wait_for_network(store, cfg, request_id, now, since=offline_since)
     if outcome.cause and outcome.cause.get("kind") == "paused":
         # Every account that could take it is waiting for a limit to reset: it stays in line and runs by itself then.
         _set(store, request_id, state="queued", waiting=outcome.stop, cause=outcome.cause)
@@ -439,6 +446,15 @@ def _rounds(
             return _Outcome(
                 changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=str(err), cause=cause
             )
+        except NetworkOffline:
+            # No account could be reached at all: the work waits for the network, which is no failure and no try.
+            return _Outcome(
+                changeset=out.changeset,
+                problems=out.problems,
+                run_id=out.run_id,
+                stop=OFFLINE_WAITING,
+                cause={"kind": "offline"},
+            )
         except (BudgetReached, NoProvider) as err:
             return _Outcome(
                 changeset=out.changeset,
@@ -543,6 +559,8 @@ UNREADABLE = (
     "The assistant's answer wasn't in the form this work needs, even when asked again. Try again, or pick another "
     "account for this work."
 )
+#: What a request waits on while no AI account can be reached for want of a network connection.
+OFFLINE_WAITING = "Waiting for the network"
 #: What a run waits on while the workspace has no person set; the setup step that names them clears it.
 SAY_WHO_FIRST = "Say who you are first"
 UNPRICED_GO = "Its cost can't be estimated on this account. Waiting for your go."
@@ -662,6 +680,7 @@ _PLAIN_FAILURE = {
     "no_key": "The AI account's key wasn't found",
     "timeout": "The AI account didn't answer in time",
     "provider_down": "The AI service is down",
+    "offline": "There is no network connection to the AI account",
     "invalid_output": "The AI account's answer couldn't be read",
     "no_output": "The AI account finished without giving an answer",
 }
@@ -696,6 +715,22 @@ def _set(store: Store, request_id: str, **changes: object) -> None:
     with store.transaction() as tx:
         cur = tx.get("request", request_id)
         tx.update("request", request_id, changes, _ENGINE, read_version=cur.version)
+
+
+def wait_for_network(store: Store, cfg: Config, request_id: str, now: datetime, since: object = None) -> None:
+    """Queue a request that found no network. It says why, since when and until when it is looked at again; `retries`
+    is left as it was, so being offline never uses up the tries a failing service gets."""
+    started = since if isinstance(since, str) else now.isoformat()
+    at = now + timedelta(seconds=cfg.dispatch.offline_check_seconds)
+    began = datetime.fromisoformat(started)
+    _set(
+        store,
+        request_id,
+        state="queued",
+        waiting=(f"{OFFLINE_WAITING} since {when_text(cfg, began, now)}. Checking again at {when_text(cfg, at, now)}."),
+        cause={"kind": "offline", "since": started, "until": at.isoformat()},
+    )
+    return None
 
 
 def stop_or_retry(store: Store, cfg: Config, request_id: str, outcome: _Outcome, now: datetime) -> None:

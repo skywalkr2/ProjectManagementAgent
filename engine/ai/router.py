@@ -16,7 +16,7 @@ from engine.config import Config
 from engine.secrets import SecretError, resolve_secret
 from engine.storage import Store, WriteContext
 
-FALLBACK_ON = {"rate_limited", "quota", "auth", "no_key", "provider_down", "timeout"}
+FALLBACK_ON = {"rate_limited", "quota", "auth", "no_key", "provider_down", "timeout", "offline"}
 LEVELS = ("open", "internal", "restricted")
 _SYSTEM = WriteContext(actor="engine", trust="trusted", op="run.record")
 
@@ -57,6 +57,14 @@ class AccountPaused(NoProvider):
         super().__init__(message)
         self.account = account
         self.until = until
+
+
+class NetworkOffline(AiError):
+    """Every account that could take the work, and wasn't paused, could not be reached because no connection could be
+    made at all. The work waits for the network; it is not a failure of any account."""
+
+    def __init__(self, detail: str = ""):
+        super().__init__("offline", detail)
 
 
 class BudgetReached(Exception):
@@ -221,6 +229,7 @@ class Router:
         picked = choices(self.cfg, task.kind, data_level, tier=tier, use=use, content=content, independent=independent)
         options = self._that_fit(task, list(picked))
         paused: dict[str, datetime] = {}
+        offline = 0  # accounts that could not be reached at all
         for position, choice in enumerate(options):
             held = self.pauses.until(choice.provider)
             if held is not None:
@@ -242,6 +251,8 @@ class Router:
                 continue
             except AiError as err:
                 last = err
+                if err.kind == "offline":
+                    offline += 1
                 self._record(task, request_id, choice, started, time.monotonic() - clock, None, err, independent)
                 until = self._pause_until(err, position == len(options) - 1)
                 if until is not None:
@@ -258,6 +269,8 @@ class Router:
             account, until = min(paused.items(), key=lambda item: item[1])
             raise AccountPaused(account, until, waiting_text(self.cfg, account, until, self.now()))
         assert last is not None
+        if offline and offline + len(paused) == len(options):
+            raise NetworkOffline(last.detail)
         raise last
 
     def _pause_until(self, err: AiError, last_in_line: bool) -> datetime | None:

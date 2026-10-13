@@ -1,5 +1,5 @@
 // Today's lines for work that has stopped (design 7.7, 8.5): work held until the app restarts, an AI account paused
-// until its usage limit resets, and the synced folder that can't be used until the person settles which copy to keep.
+// until its usage limit resets, work waiting for the network, and the synced folder that can't be used until the person settles which copy to keep.
 // Each is one row that says what to do first, with the one button that does it. The lines come from the Today queue; a
 // line is gone once its cause is, and only the person's own click ever restarts the app.
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +21,8 @@ function resetText(iso: string): string {
 
 export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void }) {
   const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
-  const lines = (queue.data ?? []).filter((line) => line.kind === "restart" || line.kind === "paused" || line.kind === "handover");
+  const lines = (queue.data ?? []).filter((line) => line.kind === "restart" || line.kind === "paused" || line.kind === "offline" || line.kind === "handover",
+  );
   if (!lines.length) return null;
   return (
     <div className={styles.lines} data-held-lines="">
@@ -30,6 +31,8 @@ export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover:
           <RestartLine key={line.key} line={line} />
         ) : line.kind === "handover" ? (
           <HandoverLine key={line.key} line={line} onOpen={props.onOpenHandover} />
+        ) : line.kind === "offline" ? (
+          <OfflineLine key={line.key} line={line} />
         ) : (
           <PausedLine key={line.key} line={line} onOpenAiAccounts={props.onOpenAiAccounts} />
         ),
@@ -80,6 +83,21 @@ function PausedLine(props: { line: Line; onOpenAiAccounts: () => void }) {
         <Button size="sm" variant="primary" onClick={props.onOpenAiAccounts}>
           {t("queue.paused.open")}
         </Button>
+      </div>
+    </section>
+  );
+}
+
+function OfflineLine(props: { line: Line }) {
+  const { t, tn } = useWords();
+  const { line } = props;
+  const label = tn("queue.offline", line.count, { time: line.waiting_since ? resetText(line.waiting_since) : "" });
+  return (
+    <section className={styles.line} aria-label={t("queue.offline.label")} data-queue-line="offline">
+      <Pill tone="warn">{t("queue.offline.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{label}</p>
+        <p className={styles.sub}>{t("queue.offline.sub")}</p>
       </div>
     </section>
   );

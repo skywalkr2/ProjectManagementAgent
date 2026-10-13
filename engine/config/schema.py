@@ -652,6 +652,19 @@ class DispatchFile(FileModel):
         le=3600,
         description="The wait before the first automatic retry; each later one waits twice as long as the one before.",
     )
+    offline_check_seconds: int = Field(
+        60,
+        ge=5,
+        le=3600,
+        description="How long work that found no network connection waits before the assistant looks again. Being "
+        "offline never uses up the automatic tries.",
+    )
+    offline_line_after_minutes: int = Field(
+        15,
+        ge=1,
+        le=1440,
+        description="How long work may wait for the network before Today asks you to check the connection.",
+    )
     cleaning: CleaningSettings = Field(default_factory=CleaningSettings, description="Input cleaning before AI calls.")
 
 

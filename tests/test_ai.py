@@ -9,7 +9,7 @@ import httpx
 import pytest
 
 from engine.ai.adapters import ADAPTERS
-from engine.ai.router import AccountPaused, BudgetReached, NoProvider, Router, choices
+from engine.ai.router import AccountPaused, BudgetReached, NetworkOffline, NoProvider, Router, choices
 from engine.ai.task import AiError, AiTask
 from engine.config import load_config
 from engine.storage import Store, WriteContext
@@ -120,17 +120,61 @@ def test_http_errors_are_classified_by_status(cfg, status, kind):
     assert err.value.kind == kind
 
 
-def test_a_timeout_and_a_dropped_connection_are_their_own_kinds(cfg):
+def test_a_timeout_no_connection_at_all_and_a_broken_exchange_are_their_own_kinds(cfg):
     def timeout(request):
         raise httpx.ReadTimeout("slow", request=request)
 
-    def dropped(request):
-        raise httpx.ConnectError("refused", request=request)
+    def no_connection(request):
+        raise httpx.ConnectError("name not resolved", request=request)
 
-    for handler, kind in ((timeout, "timeout"), (dropped, "provider_down")):
+    def broken(request):
+        raise httpx.RemoteProtocolError("closed mid-answer", request=request)
+
+    for handler, kind in ((timeout, "timeout"), (no_connection, "offline"), (broken, "provider_down")):
         with pytest.raises(AiError) as err:
             adapter(cfg, "main", handler).run(TASK, "m")
         assert err.value.kind == kind
+        with pytest.raises(AiError) as listing:
+            adapter(cfg, "main", handler).list_models()
+        assert listing.value.kind == kind
+
+
+def test_a_service_that_answers_with_a_failure_is_down_not_offline(cfg):
+    with pytest.raises(AiError) as err:
+        adapter(cfg, "main", lambda r: httpx.Response(503, text="overloaded")).run(TASK, "m")
+    assert err.value.kind == "provider_down"
+
+
+def test_the_next_account_is_tried_when_one_has_no_connection(cfg, store):
+    def no_connection(request):
+        raise httpx.ConnectError("name not resolved", request=request)
+
+    router, seen = router_with(
+        cfg, store, {"main": no_connection, "backup": lambda r: httpx.Response(200, json=ok_body())}
+    )
+    _, choice, _ = router.call(TASK, request_id="REQ-1")
+    assert choice.provider == "backup" and [h for h, _ in seen] == [host(cfg, "main"), host(cfg, "backup")]
+    assert store.read().list("run")[0].data["error_kind"] == "offline"
+
+
+def test_every_account_without_a_connection_is_the_network_being_offline(cfg, store):
+    def no_connection(request):
+        raise httpx.ConnectError("name not resolved", request=request)
+
+    router, seen = router_with(cfg, store, {"main": no_connection, "backup": no_connection})
+    with pytest.raises(NetworkOffline) as offline:
+        router.call(TASK, request_id="REQ-1")
+    assert offline.value.kind == "offline" and len(seen) == 2
+
+
+def test_one_account_without_a_connection_and_another_refusing_the_key_is_not_the_network(cfg, store):
+    def no_connection(request):
+        raise httpx.ConnectError("name not resolved", request=request)
+
+    router, _ = router_with(cfg, store, {"main": no_connection, "backup": lambda r: httpx.Response(401, text="no")})
+    with pytest.raises(AiError) as err:
+        router.call(TASK, request_id="REQ-1")
+    assert err.value.kind == "auth" and not isinstance(err.value, NetworkOffline)
 
 
 def test_a_missing_key_is_an_auth_failure_and_falls_through(cfg, store):

@@ -376,6 +376,7 @@ LIST_PROBLEMS = {
     "rate_limited": "The service asked to wait a moment. Try again shortly.",
     "timeout": "The service didn't answer in time. Try again.",
     "provider_down": "The service couldn't be reached. Check the address, or start it if it runs on this computer.",
+    "offline": "There is no network connection. Check it, then try again.",
     "invalid_output": "The service answered, but not with a model list. Check the address.",
 }
 

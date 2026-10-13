@@ -10,7 +10,7 @@ Plugin Today lines and stage lines are added by the screen into their groups.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from engine.followups import ROUTING, sections
@@ -47,7 +47,9 @@ class Line:
     none), refused, restart (work held until the person restarts the app: `count` is how many requests wait), handover
     (the synced folder can't be used until the person settles it: `state` is diverged, chosen or elsewhere and `text`
     the other computer), failed,
-    paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), overdue,
+    paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), offline (work
+    that has waited for the network longer than the configured time: `count` waiting and `waiting_since`, when the
+    oldest began), overdue,
     review, send or nudge. `count` is how many things the line covers; `text` the
     decision, question or held item in one line; `title` the input the line is about; `outcome` what the assistant
     did, counted by kind; `waiting` why the work stopped, as the engine said it."""
@@ -75,6 +77,7 @@ class Line:
     unpriced: int = 0
     account: str | None = None
     until: str | None = None
+    waiting_since: str | None = None
     state: str | None = None
     since: str = ""
 
@@ -264,6 +267,32 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 )
             )
 
+    # Risk: work that has waited for the network longer than the configured time, as one line.
+    offline = [
+        r
+        for r in requests.values()
+        if r.data.get("state") == "queued"
+        and not r.data.get("dismissed")
+        and (r.data.get("cause") or {}).get("kind") == "offline"
+        and (r.data.get("cause") or {}).get("since")
+    ]
+    if offline:
+        began = min(_aware(str(r.data["cause"]["since"])) for r in offline)
+        if now - began >= timedelta(minutes=cfg.dispatch.offline_line_after_minutes):
+            from engine.dispatcher import OFFLINE_WAITING
+
+            lines.append(
+                Line(
+                    key="offline",
+                    group="risk",
+                    kind="offline",
+                    count=len(offline),
+                    waiting=OFFLINE_WAITING,
+                    waiting_since=began.isoformat(),
+                    since=began.isoformat(),
+                )
+            )
+
     # Risk: the person's own overdue to-dos, as one line.
     overdue = []
     for action in reader.list("action"):
@@ -374,11 +403,18 @@ _KIND_ORDER = {
     "question": 6,
     "failed": 0,
     "paused": 1,
+    "offline": 1,
     "overdue": 2,
     "review": 0,
     "send": 0,
     "nudge": 1,
 }
+
+
+def _aware(stamp: str) -> datetime:
+    """A stored time as a moment with a zone."""
+    at = datetime.fromisoformat(stamp)
+    return at if at.tzinfo else at.replace(tzinfo=UTC)
 
 
 def _rank(line: Line) -> tuple[Any, ...]:

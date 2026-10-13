@@ -940,7 +940,8 @@ class QueueLineView(BaseModel):
     """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`
     is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
     POST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`
-    waiting), after which the work runs again by itself."""
+    waiting), after which the work runs again by itself; `offline` is work that has waited for the network longer than
+    the configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -957,6 +958,7 @@ class QueueLineView(BaseModel):
         "handover",
         "failed",
         "paused",
+        "offline",
         "overdue",
         "review",
         "send",
@@ -993,6 +995,11 @@ class QueueLineView(BaseModel):
         None,
         description="When the account's limit resets and the work waiting on it runs again by itself (paused), on the "
         "person's own clock (their time zone).",
+    )
+    waiting_since: datetime | None = Field(
+        None,
+        description="When the oldest request waiting for the network began waiting (offline), on the person's own "
+        "clock (their time zone).",
     )
     state: Literal["diverged", "chosen", "elsewhere"] | None = Field(
         None,

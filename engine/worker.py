@@ -69,10 +69,10 @@ def code_fingerprint() -> str:
 
 
 def waits_for_its_time(request: dict[str, Any], now: datetime) -> bool:
-    """Whether a queued request is waiting for a time to come (an account's limit to reset, or the next automatic try)
-    and that time is still ahead."""
+    """Whether a queued request is waiting for a time to come (an account's limit to reset, the next automatic try or
+    the next look for the network) and that time is still ahead."""
     cause = request.get("cause") or {}
-    if cause.get("kind") not in ("paused", "retry") or not cause.get("until"):
+    if cause.get("kind") not in ("paused", "retry", "offline") or not cause.get("until"):
         return False
     until = datetime.fromisoformat(str(cause["until"]))
     return (until if until.tzinfo else until.replace(tzinfo=UTC)) > now

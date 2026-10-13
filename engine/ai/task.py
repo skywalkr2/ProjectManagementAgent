@@ -15,6 +15,7 @@ ErrorKind = Literal[
     "invalid_output",
     "no_output",  # the program finished without error but gave no answer
     "provider_down",
+    "offline",  # no connection could be made at all; any answer from the service, even a failure, is not this
     "refused",
     "other",
 ]

@@ -2844,3 +2844,26 @@ domain; the sorting-rule save refuses one in plain words so a stale screen can't
 **Impact:** Design 4.x (a new `watch` key), 6.5 (the correction offers) and CHANGES section 35. New setting
 `watch.public_mail_domains_extra` with demo values in both workspaces. `domain` on the Set aside row and on the set-aside
 answer can now be empty. No change to scope.
+
+## 2026-10-13: A lost network waits for the network and uses up no tries (phase L0)
+
+**Decision:** A call to an AI account that could make no connection at all (the name did not resolve, or the connection
+could not be opened) is a new error kind, `offline`, never `provider_down`. Any answer from the service, a 5xx included, and
+any other break in the exchange stay `provider_down`; only the adapter decides it, from the kind of transport failure. The
+router may still try the next account in the chain. When every account that isn't paused is offline, the request stays
+queued with "Waiting for the network since <time>. Checking again at <time>.", the cause `offline` (`since`, `until`), and
+`retries` unchanged, so being offline never uses up the tries a failing service gets and never brings the request to the
+person. The worker looks again after `dispatch.offline_check_seconds` (60), never in a tight loop. Once a request has waited
+longer than `dispatch.offline_line_after_minutes` (15), Today's queue has one line however many wait, asking the person to
+check the network connection, with how many wait and since when; it goes when the work runs again. The command-line agent
+adapter is unchanged: none of its errors says plainly that no connection could be made.
+
+**Decided by:** the technical PM.
+
+**Why:** Design 8.6 says no network on waking is not a failure. A request run just after waking was tried three times in
+about ninety seconds and then came to the person, who could do nothing about it, while the scheduled reads already waited
+for the network without fuss.
+
+**Impact:** Design 6.16 (error kinds, the wait), 8.6, 5.1 (request cause, run error kind), 4.9 (two `dispatch` keys), 7.7 (a
+Today line) and CHANGES section 38. New settings `dispatch.offline_check_seconds` and `dispatch.offline_line_after_minutes`
+with demo values in both workspaces. No change to scope.

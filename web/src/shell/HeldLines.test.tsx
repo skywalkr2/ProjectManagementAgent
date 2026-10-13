@@ -97,6 +97,27 @@ test("each paused account has its own line, and both kinds can show together", a
   expect(rows[1]).toHaveTextContent("second's limit");
 });
 
+test("work waiting for the network is one line that starts with checking the connection, with the count and since when", async () => {
+  show([line("offline", { key: "offline", waiting_since: `${localDate(new Date())}T14:05:00-05:00`, count: 3 })]);
+  const row = await screen.findByRole("region", { name: "No network" });
+  expect(row).toHaveTextContent(/^No networkCheck the network connection: 3 requests have been waiting for it since 2:05\s?PM/);
+  expect(row).toHaveTextContent("They run again by themselves as soon as the network is back.");
+  expect(row.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  expect(within(row).queryByRole("button")).toBeNull();
+});
+
+test("one request waiting for the network is singular, and the line is gone once the queue no longer has it", async () => {
+  show([line("offline", { key: "offline", waiting_since: `${addDays(localDate(new Date()), -1)}T08:05:00-05:00` })]);
+  const row = await screen.findByRole("region", { name: "No network" });
+  expect(row).toHaveTextContent(/1 request has been waiting for it since \w{3}, \w{3} \d{1,2}, 8:05\s?AM/);
+});
+
+test("nothing is drawn for the network when the queue has no such line", async () => {
+  const { calls } = show([line("overdue", { group: "risk" })]);
+  await waitFor(() => expect(calls.some((c) => c.route === "GET today/queue")).toBe(true));
+  expect(screen.queryByRole("region", { name: "No network" })).toBeNull();
+});
+
 const handover = (state: "diverged" | "chosen" | "elsewhere", text: string | null = "Other laptop") =>
   line("handover", { key: "handover", group: "decide", state, text });
 

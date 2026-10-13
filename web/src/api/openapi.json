@@ -5842,7 +5842,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself.",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back.",
         "properties": {
           "account": {
             "anyOf": [
@@ -5931,6 +5931,7 @@
               "handover",
               "failed",
               "paused",
+              "offline",
               "overdue",
               "review",
               "send",
@@ -6120,6 +6121,19 @@
               }
             ],
             "title": "Waiting Days"
+          },
+          "waiting_since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the oldest request waiting for the network began waiting (offline), on the person's own clock (their time zone).",
+            "title": "Waiting Since"
           }
         },
         "required": [

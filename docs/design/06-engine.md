@@ -778,7 +778,7 @@ order, each line with a kind:
 | Group | Lines (kind) |
 |---|---|
 | **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; built, `tests/test_silent_stops.py::test_the_restart_line_comes_before_the_first_go_and_before_decisions`); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
-| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, built, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line (`overdue`) |
+| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, built, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`); work that has waited for the network longer than `dispatch.offline_line_after_minutes`, one line with the count and since when (`offline`, built, `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line (`overdue`) |
 | **Review** | the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
 | **Send** | messages to send, one line per person (`send`); a person who hasn't answered in `ui.today.nudge_after_days` days (`nudge`: questions sent and actions told, 4.11) |
 
@@ -877,7 +877,7 @@ registers its own, plugins add theirs (3.3).
   discounted) and price per billing unit, from the provider's catalog where it has one;
 - `run(task) -> result` with output, usage and timing;
 - `classify_error(exit_code, error_stream, transport_error) -> rate_limited | quota | auth | timeout |
-  invalid_output | no_output | provider_down | other`, with `retry_after` (seconds to the reset) when the runner gave one:
+  invalid_output | no_output | provider_down | offline | other`, with `retry_after` (seconds to the reset) when the runner gave one:
   an HTTP `Retry-After`, or, for an agent, the first group of a pattern in `errors.reset` matched in the error stream. It reads **only** the runner's own exit code, error stream and transport errors,
   never the model's output: a model writing "not logged in" in a report is text, not an auth failure. An agent that prints
   its errors on its output instead (its account sets `agent.errors.report_on_output`) has that output read as its error
@@ -1015,7 +1015,31 @@ when none is, the request stays queued, says "Waiting for <account>'s limit to r
 a model), and the worker leaves it alone until then and runs it again by itself at the reset, with nobody pressing anything. A
 limit with no reset time is not a pause: the request waits for the person ("out of credit"). Changing the accounts or tiers lifts
 the pauses, since another account may take the work
-(`tests/test_silent_stops.py::test_changing_the_accounts_lets_waiting_requests_try_the_new_setup_at_once`). Notes and messages cost little; drafting work
+(`tests/test_silent_stops.py::test_changing_the_accounts_lets_waiting_requests_try_the_new_setup_at_once`).
+
+**A lost network is `offline`, and it waits** (built: `tests/test_ai.py::test_a_timeout_no_connection_at_all_and_a_broken_exchange_are_their_own_kinds`,
+`test_a_service_that_answers_with_a_failure_is_down_not_offline`, `test_the_next_account_is_tried_when_one_has_no_connection`,
+`test_every_account_without_a_connection_is_the_network_being_offline`,
+`test_one_account_without_a_connection_and_another_refusing_the_key_is_not_the_network`;
+`tests/test_silent_stops.py::test_a_lost_network_waits_without_counting_a_try_and_runs_when_the_network_is_back`,
+`test_a_lost_network_never_reaches_the_person_however_long_it_lasts`, `test_a_service_that_is_down_still_counts_its_tries`,
+`test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`,
+`test_another_account_in_the_chain_takes_the_work_when_one_has_no_connection`;
+`tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`). `offline` means
+no connection could be made at all: the name did not resolve or the connection could not be opened. Any answer from the
+service, a 5xx included, is still `provider_down`, and a break after the connection was made stays `provider_down`. Only
+the adapter decides it, from the kind of transport failure and never from text (the OpenAI-compatible adapter: a connect
+error is `offline`, any other transport error `provider_down`; the command-line agent adapter classifies from the exit
+code and error stream and none of its errors says plainly that no connection could be made, so it does not use `offline`).
+The router tries the next account in the chain on `offline`, since another account may be reachable. When every account
+in the chain that is not paused is `offline`, the call ends in `NetworkOffline` and the request waits: it stays queued,
+says "Waiting for the network since <time>. Checking again at <time>.", has the cause `offline` with `since` (kept from the
+first time it found no network) and `until`, and **no try is counted** (`retries` is unchanged), so being offline never
+uses up the tries a failing service gets and never brings the request to the person. The worker leaves it alone until
+`until` (`dispatch.offline_check_seconds`, 60) and then tries again; it never loops. Each look is a recorded run with the
+error kind `offline`. Once a request has waited longer than `dispatch.offline_line_after_minutes` (15), Today's queue has one
+risk line, however many requests wait, to check the network connection, with how many wait and since when; it goes when the
+requests run again (7.7). Notes and messages cost little; drafting work
 (proposals, statements of work, long copy, research, independent reviews) can cost the person real money, so spending is something they decide,
 never something that happens to them:
 

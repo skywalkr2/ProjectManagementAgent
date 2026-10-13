@@ -535,11 +535,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         projects = {p.id: p.data["name"] for p in store.read().list("project")}
         here = zone(cfg)
         out = []
-        for line in queue(ws, store, cfg, datetime.now(UTC), handover=worker.handover_state()):
+        for line in queue(ws, store, cfg, worker.now(), handover=worker.handover_state()):
             data = {k: v for k, v in vars(line).items() if k not in ("title", "since")}
             if line.until:
                 # A time of the person's own clock, so the screen shows it as they would say it.
                 data["until"] = datetime.fromisoformat(line.until).astimezone(here)
+            if line.waiting_since:
+                data["waiting_since"] = datetime.fromisoformat(line.waiting_since).astimezone(here)
             out.append(
                 QueueLineView(
                     **data,

@@ -317,6 +317,112 @@ def test_no_retries_configured_means_the_first_failure_goes_to_the_person(env):
     assert stopped["state"] == "needs_you" and not stopped["waiting"].startswith("Tried")
 
 
+# ---- a lost network waits for the network, and uses up no tries ----------------------------------------
+
+
+def offline() -> AiError:
+    return AiError("offline", "name resolution failed")
+
+
+def test_a_lost_network_waits_without_counting_a_try_and_runs_when_the_network_is_back(env):
+    _, cfg, _, clock = env
+    provider = Scripted(offline(), offline(), offline(), offline(), ANSWER)
+    set_responder(provider)
+    request = hand(env)
+    worker = worker_of(env)
+    worker.run_pending()
+    began = clock()
+    waiting = data(env, request)
+    assert waiting["state"] == "queued" and waiting["retries"] == 0 and waiting["cause"]["kind"] == "offline"
+    assert datetime.fromisoformat(waiting["cause"]["since"]) == began
+    wait = timedelta(seconds=cfg.dispatch.offline_check_seconds)
+    assert datetime.fromisoformat(waiting["cause"]["until"]) == began + wait
+    assert waiting["waiting"].startswith("Waiting for the network since ") and "Checking again at" in waiting["waiting"]
+    # It is looked at again only after its wait, never in a loop, and more times than a failing service gets tries.
+    assert worker.run_pending() == 0 and provider.calls == 1
+    for _ in range(cfg.dispatch.retries + 1):
+        clock.move(seconds=cfg.dispatch.offline_check_seconds)
+        assert worker.run_pending() == 1
+        again = data(env, request)
+        assert again["state"] == "queued" and again["retries"] == 0
+        assert datetime.fromisoformat(again["cause"]["since"]) == began
+    clock.move(seconds=cfg.dispatch.offline_check_seconds)
+    assert worker.run_pending() == 1
+    done = data(env, request)
+    assert done["state"] == "review" and done["retries"] == 0 and done["cause"] is None
+    assert provider.calls == 5
+
+
+def test_a_lost_network_never_reaches_the_person_however_long_it_lasts(env):
+    _, cfg, _, clock = env
+    set_responder(Scripted(offline()))
+    request = hand(env)
+    worker = worker_of(env)
+    for _ in range(cfg.dispatch.retries + 4):
+        worker.run_pending()
+        clock.move(seconds=cfg.dispatch.offline_check_seconds)
+    stopped = data(env, request)
+    assert stopped["state"] == "queued" and stopped["retries"] == 0 and stopped["cause"]["kind"] == "offline"
+
+
+def test_a_service_that_is_down_still_counts_its_tries(env):
+    _, cfg, _, clock = env
+    set_responder(Scripted(AiError("provider_down", "HTTP 503: overloaded")))
+    request = hand(env)
+    worker = worker_of(env)
+    for _ in range(cfg.dispatch.retries + 1):
+        worker.run_pending()
+        clock.move(minutes=10)
+    stopped = data(env, request)
+    assert stopped["state"] == "needs_you" and stopped["waiting"].startswith(f"Tried {cfg.dispatch.retries + 1} times")
+
+
+def test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back(env):
+    ws, cfg, store, clock = env
+    set_responder(Scripted(offline()))
+    first = hand(env)
+    second = hand(env, NOTE + " Also the covers.")
+    worker = worker_of(env)
+    worker.run_pending()
+    assert all(line.kind != "offline" for line in queue(ws, store, cfg, clock()))
+    clock.move(minutes=cfg.dispatch.offline_line_after_minutes - 1)
+    worker.run_pending()
+    assert all(line.kind != "offline" for line in queue(ws, store, cfg, clock()))
+    clock.move(minutes=1)
+    worker.run_pending()
+    [line] = [x for x in queue(ws, store, cfg, clock()) if x.kind == "offline"]
+    assert line.group == "risk" and line.count == 2 and line.waiting == "Waiting for the network"
+    assert line.waiting_since == START.isoformat()
+    set_responder(Scripted(ANSWER))
+    clock.move(seconds=cfg.dispatch.offline_check_seconds)
+    worker.run_pending()
+    assert data(env, first)["state"] == "review" and data(env, second)["state"] == "review"
+    assert all(line.kind != "offline" for line in queue(ws, store, cfg, clock()))
+
+
+def test_another_account_in_the_chain_takes_the_work_when_one_has_no_connection(env):
+    ws, cfg, store, clock = env
+    cfg.ai.providers["second"] = cfg.ai.providers[account_of(cfg)].model_copy()
+    cfg.ai.tiers["routine"].fallback = ["second/default"]
+    cfg.ai.tiers["deep"].fallback = ["second/default"]
+    request = hand(env)
+
+    def cut_off(task):
+        raise offline()
+
+    factory = adapters_by_account(cfg, {account_of(cfg): cut_off, "second": lambda task: ANSWER})
+    worker = Worker(
+        ws,
+        store,
+        cfg,
+        Events(),
+        router_factory=lambda: Router(cfg, store, env={}, adapter_factory=factory, now=clock, sleep=lambda s: None),
+        now=clock,
+    )
+    worker.run_pending()
+    assert data(env, request)["state"] == "review" and data(env, request)["cause"] is None
+
+
 # ---- a program that finishes without an answer is its own outcome ----------------------------------------
 
 

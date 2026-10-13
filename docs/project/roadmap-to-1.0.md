@@ -579,11 +579,15 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - [x] **waking up** (for the scheduled reads: `tests/test_journeys.py::test_j11_a_scheduled_read_missed_in_sleep_runs_once_on_waking_and_a_lost_network_files_nothing`): the computer sleeps through a scheduled batch and wakes. The batch runs once, nothing looks fresh that
     isn't, and nothing is filed for the lost network (design 8.6). Most people open the lid rather than start fresh, and
     waking was where most "it just stopped" reports came from.
-- [ ] **A lost network while the assistant works** (found by the waking-up journey; left from it): a call to an AI account
-  that can't connect is `provider_down`, the same as a service that is failing, so a request run just after waking with
-  no network is tried three times within about a minute and a half and then comes to the person (design 8.6 says no
-  network on wake is not a failure). Needs a decision: a kind of its own that waits for the network without counting a
-  try, with a Today line saying why and until when.
+- [x] **A lost network while the assistant works** (found by the waking-up journey; decided 2026-10-13): a call that can
+  make no connection is the error kind `offline`, not `provider_down`; the request waits for the network without counting
+  a try, says why and since when, is looked at again after `dispatch.offline_check_seconds`, and after
+  `dispatch.offline_line_after_minutes` Today has one line to check the connection. Tests:
+  `tests/test_ai.py::test_a_timeout_no_connection_at_all_and_a_broken_exchange_are_their_own_kinds`,
+  `tests/test_silent_stops.py::test_a_lost_network_waits_without_counting_a_try_and_runs_when_the_network_is_back`,
+  `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`,
+  `tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`,
+  `web/src/shell/HeldLines.test.tsx`.
 
 L1. **Knowledge as records.**
 - [ ] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,

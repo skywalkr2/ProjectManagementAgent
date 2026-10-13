@@ -98,6 +98,7 @@ PROBLEMS = {
     "rate_limited": "The account asked to wait; try again shortly",
     "timeout": "It didn't answer in time",
     "provider_down": "It couldn't be reached",
+    "offline": "There is no network connection to reach it",
     "invalid_output": "Its answer couldn't be read",
     "no_output": "It finished without giving an answer",
     "refused": "It refused the request",

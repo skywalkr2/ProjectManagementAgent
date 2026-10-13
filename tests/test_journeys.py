@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
+from engine.ai.task import AiError
 from engine.backup import restore_backup
 from engine.cli import main
 from engine.workspace import Workspace
@@ -411,3 +412,45 @@ def test_j11_a_scheduled_read_missed_in_sleep_runs_once_on_waking_and_a_lost_net
         assert len(_changes(client)) == 3  # only the new note was handed in
         row = next(s for s in client.get("/api/watch").json() if s["id"] == "notes")
         assert row["last"]["outcome"] == "ok" and datetime.fromisoformat(row["read_at"]) == clock()
+
+
+def test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back(tmp_path):
+    """J12. The computer wakes with no network and the assistant has a request to read. The item waits, saying it is
+    waiting for the network; no try is used up and nothing is asked of me. After a quarter of an hour Today has one
+    line asking me to check the connection, with how many items wait and since when. When the network returns the item
+    is read once, the line goes, and the item is there to review."""
+    from tests.test_silent_stops import Scripted
+
+    ws, clock = _started(tmp_path)
+    cut_off = Scripted(AiError("offline", "name resolution failed"))
+    set_responder(cut_off)
+    try:
+        client, worker = _open_with_clock(ws, tmp_path, clock)
+        with client:
+            client.post("/api/handin", json={"note": "", "pasted": NOTES[0]})
+            worker.run_pending()
+            assert client.post("/api/runs/first-go").json()["started"] == 1
+            began = clock()
+            worker.run_pending()
+            [item] = _changes(client).values()
+            assert item["state"] == "queued" and item["waiting"].startswith("Waiting for the network since ")
+            assert worker.store.read().get("request", item["id"]).data["retries"] == 0
+            assert not _lines(client, "offline")
+
+            clock.move(minutes=16)  # the computer sleeps on; the network is still down when it is looked at again
+            worker.run_pending()
+            stuck = _changes(client)[item["id"]]
+            assert stuck["state"] == "queued" and worker.store.read().get("request", item["id"]).data["retries"] == 0
+            [line] = _lines(client, "offline")
+            assert line["group"] == "risk" and line["count"] == 1 and line["waiting"] == "Waiting for the network"
+            assert datetime.fromisoformat(line["waiting_since"]) == began
+            assert not [x for x in client.get("/api/today/queue").json() if x["kind"] in ("failed", "refused", "go")]
+
+            set_responder(Scripted(NOTHING_TO_DO))  # the network is back
+            clock.move(seconds=worker.cfg.dispatch.offline_check_seconds)
+            assert worker.run_pending() == 1
+            assert _changes(client)[item["id"]]["state"] == "review"
+            assert not _lines(client, "offline")
+            assert cut_off.calls == 2 and len(worker.store.read().list("changeset")) == 1
+    finally:
+        set_responder(None)

@@ -763,12 +763,13 @@ class StopCause(BaseModel):
     """Why a request stopped, in a form the screen can act on."""
 
     model_config = ConfigDict(extra="forbid")
-    kind: Literal["data_level", "no_person", "paused", "retry"] = Field(
+    kind: Literal["data_level", "no_person", "paused", "retry", "offline"] = Field(
         description="data_level: no AI account may see the request's material, and `accounts` would take it if "
         "allowed. no_person: the workspace has no person set yet, so the work waits before any AI call. paused: "
         "every account that could take it is waiting for a usage limit to reset (`account`, `until`); the request "
         "stays queued and runs again by itself then. retry: a run that gave no usable answer is tried again by "
-        "itself at `until`."
+        "itself at `until`. offline: no AI account could be reached for want of a network connection; the request "
+        "stays queued since `since` and is looked at again at `until`, and no try is counted."
     )
     level: Literal["open", "internal", "restricted"] | None = Field(
         None, description="For data_level: the data level of the material."
@@ -779,13 +780,16 @@ class StopCause(BaseModel):
         "level, in the order the tier tries them.",
     )
     account: str | None = Field(None, description="For paused: the account whose limit resets first.")
-    until: datetime | None = Field(None, description="For paused and retry: when the request runs again by itself.")
+    until: datetime | None = Field(
+        None, description="For paused, retry and offline: when the request runs again by itself."
+    )
+    since: datetime | None = Field(None, description="For offline: when the request first found no network.")
 
     @model_serializer(mode="wrap")
     def _leave_out_unset_times(self, handler: Any) -> dict[str, Any]:
-        """The account and the time are written only for the causes that have them."""
+        """The account and the times are written only for the causes that have them."""
         data = handler(self)
-        for key in ("account", "until"):
+        for key in ("account", "until", "since"):
             if data.get(key) is None:
                 data.pop(key, None)
         return data
