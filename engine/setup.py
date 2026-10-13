@@ -24,6 +24,7 @@ import yaml
 from engine.connectors import CORE, declared_reads, reads
 from engine.shipped import shipped
 from engine.storage import StoreError
+from engine.yaml_load import load_yaml
 
 STATE_FILE = "setup.json"
 CORE_STEPS = ("workspace", "ai", "mail", "backup", "people", "template", "first_note", "addons")
@@ -318,7 +319,7 @@ def known_endpoints() -> list[dict[str, Any]]:
     base_url, key_url, needs_key, local, allowed_data, settings (a new account's starting provider settings) and a
     note. Entries missing an id, a name or an adapter are left out."""
     try:
-        data = yaml.safe_load(CATALOG.read_text(encoding="utf-8")) or {}
+        data = load_yaml(CATALOG.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError):
         return []
     found = []

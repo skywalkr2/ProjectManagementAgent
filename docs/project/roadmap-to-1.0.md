@@ -362,14 +362,20 @@ them are needed before the owner's daily use, which starts when L-core passes.
   folder arrive as content, not the person's own words.
 - [ ] **Test and start-up efficiency, what the speed pass left** (prime directive; the pass itself: 72 s to 43 s wall,
   half the CPU, `tests/speedups.py` and the faster repository scan):
-  - the product reads its settings with the C YAML parser when it is installed, so every start and settings load is
-    faster and the tests run the product's own parser (today only the tests use it);
-  - the same stub evaluation of the demo cases runs in three tests; keep each layer's assertion on fewer cases;
+  - [x] the product reads YAML with the C parser when it is installed (`engine/yaml_load.py`, used everywhere the
+    engine parses YAML), so every start and settings load is faster and the tests run the product's own parser
+    (`test_yaml_is_read_by_the_compiled_parser_with_the_same_data`); a text the C parser refuses is parsed again by
+    the pure-Python one, so a mistyped file keeps the longer message with the quoted line
+    (`test_a_mistyped_settings_file_still_names_the_line_and_quotes_it`);
+  - [x] the same stub evaluation of the demo cases ran in three tests; the full run stays in
+    `test_every_case_passes_with_its_ideal_answer`, and the two CLI tests assert their own layer on one case
+    (`test_evaluate_with_the_stub_checks_the_cases`, `test_evaluate_runs_a_workspaces_own_cases_with_its_own_ai_setup`);
   - each store re-imports every plugin package; caching the plugin classes across stores needs a design for isolation;
   - tests that build several apps for one assertion share one;
-  - the browser test "a value added to the project status list ... still there after a reload" fails under heavy load
-    (seen three times); find the wait it is missing.
-  - the journey J4 (an add-on installed from the list) failed once while other test runs shared the machine and passed
+  - [x] the browser test "a value added to the project status list ... still there after a reload" waits for the
+    reloaded People view before opening it (`acceptance.spec.ts`, "a value added to the project status list from a
+    project form is selected, and still there after a reload"; passed twice, root project).
+  - [ ] the journey J4 (an add-on installed from the list) failed once while other test runs shared the machine and passed
     on its own; find what it waits on too.
 - [ ] Journey tests:
   - **no silent stops,** each with a fake provider:

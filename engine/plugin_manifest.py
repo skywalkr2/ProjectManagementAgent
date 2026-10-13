@@ -7,10 +7,11 @@ import re
 from pathlib import Path
 from typing import Literal
 
-import yaml
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
+
+from engine.yaml_load import load_yaml
 
 
 class Strict(BaseModel):
@@ -297,7 +298,7 @@ def installed_manifest(entry_point: object) -> Path:
 
 
 def read_manifest(path: Path) -> Manifest:
-    return Manifest.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
+    return Manifest.model_validate(load_yaml(path.read_text(encoding="utf-8")))
 
 
 def shipped_plugins() -> set[str]:

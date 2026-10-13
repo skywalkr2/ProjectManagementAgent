@@ -23,6 +23,7 @@ from engine.storage import Store, StoreError
 from engine.storage.export import commit_export, export_data, import_data
 from engine.storage.lease import Lease, LeaseHeld
 from engine.workspace import Workspace, WorkspaceError, init_workspace, resolve
+from engine.yaml_load import load_yaml
 
 STALE_BUILD = "The web screens are out of date. Run: npm --prefix web run build"
 TEMP_FOLDER = "This folder is emptied when the computer restarts. Keep workspaces in your home folder."
@@ -263,7 +264,7 @@ def add_plugin(ws: Workspace, plugin: str) -> str:
 
     source = Path(plugin).expanduser()
     if (source / "plugin.yaml").is_file():
-        manifest = yaml.safe_load((source / "plugin.yaml").read_text(encoding="utf-8")) or {}
+        manifest = load_yaml((source / "plugin.yaml").read_text(encoding="utf-8")) or {}
         name = str(manifest.get("name") or source.resolve().name)
         target = ws.root / "plugins" / name
         target.parent.mkdir(exist_ok=True)
@@ -282,7 +283,7 @@ def add_plugin(ws: Workspace, plugin: str) -> str:
         name = plugin
     path = ws.config_dir / "workspace.yaml"
     text = path.read_text(encoding="utf-8")
-    enabled = list((yaml.safe_load(text) or {}).get("plugins", {}).get("enabled", []))
+    enabled = list((load_yaml(text) or {}).get("plugins", {}).get("enabled", []))
     if name not in enabled:
         path.write_text(set_key(text, ["plugins", "enabled"], [*enabled, name]), encoding="utf-8")
     return name
@@ -329,7 +330,7 @@ def cmd_init(args: argparse.Namespace) -> int:
     if args.sync is not None:
         from engine.handover import Refused, open_workspace
 
-        storage = yaml.safe_load((ws.config_dir / "storage.yaml").read_text(encoding="utf-8")) or {}
+        storage = load_yaml((ws.config_dir / "storage.yaml").read_text(encoding="utf-8")) or {}
         storage.setdefault("sync", {})["folder"] = str(args.sync.expanduser().resolve())
         (ws.config_dir / "storage.yaml").write_text(yaml.safe_dump(storage, sort_keys=False), encoding="utf-8")
         try:

@@ -17,14 +17,13 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
 from engine.dispatcher import process
 from engine.intake import hand_in
 from engine.storage import Store
 from engine.workspace import init_workspace
+from engine.yaml_load import load_yaml
 
 RECEIVED_HOUR = 14  # a case that gives only a day is received at this hour, UTC
 
@@ -111,7 +110,7 @@ def received_of(case: dict[str, Any]) -> datetime:
 
 
 def load_cases(template: Path) -> list[dict[str, Any]]:
-    cases = [yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted((template / "evals").glob("*.yaml"))]
+    cases = [load_yaml(p.read_text(encoding="utf-8")) for p in sorted((template / "evals").glob("*.yaml"))]
     for case in cases:
         received_of(case)
     return cases

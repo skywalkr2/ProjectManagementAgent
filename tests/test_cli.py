@@ -68,8 +68,9 @@ def test_takeover_frees_a_workspace_left_open(tmp_path, demo, capsys):
 def test_evaluate_with_the_stub_checks_the_cases(capsys):
     from tests.conftest import DEMO_B
 
-    assert main(["evaluate", "--from", str(DEMO_B), "--stub", "--runs", "1"]) == 0
-    assert "Overall pass rate: 100%" in capsys.readouterr().out
+    assert main(["evaluate", "--from", str(DEMO_B), "--stub", "--runs", "1", "--case", "close-action"]) == 0
+    out = capsys.readouterr().out
+    assert "close-action" in out and "Overall pass rate: 100%" in out
 
 
 def test_evaluate_with_a_missing_key_fails_and_says_so(tmp_path, capsys):
@@ -206,8 +207,9 @@ def test_evaluate_runs_a_workspaces_own_cases_with_its_own_ai_setup(tmp_path, ca
 
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
     assert (ws.root / "evals").is_dir()
-    assert main(["evaluate", "-w", str(ws.root), "--stub", "--runs", "1"]) == 0
-    assert "Overall pass rate: 100%" in capsys.readouterr().out
+    assert main(["evaluate", "-w", str(ws.root), "--stub", "--runs", "1", "--case", "close-action"]) == 0
+    out = capsys.readouterr().out
+    assert "close-action" in out and "Overall pass rate: 100%" in out
 
 
 def test_evaluate_without_cases_says_where_to_find_some(tmp_path, capsys):

@@ -13,27 +13,9 @@ from pathlib import Path
 
 
 def install() -> None:
-    _use_the_c_yaml_parser()
     _remember_installed_plugins()
     _share_route_validators()
     _copy_prepared_workspaces()
-
-
-# ---- parsing ---------------------------------------------------------------------------------------------------------
-
-
-def _use_the_c_yaml_parser() -> None:
-    """Settings, manifests and records are many small YAML files for every workspace a test builds. The C parser gives
-    the same data as the pure-Python one several times faster; it is used when it is installed."""
-    import yaml
-
-    if getattr(yaml, "CSafeLoader", None) is None:
-        return
-
-    def safe_load(stream):
-        return yaml.load(stream, Loader=yaml.CSafeLoader)
-
-    yaml.safe_load = safe_load
 
 
 # ---- installed plugins -----------------------------------------------------------------------------------------------

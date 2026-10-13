@@ -15,6 +15,8 @@ from typing import Any
 
 import yaml
 
+from engine.yaml_load import load_yaml
+
 _KEY = re.compile(r"^(?P<indent> *)(?P<key>[A-Za-z0-9_./-]+|\"[^\"]*\"|'[^']*'):(?P<rest>(?: .*)?)$")
 _MISSING = object()
 
@@ -25,13 +27,13 @@ class _Fallback(Exception):
 
 def set_key(text: str, path: list[str], value: Any) -> str:
     """The file's text with the key at `path` set to `value`."""
-    data = yaml.safe_load(text) or {}
+    data = load_yaml(text) or {}
     expected = copy.deepcopy(data)
     _set(expected, path, value)
     try:
         edited = _set_lines(text.splitlines(), path, value)
         result = "\n".join(edited) + "\n"
-        if (yaml.safe_load(result) or {}) == expected:
+        if (load_yaml(result) or {}) == expected:
             return result
     except (_Fallback, yaml.YAMLError):
         pass
@@ -40,14 +42,14 @@ def set_key(text: str, path: list[str], value: Any) -> str:
 
 def remove_key(text: str, path: list[str]) -> str:
     """The file's text without the key at `path` (so it goes back to its default). A missing key changes nothing."""
-    data = yaml.safe_load(text) or {}
+    data = load_yaml(text) or {}
     expected = copy.deepcopy(data)
     if not _remove(expected, path):
         return text
     try:
         edited = _remove_lines(text.splitlines(), path)
         result = "\n".join(edited) + "\n"
-        if (yaml.safe_load(result) or {}) == expected:
+        if (load_yaml(result) or {}) == expected:
             return result
     except (_Fallback, yaml.YAMLError):
         pass

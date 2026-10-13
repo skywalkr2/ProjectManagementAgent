@@ -16,10 +16,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import get_args
 
-import yaml
 from pydantic import BaseModel
 
 from engine.config.schema import FILES
+from engine.yaml_load import load_yaml
 
 REPO = Path(__file__).resolve().parents[2]
 CODE_DIRS = ("engine", "api", "web/src", "web/e2e", "plugins", "tests")
@@ -148,7 +148,7 @@ def workspace_terms(ws_root: Path) -> set[str]:
 
     cfg_path = ws_root / "config" / "workspace.yaml"
     if cfg_path.exists():
-        cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+        cfg = load_yaml(cfg_path.read_text(encoding="utf-8")) or {}
         add(cfg.get("name"))
         add(cfg.get("assistant_name"))
         user = cfg.get("user") or {}
@@ -197,7 +197,7 @@ def scan_specificity(
 
 
 def scan_providers(extra_names: Iterable[str] = (), root: Path = REPO) -> list[Finding]:
-    data = yaml.safe_load((root / ADAPTERS / "known_vendors.yaml").read_text(encoding="utf-8"))
+    data = load_yaml((root / ADAPTERS / "known_vendors.yaml").read_text(encoding="utf-8"))
     names = {n.lower() for n in data.get("vendors", [])} | {n.lower() for n in extra_names if n}
     patterns = [(n, _term_pattern(n)) for n in sorted(names)]
     findings = []

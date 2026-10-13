@@ -12,6 +12,8 @@ from typing import Any
 
 import yaml
 
+from engine.yaml_load import load_yaml
+
 PACKAGED = Path(__file__).resolve().parent / "_shipped"
 CHECKOUT = Path(__file__).resolve().parents[1]
 
@@ -46,7 +48,7 @@ def product(packaged: Path = PACKAGED, checkout: Path = CHECKOUT) -> dict[str, A
     """Facts about this build (`catalog/product.yaml`), such as where feedback goes; empty when there are none."""
     path = shipped("catalog", packaged, checkout) / "product.yaml"
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data = load_yaml(path.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError):
         return {}
     return data if isinstance(data, dict) else {}

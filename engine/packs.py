@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from engine.config import Config
 from engine.connectors import READS_WORDS, reads
+from engine.yaml_load import load_yaml
 
 #: The largest feed read, in bytes.
 MAX_FEED_BYTES = 2_000_000
@@ -117,7 +118,7 @@ def parse(url: str, text: str) -> Feed:
     """A feed's entries; entries that don't fit are left out with a note."""
     feed = Feed(url)
     try:
-        data = yaml.safe_load(text)
+        data = load_yaml(text)
     except yaml.YAMLError:
         feed.error = "it isn't a catalog file"
         return feed

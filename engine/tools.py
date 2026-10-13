@@ -29,8 +29,9 @@ from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-import yaml
 from packaging.version import InvalidVersion, Version
+
+from engine.yaml_load import load_yaml
 
 #: Environment variables passed through to programs; everything else is left out.
 _PASSED_ENV = ("PATH", "LANG", "LC_ALL", "SYSTEMROOT", "WINDIR", "COMSPEC", "PATHEXT")
@@ -78,7 +79,7 @@ def read_locations(path: Path) -> dict[str, dict[str, Any]]:
     """The per-computer tool locations: name -> {command: [...], env: {...}}. A missing file means none."""
     if not path.exists():
         return {}
-    raw = yaml.safe_load(path.read_text()) or {}
+    raw = load_yaml(path.read_text()) or {}
     if not isinstance(raw, dict):
         raise ToolError(f"{path.name} must map tool names to a path or a command")
     found = {}

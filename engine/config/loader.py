@@ -18,6 +18,7 @@ import yaml
 from pydantic import BaseModel, ValidationError
 
 from engine.config.schema import CURRENT_VERSIONS, FILES, FileModel
+from engine.yaml_load import load_yaml
 
 ENV_PREFIX = "COCKPIT__"
 LAYERS = ("default", "file", "env", "flag")
@@ -145,7 +146,7 @@ def render_default_file(name: str, values: FileModel | None = None) -> str:
 
 def _read_yaml(path: Path) -> dict[str, Any]:
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data = load_yaml(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as err:
         raise ConfigError(f"{path.name}: not valid YAML ({err})", "your settings aren't written correctly") from None
     if data is None:
@@ -175,7 +176,7 @@ def _env_values(env: Mapping[str, str]) -> dict[str, Any]:
         parts = [p.lower() for p in key[len(ENV_PREFIX) :].split("__") if p]
         if len(parts) < 2 or parts[0] not in FILES:
             continue
-        values[".".join(parts)] = yaml.safe_load(text) if text != "" else ""
+        values[".".join(parts)] = load_yaml(text) if text != "" else ""
     return values
 
 

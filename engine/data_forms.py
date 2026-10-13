@@ -17,6 +17,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from engine.storage import StoreError
+from engine.yaml_load import load_yaml
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ def _problem(err: ValidationError) -> str:
 def _raw(path: Path) -> tuple[dict[str, Any] | None, str | None]:
     """A file's own content (only the keys it has), or why it can't be read."""
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        data = load_yaml(path.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError) as err:
         log.warning("A data file couldn't be read: %s", err)
         return None, "it can't be read"
@@ -220,7 +221,7 @@ def restore(host: Any, name: str, file: str, layer: str, before: str | None, pro
         path.unlink(missing_ok=True)
         return
     try:
-        yaml.safe_load(before)
+        load_yaml(before)
     except yaml.YAMLError:
         raise StoreError("that copy can't be read any more") from None
     path.parent.mkdir(parents=True, exist_ok=True)

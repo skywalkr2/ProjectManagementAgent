@@ -30,6 +30,8 @@ from typing import Any
 
 import yaml
 
+from engine.yaml_load import COMPILED_SAFE_LOADER, load_with
+
 MACHINE = ".cockpit"
 WORKSPACE = "_workspace"
 MANIFEST = f"{MACHINE}/manifest.json"
@@ -168,18 +170,22 @@ def _yaml(data: Any) -> str:
     return yaml.safe_dump(data, sort_keys=False, allow_unicode=True, default_flow_style=False, width=1000)
 
 
-class _NoDates(yaml.SafeLoader):
-    """Reads YAML the way it was written: dates and times stay text, as the records hold them."""
+def _without_dates(base: type) -> type:
+    """`base` reading YAML the way it was written: dates and times stay text, as the records hold them."""
+    loader = type("_NoDates", (base,), {})
+    loader.yaml_implicit_resolvers = {
+        key: [(tag, regexp) for tag, regexp in resolvers if tag != "tag:yaml.org,2002:timestamp"]
+        for key, resolvers in base.yaml_implicit_resolvers.items()
+    }
+    return loader
 
 
-_NoDates.yaml_implicit_resolvers = {
-    key: [(tag, regexp) for tag, regexp in resolvers if tag != "tag:yaml.org,2002:timestamp"]
-    for key, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
-}
+_NoDates = _without_dates(yaml.SafeLoader)
+_FastNoDates = _without_dates(COMPILED_SAFE_LOADER) if COMPILED_SAFE_LOADER is not None else None
 
 
 def read_yaml(text: str) -> Any:
-    return yaml.load(text, Loader=_NoDates)  # noqa: S506 - a SafeLoader subclass
+    return load_with(text, _FastNoDates, _NoDates)
 
 
 def _fields(record: Any, model: Any, skip: set[str]) -> dict[str, Any]:

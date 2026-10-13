@@ -41,6 +41,7 @@ from engine.plugin_manifest import NOT_YET, Manifest, installed_manifest, read_m
 from engine.records import REFERENCES, REGISTRY, ref_fields, values_at
 from engine.storage import StoreError, WriteContext
 from engine.tasks import TASKS
+from engine.yaml_load import load_yaml
 
 BUNDLED = Path(__file__).resolve().parents[1] / "plugins"
 #: The longest text a plugin's wording entry may have.
@@ -1139,7 +1140,7 @@ class PluginHost:
                 if info.is_required() or not info.description:
                     raise ValueError(f"config key {key} needs a default and description")
             config_path = self.store.path.parent / "config" / "plugins" / f"{name}.yaml"
-            raw = yaml.safe_load(config_path.read_text()) if config_path.exists() else {}
+            raw = load_yaml(config_path.read_text()) if config_path.exists() else {}
             config = schema.model_validate({} if raw is None else raw)
             for new_name, old_name in schema.renamed_keys(raw):
                 self.status[name].notes.append(
@@ -1594,7 +1595,7 @@ class PluginHost:
         """What the screens call running plugins' own things: each AI task kind's label as `task.<kind>`, then the
         plugins' wording files. A key must name something in its plugin's namespace; other keys and values that
         aren't short text are left out and noted on the plugin."""
-        import yaml
+        from engine.yaml_load import load_yaml
 
         found: dict[str, str] = {}
         for plugin in sorted(self.manifests):
@@ -1607,7 +1608,7 @@ class PluginHost:
             for relative in self.manifests[plugin].provides.wording:
                 path = self.candidates[plugin].parent / relative
                 try:
-                    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+                    data = load_yaml(path.read_text(encoding="utf-8")) or {}
                 except (OSError, yaml.YAMLError) as err:
                     self._note(plugin, f"its wording file {relative} can't be read: {err}")
                     continue

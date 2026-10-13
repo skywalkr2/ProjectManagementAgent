@@ -22,6 +22,7 @@ from typing import Any
 import yaml
 
 from engine.shipped import shipped as shipped_folder
+from engine.yaml_load import load_yaml
 
 SHIPPED = shipped_folder("templates")
 
@@ -88,7 +89,7 @@ def in_use(ws: Any, enabled: list[str]) -> str | None:
 def _holds(ws: Any, plugin: str, settings: dict[str, Any]) -> bool:
     path = ws.config_dir / "plugins" / f"{plugin}.yaml"
     try:
-        current = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        current = load_yaml(path.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError):
         return False
     for key, entries in settings.items():
@@ -114,7 +115,7 @@ def find(name_or_path: str) -> Path:
 
 def _read(path: Path) -> dict[str, Any]:
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        data = load_yaml(path.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError) as err:
         raise TemplateError(f"{path.name} can't be read: {err}", "the template can't be read") from None
     if not isinstance(data, dict) or not data.get("name") or not isinstance(data.get("plugins", {}), dict):
@@ -151,7 +152,7 @@ def apply(ws: Any, name_or_path: str) -> list[str]:
     merged: dict[str, Any] = {}
     for plugin, settings in plugins.items():
         path = settings_dir / f"{plugin}.yaml"
-        current = yaml.safe_load(path.read_text(encoding="utf-8")) if path.exists() else {}
+        current = load_yaml(path.read_text(encoding="utf-8")) if path.exists() else {}
         merged[plugin] = merge(current or {}, settings or {})
         _check(plugin, merged[plugin], ws, BUNDLED)
     workspace_file = ws.config_dir / "workspace.yaml"
@@ -167,7 +168,7 @@ def apply(ws: Any, name_or_path: str) -> list[str]:
 def _enabled(text: str, plugins: list[str]) -> str:
     """workspace.yaml with these plugins turned on, keeping its comments and layout where the list is written on one
     line (`enabled: [a, b]`); otherwise rewritten."""
-    workspace = yaml.safe_load(text) or {}
+    workspace = load_yaml(text) or {}
     enabled = list((workspace.get("plugins") or {}).get("enabled") or [])
     wanted = [*enabled, *[p for p in plugins if p not in enabled]]
     if wanted == enabled:
@@ -205,6 +206,6 @@ def save(ws: Any, path: Path, name: str, description: str, plugins: list[str]) -
         settings_path = ws.config_dir / "plugins" / f"{plugin}.yaml"
         if not settings_path.exists():
             raise TemplateError(f"{plugin} has no settings in this workspace")
-        out["plugins"][plugin] = yaml.safe_load(settings_path.read_text(encoding="utf-8")) or {}
+        out["plugins"][plugin] = load_yaml(settings_path.read_text(encoding="utf-8")) or {}
     path.write_text(yaml.safe_dump(out, sort_keys=False), encoding="utf-8")
     return path

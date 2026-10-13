@@ -252,18 +252,19 @@ class PluginWorkspace:
         from engine.shipped import demo
         from engine.storage import Store
         from engine.workspace import Workspace, init_workspace
+        from engine.yaml_load import load_yaml
 
         if from_saved is not None:
             shutil.copytree(from_saved.path, root, symlinks=True)
             self.ws = Workspace(root)
-            self.plugins = list(yaml.safe_load((root / ".plugin-workspace.yaml").read_text(encoding="utf-8")))
+            self.plugins = list(load_yaml((root / ".plugin-workspace.yaml").read_text(encoding="utf-8")))
             self.cfg = load_config(self.ws.config_dir, env={})
             self.store = Store(self.ws.db_path, cfg=self.cfg)
             self._check_started(require_started)
             return
         self.ws = init_workspace(root, template=demo("demo-b"), git=False)
         storage_path = self.ws.config_dir / "storage.yaml"
-        storage = yaml.safe_load(storage_path.read_text(encoding="utf-8")) or {}
+        storage = load_yaml(storage_path.read_text(encoding="utf-8")) or {}
         storage.setdefault("backups", {})["automatic"] = False
         storage_path.write_text(yaml.safe_dump(storage), encoding="utf-8")
         self.plugins = [add_plugin(self.ws, str(folder)) for folder in folders]

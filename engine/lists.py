@@ -11,10 +11,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from engine.records import list_fields
 from engine.storage import StoreError, WriteContext
+from engine.yaml_load import load_yaml
 
 DEFAULTS = Path(__file__).parent / "defaults" / "value_lists.yaml"
 
@@ -22,7 +21,7 @@ _ENGINE = WriteContext(actor="engine", trust="trusted", op="lists.ensure")
 
 
 def core_lists() -> dict[str, dict[str, Any]]:
-    data = yaml.safe_load(DEFAULTS.read_text(encoding="utf-8")) or {}
+    data = load_yaml(DEFAULTS.read_text(encoding="utf-8")) or {}
     return {
         str(name): {"label": str(entry["label"]), "values": [str(v) for v in entry.get("values") or []]}
         for name, entry in (data.get("lists") or {}).items()

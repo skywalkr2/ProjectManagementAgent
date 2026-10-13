@@ -42,6 +42,8 @@ from typing import Any
 
 import yaml
 
+from engine.yaml_load import load_yaml
+
 
 @dataclass
 class Report:
@@ -154,7 +156,7 @@ def _check_entry(entry_path: Path, manifest: Any, report: Report, manifest_folde
     from engine import packs
 
     try:
-        raw = yaml.safe_load(entry_path.read_text(encoding="utf-8"))
+        raw = load_yaml(entry_path.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as err:
         report.failed.append(f"the catalog entry can't be read: {err}")
         return
@@ -181,7 +183,7 @@ def _check_entry(entry_path: Path, manifest: Any, report: Report, manifest_folde
             else f"its {label} is {ours!r}, plugin.yaml says {theirs!r}"
         )
     # Compared with plugin.yaml as written, since the entry is copied from it.
-    data = yaml.safe_load((Path(manifest_folder) / "plugin.yaml").read_text(encoding="utf-8")) or {}
+    data = load_yaml((Path(manifest_folder) / "plugin.yaml").read_text(encoding="utf-8")) or {}
     for part in ("provides", "requires"):
         ours, theirs = _declared(getattr(entry, part)), _declared(data.get(part) or {})
         if ours == theirs:

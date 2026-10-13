@@ -29,6 +29,7 @@ from engine.config.loader import plain_label, refusal_text
 from engine.config.schema import FILES
 from engine.config.yaml_edit import get_key, has_key, remove_key, set_key
 from engine.storage import StoreError, WriteContext
+from engine.yaml_load import load_yaml
 
 log = logging.getLogger(__name__)
 
@@ -155,7 +156,7 @@ def _plugin_raw(config_dir: Path, plugin: str) -> dict[str, Any]:
     if not path.exists():
         return {}
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        data = load_yaml(path.read_text(encoding="utf-8"))
     except yaml.YAMLError:
         return {}
     return data if isinstance(data, dict) else {}
@@ -300,7 +301,7 @@ def save(
         if name not in texts:
             source = config_dir / f"{name}.yaml"
             texts[name] = source.read_text(encoding="utf-8") if source.exists() else "version: 1\n"
-        data = yaml.safe_load(texts[name]) or {}
+        data = load_yaml(texts[name]) or {}
         before[key] = (_value(key, cfg, models, texts[name]), not has_key(data, path))
     for key, value in changes.items():
         name, *path = key.split(".")
@@ -311,7 +312,7 @@ def save(
     for name in texts:
         if name in models and hasattr(models[name], "renamed_keys"):
             # An add-on's renamed setting is written under its new name, and the old name goes.
-            data = yaml.safe_load(texts[name]) or {}
+            data = load_yaml(texts[name]) or {}
             for new_name, old_name in models[name].renamed_keys(data):
                 texts[name] = remove_key(texts[name], [old_name])
                 if new_name not in data:
@@ -361,7 +362,7 @@ def _value(key: str, cfg: Any, models: dict[str, type[BaseModel]], text: str) ->
     if name not in models:
         return _effective(cfg, key)
     try:
-        data = models[name].model_validate(yaml.safe_load(text) or {}).model_dump(mode="json")
+        data = models[name].model_validate(load_yaml(text) or {}).model_dump(mode="json")
     except Exception:  # an add-on's file it refuses: no value to show
         return None
     return get_key(data, path) if has_key(data, path) else None
@@ -372,7 +373,7 @@ def _check_plugin(model: type[BaseModel], text: str) -> None:
     from pydantic import ValidationError
 
     try:
-        model.model_validate(yaml.safe_load(text) or {})
+        model.model_validate(load_yaml(text) or {})
     except ValidationError as err:
         first = err.errors()[0]
         log.warning("An add-on's settings were refused at %s: %s", ".".join(map(str, first["loc"])), first["msg"])

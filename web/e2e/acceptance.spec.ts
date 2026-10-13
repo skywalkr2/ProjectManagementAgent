@@ -871,6 +871,8 @@ test.describe.serial("acceptance scenario", () => {
     const row = page.locator("li.line", { hasText: "Listed project" });
     await expect(row).toContainText("Parked for now");
     await page.reload();
+    // The reloaded page has no views to open until the app has loaded, so wait for the People view itself.
+    await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
     await go(page, "People");
     const again = page.locator("li.line", { hasText: "Listed project" });
     await expect(again).toContainText("Parked for now");

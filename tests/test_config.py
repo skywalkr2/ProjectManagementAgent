@@ -101,3 +101,24 @@ def test_the_pms_name_moves_from_the_settings_to_their_person_record(tmp_path):
     finally:
         store.close()
     assert load_config(ws.config_dir, env={}).moved == {}
+
+
+def test_yaml_is_read_by_the_compiled_parser_with_the_same_data(monkeypatch):
+    import engine.yaml_load as reading
+
+    text = "a: 1\nb: [x, y]\nc:\n  - d: 2026-01-02\n    e: 'q'\n"
+    assert reading.COMPILED_SAFE_LOADER is not None  # the test environment installs the compiled parser
+    expected = yaml.safe_load(text)
+    calls = []
+    real = yaml.load
+    monkeypatch.setattr(yaml, "load", lambda stream, Loader: calls.append(Loader) or real(stream, Loader=Loader))
+    assert reading.load_yaml(text) == expected
+    assert calls == [reading.COMPILED_SAFE_LOADER]
+
+
+def test_a_mistyped_settings_file_still_names_the_line_and_quotes_it(tmp_path):
+    write(tmp_path, "server", "port: 9000\nhost: [a, b\nbase_path: /\n")
+    with pytest.raises(ConfigError) as err:
+        load_config(tmp_path, env={})
+    assert "server.yaml: not valid YAML" in str(err.value) and "line 2" in str(err.value)
+    assert "host: [a, b" in str(err.value)  # the pure-Python parser's longer message, used for the error
