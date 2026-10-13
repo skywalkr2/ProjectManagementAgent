@@ -245,7 +245,11 @@ test.describe("screen use and the shell", () => {
       await expect(main.getByRole("heading", { level: 2, name: "Your AI account" })).toBeVisible();
       // At the end of the screen, where its buttons are, pressing the undo key with nothing to undo says so in a toast.
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-      // The cursor starts in the screen's first field, where a shortcut key would type; leave the field first.
+      // The cursor starts in the screen's first field, where a shortcut key would type; wait for it to land there (the
+      // screen focuses its field once its data has loaded), then leave the field.
+      await expect
+        .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")))
+        .toBe(true);
       await main.getByRole("heading", { level: 2, name: "Your AI account" }).click();
       await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
       await page.keyboard.press("u");

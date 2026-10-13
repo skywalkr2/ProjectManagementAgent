@@ -235,8 +235,11 @@ test.describe.serial("journeys", () => {
     await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
     await connectedAgain(page);
 
-    // Its screen is in the sidebar (once the app has told the page about it) and opens.
-    await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Example overview" })).toBeVisible();
+    // Its screen is in the sidebar (once the app has told the page about it) and opens. The page learns of it when it
+    // reloads its data after reconnecting, which a busy machine can take longer than the default wait to do.
+    await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Example overview" })).toBeVisible({
+      timeout: 30_000,
+    });
     await openView(page, "Example overview");
     await expect(page.getByRole("heading", { level: 1, name: "Example overview" })).toBeVisible();
     await expect(page.getByText("This page comes from the example add-on.")).toBeVisible();
