@@ -256,12 +256,28 @@ them are needed before the owner's daily use, which starts when L-core passes.
   question it waited on (the answer stands, other ops may share it) and takes along the owner the person picked for it
   (`tests/test_pipeline.py::test_an_action_released_by_saying_who_someone_is_can_be_undone`,
   `tests/test_pipeline.py::test_an_action_given_an_owner_by_pick_an_owner_can_be_undone`).
-- [ ] **What the audit found, put right in the design:** 6.8 to 6.11 describe in the present tense what isn't built:
-  question `key` dedupe, `on_answer`, link enrichment, reroute proposals, the pending flag, Reassign, meeting sync, the
-  notice baseline date, `track_only`, `owner_format` parsing and `person.merge`. Each gets "designed" and its phase.
-  Dropping, rewording and rerouting a question, and the feedback run built from the named item's current state, move to
-  L3, where every correction records its signal; `draft_edited` ties to the run that wrote the questions there too.
+- [x] **What the audit found, put right in the design** (checked by reading; design 6.8, 6.9, 6.10 and 6.11 in
+  `06-engine.md`, its status note, and one phrase in 6.7): what 6.8 to 6.11 described in the present tense and the code does
+  not do is now marked *designed*, with its phase:
+  - L3: moving, rewording, rerouting and dropping a question, "not me, ask X" as a routing proposal, narrowing a question,
+    the feedback run built from the named item's current state, and learning from the PM's own answer;
+  - L0: the `owner_format` setting wired or removed (Followed up, `done_by` and `reported_by` are built);
+  - L2: `near-duplicate-question`; B: Reassign; C2: meeting sync and `routing.escalation`; C4: edits pulled back from
+    published pages;
+  - not scheduled (listed in this change's report): question `key` dedupe, `on_answer`, link enrichment, the pending flag,
+    the re-check of every other open question, one store interface over every action store, the notice baseline date,
+    `track_only` notices, `owner_format` parsing and `person.merge`.
   "Add a new person" is L3b.
+- [ ] **Where the code and the design differ, to decide** (found by the design pass; the design is left as written):
+  - a question carries a stored kind (question or decision), while 6.8 says the recipient decides whether something is
+    a decision; Follow-ups treats every question to the PM as a decision;
+  - "to send" is a count on the person's card, while 6.10 says it marks the action row;
+  - `me`, `myself` and `I` are English words hard-coded in the names service and override anyone indexed under them;
+  - names resolve only for action owners and a question's recipient, while 6.11 says every write path;
+  - the references table omits an action's `told` keys, a question's options and `resolves`, and a signal's refs, which
+    `person.merge` will need;
+  - a greeting takes the first word of a full name as the first name, so a title or a two-word first name misgreets;
+  - a change to an action's due date or text after it was told is never sent again.
 - [ ] **No silent stops** (design 8.5, 8.6, 8.8):
   - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived (done:
     `tests/test_names.py::test_the_packet_states_the_inputs_received_date_beside_todays`);
@@ -421,6 +437,14 @@ L3. **Every correction teaches.**
   lesson should have caught it.
   - It runs at once when the person wrote something: a send-back note, or an answer to the assistant.
   - Silent corrections are batched, including the `edited` signal for the person's direct edits.
+- [ ] **Questions can be corrected, and each correction is recorded** (design 6.8; found by the L0 audit): the question's
+  own menu gets reword (`question.update`), reroute (`question.move`) and drop (`question.drop`, kept in a
+  dropped-questions register with the reason), each person-only with Undo and each recording its signal (`reworded`,
+  `dropped`, and a reroute); a send-back or correction runs a feedback task whose packet carries the current state of the
+  item it names, and says where the item actually is before anything changes; "not me, ask X" in a reply becomes a routing
+  proposal that waits for the person. The `draft_edited` signal is tied to the run that wrote the questions (the signal
+  names the question ids and their run), because today it refs only the person. Today none of these exists: a person can
+  send back a whole changeset and cannot reword, reroute or drop a question.
 - [ ] Learning from a direct edit sees the inputs that came after the original run, and says "nothing to generalize"
   unless the edit contradicts the evidence the run had.
 - [ ] Learning from inputs (`learn.input`), with a rules-only scan for terms missing from the glossary: new terms, "not me,

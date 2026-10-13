@@ -4,9 +4,9 @@ Each component is generic, configured from Part 4, and has its own tests with fi
 
 **Status.** A section or paragraph marked *designed, not yet built* is in the design baseline and has no code yet; the
 roadmap (`docs/project/roadmap-to-1.0.md`) says when it is due. Where the code and a section differ, the code and the decisions
-are right and the section is a gap. Sections 6.8 to 6.11 were written for the first design and have not been compared with
-the code line by line since. They are where most corrections happen (drops, rewords, reroutes, reassignments), so the
-learning loop's signals come from them; they are audited against the code first in phase L-core (L0), before the learning loop is built on them.
+are right and the section is a gap. Sections 6.8 to 6.11 were written for the first design. They are where most corrections happen (drops, rewords, reroutes, reassignments), so the
+learning loop's signals come from them; they were audited against the code in phase L-core (L0), and what the audit found
+unbuilt is marked *designed* with its phase in each of them (checked by reading).
 
 ## 6.1 Plugin host
 
@@ -488,7 +488,7 @@ Every finding is recorded on the changeset with the check's name and severity, s
 ### Normalize, apply, undo
 
 **Normalization before apply:** names in id fields resolved to ids (6.11), dates parsed to zoned values, links enriched from
-item keys and known titles; a value for a field bound to a value list is checked against the list and refused if it is not on
+item keys and known titles (*designed, not yet built*, 6.8); a value for a field bound to a value list is checked against the list and refused if it is not on
 it (5.4).
 
 **Apply** is one transaction: check record versions, apply the ops in order, write a ledger entry per field changed (5.0),
@@ -514,35 +514,57 @@ a system op, or otherwise needs a decision. Everything else is filed quietly (st
 
 ## 6.8 Questions service
 
-- `ask(to, title, text, key, on_answer, links, projects, batch)`: deduplicates by `key`; holds the question and files a routing
-  decision to the PM when the recipient is unsure (`to: "?"`, a first name several people share, a name nobody on file has).
-- Enriches links automatically from item keys and known titles found in the text.
+*As built today* there is no separate questions service: a question is written by the `question.add` op (a recipient, a
+title, text, links, one project and a kind), by the engine for its own problems (a sign-in that needs attention, a watched
+source that fails), and by the applier for its routing decisions. Below, what the design says and the code does not yet do
+is marked *designed*, with the phase.
+
+- `ask(to, title, text, key, on_answer, links, projects, batch)` is the one entry point *(designed, not yet built, not
+  scheduled)*: it deduplicates by `key` and takes several projects, a batch and what to do on an answer. Today `question.add`
+  has none of `key`, `on_answer`, `batch` or several projects. What is built is the rest of the sentence: the op is held and a
+  routing decision is filed to the PM when the recipient is unsure (`to: "?"`, a first name several people share, a name
+  nobody on file has), and answering that decision releases it (6.11).
+- Enriching links automatically from item keys and known titles found in the text is *designed, not yet built, not
+  scheduled*. Today a question to anyone but the PM is refused unless it carries a link the recipient can open, and nothing
+  adds links.
 - **Decisions are questions addressed to the PM.** Whether something is "your decision" is decided by the recipient, never by a
-  stored kind. Moving a question from the PM to someone else makes it an ordinary question.
+  stored kind. Moving a question from the PM to someone else makes it an ordinary question (*designed, phase L3*; `question.move`
+  is not built, 6.7).
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
-    (6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.
+    (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.
   - **A reply someone else sent,** pasted by the PM (`/reply`), is handed in as pasted content: untrusted, like the paste
     box's "pasted content". Only the PM's own note beside it counts as the PM's words. So "not me, ask X" in a reply becomes
-    a routing proposal that waits for the person, never routing with the PM's authority.
+    a routing proposal that waits for the person, never routing with the PM's authority (*designed, phase L3*: nothing
+    proposes a reroute today, and the pasted reply has no authority already).
 
-  A reply becomes a request carrying the question and its `on_answer`; the AI records the answer as a fact, updates
-  records, closes or narrows the question, and re-checks every other open question to that person against the same answer.
+  A reply becomes a request carrying the question (today a note that names its id) and its `on_answer` (*designed, not yet
+  built, not scheduled*); the AI records the answer as a fact and closes the question (`question.done`, built), updates
+  records, narrows the question (*designed, phase L3*: it needs `question.update`), and re-checks every other open question to
+  that person against the same answer (*designed, not scheduled*: the packet lists the open questions, and the reply's prompt
+  does not ask for the re-check).
   The PM's own answer is recorded on the question today; queuing it the same way is *designed*.
 - **Same question twice:** `near-duplicate-question` (a lint, 4.17) compares a new question with open questions and ones
-  answered in the last `checks` window, since the assistant doesn't know the `key` that deduplicates (*designed, phase L*).
-- Feedback flow (send back, or the question's own menu): reword, reroute, drop (kept in a dropped-questions register with the reason) or
-  close; every op that settles a pending request clears that question's pending flag.
+  answered in the last `checks` window, since the assistant doesn't know the `key` that deduplicates (*designed, phase L2*).
+- Feedback flow (send back, or the question's own menu): reword, reroute, drop (kept in a dropped-questions register with the
+  reason) or close; every op that settles a pending request clears that question's pending flag. *Designed, phase L3* (each
+  records its signal, 6.20); the pending flag is *designed, not yet built, not scheduled*. Today a person can send back a
+  whole changeset, and cannot reword, reroute or drop a question: the engine alone closes its own questions as dropped.
 - **Check a correction against the data first.** A correction ("this shouldn't be in X's list") is a claim about the data. The
   feedback task's packet carries the current state of what it names, and the run starts by stating where the item actually is.
   When the data doesn't match the correction, the answer is a question to the PM with what was found, not a change and never a
-  report.
-- Aging: "waiting Nd" after Mark sent; chase suggestions after a configured number of days; one escalation suggestion when
-  `routing.escalation` says so (4.3, 6.24).
+  report. *Designed, phase L3.* Today Send back runs the reading task again with the old note and the PM's words added, and
+  nothing in the packet states the named item's current state.
+- Aging: "waiting Nd" after Mark sent (built); chase suggestions after a configured number of days (built, as the Today
+  nudge threshold); one escalation suggestion when `routing.escalation` says so (4.3, 6.24; *designed, phase C2*, with the
+  project management pack: no `routing` setting exists today).
 
 ## 6.9 Actions service
 
-- One store interface over every action store (project records, portfolio actions, plugin stores), each action with a stable key.
+*As built today* the core has one `action` record kind with a stable id; other stores are plugins' own record types.
+
+- One store interface over every action store (project records, portfolio actions, plugin stores), each action with a stable
+  key (*designed, not yet built, not scheduled*).
 - **Mark done** for the PM's own; for others' actions **Followed up** (recorded internally, stays open, counts as told) and
   **They finished it** (credited to the owner, "reported by" the PM). Never credit the PM for someone else's work.
   **Built:** Followed up adds the day to the action's `followed_up` for that person and sets their told day to the same
@@ -553,27 +575,36 @@ a system op, or otherwise needs a decision. Everything else is filed quietly (st
   Marking an action done from a row credits its owners and records the PM as the reporter
   (`tests/test_routes.py::test_marking_an_action_done_credits_its_owners_and_records_the_pm_as_the_reporter`).
 - **Reassign:** swap one person in the owners list, keeping their team ("Product (Jane Doe)" to "Product (Sam Lee)"); the
-  other owners stay. Told dates, Followed up and They finished it are per person.
-- **Assign:** give a held action (one waiting for "Pick an owner") its first owner, which adds it.
-- Any change in who does something or when updates the action (and any matching meeting) in the same step.
+  other owners stay. Told dates, Followed up and They finished it are per person. *Designed, not yet built, phase B* (edit,
+  close and reassign from the row). Told dates are per person today; the only way to change an owner is to edit the whole list
+  on the record page.
+- **Assign:** give a held action (one waiting for "Pick an owner") its first owner, which adds it (built).
+- Any change in who does something or when updates the action (built for the action) and any matching meeting in the same
+  step (*designed, not yet built, phase C2*: the core has no meeting record; meetings come with the project management pack
+  and the app's calendar, 6.7).
 
 ## 6.10 Action notices
 
-Actions owned by others reach them: each open action not yet communicated to an owner shows as "to send" on the action row (not
-as a separate question row), the person's Copy includes it, Mark sent records it as told. Closing the action closes the notice.
-A baseline date lets a new workspace treat existing actions as already communicated. Owners marked `track_only` get no notices.
+*As built today* nothing is stored as a notice, and no question is made for one. Actions owned by others reach them: each open
+action not yet communicated to an owner shows as "to send" on the action row (not as a separate question row), the person's
+Copy includes it, Mark sent records it as told. Closing the action closes the notice.
+A baseline date lets a new workspace treat existing actions as already communicated (*designed, not yet built, not
+scheduled*: a new workspace with imported actions shows each as to send). Owners marked `track_only` get no notices
+(*designed, not yet built, not scheduled*: the flag is stored and shown, and notices do not read it).
 
 ## 6.11 Names and identity
 
 People, teams and projects are referred to by id everywhere (5.1). Names are resolved once, where they come in, and rendered
 wherever they are shown.
 
-- **Resolving** (every write path: AI ops, PM forms, edits pulled back from published pages): an id passes; a full name or
-  alias that matches one person becomes that id; the PM's aliases become the PM; a bare first name (one that no one has set as
-  an alias) becomes a person **only when that person is in the input's context**, and only if exactly one person of that first
+- **Resolving** (every write path: AI ops, PM forms, edits pulled back from published pages; the last is *designed, phase C4*,
+  with the publisher): an id passes; a full name or
+  alias that matches one person becomes that id; the PM's aliases become the PM; a bare first name (one that no one has set as an
+  alias) becomes a person **only when that person is in the input's context**, and only if exactly one person of that first
   name is; a first name with an initial or surname fragment ("Ada L.") becomes the one person that fragment fits, and when it
   fits no one the op is held and the people who share the first name are offered, however many of them are in the thread;
-  an owner written in the workspace's `owner_format` is parsed into person and team (*designed, not built*).
+  an owner written in the workspace's `owner_format` is parsed into person and team (*designed, not yet built*; phase L0
+  wires or removes the setting, and parsing is not scheduled).
   Anything ambiguous or unknown holds the op and files one routing decision per name per input ("Who is 'Sam'?", with the
   candidates; names compare ignoring case and surrounding space). Every op of that input that waits on the name hangs on
   that one question, and answering it applies them all. **Built**: `tests/test_pipeline.py::test_one_unknown_name_in_two_ops_gets_one_question_and_one_answer_releases_both`,
@@ -589,11 +620,14 @@ wherever they are shown.
   Tests: `tests/test_names.py` (the resolving rules with and without context, the context of a hand-in and of a watched
   message) and the golden cases `first-name-in-thread`, `different-initial-held`, `shared-first-name` and `unknown-person`.
 - **Rendering:** owners in `owner_format` ("Product (Jane Doe)"), recipients by full name, greetings by first name. Changing
-  the format changes every output at the next render.
+  the format changes every output at the next render. Recipients by full name and greetings by first name are built; owners in
+  `owner_format` is *designed, not yet built* (phase L0 wires or removes the setting): today owners are shown as plain full
+  names, and a team is not shown.
 - **No sweep needed:** nothing stores a short name, so nothing needs rewriting later. Free text (notes, fact text) keeps names
   as written.
 - **Merging:** when two person records turn out to be one person, `person.merge` repoints every stored id (each record type
-  declares the ids it stores, 5.1) and the ledger records it.
+  declares the ids it stores, 5.1) and the ledger records it. *Designed, not yet built, not scheduled* (6.7 lists the op).
+  Today a person that other records still refer to can't be removed, and the person is marked as left instead.
 
 ## 6.12 Records, renderer and publisher
 

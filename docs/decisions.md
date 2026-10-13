@@ -3,6 +3,14 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: Design 6.8 to 6.11 say what is built and what is designed (phase L0)
+
+**Decided by:** the audit of 6.8 to 6.11 against the code, as the roadmap's L0 item asks. **What:** the sections keep their
+content; each rule the code doesn't follow is marked *designed*, with its phase, and corrections to questions (reword,
+reroute, drop, the feedback run, `draft_edited` tied to its run) are an L3 item. Where the code does something different from
+the text, the text is unchanged until the owner decides which is right. **Impact:** design 6.7 (one phrase), 6.8 to 6.11 and
+Part 6's status note; the roadmap's L0 and L3; no code, no setting.
+
 ## 2026-10-13: One "who is this?" per name, a signal for the answer, and no signal for undoing the person's own release (phase L0)
 
 **Decided by:** the design (6.8, 6.11, 6.20) is built as the audit of 6.8 to 6.11 found it should be.

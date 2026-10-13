@@ -634,6 +634,23 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 | The answer | Recorded nothing | A `routed` signal with the person chosen (6.20). Built: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal` |
 | Undoing the person's own release | Recorded `undone` against the assistant | Records nothing. Built: `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |
 
+## 28. Phase L0: 6.8 to 6.11 say what is built and what is designed (2026-10-13)
+
+Sections 6.8 to 6.11 were compared with the code. No behavior changed; their text now says, for each rule the code doesn't
+yet follow, that it is *designed*, with its phase.
+
+| Item | What the section said | What it says now |
+|---|---|---|
+| Question `key`, `on_answer`, `batch`, link enrichment, the pending flag, the re-check of other open questions | Present tense | Designed, not yet built, not scheduled |
+| Reword, reroute, drop, move a question; "not me, ask X"; narrowing; the feedback run from the named item's state; learning from the PM's own answer | Present tense | Designed, phase L3 (one sub-item added to L3) |
+| `near-duplicate-question` | Phase L | Phase L2 |
+| Followed up, `done_by`, `reported_by`; `owner_format` in rendering | Present tense | Designed, phase L0 |
+| Reassign | Present tense | Designed, phase B |
+| Meeting sync; escalation suggestion | Present tense | Designed, phase C2 (project management pack) |
+| Edits pulled back from published pages | Present tense | Designed, phase C4 |
+| One store interface over every action store; the notice baseline date; `track_only` notices; `owner_format` parsing; `person.merge` | Present tense | Designed, not yet built, not scheduled |
+| 6.7, links enriched before apply | Present tense | Designed, not yet built |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
