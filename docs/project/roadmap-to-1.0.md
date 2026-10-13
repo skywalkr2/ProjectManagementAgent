@@ -773,8 +773,6 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   - [ ] **Hand an action to the assistant** from its row (beside Mark done and Reassign): the assistant drafts the work
     (a message, a list, a page) as a pending draft for the person, under the usual estimate and approval. The action
     stays the person's until they close it.
-  - [ ] **A fix ready for what was held:** when a check holds the assistant's work, the line offers the corrected
-    version (Apply the fix, See the change, Discard), not only the reason.
   - [ ] **Projects at a glance:** the Projects table grouped under their parent project, with the stage, the target
     date and when it was last updated ("5 days ago"); the health (on track, at risk, on hold) comes from the project
     management pack when it is on (C2).
