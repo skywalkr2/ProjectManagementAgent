@@ -102,6 +102,7 @@ const COMMANDS = [
   "restore",
   "selfcheck",
   "serve",
+  "start",
   "sync",
   "takeover",
   "template",

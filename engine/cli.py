@@ -64,8 +64,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):
-        parser.print_help()
-        return 2
+        # `cockpit` on its own starts the person's workspace: the one used last, or a new one in their home folder.
+        args = parser.parse_args(["start"])
     try:
         return args.func(args) or 0
     except (WorkspaceError, ConfigError, StoreError, LeaseHeld) as err:
@@ -97,6 +97,11 @@ def _parser() -> argparse.ArgumentParser:
         "--sync", type=Path, help="a synced folder that already holds the workspace: set this computer up from it"
     )
     sp.set_defaults(func=cmd_init)
+
+    sp = sub.add_parser(
+        "start", help="start your workspace and open it (the default): the one used last, or a new one if there is none"
+    )
+    sp.set_defaults(func=cmd_start)
 
     sp = sub.add_parser("serve", help="run the app on this computer")
     ws_arg(sp)
@@ -448,6 +453,51 @@ def cmd_update(args: argparse.Namespace) -> int:
     return update_checkout(repo_root(), run_command, shutil.which)
 
 
+#: Where `cockpit` on its own makes a workspace the first time, inside the person's home folder.
+DEFAULT_FOLDER = "Cockpit"
+#: The per-person file that remembers the workspace started last, so `cockpit` alone reopens it.
+LAST_FILE = Path(".pm-cockpit") / "last-workspace"
+
+
+def last_workspace() -> Path | None:
+    """The workspace started last on this computer, when it still exists."""
+    try:
+        path = Path((Path.home() / LAST_FILE).read_text(encoding="utf-8").strip())
+    except OSError:
+        return None
+    return path if (path / "config").is_dir() else None
+
+
+def remember_workspace(root: Path) -> None:
+    """Remember the workspace just started, for the next `cockpit` on its own. Failing to write it changes nothing."""
+    try:
+        file = Path.home() / LAST_FILE
+        file.parent.mkdir(parents=True, exist_ok=True)
+        file.write_text(str(root) + "\n", encoding="utf-8")
+    except OSError:
+        pass
+
+
+def cmd_start(args: argparse.Namespace) -> int:
+    """Start the person's workspace with nothing to remember: the one named by the environment, else the one started
+    last, else the `Cockpit` folder in their home folder, made the first time (the walkthrough opens there)."""
+    from engine.workspace import ENV_WORKSPACE, init_workspace
+
+    chosen = os.environ.get(ENV_WORKSPACE)
+    root = Path(chosen).expanduser() if chosen else last_workspace() or Path.home() / DEFAULT_FOLDER
+    if not (root / "config").is_dir():
+        if root.exists() and any(root.iterdir()):
+            print(
+                f"cockpit: {root} already holds other files, so a workspace can't be made there. Move them, or start "
+                "a workspace elsewhere with: cockpit init <a new folder>",
+                file=sys.stderr,
+            )
+            return 1
+        init_workspace(root)
+        print(f"Made your workspace in {root}.")
+    return cmd_serve(_parser().parse_args(["serve", "-w", str(root), "--open"]))
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     import uvicorn
 
@@ -474,6 +524,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
     except Refused as err:
         print(f"cockpit: {err}", file=sys.stderr)
         return 1
+    remember_workspace(ws.root)
     if opened.action == "loaded":
         print(f"Loaded the newer copy from the synced folder (this computer's copy was saved to {opened.backup}).")
     if opened.message:

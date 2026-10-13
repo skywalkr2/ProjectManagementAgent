@@ -181,6 +181,13 @@ add-on on or off, your name) was refused (`tests/test_settings_undo.py`).
 The sorting run on headers for mail the rules can't place, and the proof that learning never reads set-aside mail, stay
 in L0.
 
+A6. **One command to start** (owner, 2026-10-13):
+- [x] `cockpit` on its own starts the workspace used last, or makes one in the home folder the first time, and opens it
+  (`test_cockpit_on_its_own_makes_a_workspace_in_the_home_folder_the_first_time`,
+  `test_cockpit_on_its_own_reopens_the_workspace_started_last`,
+  `test_cockpit_on_its_own_never_makes_a_workspace_in_a_folder_with_other_files`). The docs and install scripts say
+  `cockpit` and `cockpit update` only.
+
 ## Phase L: the learning loop, L-core (about 11.5 sessions, L0 included)
 
 Added on 2026-10-12 after the first design's author reviewed design 1.1 (decisions, "The learning slice"); split into L-core
@@ -445,6 +452,8 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **The cursor starts where you type** (owner, 2026-10-12; design 7.0): every screen, step, form and dialog opens
   with the cursor in its first main field. The walkthrough does already (`Walkthrough.test.tsx`); the redesign applies
   it everywhere, with a browser check per screen.
+- [ ] **A launcher for people who never open a terminal** (owner, 2026-10-13): an app icon (macOS) or a Start menu entry
+  (Windows) that runs `cockpit`, made by the install step.
 - [ ] **Lists, not typing** (owner, 2026-10-12: "nearly everything should have dropdowns"): every field on every screen
   whose values are known is a list to pick from. Audit each free-text field and convert it, with a test per screen. The
   time zone is done (`test_the_time_zone_setting_is_a_list_of_known_time_zones`; the Settings screen and the

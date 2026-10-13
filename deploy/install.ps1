@@ -16,5 +16,5 @@ uv tool update-shell | Out-Null
 Write-Host ""
 Write-Host "Installed. Open a new terminal, then:"
 Write-Host "  cockpit demo                         try it on made-up data"
-Write-Host "  cockpit init ~\cockpit\my-work       start your own workspace"
-Write-Host "  cockpit serve -w ~\cockpit\my-work"
+Write-Host "  cockpit                              start your workspace (made the first time) and open it"
+Write-Host "To update later, run this script again with the newer file."

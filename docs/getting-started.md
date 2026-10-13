@@ -37,14 +37,17 @@ A workspace is one folder that holds your work. Keep it in your home folder, not
 temporary folders when the computer restarts, and your setup would go with them.
 
 ```sh
-cockpit init ~/cockpit
-cockpit serve -w ~/cockpit --open
+cockpit
 ```
 
-From a checkout, put `uv run` in front of each `cockpit` command. `init` makes an empty workspace. You can add
-`--you "Your Name" --name "My Work"` to name yourself and the workspace right away; the walkthrough asks for both anyway.
-`serve` starts the app on your own computer, only reachable from it, and opens it in your browser. If it does not open,
-copy the link it prints. Leave the terminal window open while you work: closing it stops the app.
+That's the only command to remember (from a checkout, `uv run cockpit` in its folder). The first time, it makes your
+workspace in a folder called `Cockpit` in your home folder and opens it in your browser, where the walkthrough starts.
+Every time after, the same command reopens the workspace you used last. It runs on your own computer, reachable only
+from it. If the browser doesn't open, copy the link it prints. Leave the terminal window open while you work: closing it
+stops the app. To update later: `cockpit update`.
+
+To keep a workspace somewhere else, or have more than one: `cockpit init <folder>`, then `cockpit serve -w <folder>`.
+After that, `cockpit` alone reopens whichever you used last.
 
 Nothing is spent so far, and nothing has left your computer.
 
@@ -160,7 +163,7 @@ You can also press **Hand something in** (or the `n` key) at any time to paste a
 
 ## If something does not work
 
-- **The page does not open:** copy the link `cockpit serve` printed into your browser. It only works on this computer.
+- **The page does not open:** copy the link `cockpit` printed into your browser. It only works on this computer.
 - **The terminal says the workspace folder is not empty:** `cockpit init` makes a new folder; give it a path that does not
   exist yet.
 - **Setup has a step that stays "Not done yet":** open that screen. It says what is missing, and the step is done once the

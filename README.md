@@ -36,14 +36,16 @@ Needs Python 3.12 or newer with [uv](https://docs.astral.sh/uv/), and Node 22.12
 ```
 uv sync
 npm --prefix web ci && npm --prefix web run build   # the web UI
-uv run cockpit init ~/cockpit                       # your own workspace, empty
-uv run cockpit serve -w ~/cockpit                   # prints a link to open
+uv run cockpit                                      # starts your workspace and opens it
 ```
+
+That one command is all you need: the first time it makes your workspace (a `Cockpit` folder in your home folder) and
+opens the walkthrough; after that it reopens the workspace you used last. `uv run cockpit update` updates.
 
 The workspace starts empty. The first screen is a setup walkthrough of about 10 minutes: your name, your AI account
 (with a test), your mail and calendar (installed, turned on and signed in on the screen, with one restart you press), a
-backup folder and the people you work with. You never edit a file, and nothing is spent until you press Go at the end. Add `--you "Your Name" --name "My Work"` to `init`
-to name yourself and the workspace up front.
+backup folder and the people you work with. You never edit a file, and nothing is spent until you press Go at the end. For a workspace elsewhere, `uv run cockpit init <folder>`
+then `uv run cockpit serve -w <folder>`.
 
 Keep the workspace in your home folder: the system's temporary folders (`/tmp`) are emptied when the computer restarts,
 and the setup would go with them. `cockpit serve` says when the web screens are out of date.

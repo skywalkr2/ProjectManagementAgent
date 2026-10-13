@@ -246,3 +246,53 @@ def test_a_workspace_with_an_untested_ai_account_gets_the_note(tmp_path):
     finally:
         store.close()
     assert note is not None and "hasn't passed its test" in note
+
+
+def _start_without_serving(monkeypatch, tmp_path):
+    """`cockpit` with the server replaced by a recorder, and the home folder a temporary one."""
+    import engine.cli as cli
+
+    served = []
+
+    def serve(args):
+        served.append(Path(args.workspace))
+        cli.remember_workspace(Path(args.workspace).resolve())
+        return 0
+
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    (tmp_path / "home").mkdir()
+    monkeypatch.delenv("COCKPIT_WORKSPACE", raising=False)
+    monkeypatch.setattr(cli, "cmd_serve", serve)
+    return served
+
+
+def test_cockpit_on_its_own_makes_a_workspace_in_the_home_folder_the_first_time(tmp_path, monkeypatch, capsys):
+    served = _start_without_serving(monkeypatch, tmp_path)
+    assert main([]) == 0
+    home = tmp_path / "home"
+    assert (home / "Cockpit" / "config").is_dir()
+    assert served == [home / "Cockpit"]
+    assert "Made your workspace in" in capsys.readouterr().out
+
+
+def test_cockpit_on_its_own_reopens_the_workspace_started_last(tmp_path, monkeypatch):
+    from engine.workspace import init_workspace
+
+    served = _start_without_serving(monkeypatch, tmp_path)
+    other = init_workspace(tmp_path / "elsewhere", git=False).root
+    import engine.cli as cli
+
+    cli.remember_workspace(other)
+    assert main([]) == 0
+    assert served == [other]
+    assert not (tmp_path / "home" / "Cockpit").exists()
+
+
+def test_cockpit_on_its_own_never_makes_a_workspace_in_a_folder_with_other_files(tmp_path, monkeypatch, capsys):
+    served = _start_without_serving(monkeypatch, tmp_path)
+    folder = tmp_path / "home" / "Cockpit"
+    folder.mkdir()
+    (folder / "notes.txt").write_text("mine")
+    assert main([]) == 1
+    assert served == []
+    assert "already holds other files" in capsys.readouterr().err

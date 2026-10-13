@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: One command to start: `cockpit` on its own
+
+**Decided by:** project owner ("I will never remember all these command lines").
+
+**What:** `cockpit` with nothing after it (also `cockpit start`) starts the person's workspace and opens it in the
+browser. It uses the workspace named by `COCKPIT_WORKSPACE`, else the one started last on this computer (remembered in
+the person's home folder), else a `Cockpit` folder in their home folder, made the first time, where the walkthrough
+starts. It never writes into a folder that holds other files. `cockpit update` stays the one way to update a checkout.
+`init` and `serve` remain for anyone who wants a workspace elsewhere.
+
+**Why:** The exit test asked for one install or update command and no second command. Starting needed two commands and
+a folder name to remember.
+
+**Impact:** The CLI, the README, `docs/install.md`, `docs/getting-started.md` and the install scripts. No setting
+changes. A launcher icon for people who never open a terminal is phase B.
+
 ## 2026-10-12: Pick, don't type; and a new workspace's defaults count as not chosen
 
 **Decided by:** project owner ("nearly everything should have dropdowns, and time zone is a prime candidate"; "the name

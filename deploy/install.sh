@@ -16,5 +16,5 @@ uv tool update-shell >/dev/null 2>&1 || true
 echo
 echo "Installed. Open a new terminal, then:"
 echo "  cockpit demo                      try it on made-up data"
-echo "  cockpit init ~/cockpit/my-work    start your own workspace"
-echo "  cockpit serve -w ~/cockpit/my-work"
+echo "  cockpit                           start your workspace (made the first time) and open it"
+echo "To update later, run this script again with the newer file."
