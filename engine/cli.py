@@ -560,14 +560,18 @@ def cmd_serve(args: argparse.Namespace) -> int:
     if problem := local_address_problem(cfg.server):
         print(f"cockpit: {problem}", file=sys.stderr)
         return 1
-    from engine.handover import Refused, open_workspace
+    from engine.handover import Refused, open_or_hold
 
     try:
-        opened = open_workspace(ws, cfg)
+        opened = open_or_hold(ws, cfg)
     except Refused as err:
         print(f"cockpit: {err}", file=sys.stderr)
         return 1
     remember_workspace(ws.root)
+    if opened.kept:
+        which, saved = opened.kept
+        side = "this computer" if which == "here" else "the synced folder"
+        print(f"Kept {side}'s copy. The other was saved to {saved}.")
     if opened.action == "loaded":
         print(f"Loaded the newer copy from the synced folder (this computer's copy was saved to {opened.backup}).")
     if opened.message:
@@ -608,7 +612,15 @@ def cmd_serve(args: argparse.Namespace) -> int:
         restart.set()
         server.stop()
 
-    app = create_app(ws, cfg, token, on_shutdown=shut_down, start_worker=True, on_restart=ask_restart)
+    app = create_app(
+        ws,
+        cfg,
+        token,
+        on_shutdown=shut_down,
+        start_worker=True,
+        on_restart=ask_restart,
+        sync_held=opened.action == "held",
+    )
 
     class CockpitServer(uvicorn.Server):
         """The web server, with live streams ended first on the way out so it isn't kept waiting on them."""

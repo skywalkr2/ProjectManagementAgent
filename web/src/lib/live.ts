@@ -38,6 +38,8 @@ const AFFECTS: Record<string, string[]> = {
   snapshot: ["status", "sync", "setup"],
   setting_change: ["settings", "status", "setup", "panels", "today", "lists", "ai-accounts", "ai-endpoints", "watch", "packs"],
   value_list: ["lists", "settings", "people", "projects"],
+  // The audit trail has no screen yet, so writing an entry refreshes nothing.
+  audit_entry: [],
 };
 
 /** The query keys' first parts to refresh for the kinds of record written, or null to refresh everything: an empty list

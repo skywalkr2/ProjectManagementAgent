@@ -2,7 +2,7 @@
 // base path with no server routes, and a view can be bookmarked and opened in a new tab:
 //   #today  #work/changed  #work/followups  #work/outgoing  #work/stages  #work/panel/<name>
 //   #records/projects  #records/people  #records/files  #records/panel/<name>  #records/<kind>/<id>
-//   #sources  #addons  #settings  #setup (the guide)  #styleguide
+//   #sources  #addons  #settings  #setup (the guide)  #handover (which copy to keep)  #styleguide
 // A `View` is that fragment, written without the "#" and with each name or id encoded, so two views compare with ===.
 export type CoreView =
   | "today"
@@ -17,6 +17,7 @@ export type CoreView =
   | "addons"
   | "settings"
   | "setup"
+  | "handover"
   | "styleguide";
 export type PanelGroup = "work" | "records";
 export type View = CoreView | `${PanelGroup}/panel/${string}` | `records/${string}/${string}`;
@@ -34,6 +35,7 @@ export const CORE_VIEWS: readonly CoreView[] = [
   "addons",
   "settings",
   "setup",
+  "handover",
   "styleguide",
 ];
 

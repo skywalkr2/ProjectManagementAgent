@@ -52,6 +52,9 @@ from api.schemas import (
     GenericRecordView,
     Handed,
     HandIn,
+    HandoverChoice,
+    HandoverSideView,
+    HandoverView,
     InboxCheckView,
     InboxView,
     ItemTitle,
@@ -402,7 +405,64 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             rebuilt=list(result.rebuilt) if result else [],
             outside_edits=edits,
             conflict_copies=copies,
+            shared=cfg.storage.sync.shared,
+            handover=(worker.handover_state() or (None,))[0],  # type: ignore[arg-type]
         )
+
+    def handover_view() -> HandoverView:
+        """Why the folder isn't being used and what the person can choose; the sides come from comparing the two
+        histories, which only reads."""
+        from engine import handover
+        from engine.today import zone
+
+        here = zone(cfg)
+        state = worker.handover_state()
+        if state is None:
+            return HandoverView(state="clear")
+        found = handover.situation(ws, cfg)
+
+        def side(entry: Any) -> HandoverSideView | None:
+            if entry is None:
+                return None
+            latest = datetime.fromisoformat(entry.latest).astimezone(here) if entry.latest else None
+            return HandoverSideView(computer=entry.computer, changes=entry.changes, latest=latest)
+
+        view = HandoverView(state=state[0], computer=state[1], chosen=handover.chosen(ws))  # type: ignore[arg-type]
+        if found is not None and found.kind == "diverged":
+            view.here, view.folder = side(found.here), side(found.folder)
+        elif found is not None and found.kind == "elsewhere":
+            view.computer = found.computer
+            view.last_seen = datetime.fromisoformat(found.last_seen).astimezone(here) if found.last_seen else None
+            view.minutes_left = found.minutes_left
+        return view
+
+    @r.get("/sync/handover")
+    def sync_handover() -> HandoverView:
+        return handover_view()
+
+    @r.post("/sync/handover")
+    def sync_handover_choose(body: HandoverChoice) -> HandoverView:
+        """Note which copy to keep. It is carried out at the next start, before the database is opened, through the
+        same checks the command line has; nothing about the workspace changes until then."""
+        from engine import handover
+
+        if not worker.sync_held:
+            raise HTTPException(status_code=409, detail="Nothing is waiting for a choice between the two copies.")
+        try:
+            handover.choose(ws, cfg, body.which)
+        except handover.Refused as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        changed()
+        return handover_view()
+
+    @r.delete("/sync/handover")
+    def sync_handover_unchoose() -> HandoverView:
+        """Take the choice back before the restart carries it out."""
+        from engine import handover
+
+        handover.clear_choice(ws)
+        changed()
+        return handover_view()
 
     @r.get("/today/agenda")
     def today_agenda() -> list[AgendaItemView]:
@@ -475,7 +535,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         projects = {p.id: p.data["name"] for p in store.read().list("project")}
         here = zone(cfg)
         out = []
-        for line in queue(ws, store, cfg, datetime.now(UTC)):
+        for line in queue(ws, store, cfg, datetime.now(UTC), handover=worker.handover_state()):
             data = {k: v for k, v in vars(line).items() if k not in ("title", "since")}
             if line.until:
                 # A time of the person's own clock, so the screen shows it as they would say it.

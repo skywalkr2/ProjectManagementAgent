@@ -466,10 +466,32 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `tests/test_export_schedule.py::test_the_interval_is_taken_in_at_once_and_the_commit_switch_waits_for_a_restart`); the
   remote is not offered on the Settings screen (`tests/test_setup.py::test_settings_are_described_for_the_forms`).
 - [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command. Moved from phase
-  A: the exit test uses one computer, but real use may not.
-- [ ] **The audit trail:** sign-ins, sign-outs and turning a plugin on or off are recorded.
-- [ ] **A shared synced folder** (`storage.sync.shared`, asked when the folder is chosen): outside edits from a shared
-  folder arrive as content, not the person's own words.
+  A: the exit test uses one computer, but real use may not. Design 5.0, decisions 2026-10-13.
+  - [x] **Diverged copies.** The app starts on this computer's copy and holds the folder (no writes, no lease); a Today line
+    opens a page with both sides in plain words and the two choices with what each does; the choice is noted and carried out
+    at the next start through `keep`, with its lease check. Built: `tests/test_handover_screen.py::test_a_choice_is_carried_out_at_the_next_start_and_the_other_side_is_saved`,
+    `::test_a_choice_still_meets_the_leases_check_when_it_is_carried_out`, `::test_a_held_worker_writes_nothing_and_leaves_the_lease_alone`,
+    `::test_today_has_a_line_and_the_page_shows_both_sides`, `::test_choosing_notes_the_choice_and_the_line_waits_for_the_restart`,
+    `::test_the_screen_refuses_a_choice_while_the_other_computer_has_the_workspace_open`; `web/src/components/Handover.test.tsx`,
+    `web/src/shell/HeldLines.test.tsx`.
+  - [x] **A copy that lost the workspace to another computer** says so on Today and on the page (who, since when, the wait):
+    `tests/test_handover_screen.py::test_a_copy_that_lost_the_workspace_to_the_other_computer_says_so`.
+  - [ ] **The app's own instance lease** (a copy that stopped without closing; `cockpit takeover --force`). Left: the app
+    that would show the screen cannot run without the lease, so this needs a start-up screen the app serves before it holds the
+    lease (a design decision for the main session). It stays a command; the start-up message says so.
+- [x] **The audit trail:** sign-ins, sign-outs and turning a plugin on or off are recorded, as `audit_entry` records (no
+  screen until the Admin tab, phase E; the ledger and the export hold them). Built: `tests/test_audit.py`
+  (`test_turning_an_add_on_on_and_off_and_undoing_it_is_recorded`, `test_applying_a_template_records_each_add_on_it_turned_on`,
+  `test_signing_in_and_out_is_recorded_without_a_token_or_the_account`,
+  `test_changing_the_app_registration_of_a_signed_in_service_is_a_sign_out`). The command line's own edits to the files
+  (`cockpit template apply`, the demo) run with no app open and are not recorded.
+- [x] **A shared synced folder** (`storage.sync.shared`, asked when the folder is chosen): outside edits from a shared
+  folder arrive as content, not the person's own words. Built: `tests/test_shared_folder.py`
+  (`test_edits_from_a_shared_folder_are_untrusted_content_the_person_still_reviews`,
+  `test_a_working_copy_from_a_shared_folder_is_untrusted_too`, `test_edits_from_a_folder_only_the_person_uses_stay_the_persons_own`);
+  the question when the folder is chosen: `web/src/components/Setup.test.tsx` ("after choosing a folder the question about
+  sharing comes first ..."). Left: an accepted passage is still credited to the person (a fourth kind of author is a plugin
+  API question).
 - [ ] **Test and start-up efficiency, what the speed pass left** (prime directive; the pass itself: 72 s to 43 s wall,
   half the CPU, `tests/speedups.py` and the faster repository scan):
   - [x] the product reads YAML with the C parser when it is installed (`engine/yaml_load.py`, used everywhere the

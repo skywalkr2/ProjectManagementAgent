@@ -119,11 +119,26 @@ repositories, so neither ever lives in the synced folder:
 - **Never a silent merge:** if both computers worked while unable to sync and their histories diverged (the folder's last
   changeset is not one the local copy has seen, and the local copy has changes the folder lacks), nothing loads. The person
   chooses which history to keep (`cockpit sync keep --here` or `--folder`); the other is saved as a backup. Duplicate files a sync service creates on conflict are found,
-  shown, and never loaded. Settling this, and a stale lease, from a screen instead of a command is planned (roadmap, A2).
+  shown, and never loaded.
+  - **From a screen** (*built, phase L0*): `cockpit serve` doesn't refuse. It starts on this computer's own copy and holds the
+    folder: nothing is written to it, its lease isn't taken, and closing doesn't release it. A Today line (Choose which copy to
+    keep, 7.7) opens a page that shows both sides in plain words (how many changes each has that the other lacks, the latest, the
+    computer) and the two choices with what each does. A choice is only noted in the workspace's private folder; the next
+    start carries it out through the same `keep` before the database is opened, so the check that the other computer hasn't
+    opened the workspace holds, the database is never replaced under a running app, and a refused start drops the choice. Until
+    then it can be taken back; the restart is the person's click. Built: `tests/test_handover_screen.py`,
+    `web/src/components/Handover.test.tsx`.
+  - **A copy that lost the workspace** to another computer while running gets the same line (Close this copy) and a page
+    saying who, since when and how long until it can be opened here. The app's own instance lease (above) is not settled
+    from a screen: a copy that stopped without closing leaves it for up to a minute, and `cockpit takeover --force` takes it
+    at once, because the app that would show the screen can't run without it.
 - **Edits made outside:** the folder is checked for changes every few seconds (`storage.sync.watch_outside_edits`). Long
   text changed in another editor comes back as a proposed version (`text.propose`, 6.7) made from the version written
   there, marked as edited outside the cockpit. It counts as the person's own work only when the folder isn't shared; when
-  `storage.sync.shared` is on, outside edits are content, reviewed like any other (12.8, phase L0). Changed fields come back as a `record.edit` held for the person; in a
+  `storage.sync.shared` is on, outside edits (and working copies taken back from the folder) are content, reviewed like any
+  other (12.8): the request is an outside input, the changeset and every write it makes are untrusted, and the notes say it
+  may be someone else's change. The folder step asks the question, and the folder's panel shows and changes the answer. Built:
+  `tests/test_shared_folder.py`. An accepted passage is still credited to the person, whose review it is. Changed fields come back as a `record.edit` held for the person; in a
   collection file, changed entries come back as held edits and removed ones as held deletes, while added entries are
   reported (creating a record takes its plugin's op). Nothing applies silently. Each change is handled once, and once the
   person has decided, the file is written again from the records. History, sources, outputs and generated files are never
@@ -187,6 +202,7 @@ generated plugin guide lists each one with its description.
 | `value_list` (LIST) | the values a field may take (5.4) | name, label, values, retired. *Phase B:* each value's **tone** and, for a status list, its **meaning** (5.4) |
 | `answer` (ANS), `setting_proposal` (SETPROP), `report` (RPT) | what asking the assistant (6.25) produces: an answer with the words it rests on; a setting change the person applies or sets aside; a report to the maintainers the person sends | request, text and cites[] / key, value, why, status / title, text, status (draft, sent, dismissed) |
 | `setting_change` (SETCHG) | one setting the person changed from a screen (4.22) | key, before, after, was_default, is_default, at |
+| `audit_entry` (AUD) | a sign-in, a sign-out or turning an add-on on or off, made from the screens (12.1). Never a token, a secret or the account's name | kind (sign_in, sign_out, plugin_on, plugin_off), subject (the sign-in's or the add-on's name), label, detail, at. **Built:** `tests/test_audit.py`; no screen lists them until the Admin tab (phase E) |
 | `tool_run` (TOOL), `job_run` (JOBRUN) | one run of an outside program a plugin declared; one run of a plugin's scheduled job | plugin, tool or job, outcome, seconds, the program's exit code and the end of its error stream, or the job's error |
 
 Plugins add record types in their own tables (namespaced `<plugin>/<name>`) and fields on core records under `ext.<plugin>`.

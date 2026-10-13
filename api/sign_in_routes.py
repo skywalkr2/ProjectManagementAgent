@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
 from api.schemas import Ok, SignInApp, SignInStarted, SignInStep, SignInView
+from engine import audit
 from engine import sign_in as flow
 from engine.config import Config
 from engine.connectors import ConnectorError
@@ -38,6 +39,11 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
         return found
 
     local = cfg.server.mode == "local"
+
+    def lost_with_registration(s: flow.SignIn, had: bool) -> None:
+        """Changing the app registration forgets the sign-in made with the one it replaces; that is a sign-out."""
+        if had:
+            audit.record(store, "sign_out", s.name, label=s.label, detail="The app registration it used was changed.")
 
     def view(s: flow.SignIn) -> SignInView:
         client_id, _, source = host.sign_in_app(s, ws.root)
@@ -95,22 +101,28 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
             raise HTTPException(status_code=409, detail="The workspace's settings already set this registration.")
         if s.client_secret and not (body.client_secret or "").strip():
             raise HTTPException(status_code=400, detail="This service also gives a client secret: paste it too.")
+        had = flow.kept(keys(s.plugin), s) is not None
         flow.paste_app(keys(s.plugin), s, body.client_id, body.client_secret if s.client_secret else None)
+        lost_with_registration(s, had)
         return view(s)
 
     @r.post("/sign-ins/{name:path}/app/set-aside")
     def set_aside_app(name: str) -> SignInView:
         """Stop using the pasted registration (the add-on's own is used, if it has one); it can be brought back."""
         s = find(name)
+        had = flow.kept(keys(s.plugin), s) is not None
         if not flow.set_aside_app(keys(s.plugin), s):
             raise HTTPException(status_code=404, detail="No registration was pasted for this sign-in.")
+        lost_with_registration(s, had)
         return view(s)
 
     @r.post("/sign-ins/{name:path}/app/bring-back")
     def bring_back_app(name: str) -> SignInView:
         s = find(name)
+        had = flow.kept(keys(s.plugin), s) is not None
         if not flow.bring_back_app(keys(s.plugin), s):
             raise HTTPException(status_code=404, detail="There is no registration to bring back.")
+        lost_with_registration(s, had)
         return view(s)
 
     @r.post("/sign-ins/{name:path}/start")
@@ -160,6 +172,7 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
         finally:
             web.close()
         host.signed_in(done, ws.root)
+        audit.record(store, "sign_in", done.name, label=done.label)
         try:
             if start_sources(ws, cfg, store, done):
                 worker.read_sources_now()
@@ -170,15 +183,23 @@ def build_sign_in_router(ws: Workspace, cfg: Config, store: Store, worker: Worke
     @r.delete("/sign-ins/{name:path}")
     def sign_out(name: str) -> Ok:
         s = find(name)
+        withdrawn = False
         if s.revoke_url:
             from engine.net import WebClient
 
             web = WebClient(list(host.manifests[s.plugin].requires.network))
             try:
-                flow.revoke(web, s, flow.kept(keys(s.plugin), s), host.sign_in_app(s, ws.root)[0])
+                withdrawn = flow.revoke(web, s, flow.kept(keys(s.plugin), s), host.sign_in_app(s, ws.root)[0])
             finally:
                 web.close()
-        flow.forget(keys(s.plugin), s)
+        if flow.forget(keys(s.plugin), s):
+            audit.record(
+                store,
+                "sign_out",
+                s.name,
+                label=s.label,
+                detail="The service was told to withdraw the access." if withdrawn else None,
+            )
         return Ok(ok="signed_out")
 
     return r

@@ -88,6 +88,8 @@ const syncView = (extra: Partial<S["SyncView"]> = {}): S["SyncView"] => ({
   rebuilt: [],
   outside_edits: [],
   conflict_copies: [],
+  shared: false,
+  handover: null,
   ...extra,
 });
 
@@ -156,9 +158,15 @@ test("choosing a folder saves it as the synced folder setting and asks before re
   const sync = await section("Synced folder");
   await user.click(await within(sync).findByRole("button", { name: "Choose a folder" }));
   await user.click(await screen.findByRole("button", { name: "Use this folder" }));
+  // The folder isn't saved until the person says whether anyone else can change it.
+  expect(calls.some((c) => c.route === "POST settings")).toBe(false);
+  expect(within(sync).getByText("Folder: /home/me")).toBeInTheDocument();
+  expect(within(sync).getByRole("button", { name: "Save the folder" })).toBeDisabled();
+  await user.click(within(sync).getByRole("radio", { name: "No, only I use it" }));
+  await user.click(within(sync).getByRole("button", { name: "Save the folder" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
   expect(calls.find((c) => c.route === "POST settings")!.body).toEqual({
-    changes: { "storage.sync.folder": "/home/me" },
+    changes: { "storage.sync.folder": "/home/me", "storage.sync.shared": false },
     reset: [],
     fingerprint: "fp-1",
   });
@@ -182,8 +190,12 @@ test("where folders can't be listed, the synced folder can be typed", async () =
   const sync = await section("Synced folder");
   await user.type(await within(sync).findByLabelText("Folder"), "/mnt/shared");
   await user.click(within(sync).getByRole("button", { name: "Use this folder" }));
+  await user.click(await within(sync).findByRole("radio", { name: "Yes, someone else can" }));
+  await user.click(within(sync).getByRole("button", { name: "Save the folder" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
-  expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "storage.sync.folder": "/mnt/shared" } });
+  expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({
+    changes: { "storage.sync.folder": "/mnt/shared", "storage.sync.shared": true },
+  });
   expect(within(sync).queryByRole("alert")).toBeNull();
 });
 
@@ -255,6 +267,54 @@ test("an outside edit that became a version can be reviewed; one that failed sho
   expect(within(sync).getByText(/These copies were not loaded/)).toBeInTheDocument();
   await user.click(within(rows[0]).getByRole("button", { name: "Review: book/chapter-1.md" }));
   expect(await screen.findByRole("dialog", { name: "Review the changes" })).toBeInTheDocument();
+});
+
+test("after choosing a folder the question about sharing comes first, can be gone back from, and saves nothing by itself", async () => {
+  const user = userEvent.setup();
+  const calls = others({ "GET jobs": () => [], "GET setup/folders": () => new Refuse(403, "no") }, "");
+  renderApp(<Setup />);
+  const sync = await section("Synced folder");
+  await user.type(await within(sync).findByLabelText("Folder"), "/mnt/team");
+  await user.click(within(sync).getByRole("button", { name: "Use this folder" }));
+  const first = await within(sync).findByRole("radio", { name: "No, only I use it" });
+  expect(first).toHaveFocus(); // the cursor starts in the first field of the step
+  expect(first).not.toBeChecked();
+  expect(within(sync).getByRole("radio", { name: "Yes, someone else can" })).not.toBeChecked();
+  expect(within(sync).getByText(/never taken as your own words/)).toBeInTheDocument();
+  await user.click(within(sync).getByRole("button", { name: "Choose another folder" }));
+  expect(await within(sync).findByLabelText("Folder")).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST settings")).toBe(false);
+});
+
+test("whether others can change the folder is shown, switched with a save that needs no restart, and shared edits say so", async () => {
+  const user = userEvent.setup();
+  let shared = false;
+  const calls = others({
+    "GET sync": () => syncView({ shared, outside_edits: [{ path: "book/chapter-1.md", version: "V-1", proposal: null, problem: null }] }),
+    "GET jobs": () => [],
+    "POST settings": (body) => {
+      shared = (body as { changes: Record<string, boolean> }).changes["storage.sync.shared"];
+      return { changes: [{ key: "storage.sync.shared", before: false, after: true, was_default: true, is_default: false }], fingerprint: "fp-2", needs_restart: false };
+    },
+  });
+  renderApp(<Setup />);
+  const sync = await section("Synced folder");
+  const box = await within(sync).findByRole("checkbox", { name: "Others can change this folder" });
+  expect(box).not.toBeChecked();
+  expect(within(sync).queryByText(/arrive as outside content to check/)).toBeNull();
+  expect(within(sync).queryByText(/these may be someone else's changes/)).toBeNull();
+  await user.click(box);
+  await waitFor(() => expect(calls.find((c) => c.route === "POST settings")!.body).toMatchObject({ changes: { "storage.sync.shared": true } }));
+  expect(await within(sync).findByText(/arrive as outside content to check, not as your own words/)).toBeInTheDocument();
+  expect(within(sync).getByText("The folder is shared, so these may be someone else's changes.")).toBeInTheDocument();
+});
+
+test("when the copies need settling the folder panel links to the page that settles it", async () => {
+  others({ "GET sync": () => syncView({ handover: "diverged" }), "GET jobs": () => [] });
+  renderApp(<Setup />);
+  const sync = await section("Synced folder");
+  const link = await within(sync).findByRole("link", { name: "Choose which copy to keep" });
+  expect(link.getAttribute("href")).toMatch(/#handover$/);
 });
 
 test("scheduled work is one row per job with how often, on or off in words, and the last run", async () => {

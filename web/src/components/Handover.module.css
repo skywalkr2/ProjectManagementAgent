@@ -1,0 +1,13 @@
+/* Which copy to keep: the two sides, then the two choices, each with what it does. */
+.sides, .choices { list-style: none; margin: var(--space-3) 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.side, .choice {
+  display: flex; flex-direction: column; gap: var(--space-1); min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  font-size: var(--text-sm); line-height: var(--lh-sm);
+}
+.choice { align-items: flex-start; }
+.what { margin: 0; color: var(--text-muted); overflow-wrap: anywhere; }
+.chosen { margin: var(--space-3) 0; }
+.elsewhere { display: flex; flex-direction: column; gap: var(--space-2); }
+.elsewhere p { margin: 0; }

@@ -24,6 +24,7 @@ const VIEW_LABEL: Record<CoreView, string> = {
   addons: "nav.addons",
   settings: "nav.settings",
   setup: "welcome.title",
+  handover: "handover.title",
   styleguide: "nav.styleguide",
 };
 

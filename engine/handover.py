@@ -11,6 +11,10 @@ another install refuses. Then the histories are compared, entry by entry of the 
 - neither starts with the other: both computers worked apart. Nothing loads; the person keeps one history and the
   other is saved as a backup.
 
+A running app can be started while the histories are diverged: it works on this computer's own copy, writes nothing to
+the folder, and shows the choice. The person's choice is only noted; it is carried out by `settle_chosen` before the
+database is opened at the next start, with the same checks as `keep`.
+
 Only files listed in the folder's manifest, with the hash it records, are ever loaded, so a folder still syncing or a
 copy a sync service made on a conflict is never read. Storage and server settings stay per computer.
 """
@@ -19,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import shutil
 import socket
@@ -33,6 +38,8 @@ from typing import Any
 from engine.sync import INDEX, MACHINE, MANIFEST, _write_atomic, folder_problem, placement_problem
 
 LEASE = f"{MACHINE}/lease.json"
+#: The person's choice between diverged histories, kept on this computer until the next start carries it out.
+CHOICE = "handover-choice"
 #: Config files that describe one computer, never copied between them.
 PER_COMPUTER = {"storage.yaml", "server.yaml"}
 
@@ -56,10 +63,11 @@ class FolderLease:
 
 @dataclass
 class Opened:
-    action: str  # off, unavailable, same, loaded, newer_here, first
+    action: str  # off, unavailable, same, loaded, newer_here, first, held
     message: str = ""
     conflict_copies: list[str] = field(default_factory=list)
     backup: str | None = None
+    kept: tuple[str, str] | None = None  # a start that carried out a choice: (which side, where the other was saved)
 
 
 def install_id(ws: Any) -> str:
@@ -376,3 +384,140 @@ def keep(ws: Any, cfg: Any, which: str, *, now: datetime | None = None) -> str:
         store.close()
     take(ws, cfg, ledger=len(_local_ledger(ws)), released=True, now=now)
     return str(target)
+
+
+# ---- showing the situation, and choosing from a screen -----------------------------------------------------
+
+
+@dataclass
+class Side:
+    """What one side has that the other lacks: how many changes, the time of the latest, and the computer."""
+
+    computer: str
+    changes: int
+    latest: str | None
+
+
+@dataclass
+class Situation:
+    """What stands in the way of using the synced folder, described without changing anything.
+    `diverged`: both sides changed apart (`here` and `folder` say what each has). `elsewhere`: another computer holds
+    the workspace now (`computer`, `last_seen`, and `minutes_left` until it can be opened here without it closing)."""
+
+    kind: str
+    here: Side | None = None
+    folder: Side | None = None
+    computer: str = ""
+    last_seen: str | None = None
+    minutes_left: int = 0
+
+
+def _side(entries: list[str], computer: str) -> Side:
+    latest = None
+    for line in entries:
+        stamp = json.loads(line).get("at")
+        if stamp and (latest is None or stamp > latest):
+            latest = stamp
+    return Side(computer, len(entries), latest)
+
+
+def other_computer(cfg: Any) -> str:
+    """The computer the folder's lease names, or an empty string."""
+    lease = read_lease(_folder(cfg))
+    return lease.computer if lease else ""
+
+
+def situation(ws: Any, cfg: Any, now: datetime | None = None) -> Situation | None:
+    """Why the folder can't be used right now, or None. Only reads."""
+    if not cfg.storage.sync.folder.strip() or folder_problem(ws, cfg):
+        return None
+    folder = _folder(cfg)
+    when = now or datetime.now(UTC)
+    other = held_elsewhere(ws, cfg, when)
+    if other is not None:
+        beat = datetime.fromisoformat(other.heartbeat)
+        stale = timedelta(minutes=cfg.storage.sync.lease_stale_after_minutes)
+        left = max(1, math.ceil((stale - (when - beat)).total_seconds() / 60))
+        return Situation("elsewhere", computer=other.computer, last_seen=other.heartbeat, minutes_left=left)
+    try:
+        theirs = _folder_ledger(folder)
+    except Refused:
+        return None
+    if theirs is None:
+        return None
+    mine = _local_ledger(ws)
+    if compare(mine, theirs) != "diverged":
+        return None
+    local, remote = apply_redactions(mine, theirs)
+    common = 0
+    while common < min(len(local), len(remote)) and local[common] == remote[common]:
+        common += 1
+    return Situation(
+        "diverged",
+        here=_side(local[common:], socket.gethostname()),
+        folder=_side(remote[common:], other_computer(cfg)),
+    )
+
+
+def chosen(ws: Any) -> str | None:
+    """The side the person chose to keep ("here" or "folder"), waiting for the next start, or None."""
+    try:
+        value = (ws.private_dir / CHOICE).read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return value if value in ("here", "folder") else None
+
+
+def clear_choice(ws: Any) -> None:
+    (ws.private_dir / CHOICE).unlink(missing_ok=True)
+
+
+def choose(ws: Any, cfg: Any, which: str, *, now: datetime | None = None) -> None:
+    """Note which side to keep, to be carried out at the next start. Refused while the other computer has the workspace
+    open, and when the histories aren't diverged."""
+    if which not in ("here", "folder"):
+        raise ValueError('keep "here" or "folder"')
+    if held_elsewhere(ws, cfg, now) is not None:
+        raise Refused("The workspace is open on the other computer. Close it there first.")
+    found = situation(ws, cfg, now)
+    if found is None or found.kind != "diverged":
+        raise Refused("There is nothing to choose between: the two copies agree, or the folder can't be read now.")
+    ws.private_dir.mkdir(parents=True, exist_ok=True)
+    (ws.private_dir / CHOICE).write_text(which + "\n", encoding="utf-8")
+
+
+def settle_chosen(ws: Any, cfg: Any, *, now: datetime | None = None) -> tuple[str, str] | None:
+    """Carry out the choice noted from the screen, before the database is opened: (which, where the other side was
+    saved), or None when no choice is waiting. The note is removed first, so a refusal is never retried unasked; the
+    choice goes through `keep`, with all its checks."""
+    which = chosen(ws)
+    if which is None:
+        return None
+    clear_choice(ws)
+    return which, keep(ws, cfg, which, now=now)
+
+
+HELD_NOTE = (
+    "Both this computer and the synced folder changed while they couldn't sync. The app opens on this computer's own "
+    "copy and writes nothing to the folder until you choose which copy to keep on the screen."
+)
+
+
+def open_or_hold(ws: Any, cfg: Any, *, now: datetime | None = None) -> Opened:
+    """`open_workspace` for starting the app: histories that diverged don't stop it. A choice noted from the screen is
+    carried out first (through `keep`, so every check holds); with none, nothing loads and nothing is written to the
+    folder, the lease isn't taken, and the app opens on this computer's copy (action "held"). Every other refusal
+    still raises, and drops any choice noted from the screen."""
+    try:
+        return open_workspace(ws, cfg, now=now)
+    except Diverged:
+        settled = settle_chosen(ws, cfg, now=now)
+        if settled is None:
+            return Opened("held", HELD_NOTE)
+        opened = open_workspace(ws, cfg, now=now)
+        opened.kept = settled
+        return opened
+    except Refused:
+        # A start that is refused drops the noted choice: what it was chosen against may have changed.
+        clear_choice(ws)
+        raise

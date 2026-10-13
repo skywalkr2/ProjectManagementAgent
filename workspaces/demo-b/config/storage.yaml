@@ -17,4 +17,5 @@ files:
 sync:
   folder: ""   # e.g. ~/CloudDrive/cockpit; off until set
   watch_outside_edits: true
+  shared: false
   lease_stale_after_minutes: 10

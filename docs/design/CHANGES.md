@@ -698,6 +698,15 @@ yet follow, that it is *designed*, with its phase.
 | "Look at the last day" for a folder | Folder items carried no time, so nothing was handed in | The folder connector gives each file's modified time; the snapshot keeps it as `changed_at` (5.1) and the recent hand-in reads it. Built: `tests/test_watch_recent.py` |
 | Machine timestamps in filed notes | The add-on's item text carries a date-time with its zone; the assistant copied it into the note | Timestamps with a zone in the prose of an assistant's ops are rewritten in the person's time zone and `language.messages.date_time_format` before they are kept (6.7). Built: `tests/test_moments.py` |
 
+## 34. Phase L0: the synced folder settled from a screen, the audit trail, the shared folder (2026-10-13)
+
+| Item | What the code did | What it does now |
+|---|---|---|
+| Diverged copies | `cockpit serve` refused to start; the choice was `cockpit sync keep` | The app starts on this computer's copy and writes nothing to the folder and does not take its lease. Today has a line (Choose which copy to keep) that opens a page showing both sides (changes, latest, computer) and the two choices with what each does. A choice is only noted; the next start carries it out through `keep` before the database is opened, so its lease check holds (5.0, 7.7). Built: `tests/test_handover_screen.py::test_a_choice_is_carried_out_at_the_next_start_and_the_other_side_is_saved`, `::test_a_choice_still_meets_the_leases_check_when_it_is_carried_out`, `::test_a_held_worker_writes_nothing_and_leaves_the_lease_alone`, `::test_today_has_a_line_and_the_page_shows_both_sides`; `web/src/components/Handover.test.tsx`, `web/src/shell/HeldLines.test.tsx` |
+| Another computer has the workspace | A running copy stopped writing and said so only in the Setup panel | The same Today line (Close this copy) and the page say who, since when and the wait. Built: `tests/test_handover_screen.py::test_a_copy_that_lost_the_workspace_to_the_other_computer_says_so` |
+| The audit trail | Settings changes were recorded; sign-ins, sign-outs and turning add-ons on or off were not (12.1) | Each is an `audit_entry` record, written in the same transaction as the change where there is one; never a token, a secret or the account's name. No screen lists them yet (the Admin tab is phase E); they are in the ledger and the export. Built: `tests/test_audit.py` |
+| A shared synced folder | Outside edits always counted as the person's own | `storage.sync.shared` (false), asked when the folder is chosen and changeable on the folder's panel (a live setting). From a shared folder an outside edit is filed as an outside input, its changeset and every write are untrusted, and its notes say it may be someone else's change; the person's review is unchanged (5.0, 12.8). Built: `tests/test_shared_folder.py` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

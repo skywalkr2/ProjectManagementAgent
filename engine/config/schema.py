@@ -285,6 +285,12 @@ class SyncSettings(ConfigModel):
         "Off: they are only reported, and the files are left as they are.",
         json_schema_extra={"enabled_by": "folder"},
     )
+    shared: bool = Field(
+        False,
+        description="Whether anyone else can change the files in this folder (a team drive, a family folder). When "
+        "they can, an edit found in the folder is treated as outside content to check, not as your own words.",
+        json_schema_extra={"enabled_by": "folder"},
+    )
     lease_stale_after_minutes: int = Field(
         10,
         ge=1,

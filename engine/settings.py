@@ -24,6 +24,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel
 
+from engine import audit
 from engine.config import ConfigError, load_config
 from engine.config.loader import plain_label, refusal_text
 from engine.config.schema import FILES
@@ -344,10 +345,16 @@ def save(
                 "at": now.isoformat(),
             }
             tx.create("setting_change", entry, WriteContext("pm", "trusted", "config.set"))
+            if key == PLUGINS_ENABLED:
+                audit.plugin_changes(tx, list(was or []), list(after or []))
             saved.changes.append({k: v for k, v in entry.items() if k != "at"})
     if cfg.storage.export.commit:
         _commit(ws.root, [config_dir / f"{name}.yaml" for name in texts], [c["key"] for c in saved.changes])
     return saved
+
+
+#: The setting that lists the add-ons that run; changing it is audited.
+PLUGINS_ENABLED = "workspace.plugins.enabled"
 
 
 def _effective(cfg: Any, key: str) -> Any:

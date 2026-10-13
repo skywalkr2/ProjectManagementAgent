@@ -43,6 +43,7 @@ LIVE_KEYS = (
     "workspace.our_accounts",
     "storage.backups.",
     "storage.export.every_minutes",
+    "storage.sync.shared",
     "watch.",
 )
 
@@ -183,6 +184,9 @@ class Worker:
         self._said_no_git = False
         self._beat = 0.0
         self.sync_lost = False
+        #: Started while this computer and the synced folder had diverged: nothing is written to the folder until the
+        #: person's choice is carried out at the next start.
+        self.sync_held = False
         self.sync_result: Any = None
         self.sync_problem: str | None = None
         self._started_with = (config_fingerprint(ws), code_fingerprint())
@@ -412,7 +416,7 @@ class Worker:
         from engine import handover
         from engine.sync import folder_problem, write_folder
 
-        if not self.cfg.storage.sync.folder.strip() or self.sync_lost:
+        if not self.cfg.storage.sync.folder.strip() or self.sync_lost or self.sync_held:
             return False
         problem = folder_problem(self.ws, self.cfg)
         if problem:
@@ -454,11 +458,32 @@ class Worker:
             self._beat = time.monotonic()
         return wrote
 
+    def hold_sync(self) -> None:
+        """Stop writing to the synced folder (and leave its lease alone) until the next start: this computer and the
+        folder have diverged, and writing would replace the other history."""
+        self.sync_held = True
+        self.sync_problem = (
+            "This computer and the synced folder both changed while they couldn't sync. Nothing is written to the "
+            "folder until you choose which copy to keep."
+        )
+
+    def handover_state(self) -> tuple[str, str] | None:
+        """What stops the synced folder from being used, if anything, with the other computer's name: "diverged" (the
+        person has not chosen), "chosen" (their choice waits for the restart) or "elsewhere" (another computer opened
+        the workspace). Reads two small files only."""
+        from engine import handover
+
+        if self.sync_held:
+            return ("chosen" if handover.chosen(self.ws) else "diverged"), handover.other_computer(self.cfg)
+        if self.sync_lost:
+            return "elsewhere", handover.other_computer(self.cfg)
+        return None
+
     def release_folder(self) -> None:
         """On closing: a last write, then the lease marked released, so the other computer can open at once."""
         from engine import handover
 
-        if not self.cfg.storage.sync.folder.strip():
+        if not self.cfg.storage.sync.folder.strip() or self.sync_held:
             return
         try:
             self.sync_if_changed()

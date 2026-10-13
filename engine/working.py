@@ -115,9 +115,13 @@ def hand_out(store: Store, cfg: Config, format_name: str, kind: str, record_id: 
         )
 
 
-def take_back(store: Store, cfg: Config, copy_id: str, data: bytes, name: str | None = None) -> dict[str, Any]:
+def take_back(
+    store: Store, cfg: Config, copy_id: str, data: bytes, name: str | None = None, *, outside: bool = False
+) -> dict[str, Any]:
     """Read a returned file back and file it as a proposal made from the handed-out version. Returns what happened:
-    {"unchanged": True} for an untouched file, else the new text version's id and what couldn't be mapped."""
+    {"unchanged": True} for an untouched file, else the new text version's id and what couldn't be mapped. `outside`:
+    the file was found in the synced folder; when that folder is shared it is filed as untrusted content, not as the
+    person's own work."""
     from engine.applier import apply_as_person
     from engine.files import add_file
     from engine.plugin_api import TakeBack
@@ -161,9 +165,18 @@ def take_back(store: Store, cfg: Config, copy_id: str, data: bytes, name: str | 
         "note": f"handed back from a working copy ({fmt.label})",
         "unmapped": [" ".join(str(u).split()) for u in result.unmapped],
     }
-    cs_id = apply_as_person(store, cfg, [op], f"Took back {fmt.label} for {kind} {record_id}")
-    made = store.read().get("changeset", cs_id).data["ops"][0]["records"]
-    proposal = next(r["id"] for r in made if r["kind"] == "text_version")
+    summary = f"Took back {fmt.label} for {kind} {record_id}"
+    from engine.outside import file_ops, shared
+
+    if outside and shared(cfg):
+        filed = file_ops(store, cfg, summary, [op])
+        if "version" not in filed:
+            raise StoreError(filed.get("problem") or "that couldn't be done")
+        proposal = filed["version"]
+    else:
+        cs_id = apply_as_person(store, cfg, [op], summary)
+        made = store.read().get("changeset", cs_id).data["ops"][0]["records"]
+        proposal = next(r["id"] for r in made if r["kind"] == "text_version")
     with store.transaction() as tx:
         fresh = tx.get("working_copy", copy_id)
         changes = {

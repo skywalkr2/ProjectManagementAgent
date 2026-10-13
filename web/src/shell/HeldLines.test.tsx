@@ -22,12 +22,13 @@ function show(lines: S["QueueLineView"][], routes: Record<string, (body: unknown
     ...routes,
   });
   const onOpenAiAccounts = vi.fn();
+  const onOpenHandover = vi.fn();
   renderApp(
     <RestartProvider hellos={1}>
-      <HeldLines onOpenAiAccounts={onOpenAiAccounts} />
+      <HeldLines onOpenAiAccounts={onOpenAiAccounts} onOpenHandover={onOpenHandover} />
     </RestartProvider>,
   );
-  return { calls, onOpenAiAccounts };
+  return { calls, onOpenAiAccounts, onOpenHandover };
 }
 
 test("nothing is drawn while the queue has neither a restart nor a paused line", async () => {
@@ -94,4 +95,44 @@ test("each paused account has its own line, and both kinds can show together", a
   expect(rows).toHaveLength(2);
   expect(rows[0]).toHaveTextContent("main's limit");
   expect(rows[1]).toHaveTextContent("second's limit");
+});
+
+const handover = (state: "diverged" | "chosen" | "elsewhere", text: string | null = "Other laptop") =>
+  line("handover", { key: "handover", group: "decide", state, text });
+
+test("copies that disagree are a line that starts with the choice and opens the page that settles it", async () => {
+  const user = userEvent.setup();
+  const { onOpenHandover } = show([handover("diverged")]);
+  const row = await screen.findByRole("region", { name: "Two copies" });
+  expect(row).toHaveTextContent("Choose which copy to keep: this computer and the synced folder each changed on their own");
+  expect(row).toHaveTextContent("Nothing is written to the folder until you choose.");
+  expect(within(row).queryByRole("button", { name: "Restart now" })).toBeNull();
+  await user.click(within(row).getByRole("button", { name: "Choose a copy" }));
+  expect(onOpenHandover).toHaveBeenCalledTimes(1);
+});
+
+test("once a copy is chosen the line asks for the restart, which only the click starts", async () => {
+  const user = userEvent.setup();
+  const { calls, onOpenHandover } = show([handover("chosen")], { "POST restart": () => ({ restarting: true }) });
+  const row = await screen.findByRole("region", { name: "Two copies" });
+  expect(row).toHaveTextContent("Restart to keep the copy you chose");
+  await waitFor(() => expect(calls.some((c) => c.route === "GET status")).toBe(true));
+  expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+  await user.click(await within(row).findByRole("button", { name: "Restart now" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST restart")).toHaveLength(1));
+  await user.click(within(row).getByRole("button", { name: "Review your choice" }));
+  expect(onOpenHandover).toHaveBeenCalledTimes(1);
+});
+
+test("a copy that lost the workspace to another computer names it and offers the details, not a restart", async () => {
+  show([handover("elsewhere")]);
+  const row = await screen.findByRole("region", { name: "Two copies" });
+  expect(row).toHaveTextContent("Close this copy: Other laptop opened the workspace, so this copy stopped saving to the synced folder");
+  expect(within(row).getByRole("button", { name: "See details" })).toBeInTheDocument();
+  expect(within(row).queryByRole("button", { name: "Restart now" })).toBeNull();
+});
+
+test("an unknown other computer is said without a name", async () => {
+  show([handover("elsewhere", null)]);
+  expect(await screen.findByRole("region", { name: "Two copies" })).toHaveTextContent("Close this copy: another computer opened the workspace");
 });

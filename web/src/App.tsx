@@ -20,6 +20,7 @@ import { Feedback } from "./components/Feedback";
 import { Files } from "./components/Files";
 import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
+import { Handover } from "./components/Handover";
 import { Panel } from "./components/Panel";
 import { restoreFocus } from "./components/ModalPanel";
 import { RecordPage } from "./components/RecordPage";
@@ -163,7 +164,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             </div>
             <SetupLine workspace={rc.workspace_name} onOpenGuide={openGuide} />
             <BackupLine onOpenGuide={openGuide} />
-            <HeldLines onOpenAiAccounts={() => setView("settings")} />
+            <HeldLines onOpenAiAccounts={() => setView("settings")} onOpenHandover={() => setView("handover")} />
             <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} onOpenGuide={openGuide} />
           </div>
         );
@@ -203,6 +204,8 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return <Settings onOpenGuide={() => openGuide()} onOpenAddons={() => setView("addons")} onChooseSource={openAddSource} />;
       case "addons":
         return <Addons onBack={() => setView("settings")} />;
+      case "handover":
+        return <Handover />;
       case "styleguide":
         return styleGuideShown(rc) ? <StyleGuide /> : null;
       default:

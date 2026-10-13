@@ -2744,6 +2744,43 @@ time is read from its error stream by the account's `errors.reset` patterns. Hel
 `ai.rate_limits.pause_seconds` and the agent `errors.reset`, with demo values. `Request` gains `retries` and the causes
 `paused` and `retry`. No change to scope.
 
+## 2026-10-13: Diverged copies are settled from a screen; sign-ins and add-on changes are audited; a shared folder's edits are untrusted
+
+**Decided by:** project owner (the phase L0 items); the way it is built by the builder.
+
+**What:**
+- *Settling from a screen.* When this computer and the synced folder have diverged, the app no longer refuses to start. It
+  starts on this computer's own copy and holds the synced folder: nothing is written to it, its lease is not taken, and
+  closing does not release it. Today shows a line (Choose which copy to keep) that opens a page with both sides in plain words
+  and the two choices the command offered, each with what it does. A choice is only noted in the workspace's private folder;
+  the next start carries it out through `keep` before the database is opened (so the check that the other computer has not
+  opened the workspace still holds, replacing the database never happens under a running app, and any refusal drops the
+  choice). Until then the person can take the choice back. The restart is the person's click.
+- A running copy that lost the workspace to another computer gets the same line (Close this copy) and a page that says who,
+  since when and how long until it can be opened here; there is nothing to choose.
+- *Not done: the instance lease.* A copy that stopped without closing leaves the app's own lease held for up to a minute, and
+  `cockpit takeover --force` takes it at once. A screen cannot settle that one: the app that would show it cannot run
+  without the lease. It stays a command; the message says it.
+- *The audit trail.* A new core record `audit_entry` (kind: sign_in, sign_out, plugin_on, plugin_off; subject; label; detail;
+  when). Turning an add-on on or off is recorded by the settings save itself (so the guided routes, the screen's Undo and the
+  general save all write it, in the same transaction as the `setting_change`); applying a template records the add-ons it
+  turned on; a sign-in, a sign-out and a changed app registration that forgets a sign-in are recorded by the sign-in routes.
+  Starting a sign-in, a refused one and signing out twice record nothing. No screen lists them until the Admin tab (phase E);
+  the records are in the ledger and the export.
+- *A shared folder.* `storage.sync.shared` (false). The folder step asks it (no default answer) and the folder's panel shows
+  and changes it; it is a live setting. When true, edits found in the folder and working copies taken back from it are filed
+  as an outside input (request origin `input`, changeset and ledger trust `untrusted`) with notes that say so; field edits
+  and deletes are held and long text is a pending version, as before, and the person's release is their own decision.
+- Authorship of an accepted passage from a shared folder is still the person's, since the review is theirs; a fourth kind of
+  author is a plugin API question and is not part of this.
+
+**Why:** The roadmap's phase L0 items: a screen instead of a command, an audit trail that starts before anyone needs it, and
+an outside edit that does not count as the person's own words when others share the folder.
+
+**Impact:** Design 5.0, 4.15, 7.7, 12.1, 12.7 and 12.8; the plugin guide (a new core record). New setting
+`storage.sync.shared` with demo values. `GET/POST/DELETE /api/sync/handover`; the queue gains the `handover` line. No change
+to scope.
+
 ## 2026-10-13: The restart and paused-account lines are drawn on Today
 
 **Decision:** Today draws the two stop lines the queue already serves, at the top before the columns, one row each with one

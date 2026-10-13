@@ -10,6 +10,19 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.60 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **Sources and files carry their data level**: the core `source` and `file` records gain `sensitivity` (`open`,
+  `internal` or `restricted`, default `internal`), which only the person changes. A run on a source or a file goes only
+  to AI accounts allowed that level. A plugin that reads them sees one more field; nothing a plugin writes changes.
+- **A snapshot says when its item last changed**: the core `snapshot` record gains an optional `changed_at`, filled from
+  `SourceItem.changed_at`, so "Look at the last day" finds items already there. A connector that sets `changed_at`
+  needs no change.
+- **An audit trail**: the core record `audit_entry` (sign-ins, sign-outs, add-ons turned on or off), written by the core
+  only. Plugins can read it; it never holds a token, a secret or an account name.
+
 ## What 0.3.59 adds
 
 Manifests stay `'>=0.3,<0.4'`.

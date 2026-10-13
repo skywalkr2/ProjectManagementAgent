@@ -9,6 +9,10 @@ The folder's index says what each readable file holds. When one no longer matche
 - a working copy is taken back by its format;
 - history, sources, outputs and generated files are never read back.
 
+When the folder is shared (anyone else can change it), the edits are not the person's own words: the request is filed
+as an outside input, the changeset and its writes are marked untrusted, and the notes say so. The person's review is the
+same, and releasing a held change is still their decision.
+
 Nothing applies without the person. Each change is handled once (`.cockpit/outside.json` keeps the hash it was
 handled at); once the person has decided, the cockpit writes the file again from the records.
 """
@@ -24,6 +28,13 @@ from engine.sync import MACHINE, Entry, _write_atomic, file_digest, read_index, 
 OUTSIDE = f"{MACHINE}/outside.json"
 NOTE = "edited outside the cockpit"
 HELD = "Edited outside the cockpit: check it before it applies."
+NOTE_SHARED = "edited in a shared folder, so it may be someone else's change"
+HELD_SHARED = "Edited in a shared folder, so it may be someone else's change: check it before it applies."
+
+
+def shared(cfg: Any) -> bool:
+    """Whether anyone else can change the synced folder, so what is found there is content, not the person's words."""
+    return bool(cfg.storage.sync.shared)
 
 
 def _handled(folder: Path) -> dict[str, dict[str, Any]]:
@@ -120,7 +131,7 @@ def _propose(store: Any, ws: Any, cfg: Any, rel: str, entry: Entry, path: Path) 
     if entry.part == "working":
         from engine import working
 
-        result = working.take_back(store, cfg, entry.id, path.read_bytes(), path.name)
+        result = working.take_back(store, cfg, entry.id, path.read_bytes(), path.name, outside=True)
         return {"copy": entry.id, "version": result.get("version")}
     view = store.read()
     if entry.part == "collection":
@@ -151,7 +162,7 @@ def _propose(store: Any, ws: Any, cfg: Any, rel: str, entry: Entry, path: Path) 
                     "field": entry.field,
                     "text": body,
                     "base": entry.version,
-                    "note": NOTE,
+                    "note": NOTE_SHARED if shared(cfg) else NOTE,
                 }
             )
     if not ops:
@@ -210,30 +221,46 @@ def _collection(store: Any, cfg: Any, rel: str, entry: Entry, path: Path, view: 
 
 
 def _apply(store: Any, cfg: Any, rel: str, ops: list[dict[str, Any]]) -> dict[str, Any]:
-    """File the ops as the person's own work: field edits and deletes held for their review, long text pending."""
+    """File the ops from a changed file: field edits and deletes held for the person's review, long text pending."""
+    where = "Edited in the shared folder" if shared(cfg) else "Edited outside the cockpit"
+    return file_ops(store, cfg, f"{where}: {rel}", ops)
+
+
+def file_ops(store: Any, cfg: Any, summary: str, ops: list[dict[str, Any]]) -> dict[str, Any]:
+    """File ops that came from the synced folder. From a folder only the person uses they are the person's own work;
+    from a shared folder they are untrusted content (the request is an outside input and every write carries the
+    mark). Either way nothing applies without the person: field edits and deletes are held, long text is pending."""
     from engine.applier import Context, Inputs, Problem, apply_changeset
     from engine.names import People
     from engine.ops import CHANGESET
     from engine.storage import WriteContext
 
-    summary = f"Edited outside the cockpit: {rel}"
+    untrusted = shared(cfg)
+    trust = "untrusted" if untrusted else "trusted"
     changeset = CHANGESET.validate_python({"summary": summary, "ops": ops}, context={"op_models": store.plugins.ops})
     with store.transaction() as tx:
         request = tx.create(
             "request",
-            {"task": "notes", "origin": "pm", "state": "review", "note": summary, "created_at": store.clock()},
-            WriteContext("pm", "trusted", "sync.outside"),
+            {
+                "task": "notes",
+                "origin": "input" if untrusted else "pm",
+                "state": "review",
+                "note": summary,
+                "created_at": store.clock(),
+            },
+            WriteContext("engine" if untrusted else "pm", trust, "sync.outside"),
         )
     ctx = Context(
         store,
         cfg,
         People(store, cfg),
         tuple(store.plugins.ops),
-        Inputs(request.id, None, "", "", "trusted"),
+        Inputs(request.id, None, "", "", trust),
         actor="pm",
     )
+    message = HELD_SHARED if untrusted else HELD
     held = [
-        Problem("outside-edit", "hold", i, HELD)
+        Problem("outside-edit", "hold", i, message)
         for i, op in enumerate(ops)
         if op["op"] in ("record.edit", "record.delete")
     ]

@@ -855,6 +855,40 @@ class SyncView(BaseModel):
     rebuilt: list[str]
     outside_edits: list[OutsideEditView]
     conflict_copies: list[str]
+    shared: bool = Field(description="Anyone else can change the folder, so outside edits are content to check.")
+    handover: Literal["diverged", "chosen", "elsewhere"] | None = Field(
+        None,
+        description="Why the folder isn't being written, when the person has something to settle "
+        "(GET /api/sync/handover).",
+    )
+
+
+class HandoverSideView(BaseModel):
+    """What one side has that the other lacks."""
+
+    computer: str = Field(description="The computer that made the changes; empty when it isn't known.")
+    changes: int = Field(description="How many changes the other side doesn't have.")
+    latest: datetime | None = Field(None, description="When the latest of them was made, on the person's own clock.")
+
+
+class HandoverView(BaseModel):
+    """Why the synced folder isn't being used and what the person can do about it (design 5.0). `diverged`: this
+    computer and the folder each changed while they couldn't sync; the person chooses which copy to keep, and the
+    choice is carried out at the next start (`chosen` once noted). `elsewhere`: another computer opened the workspace
+    (`computer`, `last_seen`, `minutes_left` until it can be opened here without it closing first); there is nothing to
+    choose. `clear`: nothing to settle."""
+
+    state: Literal["clear", "diverged", "chosen", "elsewhere"]
+    here: HandoverSideView | None = Field(None, description="This computer's side (diverged, chosen).")
+    folder: HandoverSideView | None = Field(None, description="The synced folder's side (diverged, chosen).")
+    computer: str = Field("", description="The other computer (elsewhere).")
+    last_seen: datetime | None = Field(None, description="When the other computer was last seen (elsewhere).")
+    minutes_left: int = Field(0, description="Minutes until the workspace can be opened here (elsewhere).")
+    chosen: Literal["here", "folder"] | None = Field(None, description="The copy the person chose to keep.")
+
+
+class HandoverChoice(BaseModel):
+    which: Literal["here", "folder"] = Field(description="Keep this computer's copy or the synced folder's.")
 
 
 class AgendaItemView(BaseModel):
@@ -920,6 +954,7 @@ class QueueLineView(BaseModel):
         "first_go",
         "refused",
         "restart",
+        "handover",
         "failed",
         "paused",
         "overdue",
@@ -958,6 +993,12 @@ class QueueLineView(BaseModel):
         None,
         description="When the account's limit resets and the work waiting on it runs again by itself (paused), on the "
         "person's own clock (their time zone).",
+    )
+    state: Literal["diverged", "chosen", "elsewhere"] | None = Field(
+        None,
+        description="For a handover line: diverged (this computer and the synced folder each changed; the person "
+        "chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened "
+        "the workspace, so this copy stopped writing to the folder). `text` is the other computer's name.",
     )
 
 

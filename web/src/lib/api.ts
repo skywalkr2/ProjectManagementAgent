@@ -174,6 +174,9 @@ export const api = {
   },
 
   sync: () => call<S["SyncView"]>("GET", "sync"),
+  handover: () => call<S["HandoverView"]>("GET", "sync/handover"),
+  chooseCopy: (which: S["HandoverChoice"]["which"]) => call<S["HandoverView"]>("POST", "sync/handover", { which }),
+  changeMindAboutCopy: () => call<S["HandoverView"]>("DELETE", "sync/handover"),
   jobs: () => call<S["JobView"][]>("GET", "jobs"),
 
   pluginToday: () => call<S["TodayLineView"][]>("GET", "plugin-today"),

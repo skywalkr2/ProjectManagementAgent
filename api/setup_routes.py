@@ -48,9 +48,9 @@ from api.schemas import (
     WatchSourceChange,
     WatchSourceIn,
 )
+from engine import audit, setup, templates
 from engine import set_aside as set_aside_mail
 from engine import settings as config_screens
-from engine import setup, templates
 from engine import sorting_rules as sorting
 from engine.config import Config, ConfigError, load_config
 from engine.config.schema import WatchSource
@@ -295,11 +295,14 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def template_apply(body: TemplateApply) -> TemplateApplied:
         if body.id not in {t["id"] for t in templates.shipped()}:
             raise HTTPException(status_code=404, detail=f"there is no template {body.id}")
+        before = list(current().workspace.plugins.enabled)
         try:
             plugins = templates.apply(ws, body.id)
         except (templates.TemplateError, ConfigError) as err:
             log.warning("A template couldn't be applied: %s", err)
             raise HTTPException(status_code=400, detail=err.plain) from None
+        with store.transaction() as tx:
+            audit.plugin_changes(tx, before, list(current().workspace.plugins.enabled))
         setup.template_applied(ws, body.id)
         events.changed()
         return TemplateApplied(plugins=plugins, needs_restart=worker.needs_restart())

@@ -3277,6 +3277,141 @@
         "title": "Handed",
         "type": "object"
       },
+      "HandoverChoice": {
+        "properties": {
+          "which": {
+            "description": "Keep this computer's copy or the synced folder's.",
+            "enum": [
+              "here",
+              "folder"
+            ],
+            "title": "Which",
+            "type": "string"
+          }
+        },
+        "required": [
+          "which"
+        ],
+        "title": "HandoverChoice",
+        "type": "object"
+      },
+      "HandoverSideView": {
+        "description": "What one side has that the other lacks.",
+        "properties": {
+          "changes": {
+            "description": "How many changes the other side doesn't have.",
+            "title": "Changes",
+            "type": "integer"
+          },
+          "computer": {
+            "description": "The computer that made the changes; empty when it isn't known.",
+            "title": "Computer",
+            "type": "string"
+          },
+          "latest": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the latest of them was made, on the person's own clock.",
+            "title": "Latest"
+          }
+        },
+        "required": [
+          "computer",
+          "changes"
+        ],
+        "title": "HandoverSideView",
+        "type": "object"
+      },
+      "HandoverView": {
+        "description": "Why the synced folder isn't being used and what the person can do about it (design 5.0). `diverged`: this\ncomputer and the folder each changed while they couldn't sync; the person chooses which copy to keep, and the\nchoice is carried out at the next start (`chosen` once noted). `elsewhere`: another computer opened the workspace\n(`computer`, `last_seen`, `minutes_left` until it can be opened here without it closing first); there is nothing to\nchoose. `clear`: nothing to settle.",
+        "properties": {
+          "chosen": {
+            "anyOf": [
+              {
+                "enum": [
+                  "here",
+                  "folder"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The copy the person chose to keep.",
+            "title": "Chosen"
+          },
+          "computer": {
+            "default": "",
+            "description": "The other computer (elsewhere).",
+            "title": "Computer",
+            "type": "string"
+          },
+          "folder": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HandoverSideView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The synced folder's side (diverged, chosen)."
+          },
+          "here": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HandoverSideView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "This computer's side (diverged, chosen)."
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the other computer was last seen (elsewhere).",
+            "title": "Last Seen"
+          },
+          "minutes_left": {
+            "default": 0,
+            "description": "Minutes until the workspace can be opened here (elsewhere).",
+            "title": "Minutes Left",
+            "type": "integer"
+          },
+          "state": {
+            "enum": [
+              "clear",
+              "diverged",
+              "chosen",
+              "elsewhere"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "HandoverView",
+        "type": "object"
+      },
       "InboxCheckView": {
         "description": "Came in after reading every source now, with what the read found.",
         "properties": {
@@ -5793,6 +5928,7 @@
               "first_go",
               "refused",
               "restart",
+              "handover",
               "failed",
               "paused",
               "overdue",
@@ -5896,6 +6032,23 @@
               }
             ],
             "title": "Request"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "enum": [
+                  "diverged",
+                  "chosen",
+                  "elsewhere"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name.",
+            "title": "State"
           },
           "text": {
             "anyOf": [
@@ -7963,6 +8116,23 @@
             "title": "Folder",
             "type": "string"
           },
+          "handover": {
+            "anyOf": [
+              {
+                "enum": [
+                  "diverged",
+                  "chosen",
+                  "elsewhere"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the folder isn't being written, when the person has something to settle (GET /api/sync/handover).",
+            "title": "Handover"
+          },
           "outside_edits": {
             "items": {
               "$ref": "#/components/schemas/OutsideEditView"
@@ -7996,6 +8166,11 @@
             "title": "Removed Outside",
             "type": "array"
           },
+          "shared": {
+            "description": "Anyone else can change the folder, so outside edits are content to check.",
+            "title": "Shared",
+            "type": "boolean"
+          },
           "stopped": {
             "description": "Another computer opened the workspace; this copy stopped writing.",
             "title": "Stopped",
@@ -8010,7 +8185,8 @@
           "removed_outside",
           "rebuilt",
           "outside_edits",
-          "conflict_copies"
+          "conflict_copies",
+          "shared"
         ],
         "title": "SyncView",
         "type": "object"
@@ -14465,6 +14641,78 @@
           }
         },
         "summary": "Sync Status"
+      }
+    },
+    "/api/sync/handover": {
+      "delete": {
+        "description": "Take the choice back before the restart carries it out.",
+        "operationId": "sync_handover_unchoose_api_sync_handover_delete",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sync Handover Unchoose"
+      },
+      "get": {
+        "operationId": "sync_handover_api_sync_handover_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Sync Handover"
+      },
+      "post": {
+        "description": "Note which copy to keep. It is carried out at the next start, before the database is opened, through the\nsame checks the command line has; nothing about the workspace changes until then.",
+        "operationId": "sync_handover_choose_api_sync_handover_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandoverChoice"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandoverView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sync Handover Choose"
       }
     },
     "/api/task-kinds": {

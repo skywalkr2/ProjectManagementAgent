@@ -88,13 +88,16 @@ def create_app(
     router_factory: Callable[[], Router] | None = None,
     ui_dist: Path | None = None,
     on_restart: Callable[[], None] | None = None,
+    sync_held: bool = False,
 ) -> ASGIApp:
     """Build the app for a workspace. The returned app serves the base path from the config.
 
     `on_shutdown` runs while the server shuts down, before the process exits on a stop signal, so cleanup such as
     releasing the instance lease always happens. With `start_worker`, queued requests are processed in the background;
     otherwise they wait until `app.state.worker.run_pending()` is called (tests). `on_restart` is called when saved
-    settings or new code need the process to start again; without it, waiting work says a restart is needed."""
+    settings or new code need the process to start again; without it, waiting work says a restart is needed.
+    `sync_held`: the app started while this computer and the synced folder had diverged, so it writes nothing to the
+    folder until the person chooses which copy to keep."""
     from engine.sync import placement_problem
 
     base_path = cfg.server.base_path
@@ -113,6 +116,8 @@ def create_app(
     move_names(store)
     ensure_lists(store)
     worker = Worker(ws, store, cfg, events, router_factory, on_restart)
+    if sync_held:
+        worker.hold_sync()
     from engine.sign_in_sources import start_signed_in
 
     try:

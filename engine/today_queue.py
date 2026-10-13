@@ -44,7 +44,9 @@ class Line:
     the person was asked), who_is (a name the assistant couldn't place), owner (an action with no owner), held (an
     item waiting for the person's yes), go (a run waiting for the person's go), first_go (every run waiting for the
     first go in the workspace, as one line: `estimate_usd` is their total estimate and `unpriced` how many have
-    none), refused, restart (work held until the person restarts the app: `count` is how many requests wait), failed,
+    none), refused, restart (work held until the person restarts the app: `count` is how many requests wait), handover
+    (the synced folder can't be used until the person settles it: `state` is diverged, chosen or elsewhere and `text`
+    the other computer), failed,
     paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), overdue,
     review, send or nudge. `count` is how many things the line covers; `text` the
     decision, question or held item in one line; `title` the input the line is about; `outcome` what the assistant
@@ -73,11 +75,13 @@ class Line:
     unpriced: int = 0
     account: str | None = None
     until: str | None = None
+    state: str | None = None
     since: str = ""
 
 
-def queue(ws: Any, store: Any, cfg: Any, now: datetime) -> list[Line]:
-    """Every line that needs the person now, in rank order."""
+def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str] | None = None) -> list[Line]:
+    """Every line that needs the person now, in rank order. `handover`: what stops the synced folder from being used,
+    as the worker reports it (state and the other computer's name), which is a line of its own."""
     today = now.astimezone(zone(cfg)).date()
     people = People(store, cfg)
     reader = store.read()
@@ -189,6 +193,12 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime) -> list[Line]:
                 waiting=d.get("waiting"),
                 since=str(d.get("created_at") or ""),
             )
+        )
+
+    if handover is not None:
+        # The folder not being written is never a silent stop; the line opens the page that settles it.
+        lines.append(
+            Line(key="handover", group="decide", kind="handover", text=handover[1], state=handover[0], since="")
         )
 
     from engine.worker import RESTART_NEEDED
@@ -352,6 +362,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime) -> list[Line]:
 
 
 _KIND_ORDER = {
+    "handover": -3,
     "restart": -2,
     "first_go": -1,
     "decision": 0,

@@ -632,6 +632,23 @@ class SettingChange(Record):
     at: datetime = Field(description="When it was changed.")
 
 
+class AuditEntry(Record):
+    """One sign-in, sign-out or turning an add-on on or off, made from the screens. The engine writes it as it happens;
+    nothing changes it. It never holds a token, a secret or the signed-in account's name."""
+
+    record_kind: ClassVar[str] = "audit_entry"
+    prefix: ClassVar[str] = "AUD"
+
+    kind: Literal["sign_in", "sign_out", "plugin_on", "plugin_off"] = Field(
+        description="What happened: signed in to a service, signed out of one (or lost the sign-in because its app "
+        "registration changed), turned an add-on on, or turned one off."
+    )
+    subject: str = Field(description="The sign-in's name, or the add-on's name, as the add-on declares it.")
+    label: str | None = Field(None, description="The sign-in's label for the person, when it has one.")
+    detail: str | None = Field(None, description="A few plain words when the entry needs them.")
+    at: datetime = Field(description="When it happened.")
+
+
 class ToolRun(Record):
     """One run of an outside program a plugin declared: what ran, how it ended and what it returned. The engine writes
     it after each run; nothing changes it."""
@@ -1087,6 +1104,7 @@ REGISTRY: dict[str, type[Record]] = {
         ToolRun,
         JobRun,
         SettingChange,
+        AuditEntry,
         Answer,
         SettingProposal,
         Report,
