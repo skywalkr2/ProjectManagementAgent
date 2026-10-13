@@ -268,16 +268,20 @@ them are needed before the owner's daily use, which starts when L-core passes.
     the re-check of every other open question, one store interface over every action store, the notice baseline date,
     `track_only` notices, `owner_format` parsing and `person.merge`.
   "Add a new person" is L3b.
-- [ ] **Where the code and the design differ, to decide** (found by the design pass; the design is left as written):
-  - a question carries a stored kind (question or decision), while 6.8 says the recipient decides whether something is
-    a decision; Follow-ups treats every question to the PM as a decision;
-  - "to send" is a count on the person's card, while 6.10 says it marks the action row;
-  - `me`, `myself` and `I` are English words hard-coded in the names service and override anyone indexed under them;
-  - names resolve only for action owners and a question's recipient, while 6.11 says every write path;
-  - the references table omits an action's `told` keys, a question's options and `resolves`, and a signal's refs, which
-    `person.merge` will need;
-  - a greeting takes the first word of a full name as the first name, so a title or a two-word first name misgreets;
-  - a change to an action's due date or text after it was told is never sent again.
+- [ ] **Where the code and the design differ, decided** (found by the design pass; the technical PM's calls, 2026-10-13):
+  - a question's stored kind (question or decision) stays: the assistant says which, and it is checkable. The design
+    (6.8) is corrected to say so, and Follow-ups uses the kind instead of treating every question to the PM as a
+    decision (here, L0);
+  - "to send" stays a count on the person's card, and each action row gets its own marker in phase B's Follow-ups work;
+  - `me`, `myself` and `I` become the language's words for the person, from the wording settings, not English words in
+    code (here, L0);
+  - names resolve on the two fields that hold names written in an input (owners, a question's recipient); every other
+    field is picked from a list. The design (6.11) is corrected to say so;
+  - the references table gains an action's `told` keys, a question's options and `resolves`, and a signal's refs, when
+    `person.merge` is built;
+  - a greeting's first name comes from the person's record (a first-name field, or the first name as the person wrote
+    it), not the first word of the full name; with `owner_format` here (L0);
+  - a change to an action's due date or text after it was told is marked "to send" again (here, L0).
 - [ ] **No silent stops** (design 8.5, 8.6, 8.8):
   - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived (done:
     `tests/test_names.py::test_the_packet_states_the_inputs_received_date_beside_todays`);
