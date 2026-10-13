@@ -107,6 +107,27 @@ def _rel(path: Path, root: Path) -> str:
     return str(path.relative_to(root))
 
 
+def _term_hits(lines: list[str], patterns: list[tuple]) -> Iterator[tuple[int, tuple]]:
+    """Each (line number, pattern entry) where an entry's pattern (its second item) matches the line, in line order and
+    then pattern order. A search of the whole text first leaves out the entries (term first, pattern second) that
+    match nowhere in the file, so a long list of terms isn't tried against every line of every file."""
+    text = "\n".join(lines)
+    lowered = text.lower() if text.isascii() else None
+    present = [entry for entry in patterns if _may_contain(entry[0], text, lowered)]
+    for n, line in enumerate(lines, 1) if present else ():
+        for entry in present:
+            if entry[1].search(line):
+                yield n, entry
+
+
+def _may_contain(term: str, text: str, lowered: str | None) -> bool:
+    """False only when the term can't be in the text, ignoring case. Plain ASCII text and term compare in lower case;
+    anything else is searched with the term's own letters matched without case (a superset of the scan's match)."""
+    if lowered is not None and term.isascii():
+        return term.lower() in lowered
+    return re.compile(re.escape(term), re.IGNORECASE).search(text) is not None
+
+
 # ---- terms from workspaces -------------------------------------------------------------------------------------------
 
 
@@ -169,11 +190,9 @@ def scan_specificity(
     patterns += [(t, _term_pattern(t), True) for t in sorted(private - public)]
     findings = []
     for path in code_files(root):
-        for n, line in enumerate(_lines(path), 1):
-            for term, pattern, is_private in patterns:
-                if pattern.search(line):
-                    shown = "a value from your private workspace" if is_private else repr(term)
-                    findings.append(Finding("specificity", _rel(path, root), n, f"{shown} belongs in config or data"))
+        for n, (term, _, is_private) in _term_hits(_lines(path), patterns):
+            shown = "a value from your private workspace" if is_private else repr(term)
+            findings.append(Finding("specificity", _rel(path, root), n, f"{shown} belongs in config or data"))
     return findings
 
 
@@ -183,14 +202,10 @@ def scan_providers(extra_names: Iterable[str] = (), root: Path = REPO) -> list[F
     patterns = [(n, _term_pattern(n)) for n in sorted(names)]
     findings = []
     for path in code_files(root, exclude=[ADAPTERS]):
-        for n, line in enumerate(_lines(path), 1):
-            for name, pattern in patterns:
-                if pattern.search(line):
-                    findings.append(
-                        Finding(
-                            "provider", _rel(path, root), n, f"AI vendor or model name {name!r} outside the adapters"
-                        )
-                    )
+        for n, (name, _) in _term_hits(_lines(path), patterns):
+            findings.append(
+                Finding("provider", _rel(path, root), n, f"AI vendor or model name {name!r} outside the adapters")
+            )
     return findings
 
 
@@ -198,9 +213,11 @@ def scan_patterns(root: Path = REPO) -> list[Finding]:
     findings = []
     for path in code_files(root):
         rel = _rel(path, root)
-        for n, line in enumerate(_lines(path), 1):
-            if URL.search(line):
-                findings.append(Finding("pattern", rel, n, "a URL in code; URLs belong in config or data"))
+        lines = _lines(path)
+        if any("://" in line for line in lines):
+            for n, line in enumerate(lines, 1):
+                if URL.search(line):
+                    findings.append(Finding("pattern", rel, n, "a URL in code; URLs belong in config or data"))
         for n, comment in _comments(path):
             for pattern in DATED_COMMENT:
                 if pattern.search(comment):

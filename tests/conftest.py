@@ -12,10 +12,15 @@ from pathlib import Path
 import pytest
 import yaml
 
-from engine.config import load_config
-from engine.selfcheck import FIXTURES
-from engine.storage import Store
-from engine.workspace import Workspace, init_workspace
+from tests import speedups
+
+# Faster parsing, plugin lookup, route validators and prepared workspaces; before the product's modules are imported.
+speedups.install()
+
+from engine.config import load_config  # noqa: E402
+from engine.selfcheck import FIXTURES  # noqa: E402
+from engine.storage import Store  # noqa: E402
+from engine.workspace import Workspace, init_workspace  # noqa: E402
 
 # Text a person reads that names a settings file, a key, a secret reference or a command fails the response while the
 # whole suite runs (api/screen_text.py).
