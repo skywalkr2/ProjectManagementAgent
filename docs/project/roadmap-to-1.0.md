@@ -1073,6 +1073,10 @@ C4. **What the packs need from the core.**
   - 194, `$new:<n>` in a proposal for the record an earlier op creates, resolved by the applier in order, and refused
     with the reason when the person drops op n (applier work: the main session's);
   - 195, a `show_for`-style predicate on a person action, given the view and the target, quick and deterministic.
+- [ ] **Round 42 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
+  - 196, a task kind's declared tier holds over its role's tier (or is marked required), `ai.tasks.<kind>.tier` still
+    overriding both; with 191's declared context need;
+  - 197, `RefTo(..., blocks_delete=False)` for a reference that is history, left dangling and shown as removed.
 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
