@@ -8,7 +8,7 @@ import { useRestartWhat } from "../lib/restart-for";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { backupChipAge, backupText } from "../lib/backup";
-import { time } from "../lib/dates";
+import { time, whenText } from "../lib/dates";
 import type { LiveState } from "../lib/live";
 import { useTotal } from "../lib/money";
 import { useWords } from "../lib/wording";
@@ -39,6 +39,7 @@ function leave(close: () => void, run: () => void) {
 const CHIP_WORD: Record<StatusKind, string> = {
   connecting: "live.connecting",
   offline: "live.offline",
+  network: "status.chip_network",
   restart: "status.chip_restart",
   restarting: "status.chip_restarting",
   backup: "status.chip_backup",
@@ -52,7 +53,7 @@ export function StatusMenu(props: {
   /** Opens the setup guide, at a step when one is named. */
   onOpenGuide: (step?: string) => void;
 }) {
-  const { t } = useWords();
+  const { t, tn } = useWords();
   const act = useAct();
   const restart = useRestart();
   const what = useRestartWhat();
@@ -65,6 +66,7 @@ export function StatusMenu(props: {
   const age = b ? backupChipAge(b, t) : null;
   const ai = status.data?.ai;
   const spend = status.data ? spendText(status.data.spend, t, total) : null;
+  const wait = status.data?.network_wait;
   const restartShown = restart.phase !== "idle" || !!status.data?.restart_needed;
   const backupNow = () => void act(() => api.backup(), () => ({ message: t("toast.backup_ran") }));
   const updates =
@@ -114,6 +116,15 @@ export function StatusMenu(props: {
                     {t("status.backup_set_up")}
                   </Button>
                 )}
+              </li>
+            )}
+            {wait && (
+              <li className={[styles.state, styles.warn].join(" ")} data-state="network">
+                <p className={styles.name}>{t("status.network")}</p>
+                <p className={`${styles.text} ${styles.full}`}>
+                  {tn("status.network_waiting", wait.count, { time: whenText(wait.since) })}
+                </p>
+                <p className={styles.note}>{t("status.network_todo")}</p>
               </li>
             )}
             {restartShown && (

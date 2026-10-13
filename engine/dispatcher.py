@@ -35,6 +35,7 @@ from engine.packet import PacketRefused, build, target_of
 from engine.projects import budget_problem
 from engine.storage import Store, StoreError, WriteContext
 from engine.tasks import settings as task_settings
+from engine.text_shape import error_problem
 from engine.today import zone
 from engine.workspace import Workspace
 
@@ -95,7 +96,7 @@ def _describe_error(error: dict, data: object, models: dict) -> str:
             if model is not None and key in op and key not in model.model_fields:
                 fields = ", ".join(name for name in model.model_fields if name != "group")
                 return f"op {index} ({op['op']}) has a field {key!r} it doesn't take; it takes: {fields}"
-    return f"{where}: {error['msg'].removeprefix('Value error, ')}"
+    return error_problem(error) or f"{where}: {error['msg'].removeprefix('Value error, ')}"
 
 
 def hidden_words(cfg: Config) -> list[str]:
@@ -740,6 +741,17 @@ def _set(store: Store, request_id: str, **changes: object) -> None:
     with store.transaction() as tx:
         cur = tx.get("request", request_id)
         tx.update("request", request_id, changes, _ENGINE, read_version=cur.version)
+
+
+def is_waiting_for_network(request: dict) -> bool:
+    """Whether a request is queued only because no network connection could be made, with when it first found none."""
+    cause = request.get("cause") or {}
+    return (
+        request.get("state") == "queued"
+        and not request.get("dismissed")
+        and cause.get("kind") == "offline"
+        and bool(cause.get("since"))
+    )
 
 
 def wait_for_network(store: Store, cfg: Config, request_id: str, now: datetime, since: object = None) -> None:

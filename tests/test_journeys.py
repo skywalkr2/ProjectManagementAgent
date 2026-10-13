@@ -416,9 +416,10 @@ def test_j11_a_scheduled_read_missed_in_sleep_runs_once_on_waking_and_a_lost_net
 
 def test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back(tmp_path):
     """J12. The computer wakes with no network and the assistant has a request to read. The item waits, saying it is
-    waiting for the network; no try is used up and nothing is asked of me. After a quarter of an hour Today has one
-    line asking me to check the connection, with how many items wait and since when. When the network returns the item
-    is read once, the line goes, and the item is there to review."""
+    waiting for the network; no try is used up and nothing is asked of me. After the configured time (an hour) Today
+    has one line asking me to check the connection, with how many items wait and since when, and the header's
+    status says the same from the first miss. When the network returns the item is read once, the line and the
+    status go, and the item is there to review."""
     from tests.test_silent_stops import Scripted
 
     ws, clock = _started(tmp_path)
@@ -436,8 +437,14 @@ def test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is
             assert item["state"] == "queued" and item["waiting"].startswith("Waiting for the network since ")
             assert worker.store.read().get("request", item["id"]).data["retries"] == 0
             assert not _lines(client, "offline")
+            wait = client.get("/api/status").json()["network_wait"]
+            assert wait["count"] == 1 and datetime.fromisoformat(wait["since"]) == began
 
-            clock.move(minutes=16)  # the computer sleeps on; the network is still down when it is looked at again
+            minutes = worker.cfg.dispatch.offline_line_after_minutes
+            clock.move(minutes=minutes - 1)
+            worker.run_pending()
+            assert not _lines(client, "offline"), "no line before the configured time"
+            clock.move(minutes=2)  # the computer sleeps on; the network is still down when it is looked at again
             worker.run_pending()
             stuck = _changes(client)[item["id"]]
             assert stuck["state"] == "queued" and worker.store.read().get("request", item["id"]).data["retries"] == 0
@@ -451,6 +458,8 @@ def test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is
             assert worker.run_pending() == 1
             assert _changes(client)[item["id"]]["state"] == "review"
             assert not _lines(client, "offline")
-            assert cut_off.calls == 2 and len(worker.store.read().list("changeset")) == 1
+            assert client.get("/api/status").json()["network_wait"] is None
+            assert cut_off.calls == 3
+            assert len(worker.store.read().list("changeset")) == 1
     finally:
         set_responder(None)

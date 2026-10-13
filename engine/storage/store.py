@@ -551,7 +551,11 @@ def _validate(model: type, data: dict[str, Any]) -> dict[str, Any]:
     try:
         return model.model_validate(data).model_dump(mode="json", exclude_defaults=False)
     except ValidationError as err:
-        problems = "; ".join(f"{'.'.join(map(str, e['loc'])) or kind}: {e['msg']}" for e in err.errors())
+        from engine.text_shape import error_problem
+
+        problems = "; ".join(
+            error_problem(e) or f"{'.'.join(map(str, e['loc'])) or kind}: {e['msg']}" for e in err.errors()
+        )
         raise InvalidRecord(f"{kind} {data.get('id', '(new)')}: {problems}") from None
 
 

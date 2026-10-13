@@ -25,6 +25,12 @@ declare which roles their parts are for, the ledger records the person behind ea
 in 1.0; from now on new core code never assumes a single person (CLAUDE.md), and plugin API additions are designed with
 roles in mind.
 
+## 2026-10-13: The first go's estimate includes the sorting run
+
+**Decided by:** the technical PM. **What:** the first go's estimate is the items handed in plus the sorting run the go
+also makes for unsorted mail, so the person approves the whole spend. **Why:** the go starts that run too. **Impact:**
+design 7.8; the Today line and the screen's line; `GET /api/runs/first-go`.
+
 ## 2026-10-13: The original designer's review of L0 and the work version's screens
 
 **Decided by:** the original designer, on review; accepted by the technical PM. **What:** a lost network never pauses an

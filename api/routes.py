@@ -44,6 +44,7 @@ from api.schemas import (
     FieldView,
     FileKindView,
     FileView,
+    FirstGoSorting,
     FirstGoStarted,
     FollowedUp,
     FollowupAction,
@@ -62,6 +63,7 @@ from api.schemas import (
     KindView,
     ListRenameIn,
     ListValueIn,
+    NetworkWait,
     NoteView,
     Ok,
     Option,
@@ -136,6 +138,7 @@ from engine.config import Config
 from engine.dispatcher import (
     dismiss,
     grant_first_go,
+    is_waiting_for_network,
     looks_good,
     retry,
     send_back,
@@ -1084,6 +1087,17 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         return Ok(ok="queued")
 
+    @r.get("/runs/first-go")
+    def first_go_sorting() -> FirstGoSorting:
+        """What the first go's sorting run would add to the estimate of the runs waiting for it, so the person approves
+        the whole spend. Nothing when no run waits for the go or no mail needs sorting."""
+        from engine import watch
+
+        if not any(waits_on_first_go(x.data) for x in store.read().list("request")):
+            return FirstGoSorting(runs=0)
+        runs, estimate, unpriced = watch.first_go_sorting(ws, store, cfg)
+        return FirstGoSorting(runs=runs, estimate_usd=estimate, unpriced=unpriced)
+
     @r.post("/runs/first-go")
     def first_go() -> FirstGoStarted:
         """The person's first go: the mail handed in unsorted while it was pending is sorted first (the go covers that
@@ -1104,6 +1118,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         counts = {s: sum(x["state"] == s for x in reqs) for s in ("queued", "running", "review", "needs_you")}
         ai, detail = ai_state(ws, cfg, store)
         spent = spend(store, cfg)
+        waiting = [x["cause"]["since"] for x in reqs if is_waiting_for_network(x)]
         return Status(
             ai=AiState(state=ai, detail=detail),
             spend=SpendStatus(
@@ -1123,6 +1138,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 last_error=b.last_error,
             ),
             requests=RequestCounts(**counts),
+            network_wait=NetworkWait(count=len(waiting), since=min(waiting)) if waiting else None,
             version=events.version,
             restart_needed=worker.restart_needed,
             can_restart=worker.can_restart,

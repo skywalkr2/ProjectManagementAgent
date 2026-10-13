@@ -20,6 +20,7 @@ from pydantic import ValidationError
 from engine.config import Config
 from engine.ops import CHANGESET, NEEDS_EVIDENCE, OP_MODELS
 from engine.storage import Store, StoreError, WriteContext
+from engine.text_shape import error_problem
 from engine.texts import text_presence
 
 #: What a preview may be: pictures and plain text, never markup or anything that runs.
@@ -589,7 +590,7 @@ def _validated(ops: list[dict[str, Any]], store: Store, summary: str, topic: str
         )
     except ValidationError as err:
         first = err.errors()[0]
-        raise StoreError(f"{'.'.join(map(str, first['loc']))}: {first['msg']}") from None
+        raise StoreError(error_problem(first) or f"{'.'.join(map(str, first['loc']))}: {first['msg']}") from None
 
 
 def to_apply(pending: Pending, ids: list[str]) -> list[dict[str, Any]]:

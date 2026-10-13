@@ -14,8 +14,8 @@ import pytest
 from engine.ai.adapters.cli_agent import CliAgentAdapter
 from engine.ai.adapters.stub import set_responder
 from engine.ai.pauses import Pauses, pauses_path, when_text
-from engine.ai.router import AccountPaused, Router
-from engine.ai.task import AiError, AiTask
+from engine.ai.router import AccountPaused, NetworkOffline, Router
+from engine.ai.task import AiError, AiResult, AiTask
 from engine.config.schema import AgentSettings, ProviderSettings
 from engine.dispatcher import retry
 from engine.intake import hand_in
@@ -443,6 +443,143 @@ def test_another_account_in_the_chain_takes_the_work_when_one_has_no_connection(
     )
     worker.run_pending()
     assert data(env, request)["state"] == "review" and data(env, request)["cause"] is None
+
+
+# ---- a lost network is never held against an account ----------------------------------------
+
+
+def as_a_real_account(cfg) -> str:
+    """Make the account the tests use a non-stand-in one, so the assistant's state is read from its tests and runs."""
+    name = account_of(cfg)
+    cfg.ai.providers[name] = cfg.ai.providers[name].model_copy(update={"adapter": "cli-agent"})
+    return name
+
+
+def test_a_lost_network_pauses_no_account_however_often_it_is_found_and_whichever_account_is_cut_off(env):
+    _, cfg, store, clock = env
+    first = account_of(cfg)
+    cfg.ai.providers["second"] = cfg.ai.providers[first].model_copy()
+    cfg.ai.tiers["routine"].fallback = ["second/default"]
+    cut_off, limited = Scripted(offline()), Scripted(quota(7200))
+
+    def pauses() -> dict:
+        return Pauses(pauses_path(store), clock).active()
+
+    router = Router(
+        cfg, store, env={}, now=clock, adapter_factory=adapters_by_account(cfg, {first: cut_off, "second": cut_off})
+    )
+    for _ in range(3):
+        with pytest.raises(NetworkOffline):
+            router.call(TASK, request_id="REQ-1")
+    assert cut_off.calls == 6 and pauses() == {}, "every account was tried each time and none was left alone"
+    # One account at its limit and the other cut off: only the limit pauses, and the wait is still for the network.
+    router = Router(
+        cfg, store, env={}, now=clock, adapter_factory=adapters_by_account(cfg, {first: limited, "second": cut_off})
+    )
+    with pytest.raises(NetworkOffline):
+        router.call(TASK, request_id="REQ-1")
+    assert pauses() == {first: START + timedelta(hours=2)}
+
+
+def test_a_lost_network_never_makes_the_assistant_failing_or_hides_a_real_failure(env):
+    from engine.ai.smoke import ai_state
+
+    ws, cfg, store, clock = env
+    account = as_a_real_account(cfg)
+
+    def call_with(provider, request_id):
+        factory = adapters_by_account(cfg, {account: provider})
+        clock.move(seconds=1)
+        with pytest.raises(AiError):
+            Router(cfg, store, env={}, now=clock, adapter_factory=factory).call(TASK, request_id=request_id)
+
+    for n in range(3):
+        call_with(Scripted(offline()), f"REQ-{n}")
+    assert [r.data["error_kind"] for r in store.read().list("run")] == ["offline"] * 3
+    assert ai_state(ws, cfg, store)[0] == "untested", "runs that found no network make no failure"
+    # A key the account refused still shows after later runs found no network.
+    call_with(Scripted(AiError("auth", "HTTP 401")), "REQ-4")
+    call_with(Scripted(offline()), "REQ-5")
+    assert ai_state(ws, cfg, store)[0] == "failing"
+
+
+def test_a_connection_test_that_finds_no_network_is_not_kept_and_leaves_the_last_result_standing(env):
+    from engine.ai.smoke import ai_state, last_test, record, smoke_test
+
+    ws, cfg, store, clock = env
+    as_a_real_account(cfg)
+
+    def answering(name, settings, secret):
+        return type(
+            "A", (), {"run": lambda self, task, model: AiResult(text='{"ok": true}', model_served="m", seconds=0)}
+        )()
+
+    def cut_off(name, settings, secret):
+        def run(self, task, model):
+            raise offline()
+
+        return type("A", (), {"run": run})()
+
+    record(ws, smoke_test(cfg, {}, answering))
+    assert ai_state(ws, cfg, store)[0] == "ok"
+    passed_at = last_test(ws)["at"]
+    results = smoke_test(cfg, {}, cut_off)
+    assert results and all(r.offline and not r.ok for r in results if not r.answered)
+    record(ws, results)
+    assert last_test(ws)["at"] == passed_at and ai_state(ws, cfg, store)[0] == "ok"
+    # Never tested and no network: not failing either, only untested.
+    last = ws.private_dir / "ai-test.json"
+    last.unlink()
+    record(ws, results)
+    assert not last.exists() and ai_state(ws, cfg, store)[0] == "untested"
+
+
+# ---- an answer lifts a pause ----------------------------------------
+
+
+def test_a_successful_run_clears_a_pause_on_its_account_even_one_set_while_it_was_running(env):
+    _, cfg, store, clock = env
+    account = account_of(cfg)
+    pauses = Pauses(pauses_path(store), clock)
+
+    def answer_after_another_run_paused_it(task):
+        pauses.pause(account, START + timedelta(hours=5))
+        return ANSWER
+
+    router = Router(
+        cfg,
+        store,
+        env={},
+        now=clock,
+        adapter_factory=adapters_by_account(cfg, {account: answer_after_another_run_paused_it}),
+    )
+    result, _, _ = router.call(TASK, request_id="REQ-1")
+    assert result.text == ANSWER and pauses.active() == {}
+
+
+def test_a_connection_test_that_is_answered_lifts_the_pause_on_its_account_and_a_failed_one_does_not(env):
+    from engine.ai.smoke import lift_pauses, smoke_test
+
+    ws, cfg, store, clock = env
+    account = account_of(cfg)
+    pauses = Pauses(pauses_path(store), clock)
+
+    def answering(name, settings, secret):
+        return type(
+            "A", (), {"run": lambda self, task, model: AiResult(text='{"ok": true}', model_served="m", seconds=0)}
+        )()
+
+    def refusing(name, settings, secret):
+        def run(self, task, model):
+            raise AiError("auth", "HTTP 401")
+
+        return type("A", (), {"run": run})()
+
+    pauses.pause(account, START + timedelta(hours=5))
+    lift_pauses(ws, smoke_test(cfg, {}, refusing))
+    assert account in pauses.active()
+    lift_pauses(ws, smoke_test(cfg, {}, answering))
+    assert pauses.active() == {}
 
 
 # ---- a program that finishes without an answer is its own outcome ----------------------------------------

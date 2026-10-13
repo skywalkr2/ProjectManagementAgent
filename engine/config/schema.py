@@ -660,10 +660,11 @@ class DispatchFile(FileModel):
         "offline never uses up the automatic tries.",
     )
     offline_line_after_minutes: int = Field(
-        15,
+        60,
         ge=1,
         le=1440,
-        description="How long work may wait for the network before Today asks you to check the connection.",
+        description="How long work may wait for the network before Today asks you to check the connection. Most "
+        "waits clear within minutes of opening the lid, so the default is an hour.",
     )
     cleaning: CleaningSettings = Field(default_factory=CleaningSettings, description="Input cleaning before AI calls.")
 

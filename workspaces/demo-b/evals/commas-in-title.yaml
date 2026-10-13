@@ -1,0 +1,31 @@
+id: commas-in-title
+title: 'Commas inside a title do not split it into several values'
+received: '2026-10-09'
+# A row of a table holds a title with commas in it. The ideal output keeps it as one value, in one calendar entry.
+pasted: 'From: Avery Lane
+
+  Subject: Launch schedule
+
+
+  | Item | Date |
+
+  | Team wireless, KEY-1, release on top | 2026-10-20 |
+
+
+  The table above is the whole schedule.'
+expect:
+- op: event.add
+  text_has:
+  - 'Team wireless, KEY-1, release on top'
+  start: '2026-10-20'
+forbid:
+- op: question.add
+stub_answer:
+  summary: One dated item on the schedule.
+  ops:
+  - op: event.add
+    title: 'Team wireless, KEY-1, release on top'
+    start: '2026-10-20'
+    project: PRJ-1
+    evidence:
+      quote: 'Team wireless, KEY-1, release on top | 2026-10-20'

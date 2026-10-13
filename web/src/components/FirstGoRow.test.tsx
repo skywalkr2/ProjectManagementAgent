@@ -87,3 +87,33 @@ test("no line shows when nothing waits for the first go, and a run held for its 
   expect(within(row).getByRole("button", { name: "Go" })).toBeInTheDocument();
   expect(screen.queryByText(/Start the assistant/)).toBeNull();
 });
+
+test("the sorting run the go also makes is in the total, so the total is the whole spend", async () => {
+  const calls = fakeApi({
+    "GET changes": () => [held("REQ-1"), held("REQ-2", { estimate_usd: 0.12 }), held("REQ-3", { estimate_usd: 0.08 })],
+    "GET runs/first-go": () => ({ runs: 1, estimate_usd: 0.05, unpriced: 0 }),
+    ...NO_STAGES,
+  });
+  renderApp(<WhatChanged />);
+  expect(await screen.findByRole("listitem", { name: "Start the assistant: 3 items, about $0.35" })).toBeInTheDocument();
+  expect(calls.filter((c) => c.route === "GET runs/first-go")).toHaveLength(1);
+});
+
+test("a sorting run with no price makes the line say some of it is on the plan's allowance", async () => {
+  fakeApi({
+    "GET changes": () => [held("REQ-1"), held("REQ-2")],
+    "GET runs/first-go": () => ({ runs: 1, estimate_usd: null, unpriced: 1 }),
+    ...NO_STAGES,
+  });
+  renderApp(<WhatChanged />);
+  expect(
+    await screen.findByRole("listitem", { name: "Start the assistant: 2 items, about $0.20 for those with a price, and some on your plan's allowance" }),
+  ).toBeInTheDocument();
+});
+
+test("the sorting estimate is not asked for when nothing waits for the first go", async () => {
+  const calls = fakeApi({ "GET changes": () => [], ...NO_STAGES });
+  renderApp(<WhatChanged />);
+  await waitFor(() => expect(calls.some((c) => c.route === "GET changes")).toBe(true));
+  expect(calls.some((c) => c.route === "GET runs/first-go")).toBe(false);
+});

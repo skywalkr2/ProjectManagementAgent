@@ -267,6 +267,9 @@ class Router:
             run_id = self._record(
                 task, request_id, choice, started, time.monotonic() - clock, result, None, independent
             )
+            if self.pauses.until(choice.provider) is not None:
+                # An answer proves the limit has lifted, whatever reset time was written down earlier.
+                self.pauses.clear(choice.provider)
             return result, choice, run_id
         if paused and len(paused) == len(options):
             account, until = min(paused.items(), key=lambda item: item[1])
@@ -289,7 +292,7 @@ class Router:
             if seconds is None and last_in_line:
                 seconds = limits.pause_seconds
         else:
-            return None
+            return None  # only a usage limit pauses an account; no connection, a timeout or an outage never does
         return self.now() + timedelta(seconds=seconds) if seconds else None
 
     def _run_paced(

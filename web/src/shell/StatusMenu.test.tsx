@@ -256,3 +256,31 @@ test("a demo workspace says so in the popover, with the sentence", async () => {
   const dialog = await open(user);
   expect(within(dialog).getByText("Everything here is made up. Nothing you do here reaches anyone.")).toBeInTheDocument();
 });
+
+test("requests waiting for the network show on the chip and in the popover, with the count and since when", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({ network_wait: { count: 2, since: "2026-10-13T14:05:00+00:00" } }));
+  await chipIs("network");
+  await chipText("Waiting for the network");
+  expect(await chip()).toHaveAccessibleName("Status: Waiting for the network");
+  const dialog = await open(user);
+  const line = dialog.querySelector('[data-state="network"]') as HTMLElement;
+  expect(line).toHaveTextContent(/^Network2 requests have been waiting for the network since \w{3}, \w{3} \d{1,2}, \d{1,2}:05/);
+  expect(line).toHaveTextContent("They run again by themselves as soon as the network is back. Nothing is lost and no try is used up.");
+  expect(line.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+});
+
+test("one request waiting for the network reads as one, and no network line shows when none waits", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({ network_wait: { count: 1, since: "2026-10-13T14:05:00+00:00" } }));
+  const dialog = await open(user);
+  expect(dialog.querySelector('[data-state="network"]')).toHaveTextContent("1 request has been waiting for the network since");
+});
+
+test("with nothing waiting for the network the chip and popover say nothing about it", async () => {
+  const user = userEvent.setup();
+  show(statusFixture());
+  await chipIs("live");
+  const dialog = await open(user);
+  expect(dialog.querySelector('[data-state="network"]')).toBeNull();
+});

@@ -226,15 +226,20 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         )
 
     if first_go:
+        from engine.watch import first_go_sorting
+
         priced = [r.data["estimate_usd"] for r in first_go if r.data.get("estimate_usd") is not None]
+        # The go also makes the sorting run for mail handed in unsorted; the person approves that spend with it.
+        _runs, sorting_usd, sorting_unpriced = first_go_sorting(ws, store, cfg)
+        total = sum(priced) + (sorting_usd or 0.0)
         lines.append(
             Line(
                 key="first_go",
                 group="decide",
                 kind="first_go",
                 count=len(first_go),
-                estimate_usd=round(sum(priced), 4) if priced else None,
-                unpriced=len(first_go) - len(priced),
+                estimate_usd=round(total, 4) if priced or sorting_usd is not None else None,
+                unpriced=len(first_go) - len(priced) + sorting_unpriced,
                 waiting=FIRST_GO,
                 since=min(str(r.data.get("created_at") or "") for r in first_go),
             )
@@ -268,19 +273,12 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
 
     # Risk: work that has waited for the network longer than the configured time, as one line.
-    offline = [
-        r
-        for r in requests.values()
-        if r.data.get("state") == "queued"
-        and not r.data.get("dismissed")
-        and (r.data.get("cause") or {}).get("kind") == "offline"
-        and (r.data.get("cause") or {}).get("since")
-    ]
+    from engine.dispatcher import OFFLINE_WAITING, is_waiting_for_network
+
+    offline = [r for r in requests.values() if is_waiting_for_network(r.data)]
     if offline:
         began = min(_aware(str(r.data["cause"]["since"])) for r in offline)
         if now - began >= timedelta(minutes=cfg.dispatch.offline_line_after_minutes):
-            from engine.dispatcher import OFFLINE_WAITING
-
             lines.append(
                 Line(
                     key="offline",

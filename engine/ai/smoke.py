@@ -35,6 +35,9 @@ class SmokeResult:
     detail: str
     seconds: float = 0.0
     key_source: str | None = None
+    provider: str = ""  # the account's short name
+    answered: bool = False  # the account's call went through, whatever it said
+    offline: bool = False  # no connection could be made at all: the test says nothing about the account
 
 
 def _params_for_tier(cfg: Config, tier: str) -> list[tuple[str, float, int]]:
@@ -68,22 +71,35 @@ def smoke_test(
                 task = AiTask(kind, "This is a connection test.", "", _REQUEST, {}, temperature, max_output)
                 start = time.monotonic()
                 key_source = None
+                answered = no_network = False
                 try:
                     secret = resolve_secret(settings.auth, env)
                     reply = adapter_factory(settings.adapter, settings, secret).run(task, model_id)
                     detail = "answered" if _is_ok(reply.text) else "answered, but not with the requested JSON"
-                    ok = True
+                    ok = answered = True
                 except SecretError as err:
                     ok, detail, key_source = False, f"key not found: {err}", describe_secret(settings.auth)
                 except AiError as err:
                     ok, detail = False, _problem(err)
+                    no_network = err.kind == "offline"
                     if err.kind in ("auth", "no_key"):
                         key_source = describe_secret(settings.auth)
                 except ValueError as err:
                     ok, detail = False, str(err)
                 label = f"{ref} ({kind}, temperature {temperature}, max output {max_output})"
                 results.append(
-                    SmokeResult(tier_name, label, position == 0, ok, detail, time.monotonic() - start, key_source)
+                    SmokeResult(
+                        tier_name,
+                        label,
+                        position == 0,
+                        ok,
+                        detail,
+                        time.monotonic() - start,
+                        key_source,
+                        provider_name,
+                        answered,
+                        no_network,
+                    )
                 )
             if ref not in locked:
                 locked.add(ref)
@@ -133,7 +149,10 @@ def _lockdown(
     start = time.monotonic()
     checks = adapter.lockdown_test(model_id)
     seconds = time.monotonic() - start
-    return [SmokeResult(tier, f"{ref} (lockdown: {c.name})", main, c.ok, c.detail, seconds) for c in checks]
+    return [
+        SmokeResult(tier, f"{ref} (lockdown: {c.name})", main, c.ok, c.detail, seconds, provider=ref.partition("/")[0])
+        for c in checks
+    ]
 
 
 def _is_ok(text: str) -> bool:
@@ -148,7 +167,17 @@ def ai_fingerprint(ws: Workspace) -> str:
     return hashlib.sha256(path.read_bytes() if path.exists() else b"").hexdigest()
 
 
+def inconclusive(results: list[SmokeResult]) -> bool:
+    """Whether the test found no network and nothing else wrong: every failure is a missing connection. Such a test
+    says nothing about the accounts, so it is neither kept as a failure nor counted toward one."""
+    failed = [r for r in results if not r.ok]
+    return bool(failed) and all(r.offline for r in failed)
+
+
 def record(ws: Workspace, results: list[SmokeResult]) -> None:
+    """Keep a test's result. A test that only found no network is not kept: the last real result stands."""
+    if inconclusive(results):
+        return
     passed = all(r.ok for r in results if r.main)
     data = {
         "fingerprint": ai_fingerprint(ws),
@@ -157,6 +186,16 @@ def record(ws: Workspace, results: list[SmokeResult]) -> None:
         "results": [asdict(r) for r in results],
     }
     write_whole(ws.private_dir / STATUS_FILE, json.dumps(data, indent=2) + "\n")
+
+
+def lift_pauses(ws: Workspace, results: list[SmokeResult]) -> None:
+    """An account whose test call was answered is not out of its usage limit any more: its pause is lifted."""
+    from engine.ai.pauses import Pauses
+
+    pauses = Pauses(ws.private_dir / "ai-pauses.json")
+    for account in {r.provider for r in results if r.answered and r.provider}:
+        if pauses.until(account) is not None:
+            pauses.clear(account)
 
 
 def untested_since_change(ws: Workspace) -> bool:
@@ -192,10 +231,15 @@ def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]
     test = last_test(ws)
     current = test is not None and test.get("fingerprint") == ai_fingerprint(ws)
     if test is not None and current and not test.get("passed"):
-        failed = [r for r in test.get("results", []) if not r.get("ok")]
+        failed = [r for r in test.get("results", []) if not r.get("ok") and not r.get("offline")]
         pick = next((r for r in failed if r.get("main")), failed[0] if failed else None)
-        return "failing", (str(pick.get("detail", ""))[:DETAIL_LIMIT] or None) if pick else None
-    runs = sorted(store.read().list("run"), key=lambda run: run.data.get("started_at", ""))
+        if failed or not test.get("results"):
+            return "failing", (str(pick.get("detail", ""))[:DETAIL_LIMIT] or None) if pick else None
+    # A call that found no network says nothing about the account, so it never hides or makes a failure.
+    runs = sorted(
+        (run for run in store.read().list("run") if run.data.get("error_kind") != "offline"),
+        key=lambda run: run.data.get("started_at", ""),
+    )
     if runs and runs[-1].data.get("outcome") == "error" and runs[-1].data.get("error_kind") == "auth":
         latest = runs[-1].data
         passed_since = bool(test and test.get("passed") and current and str(test.get("at", "")) >= latest["started_at"])

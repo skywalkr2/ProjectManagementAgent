@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from engine.storage import WriteContext
+from engine.storage import StoreError, WriteContext
+from engine.text_shape import text_problem
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="organizations.move")
 
@@ -26,9 +27,15 @@ def find(tx: Any, name: str) -> str | None:
 
 def resolve(tx: Any, value: str | None, w: WriteContext) -> str | None:
     """An organization's id from an id or a name: an id stays; a name finds its organization, or creates one."""
-    if value is None or not str(value).strip():
+    if value is None:
         return None
-    value = str(value).strip()
+    if not isinstance(value, str):
+        raise StoreError(
+            text_problem("An organization's name or id", value) or "An organization's name or id has to be text."
+        )
+    if not value.strip():
+        return None
+    value = value.strip()
     if tx.get("organization", value) is not None:
         return value
     return find(tx, value) or tx.create("organization", {"name": " ".join(value.split())}, w).id

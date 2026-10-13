@@ -371,7 +371,7 @@ so nothing expensive happens unless the person chose it.
 ## 4.9 `config/dispatch.yaml`, `config/governor.yaml`
 
 **Dispatch** (built): `max_input_chars` (60000; a longer input is refused with a request to split it or raise the key),
-`fix_rounds` (1, up to 3: how many times a failing answer goes back to the AI), `retries` (2, up to 5: how many times a run that gave no usable answer or failed is tried again by itself before it goes to the person, 6.16, 8.6), `retry_wait_seconds` (30: the wait before the first retry, doubled for each later one), `offline_check_seconds` (60, 5 to 3600: how long work that found no network waits before it is looked at again; it uses no tries, 6.16, 8.6), `offline_line_after_minutes` (15: how long work may wait for the network before Today asks the person to check the connection, 7.7) and `cleaning` (6.6): `remove_quoted` (true),
+`fix_rounds` (1, up to 3: how many times a failing answer goes back to the AI), `retries` (2, up to 5: how many times a run that gave no usable answer or failed is tried again by itself before it goes to the person, 6.16, 8.6), `retry_wait_seconds` (30: the wait before the first retry, doubled for each later one), `offline_check_seconds` (60, 5 to 3600: how long work that found no network waits before it is looked at again; it uses no tries, 6.16, 8.6), `offline_line_after_minutes` (60: how long work may wait for the network before Today asks the person to check the connection; most waits clear within minutes of opening the lid, 7.7) and `cleaning` (6.6): `remove_quoted` (true),
 `signature_markers` (default "-- " and "Sent from my "; a line starting with one ends the message) and `remove_patterns`
 (regular expressions for disclaimers and footers).
 

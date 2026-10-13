@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { dayAndTime, day } from "../lib/dates";
-import { firstGoOf } from "../lib/first-go";
+import { firstGoOf, useFirstGoSorting } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { showRow, useReveal } from "../lib/reveal";
 import { useEstimate } from "../lib/money";
@@ -73,7 +73,8 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   // A stage task waiting for the go has its own row below; its plain request row would only offer a retry.
   // Runs waiting for the first go are one line together while the list shows what needs attention.
   const waitingGo = new Set(stageToday.waiting.map((w) => w.request.id));
-  const first = firstGoOf(changes.data);
+  const sorting = useFirstGoSorting(firstGoOf(changes.data).count > 0);
+  const first = firstGoOf(changes.data, sorting);
   const firstLine = filter === "attention" && first.count > 0;
   const rows = (changes.data ?? []).filter(
     (c) =>

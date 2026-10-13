@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import difflib
 import hashlib
+import os
 import threading
 import time
 from dataclasses import dataclass, field
@@ -330,17 +331,15 @@ def _assistant_sorted(
     return marks, sorted_.note
 
 
-def sort_before_first_go(ws: Any, store: Any, cfg: Any, router: Any = None, now: datetime | None = None) -> int:
-    """The person's first go covers the sorting of the mail that was handed in unsorted while it was pending: the
-    mail requests still waiting for the go (or queued) whose message was never sorted go through the sorting run first,
-    in the usual batches. Those it sets aside are closed as set aside, with the snapshot marked, and don't run; the
-    rest are left for the go to start. Mail the person pulled back as work, mail a rule now places or keeps, and
-    changed messages are left alone. Returns how many were set aside. Call it before the go is granted."""
+def _awaiting_sorting(ws: Any, store: Any, cfg: Any) -> dict[str, list[tuple[Any, Any, SourceItem, dict[str, Any]]]]:
+    """The mail the first go's sorting covers, by source id: each as (request, snapshot, item, facts). Mail handed in
+    unsorted while the go was pending, still waiting for it or queued, whose message was never sorted. Mail the person
+    pulled back as work, mail a rule now places or keeps, and changed messages are left out."""
     from engine.connectors import EventDetails
     from engine.dispatcher import waits_on_first_go
 
     if cfg.watch.sorting != "ai":
-        return 0
+        return {}
     view = store.read()
     pulled = {ref for s in view.list("signal") if s.data["kind"] == "pulled_back" for ref in s.data.get("refs", [])}
     snaps = {(s.data["source"], s.data["key"]): s for s in view.list("snapshot")}
@@ -377,6 +376,41 @@ def sort_before_first_go(ws: Any, store: Any, cfg: Any, router: Any = None, now:
         closed, kept = classify(store, cfg, facts)
         if closed is None and not kept:
             waiting.setdefault(source.id, []).append((req, snap, item, facts))
+    return waiting
+
+
+def first_go_sorting(ws: Any, store: Any, cfg: Any, router: Any = None) -> tuple[int, float | None, int]:
+    """What the first go's sorting run adds to the spend: how many runs it makes, what the runs that have a price cost
+    together (None when none has one) and how many have no price. Nothing when no mail waits for the sorting."""
+    from engine import mail_sorting
+
+    found = _awaiting_sorting(ws, store, cfg)
+    if not found:
+        return 0, None, 0
+    if router is None:
+        from engine.ai.router import Router
+
+        router = Router(cfg, store, env=os.environ)
+    sources = {s.id: s for s in cfg.watch.sources}
+    runs, total, unpriced = 0, 0.0, 0
+    for source_id, items in found.items():
+        headers = [mail_sorting.header_of(item.key, facts) for _, _, item, facts in items]
+        priced, missing = mail_sorting.estimate(ws, cfg, router, headers, data_level_of(cfg, sources[source_id]))
+        batches = -(-len(headers) // cfg.watch.sorting_batch)
+        runs += batches
+        total += priced
+        unpriced += missing
+    return runs, (total if runs > unpriced else None), unpriced
+
+
+def sort_before_first_go(ws: Any, store: Any, cfg: Any, router: Any = None, now: datetime | None = None) -> int:
+    """The person's first go covers the sorting of the mail that was handed in unsorted while it was pending: the
+    mail requests still waiting for the go (or queued) whose message was never sorted go through the sorting run first,
+    in the usual batches. Those it sets aside are closed as set aside, with the snapshot marked, and don't run; the
+    rest are left for the go to start. Mail the person pulled back as work, mail a rule now places or keeps, and
+    changed messages are left alone. Returns how many were set aside. Call it before the go is granted."""
+    waiting = _awaiting_sorting(ws, store, cfg)
+    sources = {s.id: s for s in cfg.watch.sources}
     set_aside = 0
     for source_id, found in waiting.items():
         marks, _note = _assistant_sorted(

@@ -1,0 +1,32 @@
+id: colon-in-title
+title: 'A colon inside a title stays one piece of text, never a name and a value'
+received: '2026-10-09'
+# A row of a table holds a title with ": " in it. The ideal output keeps the whole title as one string.
+pasted: 'From: Avery Lane
+
+  Subject: Launch checklist
+
+
+  The checklist for the launch reading has one item left to settle:
+
+
+  | Item | Status |
+
+  | Team wireless: release on top | open |
+
+
+  Nothing else is open.'
+expect:
+- op: fact
+  text_has:
+  - 'Team wireless: release on top'
+forbid:
+- op: question.add
+stub_answer:
+  summary: The checklist has one open item.
+  ops:
+  - op: fact
+    text: 'The launch checklist has one open item, "Team wireless: release on top".'
+    project: PRJ-1
+    evidence:
+      quote: 'Team wireless: release on top'

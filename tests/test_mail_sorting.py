@@ -514,3 +514,52 @@ def test_the_first_go_leaves_alone_mail_the_person_pulled_back_as_work(tmp_path)
     finally:
         store.close()
         set_responder(None)
+
+
+def test_the_first_go_estimate_includes_the_sorting_run_so_the_person_approves_the_whole_spend(tmp_path):
+    from api.app import create_app
+    from engine.ai.router import Router
+    from engine.config.schema import Price
+    from engine.dispatcher import process
+    from engine.today_queue import queue
+    from engine.watch import first_go_sorting
+
+    set_responder(Account(answers={"Newsletter": "sales"}))
+    items = [unplaced(0), mail("news", f"deals@{CLUB}", subject="Newsletter"), unplaced(2)]
+    ws, cfg, store = make(tmp_path, items, ai=[("first_go: false", "first_go: true")])
+    store.close()
+    created = create_app(ws, cfg, "t", start_worker=False)
+    client = TestClient(created)
+    client.headers["Authorization"] = "Bearer t"
+    base = cfg.server.base_path.rstrip("/") + "/api"
+    store = created.state.store
+    use = cfg.ai.tiers["routine"].use
+
+    def first_go_line():
+        return next(line for line in queue(ws, store, cfg, NOW) if line.kind == "first_go")
+
+    try:
+        read(ws, store)
+        cfg.ai.prices[use] = Price(input_per_million=10.0, output_per_million=10.0)
+        for req in requests_in(store, "queued"):
+            assert process(ws, store, cfg, Router(cfg, store, env={}), req.id, now=NOW) is None
+        held = [r.data["estimate_usd"] for r in store.read().list("request") if r.data["state"] == "needs_you"]
+        assert len(held) == 3 and all(held)
+        runs, sorting, unpriced = first_go_sorting(ws, store, cfg)
+        assert (runs, unpriced) == (1, 0) and sorting > 0
+        line = first_go_line()
+        assert line.count == 3 and line.unpriced == 0
+        assert line.estimate_usd == pytest.approx(sum(held) + sorting, abs=1e-3), "the sorting run is in the total"
+        assert line.estimate_usd > sum(held)
+        seen_by_screen = client.get(f"{base}/runs/first-go").json()
+        assert seen_by_screen == {"runs": 1, "estimate_usd": pytest.approx(sorting), "unpriced": 0}
+        # An account with no price: the sorting run is one more run on the plan's allowance, with no dollar total.
+        cfg.ai.prices.pop(use)
+        assert first_go_sorting(ws, store, cfg) == (1, None, 1)
+        assert first_go_line().unpriced >= 1
+        # Once the go is given nothing waits for it, and the screen is told there is no sorting to add.
+        assert client.post(f"{base}/runs/first-go").json() == {"started": 2}
+        assert client.get(f"{base}/runs/first-go").json() == {"runs": 0, "estimate_usd": None, "unpriced": 0}
+    finally:
+        created.state.store.close()
+        set_responder(None)

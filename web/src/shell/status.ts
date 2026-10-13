@@ -1,9 +1,9 @@
 // The status chip's one state (design 7.1): the worst thing going on, so the header says one word. In order: offline,
-// a restart to finish, a backup needed, spend near a limit, otherwise live.
+// work waiting for the network, a restart to finish, a backup needed, spend near a limit, otherwise live.
 import type { S } from "../lib/api";
 import type { LiveState } from "../lib/live";
 
-export type StatusKind = "connecting" | "offline" | "restart" | "restarting" | "backup" | "spend" | "live";
+export type StatusKind = "connecting" | "offline" | "network" | "restart" | "restarting" | "backup" | "spend" | "live";
 
 export function worstState(input: {
   live: LiveState;
@@ -12,6 +12,7 @@ export function worstState(input: {
   restartPhase: string;
 }): StatusKind {
   if (input.live === "offline") return "offline";
+  if (input.status?.network_wait) return "network";
   if (input.restartPhase === "waiting") return "restarting";
   if (["asking", "stuck", "refused"].includes(input.restartPhase) || input.status?.restart_needed) return "restart";
   if (input.status?.backup.needs_attention) return "backup";

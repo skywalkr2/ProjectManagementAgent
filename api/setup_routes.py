@@ -588,7 +588,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     @r.post("/ai/accounts/{name}/test")
     def ai_account_test(name: str) -> list[AiTestResult]:
         """Test one account on its first model, whether or not any kind of work uses it yet."""
-        from engine.ai.smoke import account_test
+        from engine.ai.smoke import account_test, lift_pauses
 
         try:
             now = load_config(ws.config_dir)
@@ -598,6 +598,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         if name not in now.ai.providers:
             raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
         results = account_test(now, os.environ, name)
+        lift_pauses(ws, results)
         line = AiTestResult(tier="account", account=name, main=True, ok=True, detail="answered")
         for x in results:
             if not x.ok and line.ok:
@@ -804,7 +805,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.post("/ai/test")
     def ai_test() -> list[AiTestResult]:
-        from engine.ai.smoke import record, smoke_test
+        from engine.ai.smoke import lift_pauses, record, smoke_test
 
         try:
             current = load_config(ws.config_dir)
@@ -813,6 +814,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail=err.plain) from None
         results = smoke_test(current, os.environ)
         record(ws, results)
+        lift_pauses(ws, results)
         events.changed()
         # One line per kind of work and account, in plain words: the run's own details are for `cockpit ai test`.
         lines: dict[tuple[str, str], AiTestResult] = {}

@@ -101,6 +101,13 @@ class RequestCounts(BaseModel):
     needs_you: int
 
 
+class NetworkWait(BaseModel):
+    """Work waiting for the network connection to come back."""
+
+    count: int = Field(description="How many requests wait for the network.")
+    since: str = Field(description="When the oldest of them first found no network, an ISO time.")
+
+
 class AiState(BaseModel):
     """Whether the assistant can do its work: set up, tested, and answering."""
 
@@ -125,6 +132,10 @@ class Status(BaseModel):
     ai: AiState
     spend: SpendStatus
     requests: RequestCounts
+    network_wait: NetworkWait | None = Field(
+        None,
+        description="Set while any request waits for the network connection, which it does with no tries used up.",
+    )
     version: int
     restart_needed: ScreenText | None = Field(
         None, description="Why new work waits until the cockpit restarts, if it does."
@@ -1011,6 +1022,16 @@ class QueueLineView(BaseModel):
 
 class FirstGoStarted(BaseModel):
     started: int = Field(description="How many runs the first go started.")
+
+
+class FirstGoSorting(BaseModel):
+    """The sorting run the first go also makes, for mail handed in unsorted while the go was pending."""
+
+    runs: int = Field(description="How many sorting runs the go makes; none when no mail waits for sorting.")
+    estimate_usd: float | None = Field(
+        None, description="What the runs that have a price cost together; none when none has one."
+    )
+    unpriced: int = Field(0, description="How many of the runs have no price (they use the plan's allowance).")
 
 
 class InboxView(BaseModel):

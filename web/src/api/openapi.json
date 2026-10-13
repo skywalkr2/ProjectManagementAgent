@@ -2829,6 +2829,39 @@
         "title": "FingerprintIn",
         "type": "object"
       },
+      "FirstGoSorting": {
+        "description": "The sorting run the first go also makes, for mail handed in unsorted while the go was pending.",
+        "properties": {
+          "estimate_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the runs that have a price cost together; none when none has one.",
+            "title": "Estimate Usd"
+          },
+          "runs": {
+            "description": "How many sorting runs the go makes; none when no mail waits for sorting.",
+            "title": "Runs",
+            "type": "integer"
+          },
+          "unpriced": {
+            "default": 0,
+            "description": "How many of the runs have no price (they use the plan's allowance).",
+            "title": "Unpriced",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "runs"
+        ],
+        "title": "FirstGoSorting",
+        "type": "object"
+      },
       "FirstGoStarted": {
         "properties": {
           "started": {
@@ -3831,6 +3864,27 @@
           "full_name"
         ],
         "title": "MeView",
+        "type": "object"
+      },
+      "NetworkWait": {
+        "description": "Work waiting for the network connection to come back.",
+        "properties": {
+          "count": {
+            "description": "How many requests wait for the network.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "since": {
+            "description": "When the oldest of them first found no network, an ISO time.",
+            "title": "Since",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "since"
+        ],
+        "title": "NetworkWait",
         "type": "object"
       },
       "NoteView": {
@@ -8030,6 +8084,17 @@
             "description": "The app can start itself again when the person asks (POST /api/restart).",
             "title": "Can Restart",
             "type": "boolean"
+          },
+          "network_wait": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NetworkWait"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set while any request waits for the network connection, which it does with no tries used up."
           },
           "requests": {
             "$ref": "#/components/schemas/RequestCounts"
@@ -13515,6 +13580,23 @@
       }
     },
     "/api/runs/first-go": {
+      "get": {
+        "description": "What the first go's sorting run would add to the estimate of the runs waiting for it, so the person approves\nthe whole spend. Nothing when no run waits for the go or no mail needs sorting.",
+        "operationId": "first_go_sorting_api_runs_first_go_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FirstGoSorting"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "First Go Sorting"
+      },
       "post": {
         "description": "The person's first go: the mail handed in unsorted while it was pending is sorted first (the go covers that\nrun), then every run still waiting for it starts, and no run waits for it again.",
         "operationId": "first_go_api_runs_first_go_post",

@@ -633,13 +633,21 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - [x] **waking up** (for the scheduled reads: `tests/test_journeys.py::test_j11_a_scheduled_read_missed_in_sleep_runs_once_on_waking_and_a_lost_network_files_nothing`): the computer sleeps through a scheduled batch and wakes. The batch runs once, nothing looks fresh that
     isn't, and nothing is filed for the lost network (design 8.6). Most people open the lid rather than start fresh, and
     waking was where most "it just stopped" reports came from.
-- [ ] **A lost network, as the original designer's version held** (their review, 2026-10-13: after a wake with no
+- [x] **A lost network, as the original designer's version held** (their review, 2026-10-13: after a wake with no
   network their runs failed and paused two AI accounts that stayed paused a day). On top of what is built below:
-  - `offline` never pauses an account and never counts toward one being failing; check every path that pauses one;
-  - a successful run clears any pause on its account;
-  - the header's status line shows the offline state while it lasts;
-  - the Today line appears after `dispatch.offline_line_after_minutes`, default 60 (most waits clear within minutes
-    of opening the lid).
+  - [x] `offline` never pauses an account and never counts toward one being failing; every path that pauses or marks
+    an account was checked (the router's pause, the connection test, the assistant's state read from tests and runs).
+    Built: `tests/test_silent_stops.py::test_a_lost_network_pauses_no_account_however_often_it_is_found_and_whichever_account_is_cut_off`,
+    `::test_a_lost_network_never_makes_the_assistant_failing_or_hides_a_real_failure`,
+    `::test_a_connection_test_that_finds_no_network_is_not_kept_and_leaves_the_last_result_standing`;
+  - [x] a successful run clears any pause on its account. Built: `tests/test_silent_stops.py::test_a_successful_run_clears_a_pause_on_its_account_even_one_set_while_it_was_running`,
+    `::test_a_connection_test_that_is_answered_lifts_the_pause_on_its_account_and_a_failed_one_does_not`;
+  - [x] the header's status line shows the offline state while it lasts. Built: `web/src/shell/StatusMenu.test.tsx`
+    ("requests waiting for the network show on the chip and in the popover, with the count and since when"),
+    `web/src/shell/status.test.ts`, `tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`;
+  - [x] the Today line appears after `dispatch.offline_line_after_minutes`, default 60 (most waits clear within minutes
+    of opening the lid; the journey now waits the configured time). Built: `tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`,
+    `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`.
 - [ ] **Every place the person types text reaches the assistant** (the original designer's lessons from running, 2026-10-13): their worst one. A teammate's reply typed into
   "They finished it" (a two-phase plan, a link, a question back) was saved to the action's history and read by nothing;
   seven more notes were lost the same way in five days (a key link, a new due date, a standing rule, two actions closed
@@ -656,12 +664,26 @@ them are needed before the owner's daily use, which starts when L-core passes.
   by their names; when one applies, the earlier failed or refused attempts for that request are dismissed, their lines
   and issues close, and a proposed fix for them is discarded. Before any costly follow-up (a fix round, a re-run) starts,
   it checks that its cause still stands. Check what the code does today first.
-- [ ] **Text where text belongs** (the original designer's review, 2026-10-13: a change written as YAML turned
+- [x] **Text where text belongs** (the original designer's review, 2026-10-13: a change written as YAML turned
   "Team wireless: KEY-1 release on top" in a table cell into a mapping, and its commas split one title across three
   columns, and it was published that way). Every text field in an op is a string: an op with a mapping or a list where
   text belongs is refused at the applier with "put text with ': ' in quotes", never coerced. Check every place the
   assistant's answer is parsed (JSON or YAML) and every op field typed loosely (`Any`, mappings of values, record
-  edits). A golden case with a colon in a title, and one in a list-like value. The screen check stays.
+  edits). A golden case with a colon in a title, and one in a list-like value. The screen check stays. Built:
+  `tests/test_text_shape.py::test_an_answer_that_sets_an_actions_text_to_a_mapping_is_refused_and_the_text_is_left_alone`,
+  `::test_a_list_for_a_person_edit_of_a_records_text_field_is_refused`,
+  `::test_a_declared_text_field_given_a_mapping_sends_the_whole_answer_back_with_the_same_words`,
+  `::test_a_record_written_with_a_mapping_in_a_text_field_is_refused_for_any_writer`,
+  `::test_a_suggested_setting_that_holds_text_is_refused_for_a_mapping_and_a_list_of_text_for_a_mapping_item`,
+  `::test_an_organization_that_is_not_text_is_never_turned_into_a_name`, golden cases `workspaces/demo-b/evals/colon-in-title.yaml` and `commas-in-title.yaml`. What was checked: the assistant's
+  answer is JSON and is never read as YAML; the loosely typed op fields are `record.set`'s value, `record.edit`'s fields
+  and `setting.propose`'s value, each now checked against the target's type; the one place a value was turned into text
+  (an organization's name) now refuses. A declared text field sends the whole answer back for a fix round rather than
+  refusing the one op.
+- [x] **The first go's estimate includes the sorting run** (the coordinator, 2026-10-13): the go also makes the
+  sorting run for mail handed in unsorted, so the Today line and the screen's line add its price. Built:
+  `tests/test_mail_sorting.py::test_the_first_go_estimate_includes_the_sorting_run_so_the_person_approves_the_whole_spend`,
+  `web/src/components/FirstGoRow.test.tsx` ("the sorting run the go also makes is in the total, so the total is the whole spend").
 - [x] **A lost network while the assistant works** (found by the waking-up journey; decided 2026-10-13): a call that can
   make no connection is the error kind `offline`, not `provider_down`; the request waits for the network without counting
   a try, says why and since when, is looked at again after `dispatch.offline_check_seconds`, and after

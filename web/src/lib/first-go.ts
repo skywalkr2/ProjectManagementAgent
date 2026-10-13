@@ -1,6 +1,7 @@
 // The first go (design 7.8): until the person's first go in a workspace, AI runs wait, and Today shows them as one line
 // with how many there are and what they would cost together.
-import type { S } from "./api";
+import { useQuery } from "@tanstack/react-query";
+import { api, type S } from "./api";
 import { useTotal } from "./money";
 import { useWords } from "./wording";
 
@@ -13,15 +14,25 @@ export interface FirstGo {
   unpriced: number;
 }
 
-/** The requests waiting on the first go, counted as one thing. Dismissed ones don't wait. */
-export function firstGoOf(changes: S["ChangeItem"][] | undefined): FirstGo {
+/** The requests waiting on the first go, counted as one thing. Dismissed ones don't wait. `sorting` is the sorting run
+ * the go also makes for mail handed in unsorted: its price joins the total and a run with no price counts as unpriced. */
+export function firstGoOf(changes: S["ChangeItem"][] | undefined, sorting?: S["FirstGoSorting"] | null): FirstGo {
   const waiting = (changes ?? []).filter((c) => c.first_go && !c.dismissed && c.state === "needs_you");
   const priced = waiting.filter((c) => c.estimate_usd != null);
+  const requests = priced.reduce((sum, c) => sum + (c.estimate_usd ?? 0), 0);
+  const extra = sorting && waiting.length > 0 ? sorting : null;
+  const anyPrice = priced.length > 0 || (extra?.estimate_usd ?? null) !== null;
   return {
     count: waiting.length,
-    estimate: priced.length ? priced.reduce((sum, c) => sum + (c.estimate_usd ?? 0), 0) : null,
-    unpriced: waiting.length - priced.length,
+    estimate: anyPrice ? requests + (extra?.estimate_usd ?? 0) : null,
+    unpriced: waiting.length - priced.length + (extra?.unpriced ?? 0),
   };
+}
+
+/** What the first go's sorting run adds to the estimate; read only while runs wait for the go. */
+export function useFirstGoSorting(waiting: boolean): S["FirstGoSorting"] | undefined {
+  const sorting = useQuery({ queryKey: ["first-go-sorting"], queryFn: api.firstGoSorting, enabled: waiting });
+  return sorting.data;
 }
 
 /** The line's words: "Start the assistant: 12 items, about $0.30", or the count and the plan's allowance when there

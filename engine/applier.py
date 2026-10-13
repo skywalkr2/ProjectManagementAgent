@@ -56,6 +56,7 @@ from engine.plugin_api import NeedsPerson
 from engine.records import entry_problem, model_for
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
+from engine.text_shape import error_problem, items_problem, text_problem
 from engine.titles import title_for
 from engine.workspace import Workspace
 
@@ -234,7 +235,12 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 try:
                     model_for(op.kind).model_validate({**target.data, op.field: op.value})
                 except ValidationError as err:
-                    refuse(i, "targets", f"{op.kind}.{op.field}: {err.errors()[0]['msg']}")
+                    first = err.errors()[0]
+                    refuse(
+                        i,
+                        "targets",
+                        error_problem(first, f"{op.kind}.{op.field}") or f"{op.kind}.{op.field}: {first['msg']}",
+                    )
                 else:
                     if op.kind == "project" and op.field == "parent" and op.value is not None:
                         why = parent_problem(view, op.id, op.value)
@@ -351,6 +357,10 @@ def setting_problem(store: Store, handle: str, value: Any) -> str | None:
     setting, why = resolve_setting(store, handle)
     if setting is None:
         return why
+    if setting.type == "text" and (problem := text_problem(config_screens.screen_name(setting), value)):
+        return problem
+    if setting.type == "list" and (problem := items_problem(config_screens.screen_name(setting), value)):
+        return problem
     config_dir = store.path.parent / "config"
     name, *path = setting.key.split(".")
     source = config_dir / f"{name}.yaml"
@@ -499,7 +509,9 @@ def edit_problem(store: Store, view: Any, op: Any) -> str | None:
         model.model_validate(merged)
     except ValidationError as err:
         first = err.errors()[0]
-        return f"{'.'.join(str(p) for p in first['loc'])}: {first['msg']}"
+        return error_problem(first, f"{op.record.kind}.{first['loc'][0]}") or (
+            f"{'.'.join(str(p) for p in first['loc'])}: {first['msg']}"
+        )
     for group in model.unique:
         if set(group) & set(op.fields):
             equals = {f: merged.get(f) for f in group}

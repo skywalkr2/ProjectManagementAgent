@@ -190,12 +190,11 @@ def _note(count: int, why: str | None) -> str:
     return f"{these} sorted by the assistant ({why}), so {'it was' if count == 1 else 'they were'} handed in as work."
 
 
-def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header], level: str, go: bool = False) -> _Try:
+def _tier_of(cfg: Any, task: AiTask, level: str) -> str:
+    """The tier a sorting run goes to, decided from the run's measurable facts."""
     from engine.ai.router import route
-    from engine.dispatcher import has_account
 
-    task, ids = build_task(ws, cfg, batch)
-    tier = route(
+    return route(
         cfg,
         KIND,
         input_chars=task.size,
@@ -203,6 +202,28 @@ def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header],
         data_level=level,
         default=settings(cfg, task_kind(KIND)).tier,
     )
+
+
+def estimate(ws: Any, cfg: Any, router: Any, headers: list[Header], level: str) -> tuple[float, int]:
+    """What sorting these headers would cost, as `sort` would run it: one run per `watch.sorting_batch`. Returns the
+    total of the runs that have a price and how many runs have none."""
+    priced, unpriced = 0.0, 0
+    size = cfg.watch.sorting_batch
+    for start in range(0, len(headers), size):
+        task, _ids = build_task(ws, cfg, headers[start : start + size])
+        cost = router.estimate(task, tier=_tier_of(cfg, task, level), data_level=level)
+        if cost is None:
+            unpriced += 1
+        else:
+            priced += cost
+    return priced, unpriced
+
+
+def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header], level: str, go: bool = False) -> _Try:
+    from engine.dispatcher import has_account
+
+    task, ids = build_task(ws, cfg, batch)
+    tier = _tier_of(cfg, task, level)
     budgets = cfg.ai.budgets
     estimate = router.estimate(task, tier=tier, data_level=level)
     if estimate is None and budgets.confirm_unpriced and not go:

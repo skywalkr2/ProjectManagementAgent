@@ -236,6 +236,7 @@ export const api = {
   removePack: (name: string) => call<S["PackInstalled"]>("POST", `packs/${id(name)}/uninstall`),
   /** The person's first go: starts every run waiting for it. */
   firstGo: () => call<S["FirstGoStarted"]>("POST", "runs/first-go"),
+  firstGoSorting: () => call<S["FirstGoSorting"]>("GET", "runs/first-go"),
   /** Adds an installed add-on to the ones that run; its code runs after the restart the person chooses. With Undo. */
   packOn: (name: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `packs/${id(name)}/on`, { fingerprint } satisfies S["FingerprintIn"]),

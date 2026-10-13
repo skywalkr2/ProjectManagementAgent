@@ -343,6 +343,22 @@ person makes on screen, or approves in a plugin's action, is not a claim and car
 quote; the quote is still checked word for word. Evidence is kept in the ledger and shown on the row ("closed because the
 email said: ...").
 
+**Text stays text.** Every field of an op that holds text is a string, and a mapping or a list that arrives where text
+belongs is refused in plain words, never turned into a string: "action.text has to be text, but it arrived as a mapping of
+names to values. A ': ' inside text makes it read as a mapping, so put text with ': ' in quotes." The usual cause is a
+title with a colon and a space in it, read as structured data. The answer itself is JSON and is never read as YAML. A
+field an op declares as text sends the whole answer back for a fix round with those words
+(`tests/test_text_shape.py::test_a_declared_text_field_given_a_mapping_sends_the_whole_answer_back_with_the_same_words`);
+the loosely typed ones are checked against the target record model's field type at the applier, and the op is refused
+alone: `record.set`'s value (`::test_an_answer_that_sets_an_actions_text_to_a_mapping_is_refused_and_the_text_is_left_alone`),
+`record.edit`'s fields, a plugin's record included (`::test_a_list_for_a_person_edit_of_a_records_text_field_is_refused`),
+and `setting.propose`'s value for a text setting or a list of text
+(`::test_a_suggested_setting_that_holds_text_is_refused_for_a_mapping_and_a_list_of_text_for_a_mapping_item`). Every
+record write is checked the same way whoever makes it (`::test_a_record_written_with_a_mapping_in_a_text_field_is_refused_for_any_writer`),
+and an organization's name is never made by turning a value into text
+(`::test_an_organization_that_is_not_text_is_never_turned_into_a_name`). Golden cases: a title with a colon
+(`workspaces/demo-b/evals/colon-in-title.yaml`) and one with commas (`commas-in-title.yaml`) stay one value.
+
 **Dates and times in the assistant's own words.** An input's text often carries machine timestamps (a date-time with its
 zone, as an add-on writes a meeting's time), and the assistant copies them into what it writes. Before an assistant's changeset
 is kept, each such timestamp in the prose of its ops (a note's, fact's, action's or question's text, an entry's title, an
@@ -1068,9 +1084,22 @@ first time it found no network) and `until`, and **no try is counted** (`retries
 uses up the tries a failing service gets and never brings the request to the person. The worker leaves it alone until
 `until` (`dispatch.offline_check_seconds`, 60) and then tries again; it never loops. The first miss of a wait is a recorded run
 with the error kind `offline`, so the history shows it; later looks of the same wait record none, until the request runs or the wait
-ends another way (`tests/test_silent_stops.py::test_a_wait_for_the_network_records_its_first_miss_only_not_one_run_per_look`). Once a request has waited longer than `dispatch.offline_line_after_minutes` (15), Today's queue has one
+ends another way (`tests/test_silent_stops.py::test_a_wait_for_the_network_records_its_first_miss_only_not_one_run_per_look`). Once a request has waited longer than `dispatch.offline_line_after_minutes` (60), Today's queue has one
 risk line, however many requests wait, to check the network connection, with how many wait and since when; it goes when the
-requests run again (7.7). Notes and messages cost little; drafting work
+requests run again (7.7). **Being offline is never held against an account.** It pauses none (only a usage limit
+does); it counts toward none being failing (a connection test that finds no network is inconclusive: its result isn't
+kept and the last real result stands, and runs that found no network are left out when the latest run is read for a
+refused key); and an answered run or connection test lifts any pause on its account, a usage-limit pause included,
+since an answer shows the limit has lifted
+(`tests/test_silent_stops.py::test_a_lost_network_pauses_no_account_however_often_it_is_found_and_whichever_account_is_cut_off`,
+`::test_a_lost_network_never_makes_the_assistant_failing_or_hides_a_real_failure`,
+`::test_a_connection_test_that_finds_no_network_is_not_kept_and_leaves_the_last_result_standing`,
+`::test_a_successful_run_clears_a_pause_on_its_account_even_one_set_while_it_was_running`,
+`::test_a_connection_test_that_is_answered_lifts_the_pause_on_its_account_and_a_failed_one_does_not`). While any request
+waits for the network the header's status says "Waiting for the network" (after a lost live connection, before a
+restart or a backup), and its popover gives the count and since when (`network_wait` of the status;
+`web/src/shell/StatusMenu.test.tsx`, `web/src/shell/status.test.ts`, `tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`).
+Notes and messages cost little; drafting work
 (proposals, statements of work, long copy, research, independent reviews) can cost the person real money, so spending is something they decide,
 never something that happens to them:
 
