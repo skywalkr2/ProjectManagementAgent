@@ -3,6 +3,30 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: Review earned per kind of change; the PM pack's charter and minutes; a sales pack waiting on requirements
+
+**Decided by:** project owner ("the human approver is there for most everything, but over time the AI should learn what
+can be auto AI approved"; the PM pack generates "project schedules, charters, ... moms"; a sales support pack "waiting
+on functional requirements").
+
+**What:**
+- **Review earned per kind of change** (phase L-more):
+  - A kind of change the person has passed unedited enough times in a row stops needing a look. It stays in What
+    changed with Undo.
+  - One correction takes the kind back to review.
+  - It's based on the person's record, never a model's confidence.
+  - It's never for anything outbound, system ops or a new or probation account: those rules are invariants.
+- The project management pack drafts charters and minutes of meetings (C2).
+- A sales support pack is planned once its user's requirements arrive (C3b); nothing before that.
+
+**Why:** Reviewing everything forever doesn't scale. Earning less review from the person's own record keeps the rule
+that the human approves what matters, while routine work stops costing them clicks.
+
+**Impact:**
+- Design 6.22 and 7.18 when built.
+- One setting (`ai.earned_review.runs`).
+- The roadmap: L-more, C2, C3b.
+
 ## 2026-10-13: Top priorities, the Monday briefing, and blocked actions
 
 **Decided by:** project owner ("go ahead and add, because in the original version of this that I use at work, it has

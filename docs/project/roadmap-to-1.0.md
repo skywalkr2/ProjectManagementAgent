@@ -607,6 +607,8 @@ being done, builds schedules and tracks action items.
 - [ ] Create its private repository, with a brief and a builder session like the other packs.
 - [ ] The core keeps what every kind of work needs: actions with owners, questions, follow-ups, decisions, Today. The
   pack adds planning on top, through ops and the core's records:
+  - [ ] **The charter:** drafted from a brief or notes for the person to approve (goals, scope, stakeholders, risks).
+  - [ ] **Minutes of meetings:** drafted from notes or a transcript, with the decisions and actions filed as records.
   - [ ] **The plan:** goals, phases, deliverables and milestones.
   - [ ] **The schedule:** work items with durations and dependencies, a critical path, dates worked out from the
     dependencies, baselines, and slips against them. Only the person rebaselines.
@@ -635,6 +637,10 @@ schedule when both are on, and is a plain list of milestones when it is alone.
   - the AI-disclosure answers filled from the authorship breakdown;
   - the `publishing/manuscript-source@1` hand-off.
 
+C3b. **A sales support pack** (owner, 2026-10-13): for a family member's sales job. Waiting on its functional
+requirements from its user; nothing is designed or scheduled before they arrive. When they do, it gets its own
+private repository and builder like the other packs, and works with the project management pack through interfaces.
+
 C4. **What the packs need from the core.**
 - [ ] **The publisher and the file channel.** Approved files are saved or shared after the person approves the exact
   content. Waiting to go out lists them, with a diff where it applies.
@@ -644,6 +650,14 @@ C4. **What the packs need from the core.**
 ## Phase L-more: the rest of learning (about 4 sessions)
 
 After the packs, beside real use (owner, 2026-10-12). None of it is needed for the loop to work. Each item has its own test.
+- [ ] **Review earned per kind of change** (owner, 2026-10-13: "over time the AI should learn what can be auto AI
+  approved"). Changes to the person's data already apply at once with Undo; what they approve is the review. A kind of
+  change (per task kind and op, per project where it differs) that the person has passed with Looks good
+  `ai.earned_review.runs` times in a row (a setting), unedited and not undone, stops needing a look: it is marked
+  reviewed and stays in What changed with Undo. One edit, undo or send back takes the kind back to review. It is
+  shown and reversible on the quality panel. Never for anything outbound, system ops (rules, recipients, sources) or a
+  new or probation account, and never from a model's own confidence (design 6.16, 6.22). Exit check: a learning pair
+  for earning and losing it, and a test that an outbound or system op never earns it.
 - [ ] Ask gets the knowledge section, with the same citation check, and a rule or fact stated in Ask becomes a proposal
   that applies at once with Undo (6.25).
 - [ ] Take my lessons: lessons, rules and general glossary terms to a file and back into another workspace. A file from
