@@ -467,13 +467,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/today/queue")
     def today_queue() -> list[QueueLineView]:
         """What needs the person, ranked: decide, then risk, review, and send and follow up (design 7.7)."""
+        from engine.today import zone
         from engine.today_queue import queue
 
         people = People(store, cfg)
         projects = {p.id: p.data["name"] for p in store.read().list("project")}
+        here = zone(cfg)
         out = []
         for line in queue(ws, store, cfg, datetime.now(UTC)):
             data = {k: v for k, v in vars(line).items() if k not in ("title", "since")}
+            if line.until:
+                # A time of the person's own clock, so the screen shows it as they would say it.
+                data["until"] = datetime.fromisoformat(line.until).astimezone(here)
             out.append(
                 QueueLineView(
                     **data,

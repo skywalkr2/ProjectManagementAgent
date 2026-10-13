@@ -7,8 +7,9 @@ from __future__ import annotations
 import json
 import sqlite3
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import yaml
 from fastapi.testclient import TestClient
@@ -187,6 +188,10 @@ def test_j7_a_usage_limit_pauses_the_account_shows_on_today_and_the_work_resumes
     from tests.test_silent_stops import Scripted, quota
 
     ws, clock = _started(tmp_path)
+    settings_path = ws.config_dir / "workspace.yaml"
+    settings = yaml.safe_load(settings_path.read_text(encoding="utf-8")) or {}
+    settings.setdefault("user", {})["timezone"] = "Pacific/Auckland"
+    settings_path.write_text(yaml.safe_dump(settings, sort_keys=False), encoding="utf-8")
     provider = Scripted(quota(7200), NOTHING_TO_DO)
     set_responder(provider)
     try:
@@ -201,6 +206,10 @@ def test_j7_a_usage_limit_pauses_the_account_shows_on_today_and_the_work_resumes
             [paused] = _lines(client, "paused")
             assert paused["group"] == "risk" and paused["count"] == 2 and paused["account"] == account
             assert paused["waiting"].startswith(f"Waiting for {account}'s limit to reset at ")
+            # The reset time is given on the person's own clock (their time zone), not the server's.
+            reset = datetime.fromisoformat(paused["until"])
+            assert reset == clock() + timedelta(hours=2)
+            assert reset.utcoffset() == reset.astimezone(ZoneInfo("Pacific/Auckland")).utcoffset() != timedelta(0)
             assert [c["state"] for c in _changes(client).values()] == ["queued", "queued"]
             assert all(c["waiting"] == paused["waiting"] for c in _changes(client).values())
             assert provider.calls == 1

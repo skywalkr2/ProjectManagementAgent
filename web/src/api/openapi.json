@@ -5925,7 +5925,7 @@
                 "type": "null"
               }
             ],
-            "description": "When the account's limit resets and the work waiting on it runs again by itself (paused).",
+            "description": "When the account's limit resets and the work waiting on it runs again by itself (paused), on the person's own clock (their time zone).",
             "title": "Until"
           },
           "untrusted": {

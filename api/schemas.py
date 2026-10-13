@@ -952,7 +952,9 @@ class QueueLineView(BaseModel):
     unpriced: int = Field(0, description="How many of the things the line starts have no price (first_go).")
     account: str | None = Field(None, description="The AI account waiting for its limit to reset (paused).")
     until: datetime | None = Field(
-        None, description="When the account's limit resets and the work waiting on it runs again by itself (paused)."
+        None,
+        description="When the account's limit resets and the work waiting on it runs again by itself (paused), on the "
+        "person's own clock (their time zone).",
     )
 
 

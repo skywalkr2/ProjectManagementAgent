@@ -2701,3 +2701,14 @@ time is read from its error stream by the account's `errors.reset` patterns. Hel
 **Impact:** Design 4.9, 5.1, 6.15, 6.16 and Part 8. New settings `dispatch.retries`, `dispatch.retry_wait_seconds`,
 `ai.rate_limits.pause_seconds` and the agent `errors.reset`, with demo values. `Request` gains `retries` and the causes
 `paused` and `retry`. No change to scope.
+
+## 2026-10-13: The restart and paused-account lines are drawn on Today
+
+**Decision:** Today draws the two stop lines the queue already serves, at the top before the columns, one row each with one
+primary action: Restart now for held work, and AI accounts for a paused account (wording "Pick another account, or wait: ...").
+`GET /api/today/queue` gives a line's reset time on the person's own clock (their time zone).
+
+**Why:** The rule is that a stop is a Today line, not only a chip; the engine built the lines but the screen showed none.
+
+**Impact:** Design 6.15, 7.7 and 8.6 text, and the wording sheet. No new setting; no change to scope. The full ranked queue
+stays in phase B.

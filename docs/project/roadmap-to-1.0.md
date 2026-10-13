@@ -292,8 +292,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
     `tests/test_followups_backup_eval.py::test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_for_that_person`.
   - Left in this item: the "to send" marker on each action row (phase B) and the references table's new keys (with
     `person.merge`), so the item stays open.
-- [ ] **No silent stops** (design 8.5, 8.6, 8.8; waking up after sleep is its own item below). Left: the restart and
-  paused-account lines are in the Today queue's API but not drawn on the Today screen yet:
+- [x] **No silent stops** (design 8.5, 8.6, 8.8; waking up after sleep is its own item below):
   - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived (done:
     `tests/test_names.py::test_the_packet_states_the_inputs_received_date_beside_todays`);
   - [x] a usage limit resumes by itself at its reset (an account is paused until the reset, kept on disk across a
@@ -311,7 +310,16 @@ them are needed before the owner's daily use, which starts when L-core passes.
     Decide line, and an account paused until its limit resets as a Risk line with the time and the count waiting:
     `tests/test_silent_stops.py::test_held_work_is_the_first_decide_line_with_its_count_and_nothing_restarts`,
     `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`. The lines are
-    served by `GET /api/today/queue`; the Today screen drawing the ranked queue is the Today item in phase B below.
+    served by `GET /api/today/queue`;
+  - [x] the Today screen draws both lines at the top of Today, each one row with one primary action: "Restart to run N
+    waiting requests" with Restart now (the header's restart flow; the person's click is the only thing that restarts, and
+    with a copy that can't restart itself the line says to close and start it), and "Pick another account, or wait:
+    <account>'s limit resets at <time> (N requests waiting)" with AI accounts, the time on the person's own clock:
+    `web/src/shell/HeldLines.test.tsx` ("held work is a line that starts with the restart and counts the waiting requests",
+    "Restart now calls the restart route, and only the click does", "a paused account is a line that names the account, the
+    reset time and the count, and opens the AI accounts"),
+    `tests/test_journeys.py::test_j7_a_usage_limit_pauses_the_account_shows_on_today_and_the_work_resumes_by_itself` (the
+    reset time arrives in the person's time zone). The full ranked queue on Today is the Today item in phase B below.
 - [x] The near-duplicate threshold becomes a setting (design 4.17): `tuning.near_duplicate_action.similarity` in
   `config/checks.yaml`, default 0.8, range 0 to 1, demo values in both workspaces. Tests: `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below`,
   `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one`.

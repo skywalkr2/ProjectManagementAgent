@@ -35,6 +35,7 @@ import { Walkthrough } from "./components/Walkthrough";
 import { BottomBar } from "./shell/BottomBar";
 import { Header } from "./shell/Header";
 import { BackupLine } from "./shell/BackupLine";
+import { HeldLines } from "./shell/HeldLines";
 import { SetupLine } from "./shell/SetupLine";
 import { Sidebar, useSidebarMode } from "./shell/Sidebar";
 import { EmptyState } from "./ui/EmptyState";
@@ -162,6 +163,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             </div>
             <SetupLine workspace={rc.workspace_name} onOpenGuide={openGuide} />
             <BackupLine onOpenGuide={openGuide} />
+            <HeldLines onOpenAiAccounts={() => setView("settings")} />
             <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} onOpenGuide={openGuide} />
           </div>
         );

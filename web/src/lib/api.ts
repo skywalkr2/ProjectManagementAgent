@@ -50,6 +50,7 @@ export const api = {
   status: () => call<S["Status"]>("GET", "status"),
   restart: () => call<S["RestartAsked"]>("POST", "restart"),
   changes: () => call<S["ChangeItem"][]>("GET", "changes"),
+  todayQueue: () => call<S["QueueLineView"][]>("GET", "today/queue"),
   source: (src: string) => call<S["SourceView"]>("GET", `sources/${id(src)}`),
   followups: () => call<S["FollowupSection"][]>("GET", "followups"),
 

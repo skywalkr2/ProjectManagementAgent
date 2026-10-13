@@ -1,0 +1,13 @@
+/* Today's lines for work that has stopped: a restart that is waiting and an AI account paused until its limit resets. */
+.lines { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.lines:empty { display: none; }
+.line {
+  display: flex; align-items: center; gap: var(--space-3); min-width: 0;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  font-size: var(--text-sm); line-height: var(--lh-sm);
+}
+.body { min-width: 0; flex: 1 1 auto; }
+.text { margin: 0; overflow-wrap: anywhere; }
+.sub { margin: 0; color: var(--text-muted); overflow-wrap: anywhere; }
+.actions { display: flex; align-items: center; gap: var(--space-1); flex: none; margin-left: auto; }
