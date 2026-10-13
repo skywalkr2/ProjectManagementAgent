@@ -3,6 +3,21 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: Running from a checkout makes `cockpit` work in any folder
+
+**Decided by:** project owner's report (`cockpit update` gave "command not found", then `uv run cockpit` in the workspace
+folder couldn't find the app; "testing has just made a mess").
+
+**What:** When `cockpit` runs from a source checkout on macOS or Linux, it links `cockpit` in uv's command folder (by
+uv's own rules, usually `~/.local/bin`) to the checkout's own command, and says so once. An installed copy, or a link to
+another checkout that still exists, is never replaced; a link to a removed checkout is. Windows is left for the
+launcher (phase B).
+
+**Why:** One command to start only helps when the command is found. From a checkout it worked only as `uv run cockpit`,
+and only inside the checkout's folder, which a person can't be expected to remember.
+
+**Impact:** The CLI, the README and the getting-started page. No setting.
+
 ## 2026-10-13: Three fixes from the exit test: an agent's own error, focus rings, a question handed in
 
 **Decided by:** project owner's report ("claude code CLI isnt working, several places in the code put an outline around

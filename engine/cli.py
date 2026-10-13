@@ -10,7 +10,7 @@ import sys
 import tempfile
 import threading
 import webbrowser
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +63,9 @@ def temp_folder_notice(path: Path, roots: Iterable[Path] | None = None) -> str |
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
+    if argv is None and Path(sys.argv[0]).name == "cockpit":
+        # Run as the command from a source checkout (`uv run cockpit`): make `cockpit` work in any folder from now on.
+        link_command(repo_root(), Path(sys.executable).parent / "cockpit", os.environ, print)
     if not getattr(args, "func", None):
         # `cockpit` on its own starts the person's workspace: the one used last, or a new one in their home folder.
         args = parser.parse_args(["start"])
@@ -447,6 +450,45 @@ def update_checkout(
     say("Already up to date." if before == after else f"Updated from {before} to {after}.")
     say(RESTART_NOTE)
     return 0
+
+
+def command_folder(env: Mapping[str, str]) -> Path:
+    """Where uv puts the commands of the programs it installs, by its own rules: UV_TOOL_BIN_DIR, then XDG_BIN_HOME,
+    then the folder beside XDG_DATA_HOME, then `.local/bin` in the home folder."""
+    if env.get("UV_TOOL_BIN_DIR"):
+        return Path(env["UV_TOOL_BIN_DIR"]).expanduser()
+    if env.get("XDG_BIN_HOME"):
+        return Path(env["XDG_BIN_HOME"]).expanduser()
+    if env.get("XDG_DATA_HOME"):
+        return Path(env["XDG_DATA_HOME"]).expanduser().parent / "bin"
+    return Path(env.get("HOME") or Path.home()).expanduser() / ".local" / "bin"
+
+
+def link_command(root: Path, script: Path, env: Mapping[str, str], say: Callable[[str], None]) -> None:
+    """From a source checkout on macOS or Linux: link `cockpit` in uv's command folder to this checkout's own command,
+    so it works in any folder. An installed copy, or a link to another checkout that still exists, is left alone; a
+    link to one that is gone is replaced. Says so once, when the link is made. Failing to make it changes nothing."""
+    if os.name == "nt" or not (root / ".git").exists() or not script.is_file():
+        return
+    folder = command_folder(env)
+    target = folder / "cockpit"
+    if target.is_symlink():
+        if target.exists() and target.resolve() == script.resolve():
+            return
+        if target.exists():
+            return  # another checkout's command
+    elif target.exists():
+        return  # an installed copy
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        if target.is_symlink():
+            target.unlink()
+        target.symlink_to(script.resolve())
+    except OSError:
+        return
+    on_path = str(folder) in (env.get("PATH") or "").split(os.pathsep)
+    then = "" if on_path else " Open a new terminal first; if it still isn't found there, run: uv tool update-shell"
+    say(f"From now on, `cockpit` works in any folder (it runs this copy, {root}).{then}")
 
 
 def cmd_update(args: argparse.Namespace) -> int:

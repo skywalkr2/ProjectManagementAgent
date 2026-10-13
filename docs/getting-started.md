@@ -40,7 +40,8 @@ temporary folders when the computer restarts, and your setup would go with them.
 cockpit
 ```
 
-That's the only command to remember (from a checkout, `uv run cockpit` in its folder). The first time, it makes your
+That's the only command to remember. From a checkout, run `uv run cockpit` in its folder the first time; on macOS and
+Linux that also makes `cockpit` work in any folder from then on. The first time, it makes your
 workspace in a folder called `Cockpit` in your home folder and opens it in your browser, where the walkthrough starts.
 Every time after, the same command reopens the workspace you used last. It runs on your own computer, reachable only
 from it. If the browser doesn't open, copy the link it prints. Leave the terminal window open while you work: closing it

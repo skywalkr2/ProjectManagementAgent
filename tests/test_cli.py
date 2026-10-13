@@ -1,6 +1,8 @@
+import os
 import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 from engine.cli import main
@@ -296,3 +298,72 @@ def test_cockpit_on_its_own_never_makes_a_workspace_in_a_folder_with_other_files
     assert main([]) == 1
     assert served == []
     assert "already holds other files" in capsys.readouterr().err
+
+
+def _checkout_with_script(tmp_path):
+    """A stand-in source checkout with the command its environment installs."""
+    root = tmp_path / "checkout"
+    (root / ".git").mkdir(parents=True)
+    script = root / ".venv" / "bin" / "cockpit"
+    script.parent.mkdir(parents=True)
+    script.write_text("#!/bin/sh\n")
+    return root, script
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the command link is for macOS and Linux")
+def test_running_from_a_checkout_makes_cockpit_work_in_any_folder(tmp_path):
+    """The person's path: they run `uv run cockpit` in the source folder once; afterwards `cockpit` works anywhere,
+    pointing at that checkout, and they are told so once."""
+    from engine.cli import link_command
+
+    root, script = _checkout_with_script(tmp_path)
+    bin_dir = tmp_path / "bin"
+    said: list[str] = []
+    env = {"HOME": str(tmp_path), "XDG_BIN_HOME": str(bin_dir), "PATH": str(bin_dir)}
+    link_command(root, script, env, said.append)
+    link = bin_dir / "cockpit"
+    assert link.is_symlink() and link.resolve() == script.resolve()
+    assert len(said) == 1 and "any folder" in said[0]
+    link_command(root, script, env, said.append)
+    assert len(said) == 1  # already in place: nothing more is said
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the command link is for macOS and Linux")
+def test_the_command_link_never_replaces_an_installed_cockpit_and_says_when_a_new_terminal_is_needed(tmp_path):
+    from engine.cli import link_command
+
+    root, script = _checkout_with_script(tmp_path)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    installed = bin_dir / "cockpit"
+    installed.write_text("#!/bin/sh\n# an installed copy\n")
+    said: list[str] = []
+    link_command(root, script, {"HOME": str(tmp_path), "XDG_BIN_HOME": str(bin_dir), "PATH": ""}, said.append)
+    assert not installed.is_symlink() and "installed copy" in installed.read_text() and said == []
+
+    other = tmp_path / "bin2"
+    said.clear()
+    link_command(root, script, {"HOME": str(tmp_path), "XDG_BIN_HOME": str(other), "PATH": "/usr/bin"}, said.append)
+    assert (other / "cockpit").is_symlink() and "new terminal" in said[0]
+
+
+@pytest.mark.skipif(os.name == "nt", reason="the command link is for macOS and Linux")
+def test_a_link_left_by_a_removed_checkout_is_replaced(tmp_path):
+    from engine.cli import link_command
+
+    root, script = _checkout_with_script(tmp_path)
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    (bin_dir / "cockpit").symlink_to(tmp_path / "gone" / ".venv" / "bin" / "cockpit")
+    link_command(root, script, {"HOME": str(tmp_path), "XDG_BIN_HOME": str(bin_dir), "PATH": str(bin_dir)}, print)
+    assert (bin_dir / "cockpit").resolve() == script.resolve()
+
+
+def test_no_link_is_made_outside_a_checkout(tmp_path):
+    from engine.cli import link_command
+
+    root, script = _checkout_with_script(tmp_path)
+    (root / ".git").rmdir()
+    bin_dir = tmp_path / "bin"
+    link_command(root, script, {"HOME": str(tmp_path), "XDG_BIN_HOME": str(bin_dir), "PATH": ""}, print)
+    assert not (bin_dir / "cockpit").exists()

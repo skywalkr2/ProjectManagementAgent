@@ -41,6 +41,8 @@ uv run cockpit                                      # starts your workspace and 
 
 That one command is all you need: the first time it makes your workspace (a `Cockpit` folder in your home folder) and
 opens the walkthrough; after that it reopens the workspace you used last. `uv run cockpit update` updates.
+The first time you run it from the checkout (on macOS or Linux), it also makes `cockpit` work in any folder, so after
+that you can leave out `uv run` and the trip to the checkout.
 
 The workspace starts empty. The first screen is a setup walkthrough of about 10 minutes: your name, your AI account
 (with a test), your mail and calendar (installed, turned on and signed in on the screen, with one restart you press), a
