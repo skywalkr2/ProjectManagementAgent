@@ -194,7 +194,7 @@ def process(
         and req.data.get("approval") != "granted"
         and (estimate is None or estimate > 0)
         and not store.read().has("run")
-        and _has_account(cfg, packet.task.kind, level, tier, use, content, independent)
+        and has_account(cfg, packet.task.kind, level, tier, use, content, independent)
     ):
         # Nothing has run in this workspace yet: the first runs wait for one go that covers all of them. A request
         # no account can take isn't held for a go it couldn't use; the run says what is missing.
@@ -315,7 +315,7 @@ def person_is_set(store: Store, cfg: Config) -> bool:
     return bool(person) and store.read().get("person", person) is not None
 
 
-def _has_account(
+def has_account(
     cfg: Config,
     kind: str,
     level: str,
@@ -487,7 +487,7 @@ def _rounds(
                 problems=out.problems,
                 run_id=out.run_id,
                 stop=stop,
-                retry=_failure(err) if err.kind in RETRIED else None,
+                retry=failure_in_words(err) if err.kind in RETRIED else None,
             )
         if result.refused:
             return _Outcome(run_id=out.run_id, stop=_refused(store, out.run_id, result.refusal or ""))
@@ -703,7 +703,7 @@ _PLAIN_FAILURE = {
 }
 
 
-def _failure(err: AiError) -> str:
+def failure_in_words(err: AiError) -> str:
     """A failed call in a few plain words: what happened and the provider's own reason, if it gave one."""
     reason = provider_reason(err.detail)
     return _PLAIN_FAILURE.get(err.kind, "The AI call failed") + (f" ({reason})" if reason else "")

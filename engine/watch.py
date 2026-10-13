@@ -27,6 +27,7 @@ from engine.storage import StoreError, WriteContext
 from engine.triage import classify
 
 _WATCHER = WriteContext(actor="watcher", trust="untrusted", op="watch.read")
+_SORTER = WriteContext(actor="engine", trust="trusted", op="watch.sort")
 #: Lines of unchanged text shown around each change in a diff.
 CONTEXT_LINES = 2
 
@@ -298,7 +299,7 @@ def _compare(
 
 
 def _assistant_sorted(
-    ws: Any, store: Any, cfg: Any, source: Any, router: Any, unplaced: dict[str, dict[str, Any]]
+    ws: Any, store: Any, cfg: Any, source: Any, router: Any, unplaced: dict[str, dict[str, Any]], go: bool = False
 ) -> tuple[dict[str, dict[str, str]], str | None]:
     """The assistant's sorting (design 6.5, step 3) of the mail the rules couldn't place, as {item key: facts}: one
     run per batch of headers, never the text. Returns, by item key, the set-aside match of each message it set aside,
@@ -315,6 +316,7 @@ def _assistant_sorted(
         router,
         [mail_sorting.header_of(key, facts) for key, facts in unplaced.items()],
         data_level_of(cfg, source),
+        go,
     )
     marks = {
         key: {
@@ -326,6 +328,88 @@ def _assistant_sorted(
         for key, section in sorted_.sections.items()
     }
     return marks, sorted_.note
+
+
+def sort_before_first_go(ws: Any, store: Any, cfg: Any, router: Any = None, now: datetime | None = None) -> int:
+    """The person's first go covers the sorting of the mail that was handed in unsorted while it was pending: the
+    mail requests still waiting for the go (or queued) whose message was never sorted go through the sorting run first,
+    in the usual batches. Those it sets aside are closed as set aside, with the snapshot marked, and don't run; the
+    rest are left for the go to start. Mail the person pulled back as work, mail a rule now places or keeps, and
+    changed messages are left alone. Returns how many were set aside. Call it before the go is granted."""
+    from engine.connectors import EventDetails
+    from engine.dispatcher import waits_on_first_go
+
+    if cfg.watch.sorting != "ai":
+        return 0
+    view = store.read()
+    pulled = {ref for s in view.list("signal") if s.data["kind"] == "pulled_back" for ref in s.data.get("refs", [])}
+    snaps = {(s.data["source"], s.data["key"]): s for s in view.list("snapshot")}
+    sources = {s.id: s for s in cfg.watch.sources}
+    waiting: dict[str, list[tuple[Any, Any, SourceItem, dict[str, Any]]]] = {}
+    for req in view.list("request"):
+        data = req.data
+        if data["task"] != "notes" or data["origin"] != "input" or not data.get("source") or req.id in pulled:
+            continue
+        if data.get("set_aside") or data.get("auto_closed") or data.get("folded_into") or data.get("dismissed"):
+            continue
+        if not (data["state"] == "queued" or waits_on_first_go(data)):
+            continue
+        record = view.get("source", data["source"])
+        watched = (record.data.get("watched") if record else None) or {}
+        snap = snaps.get((watched.get("source"), watched.get("key")))
+        source = sources.get(watched.get("source", ""))
+        if watched.get("change") != "new" or snap is None or source is None:
+            continue
+        sd = snap.data
+        if not sd.get("message") or sd.get("set_aside") or sd.get("gone") or sd.get("deleted"):
+            continue
+        item = SourceItem(
+            sd["key"],
+            sd["title"],
+            _read_text(ws, sd["content_hash"]),
+            author=sd.get("author"),
+            changed_at=sd.get("changed_at"),
+            link=sd.get("link"),
+            event=EventDetails(**sd["event"]) if sd.get("event") else None,
+            message=_message_of(sd.get("message")),
+        )
+        facts = _change(cfg, source, item, "new", None)
+        closed, kept = classify(store, cfg, facts)
+        if closed is None and not kept:
+            waiting.setdefault(source.id, []).append((req, snap, item, facts))
+    set_aside = 0
+    for source_id, found in waiting.items():
+        marks, _note = _assistant_sorted(
+            ws, store, cfg, sources[source_id], router, {item.key: facts for _, _, item, facts in found}, go=True
+        )
+        for req, snap, item, _facts in found:
+            mark = marks.get(item.key)
+            if mark is None:
+                continue
+            try:
+                with store.transaction() as tx:
+                    current, shot = tx.get("request", req.id), tx.get("snapshot", snap.id)
+                    tx.update(
+                        "snapshot", shot.id, {"set_aside": _set_aside_of(mark)}, _SORTER, read_version=shot.version
+                    )
+                    tx.update(
+                        "request",
+                        current.id,
+                        {
+                            "state": "done",
+                            "waiting": f"Set aside: {mark['reason']}",
+                            "cause": None,
+                            "approval": None,
+                            "estimate_usd": None,
+                            "set_aside": _set_aside_of(mark),
+                        },
+                        _SORTER,
+                        read_version=current.version,
+                    )
+                set_aside += 1
+            except StoreError:
+                continue  # it changed meanwhile (the worker took it, or the person acted); it stays as work
+    return set_aside
 
 
 def _carried_sorting(before: Any) -> dict[str, str] | None:

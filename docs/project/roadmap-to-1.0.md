@@ -408,7 +408,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
     (`engine/handover.py::apply_redactions`), so two computers don't read it as a divergence. Forgetting a person (5.2,
     phase E) will use the same step. Built:
     `tests/test_set_aside.py::test_a_confirmed_set_asides_redaction_matches_its_original_when_two_histories_are_compared`.
-- [x] **Personal and sales mail set aside, the rest** (owner, 2026-10-12; design 6.5; the rules part is phase A5,
+- [ ] **Personal and sales mail set aside, the rest** (owner, 2026-10-12; design 6.5; the rules part is phase A5,
   `tests/test_set_aside.py`; the sorting run is `tests/test_mail_sorting.py`):
   - a Set aside folder (Personal; Sales and promotions);
   - sorting by the person's sender and domain rules, then the mail's own category and bulk headers, then a low-cost
@@ -434,7 +434,11 @@ them are needed before the owner's daily use, which starts when L-core passes.
   the learning pair (a sender sorted wrongly, corrected with a "keep" rule, the next message kept) is
   `test_learning_pair_a_sender_the_assistant_got_wrong_is_kept_next_time`. No learning-pair fixture format exists yet, so
   the pair and the evaluation case are tests; moving them into fixtures is part of L4.
-  Left: before the person's first go the run isn't made, so the first read's mail goes in as work (decisions, 2026-10-13).
+  The first go sorts what was handed in while it was pending, then runs only the work mail:
+  `test_the_first_go_sorts_the_mail_handed_in_before_it_sets_aside_the_newsletter_and_runs_only_the_work`.
+  Left: a sorting run that couldn't be made for its own reason (its own budget, an estimate above the amount to ask
+  about) is told only in the read's note, which no screen shows yet; showing it on the source's row in Sources is
+  phase B. The item is unticked until then.
 - [x] **"Look at the last day" works for a folder:** today it hands in nothing, because folder items carry no time.
   Folder items carry the file's modified time, kept on the snapshot, so the person can hand in what is already there
   (found by the phase A fixes; the add-source hint then points to it). Tests:

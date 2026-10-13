@@ -205,11 +205,17 @@ It is sorted in this order, first match wins:
    - **cost is the person's choice, as for any run (6.16):** the run is the task kind `sort-mail`, role `write`, at the
      `routine` tier unless `ai.tasks.sort-mail.tier` says otherwise, with its own entry for a budget (`ai.budgets.per_task`).
      It is estimated first and goes through the per-run limit, the first go, the amount to ask above and the day, month and
-     per-kind budgets. It is made for no request, so its run record carries an empty request id. When it can't be made (no
+     per-kind budgets. It is made for no request, so its run record has no request (`Run.request` is none). When it can't be made (no
      account for the tier, a budget used up, the first go or the go above the configured amount not given, an account
      paused or failing, a refusal) **the mail is handed in as work, never held back**, and the read says why in plain
      words. The same cause stops the handed-in requests themselves on the paths that already show it (a request needing an
      account or a budget waits for the person, an account at its limit is a paused line, the first go is its line);
+   - **The first go covers it:** before the person's first go in a workspace the run isn't made, so the mail of the
+     first read is handed in as work and waits with every other run. When the person gives the first go, the mail
+     requests still waiting for it (or queued) whose message was never sorted go through the sorting run first, in
+     the same batches and under the same limits, the go covering the checks that wait for a go. Personal and sales
+     answers set the message aside (its request is closed as set aside) and only the rest run. Mail the person
+     pulled back as work, mail a rule now places or keeps, and changed messages are left alone;
    - **nothing from it is learned:** a set-aside request and snapshot carry the `set_aside` mark that
      `engine.set_aside.learnable` leaves out, so no signal, fact, lesson or evaluation case comes from them (above).
 

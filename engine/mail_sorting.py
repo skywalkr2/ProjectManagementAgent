@@ -9,7 +9,7 @@ hidden on a guess.
 The run goes through the same estimate, configured amount, budgets and escalation rule as any other. When it can't
 run (no account for its tier, a budget used up, the person's go not given, an account paused or failing), or its answer
 fails the checks even on the stronger tier, the mail is handed in as work and the reason is returned for the person.
-The run is made for no request, so its record carries an empty request id.
+The run is made for no request, so its record carries none.
 """
 
 from __future__ import annotations
@@ -152,9 +152,10 @@ def read_answers(text: str, ids: set[str], truncated: bool = False) -> tuple[dic
     return found, problems[:5]
 
 
-def sort(ws: Any, store: Any, cfg: Any, router: Any, headers: list[Header], level: str) -> Sorted:
+def sort(ws: Any, store: Any, cfg: Any, router: Any, headers: list[Header], level: str, go: bool = False) -> Sorted:
     """Sort these headers, one run per `watch.sorting_batch` of them, at the data level of their source. Returns the
-    messages set aside and a note when any wasn't sorted by the assistant."""
+    messages set aside and a note when any wasn't sorted by the assistant. `go`: the person has just given the first go,
+    which covers the checks that wait for a go (the first go, an unpriced run, the amount to ask above)."""
     out = Sorted()
     if not headers:
         return out
@@ -171,7 +172,7 @@ def sort(ws: Any, store: Any, cfg: Any, router: Any, headers: list[Header], leve
         if stopped:
             unsorted += len(batch)
             continue
-        tried = _sort_batch(ws, store, cfg, router, batch, level)
+        tried = _sort_batch(ws, store, cfg, router, batch, level, go)
         if tried.answers is None:
             unsorted += len(batch)
             why, stopped = tried.why, tried.stop
@@ -189,9 +190,9 @@ def _note(count: int, why: str | None) -> str:
     return f"{these} sorted by the assistant ({why}), so {'it was' if count == 1 else 'they were'} handed in as work."
 
 
-def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header], level: str) -> _Try:
+def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header], level: str, go: bool = False) -> _Try:
     from engine.ai.router import route
-    from engine.dispatcher import _has_account
+    from engine.dispatcher import has_account
 
     task, ids = build_task(ws, cfg, batch)
     tier = route(
@@ -204,18 +205,19 @@ def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header],
     )
     budgets = cfg.ai.budgets
     estimate = router.estimate(task, tier=tier, data_level=level)
-    if estimate is None and budgets.confirm_unpriced:
+    if estimate is None and budgets.confirm_unpriced and not go:
         return _Try(why="its cost can't be estimated and your go wasn't given", stop=True)
     if estimate is not None and estimate > budgets.per_run_usd:
         return _Try(why=f"it would cost about ${estimate:.2f}, above the most one run may cost", stop=True)
     if (
         budgets.first_go
+        and not go
         and (estimate is None or estimate > 0)
         and not store.read().has("run")
-        and _has_account(cfg, KIND, level, tier, None, frozenset(), None)
+        and has_account(cfg, KIND, level, tier, None, frozenset(), None)
     ):
         return _Try(why="your first go in this workspace wasn't given yet", stop=True)
-    if estimate is not None and estimate > budgets.confirm_above_usd:
+    if estimate is not None and estimate > budgets.confirm_above_usd and not go:
         return _Try(why=f"it would cost about ${estimate:.2f} and your go wasn't given", stop=True)
     first = _rounds(cfg, router, task, ids, tier, level)
     if first.answers is not None or first.stop:
@@ -235,17 +237,17 @@ def _sort_batch(ws: Any, store: Any, cfg: Any, router: Any, batch: list[Header],
 def _rounds(cfg: Any, router: Any, task: AiTask, ids: dict[str, str], tier: str, level: str) -> _Try:
     """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong."""
     from engine.ai.router import AccountPaused, BudgetReached, NoProvider
-    from engine.dispatcher import _failure
+    from engine.dispatcher import failure_in_words
 
     current = task
     problems: list[str] = []
     for _ in range(cfg.dispatch.fix_rounds + 1):
         try:
-            result, _choice, _run = router.call(current, request_id="", tier=tier, data_level=level)
+            result, _choice, _run = router.call(current, request_id=None, tier=tier, data_level=level)
         except (AccountPaused, BudgetReached, NoProvider) as err:
             return _Try(why=str(err).rstrip("."), stop=True)
         except AiError as err:
-            return _Try(why=_failure(err), stop=True)
+            return _Try(why=failure_in_words(err), stop=True)
         if result.refused:
             return _Try(why="the AI account refused it", stop=True)
         answers, problems = read_answers(result.text, set(ids), result.truncated)

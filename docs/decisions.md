@@ -2908,8 +2908,11 @@ setting, no change to scope. Roadmap L0: the instance-lease sub-item is built.
 - **When it can't run:** no account, a budget used up, no first go, an estimate above the amount to ask about, an account
   paused or failing, or an answer that fails its checks after the escalation: the mail is handed in as work, and the
   read's note says why. A run never waits for a go, because the mail waits for it. Before the first go in a workspace the
-  run isn't made (it would spend before the person's first go), so the first read's mail goes in as work.
-- **No request:** the run record carries an empty request id (its description says so).
+  run isn't made (it would spend before the person's first go), so the first read's mail goes in as work. The first go
+  then sorts it first: the mail requests waiting for the go that were never sorted go through the run (the go covers
+  it), personal and sales ones are closed as set aside and only the rest run. Mail the person pulled back as work is
+  left alone.
+- **No request:** `Run.request` is optional; a run that serves no request, such as sorting, has none.
 - **Learning pair:** no learning-pair fixture format exists, so the pair is a test (`tests/test_mail_sorting.py`).
 
 **Decided by:** the technical PM's brief; the choices above were made by the builder and are for review.

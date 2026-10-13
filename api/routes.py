@@ -1085,9 +1085,13 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.post("/runs/first-go")
     def first_go() -> FirstGoStarted:
-        """The person's first go: every run waiting for it starts, and no run waits for it again."""
+        """The person's first go: the mail handed in unsorted while it was pending is sorted first (the go covers that
+        run), then every run still waiting for it starts, and no run waits for it again."""
+        from engine import watch
+
+        aside = watch.sort_before_first_go(ws, store, cfg)
         started = grant_first_go(store)
-        if started:
+        if started or aside:
             worker.poke()
             changed()
         return FirstGoStarted(started=started)

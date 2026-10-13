@@ -1283,7 +1283,7 @@ One call to an AI provider. The engine writes it after each call, for usage and 
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `request` | str | required | The id of the request the call was made for; empty for a call made for no request (sorting mail headers). |
+| `request` | str \| None | `None` | The id of the request the call was made for; none for a call that serves no request (sorting mail headers). |
 | `task` | str | required | The kind of task asked. |
 | `provider` | str | required | The configured provider that was called. |
 | `model` | str | required | The model that answered, as the provider reported it. |

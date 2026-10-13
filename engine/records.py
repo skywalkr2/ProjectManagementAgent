@@ -1003,9 +1003,10 @@ class Run(Record):
     record_kind: ClassVar[str] = "run"
     prefix: ClassVar[str] = "RUN"
 
-    request: str = Field(
-        description="The id of the request the call was made for; empty for a call made for no request (sorting mail "
-        "headers)."
+    request: str | None = Field(
+        None,
+        description="The id of the request the call was made for; none for a call that serves no request (sorting "
+        "mail headers).",
     )
     task: str = Field(description="The kind of task asked.")
     provider: str = Field(description="The configured provider that was called.")

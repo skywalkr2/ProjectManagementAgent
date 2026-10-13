@@ -13510,7 +13510,7 @@
     },
     "/api/runs/first-go": {
       "post": {
-        "description": "The person's first go: every run waiting for it starts, and no run waits for it again.",
+        "description": "The person's first go: the mail handed in unsorted while it was pending is sorted first (the go covers that\nrun), then every run still waiting for it starts, and no run waits for it again.",
         "operationId": "first_go_api_runs_first_go_post",
         "responses": {
           "200": {

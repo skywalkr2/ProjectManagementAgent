@@ -215,7 +215,7 @@ class Router:
         self,
         task: AiTask,
         *,
-        request_id: str,
+        request_id: str | None,
         data_level: str = "internal",
         tier: str | None = None,
         use: str | None = None,
@@ -297,7 +297,7 @@ class Router:
         adapter: Adapter,
         task: AiTask,
         choice: Choice,
-        request_id: str,
+        request_id: str | None,
         wait: bool,
         independent: Independence | None = None,
     ) -> AiResult:
@@ -481,7 +481,7 @@ class Router:
     def _record(
         self,
         task: AiTask,
-        request_id: str,
+        request_id: str | None,
         choice: Choice,
         started: datetime,
         seconds: float,

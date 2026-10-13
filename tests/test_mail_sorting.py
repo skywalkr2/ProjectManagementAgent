@@ -103,7 +103,7 @@ def test_thirty_unsorted_messages_with_a_batch_of_25_make_two_runs_and_the_packe
         result = read(ws, store)
         assert [len(rows_of(t)) for t in account.tasks] == [25, 5]
         runs = sort_runs(store)
-        assert len(runs) == 2 and all(r["request"] == "" and r["tier"] == "routine" for r in runs)
+        assert len(runs) == 2 and all(r["request"] is None and r["tier"] == "routine" for r in runs)
         assert len(result.new) == 30 and len(requests_in(store, "queued")) == 30, "all work: handed in as before"
         for task in account.tasks:
             packet = task.instructions + task.stable + task.request
@@ -440,3 +440,77 @@ def test_a_read_that_is_a_day_later_still_sorts_new_mail_only(tmp_path, account)
         assert len(account.tasks) == 1, "mail already seen is not sorted again"
     finally:
         store.close()
+
+
+# ---- the first go covers the sorting of the mail that was handed in while it was pending ---------------------------
+
+
+def test_the_first_go_sorts_the_mail_handed_in_before_it_sets_aside_the_newsletter_and_runs_only_the_work(tmp_path):
+    from api.app import create_app
+    from engine.ai.router import Router
+    from engine.dispatcher import process
+
+    seen = []
+
+    def account(task):
+        seen.append(task.kind)
+        if task.kind == "notes":
+            return json.dumps({"summary": "Nothing to do.", "ops": []})
+        rows = [{"id": r["id"], "answer": "sales" if r["subject"] == "Newsletter" else "work"} for r in rows_of(task)]
+        return json.dumps({"answers": rows})
+
+    set_responder(account)
+    items = [unplaced(0, body=f"Dinner {UNIQUE}"), mail("news", f"deals@{CLUB}", subject="Newsletter"), unplaced(2)]
+    ws, cfg, store = make(tmp_path, items, ai=[("first_go: false", "first_go: true")])
+    store.close()
+    created = create_app(ws, cfg, "t", start_worker=False)
+    client = TestClient(created)
+    client.headers["Authorization"] = "Bearer t"
+    base = cfg.server.base_path.rstrip("/") + "/api"
+    store = created.state.store
+    try:
+        result = read(ws, store)
+        assert len(result.new) == 3 and "first go" in result.note and seen == [], "no go: no sorting, all as work"
+        for req in requests_in(store, "queued"):
+            assert process(ws, store, cfg, Router(cfg, store, env={}), req.id, now=NOW) is None
+        assert len([r for r in store.read().list("request") if r.data["state"] == "needs_you"]) == 3
+        assert seen == [] and not store.read().has("run")
+        # The go: the sorting run happens first, covered by it; the newsletter is set aside and closed.
+        assert client.post(f"{base}/runs/first-go").json() == {"started": 2}
+        assert seen == ["sort-mail"] and len(sort_runs(store)) == 1
+        snaps = snapshots(store)
+        assert snaps["news"]["set_aside"]["section"] == "sales" and snaps["news"]["set_aside"]["by"] == "assistant"
+        assert snaps["thread-0"]["set_aside"] is None
+        aside = [r for r in store.read().list("request") if r.data.get("set_aside")]
+        assert len(aside) == 1 and aside[0].data["state"] == "done"
+        assert aside[0].data["waiting"] == f"Set aside: {REASON['sales']}"
+        queued = requests_in(store, "queued")
+        assert len(queued) == 2 and all(not r.data.get("set_aside") for r in queued)
+        for req in queued:
+            assert process(ws, store, cfg, Router(cfg, store, env={}), req.id, now=NOW) is not None
+        assert seen.count("notes") == 2, "only the work mail ran"
+        assert [i["title"] for i in client.get(f"{base}/set-aside").json()["items"]] == ["Newsletter"]
+        # Nothing waits for the go again, and the sorting isn't repeated.
+        assert client.post(f"{base}/runs/first-go").json() == {"started": 0} and len(sort_runs(store)) == 1
+    finally:
+        created.state.store.close()
+        set_responder(None)
+
+
+def test_the_first_go_leaves_alone_mail_the_person_pulled_back_as_work(tmp_path):
+    from engine.dispatcher import signal
+    from engine.set_aside import put_back, set_aside_item
+    from engine.watch import sort_before_first_go
+
+    set_responder(Account(answers={"Subject 0": "personal"}))
+    ws, cfg, store = make(tmp_path, [unplaced(0)], ai=[("first_go: false", "first_go: true")])
+    try:
+        read(ws, store)
+        snap = store.read().list("snapshot")[0]
+        set_aside_item(store, snap.id, "personal")
+        waiting = put_back(ws, store, cfg, snap.id, hand_in=True)
+        signal(store, "pulled_back", [waiting])
+        assert sort_before_first_go(ws, store, cfg) == 0 and sort_runs(store) == []
+    finally:
+        store.close()
+        set_responder(None)
