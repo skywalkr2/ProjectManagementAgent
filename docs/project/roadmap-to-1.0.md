@@ -57,7 +57,7 @@ Within 0.3 every change is additive: a pack built for an earlier 0.3 version kee
 | L-core: L4 | Packs' own evaluation cases (`provides.evals`) and domain scorers (`registrar.scorer`) | 0.3.x | No |
 | L-core: L5 | The text-extractor extension point; a connector item that carries files (mail attachments) | 0.3.x | No |
 | B | Nothing planned: panels, Today lines and jobs keep their contract through the redesign | none | No |
-| C1 to C3 | What the packs' builders ask for, answered in the weekly round; interfaces between packs (such as `pm/schedule@1`) belong to the packs | 0.3.x | No |
+| C1 to C3 | What the packs' builders ask for, answered in the weekly round (round 39: a conversation on a record, context-sized task kinds, data-form previews, a pack's value on a request, computed-column headings); interfaces between packs (such as `pm/schedule@1`) belong to the packs | 0.3.x | No |
 | C4 | The publisher and the file channel for a pack's outputs, and fact lookups from configured sources. Whether a pack's "send" changes shape is decided here; if it does, this is 0.4 | 0.3.x or 0.4 | Only if 0.4, announced a round ahead |
 | D | Frozen: no new names, only fixes, anything deprecated removed | 0.9 | Removals only, listed a round ahead |
 | Publish 1.0 | 1.0 once the writing pack and the project management pack run on it unchanged through phase D's week of real use | 1.0 | No |
@@ -994,6 +994,16 @@ C4. **What the packs need from the core.**
   content. Waiting to go out lists them, with a diff where it applies.
 - [ ] **Fact lookups** (6.19): published dates are looked up from the configured sources, never asked.
 - [ ] Anything else either pack's builder asks for, answered in one weekly round.
+- [ ] **Round 39 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
+  - 190, **a conversation on a record**: a thread kept on the record, opened from any screen with that record as its
+    context, each message a request of a task kind the pack names, replies with citations, kept-or-dropped changes,
+    queued work with its estimate, and questions answered by replying; it uses L2's bounded search. It is designed with
+    Ask as a side pane (phase B) and built after L2, since it needs the search round; the design answer goes in the round.
+  - 191, a task kind that declares the context it needs, so a run goes only to a model whose window fits, the estimate
+    names it, and a run that fits nowhere says so before anything is sent (provider layer, 6.16).
+  - 187, a preview beside a data form, run again after each save, read only, as the person.
+  - 188, a small pack-defined value on a request, never shown, returned to the run.
+  - 189, a computed panel column headed from the pack's wording.
 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
