@@ -688,6 +688,14 @@ yet follow, that it is *designed*, with its phase.
 | Why an add-on didn't load | A manifest or plugin-settings failure showed the validator's own text (field paths, error types, a link); a few registration messages named manifest fields or a settings file | Said as where and what in plain words; the wording check also catches `interfaces.*`, `depends_on` and `config_schema` (7.0, 7.1). Built: `tests/test_plugin_messages.py` |
 | How Ask names a setting | Each settings line in Ask's material ended with the setting's key, which an answer could quote onto the screen | Decided, not built: a screen name and a stable short handle made from the key; `setting.propose` names the handle and the applier resolves it (6.25) |
 
+## 33. Phase L0: input levels, folders in the last day, local timestamps (2026-10-13)
+
+| Item | What the code did | What it does now |
+|---|---|---|
+| Data level of sources and files | Only a request carried it (`sensitivity`); a source read later had none | `source` and `file` carry `sensitivity` (their data level). A hand-in's choice, an upload's choice, or a watched source's setting (else its kind's in `watch.connector_data_levels`, else `watch.default_data_level`) sets it; a run's level is the highest of its record type, its request and its source (4.x, 5.1, 6.16). Built: `tests/test_data_levels.py` |
+| "Look at the last day" for a folder | Folder items carried no time, so nothing was handed in | The folder connector gives each file's modified time; the snapshot keeps it as `changed_at` (5.1) and the recent hand-in reads it. Built: `tests/test_watch_recent.py` |
+| Machine timestamps in filed notes | The add-on's item text carries a date-time with its zone; the assistant copied it into the note | Timestamps with a zone in the prose of an assistant's ops are rewritten in the person's time zone and `language.messages.date_time_format` before they are kept (6.7). Built: `tests/test_moments.py` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
@@ -707,11 +715,3 @@ plugins, validates every bundled manifest against registration, and compares nes
 
 The later 1.0 extension points and reach capabilities (interfaces, panels, jobs, network, secrets and tools) are explicitly
 refused by this host, not silently ignored. The contract and current limitations are in `docs/plugin-api-0.x.md`.
-
-## 33. Phase L0: input levels, folders in the last day, local timestamps (2026-10-13)
-
-| Item | What the code did | What it does now |
-|---|---|---|
-| Data level of sources and files | Only a request carried it (`sensitivity`); a source read later had none | `source` and `file` carry `sensitivity` (their data level). A hand-in's choice, an upload's choice, or a watched source's setting (else its kind's in `watch.connector_data_levels`, else `watch.default_data_level`) sets it; a run's level is the highest of its record type, its request and its source (4.x, 5.1, 6.16). Built: `tests/test_data_levels.py` |
-| "Look at the last day" for a folder | Folder items carried no time, so nothing was handed in | The folder connector gives each file's modified time; the snapshot keeps it as `changed_at` (5.1) and the recent hand-in reads it. Built: `tests/test_watch_recent.py` |
-| Machine timestamps in filed notes | The add-on's item text carries a date-time with its zone; the assistant copied it into the note | Timestamps with a zone in the prose of an assistant's ops are rewritten in the person's time zone and `language.messages.date_time_format` before they are kept (6.7). Built: `tests/test_moments.py` |

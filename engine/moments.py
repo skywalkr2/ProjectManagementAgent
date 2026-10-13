@@ -13,8 +13,8 @@ from typing import Any
 
 from engine.today import zone
 
-#: A date, a time and a zone offset, joined by "T" or a space and ending in Z or an offset such as +01:00. A time with no
-#: zone is left alone, since there is nothing to convert it from.
+#: A date, a time and a zone offset, joined by "T" or a space and ending in Z or an offset such as +01:00. A time
+#: with no zone is left alone, since there is nothing to convert it from.
 _MOMENT = re.compile(
     r"(?<![\w:.-])(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)\s?(Z|[+-]\d{2}:?\d{2})(?![\w:])(?!\.\d)"
 )
