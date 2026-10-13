@@ -19,6 +19,10 @@ from engine.storage import Store, WriteContext
 
 _PM = WriteContext(actor="pm", trust="trusted", op="followup")
 
+#: The fields of an action whose change, after a person was told, means they need telling again, and the field that
+#: records who was told.
+TOLD_FIELDS = ("text", "due", "told")
+
 #: Questions that hold an item until the PM says who: answered on the item itself.
 ROUTING = ("held-op", "owner")
 
@@ -66,12 +70,14 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                 "resolves": d.get("resolves"),
             }
         )
-    for a in store.read().list("action"):
+    open_actions = [a for a in store.read().list("action") if a.data["status"] == "open"]
+    history = store.read().field_changes("action", TOLD_FIELDS) if any(a.data.get("told") for a in open_actions) else {}
+    for a in open_actions:
         d = a.data
-        if d["status"] != "open":
-            continue
         for owner in d.get("owners", []):
             told = d.get("told", {}).get(owner["person"])
+            if told and changed_since_told(history.get(a.id, []), owner["person"], d):
+                told = None  # what they were told is out of date, so they need telling again
             chases = (d.get("followed_up") or {}).get(owner["person"]) or []
             last_chase = str(max(chases)) if chases else None
             told_days = (today - date.fromisoformat(told)).days if told else None
@@ -94,6 +100,27 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
             s.to_send = sum(q["status"] == "open" for q in s.questions) + sum(a["told"] is None for a in s.actions)
             s.message = compose(s, cfg, people)
     return sorted(by_person.values(), key=lambda s: (not s.is_pm, s.name.lower()))
+
+
+def changed_since_told(history: list[dict[str, Any]], person: str, current: dict[str, Any]) -> bool:
+    """Whether an action's text or due date differs from what it was when `person` was last told. `history` is the
+    ledger's changes to the action's text, due date and told days, oldest first. An action with no record of when the
+    person was told, or of an earlier value, counts as unchanged."""
+
+    def day(value: Any) -> str | None:
+        return None if value is None else str(value)
+
+    told_at = None
+    for row in history:
+        if row["field"] == "told" and day((row["after"] or {}).get(person)) != day((row["before"] or {}).get(person)):
+            told_at = row["version"] if (row["after"] or {}).get(person) else None
+    if told_at is None:
+        return False
+    for name in ("text", "due"):
+        then = [row for row in history if row["field"] == name and row["version"] <= told_at]
+        if then and day(then[-1]["after"]) != day(current.get(name)):
+            return True
+    return False
 
 
 def compose(s: Section, cfg: Config, people: People) -> str:
@@ -146,6 +173,11 @@ def mark_sent(
             if a["told"] is None:
                 rec = tx.get("action", a["id"])
                 told = {**rec.data.get("told", {}), person: today.isoformat()}
+                if person in rec.data.get("told", {}):
+                    # Told before and changed since: clear the old day first, so telling again on the same day is
+                    # still a change in the ledger and the action no longer counts as changed since it was told.
+                    cleared = {k: v for k, v in rec.data["told"].items() if k != person}
+                    rec = tx.update("action", a["id"], {"told": cleared}, _PM, read_version=rec.version)
                 tx.update("action", a["id"], {"told": told}, _PM, read_version=rec.version)
                 counts["actions"] += 1
                 counts["action_ids"].append(a["id"])

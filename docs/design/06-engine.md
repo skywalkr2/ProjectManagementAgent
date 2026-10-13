@@ -534,9 +534,11 @@ is marked *designed*, with the phase.
 - Enriching links automatically from item keys and known titles found in the text is *designed, not yet built, not
   scheduled*. Today a question to anyone but the PM is refused unless it carries a link the recipient can open, and nothing
   adds links.
-- **Decisions are questions addressed to the PM.** Whether something is "your decision" is decided by the recipient, never by a
-  stored kind. Moving a question from the PM to someone else makes it an ordinary question (*designed, phase L3*; `question.move`
-  is not built, 6.7).
+- **Decisions are questions addressed to the PM.** The assistant marks each question with a kind (question, decision, and the
+  routing, impact and notice kinds), and the screen follows the stored kind: a question to the PM of kind `decision` shows as a
+  decision, and one of kind `question` shows as a question to answer. Keeping the kind makes the assistant's call checkable
+  and lets a mistaken one be corrected. Moving a question from the PM to someone else makes it an ordinary question
+  (*designed, phase L3*; `question.move` is not built, 6.7). **Built:** `web/src/components/FollowUps.test.tsx` ("a question to the PM shows as a decision or as a question by its stored kind").
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.
@@ -581,6 +583,11 @@ is marked *designed*, with the phase.
   `tests/test_pipeline.py::test_closing_an_action_from_a_sender_nobody_knows_leaves_reported_by_empty`). The generic status route reopening an action clears both.
   Marking an action done from a row credits its owners and records the PM as the reporter
   (`tests/test_routes.py::test_marking_an_action_done_credits_its_owners_and_records_the_pm_as_the_reporter`).
+  **Told again after a change:** an action's told day is per person, and when the action's text or due date differs from
+  what it was at that person's told day (read from the ledger), it counts as to send again for that person: it leaves
+  Waiting on them and joins their next message. Putting the value back to what they were told reverts it, and Mark sent
+  settles it, even on the same day (`tests/test_followups_backup_eval.py::test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_for_that_person`,
+  `tests/test_followups_backup_eval.py::test_a_change_before_telling_or_one_put_back_to_what_was_told_does_not_reopen_the_action`).
 - **Reassign:** swap one person in the owners list, keeping their team ("Product (Jane Doe)" to "Product (Sam Lee)"); the
   other owners stay. Told dates, Followed up and They finished it are per person. *Designed, not yet built, phase B* (edit,
   close and reassign from the row). Told dates are per person today; the only way to change an owner is to edit the whole list
@@ -610,8 +617,12 @@ wherever they are shown.
   alias) becomes a person **only when that person is in the input's context**, and only if exactly one person of that first
   name is; a first name with an initial or surname fragment ("Ada L.") becomes the one person that fragment fits, and when it
   fits no one the op is held and the people who share the first name are offered, however many of them are in the thread;
-  an owner written in the workspace's `owner_format` is parsed into person and team (*designed, not yet built*; phase L0
-  wires or removes the setting, and parsing is not scheduled).
+  an owner written in the workspace's `owner_format` is parsed into person and team (*designed, not yet built, not
+  scheduled*; the format is used for showing owners, below).
+  **Names resolve on two fields only:** the owners of an action and a question's recipient, the two that hold a name
+  written in an input. Every other field that refers to a record or a value is picked from a list (7.0), so there is no name to
+  resolve there. The words that mean the person themselves ("me", "myself", "I" by default) are the setting
+  `language.self_words`, not words in code (4.6). **Built:** `tests/test_names.py::test_the_words_that_mean_the_person_come_from_the_language_setting`.
   Anything ambiguous or unknown holds the op and files one routing decision per name per input ("Who is 'Sam'?", with the
   candidates; names compare ignoring case and surrounding space). Every op of that input that waits on the name hangs on
   that one question, and answering it applies them all. **Built**: `tests/test_pipeline.py::test_one_unknown_name_in_two_ops_gets_one_question_and_one_answer_releases_both`,
@@ -627,9 +638,16 @@ wherever they are shown.
   Tests: `tests/test_names.py` (the resolving rules with and without context, the context of a hand-in and of a watched
   message) and the golden cases `first-name-in-thread`, `different-initial-held`, `shared-first-name` and `unknown-person`.
 - **Rendering:** owners in `owner_format` ("Product (Jane Doe)"), recipients by full name, greetings by first name. Changing
-  the format changes every output at the next render. Recipients by full name and greetings by first name are built; owners in
-  `owner_format` is *designed, not yet built* (phase L0 wires or removes the setting): today owners are shown as plain full
-  names, and a team is not shown.
+  the format changes every output at the next render. The format takes `{full_name}` (required) and `{team}`; an owner with
+  no team is shown by the full name alone, and the team is the one on the action's owner entry, else the person's own. It
+  applies where the app shows an action's owners (a record's page and the review of a change), not in the packet the
+  assistant reads, because names are not yet parsed back from the format. A greeting uses the person's `first_name` when the
+  record has one (the person edits it in the app), else the first word of the full name. **Built:**
+  `tests/test_names.py::test_an_owner_is_written_in_the_owner_format_with_the_team_on_the_entry_else_the_persons_own`,
+  `tests/test_names.py::test_the_record_page_writes_owners_in_the_owner_format`,
+  `tests/test_record_page.py::test_the_owner_format_applies_to_the_owners_on_the_review_screen_and_the_record_page`,
+  `tests/test_names.py::test_a_greeting_uses_the_first_name_on_the_record_else_the_first_word_of_the_full_name`,
+  `tests/test_routes.py::test_a_first_name_set_on_the_person_is_what_the_copied_message_greets_them_by`.
 - **No sweep needed:** nothing stores a short name, so nothing needs rewriting later. Free text (notes, fact text) keeps names
   as written.
 - **Merging:** when two person records turn out to be one person, `person.merge` repoints every stored id (each record type

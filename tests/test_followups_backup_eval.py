@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
@@ -111,6 +111,69 @@ def _action_row(env, action_id, owner):
     _, cfg, store = env
     sec = next(s for s in sections(store, cfg, NOW.date()) if s.person == owner)
     return next(a for a in sec.actions if a["id"] == action_id)
+
+
+def _change_action(store, action_id, **changes):
+    rec = store.read().get("action", action_id)
+    with store.transaction() as tx:
+        tx.update(
+            "action", action_id, changes, WriteContext(actor="pm", trust="trusted", op="test"), read_version=rec.version
+        )
+
+
+def _told_action(env):
+    """An open action with an owner, after the PM marked everything for that owner as sent on NOW."""
+    _, cfg, store = env
+    action = next(a for a in store.read().list("action") if a.data["status"] == "open" and a.data.get("owners"))
+    owner = action.data["owners"][0]["person"]
+    sec = next(s for s in sections(store, cfg, NOW.date()) if s.person == owner)
+    mark_sent(store, cfg, owner, sent_text=sec.message, now=NOW)
+    assert _action_row(env, action.id, owner)["told"] == NOW.date().isoformat()
+    return action, owner
+
+
+@pytest.mark.parametrize("field,value", [("due", "2031-01-02"), ("text", "Send the corrected index to the typesetter")])
+def test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_for_that_person(env, field, value):
+    _, cfg, store = env
+    action, owner = _told_action(env)
+    _change_action(store, action.id, **{field: value})
+    row = _action_row(env, action.id, owner)
+    assert row["told"] is None and row["told_days"] is None and not row["chase_due"]
+    sec = next(s for s in sections(store, cfg, NOW.date()) if s.person == owner)
+    shown = cfg.language.messages.date_format
+    expected = date.fromisoformat(value).strftime(shown) if field == "due" else value
+    assert sec.to_send >= 1 and expected in sec.message
+    # Sending again, even on the same day, settles it: it is told again and stays told.
+    mark_sent(store, cfg, owner, sent_text=sec.message, now=NOW)
+    assert _action_row(env, action.id, owner)["told"] == NOW.date().isoformat()
+    assert next(s for s in sections(store, cfg, NOW.date()) if s.person == owner).to_send == 0
+
+
+def test_a_change_before_telling_or_one_put_back_to_what_was_told_does_not_reopen_the_action(env):
+    _, cfg, store = env
+    action = next(a for a in store.read().list("action") if a.data["status"] == "open" and a.data.get("owners"))
+    owner = action.data["owners"][0]["person"]
+    _change_action(store, action.id, due="2031-03-04")  # before the person is told
+    sec = next(s for s in sections(store, cfg, NOW.date()) if s.person == owner)
+    mark_sent(store, cfg, owner, sent_text=sec.message, now=NOW)
+    assert _action_row(env, action.id, owner)["told"] == NOW.date().isoformat()
+    _change_action(store, action.id, due="2031-05-06")
+    assert _action_row(env, action.id, owner)["told"] is None
+    _change_action(store, action.id, due="2031-03-04")  # back to the date they were told
+    assert _action_row(env, action.id, owner)["told"] == NOW.date().isoformat()
+
+
+def test_a_change_to_an_action_leaves_other_owners_told_before_it_alone_only_when_it_is_the_same_for_them(env):
+    _, cfg, store = env
+    action = next(
+        a for a in store.read().list("action") if a.data["status"] == "open" and len(a.data.get("owners", [])) > 1
+    )
+    first, second = (o["person"] for o in action.data["owners"][:2])
+    mark_sent(store, cfg, first, now=NOW)
+    _change_action(store, action.id, due="2031-07-08")
+    mark_sent(store, cfg, second, now=NOW + timedelta(days=1))
+    assert _action_row(env, action.id, first)["told"] is None, "told before the change, so told again"
+    assert _action_row(env, action.id, second)["told"] == (NOW + timedelta(days=1)).date().isoformat()
 
 
 def test_followed_up_records_a_chase_keeps_the_action_open_and_counts_as_told(env):

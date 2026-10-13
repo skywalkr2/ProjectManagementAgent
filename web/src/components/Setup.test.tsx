@@ -514,6 +514,26 @@ test("adding an organization from the person form posts it, selects it, and send
   expect(calls.find((c) => c.route === "POST people")!.body).toMatchObject({ full_name: "New Person", org: "ORG-3" });
 });
 
+test("the person form has a first name field; it is sent as typed, or as nothing when empty, and undo puts the old one back", async () => {
+  const user = userEvent.setup();
+  const calls = organizationRoutes({
+    "GET people": () => [person("P-1", "Ana Person", { first_name: "Anita" })],
+    "POST people/P-1": () => ({ ok: "P-1" }),
+  });
+  renderApp(<Setup />);
+  const row = (await screen.findByText("Ana Person")).closest("li")!;
+  await user.click(within(row).getByRole("button", { name: "Edit" }));
+  const field = within(row).getByLabelText(/^First name/);
+  expect(field).toHaveValue("Anita");
+  await user.clear(field);
+  await user.click(within(row).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST people/P-1")).toBe(true));
+  expect(calls.find((c) => c.route === "POST people/P-1")!.body).toMatchObject({ first_name: null });
+  await undoToast(user);
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST people/P-1")).toHaveLength(2));
+  expect(calls.filter((c) => c.route === "POST people/P-1")[1].body).toMatchObject({ first_name: "Anita" });
+});
+
 test("Escape cancels the new organization field without closing the form", async () => {
   const user = userEvent.setup();
   const calls = organizationRoutes();

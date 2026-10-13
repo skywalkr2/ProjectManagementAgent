@@ -659,6 +659,17 @@ yet follow, that it is *designed*, with its phase.
 | Learning and set-aside mail (6.5) | Stated, not guarded | `engine.set_aside.learnable` is the one place learning reads requests and snapshots; it leaves out set-aside ones. The learning pair waits for L4 |
 | Synced-folder comparison (5.2) | A confirmed set-aside's deletion rewrote earlier ledger entries on one computer, which read as a divergence on the other | Each deletion found in either history is applied to both before comparing |
 
+## 30. Phase L0: where the code and the design differed, decided (2026-10-13)
+
+| Item | Before | Now |
+|---|---|---|
+| A question's kind (6.8) | The design said whether something is a decision is decided by the recipient, never by a stored kind; Follow-ups showed every question to the PM as a decision | The assistant marks the kind and the screen follows it: a question to the PM of kind `decision` shows as a decision, `question` as a question to answer. Built: `web/src/components/FollowUps.test.tsx` ("a question to the PM shows as a decision or as a question by its stored kind") |
+| "me", "myself", "I" (6.11) | English words in code | The setting `language.self_words` (4.6), default those three. Built: `tests/test_names.py::test_the_words_that_mean_the_person_come_from_the_language_setting` |
+| A greeting's first name (6.11, 5.1) | The first word of the full name | The person record's optional `first_name`, else the first word; the person form has the field. Built: `tests/test_names.py::test_a_greeting_uses_the_first_name_on_the_record_else_the_first_word_of_the_full_name` |
+| `owner_format` (4.1, 6.11) | In the schema, read nowhere | Read where the app shows an action's owners; checked when set (must hold `{full_name}`; `{team}` optional). Parsing an owner written in it stays designed, not scheduled. Built: `tests/test_names.py::test_an_owner_is_written_in_the_owner_format_with_the_team_on_the_entry_else_the_persons_own` |
+| An action changed after it was told (6.9) | Stayed "told" | Counts as to send again for that person. Built: `tests/test_followups_backup_eval.py::test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_for_that_person` |
+| Names resolve on which fields (6.11) | Unsaid | Two: an action's owners and a question's recipient; every other field is picked from a list |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

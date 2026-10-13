@@ -8,7 +8,11 @@ import pytest
 import yaml
 
 from engine.config import load_config
+from engine.config.schema import WorkspaceFile
 from engine.names import People, header_entries
+from engine.record_page import page as record_page
+from engine.storage import Store
+from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
 
 PEOPLE = {p["id"]: p for p in fixture_records(DEMO_B, "person")}
@@ -73,6 +77,64 @@ def test_full_names_aliases_ids_and_me_resolve_without_context():
     assert people().resolve(designer["aliases"][0]).person == designer["id"], "a set alias resolves as it always did"
     for me in ("me", "Me", "myself", "I"):
         assert people().resolve(me).person == PM
+
+
+def test_a_greeting_uses_the_first_name_on_the_record_else_the_first_word_of_the_full_name():
+    sam = person("Typesetter")
+    assert people().first_name(sam["id"]) == first(sam)
+    written = {**PEOPLE, sam["id"]: {**sam, "first_name": "  Nickname-" + first(sam) + " "}}
+    named = People.from_records(written, PM)
+    assert named.first_name(sam["id"]) == "Nickname-" + first(sam)
+    blank = People.from_records({**PEOPLE, sam["id"]: {**sam, "first_name": " "}}, PM)
+    assert blank.first_name(sam["id"]) == first(sam), "an empty first name falls back to the full name"
+
+
+TEAMS = {t["id"]: t["name"] for t in fixture_records(DEMO_B, "team")}
+
+
+def test_an_owner_is_written_in_the_owner_format_with_the_team_on_the_entry_else_the_persons_own():
+    member = next(p for p in PEOPLE.values() if p.get("team") in TEAMS)
+    other_team = next(t for t in TEAMS if t != member["team"])
+    fmt = "{team} ({full_name})"
+    named = People.from_records(PEOPLE, PM, owner_format=fmt, team_names=TEAMS)
+    assert named.owner({"person": member["id"]}) == f"{TEAMS[member['team']]} ({member['full_name']})"
+    assert named.owner({"person": member["id"], "team": other_team}) == f"{TEAMS[other_team]} ({member['full_name']})"
+    teamless = next(p for p in PEOPLE.values() if not p.get("team"))
+    assert named.owner({"person": teamless["id"]}) == teamless["full_name"], "no team: the full name alone"
+    plain = People.from_records(PEOPLE, PM, team_names=TEAMS)
+    assert plain.owner({"person": member["id"]}) == member["full_name"], "the default format is the full name"
+
+
+def test_the_record_page_writes_owners_in_the_owner_format(tmp_path):
+    store = Store(init_workspace(tmp_path / "ws", template=DEMO_B, git=False).db_path)
+    action = next(a for a in store.read().list("action") if a.data.get("owners") and a.data.get("project"))
+    entry = action.data["owners"][0]
+    page = record_page(store, "project", action.data["project"], pm=None, owner_format="{full_name} of {team}")
+    shown = next(a for a in page["open_actions"] if a["id"] == action.id)["owners"][0]
+    person = store.read().get("person", entry["person"]).data
+    team = store.read().get("team", entry.get("team") or person.get("team"))
+    expected = person["full_name"] if team is None else f"{person['full_name']} of {team.data['name']}"
+    assert shown == expected
+    store.close()
+
+
+@pytest.mark.parametrize("bad", ["{team}", "{full_name} {nickname}", "{full_name", "no placeholder"])
+def test_an_owner_format_without_the_full_name_or_with_unknown_fields_is_refused(bad):
+    with pytest.raises(ValueError):
+        WorkspaceFile(owner_format=bad)
+    assert WorkspaceFile(owner_format="{team}: {full_name}").owner_format == "{team}: {full_name}"
+
+
+def test_the_words_that_mean_the_person_come_from_the_language_setting():
+    cfg = load_config(DEMO_B)
+    assert cfg.language.self_words, "the demo workspace sets the words"
+    words = ["moi", "ich"]
+    mine = People.from_records(PEOPLE, PM, self_words=words)
+    for word in words:
+        assert mine.resolve(word.upper()).person == PM
+    assert mine.resolve("me").status != "ok", "the default English words are not hard-coded"
+    for word in cfg.language.self_words:
+        assert people().resolve(word).person == PM
 
 
 def test_a_different_initial_or_surname_is_held_even_with_the_first_name_in_context():

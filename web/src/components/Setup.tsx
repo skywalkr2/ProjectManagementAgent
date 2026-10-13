@@ -160,18 +160,26 @@ function PersonForm(props: { person?: S["PersonView"]; onDone: () => void }) {
   const act = useAct();
   const p = props.person;
   const [name, setName] = useState(p?.name ?? "");
+  const [firstName, setFirstName] = useState(p?.first_name ?? "");
   const [role, setRole] = useState(p?.role ?? "");
   const [org, setOrg] = useState(p?.org ?? "");
   const [aliases, setAliases] = useState(p?.aliases.join(", ") ?? "");
   const key = p?.id ?? "new";
   const save = async () => {
-    const body = { full_name: name.trim(), role: role.trim() || null, org: org || null, aliases: list(aliases) };
+    const body = {
+      full_name: name.trim(),
+      first_name: firstName.trim() || null,
+      role: role.trim() || null,
+      org: org || null,
+      aliases: list(aliases),
+    };
     const done = p
       ? await act(
           () => api.editPerson(p.id, body),
           () => ({
             message: t("toast.saved", { name: body.full_name }),
-            undo: () => api.editPerson(p.id, { full_name: p.name, role: p.role, org: p.org, aliases: p.aliases }),
+            undo: () =>
+              api.editPerson(p.id, { full_name: p.name, first_name: p.first_name, role: p.role, org: p.org, aliases: p.aliases }),
           }),
         )
       : await act(
@@ -192,6 +200,13 @@ function PersonForm(props: { person?: S["PersonView"]; onDone: () => void }) {
       }}
     >
       <Field id={`pn-${key}`} label={t("setup.full_name")} value={name} onChange={setName} required autoFocus />
+      <Field
+        id={`pf-${key}`}
+        label={t("setup.first_name")}
+        value={firstName}
+        onChange={setFirstName}
+        hint={t("setup.first_name_hint")}
+      />
       <Field id={`pr-${key}`} label={t("setup.role")} value={role} onChange={setRole} hint={t("setup.role_hint")} />
       <OrgSelect id={`po-${key}`} label={t("setup.org")} value={org} onChange={setOrg} hint={t("setup.org_hint")} />
       <Field id={`pa-${key}`} label={t("setup.aliases")} value={aliases} onChange={setAliases} hint={t("setup.aliases_hint")} />

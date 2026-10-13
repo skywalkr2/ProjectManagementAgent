@@ -2,6 +2,8 @@ version: 1
 blocked_phrases: [confirm, check whether, check if, "TBD?"]
 run_on_separators: [" / ", "; "]
 never_shown: []
+# The words that mean the person themselves.
+self_words: [me, myself, I]
 # Lines an item's title is never taken from: greetings, quoted headers, sign-offs.
 title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to|cc|sent|date|subject)\s*:', '(thanks|best|regards|cheers)\b[ ,!.]*$', '-{2,}|>']
 messages:

@@ -3938,7 +3938,7 @@
             "type": "string"
           },
           "owners": {
-            "description": "The owners' full names.",
+            "description": "The owners, written in the workspace's owner format.",
             "items": {
               "type": "string"
             },
@@ -4867,6 +4867,18 @@
             "title": "Aliases",
             "type": "array"
           },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name a greeting uses; empty means the first word of the name.",
+            "title": "First Name"
+          },
           "full_name": {
             "minLength": 1,
             "title": "Full Name",
@@ -4917,6 +4929,18 @@
               }
             ],
             "title": "Aliases"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name a greeting uses; null clears it.",
+            "title": "First Name"
           },
           "full_name": {
             "anyOf": [
@@ -4981,6 +5005,18 @@
             },
             "title": "Aliases",
             "type": "array"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name a greeting to them uses; empty means the first word.",
+            "title": "First Name"
           },
           "id": {
             "title": "Id",

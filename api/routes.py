@@ -953,7 +953,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         """Any record's page: core or a plugin's, by its kind."""
         from engine.record_page import page
 
-        found = page(store, kind, record_id, pm=cfg.workspace.user.person)
+        found = page(store, kind, record_id, pm=cfg.workspace.user.person, owner_format=cfg.workspace.owner_format)
         if found is None:
             raise HTTPException(status_code=404, detail=f"There is no {kind} {record_id}.")
         return RecordPageView(**found)
@@ -1383,6 +1383,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             PersonView(
                 id=p.id,
                 name=p.data["full_name"],
+                first_name=p.data.get("first_name"),
                 role=p.data.get("role"),
                 org=p.data.get("org"),
                 org_name=orgs.get(p.data.get("org") or ""),
@@ -1717,7 +1718,7 @@ def _op_view(o: dict[str, Any], store: Store, people: People, projects: dict[str
         d = rec.data
         title = d.get("text") or d.get("title") or d.get("full_name") or d.get("name") or title
         if kind == "action":
-            meta["owners"] = [people.name(x["person"]) for x in d.get("owners", [])]
+            meta["owners"] = [people.owner(x) for x in d.get("owners", [])]
             meta["due"] = d.get("due")
             meta["project"] = projects.get(d.get("project"))
             meta["action_status"] = d.get("status")

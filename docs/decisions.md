@@ -3,6 +3,16 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: Where the code and the design differed, decided (phase L0)
+
+**Decided by:** the technical PM (roadmap, phase L0). **What:** a question's stored kind stays and the screen follows it
+(design 6.8 corrected); "me", "myself" and "I" are the setting `language.self_words`; a greeting uses the person's optional
+`first_name`, else the first word of the full name; `owner_format` is read where the app shows an action's owners (an owner
+with no team is shown by the full name alone; parsing it back stays unscheduled); an action whose text or due date changed
+after a person was told counts as to send again for that person; names resolve only on an action's owners and a question's
+recipient (6.11 corrected). **Impact:** design 4.1, 4.6, 5.1, 6.8, 6.9, 6.11, 8, 10; one additive person field (plugin guide
+regenerated, plugin API version not changed); one new setting with demo values in both workspaces.
+
 ## 2026-10-13: Design 6.8 to 6.11 say what is built and what is designed (phase L0)
 
 **Decided by:** the audit of 6.8 to 6.11 against the code, as the roadmap's L0 item asks. **What:** the sections keep their

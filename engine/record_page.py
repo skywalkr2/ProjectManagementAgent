@@ -7,6 +7,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Literal, get_args, get_origin
 
+from engine.names import render_owner
 from engine.records import ref_fields, values_at
 from engine.texts import long_text_fields
 
@@ -45,7 +46,9 @@ def _type_of(annotation: Any) -> str:
     return "text"
 
 
-def page(store: Any, kind: str, record_id: str, *, pm: str | None) -> dict[str, Any] | None:
+def page(
+    store: Any, kind: str, record_id: str, *, pm: str | None, owner_format: str = "{full_name}"
+) -> dict[str, Any] | None:
     view = store.read()
     record = view.get(kind, record_id)
     model = store.plugins.records.get(kind) if hasattr(store, "plugins") else None
@@ -60,6 +63,11 @@ def page(store: Any, kind: str, record_id: str, *, pm: str | None) -> dict[str, 
             target = view.get(ref_kind, ref_id, include_deleted=True)
             names[key] = display_name(target.data) if target is not None else ""
         return names[key]
+
+    def owner_of(entry: dict[str, Any]) -> str:
+        person = view.get("person", entry["person"], include_deleted=True)
+        team = entry.get("team") or (person.data.get("team") if person is not None else None)
+        return render_owner(owner_format, name_of("person", entry["person"]), name_of("team", team) if team else None)
 
     refs = ref_fields(model)
     long_text = set(long_text_fields(model))
@@ -92,7 +100,7 @@ def page(store: Any, kind: str, record_id: str, *, pm: str | None) -> dict[str, 
                 "id": a.id,
                 "text": a.data["text"],
                 "due": str(a.data["due"]) if a.data.get("due") else None,
-                "owners": [name_of("person", o["person"]) for o in a.data.get("owners") or []],
+                "owners": [owner_of(o) for o in a.data.get("owners") or []],
                 "project": a.data.get("project"),
                 "project_name": name_of("project", a.data["project"]) if a.data.get("project") else None,
             }

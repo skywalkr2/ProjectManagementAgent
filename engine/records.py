@@ -215,6 +215,10 @@ class Person(Record):
     layout: ClassVar[str | None] = "people/{full_name}"
 
     full_name: str = Field(min_length=1, description="The name shown wherever the person appears.")
+    first_name: str | None = Field(
+        None,
+        description="The name a greeting to them uses, as they write it; empty means the first word of the full name.",
+    )
     aliases: list[str] = Field(
         default_factory=list, description="Other names that mean this person, such as a first name or nickname."
     )

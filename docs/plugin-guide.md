@@ -1050,6 +1050,7 @@ Someone the workspace works with or tracks. Added by `person.add`; role, org and
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `full_name` | str | required | The name shown wherever the person appears. |
+| `first_name` | str \| None | `None` | The name a greeting to them uses, as they write it; empty means the first word of the full name. |
 | `aliases` | list[str] | `[]` | Other names that mean this person, such as a first name or nickname. |
 | `role` | str \| None | `None` | Their job or part in the work, in plain words. |
 | `team` | str \| None | `None` | The id of the team they belong to. |

@@ -83,7 +83,7 @@ they apply to. Those guarded by an invariant or code still give the model their 
 | Shared ownership is allowed: an action can have several owners, each followed up separately | owners list, per-person told dates |
 | Before adding an action, search open and done actions for the same deliverable | applier near-duplicate warning (open and done actions; **built:** `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too`) |
 | When an input completes actions, close them across every related project | packet lists open actions with keys |
-| Action owners are people: stored as a person id, shown in the workspace's owner format | applier "people resolve" invariant (partly enforced: ids are stored; `workspace.owner_format` is not yet read, so owners always show as full names) |
+| Action owners are people: stored as a person id, shown in the workspace's owner format | applier "people resolve" invariant (ids are stored; where the app shows an action's owners it writes them in `workspace.owner_format`, 6.11) |
 | Actions go only to people in the tracked area or the PM; another area's work is a fact, not an action | applier scope check, scope sweep (not yet enforced): no scope resolver yet |
 | Separate who did it from who reported it | actions service (not yet enforced) |
 | A nudge isn't a completion | Followed up vs They finished it |

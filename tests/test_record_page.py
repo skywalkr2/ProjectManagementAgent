@@ -62,3 +62,43 @@ def test_people_rows_count_open_items(api):
 def test_an_unknown_record_has_no_page(api):
     client, _ = api
     assert client.get("/api/record-pages/PER-999", params={"kind": "person"}).status_code == 404
+
+
+def test_the_owner_format_applies_to_the_owners_on_the_review_screen_and_the_record_page(tmp_path):
+    ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
+    flags = {
+        "server.base_path": "/",
+        "storage.backups.automatic": False,
+        "workspace.owner_format": "{full_name} of {team}",
+    }
+    app = create_app(ws, ws.config(env={}, flags=flags), TOKEN, ui_dist=tmp_path / "no-ui")
+    with TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}) as client:
+        c = next(c for c in load_cases(DEMO_B) if c["id"] == "production-checkin")
+        set_responder(lambda task: json.dumps(c["stub_answer"]))
+        client.post("/api/handin", json={"pasted": c["pasted"]})
+        app.state.worker.run_pending()
+        store = app.state.store
+        teams = {t.id: t.data["name"] for t in store.read().list("team")}
+        people = {p.id: p.data for p in store.read().list("person")}
+        owned = {
+            o["person"]: f"{people[o['person']]['full_name']} of {teams[people[o['person']]['team']]}"
+            for a in store.read().list("action")
+            for o in a.data.get("owners", [])
+            if people[o["person"]].get("team") in teams
+        }
+        shown = {
+            owner
+            for item in client.get("/api/changes").json()
+            for op in (item.get("changeset") or {}).get("ops", [])
+            for owner in op["meta"].get("owners") or []
+        }
+        assert owned and shown & set(owned.values()), "an owner with a team is written in the workspace's format"
+        action = next(a for a in store.read().list("action") if a.data.get("project") and a.data.get("owners"))
+        page = client.get(f"/api/record-pages/{action.data['project']}", params={"kind": "project"}).json()
+        listed = next(a for a in page["open_actions"] if a["id"] == action.id)["owners"]
+        person = people[action.data["owners"][0]["person"]]
+        expected = (
+            f"{person['full_name']} of {teams[person['team']]}" if person.get("team") in teams else person["full_name"]
+        )
+        assert listed[0] == expected
+    set_responder(None)

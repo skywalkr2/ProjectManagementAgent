@@ -91,13 +91,19 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean; r
   const s = props.section;
   const actions = props.compact ? [] : s.actions;
   const Heading = props.compact ? "h4" : "h3";
+  const decisions = s.questions.filter((q) => q.kind === "decision").length;
+  const asked = s.questions.length - decisions;
   return (
     <li className="line">
       <div className="row single">
         <div className="text">
           <Heading className="name">{t("followups.you")}</Heading>
           <span className="sub">
-            {[s.questions.length ? tn("followups.decisions", s.questions.length) : "", actions.length ? tn("followups.your_actions", actions.length) : ""]
+            {[
+              decisions ? tn("followups.decisions", decisions) : "",
+              asked ? tn("followups.questions", asked) : "",
+              actions.length ? tn("followups.your_actions", actions.length) : "",
+            ]
               .filter(Boolean)
               .join(" · ")}
           </span>
@@ -136,7 +142,7 @@ function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number })
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div className="full">
-        <div className="what">{t(who ? "followups.who_question" : "followups.decision")}</div>
+        <div className="what">{t(who ? "followups.who_question" : q.kind === "decision" ? "followups.decision" : "followups.question")}</div>
         <div className="title">{q.title}</div>
         {q.text && <SafeText text={q.text} />}
         {q.links.map((l) => (

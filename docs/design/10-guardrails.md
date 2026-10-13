@@ -42,7 +42,7 @@ now; "partial" says what it leaves out; "planned" is not built.
 4. **Config coverage:** every config key used in code exists in the schema with a default and a description; every schema key is
    used somewhere. Same for each plugin's config. **Partial:** the check that every key has a default and a description
    runs. The checks that every key used in code is in the schema and that every schema key is read somewhere are not built,
-   so keys that do nothing pass today (`workspace.owner_format`, `storage.export.every_minutes` and
+   so keys that do nothing pass today (`storage.export.every_minutes` and
    `storage.export.remote`). Failing on keys nothing reads is planned (10.5).
 5. **Boundary scan:** core code imports nothing from `plugins/`; plugins import only `engine.plugin_api` from the engine; no
    core code tests for a plugin's name; bundled plugins don't import network or process libraries directly (12.3). **Running,

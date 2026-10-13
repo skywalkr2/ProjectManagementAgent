@@ -275,3 +275,28 @@ test("a followed-up row shows when, and the menu can chase again", async () => {
   await user.click(await screen.findByRole("menuitem", { name: "Followed up" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/actions/ACT-1/followed-up")).toBe(true));
 });
+
+test("a question to the PM shows as a decision or as a question by its stored kind", async () => {
+  const withQuestions = structuredClone(sections);
+  const ask = (id: string, title: string, kind: string): S["FollowupQuestion"] => ({
+    id,
+    title,
+    text: "",
+    links: [],
+    kind,
+    status: "open",
+    sent: null,
+    waiting_days: null,
+    about: null,
+    options: [],
+  });
+  withQuestions[0].questions = [ask("Q-7", "Ship the proof now?", "decision"), ask("Q-8", "Which cover do you prefer?", "question")];
+  fakeApi({ "GET followups": () => withQuestions, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  const decision = (await screen.findByText("Ship the proof now?")).closest("li")!;
+  const question = screen.getByText("Which cover do you prefer?").closest("li")!;
+  expect(within(decision).getByText("Decision")).toBeInTheDocument();
+  expect(within(question).getByText("Question")).toBeInTheDocument();
+  expect(within(question).queryByText("Decision")).toBeNull();
+  expect(screen.getByText(/1 decision · 1 question/)).toBeInTheDocument();
+});

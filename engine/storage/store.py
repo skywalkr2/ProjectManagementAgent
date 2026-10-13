@@ -11,7 +11,7 @@ import json
 import re
 import sqlite3
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -255,6 +255,27 @@ class Tx:
             args = [kind] + ([record_id] if record_id else [])
         rows = self._c.execute(sql + " ORDER BY seq", args).fetchall()
         return [_ledger_row(r) for r in rows]
+
+    def field_changes(self, kind: str, fields: Iterable[str]) -> dict[str, list[dict[str, Any]]]:
+        """The ledger's changes to these fields of every record of a kind, oldest first, keyed by record id. Each is
+        the record's version, the field, and its value before and after."""
+        names = list(fields)
+        marks = ",".join("?" for _ in names)
+        rows = self._c.execute(
+            f"SELECT record_id, version, field, before, after FROM ledger WHERE kind=? AND field IN ({marks}) "
+            "ORDER BY seq",
+            [kind, *names],
+        ).fetchall()
+        out: dict[str, list[dict[str, Any]]] = {}
+        for row in rows:
+            entry = {
+                "version": row["version"],
+                "field": row["field"],
+                "before": json.loads(row["before"]) if row["before"] is not None else None,
+                "after": json.loads(row["after"]) if row["after"] is not None else None,
+            }
+            out.setdefault(row["record_id"], []).append(entry)
+        return out
 
     def changed_kinds(self, after: int) -> tuple[int, list[str]]:
         """The ledger's last position, and the record kinds written after position `after` (for live updates)."""

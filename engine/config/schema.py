@@ -7,6 +7,7 @@ written into new config files, the settings forms and `cockpit config show`.
 from __future__ import annotations
 
 import re
+import string
 from datetime import date
 from typing import Any, Literal
 
@@ -148,7 +149,11 @@ class WorkspaceFile(FileModel):
     name: str = Field("Workspace", description="The workspace's display name.")
     assistant_name: str = Field("Assistant", description="The assistant's display name; the only name people see.")
     user: UserSettings = Field(default_factory=UserSettings, description="Who the PM is.")
-    owner_format: str = Field("{full_name}", description='How an action owner is written, e.g. "{team} ({full_name})".')
+    owner_format: str = Field(
+        "{full_name}",
+        description='How an action owner is shown: {full_name} and, if you like, {team}, e.g. "{team} ({full_name})". '
+        "An owner with no team is shown by the full name alone.",
+    )
     language: str = Field(
         "en-US",
         pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
@@ -164,6 +169,14 @@ class WorkspaceFile(FileModel):
         False,
         description="Made-up example data: every screen says so, so nobody mistakes it for real work.",
     )
+
+    @field_validator("owner_format")
+    @classmethod
+    def _owner_format_names_the_person(cls, value: str) -> str:
+        fields = {name for _, name, _, _ in string.Formatter().parse(value) if name is not None}
+        if "full_name" not in fields or not fields <= {"full_name", "team"}:
+            raise ValueError("write the owner with {full_name}, and {team} if you like, such as {team} ({full_name})")
+        return value
 
 
 # ---- config/server.yaml ----------------------------------------------------------------------------------------------
@@ -665,8 +678,16 @@ class MessageSettings(ConfigModel):
     date_format: str = Field("%a, %b %d", description="How dates appear in messages (strftime codes).")
 
 
+DEFAULT_SELF_WORDS = ("me", "myself", "I")
+
+
 class LanguageFile(FileModel):
     messages: MessageSettings = Field(default_factory=MessageSettings, description="Wording of copied messages.")
+    self_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_SELF_WORDS),
+        description='The words the language uses for the person themselves ("assign it to me"). A name written as one '
+        "of these means the person, whatever case it is in.",
+    )
     blocked_phrases: list[str] = Field(
         default_factory=lambda: ["confirm", "check whether", "check if", "TBD?"],
         description="Wording not allowed in actions and shared text; actions say what to do.",

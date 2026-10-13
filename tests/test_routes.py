@@ -381,6 +381,20 @@ def test_people_can_be_added_renamed_and_removed_when_unused(api):
     assert new in {p["id"] for p in client.get(f"{base}/people").json()}
 
 
+def test_a_first_name_set_on_the_person_is_what_the_copied_message_greets_them_by(api):
+    client, base, _ = api
+    editor = by_role("Editor")
+    greeting = "Hi Greeted-Name,"
+    assert client.post(f"{base}/people/{editor['id']}", json={"first_name": "Greeted-Name"}).status_code == 200
+    row = next(p for p in client.get(f"{base}/people").json() if p["id"] == editor["id"])
+    assert row["first_name"] == "Greeted-Name"
+    sec = next(s for s in client.get(f"{base}/followups").json() if s["person"] == editor["id"])
+    assert sec["message"].startswith(greeting)
+    assert client.post(f"{base}/people/{editor['id']}", json={"first_name": None}).status_code == 200
+    sec = next(s for s in client.get(f"{base}/followups").json() if s["person"] == editor["id"])
+    assert sec["message"].startswith("Hi " + editor["full_name"].split()[0])
+
+
 def test_a_person_in_use_cannot_be_removed_and_a_rename_shows_everywhere(api):
     client, base, _ = api
     editor = by_role("Editor")

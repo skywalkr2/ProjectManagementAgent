@@ -269,19 +269,29 @@ them are needed before the owner's daily use, which starts when L-core passes.
     `track_only` notices, `owner_format` parsing and `person.merge`.
   "Add a new person" is L3b.
 - [ ] **Where the code and the design differ, decided** (found by the design pass; the technical PM's calls, 2026-10-13):
-  - a question's stored kind (question or decision) stays: the assistant says which, and it is checkable. The design
+  - [x] a question's stored kind (question or decision) stays: the assistant says which, and it is checkable. The design
     (6.8) is corrected to say so, and Follow-ups uses the kind instead of treating every question to the PM as a
-    decision (here, L0);
+    decision (here, L0). Built: `web/src/components/FollowUps.test.tsx` ("a question to the PM shows as a decision or as a
+    question by its stored kind");
   - "to send" stays a count on the person's card, and each action row gets its own marker in phase B's Follow-ups work;
-  - `me`, `myself` and `I` become the language's words for the person, from the wording settings, not English words in
-    code (here, L0);
-  - names resolve on the two fields that hold names written in an input (owners, a question's recipient); every other
-    field is picked from a list. The design (6.11) is corrected to say so;
+  - [x] `me`, `myself` and `I` become the language's words for the person, from the wording settings, not English words in
+    code (here, L0). Built: the setting `language.self_words` (design 4.6), `tests/test_names.py::test_the_words_that_mean_the_person_come_from_the_language_setting`;
+  - [x] names resolve on the two fields that hold names written in an input (owners, a question's recipient); every other
+    field is picked from a list. The design (6.11) is corrected to say so (checked by reading: design 6.11);
   - the references table gains an action's `told` keys, a question's options and `resolves`, and a signal's refs, when
     `person.merge` is built;
-  - a greeting's first name comes from the person's record (a first-name field, or the first name as the person wrote
-    it), not the first word of the full name; with `owner_format` here (L0);
-  - a change to an action's due date or text after it was told is marked "to send" again (here, L0).
+  - [x] a greeting's first name comes from the person's record (a first-name field, or the first name as the person wrote
+    it), not the first word of the full name; with `owner_format` here (L0). Built: `first_name` on the person (the person
+    form has the field), `tests/test_names.py::test_a_greeting_uses_the_first_name_on_the_record_else_the_first_word_of_the_full_name`,
+    `tests/test_routes.py::test_a_first_name_set_on_the_person_is_what_the_copied_message_greets_them_by`,
+    `web/src/components/Setup.test.tsx` ("the person form has a first name field…"). `owner_format` is wired for showing
+    owners (an owner with no team shows the full name alone; parsing stays unscheduled):
+    `tests/test_names.py::test_an_owner_is_written_in_the_owner_format_with_the_team_on_the_entry_else_the_persons_own`,
+    `tests/test_record_page.py::test_the_owner_format_applies_to_the_owners_on_the_review_screen_and_the_record_page`;
+  - [x] a change to an action's due date or text after it was told is marked "to send" again (here, L0). Built:
+    `tests/test_followups_backup_eval.py::test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_for_that_person`.
+  - Left in this item: the "to send" marker on each action row (phase B) and the references table's new keys (with
+    `person.merge`), so the item stays open.
 - [ ] **No silent stops** (design 8.5, 8.6, 8.8):
   - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived (done:
     `tests/test_names.py::test_the_packet_states_the_inputs_received_date_beside_todays`);
@@ -388,7 +398,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [ ] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
   (manifest validation, registration errors) get plain words and a test that produces each; Ask's material names
   settings without their keys, with `setting.propose` finding the key another way.
-- [ ] Settings that do nothing are wired or removed: `owner_format`. **The scheduled export is wired** to the workspace's
+- [ ] Settings that do nothing are wired or removed: `owner_format` (wired for showing owners: `tests/test_names.py::test_an_owner_is_written_in_the_owner_format_with_the_team_on_the_entry_else_the_persons_own`). **The scheduled export is wired** to the workspace's
   own git, so a readable copy is written regularly once real knowledge accumulates; the backups copy the database, which
   is not readable on its own. The export's remote is not offered until phase E gives it the care of backups (design 12.1).
   Moved from phase A, because knowledge starts accumulating in L-core.

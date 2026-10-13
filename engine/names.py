@@ -15,6 +15,7 @@ from email.utils import parseaddr
 from typing import Any, Literal
 
 from engine.config import Config
+from engine.config.schema import DEFAULT_SELF_WORDS
 from engine.storage import Store
 
 
@@ -69,17 +70,40 @@ def _parts(entry: str) -> tuple[str, str]:
     return label, address
 
 
+def render_owner(owner_format: str, full_name: str, team_name: str | None) -> str:
+    """An action owner as the workspace writes one. An owner with no team is the full name alone."""
+    if not team_name:
+        return full_name
+    return owner_format.format(full_name=full_name, team=team_name)
+
+
 class People:
     def __init__(self, store: Store, cfg: Config, *, context: Iterable[str] = ()):
-        self._build({p.id: p.data for p in store.read().list("person")}, cfg.workspace.user.person, context)
+        self._build(
+            {p.id: p.data for p in store.read().list("person")},
+            cfg.workspace.user.person,
+            context,
+            cfg.language.self_words,
+        )
+        self.owner_format = cfg.workspace.owner_format
+        self.team_names = {t.id: t.data["name"] for t in store.read().list("team")}
 
     @classmethod
     def from_records(
-        cls, records: Mapping[str, Mapping[str, Any]], pm: str | None, *, context: Iterable[str] = ()
+        cls,
+        records: Mapping[str, Mapping[str, Any]],
+        pm: str | None,
+        *,
+        context: Iterable[str] = (),
+        self_words: Iterable[str] = DEFAULT_SELF_WORDS,
+        owner_format: str = "{full_name}",
+        team_names: Mapping[str, str] | None = None,
     ) -> People:
         """The people from their records alone, for work that has no store."""
         self = object.__new__(cls)
-        self._build(dict(records), pm, context)
+        self._build(dict(records), pm, context, self_words)
+        self.owner_format = owner_format
+        self.team_names = dict(team_names or {})
         return self
 
     @classmethod
@@ -90,9 +114,13 @@ class People:
         people.in_context = people.in_context | people._input_people(store, request_id, text)
         return people
 
-    def _build(self, records: dict[str, Any], pm: str | None, context: Iterable[str]) -> None:
+    def _build(
+        self, records: dict[str, Any], pm: str | None, context: Iterable[str], self_words: Iterable[str]
+    ) -> None:
         self.records = records
         self.pm = pm
+        self.owner_format = "{full_name}"
+        self.team_names: dict[str, str] = {}
         self.in_context: frozenset[str] = frozenset(context) | ({pm} if pm else frozenset())
         # Full names and aliases, which a person or the PM set as a way to name someone.
         self._named: dict[str, set[str]] = {}
@@ -107,7 +135,7 @@ class People:
                 self._firsts.setdefault(words[0].lower(), set()).add(pid)
         self._index = {name: set(pids) for name, pids in self._named.items()}
         if self.pm:
-            for alias in ["me", "myself", "I"]:
+            for alias in self_words:
                 self._index[alias.lower()] = {self.pm}
 
     def resolve(self, name: str) -> Resolved:
@@ -201,7 +229,17 @@ class People:
         data = self.records.get(pid)
         return data["full_name"] if data else pid
 
+    def owner(self, entry: Mapping[str, Any]) -> str:
+        """An action's owner entry, written in the workspace's owner format: the entry's team, else the person's own."""
+        data = self.records.get(entry["person"])
+        team = entry.get("team") or (data or {}).get("team")
+        return render_owner(self.owner_format, self.name(entry["person"]), self.team_names.get(team or ""))
+
     def first_name(self, pid: str) -> str:
+        """The name a greeting uses: the one on the person's record, else the first word of the full name."""
+        data = self.records.get(pid)
+        if data and (set_name := (data.get("first_name") or "").strip()):
+            return set_name
         full = self.name(pid)
         return full.split()[0] if full else full
 

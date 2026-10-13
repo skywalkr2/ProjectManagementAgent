@@ -333,6 +333,7 @@ class Unmark(BaseModel):
 class PersonView(BaseModel):
     id: str
     name: str
+    first_name: str | None = Field(None, description="The name a greeting to them uses; empty means the first word.")
     role: str | None
     org: str | None = Field(None, description="The id of the organization they work for.")
     org_name: str | None = Field(None, description="That organization's name, for showing.")
@@ -346,6 +347,9 @@ class PersonView(BaseModel):
 
 class PersonIn(BaseModel):
     full_name: str = Field(min_length=1)
+    first_name: str | None = Field(
+        None, description="The name a greeting uses; empty means the first word of the name."
+    )
     role: str | None = None
     org: str | None = Field(None, description="An organization's id, from GET /api/organizations.")
     aliases: list[str] = []
@@ -353,6 +357,7 @@ class PersonIn(BaseModel):
 
 class PersonPatch(BaseModel):
     full_name: str | None = Field(None, min_length=1)
+    first_name: str | None = Field(None, description="The name a greeting uses; null clears it.")
     role: str | None = None
     org: str | None = Field(None, description="An organization's id; null for none.")
     aliases: list[str] | None = None
@@ -548,7 +553,7 @@ class OpenAction(BaseModel):
     id: str
     text: str
     due: str | None = None
-    owners: list[str] = Field(default_factory=list, description="The owners' full names.")
+    owners: list[str] = Field(default_factory=list, description="The owners, written in the workspace's owner format.")
     project: str | None = None
     project_name: str | None = None
 

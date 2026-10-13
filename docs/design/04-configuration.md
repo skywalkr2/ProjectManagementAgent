@@ -78,8 +78,9 @@ Built keys, with defaults:
 - `name` ("Workspace") and `assistant_name` ("Assistant"): display names. The assistant's name is the only name people see.
 - `user`: `person` (the PM's own person record id, e.g. `PER-1`; their name and aliases live on that record, 5.1) and
   `timezone` (an IANA name, default `UTC`). "Today" and every date shown follow the time zone.
-- `owner_format`: how an owner is written and parsed, e.g. `"{full_name}"` (default) or `"{team} ({full_name})"`. The key is
-  in the schema but nothing reads it yet; wiring it is item A2 of the roadmap.
+- `owner_format`: how an owner is shown, e.g. `"{full_name}"` (default) or `"{team} ({full_name})"`; it must contain
+  `{full_name}` and may contain `{team}`, and an owner with no team is shown by the full name alone. Parsing an owner written in
+  the format is *designed, not yet built, not scheduled* (6.11).
 - `language`: the language and variety work is written in, as a tag (default `en-US`). A project may set its own (5.1).
 - `our_accounts`: the names the PM and this app use on watched sources. A watched change by one of them is marked `by_us`
   (6.4, 6.5). Live.
@@ -224,6 +225,10 @@ Built keys:
 
 - `messages`: `greeting` ("Hi {first_name},"), `actions_heading` ("Action items with you:"), `closing` ("Thanks!") and
   `date_format` (strftime codes, default `%a, %b %d`) for copied messages.
+- `self_words`: the words the language uses for the person themselves (default "me", "myself" and "I"); a name written as
+  one of them, in any case, resolves to the person (6.11).
+- `self_words`: the words the language uses for the person themselves (default "me", "myself" and "I"); a name written as
+  one of them, in any case, resolves to the person (6.11).
 - `blocked_phrases`: wording not allowed in actions and shared text (default "confirm", "check whether", "check if", "TBD?").
 - `run_on_separators`: separators that mean several items were crammed into one line (default " / " and "; ").
 - `never_shown`: words that must never appear in anything people see; model names are added to it.
