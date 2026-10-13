@@ -133,6 +133,9 @@ class People:
             words = data["full_name"].split()
             if words:
                 self._firsts.setdefault(words[0].lower(), set()).add(pid)
+            # A first name set on the record (a person who goes by another name) is a first name too.
+            if set_first := (data.get("first_name") or "").strip():
+                self._firsts.setdefault(set_first.lower(), set()).add(pid)
         self._index = {name: set(pids) for name, pids in self._named.items()}
         if self.pm:
             for alias in self_words:

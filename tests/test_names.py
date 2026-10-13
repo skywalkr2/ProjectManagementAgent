@@ -376,3 +376,14 @@ def test_the_new_golden_cases_exist():
 
     ids = {c["id"] for c in load_cases(DEMO_B)}
     assert {"first-name-in-thread", "different-initial-held", "unknown-person", "unknown-person-twice"} <= ids
+
+
+def test_a_first_name_set_on_the_record_resolves_in_context_like_the_first_word():
+    """The person's path: they record that someone goes by a different first name; that name in a message then means
+    them, under the same context rule as any bare first name."""
+    sam = person("Typesetter")
+    goes_by = "Q" + "uillon"
+    records = {**PEOPLE, sam["id"]: {**sam, "first_name": goes_by}}
+    named = People.from_records(records, PM, context=[sam["id"]])
+    assert named.resolve(goes_by).person == sam["id"]
+    assert People.from_records(records, PM).resolve(goes_by).status != "ok", "out of context it is held"

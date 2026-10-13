@@ -10,6 +10,18 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.59 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A person can have a first name of their own**: the core person record gains an optional `first_name`, for someone
+  who goes by a name other than the first word of their full name. Messages greet them by it, and a bare first name in
+  an input resolves to them by it under the same context rule as any first name. A plugin that reads people sees one
+  more optional field; nothing a plugin writes changes.
+- **A calendar entry record and its op**: the core record `event` (a calendar entry: title, start, optional end,
+  project, source, evidence) and the data op `event.add`, which reading notes uses for a date in an input. Plugins read
+  entries like other core records.
+
 ## What 0.3.58 adds
 
 Manifests stay `'>=0.3,<0.4'`.
