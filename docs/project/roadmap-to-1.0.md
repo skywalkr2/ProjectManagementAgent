@@ -1045,6 +1045,11 @@ C4. **What the packs need from the core.**
   - 187, a preview beside a data form, run again after each save, read only, as the person.
   - 188, a small pack-defined value on a request, never shown, returned to the run.
   - 189, a computed panel column headed from the pack's wording.
+- [ ] **Round 41 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
+  - 193, a task kind whose `on` names several record kinds, the packet told which one it got;
+  - 194, `$new:<n>` in a proposal for the record an earlier op creates, resolved by the applier in order, and refused
+    with the reason when the person drops op n (applier work: the main session's);
+  - 195, a `show_for`-style predicate on a person action, given the view and the target, quick and deterministic.
 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
