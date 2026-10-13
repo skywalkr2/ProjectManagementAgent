@@ -1185,6 +1185,9 @@ C4. **What the packs need from the core.**
   part carrying a small pack-defined address for work on a record or file that isn't long text (with 188); 200, a record
   type saying where it is written, apart from a field named `project` (or the guide naming the rule); 201, the test
   kit's `ActionResult.apply` taking the requests to keep too.
+- [ ] **Round 45** (received 2026-10-13): 202 answered at once from the code (a superseded request's `state` is set to
+  done in the same change that sets `superseded_by`); 203, a stable code on the core's failures for packs' tests, and
+  the guide saying the wording is not the contract, answered in the weekly round.
 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
