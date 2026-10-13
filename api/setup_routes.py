@@ -455,6 +455,13 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         person's own rule, with Undo. Keeping mail goes first in the list; the rule applies to the next mail."""
         if not body.senders and not body.domains:
             raise HTTPException(status_code=400, detail="Name a sender or a domain.")
+        public = next((d for d in body.domains if set_aside_mail.is_public_domain(d, current())), None)
+        if public is not None:
+            raise HTTPException(
+                status_code=400,
+                detail=f"{public} is a mail service anyone can have an address at, so a rule for all of it would set "
+                "aside mail from people you know. Choose the sender instead.",
+            )
         rules = sorting.with_sender_rules(triage_now(), body.choice, body.senders, body.domains)
         return saved(save({"watch.triage": rules}, [], body.fingerprint, allow=("watch.triage",)))
 
@@ -494,11 +501,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         for section, senders in by_section.items():
             domains: dict[str, int] = {}
             for address in senders:
-                domains[set_aside_mail.domain_of(address)] = domains.get(set_aside_mail.domain_of(address), 0) + 1
+                domain = set_aside_mail.offerable_domain(address, current())
+                if domain:
+                    domains[domain] = domains.get(domain, 0) + 1
             offers += [
-                DomainOffer(domain=d, senders=n, section=section)
-                for d, n in domains.items()
-                if n >= DOMAIN_OFFER_AT and d
+                DomainOffer(domain=d, senders=n, section=section) for d, n in domains.items() if n >= DOMAIN_OFFER_AT
             ]
         return ConfirmDone(
             saved=done,

@@ -1087,6 +1087,11 @@ class WatchFile(FileModel):
         description="After you confirm set-aside mail is not work for you, how long the app keeps its copy so Undo can "
         "bring it back; then the copy is deleted from the app (it stays in your mailbox). 0 deletes at once.",
     )
+    public_mail_domains_extra: list[str] = Field(
+        default_factory=list,
+        description="Mail domains anyone can have an address at, added to the ones the app already knows. No sorting "
+        "rule is offered for a whole domain listed here or known to the app; a rule for one sender still is.",
+    )
     failures_before_asking: int = Field(
         3,
         ge=1,

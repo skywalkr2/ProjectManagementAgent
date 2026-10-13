@@ -36,7 +36,7 @@ export function useSetAside() {
 
   /** The toast's choices for a sender and a domain: a rule that sets mail aside in `choice`, or keeps it. */
   const offers = useCallback(
-    (choice: Choice, who: { address: string; domain: string }, words: string) => {
+    (choice: Choice, who: { address: string; domain?: string | null }, words: string) => {
       const keep = choice === "never";
       const sender = who.address
         ? {
@@ -44,10 +44,11 @@ export function useSetAside() {
             run: () => always(choice, [who.address], [], t(keep ? "setaside.rule_keep_sender" : "setaside.rule_sender", { sender: who.address, what: words })),
           }
         : undefined;
-      const domain = who.domain
+      const name = who.domain;
+      const domain = name
         ? {
             label: t("setaside.always_domain"),
-            run: () => always(choice, [], [who.domain], t(keep ? "setaside.rule_keep_domain" : "setaside.rule_domain", { domain: who.domain, what: words })),
+            run: () => always(choice, [], [name], t(keep ? "setaside.rule_keep_domain" : "setaside.rule_domain", { domain: name, what: words })),
           }
         : undefined;
       return { action: sender ?? domain, more: sender && domain ? [domain] : [] };

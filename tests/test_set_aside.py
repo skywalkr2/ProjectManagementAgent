@@ -16,6 +16,8 @@ NOW = datetime.now(UTC).replace(microsecond=0)
 LISTS = "lists.example.com"
 SHOP = "shop.example.com"
 WORK = "colleague@work.example.com"
+OWN = "own-mail.example.com"  # a public mail domain the person adds in the settings
+CLUB = "club.example.com"
 UNIQUE = "zebra-quartz-marmalade"  # a phrase that is only in the messages under test
 
 
@@ -529,6 +531,95 @@ def test_confirm_all_writes_one_save_with_one_undo_and_offers_a_domain_at_three_
     )
     assert domain.status_code == 200
     assert load_config(ws.config_dir, env={}).watch.triage[0].params == {"domains": [SHOP]}
+
+
+# ---- no rule for a whole public mail domain -----------------------------------------------------------------------
+
+
+def public_domain():
+    """A domain from the shipped list of public mail domains."""
+    from engine.set_aside import shipped_public_domains
+
+    return sorted(shipped_public_domains())[0]
+
+
+def add_items(ws, items):
+    settings = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
+    settings["sources"][0]["settings"]["items"] += items
+    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(settings))
+
+
+def test_a_public_mail_domain_is_the_shipped_list_plus_the_persons_own_and_matches_exactly(tmp_path):
+    from engine.set_aside import is_public_domain, offerable_domain
+
+    ws, cfg, store = make(tmp_path, [], public_mail_domains_extra=[OWN.upper()])
+    store.close()
+    shipped = public_domain()
+    own = [OWN]
+    assert is_public_domain(shipped, cfg) and is_public_domain(shipped.upper(), cfg)
+    assert is_public_domain(f"@{shipped}", cfg)
+    assert is_public_domain(own[0], cfg), "a domain from the setting counts"
+    assert not is_public_domain(LISTS, cfg) and not is_public_domain("", cfg)
+    assert not is_public_domain(f"team.{shipped}", cfg), "a subdomain is not the listed domain"
+    assert offerable_domain(f"a@{shipped}", cfg) is None and offerable_domain(f"a@{own[0]}", cfg) is None
+    assert offerable_domain(f"a@{LISTS}", cfg) == LISTS and offerable_domain("no-address", cfg) is None
+
+
+def test_a_set_aside_row_and_this_is_work_offer_no_domain_for_a_public_domain(app):
+    ws, cfg, store, client, base = app
+    add_items(ws, [mail("personal", f"friend@{public_domain()}", bulk=True)])
+    read(ws, store)
+    rows = {i["address"]: i for i in folder(client, base)["items"]}
+    friend = rows[f"friend@{public_domain()}"]
+    assert friend["domain"] is None and friend["address"], "only the sender rule is offered"
+    assert rows[f"a@{LISTS}"]["domain"] == LISTS, "a company sender still offers both"
+    work = client.post(f"{base}/set-aside/{friend['id']}/work", json={"read_version": friend["version"]}).json()
+    assert work["domain"] is None and work["address"] == friend["address"]
+    by_hand = client.post(f"{base}/mail/{friend['id']}/set-aside", json={"section": "personal"}).json()
+    assert by_hand["domain"] is None and by_hand["address"] == friend["address"]
+
+
+def test_confirm_all_offers_no_domain_for_three_senders_on_a_public_domain_but_does_for_a_company(app):
+    ws, cfg, store, client, base = app
+    add_items(
+        ws,
+        [mail(f"p{n}", f"person{n}@{public_domain()}", bulk=True) for n in range(3)]
+        + [mail(f"c{n}", f"person{n}@{CLUB}", bulk=True) for n in range(3)],
+    )
+    read(ws, store)
+    items = folder(client, base)["items"]
+    public = [i["id"] for i in items if i["domain"] is None]
+    company = [i["id"] for i in items if i["domain"] == CLUB]
+    assert len(public) == 3 and len(company) == 3
+    only_public = confirm(client, base, public).json()
+    assert len(only_public["senders"]) == 3 and only_public["domain_offers"] == []
+    both = confirm(client, base, company).json()
+    assert [(o["domain"], o["senders"]) for o in both["domain_offers"]] == [(CLUB, 3)]
+
+
+def test_a_domain_rule_for_a_public_domain_is_refused_in_plain_words_and_nothing_is_saved(app):
+    ws, cfg, store, client, base = app
+    own = OWN
+    settings = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
+    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump({**settings, "public_mail_domains_extra": [own]}))
+
+    def save(domains):
+        body = {"fingerprint": fingerprint(client, base), "choice": "sales", "senders": [], "domains": domains}
+        return client.post(f"{base}/watch/sorting", json=body)
+
+    for domain in (public_domain(), f"@{public_domain().upper()}", own):
+        refused = save([SHOP, domain])
+        assert refused.status_code == 400
+        words = refused.json()["detail"]
+        assert domain.lstrip("@").lower() in words.lower() and "sender" in words
+        assert "watch" not in words and ".yaml" not in words and "_" not in words
+    assert load_config(ws.config_dir, env={}).watch.triage == [], "the stale screen wrote nothing"
+    assert save([SHOP]).status_code == 200, "a company domain is still saved"
+    # A domain the person adds to the setting is refused at once, with no restart.
+    settings = yaml.safe_load((ws.config_dir / "watch.yaml").read_text())
+    settings["public_mail_domains_extra"] = [own, LISTS]
+    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump(settings))
+    assert save([LISTS]).status_code == 400
 
 
 def all_text(ws):

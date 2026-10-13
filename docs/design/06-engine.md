@@ -200,11 +200,16 @@ It is sorted in this order, first match wins:
   signal (6.20). It shows in Today's Came in again. Undo sets it aside again.
 - **Each correction offers** "Always for this sender" and "Always for this domain": a sorting rule written through the settings
   save path as the person's own change, with a read-back toast and Undo. After "This is work" they are rules to keep the
-  mail; after "Set aside" they are rules to set it aside in that section. Settings under `watch.` apply at once.
+  mail; after "Set aside" they are rules to set it aside in that section. Settings under `watch.` apply at once. The domain
+  rule is never offered for a **public mail domain** (the free mail services anyone has an address at): the folder's rows, the
+  answer to "This is work" and "Set aside", and Confirm all carry no domain for one, however many senders share it, and the
+  save that writes a domain rule refuses it in plain words, so a screen that is out of date can't write one. The core ships
+  the list (`engine/defaults/public_mail_domains.yaml`, exact match, case ignored: a subdomain isn't listed by its parent) and
+  `watch.public_mail_domains_extra` adds the person's own; both apply at once. A rule for the sender is still offered.
 - **Confirm** (each row's menu, and "Confirm all" for a section): the person says the mail was rightly set aside. The app
   *learns* a sender rule for each distinct sender, in the message's section, in one save with one read-back ("From now on, mail
   from a@example.com is set aside as sales") and one Undo; when three or more confirmed senders share a domain, the toast
-  also offers "Always for example.com". These are sorting rules and nothing else is learned from the mail. The app also
+  also offers "Always for example.com" (never for a public mail domain). These are sorting rules and nothing else is learned from the mail. The app also
   *deletes the message from itself*: after `watch.set_aside_keep_seconds` (60) it removes the snapshot's subject, sender name,
   link and saved text, the saved source record's title and text, any saved text file that nothing else holds, and the earlier
   values of those fields in the ledger (the entries stay, with who made them and when, and a write that removes the content is

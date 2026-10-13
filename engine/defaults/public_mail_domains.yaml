@@ -1,0 +1,53 @@
+# Public mail domains: the free mail services that anyone can have an address at. A sorting rule for the whole domain
+# would reach every contact with a personal address there, so the app never offers one for these. A domain matches only
+# when it is listed exactly (case does not matter); a regional or older name of a service is listed on its own. The
+# person adds more in the settings (`watch.public_mail_domains_extra`); this list is the shipped part.
+domains:
+  - gmail.com
+  - googlemail.com
+  - outlook.com
+  - hotmail.com
+  - hotmail.co.uk
+  - hotmail.fr
+  - hotmail.de
+  - hotmail.it
+  - hotmail.es
+  - live.com
+  - live.co.uk
+  - live.fr
+  - msn.com
+  - yahoo.com
+  - yahoo.co.uk
+  - yahoo.co.jp
+  - yahoo.ca
+  - yahoo.com.au
+  - yahoo.fr
+  - yahoo.de
+  - ymail.com
+  - rocketmail.com
+  - aol.com
+  - icloud.com
+  - me.com
+  - mac.com
+  - proton.me
+  - protonmail.com
+  - pm.me
+  - gmx.com
+  - gmx.net
+  - gmx.de
+  - web.de
+  - mail.com
+  - zoho.com
+  - yandex.com
+  - yandex.ru
+  - mail.ru
+  - fastmail.com
+  - tutanota.com
+  - hey.com
+  - comcast.net
+  - att.net
+  - verizon.net
+  - sbcglobal.net
+  - qq.com
+  - 163.com
+  - naver.com

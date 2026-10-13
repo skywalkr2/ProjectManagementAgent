@@ -211,6 +211,8 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   level a watched source's items carry when the source sets none. It is kept on each source record (5.1).
 - `set_aside_keep_seconds` (60): how long the app keeps the copy of mail the person confirmed was rightly set aside, so
   Undo can bring it back; then its content is deleted from the app (6.5). 0 deletes at once.
+- `public_mail_domains_extra` (empty list): mail domains anyone can have an address at, added to the list the app ships. No
+  sorting rule is offered or saved for a whole public mail domain, only for a sender (6.5).
 - `failures_before_asking` (3): failed reads in a row before the person is asked about a source; one question, not one per
   read.
 

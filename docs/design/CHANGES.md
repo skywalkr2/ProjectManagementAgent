@@ -707,6 +707,12 @@ yet follow, that it is *designed*, with its phase.
 | The audit trail | Settings changes were recorded; sign-ins, sign-outs and turning add-ons on or off were not (12.1) | Each is an `audit_entry` record, written in the same transaction as the change where there is one; never a token, a secret or the account's name. No screen lists them yet (the Admin tab is phase E); they are in the ledger and the export. Built: `tests/test_audit.py` |
 | A shared synced folder | Outside edits always counted as the person's own | `storage.sync.shared` (false), asked when the folder is chosen and changeable on the folder's panel (a live setting). From a shared folder an outside edit is filed as an outside input, its changeset and every write are untrusted, and its notes say it may be someone else's change; the person's review is unchanged (5.0, 12.8). Built: `tests/test_shared_folder.py` |
 
+## 35. Phase L0: no domain rule for a public mail domain (2026-10-13)
+
+| Item | What the code did | What it does now |
+|---|---|---|
+| "Always for this domain" for a personal address | Offered for any sender's domain, so one click could set aside or keep every contact at a free mail service | A shipped list of public mail domains (`engine/defaults/public_mail_domains.yaml`) plus `watch.public_mail_domains_extra` (empty by default, live). For a public domain the Set aside rows, "This is work", "Set aside" and Confirm all carry no domain, so only the sender rule is offered; the sorting-rule save refuses a public domain in plain words. A match is exact (case ignored), not by parent domain (4.x, 6.5). Built: `tests/test_set_aside.py::test_a_public_mail_domain_is_the_shipped_list_plus_the_persons_own_and_matches_exactly`, `test_a_set_aside_row_and_this_is_work_offer_no_domain_for_a_public_domain`, `test_confirm_all_offers_no_domain_for_three_senders_on_a_public_domain_but_does_for_a_company`, `test_a_domain_rule_for_a_public_domain_is_refused_in_plain_words_and_nothing_is_saved`; `src/components/SetAside.test.tsx` |
+
 ## 36. Copy puts formatted text and plain text on the clipboard together (2026-10-13)
 
 | Item | Before | Now |

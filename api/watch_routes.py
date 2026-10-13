@@ -3,6 +3,8 @@ reading one now."""
 
 from __future__ import annotations
 
+import os
+
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
@@ -18,7 +20,7 @@ from api.schemas import (
     WatchSourceView,
 )
 from engine import set_aside, watch
-from engine.config import Config
+from engine.config import Config, ConfigError, load_config
 from engine.connectors import declared_reads, reads
 from engine.storage import Store, StoreError, WriteContext
 from engine.worker import Events, Worker
@@ -29,6 +31,13 @@ LISTED = 50
 
 def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
+
+    def current() -> Config:
+        """The settings as the files hold them now, so a change to the public mail domains applies at once."""
+        try:
+            return load_config(ws.config_dir, env=dict(os.environ))
+        except ConfigError:
+            return cfg
 
     def view(source: object) -> WatchSourceView:
         known = watch.connectors(store)
@@ -167,7 +176,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def folder_view() -> SetAsideFolder:
         set_aside.purge_due(ws, store, cfg)
         return SetAsideFolder(
-            items=[SetAsideView(**row) for row in set_aside.folder(ws, store, cfg)],
+            items=[SetAsideView(**row) for row in set_aside.folder(ws, store, current())],
             deleted=set_aside.deleted_count(store),
         )
 
@@ -190,7 +199,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             version=snap.version,
             section=section,
             address=address,
-            domain=set_aside.domain_of(address),
+            domain=set_aside.offerable_domain(address, current()),
         )
 
     @r.post("/mail/{snapshot_id}/set-aside")

@@ -1655,7 +1655,11 @@ class SetAsideView(BaseModel):
     received: str | None = Field(None, description="ISO 8601 date-time with its offset, as the service gave it.")
     reason: str = Field(description="Why it was set aside, in plain words.")
     address: str = Field("", description="The sender's address, when the mail holds one.")
-    domain: str = Field("", description="The sender's domain, when the mail holds an address.")
+    domain: str | None = Field(
+        None,
+        description="The sender's domain, when a rule for the whole domain may be offered: empty when the mail has no "
+        "address or the domain is a public mail domain.",
+    )
 
 
 class SetAsideFolder(BaseModel):
@@ -1676,7 +1680,11 @@ class SetAsideDone(BaseModel):
     version: int
     section: Literal["personal", "sales"]
     address: str = Field("", description="The sender's address, when the mail holds one.")
-    domain: str = Field("", description="The sender's domain, when the mail holds an address.")
+    domain: str | None = Field(
+        None,
+        description="The sender's domain, when a rule for the whole domain may be offered: empty when the mail has no "
+        "address or the domain is a public mail domain.",
+    )
 
 
 class SortingRuleIn(BaseModel):

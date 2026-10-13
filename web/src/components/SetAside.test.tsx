@@ -89,6 +89,16 @@ test("This is work hands the message in with the version that was read, and offe
   expect(await screen.findByText(`From now on, mail from ${addr("a")} stays with Helper.`)).toBeInTheDocument();
 });
 
+test("This is work offers only Always for this sender when the server sends no domain", async () => {
+  const user = userEvent.setup();
+  open({
+    "POST set-aside/a/work": () => ({ id: "a", version: 5, section: "sales", address: addr("a"), domain: null }),
+  });
+  await user.click(await screen.findByRole("button", { name: "This is work: Offer a" }));
+  expect(await screen.findByRole("button", { name: "Always for this sender" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Always for this domain" })).not.toBeInTheDocument();
+});
+
 test("Always for this domain writes a keep rule for the domain", async () => {
   const user = userEvent.setup();
   const calls = open({

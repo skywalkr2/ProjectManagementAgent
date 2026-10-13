@@ -43,6 +43,7 @@ default_data_level: internal   # how sensitive a watched source's items are when
 connector_data_levels: {mailbox: internal}   # per kind of source; a source's own data_level wins over this
 set_aside_defaults: true   # mailing lists and promotions are set aside with no AI run
 set_aside_keep_seconds: 60   # how long a confirmed message's copy is kept so Undo can bring it back
+public_mail_domains_extra: [mail.example.net]   # more free mail domains, so no rule is offered for the whole domain
 triage:
   - name: Spacing only
     kind: cosmetic

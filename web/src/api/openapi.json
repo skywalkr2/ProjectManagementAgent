@@ -6749,10 +6749,16 @@
             "type": "string"
           },
           "domain": {
-            "default": "",
-            "description": "The sender's domain, when the mail holds an address.",
-            "title": "Domain",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sender's domain, when a rule for the whole domain may be offered: empty when the mail has no address or the domain is a public mail domain.",
+            "title": "Domain"
           },
           "id": {
             "title": "Id",
@@ -6829,10 +6835,16 @@
             "type": "string"
           },
           "domain": {
-            "default": "",
-            "description": "The sender's domain, when the mail holds an address.",
-            "title": "Domain",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The sender's domain, when a rule for the whole domain may be offered: empty when the mail has no address or the domain is a public mail domain.",
+            "title": "Domain"
           },
           "id": {
             "description": "The mail item's snapshot.",

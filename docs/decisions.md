@@ -2818,3 +2818,21 @@ are kept; they came from the add-on's item text, copied by the assistant, not fr
 **Impact:** Design 4.x (watch keys, `date_time_format`), 5.1 (source, file, snapshot), 6.7, 7.x. New settings
 `watch.default_data_level`, `watch.connector_data_levels`, a source's `data_level` and `language.messages.date_time_format`,
 with demo values. `sync.sources` stays unbuilt. No change to scope.
+
+## 2026-10-13: No set-aside rule for a whole public mail domain (phase L0)
+
+**Decision:** "Always for this domain" is never offered, and a domain rule is never saved, for a public mail domain (the free
+mail services anyone has an address at). Only the sender rule is offered there. The core ships the list as data
+(`engine/defaults/public_mail_domains.yaml`) and `watch.public_mail_domains_extra` adds the person's own; the effective list is
+both, read at the moment of use. A domain matches only when listed exactly (case ignored): a subdomain of a listed domain is
+not public, because an organization can run its own mail on one, and the regional and older names of a service are listed on
+their own. A Set aside row, the answers to "This is work" and "Set aside", and Confirm all carry no domain for a public
+domain; the sorting-rule save refuses one in plain words so a stale screen can't write it.
+
+**Decided by:** the original designer, on review; accepted by the technical PM.
+
+**Why:** One sender's correction on a personal address would otherwise hide or keep every contact at that service.
+
+**Impact:** Design 4.x (a new `watch` key), 6.5 (the correction offers) and CHANGES section 35. New setting
+`watch.public_mail_domains_extra` with demo values in both workspaces. `domain` on the Set aside row and on the set-aside
+answer can now be empty. No change to scope.

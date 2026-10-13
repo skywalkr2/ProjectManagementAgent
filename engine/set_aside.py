@@ -10,12 +10,17 @@ again. Nothing here changes the mailbox itself.
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from functools import cache
+from pathlib import Path
 from typing import Any
 
 from engine.storage import StoreError, WriteContext
 from engine.triage import sender_address
+from engine.yaml_load import load_yaml
 
 SECTIONS = ("personal", "sales")
+#: The domains the core ships as public mail domains (see `is_public_domain`).
+PUBLIC_DOMAINS_FILE = Path(__file__).parent / "defaults" / "public_mail_domains.yaml"
 #: The rule name shown for mail the person set aside by hand.
 BY_PERSON = "Set aside by you"
 _PM = WriteContext(actor="pm", trust="trusted", op="set_aside.correct")
@@ -34,6 +39,37 @@ REDACTED_FIELDS = {"snapshot": _SNAPSHOT_FIELDS, "source": _SOURCE_FIELDS}
 
 def domain_of(address: str) -> str:
     return address.rpartition("@")[2] if "@" in address else ""
+
+
+def _normal_domain(domain: str) -> str:
+    return str(domain).strip().lower().removeprefix("@").rstrip(".")
+
+
+@cache
+def shipped_public_domains() -> frozenset[str]:
+    """The public mail domains the core ships, lower case."""
+    data = load_yaml(PUBLIC_DOMAINS_FILE.read_text(encoding="utf-8")) or {}
+    return frozenset(_normal_domain(d) for d in data.get("domains") or [])
+
+
+def public_domains(cfg: Any) -> frozenset[str]:
+    """The shipped public mail domains plus the person's own (`watch.public_mail_domains_extra`)."""
+    extra = {_normal_domain(d) for d in cfg.watch.public_mail_domains_extra}
+    return shipped_public_domains() | extra - {""}
+
+
+def is_public_domain(domain: str, cfg: Any) -> bool:
+    """Whether this is a public mail domain, where anyone may have an address. It must be listed exactly, in any case:
+    a subdomain of a listed domain is not public, because a company can run its own mail on one. No sorting rule is
+    ever offered or saved for a whole public domain, only for a sender."""
+    return _normal_domain(domain) in public_domains(cfg)
+
+
+def offerable_domain(address: str, cfg: Any) -> str | None:
+    """The sender's domain when a rule for the whole domain may be offered: None when the address has no domain or
+    the domain is a public mail domain."""
+    domain = domain_of(address)
+    return None if not domain or is_public_domain(domain, cfg) else domain
 
 
 def address_of(snapshot: Any, ws: Any = None) -> str:
@@ -302,7 +338,7 @@ def folder(ws: Any, store: Any, cfg: Any) -> list[dict[str, Any]]:
                 "received": message.get("received"),
                 "reason": mark["reason"],
                 "address": address,
-                "domain": domain_of(address),
+                "domain": offerable_domain(address, cfg),
             }
         )
     rows.sort(key=lambda r: str(r["received"] or ""), reverse=True)
