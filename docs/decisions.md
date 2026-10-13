@@ -2892,3 +2892,30 @@ because the computer can see the process is gone; only the cases it can't see ke
 
 **Impact:** Design 5.0 (one running instance, the lease paragraph in the handover screen item) and CHANGES section 40. No new
 setting, no change to scope. Roadmap L0: the instance-lease sub-item is built.
+
+## 2026-10-13: The assistant's header-only mail sorting (phase L0)
+
+**Decision:** Mail the rules can't place is sorted by the core task kind `sort-mail`, one run per `watch.sorting_batch`
+(25) of headers, when `watch.sorting` is `ai` (the default). Choices the design left open:
+- **Role and tier:** role `write`, tier `routine`. `check` would put the run on another account than the one that wrote
+  some work, but there is no work, and the demo workspaces map `check` to the strong tier; `research` gathers from
+  sources. `write` leaves the tier to `ai.tasks.sort-mail.tier`, else the default low-cost tier. A workspace that maps the
+  `write` role to a strong tier also sorts there, unless it sets the kind's own tier.
+- **Where items wait:** a new mail item is written and handed in only after its batch is answered, so a message is set
+  aside from the start and never queued for the assistant. Only new mail is sorted; a changed message keeps what was
+  decided about it (set aside by the assistant stays set aside, work stays work). Mail a `never` rule keeps is not sent to
+  the run. "Look at the last day" sorts what a first read only noted.
+- **When it can't run:** no account, a budget used up, no first go, an estimate above the amount to ask about, an account
+  paused or failing, or an answer that fails its checks after the escalation: the mail is handed in as work, and the
+  read's note says why. A run never waits for a go, because the mail waits for it. Before the first go in a workspace the
+  run isn't made (it would spend before the person's first go), so the first read's mail goes in as work.
+- **No request:** the run record carries an empty request id (its description says so).
+- **Learning pair:** no learning-pair fixture format exists, so the pair is a test (`tests/test_mail_sorting.py`).
+
+**Decided by:** the technical PM's brief; the choices above were made by the builder and are for review.
+
+**Why:** Newsletters and personal mail the rules miss should land in Set aside within a read, at a fraction of a cent, and
+a guess must never hide mail.
+
+**Impact:** Design 6.5, 4.x and CHANGES section 39. New settings `watch.sorting` and `watch.sorting_batch` (live), demo
+values in both workspaces, the `sort-mail` prompt and playbook practice. No change to scope.

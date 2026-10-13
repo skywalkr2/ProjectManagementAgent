@@ -9,6 +9,7 @@ import { api, ApiError, type S } from "../lib/api";
 import { serviceReachLines, waitsForRestart } from "../lib/packs";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
+import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useStartSignIn } from "../lib/sign-in-start";
 import { useWords } from "../lib/wording";
 import { Skeleton } from "../ui/Skeleton";
@@ -78,6 +79,43 @@ export function servicesFrom(available: Pack[], installed: Installed[]): Service
     });
   }
   return [...found.values()];
+}
+
+/** The setting that decides whether the assistant sorts the mail the rules can't place; it is on unless set to rules. */
+const SORTING = "watch.sorting";
+
+/** Whether the assistant sorts what the rules can't, from sender, subject and category only: a setting the running app
+ *  takes in at once, saved like any other, with its read-back and Undo. */
+function SortingSwitch() {
+  const { t } = useWords();
+  const afterSave = useAfterSave();
+  const fresh = useFreshFingerprint();
+  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
+  const [problem, setProblem] = useState("");
+  const on = settings.data?.items.find((i) => i.key === SORTING)?.value !== "rules";
+  const change = async (next: boolean) => {
+    setProblem("");
+    try {
+      const saved = await api.saveSettings({ changes: { [SORTING]: next ? "ai" : "rules" }, reset: [], fingerprint: await fresh() });
+      await afterSave(saved);
+    } catch (err) {
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    }
+  };
+  return (
+    <div className="field" data-sorting="">
+      <label className="check-line">
+        <input type="checkbox" checked={on} disabled={settings.isPending} onChange={(e) => void change(e.target.checked)} />
+        <span>{t("walkthrough.mail.sorting")}</span>
+      </label>
+      <p className="hint">{t("walkthrough.mail.sorting_hint")}</p>
+      {problem && (
+        <p className="problem-note" role="alert">
+          {problem}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function WalkthroughMail(props: { onChooseSource: (plugin: string | null) => void; onOpenAddons: () => void }) {
@@ -162,6 +200,7 @@ export function WalkthroughMail(props: { onChooseSource: (plugin: string | null)
       <p className="hint" data-set-aside="">
         {t("walkthrough.mail.set_aside")}
       </p>
+      <SortingSwitch />
       {read.length > 0 && (
         <div className="field" data-reading="">
           <span className="what" id="mail-read">

@@ -532,7 +532,7 @@ class Worker:
         for source in sources:
             if self._stop.is_set():
                 break
-            result = refresh(self.ws, self.store, self.cfg, source, now)
+            result = refresh(self.ws, self.store, self.cfg, source, now, self.router_factory())
             handed += len(result.new) + len(result.changed) + len(result.removed)
         if sources:
             self.events.changed()

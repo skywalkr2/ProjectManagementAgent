@@ -207,6 +207,10 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   are *designed, not yet built*.
 - `set_aside_defaults` (true): after the `triage` list, mail that is bulk, or that the mail service files under promotions,
   social or forums, is set aside as sales mail with no AI run. It needs no rule in the file, so every workspace has it.
+- `sorting` (`ai`) and `sorting_batch` (25): how mail that no rule places is sorted (6.5). `ai`: one small low-cost run per
+  batch reads only the senders, subjects and service categories (never the text) and says work, personal or sales; unsure
+  counts as work. `rules`: no run. A batch is at most 100 messages. The kind of work is `sort-mail`: its tier, limits and
+  budget are set under `ai.tasks` and `ai.budgets.per_task` like any kind's. Both keys are live.
 - `default_data_level` (internal) and `connector_data_levels` (a map from a connector's name to a level; empty): the data
   level a watched source's items carry when the source sets none. It is kept on each source record (5.1).
 - `set_aside_keep_seconds` (60): how long the app keeps the copy of mail the person confirmed was rightly set aside, so

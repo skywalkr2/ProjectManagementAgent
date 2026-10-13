@@ -24,7 +24,7 @@ from pydantic import ValidationError
 
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
 from engine.storage import StoreError, WriteContext
-from engine.triage import first_match
+from engine.triage import classify
 
 _WATCHER = WriteContext(actor="watcher", trust="untrusted", op="watch.read")
 #: Lines of unchanged text shown around each change in a diff.
@@ -99,21 +99,22 @@ def failures_in_a_row(store: Any, source: str) -> int:
     return count
 
 
-def refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None = None) -> Result:
+def refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None = None, router: Any = None) -> Result:
     """Read one source now, compare and hand in what changed. Returns what happened. A source is never read twice at
-    the same moment: when another read of it is under way this one does nothing and says so (outcome "busy")."""
+    the same moment: when another read of it is under way this one does nothing and says so (outcome "busy"). The
+    router makes the assistant's sorting run for mail the rules can't place; left out, one is made when it is needed."""
     if not any(s.id == source_id for s in cfg.watch.sources):
         raise StoreError(f"there is no source {source_id}")
     lock = _read_lock(ws, source_id)
     if not lock.acquire(blocking=False):
         return Result(source_id, "busy", note=ALREADY_READING)
     try:
-        return _refresh(ws, store, cfg, source_id, now)
+        return _refresh(ws, store, cfg, source_id, now, router)
     finally:
         lock.release()
 
 
-def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None) -> Result:
+def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None, router: Any = None) -> Result:
     now = now or datetime.now(UTC)
     clock = time.monotonic()
     source = next((s for s in cfg.watch.sources if s.id == source_id), None)
@@ -157,7 +158,7 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
     )
     baseline = not read_before and source.first_run in ("baseline", "recent")
     recent = timedelta(hours=source.first_run_hours) if baseline and source.first_run == "recent" else None
-    result = _compare(ws, store, cfg, source, poll, now, baseline, recent)
+    result = _compare(ws, store, cfg, source, poll, now, baseline, recent, router)
     _record(
         store,
         source.id,
@@ -202,6 +203,20 @@ def is_recent(details: dict[str, Any], changed_at: str | None, now: datetime, wi
     return False
 
 
+@dataclass
+class _Entry:
+    """One item of a read that is new or changed: what the read found, and how the rules placed it."""
+
+    item: SourceItem
+    digest: str
+    before: Any
+    details: dict[str, Any]
+    change: str
+    old: str | None
+    closed: dict[str, str] | None
+    handed: bool  # it is handed in now, not only noted
+
+
 def _compare(
     ws: Any,
     store: Any,
@@ -211,10 +226,13 @@ def _compare(
     now: datetime,
     baseline: bool,
     recent: timedelta | None = None,
+    router: Any = None,
 ) -> Result:
     result = Result(source.id, "ok")
     seen = {s.data["key"]: s for s in store.read().find("snapshot", {"source": source.id}) if not s.data["gone"]}
     listed = set()
+    entries: list[_Entry] = []
+    unplaced: dict[str, dict[str, Any]] = {}
     for item in poll.items:
         listed.add(item.key)
         digest = _keep_text(ws, item.text)
@@ -231,16 +249,25 @@ def _compare(
         change = "new" if before is None else "changed"
         old = _read_text(ws, before.data["content_hash"]) if before is not None else None
         facts = _change(cfg, source, item, change, old)
-        closed = first_match(store, cfg, facts)
+        closed, kept = classify(store, cfg, facts)
+        handed = not baseline or (recent is not None and is_recent(details, item.changed_at, now, recent))
+        if closed is None and not kept:
+            closed = _carried_sorting(before)
+        if handed and closed is None and not kept and before is None and item.message is not None:
+            unplaced[item.key] = facts
+        entries.append(_Entry(item, digest, before, details, change, old, closed, handed))
+    marks, result.note = _assistant_sorted(ws, store, cfg, source, router, unplaced)
+    for entry in entries:
+        item, before, closed = entry.item, entry.before, entry.closed or marks.get(entry.item.key)
         with store.transaction() as tx:
             data = {
                 "source": source.id,
                 "key": item.key,
                 "title": item.title,
-                "content_hash": digest,
+                "content_hash": entry.digest,
                 "author": item.author,
                 "seen_at": now.isoformat(),
-                **details,
+                **entry.details,
                 "closed_by": closed["rule"] if closed and not closed.get("section") else None,
                 "set_aside": _set_aside_of(closed) or _kept_set_aside(before),
             }
@@ -248,13 +275,11 @@ def _compare(
                 tx.create("snapshot", data, _WATCHER)
             else:
                 tx.update("snapshot", before.id, data, _WATCHER, read_version=before.version)
-            handed = not baseline or (recent is not None and is_recent(details, item.changed_at, now, recent))
-            if not handed:
+            if not entry.handed:
                 continue
-            text = _input_text(source, item, change, old)
-            request = _hand_in(ws, store, tx, cfg, source, item, change, text, now, closed)
-        if handed:
-            (result.new if change == "new" else result.changed).append(request)
+            text = _input_text(source, item, entry.change, entry.old)
+            request = _hand_in(ws, store, tx, cfg, source, item, entry.change, text, now, closed)
+        (result.new if entry.change == "new" else result.changed).append(request)
     gone_keys = [k for k in seen if k not in listed] if poll.complete else [k for k in poll.removed if k in seen]
     for key in gone_keys:
         snapshot = seen[key]
@@ -267,9 +292,48 @@ def _compare(
             )
             text = f"{snapshot.data['title']} is no longer in {source.label or source.id}."
             facts = _change(cfg, source, gone, "removed", _read_text(ws, snapshot.data["content_hash"]))
-            closed = first_match(store, cfg, facts)
+            closed = classify(store, cfg, facts)[0]
             result.removed.append(_hand_in(ws, store, tx, cfg, source, gone, "removed", text, now, closed))
     return result
+
+
+def _assistant_sorted(
+    ws: Any, store: Any, cfg: Any, source: Any, router: Any, unplaced: dict[str, dict[str, Any]]
+) -> tuple[dict[str, dict[str, str]], str | None]:
+    """The assistant's sorting (design 6.5, step 3) of the mail the rules couldn't place, as {item key: facts}: one
+    run per batch of headers, never the text. Returns, by item key, the set-aside match of each message it set aside,
+    and a note when some mail wasn't sorted by it (that mail is handed in as work)."""
+    from engine import mail_sorting
+    from engine.set_aside import SECTION_WORDS
+
+    if cfg.watch.sorting != "ai" or not unplaced:
+        return {}, None
+    sorted_ = mail_sorting.sort(
+        ws,
+        store,
+        cfg,
+        router,
+        [mail_sorting.header_of(key, facts) for key, facts in unplaced.items()],
+        data_level_of(cfg, source),
+    )
+    marks = {
+        key: {
+            "rule": mail_sorting.RULE,
+            "reason": f"the assistant sorted it as {SECTION_WORDS[section]}",
+            "section": section,
+            "by": "assistant",
+        }
+        for key, section in sorted_.sections.items()
+    }
+    return marks, sorted_.note
+
+
+def _carried_sorting(before: Any) -> dict[str, str] | None:
+    """What the assistant set aside stays set aside when the item changes: its mark, as a match."""
+    mark = before.data.get("set_aside") if before is not None else None
+    if mark and mark.get("by") == "assistant" and mark.get("section"):
+        return {"rule": mark["rule"], "reason": mark["reason"], "section": mark["section"], "by": "assistant"}
+    return None
 
 
 def _input_text(source: Any, item: SourceItem, change: str, old: str | None) -> str:
@@ -293,10 +357,12 @@ def _message_dict(message: Any) -> dict[str, Any] | None:
 
 
 def _set_aside_of(closed: dict[str, str] | None) -> dict[str, str] | None:
-    """A triage match that sets mail aside, as the snapshot keeps it: {section, rule, reason}."""
+    """A match that sets mail aside, as the snapshot keeps it: {section, rule, reason}, and `by` when the assistant's
+    sorting made it."""
     if not closed or not closed.get("section"):
         return None
-    return {"section": closed["section"], "rule": closed["rule"], "reason": closed["reason"]}
+    mark = {"section": closed["section"], "rule": closed["rule"], "reason": closed["reason"]}
+    return {**mark, "by": closed["by"]} if closed.get("by") else mark
 
 
 def _kept_set_aside(before: Any) -> dict[str, str] | None:
@@ -397,7 +463,7 @@ def _hand_in(
         data.update(
             state="done",
             waiting=f"Set aside: {closed['reason']}",
-            set_aside={"section": closed["section"], "rule": closed["rule"], "reason": closed["reason"]},
+            set_aside=_set_aside_of(closed),
         )
     elif closed:
         data.update(state="done", waiting=f"Closed by {closed['rule']}: {closed['reason']}", auto_closed=closed)
@@ -509,13 +575,16 @@ def _close_question(store: Any, source: str) -> None:
             )
 
 
-def hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None = None) -> list[str]:
+def hand_in_recent(
+    ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None = None, router: Any = None
+) -> list[str]:
     """Hand the assistant what a source already holds from the recent past or near future (its `first_run_hours`
     around now) that it hasn't been handed yet: the person asks for this after a first read that only noted what was
-    there. Triage rules apply as for any change. Returns the requests made. It waits for a read of the same source under
-    way, and holds that source's lock while it works, so the same item is never handed in twice."""
+    there. Triage rules and the assistant's sorting of mail apply as for any change. Returns the requests made. It
+    waits for a read of the same source under way, and holds that source's lock while it works, so the same item is
+    never handed in twice."""
     with _read_lock(ws, source_id):
-        return _hand_in_recent(ws, store, cfg, source_id, now)
+        return _hand_in_recent(ws, store, cfg, source_id, now, router)
 
 
 def hand_in_snapshot(ws: Any, store: Any, cfg: Any, snapshot_id: str, now: datetime | None = None) -> str | None:
@@ -562,7 +631,9 @@ def _message_of(details: dict[str, Any] | None) -> Any:
     return MessageDetails(**{**details, "categories": tuple(details.get("categories") or ())})
 
 
-def _hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None) -> list[str]:
+def _hand_in_recent(
+    ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None, router: Any = None
+) -> list[str]:
     from engine.connectors import EventDetails
 
     now = now or datetime.now(UTC)
@@ -575,7 +646,8 @@ def _hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime
         for s in store.read().list("source")
         if (s.data.get("watched") or {}).get("source") == source_id
     }
-    made = []
+    pending: list[tuple[Any, SourceItem, dict[str, str] | None]] = []
+    unplaced: dict[str, dict[str, Any]] = {}
     for snap in store.read().find("snapshot", {"source": source_id}):
         data = snap.data
         if data.get("gone") or data.get("deleted") or data.get("set_aside") or data["key"] in handed:
@@ -592,9 +664,32 @@ def _hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime
             event=EventDetails(**data["event"]) if data.get("event") else None,
             message=_message_of(data.get("message")),
         )
-        closed = first_match(store, cfg, _change(cfg, source, item, "new", None))
+        facts = _change(cfg, source, item, "new", None)
+        closed, kept = classify(store, cfg, facts)
+        if closed is None and not kept and item.message is not None:
+            unplaced[item.key] = facts
+        pending.append((snap, item, closed))
+    marks, _note = _assistant_sorted(ws, store, cfg, source, router, unplaced)
+    made = []
+    for snap, item, closed in pending:
+        sorted_aside = marks.get(item.key) if closed is None else None
         with store.transaction() as tx:
+            if sorted_aside:
+                tx.update(
+                    "snapshot", snap.id, {"set_aside": _set_aside_of(sorted_aside)}, _WATCHER, read_version=snap.version
+                )
             made.append(
-                _hand_in(ws, store, tx, cfg, source, item, "new", _input_text(source, item, "new", None), now, closed)
+                _hand_in(
+                    ws,
+                    store,
+                    tx,
+                    cfg,
+                    source,
+                    item,
+                    "new",
+                    _input_text(source, item, "new", None),
+                    now,
+                    closed or sorted_aside,
+                )
             )
     return made

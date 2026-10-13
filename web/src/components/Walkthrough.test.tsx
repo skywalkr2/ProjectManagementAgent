@@ -711,6 +711,51 @@ describe("Mail and calendar", () => {
     expect(within(reach).getByText("Needs 2 keys from you")).toBeInTheDocument();
   });
 
+  test("the assistant's sorting of what the rules can't place is on by default and one switch turns it off", async () => {
+    const user = userEvent.setup();
+    let sorting = "ai";
+    const item = (value: string) =>
+      ({
+        key: "watch.sorting",
+        file: "watch",
+        group: "watch",
+        description: "How unplaced mail is sorted.",
+        type: "choice",
+        options: ["ai", "rules"],
+        value,
+        default: "ai",
+        source: "default",
+        locked: false,
+        basic: false,
+        editable: true,
+      }) as S["SettingItem"];
+    const calls = fakeApi({
+      ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),
+      "GET settings": () => ({ fingerprint: "fp-1", items: [...SETTINGS, item(sorting)] }),
+      "POST settings": (body) => {
+        const changes = (body as { changes: Record<string, string> }).changes;
+        sorting = changes["watch.sorting"];
+        return {
+          changes: [{ key: "watch.sorting", before: "ai", after: sorting, was_default: true, is_default: false }],
+          fingerprint: "fp-2",
+          needs_restart: false,
+        };
+      },
+    });
+    open();
+    const box = await screen.findByRole("checkbox", { name: "Let the assistant sort what the rules can't" });
+    await waitFor(() => expect(box).toBeChecked());
+    expect(screen.getByText(/never the message itself/)).toBeInTheDocument();
+    await user.click(box);
+    await waitFor(() => expect(calls.some((c) => c.route === "POST settings")).toBe(true));
+    expect(calls.find((c) => c.route === "POST settings")!.body).toEqual({
+      changes: { "watch.sorting": "rules" },
+      reset: [],
+      fingerprint: "fp-1",
+    });
+    await waitFor(() => expect(box).not.toBeChecked());
+  });
+
   test("a service the catalog names no publisher for shows none", async () => {
     fakeApi({
       ...routes({}, CORE.map((c) => step(c)), { step: "mail" }),

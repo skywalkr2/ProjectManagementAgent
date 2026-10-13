@@ -142,6 +142,12 @@ def first_match(store: Any, cfg: Any, change: dict[str, Any]) -> dict[str, str] 
     """The first rule that closes this change: {rule, reason}, plus `section` (personal or sales) when the rule sets
     mail aside, or None. A matching `never` rule keeps the mail with the assistant against every later set-aside rule
     and the built-in sorting; other rules still apply."""
+    return classify(store, cfg, change)[0]
+
+
+def classify(store: Any, cfg: Any, change: dict[str, Any]) -> tuple[dict[str, str] | None, bool]:
+    """What the rules and the built-in sorting make of this change: the match `first_match` gives, and whether a
+    `never` rule keeps the mail with the assistant (so no later sorting, the assistant's included, may set it aside)."""
     found = matchers(store)
     kept = False
     for rule in cfg.watch.triage:
@@ -166,11 +172,11 @@ def first_match(store: Any, cfg: Any, change: dict[str, Any]) -> dict[str, str] 
         closed = {"rule": rule.name, "reason": why}
         if rule.set_aside:
             closed["section"] = rule.set_aside
-        return closed
+        return closed, kept
     if kept or not change.get("message") or not cfg.watch.set_aside_defaults:
-        return None
+        return None, kept
     for kind, params, name, section in BUILT_IN_SET_ASIDE:
         reason = CORE[kind](change, params)
         if reason:
-            return {"rule": name, "reason": reason, "section": section}
-    return None
+            return {"rule": name, "reason": reason, "section": section}, kept
+    return None, kept

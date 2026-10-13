@@ -95,6 +95,16 @@ TASKS: dict[str, TaskKind] = {
         playbook="notes",
         label="Ask",
     ),
+    # Sorting the mail the rules can't place (design 6.5): one run over a batch of headers, with no request and no
+    # ops. It sees only sender, subject and category, so it is the low-cost tier's work (engine/mail_sorting.py).
+    "sort-mail": TaskKind(
+        name="sort-mail",
+        ops=(),
+        prompt="sort-mail",
+        playbook="sort-mail",
+        label="Sort mail",
+        defaults={"max_output": 2000, "expected_output": 400},
+    ),
 }
 
 

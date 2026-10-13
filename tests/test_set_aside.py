@@ -46,7 +46,10 @@ def make(tmp_path, items, first_run="all", **watch):
 
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
     source = {"id": "m", "connector": "fake", "label": "Inbox", "first_run": first_run, "settings": {"items": items}}
-    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump({"version": 1, "sources": [source], **watch}))
+    # These tests are about the rules; the assistant's own sorting has its tests in test_mail_sorting.py.
+    (ws.config_dir / "watch.yaml").write_text(
+        yaml.safe_dump({"version": 1, "sources": [source], "sorting": "rules", **watch})
+    )
     cfg = load_config(ws.config_dir, env={})
     return ws, cfg, Store(ws.db_path, cfg=cfg)
 

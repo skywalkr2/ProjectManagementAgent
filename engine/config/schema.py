@@ -1094,6 +1094,20 @@ class WatchFile(FileModel):
         "mail the mail service files under promotions, social or forums. It applies after the rules above, so a rule "
         "that keeps mail from a sender wins.",
     )
+    sorting: Literal["ai", "rules"] = Field(
+        "ai",
+        description="How mail that none of the rules above place is sorted. ai: one small, low-cost run reads only "
+        "each message's sender, subject line and the mail service's category (never the text) and says work, "
+        "personal or sales; unsure counts as work, so nothing is hidden on a guess. rules: no run; only the rules "
+        "set mail aside.",
+    )
+    sorting_batch: int = Field(
+        25,
+        ge=1,
+        le=100,
+        description="How many messages one sorting run covers: the unsorted mail of a read goes in groups of this "
+        "size, one run for each group.",
+    )
     set_aside_keep_seconds: int = Field(
         60,
         ge=0,

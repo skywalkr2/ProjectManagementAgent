@@ -111,3 +111,9 @@ def answer(request: str, stable: str) -> dict[str, Any]:
             }
         ],
     }
+
+
+def sort_mail(request: str) -> dict[str, Any]:
+    """Sorting mail headers: every message is work. The stand-in reads no headers and claims no judgment, so it hides
+    nothing."""
+    return {"answers": [{"id": name, "answer": "work"} for name in re.findall(r'"id": "(m\d+)"', request)]}

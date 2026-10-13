@@ -408,15 +408,33 @@ them are needed before the owner's daily use, which starts when L-core passes.
     (`engine/handover.py::apply_redactions`), so two computers don't read it as a divergence. Forgetting a person (5.2,
     phase E) will use the same step. Built:
     `tests/test_set_aside.py::test_a_confirmed_set_asides_redaction_matches_its_original_when_two_histories_are_compared`.
-- [ ] **Personal and sales mail set aside, the rest** (owner, 2026-10-12; design 6.5; the rules part is phase A5):
+- [x] **Personal and sales mail set aside, the rest** (owner, 2026-10-12; design 6.5; the rules part is phase A5,
+  `tests/test_set_aside.py`; the sorting run is `tests/test_mail_sorting.py`):
   - a Set aside folder (Personal; Sales and promotions);
   - sorting by the person's sender and domain rules, then the mail's own category and bulk headers, then a low-cost
     run on sender, subject and category only (`watch.sorting`, on by default, shown in the walkthrough's Mail step);
   - one-click corrections that make sorting rules;
   - mail items carry `categories` and `bulk` (plugin API).
 
-  Exit check: a learning pair and an evaluation case prove that set-aside mail produces no request, signal or
-  knowledge, and that "This is work" hands it in.
+  Built (L0, the sorting run; the folder, rules and corrections are above, in A5): the core task kind `sort-mail`
+  (role `write`, `routine` tier), one run per `watch.sorting_batch` of headers, never a body; unsure and unknown answers
+  are work; a failing check goes back once, escalates once, then everything is work; when it can't be made the mail is
+  handed in as work with the reason in the read's note. Tests: `tests/test_mail_sorting.py::test_thirty_unsorted_messages_with_a_batch_of_25_make_two_runs_and_the_packet_holds_no_body`,
+  `test_personal_and_sales_are_set_aside_with_the_reason_and_the_rest_is_handed_in_as_work`,
+  `test_the_check_reads_answers_by_id_and_refuses_unknown_and_repeated_ids`,
+  `test_an_answer_that_keeps_failing_is_tried_once_on_the_stronger_tier_then_everything_is_work`,
+  `test_sorting_rules_makes_no_run`,
+  `test_when_the_run_cant_be_made_the_mail_is_handed_in_as_work_and_the_reason_is_given`,
+  `test_look_at_the_last_day_sorts_the_mail_a_first_read_only_noted`; the Mail step's switch:
+  `web/src/components/Walkthrough.test.tsx` ("the assistant's sorting of what the rules can't place is on by default and
+  one switch turns it off").
+
+  Exit check, met: set-aside mail the assistant sorted produces no request, signal or knowledge, and "This is work" hands
+  it in, `tests/test_mail_sorting.py::test_mail_the_assistant_set_aside_gives_no_request_signal_or_knowledge_and_this_is_work_hands_it_in`;
+  the learning pair (a sender sorted wrongly, corrected with a "keep" rule, the next message kept) is
+  `test_learning_pair_a_sender_the_assistant_got_wrong_is_kept_next_time`. No learning-pair fixture format exists yet, so
+  the pair and the evaluation case are tests; moving them into fixtures is part of L4.
+  Left: before the person's first go the run isn't made, so the first read's mail goes in as work (decisions, 2026-10-13).
 - [x] **"Look at the last day" works for a folder:** today it hands in nothing, because folder items carry no time.
   Folder items carry the file's modified time, kept on the snapshot, so the person can hand in what is already there
   (found by the phase A fixes; the add-source hint then points to it). Tests:

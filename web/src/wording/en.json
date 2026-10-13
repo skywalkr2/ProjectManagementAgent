@@ -1648,6 +1648,8 @@
   "walkthrough.mail.reading": "Now reading",
   "walkthrough.mail.first_go": "The last day of your mail waits for your first Go. Nothing is spent until you press it.",
   "walkthrough.mail.set_aside": "Social updates, promotions and mailing lists are set aside; you can turn this off.",
+  "walkthrough.mail.sorting": "Let the assistant sort what the rules can't",
+  "walkthrough.mail.sorting_hint": "A small run reads only each message's sender, subject and category, never the message itself, and sets aside what is personal or a promotion. When it isn't sure, the mail stays with your work.",
   "walkthrough.mail.signed_in": "Signed in",
   "walkthrough.mail.signed_in_as": "Signed in as {account}",
   "walkthrough.mail.allows": "You will be asked to allow: {allows}",

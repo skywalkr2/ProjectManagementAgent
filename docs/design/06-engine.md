@@ -149,7 +149,7 @@ tuned, 6.20). A closed mail item is left out of Today's list of what came in, an
 match and is contained like any plugin call (6.1).
 
 **Setting aside personal and sales mail** (owner, 2026-10-12; the rules part is phase A5, **built**, `tests/test_set_aside.py`; the sorting run and the
-proof that learning never reads it are phase L0). Mail that isn't work goes into a **Set aside** folder in the app, in two
+proof that learning never reads it are phase L0, **built**, `tests/test_mail_sorting.py`). Mail that isn't work goes into a **Set aside** folder in the app, in two
 sections: *Personal*, and *Sales and promotions*. The person's mailbox is never changed; the add-ons read only. Set-aside mail
 never reaches the assistant and never feeds learning:
 - **No knowledge from it:** no signal, fact, glossary term, lesson or evaluation case comes from it, and the repeat-correction
@@ -182,12 +182,36 @@ It is sorted in this order, first match wins:
    workspace's list would never reach a workspace made before, and the person edits nothing to be helped.
    The sender in the person's contacts who isn't one of the workspace's people (`personal-contact`) is *designed, not yet
    built* (L0).
-3. **The assistant's sorting**, for mail the rules can't place (`watch.sorting: ai`, on by default, chosen in the
-   walkthrough's Mail step) is *designed, not yet built* (L0):
-   - a small low-cost run sees **only the sender, the subject line and the service's category**, never the body;
-   - it answers work, personal or sales;
-   - unsure means work, so nothing is hidden on a guess;
-   - one run covers a batch of headers, not one per message.
+3. **The assistant's sorting**, for mail the rules can't place (`watch.sorting: ai`, on by default, chosen with a switch in
+   the walkthrough's Mail step, "Let the assistant sort what the rules can't"; `rules` makes no run). **Built,**
+   `tests/test_mail_sorting.py`:
+   - a small low-cost run sees **only the sender, the subject line and the service's category**, never the body, the thread
+     or an attachment. Each message is an opaque id (`m1`, `m2`, ...) with those three things, marked as outside content,
+     in a batch that comes last in the packet after the instructions and the playbook's practice (6.6);
+   - it answers work, personal or sales for each id. **Unsure means work**: a message the answer leaves out, or answers with
+     another word, counts as work, so nothing is hidden on a guess;
+   - one run covers a batch of headers, not one per message: the mail of a read that no rule placed goes in groups of
+     `watch.sorting_batch` (25), one run each, after the rules and before anything is handed in. Only new mail is sorted
+     (a message that changes keeps what the assistant decided; one the person's "never" rule keeps is never sent);
+   - **the answer is checked deterministically:** it must be readable and complete JSON, name no id that isn't in the batch
+     and answer no id twice. A failing answer goes back once with what was wrong (`dispatch.fix_rounds`), then is tried once
+     on the tier's escalation tier when that run's estimate is within the caps (6.16); after that every message in the
+     batch counts as work;
+   - **where items wait:** an item isn't written or handed in until its batch has its answer, so a sorted message is set
+     aside from the start and never queued for the assistant. Personal and sales answers set it aside with the reason "the
+     assistant sorted it as personal mail" or "... sales mail" and `by: assistant`, shown in the Set aside folder; "This is
+     work" and the sorting rules from a correction work exactly as for mail a rule set aside. "Look at the last day" sorts
+     the mail a first read only noted in the same way;
+   - **cost is the person's choice, as for any run (6.16):** the run is the task kind `sort-mail`, role `write`, at the
+     `routine` tier unless `ai.tasks.sort-mail.tier` says otherwise, with its own entry for a budget (`ai.budgets.per_task`).
+     It is estimated first and goes through the per-run limit, the first go, the amount to ask above and the day, month and
+     per-kind budgets. It is made for no request, so its run record carries an empty request id. When it can't be made (no
+     account for the tier, a budget used up, the first go or the go above the configured amount not given, an account
+     paused or failing, a refusal) **the mail is handed in as work, never held back**, and the read says why in plain
+     words. The same cause stops the handed-in requests themselves on the paths that already show it (a request needing an
+     account or a budget waits for the person, an account at its limit is a paused line, the first go is its line);
+   - **nothing from it is learned:** a set-aside request and snapshot carry the `set_aside` mark that
+     `engine.set_aside.learnable` leaves out, so no signal, fact, lesson or evaluation case comes from them (above).
 
 **Correcting it** (all built):
 - **Any item in Came in or What changed that is a mail message** has "Set aside: personal" and "Set aside: sales" in its menu.
