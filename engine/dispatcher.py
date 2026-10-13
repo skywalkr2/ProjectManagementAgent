@@ -34,6 +34,7 @@ from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
 from engine.packet import PacketRefused, build, target_of
 from engine.projects import budget_problem
 from engine.storage import Store, StoreError, WriteContext
+from engine.storage.store import Stored, Tx
 from engine.tasks import settings as task_settings
 from engine.text_shape import error_problem
 from engine.today import zone
@@ -114,6 +115,8 @@ def process(
     req = store.read().get("request", request_id)
     if req is None:
         raise KeyError(request_id)
+    if req.data.get("superseded_by") or req.data["state"] in ("done", "review"):
+        return None  # a try is only run while its request is open: not applied, finished or replaced
     if req.data.get("approval") == "required":
         from engine.stages import wording
 
@@ -253,6 +256,8 @@ def process(
         independent,
         offline_known=waited,
     )
+    if first.abandoned:
+        return None
     outcome = first
     # The person's pick of account is theirs: no escalation away from it.
     stronger = escalation_tier(cfg, tier) if use is None else None
@@ -262,7 +267,7 @@ def process(
         else None
     )
     within = second_estimate is None or second_estimate <= min(budgets.per_run_usd, budgets.confirm_above_usd)
-    if first.escalate and stronger and stronger != tier and within:
+    if first.escalate and stronger and stronger != tier and within and not _closed(store, request_id):
         # One re-run on the stronger tier when checks still fail; it counts toward budgets like any run.
         second = _rounds(
             store,
@@ -280,8 +285,12 @@ def process(
             independent,
             offline_known=waited,
         )
+        if second.abandoned:
+            return None
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
+    if _closed(store, request_id):
+        return None  # the request was closed or replaced while the assistant worked: nothing of this run is written
     if outcome.cause and outcome.cause.get("kind") == "offline":
         # The network is down: the request stays in line, no try is counted, and it is looked at again after a short
         # wait. Since when is kept from the first time it found no network.
@@ -307,6 +316,8 @@ def process(
         changeset, problems, ctx, run=run_id, now=now, all_or_nothing=getattr(kind, "all_or_nothing", False)
     )
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
+    if _applied_something(store, cs_id):
+        retire_earlier_attempts(store, request_id)
     return cs_id
 
 
@@ -431,6 +442,7 @@ class _Outcome:
     stop: str | None = None  # why the PM is needed instead of a changeset
     cause: dict | None = None  # what the screen can offer to clear the stop, when it has a way to
     escalate: bool = False  # the answer still fails its checks: a stronger tier may do better
+    abandoned: bool = False  # the request was closed or replaced before a follow-up call: nothing more is asked
     retry: str | None = None  # a run that gave no usable answer or failed: why, in a few words; it is tried again
 
 
@@ -456,6 +468,8 @@ def _rounds(
     out = _Outcome()
     for attempt in range(cfg.dispatch.fix_rounds + 1):
         last = attempt == cfg.dispatch.fix_rounds
+        if attempt and _closed(store, request_id):
+            return _Outcome(run_id=out.run_id, abandoned=True)  # a fix round only runs while its cause stands
         try:
             result, _choice, out.run_id = router.call(
                 task,
@@ -754,6 +768,77 @@ def is_waiting_for_network(request: dict) -> bool:
     )
 
 
+def _closed(store: Store, request_id: str) -> bool:
+    """Whether a request no longer needs anything from the assistant: it was replaced by a later attempt, it applied
+    and awaits review, or it is finished."""
+    req = store.read().get("request", request_id)
+    return req is None or bool(req.data.get("superseded_by")) or req.data["state"] in ("done", "review")
+
+
+def _applied_something(store: Store, changeset_id: str) -> bool:
+    cs = store.read().get("changeset", changeset_id)
+    return cs is not None and any(o["status"] == "applied" for o in cs.data["ops"])
+
+
+#: Why an item an earlier attempt proposed is no longer open.
+SUPERSEDED = "A later try at the same request replaced this."
+
+
+def earlier_attempts(store: Store, request_id: str) -> list[str]:
+    """The requests this one redoes, nearest first: each names the one before it as `previous`."""
+    reader = store.read()
+    found: list[str] = []
+    current = reader.get("request", request_id)
+    while current is not None and current.data.get("previous") and current.data["previous"] not in found:
+        found.append(current.data["previous"])
+        current = reader.get("request", current.data["previous"])
+    return found
+
+
+def retire_earlier_attempts(store: Store, request_id: str) -> list[str]:
+    """A request applied: the attempts before it (the requests it redoes, by `previous`) are retired. Each is done and
+    names this request as its replacement, so its Today lines and stopped state close and a try queued for it never
+    runs; the items it left waiting (held changes, the questions asked to place them, proposals and reports not yet
+    reviewed) are closed. What the earlier attempts applied stays. Returns the requests retired."""
+    earlier = earlier_attempts(store, request_id)
+    if not earlier:
+        return []
+    ids = set(earlier)
+    with store.transaction() as tx:
+        for rid in earlier:
+            cur = tx.get("request", rid)
+            if cur is None:
+                continue
+            changes: dict[str, object] = {"superseded_by": request_id, "waiting": None, "cause": None}
+            if cur.data["state"] != "done":
+                changes["state"] = "done"
+            tx.update("request", rid, changes, _ENGINE, read_version=cur.version)
+        for cs in tx.list("changeset"):
+            if cs.data["request"] in ids:
+                _close_held(tx, cs)
+        for kind, open_status in (("setting_proposal", "open"), ("report", "draft")):
+            for record in tx.list(kind):
+                if record.data["request"] in ids and record.data["status"] == open_status:
+                    tx.update(kind, record.id, {"status": "dismissed"}, _ENGINE, read_version=record.version)
+    return earlier
+
+
+def _close_held(tx: Tx, cs: Stored) -> None:
+    """Refuse the held items of a changeset, with why, and drop the open questions asked to place them."""
+    ops = cs.data["ops"]
+    held = [o for o in ops if o["status"] == "held"]
+    if not held:
+        return
+    for outcome in held:
+        outcome["status"], outcome["reason"] = "refused", SUPERSEDED
+        qid = outcome.get("question")
+        question = tx.get("question", qid) if qid else None
+        if question is not None and question.data["status"] == "open" and question.data.get("kind") == "routing":
+            tx.update("question", question.id, {"status": "dropped"}, _ENGINE, read_version=question.version)
+    status = "applied" if any(o["status"] == "applied" for o in ops) else "rejected"
+    tx.update("changeset", cs.id, {"ops": ops, "status": status}, _ENGINE, read_version=cs.version)
+
+
 def wait_for_network(store: Store, cfg: Config, request_id: str, now: datetime, since: object = None) -> None:
     """Queue a request that found no network. It says why, since when and until when it is looked at again; `retries`
     is left as it was, so being offline never uses up the tries a failing service gets."""
@@ -798,7 +883,9 @@ def stop_or_retry(store: Store, cfg: Config, request_id: str, outcome: _Outcome,
 
 def needs_you(store: Store, request_id: str, why: str, cause: dict | None = None) -> None:
     """Stop a request for the person, with why in plain words and, when the screen can offer an action that clears it,
-    the cause."""
+    the cause. A request that is closed or was replaced by a later attempt is not stopped again."""
+    if _closed(store, request_id):
+        return None
     _set(store, request_id, state="needs_you", waiting=why, cause=cause)
     return None
 

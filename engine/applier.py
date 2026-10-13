@@ -15,6 +15,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
+from engine.check_text import quoted_passages, without_links, words_of
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
 from engine.config.yaml_edit import set_key
@@ -274,10 +275,12 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 for link in op.links:
                     if not _openable(link.url):
                         refuse(i, "question-links", f"{link.url} isn't a link the recipient can open")
-            _wording(i, op.title + " " + op.text, ctx, lint)
+            _wording(i, op.title + " " + op.text, ctx, lint, _quotes_in(op, ctx))
         if isinstance(op, ActionAddOp):
-            _wording(i, op.text, ctx, lint)
-            if any(sep in op.text for sep in ctx.cfg.language.run_on_separators):
+            quotes = _quotes_in(op, ctx)
+            reads = words_of(op.text, quotes)
+            _wording(i, op.text, ctx, lint, quotes)
+            if any(sep in reads for sep in ctx.cfg.language.run_on_separators):
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
             for existing in known_actions:
                 if _similar(op.text, existing.data["text"]) >= similarity:
@@ -309,8 +312,21 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     return problems
 
 
-def _wording(i: int, text: str, ctx: Context, lint: Any) -> None:
-    lowered = text.lower()
+def _quotes_in(op: OpModel, ctx: Context) -> list[str]:
+    """The exact words an op quotes from the input: its evidence, its cited passages, and any passage of its text in
+    quotation marks that is in the input. Wording checks don't read them."""
+    quotes: list[str] = []
+    evidence = _evidence(op)
+    if evidence is not None:
+        quotes.append(evidence.quote)
+    quotes += [q for cite in getattr(op, "cites", None) or [] if isinstance(q := getattr(cite, "quote", None), str)]
+    for text in _texts(op):
+        quotes += [p for p in quoted_passages(text) if ctx.inputs.evidence_source(p) is not None]
+    return quotes
+
+
+def _wording(i: int, text: str, ctx: Context, lint: Any, quotes: list[str] | None = None) -> None:
+    lowered = words_of(text, quotes or []).lower()
     for phrase in ctx.cfg.language.blocked_phrases:
         if re.search(r"(?<![a-z])" + re.escape(phrase.lower()) + r"(?![a-z])", lowered):
             lint(i, "blocked-wording", f"avoid {phrase!r}: say what to do, or ask the real question")
@@ -426,11 +442,11 @@ _WORD = re.compile(r"[a-z0-9]{4,}")
 
 
 def _shares_words(a: str, b: str) -> bool:
-    return bool(set(_WORD.findall(normalize(a))) & set(_WORD.findall(normalize(b))))
+    return bool(set(_WORD.findall(normalize(without_links(a)))) & set(_WORD.findall(normalize(without_links(b)))))
 
 
 def _similar(a: str, b: str) -> float:
-    wa, wb = set(_WORD.findall(normalize(a))), set(_WORD.findall(normalize(b)))
+    wa, wb = set(_WORD.findall(normalize(without_links(a)))), set(_WORD.findall(normalize(without_links(b))))
     return len(wa & wb) / len(wa | wb) if wa and wb else 0.0
 
 

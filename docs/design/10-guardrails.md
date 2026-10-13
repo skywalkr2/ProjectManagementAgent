@@ -115,7 +115,7 @@ server builds (`docs/project/review-2026-10-12.md`). These guardrails answer tha
 | **A plan item is never marked done on a part of it:** say what is left | Process rule, in force (`CLAUDE.md`) |
 | **"Built" means a named test passes:** checked roadmap boxes and "Built" rows cite their tests, and the self-check fails on a cited test that doesn't exist | The "built claims" step is in the self-check (`tests/test_built_claims.py`); see the rule below |
 | **Nothing lives only in the conversation:** commitments are written in the same turn to the roadmap or `docs/project/open-promises.md`, which a project hook shows to the session at start, resume and after a compaction | In force (`CLAUDE.md`, `.claude/settings.json`) |
-| **Screen wording checked where responses leave:** the API's response serializer refuses settings-file names, `env:`, key paths and commands in user-facing text, in tests and dev mode | Planned (roadmap A2) |
+| **Screen wording checked where responses leave:** the API's response serializer refuses settings-file names, `env:`, key paths and commands in user-facing text, in tests and dev mode; it reads the words with links taken out first (6.7) | Planned (roadmap A2) |
 | **Part 8 is generated from the seed lessons**, and every instruction-only rule has a fixture case; the self-check fails when the page is stale or a case is missing (decisions, 2026-10-12) | Planned (roadmap L) |
 
 **The built-claims rule.** A claim is a checked roadmap box (`- [x]`) or, in a design file, a bold "Built" marker (in a

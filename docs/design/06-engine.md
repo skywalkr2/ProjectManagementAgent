@@ -537,6 +537,16 @@ on an item that **stays internal** (an action, a note, a fact) never costs a fix
 row. Lints about correctness (`near-duplicate-action`, `evidence-fit`) keep their configured severity on every item. Lints
 look only at the assistant's own words, never at quoted evidence from the input.
 
+**A check on words reads the words** (`engine/check_text.py`): links (an address with a scheme and a query string, `mailto:`,
+a mail address, `www.` and bare domains such as a dotted host with or without a path) and the person's or the input's own quoted
+text are taken out first, by one helper every such check uses: the screen-text check (7.0), the wording lints (`blocked-wording`,
+`run-on-list`) and the word-overlap checks (`near-duplicate-action`, `evidence-fit`). What is known where decides which quotes can
+be removed. The applier knows the input, so it removes an op's evidence quote, the quotes of its cited passages and any passage
+of its text in quotation marks that is in the input. A screen field holds a string only, so it can remove links and nothing
+more: a field that holds the input's own words (a cited quote) is typed as plain text, not as screen text. A settings key or a
+file name is not a link, so it is still caught. The `never-shown` check is a leak guard, not a check on wording, and reads the
+text whole.
+
 Built: `blocked-wording` (blocked phrases, including "confirm / check whether" in actions), `run-on-list` (run-on separators),
 `near-duplicate-action` and `evidence-fit`, below, plus any lint a plugin registers (4.17).
 - Wording on anything that reaches a shared output: blocked phrases, run-on separators; locale spelling (*designed*).
@@ -570,6 +580,16 @@ is per field across groups but all or nothing within a group:
   unique field group or leave a dangling reference is skipped and reported, never half done.
 - **Send back** queues the work again with the person's note and, by default, first undoes what the assistant did; the person
   may keep it instead, and the old work then counts as looked over and the new run builds on it.
+- **A retry that applies retires the attempts before it.** Attempts are linked by the request they answer: a request made by
+  sending work back names the one it redoes as `previous`, never by names or titles. When a request's changeset applies
+  something, every request it redoes is retired: it is done and names the later one as `superseded_by`, its waiting reason and
+  cause are cleared (so its Today lines close and a try queued for it never runs), the changes it left held are refused with
+  "A later try at the same request replaced this", the routing questions asked to place them are dropped, and its open setting
+  proposals and report drafts are dismissed. What an earlier attempt applied stays, with Undo as before. A try again on the
+  same request needs nothing more: it clears the cause and the waiting reason when it starts. **Before any costly follow-up
+  starts** (a queued automatic try, a fix round, the escalation re-run) the dispatcher checks that its cause still stands: a
+  request that is already applied, finished or replaced is not run, a fix round or an escalation for a request closed meanwhile is
+  not asked, and a late failure or result is not written onto it. A changeset that applied nothing retires nothing.
 - **Outbound can't be undone.** Undoing a published page edit drafts a reverting edit for approval; a sent message shows as
   "already sent", with a follow-up offered if the PM wants to correct it.
 

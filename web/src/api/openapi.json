@@ -1835,6 +1835,7 @@
       "CiteView": {
         "properties": {
           "quote": {
+            "description": "The exact words from the cited material; the input's own text, never checked.",
             "title": "Quote",
             "type": "string"
           },

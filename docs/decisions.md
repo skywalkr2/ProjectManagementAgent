@@ -2984,3 +2984,25 @@ one, because they own the material.
 
 **Impact:** Design 3.3 (file kind), 5.3 (files), 5.1 (the `file` record) and CHANGES section 41. Plugin API 0.3.61. No new
 settings. No change to scope.
+
+## 2026-10-13: Wording checks skip links, and a retry that applies retires the attempts before it (phase L0)
+
+**Decision:** Every check on words reads the words: one helper takes out links and the input's own quoted text first
+(the screen-text check, `blocked-wording`, `run-on-list`, `near-duplicate-action`, `evidence-fit`). The applier knows the
+input, so it removes an op's evidence, its cited passages and quoted passages that are in the input; a screen field holds a
+string only, so it removes links and nothing more, and a field that holds the input's own words is plain text. The
+`never-shown` check stays whole, as it guards against a leak. Separately, attempts are linked by the request they answer
+(`previous`): when a request's changeset applies something, the requests it redoes are retired (`request.superseded_by`
+names the later one; held changes refused with a reason, routing questions dropped, open proposals and reports dismissed;
+what was applied stays), and every costly follow-up (a queued try, a fix round, the escalation) first checks its request is
+still queued or running and not replaced.
+
+**Decided by:** the owner's plan item from the original designer's lessons; the field and the wording of the reason were
+the builder's choice, for review.
+
+**Why:** A link or a quoted sentence is not the product's wording, so a check on wording refused text it should not.
+A request redone after a refusal left the old one's held items and questions on Today after the new one applied, and a
+try queued for a request that had since applied would have run and cost money.
+
+**Impact:** Design 6.7, 5.1 (the `request` record, one optional field), 10 (the screen check) and CHANGES section 44. The
+plugin guide is regenerated (a core record changed). No new setting. No change to scope.

@@ -657,13 +657,27 @@ them are needed before the owner's daily use, which starts when L-core passes.
   route does today first. A self-check lists every route that takes free text from the person and fails when one
   neither makes a request nor is declared local-only. A golden case: a "They finished it" note with a link and a new
   date produces a fact, a source and a moved date.
-- [ ] **Wording checks skip links** (the original designer's lessons from running, 2026-10-13): a check on words runs on the words, with links and the person's own quoted
+- [x] **Wording checks skip links** (the original designer's lessons from running, 2026-10-13): a check on words runs on the words, with links and the person's own quoted
   text taken out first; today the screen-text check would refuse a dotted domain or a file name the person typed. A test
   with a link that has a query string and a dotted domain, for the screen-text check and for every wording lint.
-- [ ] **A retry that applies retires the attempts before it** (the original designer's lessons from running, 2026-10-13): attempts are linked by the request they answer, never
+  Built: `tests/test_check_text.py::test_a_link_with_a_query_string_and_a_dotted_domain_passes_beside_plain_words`,
+  `::test_a_real_settings_key_beside_a_link_still_fails`,
+  `::test_a_blocked_phrase_inside_a_link_is_not_caught_and_one_outside_it_is`,
+  `::test_words_the_input_said_in_quotation_marks_are_not_the_assistants_wording`,
+  `::test_separators_inside_the_evidence_do_not_make_a_run_on_list`, `::test_the_word_overlap_checks_do_not_read_links`.
+  A screen field knows links only, not the person's quoted text (design 6.7).
+- [x] **A retry that applies retires the attempts before it** (the original designer's lessons from running, 2026-10-13): attempts are linked by the request they answer, never
   by their names; when one applies, the earlier failed or refused attempts for that request are dismissed, their lines
   and issues close, and a proposed fix for them is discarded. Before any costly follow-up (a fix round, a re-run) starts,
   it checks that its cause still stands. Check what the code does today first.
+  Built: `tests/test_attempts_retire.py::test_a_try_again_on_the_same_request_that_applies_leaves_no_line_or_cause_for_the_failed_try`
+  (already true), `::test_a_sent_back_attempt_with_a_held_item_is_retired_when_the_next_one_applies`,
+  `::test_a_stopped_attempt_and_its_cause_close_when_a_later_attempt_applies`,
+  `::test_the_attempts_open_proposals_are_discarded`,
+  `::test_a_queued_automatic_try_for_a_request_that_has_since_applied_does_not_run`,
+  `::test_a_fix_round_for_a_request_retired_meanwhile_does_not_run`,
+  `::test_a_retired_request_is_not_stopped_again_by_a_late_failure`. Attempts are linked by `previous` (a request made by
+  sending work back); a hand-in of the same input again is a separate request and is not linked.
 - [x] **Text where text belongs** (the original designer's review, 2026-10-13: a change written as YAML turned
   "Team wireless: KEY-1 release on top" in a table cell into a mapping, and its commas split one title across three
   columns, and it was published that way). Every text field in an op is a string: an op with a mapping or a list where

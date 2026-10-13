@@ -862,6 +862,11 @@ class Request(Record):
     created_at: datetime = Field(description="When the request was made.")
     changeset: str | None = Field(None, description="The id of the changeset the assistant proposed for it.")
     previous: str | None = Field(None, description="The request this one redoes after the PM sent it back.")
+    superseded_by: str | None = Field(
+        None,
+        description="The later request that redid this one and applied, which retired this attempt: it is done, its "
+        "held items and open proposals are closed, and nothing is run or shown for it again.",
+    )
     dismissed: bool = Field(
         False, description="The PM set this aside without trying again; it no longer counts as needing attention."
     )
@@ -1145,6 +1150,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("previous", "request"),
         ("follows", "changeset"),
         ("folded_into", "request"),
+        ("superseded_by", "request"),
         ("project", "project"),
     ],
     "changeset": [("request", "request"), ("run", "run")],

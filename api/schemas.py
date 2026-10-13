@@ -1579,7 +1579,7 @@ class AskIn(BaseModel):
 
 
 class CiteView(BaseModel):
-    quote: ScreenText
+    quote: str = Field(description="The exact words from the cited material; the input's own text, never checked.")
     source: str | None = None
 
 

@@ -1,7 +1,10 @@
 """The wording check: text the screen shows never names a settings file, a secret reference, a settings key, a manifest
 field or a command (design 7.0, 7.1). Terminal output may; the screen may not.
 
-`problems(text)` finds what a person would have to know the product's insides to read. `ScreenText` types the response
+`problems(text)` finds what a person would have to know the product's insides to read. It reads the words with links
+taken out (`engine/check_text.py`): a link with a query string or a dotted domain is not a settings key. A field a
+person's or an input's own words fill is typed as plain text, not as `ScreenText`, because a screen field holds a string
+and cannot know which part of it was quoted. `ScreenText` types the response
 fields whose text the server writes; while the developer switch `COCKPIT_CHECK_WORDING=1` is set (tests and
 development, never a setting), sending such a field that `problems` flags fails, and so does an error message the app
 returns that it flags. With the switch off nothing changes.
@@ -17,6 +20,7 @@ from typing import Annotated, Any
 from pydantic import WrapValidator
 from pydantic_core import PydanticCustomError
 
+from engine.check_text import without_links
 from engine.secrets import SecretHint
 
 #: The environment variable that turns the check on.
@@ -93,6 +97,7 @@ def _is_key_path(token: str) -> bool:
 def problems(text: str) -> list[str]:
     """What in text meant for the screen names the product's insides; empty when nothing does."""
     found: list[str] = []
+    text = without_links(text)
     for match in _FILE_NAME.finditer(text):
         found.append(f"names a settings file: {match.group()!r}")
     for match in _BANNED_PHRASES.finditer(text):
