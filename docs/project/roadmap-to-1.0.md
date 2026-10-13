@@ -494,6 +494,12 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   whose values are known is a list to pick from. Audit each free-text field and convert it, with a test per screen. The
   time zone is done (`test_the_time_zone_setting_is_a_list_of_known_time_zones`; the Settings screen and the
   walkthrough). Settings name their lists with `choices`.
+- [ ] **Action items and open questions, cleaned up end to end** (owner, 2026-10-13: "the whole action items / open
+  issues needs a lot of work"). Starts from L0's audit of design 6.8 to 6.11 against the code, so the list of what is
+  wrong comes from the code, not memory. Then one place for each: every open action with its owner, due date, project
+  and where it came from; every open question with who it's waiting on and since when. Filter by project, person and
+  state; edit, close and reassign from the row, with Undo; duplicates offered for merging; anything stale or with no
+  owner surfaced on Today. Exit check: the owner works through their own open items on a laptop and a phone.
 - [ ] **The obvious next steps on screen** (L3b): "Add a new person" in the who-is-this chooser, "Add a project",
   "It's part of" and "Not a project", and the other one-click offers, in the row's menu or as its primary.
 - [ ] **The app's own kit, offered where it's wanted** (owner, 2026-10-13: "i dont want to see these fake plugins"): the
