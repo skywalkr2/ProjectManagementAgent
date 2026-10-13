@@ -527,7 +527,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `tests/test_export_schedule.py::test_a_workspace_without_a_repository_gets_no_scheduled_export_and_says_so_once`,
   `tests/test_export_schedule.py::test_the_interval_is_taken_in_at_once_and_the_commit_switch_waits_for_a_restart`); the
   remote is not offered on the Settings screen (`tests/test_setup.py::test_settings_are_described_for_the_forms`).
-- [x] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command. Moved from phase
+- [x] A divergence between two computers, or a stale lease, is resolved without a command wherever the app can tell what
+  happened: diverged copies from a screen, a stopped copy on this computer by taking over at start; otherwise the
+  message says where the workspace is open (decided 2026-10-13). Moved from phase
   A: the exit test uses one computer, but real use may not. Design 5.0, decisions 2026-10-13.
   - [x] **Diverged copies.** The app starts on this computer's copy and holds the folder (no writes, no lease); a Today line
     opens a page with both sides in plain words and the two choices with what each does; the choice is noted and carried out
