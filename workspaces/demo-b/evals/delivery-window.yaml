@@ -1,0 +1,41 @@
+id: delivery-window
+title: 'An estimated delivery window becomes a fact and a calendar entry spanning it'
+received: '2026-10-09'
+pasted: 'From: orders@shop.example.com
+
+  Subject: Your order has shipped
+
+
+  Hello, your order of 40 printed bookmarks for launch events has shipped.
+
+
+  Estimated delivery: Tuesday, October 20 - Thursday, October 22
+
+
+  Thank you for ordering.'
+expect:
+- op: fact
+  text_has:
+  - bookmarks
+- op: event.add
+  text_has:
+  - bookmarks
+  start: '2026-10-20'
+  end: '2026-10-22'
+forbid:
+- op: question.add
+stub_answer:
+  summary: The bookmark order will arrive between October 20 and October 22.
+  ops:
+  - op: fact
+    text: The printed bookmarks are expected to be delivered between Oct 20 and Oct 22.
+    project: PRJ-1
+    evidence:
+      quote: 'Estimated delivery: Tuesday, October 20 - Thursday, October 22'
+  - op: event.add
+    title: Printed bookmarks delivered
+    start: '2026-10-20'
+    end: '2026-10-22'
+    project: PRJ-1
+    evidence:
+      quote: 'Estimated delivery: Tuesday, October 20 - Thursday, October 22'

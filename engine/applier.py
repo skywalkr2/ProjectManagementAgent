@@ -29,6 +29,7 @@ from engine.ops import (
     ActionCloseOp,
     AnswerOp,
     ChangesetIn,
+    EventAddOp,
     EvidenceIn,
     FactOp,
     FileAddOp,
@@ -52,7 +53,7 @@ from engine.ops import (
     TextProposeOp,
 )
 from engine.plugin_api import NeedsPerson
-from engine.records import model_for
+from engine.records import entry_problem, model_for
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
 from engine.titles import title_for
@@ -199,6 +200,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         for project in _projects_of(op):
             if view.get("project", project) is None:
                 refuse(i, "targets", f"there is no project {project}")
+        if isinstance(op, EventAddOp) and (why := entry_problem(op.start, op.end)) is not None:
+            refuse(i, "targets", f"calendar entry {op.title!r}: {why}")
         if isinstance(op, ActionCloseOp):
             target = view.get("action", op.id)
             if target is None:
@@ -375,7 +378,7 @@ def _evidence(op: OpModel) -> EvidenceIn | None:
 
 
 def _projects_of(op: OpModel) -> list[str]:
-    if isinstance(op, (NoteOp, FactOp, ActionAddOp, QuestionAddOp)) and op.project:
+    if isinstance(op, (NoteOp, FactOp, EventAddOp, ActionAddOp, QuestionAddOp)) and op.project:
         return [op.project]
     if isinstance(op, RecordLogOp):
         return [op.project]
@@ -924,6 +927,18 @@ def _apply_op(
                 "fact", {"text": op.text, "project": op.project, "source": source, "evidence": ev, "trust": trust}, w
             ).id,
         )
+    elif isinstance(op, EventAddOp):
+        ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
+        data = {
+            "title": op.title,
+            "start": op.start,
+            "end": op.end,
+            "project": op.project,
+            "source": source,
+            "evidence": ev,
+            "trust": trust,
+        }
+        made("event", tx.create("event", data, w).id)
     elif isinstance(op, RecordSetOp):
         cur = tx.get(op.kind, op.id)
         value = op.value

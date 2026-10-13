@@ -13,6 +13,7 @@ from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from engine.connectors import moment
+from engine.records import entry_time
 
 
 @dataclass
@@ -27,6 +28,7 @@ class AgendaItem:
     link: str | None
     cancelled: bool
     days: list[date] = field(default_factory=list)
+    own: bool = False  # an entry in the app's own calendar, not an event read from a connected calendar
 
 
 @dataclass
@@ -55,7 +57,8 @@ def zone(cfg: Any) -> ZoneInfo:
 
 
 def agenda(store: Any, cfg: Any, now: datetime) -> list[AgendaItem]:
-    """Events on today and the configured days after it, earliest first; all-day ones first on their day."""
+    """Events on today and the configured days after it, earliest first; all-day ones first on their day. The app's own
+    calendar entries follow the connected calendars' events, in start order, each on every day it covers."""
     here = zone(cfg)
     first = now.astimezone(here).date()
     days = [first + timedelta(days=n) for n in range(cfg.ui.today.agenda_days_ahead + 1)]
@@ -82,7 +85,55 @@ def agenda(store: Any, cfg: Any, now: datetime) -> list[AgendaItem]:
                 days=on,
             )
         )
+    found.sort(key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))
+    return [*found, *_own_entries(store, days, here)]
+
+
+def _own_entries(store: Any, days: list[date], here: ZoneInfo) -> list[AgendaItem]:
+    """The app's own calendar entries that overlap the listed days, earliest first. A range counts every day from its
+    start to its end, both included; an entry with no time of day is all-day."""
+    found = []
+    for entry in store.read().list("event"):
+        data = entry.data
+        try:
+            start = entry_time(data["start"])
+            end = entry_time(data["end"]) if data.get("end") else start
+        except (TypeError, ValueError):
+            continue
+        all_day = not isinstance(start, datetime)
+        first, last = _local_day(start, here), _local_day(end, here)
+        on = [d for d in days if first <= d <= last]
+        if not on:
+            continue
+        found.append(
+            AgendaItem(
+                snapshot=entry.id,
+                source=data.get("source") or "",
+                title=data["title"],
+                start=_local_text(start, here),
+                end=_local_text(end, here) if data.get("end") else None,
+                all_day=all_day,
+                where=None,
+                link=None,
+                cancelled=False,
+                days=on,
+                own=True,
+            )
+        )
     return sorted(found, key=lambda a: (a.days[0], not a.all_day, _sort_key(a, here), a.title))
+
+
+def _local_day(value: date | datetime, here: ZoneInfo) -> date:
+    if isinstance(value, datetime):
+        return (value if value.tzinfo else value.replace(tzinfo=here)).astimezone(here).date()
+    return value
+
+
+def _local_text(value: date | datetime, here: ZoneInfo) -> str:
+    """A day as its ISO text; a time with its offset, in the person's time zone when it was written without one."""
+    if isinstance(value, datetime):
+        return (value if value.tzinfo else value.replace(tzinfo=here)).isoformat()
+    return value.isoformat()
 
 
 def _falls_on(event: dict[str, Any], day: date, here: ZoneInfo) -> bool:

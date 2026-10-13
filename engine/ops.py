@@ -11,6 +11,8 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator, model_validator
 
+from engine.records import entry_problem
+
 Tier = Literal["data", "outbound", "system"]
 
 
@@ -81,6 +83,33 @@ class FactOp(OpModel):
     text: str = Field(min_length=1, description="The fact, as a statement.")
     project: str | None = Field(None, description="Project id, if the fact is about one.")
     evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
+
+
+class EventAddOp(OpModel):
+    """A date or a range of dates the input gives for something (a delivery window, a deadline, an appointment, a
+    launch), in the app's own calendar. Beside the fact or action it belongs to, with the same quoted words. Dates only
+    as the input states them; evidence is required."""
+
+    op: Literal["event.add"]
+    title: str = Field(min_length=1, description="What happens on that date, in a few words.")
+    start: str = Field(
+        description="The day it starts, written YYYY-MM-DD, or a date-time with its offset when the input gives a time."
+    )
+    end: str | None = Field(
+        None, description="The last day of a range (or the end time), in the same form as start; leave out for one day."
+    )
+    project: str | None = Field(None, description="Project id, if the entry belongs to one.")
+    evidence: EvidenceIn = Field(description="The exact words from the input that give the date.")
+
+    @field_validator("start", "end")
+    @classmethod
+    def _readable(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        text = value.strip()
+        if (why := entry_problem(text, None)) is not None:
+            raise ValueError(why)
+        return text
 
 
 class RecordSetOp(OpModel):
@@ -409,6 +438,7 @@ class ReportDraftOp(OpModel):
 Op = Annotated[
     NoteOp
     | FactOp
+    | EventAddOp
     | RecordSetOp
     | RecordLogOp
     | ActionAddOp
@@ -438,6 +468,7 @@ Op = Annotated[
 OP_MODELS: dict[str, type[OpModel]] = {
     "note": NoteOp,
     "fact": FactOp,
+    "event.add": EventAddOp,
     "record.set": RecordSetOp,
     "record.log": RecordLogOp,
     "action.add": ActionAddOp,
@@ -475,7 +506,7 @@ TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {
 }
 
 #: Ops whose evidence is required (record.set requires it for the fields in EVIDENCE_FIELDS).
-NEEDS_EVIDENCE = {"fact", "action.add", "action.close", "question.done"}
+NEEDS_EVIDENCE = {"fact", "event.add", "action.add", "action.close", "question.done"}
 EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner"}
 
 #: Fields record.set may change, per kind.

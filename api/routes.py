@@ -405,7 +405,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
     @r.get("/today/agenda")
     def today_agenda() -> list[AgendaItemView]:
-        """Events from watched calendars on today and the next configured days, in the person's time zone."""
+        """Events from watched calendars, then the app's own calendar entries, on today and the next configured days,
+        in the person's time zone."""
         from engine import today
 
         return [AgendaItemView(**vars(a)) for a in today.agenda(store, cfg, datetime.now(UTC))]
@@ -1704,7 +1705,7 @@ def _op_view(o: dict[str, Any], store: Store, people: People, projects: dict[str
     record = None
     for ref in o.get("records", []):
         rec = store.read().get(ref["kind"], ref["id"], include_deleted=True)
-        if rec is not None and ref["kind"] in ("action", "question", "fact", "note", "person", "project"):
+        if rec is not None and ref["kind"] in ("action", "question", "fact", "event", "note", "person", "project"):
             record = (ref["kind"], rec)
             break
     title = o.get("label") or op.get("text") or op.get("title") or op.get("answer") or op.get("full_name") or ""

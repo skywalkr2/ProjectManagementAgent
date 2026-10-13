@@ -136,7 +136,8 @@ interface DayGroup {
   events: Event[];
 }
 
-/** Events by the days they fall on (today onward), all-day ones first within a day. */
+/** Events by the days they fall on (today onward): the connected calendars' events with all-day ones first, then the
+ * app's own entries. */
 export function groupByDay(events: Event[], today: string): DayGroup[] {
   const days = new Map<string, Event[]>();
   for (const event of events) {
@@ -149,7 +150,15 @@ export function groupByDay(events: Event[], today: string): DayGroup[] {
     .sort()
     .map((date) => {
       const all = days.get(date)!;
-      return { date, events: [...all.filter((e) => e.all_day), ...all.filter((e) => !e.all_day)] };
+      const connected = all.filter((e) => !e.own);
+      return {
+        date,
+        events: [
+          ...connected.filter((e) => e.all_day),
+          ...connected.filter((e) => !e.all_day),
+          ...all.filter((e) => e.own),
+        ],
+      };
     });
 }
 
@@ -173,7 +182,7 @@ function AgendaColumn(props: { onAddSource?: () => void }) {
   const today = localDate(now);
   const tomorrow = addDays(today, 1);
   const events = agenda.data ?? [];
-  const sourceName = useSourceNames(events.map((e) => e.source));
+  const sourceName = useSourceNames(events.filter((e) => !e.own).map((e) => e.source));
   const groups = groupByDay(events, today);
   const count = events.filter((e) => !e.cancelled && e.days.includes(today)).length;
   const dayLabel = (date: string) =>
@@ -194,10 +203,10 @@ function AgendaColumn(props: { onAddSource?: () => void }) {
           const ended = (e: Event) => new Date(e.end ?? e.start).getTime() <= now.getTime();
           const rows: Array<Event | "now"> = [...group.events];
           if (group.date === today) {
-            const timed = group.events.filter((e) => !e.all_day);
+            const timed = group.events.filter((e) => !e.all_day && !e.own);
             if (timed.length > 0) {
               const upcoming = timed.find((e) => !ended(e));
-              rows.splice(upcoming ? rows.indexOf(upcoming) : rows.length, 0, "now");
+              rows.splice(upcoming ? rows.indexOf(upcoming) : group.events.filter((e) => !e.own).length, 0, "now");
             }
           }
           return (
@@ -216,7 +225,7 @@ function AgendaColumn(props: { onAddSource?: () => void }) {
                       key={`${row.snapshot}:${i}`}
                       event={row}
                       when={whenText(row, group.date, t)}
-                      past={group.date === today && !row.all_day && ended(row)}
+                      past={group.date === today && !row.all_day && !row.own && ended(row)}
                       source={sourceName(row.source)}
                     />
                   ),
@@ -233,7 +242,7 @@ function AgendaColumn(props: { onAddSource?: () => void }) {
 function AgendaRow(props: { event: Event; when: string; past: boolean; source: string }) {
   const { t } = useWords();
   const { event } = props;
-  const meta = [event.where, props.source].filter(Boolean).join(" · ");
+  const meta = [event.where, event.own ? t("today.agenda.own") : props.source].filter(Boolean).join(" · ");
   return (
     <li className={props.past ? "tb-row past" : "tb-row"}>
       <span className="tb-when">{props.when}</span>

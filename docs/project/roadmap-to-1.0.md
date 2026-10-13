@@ -367,15 +367,24 @@ them are needed before the owner's daily use, which starts when L-core passes.
     internal warns without a return round (CLAUDE.md: lints only warn when the item stays internal).
   - **Machine timestamps in filed notes** ("When: 2026-10-12T18:19:04Z"): notes show dates and times in the person's
     format and time zone.
-- [ ] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
+- [x] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
   concept that the PM pack (phase C) builds on, so its records are designed for both. When an input that isn't set aside
   names a date or a date range for something (a delivery window, a deadline, an appointment), the assistant records a
   calendar entry in the app's own calendar, with its date or range and the quoted words, beside the fact it records.
   The agenda shows these entries next to the connected calendars' events. Nothing is written to the person's calendar
-  service: the mail and calendar add-ons stay read-only. Today the agenda shows only events read from a connected
-  calendar, and a delivery window is recorded only as a fact. Exit check: a golden-set case (an order mail with an
+  service: the mail and calendar add-ons stay read-only. Exit check: a golden-set case (an order mail with an
   estimated delivery window gives the fact and an entry spanning the window) and a learning pair (a corrected date on an
-  entry carries to the next similar mail).
+  entry carries to the next similar mail). Built: the `event` record and `event.add` (`tests/test_calendar_entries.py`:
+  `test_event_add_is_a_data_op_that_needs_evidence_and_readable_dates`,
+  `test_an_entry_that_ends_before_it_starts_or_quotes_words_not_in_the_input_is_refused`,
+  `test_the_applier_creates_the_entry_with_its_words_and_undo_removes_it`,
+  `test_a_workspace_with_an_entry_round_trips_through_the_export`), the agenda and its route
+  (`test_the_agenda_lists_an_entry_on_each_day_of_its_range_after_the_calendar_events`,
+  `test_own_entries_follow_the_connected_events_and_a_removed_entry_is_gone`,
+  `test_the_agenda_route_marks_an_own_entry`; the label in `TodayBoard.test.tsx`), and the golden case
+  `workspaces/demo-b/evals/delivery-window.yaml` (`test_the_delivery_window_case_gives_the_fact_and_an_entry_spanning_it`).
+  **Left: the learning pair (L4).** Knowledge isn't in packets until L-core, so a corrected date can't carry to the next
+  mail yet; the pair is built with the other pairs.
 - [ ] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
   (manifest validation, registration errors) get plain words and a test that produces each; Ask's material names
   settings without their keys, with `setting.propose` finding the key another way.
@@ -528,6 +537,8 @@ L4. **Proving it** (from the design author's review of this plan).
   - **a nudge isn't the work:** the person marked "followed up"; a later input doesn't credit them with doing the work;
   - **no placeholders:** an unknown target stays blank or TBD, with a question to whoever owns that field;
   - **attachment:** the fact needed is in an attached presentation; the run uses it and doesn't ask for it to be pasted;
+  - **dated item:** a calendar entry's date is corrected (the order mail's window was read wrong); the next similar mail
+    produces the corrected reading (the L0 item "A dated item becomes a calendar entry" leaves this pair here);
   - *negative, over-application:* a lesson about who owns risks doesn't change who owns actions;
   - *negative, other project:* a lesson targeted at one project doesn't change another project's output;
   - *negative, the world changed:* the person moved a due date because a later mail moved it; no lesson is proposed;

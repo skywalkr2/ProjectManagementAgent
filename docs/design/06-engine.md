@@ -405,9 +405,15 @@ a signature's address or number is offered for the sender's record; an action ge
 that answers an open question proposes marking it answered; a meeting invitation shows on the agenda under its
 project.
 
-*Designed, phase L0:* `event.add`, a calendar entry in the app's own calendar (a date or a date range, a title, the
-project it belongs to, and evidence), recorded when an input that isn't set aside names a date for something (a delivery
-window, a deadline, an appointment), beside the fact. It is never written to a calendar service (owner, 2026-10-13).
+`event.add` (data tier, offered to reading notes) adds a calendar entry to the app's own calendar: a title, a start (a
+day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, and
+evidence, which is required. The notes prompt asks for one when an input that isn't set aside names a date or a range for
+something (a delivery window, a deadline, an appointment, a launch), beside the fact or action, with the same quoted words;
+dates come only from the input, as for actions. An end before the start is refused alone; a start or end that isn't an
+ISO day or date-time makes the answer unreadable and goes back for a fix. The entry is an `event` record (`EVT`, shown as
+"calendar entry"; 5.1), made by the applier and removed by Undo like any create. It is never written to a calendar service
+(owner, 2026-10-13). **Built:** `tests/test_calendar_entries.py` (op validation, refusals, create and undo, the golden case
+`delivery-window`). The learning pair (a corrected date carries to the next similar mail) waits for L-core.
 
 *Designed, not yet built* (the first design's list): data ops `record.add`, `record.del`, `record.rename`, `action.update`,
 `action.assign`, `decision.add`, `milestone.add`, `risk.add`, `question.update`, `question.move`, `question.drop`,

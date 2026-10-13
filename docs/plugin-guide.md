@@ -1244,6 +1244,22 @@ Something recorded as true, with the words that show it. Added by `fact` and by 
 | `evidence.quote` | str | required | The exact words, as they appear in that source. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
 
+### `event` (EVT-n)
+
+Something dated in the app's own calendar: a day or a moment, or a range of days or moments. Added by `event.add` from what came in, and by plugins and the person later; never written to a calendar service.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `title` | str | required | What the entry is, in a few words. |
+| `start` | str | required | When it starts: a day (2026-10-12) or a date-time (2026-10-12T09:30:00+01:00), in ISO 8601 text. A day means an all-day entry; a date-time with no offset is in the person's time zone. |
+| `end` | str \| None | `None` | When it ends, in the same forms. Set, it makes a range, and the last day or moment is included. |
+| `project` | str \| None | `None` | The id of the project it is about, if any. |
+| `source` | str \| None | `None` | The id of the source it came from, if any. |
+| `evidence` | Evidence \| None | see below | The words that justify it. |
+| `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
+| `evidence.quote` | str | required | The exact words, as they appear in that source. |
+| `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
+
 ### `note` (NOTE-n)
 
 Something kept from an input that is not a fact, action or question. Added by `note`; never edited.
@@ -1533,6 +1549,20 @@ Answer the PM's question from the material given: the user guide, the settings, 
 | `text` | str | required | The answer, in plain words, for the PM. |
 | `cites` | list[EvidenceIn] | required | The exact words from the material that the answer rests on. |
 | `cites[].quote` | str | required | The exact words from the input that justify this op. |
+
+### `event.add`
+
+A date or a range of dates the input gives for something (a delivery window, a deadline, an appointment, a launch), in the app's own calendar. Beside the fact or action it belongs to, with the same quoted words. Dates only as the input states them; evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `title` | str | required | What happens on that date, in a few words. |
+| `start` | str | required | The day it starts, written YYYY-MM-DD, or a date-time with its offset when the input gives a time. |
+| `end` | str \| None | `None` | The last day of a range (or the end time), in the same form as start; leave out for one day. |
+| `project` | str \| None | `None` | Project id, if the entry belongs to one. |
+| `evidence` | EvidenceIn | required | The exact words from the input that give the date. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `fact`
 

@@ -27,6 +27,7 @@ _OUTCOME = {
     "question.add": "questions",
     "note": "notes",
     "fact": "recorded",
+    "event.add": "recorded",
     "record.set": "recorded",
     "record.log": "recorded",
     "person.add": "people",

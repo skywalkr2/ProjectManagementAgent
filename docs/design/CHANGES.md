@@ -614,7 +614,7 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 | The walkthrough's return | It opened by itself every visit until Finish later or the last button, so an optional step brought it back | Every visit only while You or an AI account is missing; otherwise only the first visit; a sign-in returns to the screen it started from (7.8). **Built:** `tests/test_walkthrough.py`, `src/components/SignIns.test.tsx` |
 | The app's own add-ons | The example and the kit were listed in setup as the person's add-ons to turn on | Not in setup; on the Add-ons screen only once on, or in a sandbox (7.8). **Built:** `tests/test_walkthrough.py` |
 | Labels and answers | 16 core ops had no label ("op.answer" showed); an answer showed its first 150 characters | Every core op has a label; an answer shows whole (7.4). **Built:** `tests/test_wording.py` |
-| The app's own calendar | The agenda showed only connected calendars; a dated item was only a fact | A core calendar; a dated item becomes an entry beside its fact (1, 6.7, 7.7; phase L0; the PM pack builds on it) |
+| The app's own calendar | The agenda showed only connected calendars; a dated item was only a fact | A core calendar; a dated item becomes an entry beside its fact (1, 6.7, 7.7; the PM pack builds on it). **Built:** the `event` record and `event.add`, the agenda showing the entries after the connected events on each day they cover, marked "From your notes"; `tests/test_calendar_entries.py`, `web/src/components/TodayBoard.test.tsx`, the golden case `delivery-window`. The learning pair waits for L-core (L4) |
 
 ## 26. Phase L0: first names in context and the received date (2026-10-13)
 

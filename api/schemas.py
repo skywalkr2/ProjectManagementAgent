@@ -850,10 +850,13 @@ class SyncView(BaseModel):
 
 
 class AgendaItemView(BaseModel):
-    """An event from a watched calendar, on today or the next configured days."""
+    """An event from a watched calendar, or an entry in the app's own calendar, on today or the next configured days."""
 
-    snapshot: str
-    source: str = Field(description="The watched source's id; its label is in GET /api/sources.")
+    snapshot: str = Field(description="The item's id: the snapshot of a watched event, or the id of an own entry.")
+    source: str = Field(
+        description="The watched source's id; its label is in GET /api/sources. For an own entry, the source it came "
+        "from, or empty."
+    )
     title: str
     start: str = Field(description="ISO 8601: a date-time with its offset, or a date for an all-day event.")
     end: str | None = None
@@ -862,6 +865,11 @@ class AgendaItemView(BaseModel):
     link: str | None = Field(None, description="Where to open it; untrusted, so show its real domain.")
     cancelled: bool = Field(description="The organizer called it off.")
     days: list[date] = Field(description="The days it falls on, in the person's time zone.")
+    own: bool = Field(
+        False,
+        description="An entry in the app's own calendar (recorded from what came in), not an event read from a "
+        "connected calendar. Its end is the last day or moment, included.",
+    )
 
 
 class ArrivedView(BaseModel):

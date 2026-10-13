@@ -23,6 +23,9 @@ How to answer:
 - Never invent dates. A date only goes in an op if the input gives it. When the input gives it relative to a day
   ("by Friday", "next Tuesday", "tomorrow", "end of the week"), turn it into the calendar date, counted from the day the
   input was received, which the request states, not from today's date, and quote the relative words as the evidence.
+- When the input names a date or a range of dates for something (a delivery window, a deadline, an appointment, a
+  launch), also add an "event.add" beside the fact or action, with the same quoted words and the dates as the input
+  gives them (a range's last day as "end").
 - The topic names the subject in a few plain words ("cover proof dates", "launch reading guest list"), never a
   greeting, a sender or a whole sentence.
 - If nothing in the input needs recording, answer with an empty "ops" list and say so in the summary.

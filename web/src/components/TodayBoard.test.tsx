@@ -25,7 +25,7 @@ function at(date: string, hour: number, minute = 0): string {
 }
 
 function event(extra: Partial<S["AgendaItemView"]> & Pick<S["AgendaItemView"], "title">): S["AgendaItemView"] {
-  return { snapshot: `snap-${extra.title}`, source: "cal-1", start: at(TODAY, 15), all_day: false, cancelled: false, days: [TODAY], ...extra };
+  return { snapshot: `snap-${extra.title}`, source: "cal-1", start: at(TODAY, 15), all_day: false, cancelled: false, own: false, days: [TODAY], ...extra };
 }
 
 function message(extra: Partial<S["ArrivedView"]> & Pick<S["ArrivedView"], "title">): S["ArrivedView"] {
@@ -137,6 +137,29 @@ test("the agenda groups by day, all-day first, with times, places, called-off la
   expect(tomorrow[0]).toHaveTextContent("All day");
   expect(tomorrow[1]).toHaveTextContent("Called off");
   expect(tomorrow[1]).toHaveTextContent("Budget call");
+});
+
+test("the app's own entries follow the calendar events on each day they cover, marked in words, all-day ones with no time", async () => {
+  const own = (extra: Partial<S["AgendaItemView"]>) =>
+    event({ title: "Delivery window", snapshot: "EVT-1", source: "", own: true, all_day: true, start: TODAY, end: TOMORROW, days: [TODAY, TOMORROW], ...extra });
+  open({
+    "GET today/agenda": () => [
+      event({ title: "Standup", start: at(TODAY, 9), end: at(TODAY, 9, 30) }),
+      event({ title: "Planning", all_day: true, start: TODAY, days: [TODAY] }),
+      own({}),
+    ],
+  });
+  const col = await column("Agenda");
+  const today = within(await within(col).findByRole("list", { name: "Today" })).getAllByRole("listitem");
+  const rowOf = (text: string) => today.findIndex((row) => row.textContent?.includes(text));
+  expect(rowOf("Planning")).toBeLessThan(rowOf("Standup"));
+  expect(rowOf("Standup")).toBeLessThan(rowOf("Delivery window"));
+  expect(today[rowOf("Delivery window")]).toHaveTextContent("All day");
+  expect(today.filter((row) => row.textContent?.includes("From your notes"))).toHaveLength(1);
+  expect(today[rowOf("Delivery window")]).toHaveTextContent("From your notes");
+  const tomorrow = within(within(col).getByRole("list", { name: "Tomorrow" })).getAllByRole("listitem");
+  expect(tomorrow[0]).toHaveTextContent("Delivery window");
+  expect(tomorrow[0]).toHaveTextContent("From your notes");
 });
 
 test("the now line goes at the end of today's list when everything has ended, and is absent with no timed events", async () => {

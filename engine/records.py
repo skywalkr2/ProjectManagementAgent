@@ -858,6 +858,68 @@ class Fact(Record):
     )
 
 
+class CalendarEntry(Record):
+    """Something dated in the app's own calendar: a day or a moment, or a range of days or moments. Added by
+    `event.add` from what came in, and by plugins and the person later; never written to a calendar service."""
+
+    record_kind: ClassVar[str] = "event"
+    prefix: ClassVar[str] = "EVT"
+    record_label: ClassVar[str] = "calendar entry"
+    layout: ClassVar[str | None] = "calendar/{id}"
+
+    title: str = Field(min_length=1, description="What the entry is, in a few words.")
+    start: str = Field(
+        description="When it starts: a day (2026-10-12) or a date-time (2026-10-12T09:30:00+01:00), in ISO 8601 text. "
+        "A day means an all-day entry; a date-time with no offset is in the person's time zone."
+    )
+    end: str | None = Field(
+        None,
+        description="When it ends, in the same forms. Set, it makes a range, and the last day or moment is included.",
+    )
+    project: str | None = Field(None, description="The id of the project it is about, if any.")
+    source: str | None = Field(None, description="The id of the source it came from, if any.")
+    evidence: Evidence | None = Field(None, description="The words that justify it.")
+    trust: Literal["trusted", "untrusted"] = Field(
+        "trusted", description="untrusted when it came from outside content."
+    )
+
+    @model_validator(mode="after")
+    def _readable_times(self) -> CalendarEntry:
+        if (problem := entry_problem(self.start, self.end)) is not None:
+            raise ValueError(problem)
+        return self
+
+
+def entry_time(value: str) -> date | datetime:
+    """An ISO 8601 day or date-time. Raises ValueError for anything else."""
+    text = value.strip()
+    if len(text) == 10:
+        return date.fromisoformat(text)
+    return datetime.fromisoformat(text[:-1] + "+00:00" if text.endswith("Z") else text)
+
+
+def entry_problem(start: str, end: str | None) -> str | None:
+    """Why a calendar entry's start and end can't stand, in plain words; None when they can."""
+    try:
+        first = entry_time(start)
+    except ValueError:
+        return f"{start!r} isn't a day such as 2026-10-12 or a date-time such as 2026-10-12T09:30:00+01:00"
+    if end is None:
+        return None
+    try:
+        last = entry_time(end)
+    except ValueError:
+        return f"{end!r} isn't a day such as 2026-10-12 or a date-time such as 2026-10-12T09:30:00+01:00"
+    both_times = isinstance(first, datetime) and isinstance(last, datetime)
+    if both_times and (first.tzinfo is None) == (last.tzinfo is None):
+        before = last < first
+    else:
+        before = (last.date() if isinstance(last, datetime) else last) < (
+            first.date() if isinstance(first, datetime) else first
+        )
+    return "it ends before it starts" if before else None
+
+
 class Note(Record):
     """Something kept from an input that is not a fact, action or question. Added by `note`; never edited."""
 
@@ -977,6 +1039,7 @@ REGISTRY: dict[str, type[Record]] = {
         Request,
         Changeset,
         Fact,
+        CalendarEntry,
         Note,
         Run,
         Signal,
@@ -1020,6 +1083,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     ],
     "changeset": [("request", "request"), ("run", "run")],
     "fact": [("project", "project"), ("source", "source")],
+    "event": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("source", "source")],
     "run": [("request", "request")],
     "file": [("project", "project"), ("replaces", "file")],

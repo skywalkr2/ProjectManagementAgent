@@ -277,6 +277,15 @@ def _matches(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store) ->
             f = _record(store, o, "fact")
             if f and _has_words(f["text"], e.get("text_has", [])):
                 return True
+        if op == "event.add":
+            entry = _record(store, o, "event")
+            if (
+                entry
+                and _has_words(entry["title"], e.get("text_has", []))
+                and entry["start"] == str(e.get("start", entry["start"]))
+                and entry.get("end") == (str(e["end"]) if "end" in e else entry.get("end"))
+            ):
+                return True
         if op == "note":
             return True
     return False

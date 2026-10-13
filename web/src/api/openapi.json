@@ -549,7 +549,7 @@
         "type": "object"
       },
       "AgendaItemView": {
-        "description": "An event from a watched calendar, on today or the next configured days.",
+        "description": "An event from a watched calendar, or an entry in the app's own calendar, on today or the next configured days.",
         "properties": {
           "all_day": {
             "title": "All Day",
@@ -592,12 +592,19 @@
             "description": "Where to open it; untrusted, so show its real domain.",
             "title": "Link"
           },
+          "own": {
+            "default": false,
+            "description": "An entry in the app's own calendar (recorded from what came in), not an event read from a connected calendar. Its end is the last day or moment, included.",
+            "title": "Own",
+            "type": "boolean"
+          },
           "snapshot": {
+            "description": "The item's id: the snapshot of a watched event, or the id of an own entry.",
             "title": "Snapshot",
             "type": "string"
           },
           "source": {
-            "description": "The watched source's id; its label is in GET /api/sources.",
+            "description": "The watched source's id; its label is in GET /api/sources. For an own entry, the source it came from, or empty.",
             "title": "Source",
             "type": "string"
           },
@@ -14769,7 +14776,7 @@
     },
     "/api/today/agenda": {
       "get": {
-        "description": "Events from watched calendars on today and the next configured days, in the person's time zone.",
+        "description": "Events from watched calendars, then the app's own calendar entries, on today and the next configured days,\nin the person's time zone.",
         "operationId": "today_agenda_api_today_agenda_get",
         "responses": {
           "200": {
