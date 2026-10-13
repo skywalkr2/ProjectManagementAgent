@@ -1181,6 +1181,10 @@ C4. **What the packs need from the core.**
   - 196, a task kind's declared tier holds over its role's tier (or is marked required), `ai.tasks.<kind>.tier` still
     overriding both; with 191's declared context need;
   - 197, `RefTo(..., blocks_delete=False)` for a reference that is history, left dangling and shown as removed.
+- [ ] **Round 44 from the writing pack's builder** (received 2026-10-13; answered in the weekly round): 199, a request's
+  part carrying a small pack-defined address for work on a record or file that isn't long text (with 188); 200, a record
+  type saying where it is written, apart from a field named `project` (or the guide naming the rule); 201, the test
+  kit's `ActionResult.apply` taking the requests to keep too.
 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
