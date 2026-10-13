@@ -2553,3 +2553,18 @@ op, so the proposal isn't lost. A priority has an open set of values, so the dec
 
 **Impact:** Design 5.1, 6.7 and the product-rules table in Part 8 say so. Plugin guide wording for `person_only`
 regenerated. No change to scope.
+
+## 2026-10-13: Lint settings live under `tuning:`, and the near-duplicate check includes done actions
+
+**Decided by:** project owner (through the coordinating session); the builder found that the earlier code skipped done
+actions only by the name of a variable, with no comment, test or decision behind it.
+
+**What:** `config/checks.yaml` gains `tuning:`, one typed entry per core lint, keyed by the lint's name with underscores.
+The first is `near_duplicate_action.similarity` (0 to 1, default 0.8). `lints:` and the plugin contract are unchanged.
+`near-duplicate-action` compares with open and done actions, as design 4.17 says.
+
+**Why:** A setting "under the lint" would have changed `lints:` from a map of severities, which plugin lints and their
+overrides rely on. A sibling key keeps that contract and gives later lints (such as `near-duplicate-question`) a place
+for their settings.
+
+**Impact:** Design 4.17, 6.7 and Part 8 say so. No change to scope.

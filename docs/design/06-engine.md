@@ -476,7 +476,7 @@ Built: `blocked-wording` (blocked phrases, including "confirm / check whether" i
 - A question whose text matches a fact kind's `terms` but doesn't declare `asks_for` (*designed*, with fact lookups).
 - A question that links to something the recipient may not be able to open, or carries bookkeeping in its label (*designed*).
 - A new action that looks like an open or done action for the same deliverable (`near-duplicate-action`; the similarity
-  threshold is fixed at 0.8 in the code today and is to become a setting, 4.17).
+  threshold is a setting, default 0.8, 4.17).
 - A link that doesn't respond (*designed*).
 - `evidence-fit`: the quoted words don't plausibly concern the target record (its title, owner and project share nothing with
   the quote). Default `return`, which holds it for the PM if the item will reach another person.

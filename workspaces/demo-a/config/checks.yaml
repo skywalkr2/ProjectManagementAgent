@@ -1,3 +1,5 @@
 version: 1
 lints: {blocked-wording: return, run-on-list: return, near-duplicate-action: warn, evidence-fit: return}
 projects: {}   # per project, e.g. {PRJ-2: {plugin/lint-name: off}}: a check switched off for one piece of work
+tuning:
+  near_duplicate_action: {similarity: 0.8}   # how alike a new action must be to an open or done one to be flagged (0 to 1)

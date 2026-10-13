@@ -242,7 +242,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - answering "who is this?" or "Pick an owner" records a signal with the person chosen (today nothing is recorded,
     so the same name asks again);
   - undoing the person's own release records no signal against the assistant (today it records `undone`);
-  - `near-duplicate-action` compares with done actions too, as 4.17 says, or 4.17 is corrected.
+  - `near-duplicate-action` compares with done actions too, as 4.17 says (done, `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too`; the box stays open for the
+    other items above);
 - [ ] **What the audit found, put right in the design:** 6.8 to 6.11 describe in the present tense what isn't built:
   question `key` dedupe, `on_answer`, link enrichment, reroute proposals, the pending flag, Reassign, meeting sync, the
   notice baseline date, `track_only`, `owner_format` parsing and `person.merge`. Each gets "designed" and its phase.
@@ -256,7 +257,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - an agent that exits 0 with no answer is its own outcome (`no_output`), retried, never "done";
   - held work and paused accounts show on Today: "Restart to run 7 waiting requests" as the first Decide line, and an
     account paused until its limit resets as a Risk line with the time and the count waiting.
-- [ ] The near-duplicate threshold becomes a setting (design 4.17; the code fixes it at 0.8).
+- [x] The near-duplicate threshold becomes a setting (design 4.17): `tuning.near_duplicate_action.similarity` in
+  `config/checks.yaml`, default 0.8, range 0 to 1, demo values in both workspaces. Tests: `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below`,
+  `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one`.
 - [ ] **"Built" checked mechanically:** a checked box here or a "Built" row in the design's status tables cites the test
   that proves it, and the self-check fails when a cited test doesn't exist. Rows already marked Built get their tests
   cited in the same change (design 10.5).

@@ -572,6 +572,8 @@ lints:                           # severities: refuse, return, warn, off
   evidence-fit: return
 projects:                        # severities for one project's work only, over the ones above
   PRJ-3: {run-on-list: off}
+tuning:                          # settings of the core lints that have more than a severity
+  near_duplicate_action: {similarity: 0.8}
 ```
 
 Severities: `refuse`, `return` (back to the AI once; then held for the PM if the item will reach another person, or applied
@@ -581,10 +583,14 @@ lint like the core's own, and `projects:` per project. A lint the workspace swit
 assistant's proposals only, never the person's own changes. Each problem names the passage it points to, its guidance goes
 back with that passage in the return round, and it shows on that passage in the compare view (7.2).
 
-**Near-duplicate threshold.** `near-duplicate-action` compares a new action's text with open and done actions and fires at a
-similarity of 0.8, which is fixed in the code today. A threshold is a setting (4.0), so a `similarity` key under the lint,
-with a default, is to be added; the first design's example value of 0.85 does not hold. (The design and the code disagreed;
-the code's value is the one in use.)
+**Lint settings.** A lint with more than a severity has its settings under `tuning:`, one typed entry per core lint, named as
+the lint is in `lints:` with underscores for hyphens, so each setting has a plain dotted key and environment variable
+(`COCKPIT__CHECKS__TUNING__NEAR_DUPLICATE_ACTION__SIMILARITY`). `lints:` stays a map of severities, so plugin lints and their
+overrides are unchanged. **Built:** `near_duplicate_action.similarity`, a number from 0 to 1, default 0.8 (the first design's
+0.85 does not hold). `near-duplicate-action` compares a new action's text with open and done actions and fires at or above
+that similarity, and a message says which kind it matched. **Built:** `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below` (fires at and above the setting, with two
+values, and not below), `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too` and `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one` (the range and the default). `near-duplicate-question` (designed, phase L) gets its
+entry beside it, with `similarity` and `days` (default 14).
 
 Lints in the first design that are *designed, not yet built*: `locale-spelling`, `fact-terms-without-asks-for` and
 `unreachable-link`. With the learning slice (phase L): `already-known` (default `return`), a question, outside lookup or report

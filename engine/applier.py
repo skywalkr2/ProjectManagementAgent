@@ -113,7 +113,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _required_ops(cs, ctx)
     view = ctx.store.read()
     lints = ctx.cfg.checks.lints
-    open_actions = [a for a in view.list("action") if a.data["status"] != "done"]
+    known_actions = view.list("action")
+    similarity = ctx.cfg.checks.tuning.near_duplicate_action.similarity
     origin = origin_of(ctx)
     about = origin.get("about") or {}
     about_record = view.get(about["kind"], about["id"]) if about.get("kind") and about.get("id") else None
@@ -264,9 +265,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             _wording(i, op.text, ctx, lint)
             if any(sep in op.text for sep in ctx.cfg.language.run_on_separators):
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
-            for existing in open_actions:
-                if _similar(op.text, existing.data["text"]) >= 0.8:
-                    lint(i, "near-duplicate-action", f"looks like open action {existing.id}: {existing.data['text']}")
+            for existing in known_actions:
+                if _similar(op.text, existing.data["text"]) >= similarity:
+                    state = "done action" if existing.data["status"] == "done" else "open action"
+                    lint(i, "near-duplicate-action", f"looks like {state} {existing.id}: {existing.data['text']}")
                     break
         # plugins' lints: soft checks on the assistant's proposals (never the person's own changes), with the
         # severity the workspace sets, or sets for this project's work (never a refusal by default)

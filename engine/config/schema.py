@@ -619,12 +619,34 @@ def _default_lints() -> dict[str, Severity]:
     }
 
 
+class NearDuplicateActionTuning(ConfigModel):
+    similarity: float = Field(
+        0.8,
+        ge=0,
+        le=1,
+        description="How alike a new action's words must be to an open or done action to count as a near-duplicate: "
+        "0 flags any action that shares a word, 1 only one with the same words.",
+    )
+
+
+class LintTuning(ConfigModel):
+    """Settings of the core lints that have more than a severity: one entry per lint, named as the lint is in `lints`
+    with underscores for hyphens, so each setting has a plain dotted key and environment variable."""
+
+    near_duplicate_action: NearDuplicateActionTuning = Field(
+        default_factory=NearDuplicateActionTuning, description="Settings of the near-duplicate action check."
+    )
+
+
 class ChecksFile(FileModel):
     lints: dict[str, Severity] = Field(default_factory=_default_lints, description="How strict each soft check is.")
     projects: dict[str, dict[str, Severity]] = Field(
         default_factory=dict,
         description="Severities for one project's work, by project id then check, over the ones above (a rule "
         "switched off for one piece of work only).",
+    )
+    tuning: LintTuning = Field(
+        default_factory=LintTuning, description="Settings of the soft checks that have more than a severity."
     )
 
 

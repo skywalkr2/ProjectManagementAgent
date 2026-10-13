@@ -587,7 +587,7 @@ All five points, and the two lines on subagents, are in the file.
 | 3. The wording rule at the response boundary | In tests and dev mode, the API's response serializer refuses user-facing text with `.yaml`, `env:`, a dotted key path or a command, so the journey tests fail on the first leak, runtime messages included (phase A2, beside rewriting the known strings). |
 | 4. A ceiling as well as a floor | The first-five-minutes brief says what those minutes cost at most (`CLAUDE.md`), and the first run after setup shows its estimate even below the confirm amount (design 7.8, phase A2). |
 | Section 4 is superseded | Marked so, pointing to the roadmap. |
-| Section 5 should be checked off | Each row has a state: eight fixed in the design text, and one (the near-duplicate threshold) fixed in the text with the code setting still open in L0. |
+| Section 5 should be checked off | Each row has a state: eight fixed in the design text, and one (the near-duplicate threshold) fixed in the text with the code setting built afterwards (`tuning.near_duplicate_action.similarity`, 4.17). |
 
 ## 25. Phase A starts: what the code showed (2026-10-12)
 
