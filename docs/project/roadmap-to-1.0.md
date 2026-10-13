@@ -603,8 +603,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`,
   `tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`,
   `web/src/shell/HeldLines.test.tsx`.
-  - Left: a draft cut off at the output limit whose continuation call finds no network is held with a note instead of waiting for the network.
-  - Left: changing the AI accounts does not end an offline wait early (`release_paused` lifts only usage-limit pauses); the wait is at most `dispatch.offline_check_seconds`.
+  - Changing the AI accounts doesn't end an offline wait early; the wait is at most `dispatch.offline_check_seconds`, so
+    nothing more is needed. A draft cut off at the output limit whose continuation finds no network moved to phase E's
+    outage handling.
 
 L1. **Knowledge as records.**
 - [ ] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,
@@ -1049,6 +1050,8 @@ time, nothing went out without approval, a backup succeeded, and the repeat-corr
 Order by what protects real data first, then by what the packs ask for:
 - [ ] **The governor:** stale-item sweeps, outage handling, the scheduled export with its remote; restore to a point in
   time (a single record comes in phase L).
+  Outage handling includes a draft cut off at the output limit whose continuation call finds no network: today it is
+  held with a note; it should wait for the network like any run.
 - [ ] **Retention, and export and forget a person** (design 5.2, 12.4): forgetting is a recorded redaction, with the local
   export repository rebuilt; evidence quotes survive retention. The forget travels through the synced folder: the history
   comparison treats redacted entries as matching, and the loading computer replays the forget. Undo never restores a
