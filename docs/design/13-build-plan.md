@@ -81,13 +81,15 @@ left. Not started: nothing exists here. A milestone is never marked done on a pa
    other in tests.
 
    **State: Built, except one item.** Manifests, registries, the fake plugin, interfaces, events, requests for another plugin's
-   task kinds and two fake plugins that use each other are built and tested (plugin API 0.3.55, with a generated guide). Not
+   task kinds and two fake plugins that use each other are built and tested (plugin API 0.3.55, with a generated guide;
+   `tests/test_plugins.py`, `tests/test_interfaces.py`, `tests/test_events.py`, `tests/test_plugin_guide.py`). Not
    yet: the walking skeleton's built-ins (AI adapters, channels) behind the same registries; adapters are a fixed list.
 
 5. **Watchers, triage, supersede.** Fake connectors with fixture changes; the matcher registry; the auto-closed list.
 
    **State: Built.** Fake connectors, the matcher registry and the auto-closed list, and beyond the milestone the core's folder,
-   feed, calendar-file and mailbox connectors (the core ships them; 1.4 and 6.2 are corrected by another writer).
+   feed, calendar-file and mailbox connectors (the core ships them; 1.4 and 6.2 are corrected by another writer;
+   `tests/test_watch.py`, `tests/test_calendar_mail.py`).
 
 6. **Records, rendering and the publisher.** Core record types and `ext` fields, templates, render-time ordering, roll-ups,
    drafts, content-hash approval, scheduled drafts, concurrency check, shared masters (lock status, outside edits as changes),

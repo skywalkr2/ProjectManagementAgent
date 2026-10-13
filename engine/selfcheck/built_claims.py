@@ -1,8 +1,10 @@
 """The "built claims" check: a claim that something is built names a test that exists (design 10.5).
 
-A claim is a checked roadmap box (`- [x]`) or a bold "Built" marker in a design file, in prose, a list item or a table
-row. Each claim is the list item, table row or paragraph it sits in. It is satisfied when it cites at least one test
-that exists, or says "checked by reading" (docs and process items). It fails when anything it cites is missing: a test
+A claim is a checked roadmap box (`- [x]`), or in a design file a bold "Built" marker (in prose, a list item or a table
+row), a table cell that starts with "Built", or a "State: Built" line (its claim is the numbered milestone it closes).
+Plain "Built" in running prose is not a claim. Each claim is the list item, table row, milestone or paragraph it sits
+in. It is satisfied when it cites at least one test that exists, or says "checked by reading" (docs and process items).
+It fails when anything it cites is missing: a test
 file that isn't there, or a test name that isn't defined in the file it is attached to (`file::name`) or anywhere in the
 tests (a bare `test_name`). A test file is cited by its path (`tests/...`, `web/e2e/...`, `web/src/...`, or `src/...`
 for `web/src/...`) or by its bare file name (`journeys.spec.ts`, `Addons.test.tsx`, `test_requeue.py`).
@@ -28,6 +30,10 @@ UNDER_REVIEW: frozenset[str] = frozenset()
 
 CHECKBOX = re.compile(r"^\s*[-*]\s+\[[xX]\]\s")
 BUILT_MARKER = re.compile(r"\*\*Built\b|\*\*built\b")
+BUILT_CELL = re.compile(r"^\**built\b(?!-)", re.IGNORECASE)
+STATE_BUILT = re.compile(r"\bState: Built\b")
+CELL_SPLIT = re.compile(r"(?<!\\)\|")
+NUMBERED = re.compile(r"^(\s*)\d+\.\s")
 LIST_START = re.compile(r"^(\s*)(?:[-*]|\d+\.)\s")
 TABLE_ROW = re.compile(r"^\s*\|")
 HEADING = re.compile(r"^\s*#")
@@ -87,6 +93,25 @@ def _marker_unit(lines: list[str], at: int) -> tuple[int, str]:
     return start, _item_from(lines, start)[1]
 
 
+def _has_built_cell(line: str) -> bool:
+    """A table row with a cell that starts with "Built" (any case, not "built-in")."""
+    return TABLE_ROW.match(line) is not None and any(BUILT_CELL.match(c.strip()) for c in CELL_SPLIT.split(line))
+
+
+def _state_block(lines: list[str], at: int) -> tuple[int, str]:
+    """The numbered item (a milestone) that holds the "State:" line at `at`: its first line and text."""
+    start = at
+    while start > 0 and not (NUMBERED.match(lines[start]) and _indent(lines[start]) < _indent(lines[at])):
+        start -= 1
+    base = _indent(lines[start])
+    end = start + 1
+    while end < len(lines) and not HEADING.match(lines[end]):
+        if NUMBERED.match(lines[end]) and _indent(lines[end]) <= base:
+            break
+        end += 1
+    return start, "\n".join(lines[start:end])
+
+
 def find_claims(text: str, path: str, *, roadmap: bool) -> list[Claim]:
     """Every claim in one markdown file: checked boxes when `roadmap`, bold Built markers otherwise."""
     lines = text.split("\n")
@@ -98,9 +123,14 @@ def find_claims(text: str, path: str, *, roadmap: bool) -> list[Claim]:
                 continue
             first, unit = number, _item_from(lines, number)[1]
         else:
-            if not BUILT_MARKER.search(line):
+            if STATE_BUILT.search(line):
+                first, unit = _state_block(lines, number)
+            elif _has_built_cell(line):
+                first, unit = number, line
+            elif BUILT_MARKER.search(line):
+                first, unit = _marker_unit(lines, number)
+            else:
                 continue
-            first, unit = _marker_unit(lines, number)
         if first in seen:
             continue
         seen.add(first)

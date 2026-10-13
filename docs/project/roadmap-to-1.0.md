@@ -260,9 +260,10 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [x] The near-duplicate threshold becomes a setting (design 4.17): `tuning.near_duplicate_action.similarity` in
   `config/checks.yaml`, default 0.8, range 0 to 1, demo values in both workspaces. Tests: `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below`,
   `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one`.
-- [ ] **"Built" checked mechanically:** a checked box here or a "Built" row in the design's status tables cites the test
+- [x] **"Built" checked mechanically:** a checked box here or a "Built" row in the design's status tables cites the test
   that proves it, and the self-check fails when a cited test doesn't exist. Rows already marked Built get their tests
-  cited in the same change (design 10.5).
+  cited in the same change (design 10.5). Built: `tests/test_built_claims.py` (the claim kinds, a missing file, a wrong
+  name, "checked by reading", and `test_the_roadmap_and_the_design_make_no_unproven_claim_of_built` on the real docs).
 - [ ] **A bare first name resolves only in context** (design 6.11): same project, or a participant in the thread; a
   different initial or surname fragment is held.
 - [ ] The golden-set cases for these fixes are written first, as their failing tests:

@@ -20,7 +20,7 @@ Everything here is generic; an organization's specifics live in a workspace.
 | Workplace PM (9.1 to 9.5) | A private add-on in its own repository | Not started. The design is kept as the worked example; it is not on the roadmap to 1.0 |
 | Publishing (9.6 to 9.9) | A private add-on in its own repository | Designed; not started. Phase C of the roadmap (C3), after the project management pack |
 | Project management (9.10) | A private add-on in its own repository, to be created | Decided; not started. Phase C of the roadmap (C2) |
-| Writing (9.11) | A private add-on in its own repository | Built far enough to load and register on the current plugin API; it cannot yet be installed from the screen (phase A2), and its review is phase C1 |
+| Writing (9.11) | A private add-on in its own repository | Loads and registers on the current plugin API, proved by its own repository's tests; it cannot yet be installed from the screen (phase A2), and its review is phase C1 |
 
 ## 9.1 The use
 

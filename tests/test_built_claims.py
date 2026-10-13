@@ -100,6 +100,36 @@ def test_a_built_marker_in_a_paragraph_or_list_item_is_judged_on_that_unit(root)
     assert "test_missing.py" in findings[0].message
 
 
+def test_a_plain_built_table_cell_needs_a_citation_in_its_row(root):
+    table = (
+        "| Area | State |\n|---|---|\n"
+        "| One | Built |\n"
+        "| Two | Built (A2; `tests/test_alpha.py`); the rest is not |\n"
+        "| Three | built; the other keys are designed |\n"
+        "| Four | Not built |\n"
+        "| Five | Built-in defaults |\n"
+        "| Six | built | `tests/test_alpha.py::test_first_thing` |\n"
+    )
+    findings = design(root, table)
+    assert [f.line for f in findings] == [3, 5]
+
+
+def test_a_state_built_line_is_judged_on_its_milestone(root):
+    text = (
+        "1. **First.** Does things.\n\n"
+        "   **State: Built.** All of it, `tests/test_alpha.py`.\n\n"
+        "2. **Second.** Does more.\n\n"
+        "   **State: Built, except one item.** Nothing cited here.\n\n"
+        "3. **Third.** Cites `tests/test_alpha.py` in its description.\n\n"
+        "   **State: Partial.** Built: some of it, no citation.\n\n"
+        "4. **Fourth.** Description.\n\n"
+        "   **State: Built.** Text (`tests/test_missing.py`).\n"
+    )
+    findings = design(root, text)
+    assert [f.line for f in findings] == [5, 13]
+    assert "test_missing.py" in findings[1].message
+
+
 def test_design_text_without_a_marker_is_not_a_claim(root):
     assert design(root, "Built-in features are for what happens every day. Not built yet: the rest.\n") == []
 

@@ -55,21 +55,21 @@ The goal: a person changes how their installation looks, behaves, runs and is se
 
 ### The files at a glance
 
-| File | Section | State |
-|---|---|---|
-| `workspace.yaml` | 4.1 | built |
-| `watch.yaml` (sources and triage) | 4.5 | built |
-| `language.yaml` | 4.6 | built; the `languages:` map is designed |
-| `ai.yaml` | 4.8 | built; native adapters, `probation` and per-record budgets are designed |
-| `dispatch.yaml` | 4.9 | built; the governor settings are designed |
-| `rules.yaml` | 4.10 | built (read by stage gates); rules reaching packets are designed |
-| `ui.yaml` | 4.11 | built |
-| `server.yaml` | 4.13 | built for local mode; hosted-mode keys are designed |
-| `storage.yaml` | 4.15 | built; `retention`, encryption and some `sync` keys are designed |
-| `checks.yaml` | 4.17 | built |
-| `stages.yaml` | 4.21 | built |
-| `plugins/<plugin>.yaml` | 4.12 | built |
-| `routing.yaml` (4.3), `scope.yaml` (4.4), `schedule.yaml` (4.5), `render.yaml` (4.7), `status.yaml` and `calendar.yaml` (4.11), `auth.yaml` (4.14), `facts.yaml` (4.16), `code_owners.yaml` (4.18), `playbooks.yaml` (4.19), `raid.yaml` (4.20) | | designed, not yet built |
+| File | Section | State | Proved by |
+|---|---|---|---|
+| `workspace.yaml` | 4.1 | built | `tests/test_config.py::test_fixture_workspaces_load` |
+| `watch.yaml` (sources and triage) | 4.5 | built | `tests/test_watch.py` |
+| `language.yaml` | 4.6 | built; the `languages:` map is designed | `tests/test_followups_backup_eval.py::test_a_message_has_greeting_questions_actions_and_closing` |
+| `ai.yaml` | 4.8 | built; native adapters, `probation` and per-record budgets are designed | `tests/test_ai.py` |
+| `dispatch.yaml` | 4.9 | built; the governor settings are designed | `tests/test_pipeline.py::test_the_fix_round_can_correct_the_answer` |
+| `rules.yaml` | 4.10 | built (read by stage gates); rules reaching packets are designed | `tests/test_stages.py::test_rule_yaml_date_and_binding_validate_at_load` |
+| `ui.yaml` | 4.11 | built | `tests/test_today_dashboard.py` |
+| `server.yaml` | 4.13 | built for local mode; hosted-mode keys are designed | `tests/test_local_guards.py` |
+| `storage.yaml` | 4.15 | built; `retention`, encryption and some `sync` keys are designed | `tests/test_first_backup.py::test_choosing_a_backup_folder_makes_the_first_backup` |
+| `checks.yaml` | 4.17 | built | `tests/test_plugin_lints.py::test_the_workspace_can_soften_a_lint_to_a_warning` |
+| `stages.yaml` | 4.21 | built | `tests/test_stages.py::test_order_wording_and_mode_override` |
+| `plugins/<plugin>.yaml` | 4.12 | built | `tests/test_plugin_api_0349.py::test_a_renamed_setting_reads_under_its_old_name_and_is_saved_under_the_new` |
+| `routing.yaml` (4.3), `scope.yaml` (4.4), `schedule.yaml` (4.5), `render.yaml` (4.7), `status.yaml` and `calendar.yaml` (4.11), `auth.yaml` (4.14), `facts.yaml` (4.16), `code_owners.yaml` (4.18), `playbooks.yaml` (4.19), `raid.yaml` (4.20) | | designed, not yet built | |
 
 ## 4.1 `config/workspace.yaml`
 

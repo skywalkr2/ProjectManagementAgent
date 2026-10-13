@@ -119,9 +119,10 @@ server builds (`docs/project/review-2026-10-12.md`). These guardrails answer tha
 | **Screen wording checked where responses leave:** the API's response serializer refuses settings-file names, `env:`, key paths and commands in user-facing text, in tests and dev mode | Planned (roadmap A2) |
 | **Part 8 is generated from the seed lessons**, and every instruction-only rule has a fixture case; the self-check fails when the page is stale or a case is missing (decisions, 2026-10-12) | Planned (roadmap L) |
 
-**The built-claims rule.** A claim is a checked roadmap box (`- [x]`) or a bold "Built" marker in a design file, whether in a
-paragraph, a list item or a table row; the claim is the list item, row or paragraph it sits in. It passes when it cites at
+**The built-claims rule.** A claim is a checked roadmap box (`- [x]`) or, in a design file, a bold "Built" marker (in a
+paragraph, a list item or a table row), a table cell that starts with "Built", or a build-plan state line that reads Built;
+the claim is the list item, table row, milestone or paragraph it sits in. It passes when it cites at
 least one test that exists (a test file by path or bare file name, a `file::test_name` whose name the file defines, or a bare
 `test_name` that some test defines), or says "checked by reading" for docs and process items. It fails when anything it cites
 is missing. The step runs in `engine/selfcheck/built_claims.py`; claims still being sorted out go in its `UNDER_REVIEW` set,
-and an entry that passes is itself reported. Plain "Built" cells in the Part 7 and Part 13 state tables are not claims yet.
+and an entry that passes is itself reported. Plain "Built" in running prose is not a claim.
