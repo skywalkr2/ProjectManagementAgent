@@ -1,8 +1,6 @@
 """The first backup (design 7.8): choosing a backup folder makes the first backup at once, in the background, so the
 person isn't asked to back up right after choosing where; and what a backup holds never includes a pasted key."""
 
-import time
-
 from engine.backup import run_backup, state
 from engine.config import load_config
 from engine.config.yaml_edit import set_key
@@ -19,56 +17,51 @@ def make(tmp_path):
     return ws, cfg, Store(ws.db_path, cfg=cfg)
 
 
-def _wait(until, seconds=15.0):
-    deadline = time.monotonic() + seconds
-    while time.monotonic() < deadline:
-        if until():
-            return True
-        time.sleep(0.05)
-    return False
-
-
 def _choose(c, api, folder):
     fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
     return c.post(f"{api}/setup/backup-folder", json={"path": str(folder), "label": "", "fingerprint": fingerprint})
 
 
+def _watching(worker) -> list:
+    """What each request to start a first backup came back with (a thread, or None), so a test can join the thread
+    rather than wait for it."""
+    started = []
+    original = worker.first_backup_soon
+    worker.first_backup_soon = lambda: started.append(original()) or started[-1]
+    return started
+
+
 def test_choosing_a_backup_folder_makes_the_first_backup(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
+    started = _watching(c.app.state.worker)
     folder = tmp_path / "drive"
+    second = tmp_path / "second"
     folder.mkdir()
+    second.mkdir()
     assert c.get(f"{api}/status").json()["backup"]["configured"] is False
     assert _choose(c, api, folder).status_code == 200
     # The backup is made without any further request, and the app no longer asks for one.
-    assert _wait(lambda: c.get(f"{api}/status").json()["backup"]["last_success"] is not None)
+    [thread] = started
+    thread.join(timeout=15)
     backup = c.get(f"{api}/status").json()["backup"]
+    assert backup["last_success"] is not None
     assert backup["configured"] is True and backup["needs_attention"] is False and backup["last_error"] is None
     copies = [p for p in folder.iterdir() if p.is_dir()]
     assert len(copies) == 1 and (copies[0] / "cockpit.db").is_file() and (copies[0] / "config").is_dir()
-
-
-def test_a_folder_added_after_a_backup_succeeded_makes_no_extra_backup(tmp_path):
-    ws, cfg, store = make(tmp_path)
-    c, api = client(ws, cfg, store)
-    first = tmp_path / "first"
-    second = tmp_path / "second"
-    first.mkdir()
-    second.mkdir()
-    assert _choose(c, api, first).status_code == 200
-    assert _wait(lambda: c.get(f"{api}/status").json()["backup"]["last_success"] is not None)
+    # A folder added after a backup succeeded makes no extra backup.
     assert _choose(c, api, second).status_code == 200
-    time.sleep(0.5)
-    assert [p for p in second.iterdir()] == []
-    assert len([p for p in first.iterdir() if p.is_dir()]) == 1
+    assert started[1:] == [None] and list(second.iterdir()) == []
+    assert len([p for p in folder.iterdir() if p.is_dir()]) == 1
 
 
 def test_the_first_backup_records_a_failure_when_the_folder_is_gone(tmp_path):
+    from engine.worker import Events, Worker
+
     ws, cfg, store = make(tmp_path)
-    c, api = client(ws, cfg, store)
     folder = tmp_path / "unplugged"
     folder.mkdir()
-    worker = c.app.state.worker
+    worker = Worker(ws, store, cfg, Events())
     # Settings that name a folder which then goes away, as a drive that was disconnected does.
     path = ws.config_dir / "storage.yaml"
     path.write_text(set_key(path.read_text(), ["backups", "targets"], [{"path": str(folder), "label": ""}]))
@@ -79,6 +72,7 @@ def test_the_first_backup_records_a_failure_when_the_folder_is_gone(tmp_path):
     state_now = state(ws, load_config(ws.config_dir, env={}))
     assert state_now.last_success is None and state_now.last_error and "isn't there" in state_now.last_error
     assert state_now.needs_attention is True
+    store.close()
 
 
 def test_two_backups_in_the_same_second_each_get_a_folder(tmp_path):

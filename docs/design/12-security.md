@@ -36,7 +36,7 @@
   sign-ins and plugin enable or disable are recorded alongside. The readable export keeps it in git history. Built: the
   ledger, approvals and settings changes (as `setting_change` records). **Phase L0, before real use:** sign-ins, sign-outs and turning a
   plugin on or off are recorded too, before the Admin tab exists, because an audit trail that starts late misses exactly
-  the period someone will want to look at. The scheduled export to the workspace's own git is wired in phase L0 too.
+  the period someone will want to look at. The scheduled export to the workspace's own git is built (`tests/test_export_schedule.py`); it never pushes.
 - **The export's remote is off-machine copying of everything,** raw mail and pasted text included, so it gets the care of
   backups (*phase E*, with the governor): the screen says so when a remote is set; the remote must be private or the
   export encrypted; and restricted sources are left out of it unless the person opts in. Until then the remote setting is
@@ -185,7 +185,7 @@ that becomes guidance in a packet is the most valuable thing to poison. These ar
 | A log of sign-ins and of turning plugins on and off | 12.1 | Not built (the ledger and settings records exist); phase L0 |
 | Host and Origin checks in local mode; a loopback-only local address | 12.1 | Not built; phase A (the cookie is already strict and there are no CORS headers) |
 | Learning and trust | 12.8 | Not built; phases L-core and L-more |
-| The scheduled export to git and its remote | 12.1 | Not built; the settings are read by nothing |
+| The scheduled export to git and its remote | 12.1 | The scheduled export to the workspace's own git is built (`tests/test_export_schedule.py`); the remote is not built and its setting is read by nothing |
 | Retention, export a person, forget a person | 12.4 | Not built |
 | Outbound review with provenance and full links | 12.2 | Not built until the publisher exists |
 | The `lookup` op | 12.2 | Not built |

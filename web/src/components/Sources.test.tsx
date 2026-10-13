@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
+import { whenText } from "../lib/dates";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { Sources } from "./Sources";
 
@@ -26,6 +27,7 @@ const source = (id: string, extra: Partial<Source> = {}): Source => ({
   every_minutes: 15,
   items: 3,
   last: run(),
+  read_at: run().started_at,
   failures: 0,
   problem: null,
   ...extra,
@@ -135,7 +137,7 @@ test("every outcome has its own words", async () => {
       failures: 3,
       problem: "It can't be read: refused. Sign in again.",
     }),
-    source("fresh", { last: null }),
+    source("fresh", { last: null, read_at: null }),
   ]);
   expect(await row("Source quiet")).toHaveTextContent("Nothing new");
   expect(await row("Source first")).toHaveTextContent("First read: noted what is there");
@@ -145,6 +147,14 @@ test("every outcome has its own words", async () => {
   expect(broken).toHaveTextContent("Failed 3 times in a row");
   expect(within(broken).getByText("It can't be read: refused. Sign in again.")).toBeInTheDocument();
   expect(await row("Source fresh")).toHaveTextContent("Not read yet");
+});
+
+test("a source that found no network shows when it was last really read, not the try", async () => {
+  open([source("away", { last: run({ outcome: "offline", started_at: "2026-03-05T08:00:00+00:00" }), read_at: "2026-03-04T10:30:00+00:00" })]);
+  const item = await row("Source away");
+  expect(item).toHaveTextContent("Not read: no network");
+  expect(item).toHaveTextContent(`last read ${whenText("2026-03-04T10:30:00+00:00")}`);
+  expect(item).not.toHaveTextContent(whenText("2026-03-05T08:00:00+00:00"));
 });
 
 test("a source without a kind says so, and a source that is off says Off and can't be read now", async () => {
@@ -160,7 +170,7 @@ test("a source without a kind says so, and a source that is off says Off and can
 });
 
 test("a source that has never been read says how often it will be", async () => {
-  open([source("a", { last: null, every_minutes: 1 })]);
+  open([source("a", { last: null, read_at: null, every_minutes: 1 })]);
   expect(await row("Source a")).toHaveTextContent("Read every minute · Not read yet");
 });
 

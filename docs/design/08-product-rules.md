@@ -121,7 +121,7 @@ they apply to. Those guarded by an invariant or code still give the model their 
 | A usage limit is a pause until reset, not a failure loop | AI adapters' `classify_error`, the router's pauses (enforced for a quota or a request to wait that comes with a reset time: the account is paused until the reset, kept across a restart, and the waiting requests run by themselves then: `tests/test_silent_stops.py::test_waiting_requests_resume_by_themselves_at_the_reset_without_anyone_pressing_anything`, `tests/test_journeys.py::test_j7_a_usage_limit_pauses_the_account_shows_on_today_and_the_work_resumes_by_itself`; a spending budget stops new runs and says until when, and resumes with the new day or month) |
 | Held work and paused accounts are Today lines, never only a chip | the `restart` and `paused` lines of the ranked queue (enforced in the engine and the queue route: `tests/test_silent_stops.py::test_held_work_is_the_first_decide_line_with_its_count_and_nothing_restarts`, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`; the Today screen draws both lines, one row each with one primary action: `web/src/shell/HeldLines.test.tsx`; the full ranked queue on Today is phase B) |
 | Runner errors are classified from the runner's exit code and error stream only, never from the model's output; both streams are kept | `classify_error` contract, `Run` record |
-| No network on wake is not a failure or an outage; a failed refresh never counts as fresh | connectivity check, scheduler |
+| No network on wake is not a failure or an outage; a failed refresh never counts as fresh | connectivity check, scheduler (enforced for the scheduled reads of watched sources: a read that finds no network is recorded as such, asks nothing of the person, and is not tried again until its next turn; a source shows when it was last actually read, not when it last tried: `tests/test_journeys.py::test_j11_a_scheduled_read_missed_in_sleep_runs_once_on_waking_and_a_lost_network_files_nothing`; not yet for a call to an AI account, which counts a lost connection as a failing service) |
 | Every waiting state shows why and until when | `Request.waiting`, UI rule (enforced for the new waiting states: a pause says "Waiting for <account>'s limit to reset at <time>", a retry says "Trying again at <time> (try 2 of 3)": `tests/test_silent_stops.py::test_a_waiting_request_says_whose_limit_and_when_in_the_persons_time_and_no_model_name`) |
 | A correction is checked against the data before anything is changed or reported | feedback task packet, `dev.request` validator (partly enforced: Send back is built; the data check is not) |
 | Shared masters edited outside the tool are checked for an open lock and diffed, never overwritten | channel `lock_status`, pull-edits (not yet enforced): no publisher or shared masters yet |
@@ -135,7 +135,7 @@ they apply to. Those guarded by an invariant or code still give the model their 
 | Restricted inputs only reach AI providers and plugins allowed to see them | `allowed_data`, plugin `data_levels` |
 | Error output is cleaned and short; the raw output is one click away | API error shape (partly enforced: errors are short; the raw output is not one click away) |
 | Saves merge, never clobber | storage layer |
-| Recover by itself after sleep or network loss | scheduler (partly enforced: the worker loops recover; no test covers catching up after sleep) |
+| Recover by itself after sleep or network loss | scheduler (partly enforced: a read missed in sleep runs once on waking, and the next one on its turn once the network is back: `tests/test_journeys.py::test_j11_a_scheduled_read_missed_in_sleep_runs_once_on_waking_and_a_lost_network_files_nothing`; the scheduled export and backups catch up at once by the same wall-clock check; the AI side is not covered) |
 | The product never changes its own code; problems and missing capabilities become reports the PM sends | `dev.request` (outbound), 6.13 |
 | An input can add knowledge and propose drafts, never change rules, sources, scope, config or code on its own | op tiers, 12.2 |
 | Fuzzy checks warn or send back; only firm invariants refuse | invariants and lints, `config/checks.yaml` |
@@ -202,7 +202,7 @@ rules that bite first are not the workplace ones:
 - **Phase L0, the start of L-core, before real use:** dates from the day received (8.5, built); a usage limit resuming by itself at its reset (8.6, built); an empty or failed run
   retried automatically, then sent to the person (8.6, built); an agent that exits 0 with no answer (6.16, built); held work and
   paused accounts as lines of Today's queue (6.15, built in the engine and drawn on Today). Without these, the assistant stops silently on the
-  first quota day and the person thinks it's broken. Waking up after sleep (8.6) is the one silent-stop item left in L0.
+  first quota day and the person thinks it's broken. Waking up after sleep (8.6, built for the scheduled reads) leaves one thing: a lost network while the assistant works (roadmap, L0).
 - **Phase L, before real use starts:**
   - the knowledge rules (8.4);
   - verbatim versus paraphrase, and unattributed lines (8.1);

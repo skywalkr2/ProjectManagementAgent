@@ -209,10 +209,16 @@ class ServerFile(FileModel):
 
 
 class ExportSettings(ConfigModel):
-    every_minutes: int = Field(60, ge=1, description="How often the readable export in data/ is written.")
+    every_minutes: int = Field(
+        60,
+        ge=1,
+        description="How often, in minutes, the readable export in data/ is written and committed while the app runs. "
+        "A workspace with no repository is not exported on a schedule.",
+    )
     commit: bool = Field(True, description="Commit the export and config to the workspace's git repository.")
     remote: str | None = Field(
-        None, description="A private repository address to push the export to, for an off-site copy."
+        None,
+        description="A private repository address for an off-site copy of the export. Not used yet: nothing is sent.",
     )
 
 

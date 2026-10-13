@@ -263,6 +263,7 @@ function watched(id: string, extra: Partial<S["WatchSourceView"]> = {}): S["Watc
     every_minutes: 15,
     items: 0,
     last: { outcome: "ok", started_at: at(TODAY, 11, 30), new: 0, changed: 0, removed: 0 },
+    read_at: at(TODAY, 11, 30),
     failures: 0,
     problem: null,
     ...extra,
@@ -297,9 +298,9 @@ test("with sources set up, the empty cards say they were checked, with the lates
   open({
     ...EMPTY,
     "GET watch": () => [
-      watched("a", { last: { outcome: "ok", started_at: at(TODAY, 8, 5), new: 0, changed: 0, removed: 0 } }),
-      watched("b", { last: { outcome: "ok", started_at: at(TODAY, 11, 40), new: 0, changed: 0, removed: 0 } }),
-      watched("c", { last: null }),
+      watched("a", { last: { outcome: "ok", started_at: at(TODAY, 8, 5), new: 0, changed: 0, removed: 0 }, read_at: at(TODAY, 8, 5) }),
+      watched("b", { last: { outcome: "ok", started_at: at(TODAY, 11, 40), new: 0, changed: 0, removed: 0 }, read_at: at(TODAY, 11, 40) }),
+      watched("c", { last: null, read_at: null }),
     ],
   });
   expect(await screen.findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
@@ -310,7 +311,7 @@ test("with sources set up, the empty cards say they were checked, with the lates
 });
 
 test("a source that hasn't been read yet says the cards are not checked yet", async () => {
-  open({ ...EMPTY, "GET watch": () => [watched("a", { last: null })] });
+  open({ ...EMPTY, "GET watch": () => [watched("a", { last: null, read_at: null })] });
   await waitFor(() => expect(screen.getAllByText("Not checked yet")).toHaveLength(2));
   expect(screen.queryByRole("button", { name: "Connect a calendar" })).toBeNull();
 });

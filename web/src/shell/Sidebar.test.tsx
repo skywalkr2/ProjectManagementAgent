@@ -33,9 +33,13 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
   show({
     panels: [panel("demo/goals", "work", "Goals"), panel("demo/contacts", "people", "Contacts"), panel("demo/admin", "settings", "Admin things"), panel("demo/board", "today", "Board")],
   });
-  await screen.findByRole("link", { name: "Goals" });
-  const names = () => within(nav()).getAllByRole("link").map((a) => a.querySelector('[class*="label"]')?.textContent);
-  expect(names()).toEqual([
+  // Wait for the panels to arrive by their text, which is cheap to poll; then read every link once, because looking each
+  // one up by role and name walks the whole tree again and is what made this test slow under load.
+  await screen.findByText("Goals");
+  const links = within(nav())
+    .getAllByRole("link")
+    .map((a) => ({ label: a.querySelector('[class*="label"]')?.textContent, href: a.getAttribute("href") }));
+  expect(links.map((l) => l.label)).toEqual([
     "Today",
     "What changed",
     "Follow-ups",
@@ -50,12 +54,11 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "Add-ons",
     "Settings",
   ]);
-  for (const link of within(nav()).getAllByRole("link")) expect(link).toHaveAttribute("href", expect.stringContaining("#"));
-  expect(screen.getByRole("link", { name: "Stages" })).toHaveAttribute("href", expect.stringMatching(/#work\/stages$/));
-  expect(screen.getByRole("link", { name: "Goals" })).toHaveAttribute("href", expect.stringMatching(/#work\/panel\/demo%2Fgoals$/));
-  expect(screen.getByRole("link", { name: "Contacts" })).toHaveAttribute("href", expect.stringMatching(/#records\/panel\/demo%2Fcontacts$/));
-  expect(screen.queryByRole("link", { name: "Admin things" })).toBeNull();
-  expect(screen.queryByRole("link", { name: "Board" })).toBeNull();
+  const href = (label: string) => links.find((l) => l.label === label)?.href;
+  for (const link of links) expect(link.href).toContain("#");
+  expect(href("Stages")).toMatch(/#work\/stages$/);
+  expect(href("Goals")).toMatch(/#work\/panel\/demo%2Fgoals$/);
+  expect(href("Contacts")).toMatch(/#records\/panel\/demo%2Fcontacts$/);
 });
 
 test("the current view is marked, and it is the only one", async () => {

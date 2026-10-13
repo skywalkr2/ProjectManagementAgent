@@ -455,10 +455,16 @@ them are needed before the owner's daily use, which starts when L-core passes.
   by its screen name and a stable short handle made from its key; `setting.propose` names the handle and the applier
   resolves it against the current settings list, so a key never reaches an answer. Left: building that, with a test that
   an answer citing a settings line shows no key.
-- [ ] Settings that do nothing are wired or removed: `owner_format` (wired for showing owners: `tests/test_names.py::test_an_owner_is_written_in_the_owner_format_with_the_team_on_the_entry_else_the_persons_own`). **The scheduled export is wired** to the workspace's
+- [x] Settings that do nothing are wired or removed: `owner_format` (wired for showing owners: `tests/test_names.py::test_an_owner_is_written_in_the_owner_format_with_the_team_on_the_entry_else_the_persons_own`). **The scheduled export is wired** to the workspace's
   own git, so a readable copy is written regularly once real knowledge accumulates; the backups copy the database, which
   is not readable on its own. The export's remote is not offered until phase E gives it the care of backups (design 12.1).
-  Moved from phase A, because knowledge starts accumulating in L-core.
+  Moved from phase A, because knowledge starts accumulating in L-core. Built: the worker writes and commits the export
+  every `storage.export.every_minutes` (a live key), catches up at once after sleep, never pushes, and a workspace with
+  no repository gets none and the log says so once
+  (`tests/test_export_schedule.py::test_the_scheduled_export_is_committed_on_the_interval_and_never_pushed`,
+  `tests/test_export_schedule.py::test_a_workspace_without_a_repository_gets_no_scheduled_export_and_says_so_once`,
+  `tests/test_export_schedule.py::test_the_interval_is_taken_in_at_once_and_the_commit_switch_waits_for_a_restart`); the
+  remote is not offered on the Settings screen (`tests/test_setup.py::test_settings_are_described_for_the_forms`).
 - [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command. Moved from phase
   A: the exit test uses one computer, but real use may not.
 - [ ] **The audit trail:** sign-ins, sign-outs and turning a plugin on or off are recorded.
@@ -475,23 +481,40 @@ them are needed before the owner's daily use, which starts when L-core passes.
     `test_every_case_passes_with_its_ideal_answer`, and the two CLI tests assert their own layer on one case
     (`test_evaluate_with_the_stub_checks_the_cases`, `test_evaluate_runs_a_workspaces_own_cases_with_its_own_ai_setup`);
   - each store re-imports every plugin package; caching the plugin classes across stores needs a design for isolation;
-  - tests that build several apps for one assertion share one;
+  - [x] tests that build several apps for one assertion share one: the base-path and policy test builds one workspace and
+    one app per base (`tests/test_api.py::test_the_ui_gets_a_base_for_the_configured_path_and_a_strict_policy`), the
+    sign-in callback test uses a second client of the same app
+    (`tests/test_sign_in.py::test_the_service_sends_the_person_back_without_the_apps_cookie`), and the first-backup tests
+    share one app, join the backup thread instead of polling for it, and start a worker without an app
+    (`tests/test_first_backup.py::test_choosing_a_backup_folder_makes_the_first_backup`,
+    `tests/test_first_backup.py::test_the_first_backup_records_a_failure_when_the_folder_is_gone`); the tests that differ
+    by what the app is started with (a restart handler, a catalog setting) keep two;
   - [x] the browser test "a value added to the project status list ... still there after a reload" waits for the
     reloaded People view before opening it (`acceptance.spec.ts`, "a value added to the project status list from a
     project form is selected, and still there after a reload"; passed twice, root project).
-  - [ ] the web test "the views are links, in the fixed groups" (`Sidebar.test.tsx`) timed out once under heavy load
-    and passes alone; find what it waits on.
-  - [ ] the journey J4 (an add-on installed from the list) failed once while other test runs shared the machine and passed
-    on its own; find what it waits on too.
-- [ ] Journey tests:
+  - [x] the web test "the views are links, in the fixed groups" (`Sidebar.test.tsx`) timed out once under heavy load
+    and passes alone: it waited for the panels by role and name, then looked each link up by role and name again, each a
+    walk of the whole tree (2.0 s alone). It now waits for the panels by their text and reads every link once (0.7 s;
+    `web/src/shell/Sidebar.test.tsx`, "the views are links, in the fixed groups, with plugin panels only under Work or Records").
+  - [x] the journey J4 (an add-on installed from the list) failed once while other test runs shared the machine and passed
+    on its own: after a restart the notice says "Restarted" when the new start answers, but the page's data refreshes only
+    when its event stream has connected again, and the next steps read that data within 5 s. J4 now waits for the header's
+    status to leave offline, connecting and restarting after each restart (`connectedAgain` in `web/e2e/journey-helpers.ts`,
+    used in `web/e2e/journeys.spec.ts` J4).
+- [x] Journey tests:
   - **no silent stops,** each with a fake provider (API-level journeys, no browser):
     - [x] a usage limit, then the work resuming by itself at the reset: `tests/test_journeys.py::test_j7_a_usage_limit_pauses_the_account_shows_on_today_and_the_work_resumes_by_itself`;
     - [x] an agent exiting 0 with no answer: `tests/test_journeys.py::test_j8_an_agent_that_exits_cleanly_with_no_answer_is_retried_then_sent_to_me_and_never_done`;
     - [x] a restart needed, shown as the first Decide line: `tests/test_journeys.py::test_j9_work_held_for_a_restart_is_the_first_line_on_today_and_runs_after_the_restart_i_choose`;
     - [x] an empty run retried, then sent to the person: `tests/test_journeys.py::test_j10_an_empty_run_is_retried_by_itself_then_goes_to_me_with_why_and_try_again_works`;
-  - **waking up:** the computer sleeps through a scheduled batch and wakes. The batch runs once, nothing looks fresh that
+  - [x] **waking up** (for the scheduled reads: `tests/test_journeys.py::test_j11_a_scheduled_read_missed_in_sleep_runs_once_on_waking_and_a_lost_network_files_nothing`): the computer sleeps through a scheduled batch and wakes. The batch runs once, nothing looks fresh that
     isn't, and nothing is filed for the lost network (design 8.6). Most people open the lid rather than start fresh, and
     waking was where most "it just stopped" reports came from.
+- [ ] **A lost network while the assistant works** (found by the waking-up journey; left from it): a call to an AI account
+  that can't connect is `provider_down`, the same as a service that is failing, so a request run just after waking with
+  no network is tried three times within about a minute and a half and then comes to the person (design 8.6 says no
+  network on wake is not a failure). Needs a decision: a kind of its own that waits for the network without counting a
+  try, with a Today line saying why and until when.
 
 L1. **Knowledge as records.**
 - [ ] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,

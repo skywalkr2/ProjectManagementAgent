@@ -7,7 +7,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { collectProblems, fakeAddress, openView, visit, type Info, type Requests } from "./journey-helpers";
+import { collectProblems, connectedAgain, fakeAddress, openView, visit, type Info, type Requests } from "./journey-helpers";
 
 const FAKE = fakeAddress("JOURNEY_FAKE_PORT", 8790);
 
@@ -223,6 +223,7 @@ test.describe.serial("journeys", () => {
     // Restart now: the app comes back on the same address, and the notice says so.
     await row.getByRole("button", { name: "Restart now" }).click();
     await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
+    await connectedAgain(page);
     await visit(page);
 
     // After the restart the row says it is installed and off; turning it on waits for another restart.
@@ -232,6 +233,7 @@ test.describe.serial("journeys", () => {
     await expect(page.getByRole("link", { name: /Example overview/ })).toHaveCount(0);
     await row.getByRole("button", { name: "Restart now" }).first().click();
     await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
+    await connectedAgain(page);
 
     // Its screen is in the sidebar (once the app has told the page about it) and opens.
     await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Example overview" })).toBeVisible();
@@ -258,6 +260,7 @@ test.describe.serial("journeys", () => {
     // Close the status popover with Escape before using the sidebar.
     await page.getByRole("dialog", { name: "Status" }).press("Escape");
     await expect(page.getByRole("dialog", { name: "Status" })).toHaveCount(0);
+    await connectedAgain(page);
     await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: "Example overview" })).toHaveCount(0);
     await openView(page, "Add-ons");
     await page.getByRole("tab", { name: "Installed" }).click();

@@ -135,11 +135,12 @@ def test_the_service_sends_the_person_back_without_the_apps_cookie(signing):
     from api.app import create_app
 
     ws, cfg, store, _ = signing
-    c = TestClient(create_app(ws, cfg, "t", start_worker=False), follow_redirects=False)
+    app = create_app(ws, cfg, "t", start_worker=False)
+    c = TestClient(app, follow_redirects=False)
     c.headers["Authorization"] = "Bearer t"
     api = cfg.server.base_path.rstrip("/") + "/api"
     query = parse_qs(urlsplit(c.post(f"{api}/sign-ins/p18/service/start").json()["url"]).query)
-    bare = TestClient(create_app(ws, cfg, "t", start_worker=False), follow_redirects=False)
+    bare = TestClient(app, follow_redirects=False)
     back = bare.get(f"{api}/sign-ins/callback", params={"state": query["state"][0], "code": "good"})
     assert landing(back).startswith(cfg.server.base_path.rstrip("/") + "/?sign_in=done")
     assert c.get(f"{api}/sign-ins").json()[0]["status"] == "signed_in"

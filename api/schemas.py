@@ -1582,6 +1582,9 @@ class WatchSourceView(BaseModel):
     every_minutes: int
     items: int = Field(description="Items it held at the last read.")
     last: WatchRunView | None = None
+    read_at: str | None = Field(
+        None, description="When it was last actually read; a try that found no network or failed doesn't count."
+    )
     failures: int = Field(0, description="Failed reads in a row.")
     problem: ScreenText | None = Field(None, description="Why it can't be read, and what to do, while it fails.")
 

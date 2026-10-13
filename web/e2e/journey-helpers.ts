@@ -74,6 +74,15 @@ export async function readScreen(page: Page): Promise<string> {
   });
 }
 
+/** After a restart the notice says "Restarted" as soon as the new start answers, but the page's data is refreshed only
+ * when its event stream has connected again. Waits for the header's status to leave offline, connecting and restarting,
+ * which is the state the next step needs: the page holds what the new start holds. */
+export async function connectedAgain(page: Page) {
+  await expect(page.getByRole("button", { name: /^Status: (?!Offline|Connecting|Restarting)/ })).toBeVisible({
+    timeout: 90_000,
+  });
+}
+
 /** A screen the person sees: it names no settings file, secret reference or command, and passes the accessibility checks. */
 export async function visit(page: Page) {
   const text = await readScreen(page);

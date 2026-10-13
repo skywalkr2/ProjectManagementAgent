@@ -65,6 +65,12 @@ def last_run(store: Any, source: str) -> Any | None:
     return runs[-1] if runs else None
 
 
+def last_read(store: Any, source: str) -> Any | None:
+    """The latest run that actually read the source (not one that found no network or failed)."""
+    runs = [r for r in store.read().find("watch_run", {"source": source}) if r.data["outcome"] in ("ok", "baseline")]
+    return runs[-1] if runs else None
+
+
 def due(store: Any, cfg: Any, now: datetime) -> list[str]:
     """Sources that are on and whose time has come."""
     found = []

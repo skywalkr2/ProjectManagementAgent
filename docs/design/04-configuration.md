@@ -501,8 +501,10 @@ Built keys:
 
 - `backend`: `sqlite` (the only one; Postgres is a later backend for multi-user, 5.0). Changed in the file only.
 - `export`: `every_minutes` (60), `commit` (true: commit the export and the config to the workspace's git) and `remote` (a
-  private git remote for an off-site copy). Today the export is written by `cockpit export` and config saves are committed;
-  the schedule behind `every_minutes` and the push to `remote` are not wired yet (roadmap A2).
+  private git remote for an off-site copy). The export is written by `cockpit export`, and on the
+  `every_minutes` schedule while the app runs (`engine/export_schedule.py`, tested in `tests/test_export_schedule.py`);
+  config saves are committed. A workspace with no repository gets no scheduled export, and the log says so once. The push
+  to `remote` is not wired: nothing is ever sent (phase E). `every_minutes` is a live key.
 - `files`: `max_file_mb` (50), `max_total_mb` (2000) and `accepted_types` (media types a file may have; a file kind can narrow
   this, never widen it) (5.3).
 - `sync`: hand the workspace between computers through a synced folder (5.0).

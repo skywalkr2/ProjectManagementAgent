@@ -356,3 +356,58 @@ def test_j10_an_empty_run_is_retried_by_itself_then_goes_to_me_with_why_and_try_
             assert _changes(client)[item["id"]]["state"] == "review"
     finally:
         set_responder(None)
+
+
+# ---- waking up after sleep -------------------------------------------------------------------------
+
+
+def _watch_runs(worker, source: str) -> list[str]:
+    return [r.data["outcome"] for r in worker.store.read().find("watch_run", {"source": source})]
+
+
+def test_j11_a_scheduled_read_missed_in_sleep_runs_once_on_waking_and_a_lost_network_files_nothing(tmp_path):
+    """J11. My source is read every 15 minutes. The computer sleeps for eight hours and wakes with no network yet.
+    The read runs once (not once for each missed turn); nothing is filed for the lost network, no question, no
+    request, no Today line; and the source does not look read just now: it says it found no network and still shows
+    when it was last really read. Once the network is back, the next read runs once, hands in only what is new, and
+    only then shows the new time."""
+    ws, clock = _started(tmp_path)
+    notes = [{"key": f"note-{n}", "title": f"Note {n}", "text": text} for n, text in enumerate(NOTES)]
+    source = {
+        "id": "notes",
+        "connector": "fake",
+        "label": "Notes",
+        "every_minutes": 15,
+        "first_run": "all",
+        "settings": {"items": notes},
+    }
+    (ws.config_dir / "watch.yaml").write_text(yaml.safe_dump({"version": 1, "sources": [source]}), encoding="utf-8")
+    client, worker = _open_with_clock(ws, tmp_path, clock)
+    with client:
+        first_read = clock()
+        assert worker.run_due_watches() == 1
+        assert _watch_runs(worker, "notes") == ["ok"]
+        assert len(_changes(client)) == 2
+        lines = client.get("/api/today/queue").json()
+
+        clock.move(hours=8)  # the computer sleeps through thirty-two turns and wakes with no network
+        worker.cfg.watch.sources[0].settings["error"] = "offline"
+        assert worker.run_due_watches() == 1
+        assert _watch_runs(worker, "notes") == ["ok", "offline"]
+        assert worker.run_due_watches() == 0  # not tried again in a loop
+        row = next(s for s in client.get("/api/watch").json() if s["id"] == "notes")
+        assert row["last"]["outcome"] == "offline" and row["failures"] == 0 and row["problem"] is None
+        assert datetime.fromisoformat(row["read_at"]) == first_read  # still the time of the read that worked
+        assert len(_changes(client)) == 2 and client.get("/api/today/queue").json() == lines
+        assert not worker.store.read().list("question")
+
+        clock.move(minutes=14)
+        assert worker.run_due_watches() == 0
+        clock.move(minutes=1)
+        del worker.cfg.watch.sources[0].settings["error"]
+        worker.cfg.watch.sources[0].settings["items"] = [*notes, {"key": "note-2", "title": "Note 2", "text": "New."}]
+        assert worker.run_due_watches() == 1
+        assert _watch_runs(worker, "notes") == ["ok", "offline", "ok"]
+        assert len(_changes(client)) == 3  # only the new note was handed in
+        row = next(s for s in client.get("/api/watch").json() if s["id"] == "notes")
+        assert row["last"]["outcome"] == "ok" and datetime.fromisoformat(row["read_at"]) == clock()

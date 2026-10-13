@@ -14,8 +14,8 @@ database gives for free and files make you rebuild by hand. So:
   file per record type, stable ordering), long text as plain files beside them, and the ledger as append-only files under
   `data/ledger/`, and commits them, with `config/`, to the workspace's git. That gives history, diffs and a plain-text view; an
   off-site copy through a remote waits for phase E, with the care of backups (12.1). The running engine never reads it; `cockpit import` does (recovery, fixtures, moving backends).
-  `cockpit export` writes it today; writing it on a schedule and after each applied changeset batch (`storage.export`, 4.15)
-  is designed and not yet wired (roadmap, A2).
+  `cockpit export` writes it, and the worker writes and commits it on the `storage.export.every_minutes` schedule when the
+  workspace has a repository (4.15). Writing it after each applied changeset batch is not built.
 - **Fictional workspaces** are committed as `config/` plus `data/` JSON; tests import them into a fresh database.
 
 **The ledger.** Every applied op is written, in the same transaction as the change itself, to an append-only ledger: changeset

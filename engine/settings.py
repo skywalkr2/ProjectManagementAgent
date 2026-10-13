@@ -53,8 +53,9 @@ BASIC = frozenset(
         "ui.toast_seconds",
     }
 )
-#: Keys the screens never change: a wrong value would stop the app from being reached or starting.
-FILE_ONLY = ("server.", "storage.backend")
+#: Keys the screens never change: a wrong value would stop the app from being reached or starting, or the setting is
+#: not offered yet (the export's remote).
+FILE_ONLY = ("server.", "storage.backend", "storage.export.remote")
 
 Kind = Literal["text", "number", "integer", "yes_no", "choice", "list", "other"]
 

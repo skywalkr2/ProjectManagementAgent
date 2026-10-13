@@ -145,6 +145,7 @@ const source = (id: string, label: string, over: Partial<S["WatchSourceView"]> =
   every_minutes: 15,
   items: 0,
   last: null,
+  read_at: null,
   failures: 0,
   problem: null,
   ...over,

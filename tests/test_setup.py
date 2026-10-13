@@ -69,6 +69,8 @@ def test_settings_are_described_for_the_forms(tmp_path, monkeypatch):
     items = {i["key"]: i for i in view["items"]}
     assert items["workspace.name"]["type"] == "text" and items["workspace.name"]["basic"]
     assert items["server.port"]["editable"] is False
+    assert items["storage.export.remote"]["editable"] is False  # not offered until it is built
+    assert items["storage.export.every_minutes"]["editable"] is True
     assert items["stages.moves"]["type"] == "choice" and items["stages.moves"]["options"] == ["person", "rule"]
     assert items["ai.providers"]["type"] == "other" and not items["ai.providers"]["editable"]
     assert items["ui.toast_seconds"]["locked"] and items["ui.toast_seconds"]["source"] == "env"

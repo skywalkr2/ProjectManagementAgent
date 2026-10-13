@@ -34,6 +34,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         known = watch.connectors(store)
         connector = known.get(source.connector)
         last = watch.last_run(store, source.id)
+        read = watch.last_read(store, source.id)
         failures = watch.failures_in_a_row(store, source.id)
         items = [s for s in store.read().find("snapshot", {"source": source.id}) if not s.data["gone"]]
         problem = None
@@ -56,6 +57,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             )
             if last
             else None,
+            read_at=str(read.data["started_at"]) if read else None,
             failures=failures,
             problem=problem,
         )

@@ -209,7 +209,7 @@ function SourceRow(props: {
   const titleId = `source-${source.id}`;
   const menuId = `${titleId}-menu`;
   const problem = problemOf(source, t);
-  const lastWhen = source.last ? when(source.last.started_at) : "";
+  const lastWhen = source.read_at ? when(source.read_at) : "";
   const lastWords = lastReadText(source, t);
 
   const readNow = async () => {
@@ -250,7 +250,7 @@ function SourceRow(props: {
   const facts = [source.connector_label || t("sources.kind_none"), tn("sources.items", source.items)];
   const schedule = [
     source.enabled ? tn("sources.read_every", source.every_minutes) : t("sources.off"),
-    source.last ? t("sources.last_read", { when: lastWhen }) : t("sources.never"),
+    source.read_at ? t("sources.last_read", { when: lastWhen }) : t("sources.never"),
   ];
   const found = [source.last ? lastWords : "", source.failures > 1 ? t("sources.failures", { n: source.failures }) : ""].filter(Boolean);
   return (

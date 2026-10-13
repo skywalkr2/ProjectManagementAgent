@@ -32,8 +32,8 @@ ADD_ONS = "add-ons"
 
 #: Settings the running app takes in at once, without a restart: everything that reads them reads the shared config
 #: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
-#: each request; where and how often backups go, for each backup; the watched sources, for each read). Any other change
-#: waits for a restart the person chooses.
+#: each request; where and how often backups go, for each backup; how often the readable export is written; the watched
+#: sources, for each read). Any other change waits for a restart the person chooses.
 LIVE_KEYS = (
     "ai.",
     "ui.",
@@ -42,6 +42,7 @@ LIVE_KEYS = (
     "workspace.assistant_name",
     "workspace.our_accounts",
     "storage.backups.",
+    "storage.export.every_minutes",
     "watch.",
 )
 
@@ -179,6 +180,7 @@ class Worker:
         self._sync: threading.Thread | None = None
         self._jobs: threading.Thread | None = None
         self._synced_at: int | None = -1
+        self._said_no_git = False
         self._beat = 0.0
         self.sync_lost = False
         self.sync_result: Any = None
@@ -360,6 +362,22 @@ class Worker:
         self.events.changed()
         return True
 
+    def export_if_due(self) -> bool:
+        """Write the readable export to the workspace's git when it is due. A workspace with no git repository has
+        nothing to commit to: that is said once in the log and nothing is written. Nothing is ever pushed. Returns
+        whether anything was committed."""
+        from engine import export_schedule
+
+        if not export_schedule.has_git(self.ws):
+            if not self._said_no_git:
+                self._said_no_git = True
+                log.info("The scheduled export is off: this workspace has no git repository to keep it in.")
+            return False
+        now = self.now()
+        if not export_schedule.due(self.ws, self.cfg, now):
+            return False
+        return export_schedule.run(self.ws, self.store, self.cfg, now)
+
     def first_backup_soon(self) -> threading.Thread | None:
         """A backup folder was just chosen: when no backup has ever succeeded, make one now on its own thread, so the
         person isn't asked to back up right after choosing where. Uses the settings as the files hold them now, and
@@ -462,35 +480,34 @@ class Worker:
 
     def run_due_jobs(self) -> int:
         """Run every plugin job that is due. Returns how many ran."""
-        from datetime import UTC, datetime
-
         if self._changed_since_start():
             return 0
-        due = self.store.plugins.due_jobs(datetime.now(UTC))
+        now = self.now()
+        due = self.store.plugins.due_jobs(now)
         for name in due:
-            self.store.plugins.run_job(name)
+            self.store.plugins.run_job(name, now)
         if due:
             self.events.changed()
             self.poke()
         return len(due)
 
     def run_due_watches(self) -> int:
-        """Read every watched source that is due. Returns how many were read."""
-        from datetime import UTC, datetime
-
+        """Read every watched source that is due, once each however long the computer was asleep. Returns how many
+        were read."""
         from engine.set_aside import purge_due
         from engine.watch import due, refresh
 
         if self._changed_since_start():
             return 0
-        if purge_due(self.ws, self.store, self.cfg, datetime.now(UTC)):
+        now = self.now()
+        if purge_due(self.ws, self.store, self.cfg, now):
             self.events.changed()
-        sources = due(self.store, self.cfg, datetime.now(UTC))
+        sources = due(self.store, self.cfg, now)
         handed = 0
         for source in sources:
             if self._stop.is_set():
                 break
-            result = refresh(self.ws, self.store, self.cfg, source)
+            result = refresh(self.ws, self.store, self.cfg, source, now)
             handed += len(result.new) + len(result.changed) + len(result.removed)
         if sources:
             self.events.changed()
@@ -508,6 +525,10 @@ class Worker:
                 self.run_due_watches()
             except Exception:  # a failed read is recorded on its run; nothing here may stop the thread
                 log.exception("reading watched sources failed")
+            try:
+                self.export_if_due()
+            except Exception:  # a failed export is logged by the export; nothing here may stop the thread
+                log.exception("the scheduled export failed")
             self._read_now.wait(timeout=60)
             self._read_now.clear()
 
