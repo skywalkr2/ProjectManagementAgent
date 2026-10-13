@@ -95,7 +95,7 @@ def test_the_answer_can_come_from_the_outbox(agent_script):
     assert result.text == '{"ok": true}'
     with pytest.raises(AiError) as missing:
         CliAgentAdapter(settings(agent_script, "silent", output_via="outbox")).run(task(), "agent-model")
-    assert missing.value.kind == "invalid_output"
+    assert missing.value.kind == "no_output"
 
 
 def test_the_packet_can_go_in_as_a_file(agent_script):

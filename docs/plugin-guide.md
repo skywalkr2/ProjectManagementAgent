@@ -1195,10 +1195,12 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `origin` | Literal['pm', 'input', 'schedule'] | required | Who started it: pm, the person (handing something in or sending work back); input, an outside input; schedule, a schedule or a stage entry. |
 | `state` | Literal['queued', 'running', 'review', 'done', 'needs_you', 'failed'] | `'queued'` | queued: waiting its turn. running: with the assistant. review: its changeset awaits the person. done: finished. needs_you: stopped until the person acts. failed: ended with an error. |
 | `waiting` | str \| None | `None` | Why it is waiting and until when, in plain words. |
-| `cause` | StopCause \| None | see below | For a request waiting on the person: the cause the screen can offer an action for, if any. |
-| `cause.kind` | Literal['data_level', 'no_person'] | required | data_level: no AI account may see the request's material, and `accounts` would take it if allowed. no_person: the workspace has no person set yet, so the work waits before any AI call. |
+| `cause` | StopCause \| None | see below | Why a request waits, when there is more to it than its words: for one waiting on the person, the cause the screen can offer an action for; for one queued, the time it is waiting for. |
+| `cause.kind` | Literal['data_level', 'no_person', 'paused', 'retry'] | required | data_level: no AI account may see the request's material, and `accounts` would take it if allowed. no_person: the workspace has no person set yet, so the work waits before any AI call. paused: every account that could take it is waiting for a usage limit to reset (`account`, `until`); the request stays queued and runs again by itself then. retry: a run that gave no usable answer is tried again by itself at `until`. |
 | `cause.level` | Optional[Literal['open', 'internal', 'restricted']] | `None` | For data_level: the data level of the material. |
 | `cause.accounts` | list[str] | `[]` | For data_level: the accounts ("provider/model") that would take the material if allowed its level, in the order the tier tries them. |
+| `cause.account` | str \| None | `None` | For paused: the account whose limit resets first. |
+| `cause.until` | datetime.datetime \| None | `None` | For paused and retry: when the request runs again by itself. |
 | `follows` | str \| None | `None` | The change (a changeset id) whose event a plugin answered with this work, if any. |
 | `sensitivity` | Optional[Literal['open', 'internal', 'restricted']] | `None` | How sensitive the person said what they handed in is; it only ever raises the level. |
 | `part` | dict[str, Any] \| None | `None` | The part of a long text the work is about: {first, last} paragraphs (by number) an anchored draft revises or other work reads, or {after} a draft adds new text after (0: at the start; "end": at the end); with the {base} version number they refer to. |
@@ -1207,6 +1209,7 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `set_aside` | dict[str, str \| None] \| None | `None` | For a watched mail item set aside as not work: {section, rule, reason}, and for one the person set aside after it was handed in, {from_state, from_waiting} to put it back. It is never queued for the assistant while this is set. This is work clears it. |
 | `folded_into` | str \| None | `None` | The newer request this one's change was folded into, so they are read in order, once. |
 | `attempts` | int | `0` | How many times the assistant has started on it. |
+| `retries` | int | `0` | How many times it was tried again by itself after a run that gave no usable answer. |
 | `created_at` | datetime | required | When the request was made. |
 | `changeset` | str \| None | `None` | The id of the changeset the assistant proposed for it. |
 | `previous` | str \| None | `None` | The request this one redoes after the PM sent it back. |

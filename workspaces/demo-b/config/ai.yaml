@@ -54,7 +54,7 @@ budgets:
 prices: {}   # price per model, for models a catalog doesn't price, e.g.:
   # low-cost/small: {input_per_million: 0.3, output_per_million: 1.1}
 evaluation: {runs: 3, min_score: 0.9}
-rate_limits: {tries: 3, max_wait_seconds: 30}
+rate_limits: {tries: 3, max_wait_seconds: 30, pause_seconds: 600}
 catalog_refresh_hours: 24
 content_levels:
   mature: Sex or graphic violence in the story.

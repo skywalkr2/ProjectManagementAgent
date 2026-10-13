@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Annotated, Any, ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 
 class Record(BaseModel):
@@ -729,9 +729,12 @@ class StopCause(BaseModel):
     """Why a request stopped, in a form the screen can act on."""
 
     model_config = ConfigDict(extra="forbid")
-    kind: Literal["data_level", "no_person"] = Field(
+    kind: Literal["data_level", "no_person", "paused", "retry"] = Field(
         description="data_level: no AI account may see the request's material, and `accounts` would take it if "
-        "allowed. no_person: the workspace has no person set yet, so the work waits before any AI call."
+        "allowed. no_person: the workspace has no person set yet, so the work waits before any AI call. paused: "
+        "every account that could take it is waiting for a usage limit to reset (`account`, `until`); the request "
+        "stays queued and runs again by itself then. retry: a run that gave no usable answer is tried again by "
+        "itself at `until`."
     )
     level: Literal["open", "internal", "restricted"] | None = Field(
         None, description="For data_level: the data level of the material."
@@ -741,6 +744,17 @@ class StopCause(BaseModel):
         description='For data_level: the accounts ("provider/model") that would take the material if allowed its '
         "level, in the order the tier tries them.",
     )
+    account: str | None = Field(None, description="For paused: the account whose limit resets first.")
+    until: datetime | None = Field(None, description="For paused and retry: when the request runs again by itself.")
+
+    @model_serializer(mode="wrap")
+    def _leave_out_unset_times(self, handler: Any) -> dict[str, Any]:
+        """The account and the time are written only for the causes that have them."""
+        data = handler(self)
+        for key in ("account", "until"):
+            if data.get(key) is None:
+                data.pop(key, None)
+        return data
 
 
 class Request(Record):
@@ -774,7 +788,9 @@ class Request(Record):
     )
     waiting: str | None = Field(None, description="Why it is waiting and until when, in plain words.")
     cause: StopCause | None = Field(
-        None, description="For a request waiting on the person: the cause the screen can offer an action for, if any."
+        None,
+        description="Why a request waits, when there is more to it than its words: for one waiting on the person, the "
+        "cause the screen can offer an action for; for one queued, the time it is waiting for.",
     )
     follows: str | None = Field(
         None, description="The change (a changeset id) whose event a plugin answered with this work, if any."
@@ -802,6 +818,9 @@ class Request(Record):
         None, description="The newer request this one's change was folded into, so they are read in order, once."
     )
     attempts: int = Field(0, description="How many times the assistant has started on it.")
+    retries: int = Field(
+        0, description="How many times it was tried again by itself after a run that gave no usable answer."
+    )
     created_at: datetime = Field(description="When the request was made.")
     changeset: str | None = Field(None, description="The id of the changeset the assistant proposed for it.")
     previous: str | None = Field(None, description="The request this one redoes after the PM sent it back.")

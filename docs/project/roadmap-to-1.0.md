@@ -292,14 +292,26 @@ them are needed before the owner's daily use, which starts when L-core passes.
     `tests/test_followups_backup_eval.py::test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_for_that_person`.
   - Left in this item: the "to send" marker on each action row (phase B) and the references table's new keys (with
     `person.merge`), so the item stays open.
-- [ ] **No silent stops** (design 8.5, 8.6, 8.8):
+- [ ] **No silent stops** (design 8.5, 8.6, 8.8; waking up after sleep is its own item below). Left: the restart and
+  paused-account lines are in the Today queue's API but not drawn on the Today screen yet:
   - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived (done:
     `tests/test_names.py::test_the_packet_states_the_inputs_received_date_beside_todays`);
-  - a usage limit resumes by itself at its reset;
-  - an empty or failed run is retried automatically, then goes to the person with why;
-  - an agent that exits 0 with no answer is its own outcome (`no_output`), retried, never "done";
-  - held work and paused accounts show on Today: "Restart to run 7 waiting requests" as the first Decide line, and an
-    account paused until its limit resets as a Risk line with the time and the count waiting.
+  - [x] a usage limit resumes by itself at its reset (an account is paused until the reset, kept on disk across a
+    restart; the waiting requests run by themselves then): `tests/test_silent_stops.py::test_waiting_requests_resume_by_themselves_at_the_reset_without_anyone_pressing_anything`,
+    `tests/test_silent_stops.py::test_a_usage_limit_with_a_reset_pauses_the_account_and_it_is_not_called_before_then`,
+    `tests/test_silent_stops.py::test_the_pause_is_kept_on_disk_so_a_new_process_still_honors_it`;
+  - [x] an empty or failed run is retried automatically (`dispatch.retries`, `dispatch.retry_wait_seconds`), then goes to
+    the person with why: `tests/test_silent_stops.py::test_an_empty_answer_is_retried_with_a_growing_wait_then_goes_to_the_person_with_why`,
+    `tests/test_silent_stops.py::test_a_failed_call_that_another_try_may_clear_is_retried`,
+    `tests/test_silent_stops.py::test_a_failure_another_try_cannot_clear_goes_to_the_person_at_once`;
+  - [x] an agent that exits 0 with no answer is its own outcome (`no_output`), retried, never "done":
+    `tests/test_silent_stops.py::test_a_program_that_exits_cleanly_with_nothing_on_its_output_is_no_output_never_an_empty_answer`,
+    `tests/test_silent_stops.py::test_no_output_from_the_agent_is_retried_then_sent_to_the_person_and_never_done`;
+  - [x] held work and paused accounts are lines of Today's ranked queue: "Restart to run 7 waiting requests" as the first
+    Decide line, and an account paused until its limit resets as a Risk line with the time and the count waiting:
+    `tests/test_silent_stops.py::test_held_work_is_the_first_decide_line_with_its_count_and_nothing_restarts`,
+    `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`. The lines are
+    served by `GET /api/today/queue`; the Today screen drawing the ranked queue is the Today item in phase B below.
 - [x] The near-duplicate threshold becomes a setting (design 4.17): `tuning.near_duplicate_action.similarity` in
   `config/checks.yaml`, default 0.8, range 0 to 1, demo values in both workspaces. Tests: `tests/test_near_duplicate.py::test_the_check_fires_at_and_above_the_configured_similarity_and_not_below`,
   `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one`.
@@ -427,11 +439,11 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - [ ] the journey J4 (an add-on installed from the list) failed once while other test runs shared the machine and passed
     on its own; find what it waits on too.
 - [ ] Journey tests:
-  - **no silent stops,** each with a fake provider:
-    - a usage limit, then the work resuming by itself at the reset;
-    - an agent exiting 0 with no answer;
-    - a restart needed, shown as the first Decide line;
-    - an empty run retried, then sent to the person;
+  - **no silent stops,** each with a fake provider (API-level journeys, no browser):
+    - [x] a usage limit, then the work resuming by itself at the reset: `tests/test_journeys.py::test_j7_a_usage_limit_pauses_the_account_shows_on_today_and_the_work_resumes_by_itself`;
+    - [x] an agent exiting 0 with no answer: `tests/test_journeys.py::test_j8_an_agent_that_exits_cleanly_with_no_answer_is_retried_then_sent_to_me_and_never_done`;
+    - [x] a restart needed, shown as the first Decide line: `tests/test_journeys.py::test_j9_work_held_for_a_restart_is_the_first_line_on_today_and_runs_after_the_restart_i_choose`;
+    - [x] an empty run retried, then sent to the person: `tests/test_journeys.py::test_j10_an_empty_run_is_retried_by_itself_then_goes_to_me_with_why_and_try_again_works`;
   - **waking up:** the computer sleeps through a scheduled batch and wakes. The batch runs once, nothing looks fresh that
     isn't, and nothing is filed for the lost network (design 8.6). Most people open the lid rather than start fresh, and
     waking was where most "it just stopped" reports came from.
@@ -614,7 +626,9 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 `reviews/ui-ux-2026-10/` are marked Done or explained, with screenshots in `reviews/ui-ux-2026-10/after/`.
 
 - [ ] **Today:** the ranked queue (its engine is built), the inspector from 1680px, and the rail. Held items are
-  top-level. Review & copy and send back are placed as designed, and the keyboard starts on the queue.
+  top-level. Review & copy and send back are placed as designed, and the keyboard starts on the queue. The `restart` line
+  (with Restart now) and the `paused` line are in the queue already (L0) and need drawing, with the wording keys
+  `queue.restart.*` and `queue.paused.*`.
 - [ ] **Work:** What changed and Follow-ups as list | detail. Waiting to go out is a designed screen with its empty
   state.
 - [ ] **Records:** the Projects table and the People table with detail panes; record pages; forms in drawers. The

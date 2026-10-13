@@ -44,7 +44,9 @@ class Line:
     the person was asked), who_is (a name the assistant couldn't place), owner (an action with no owner), held (an
     item waiting for the person's yes), go (a run waiting for the person's go), first_go (every run waiting for the
     first go in the workspace, as one line: `estimate_usd` is their total estimate and `unpriced` how many have
-    none), refused, failed, overdue, review, send or nudge. `count` is how many things the line covers; `text` the
+    none), refused, restart (work held until the person restarts the app: `count` is how many requests wait), failed,
+    paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), overdue,
+    review, send or nudge. `count` is how many things the line covers; `text` the
     decision, question or held item in one line; `title` the input the line is about; `outcome` what the assistant
     did, counted by kind; `waiting` why the work stopped, as the engine said it."""
 
@@ -69,6 +71,8 @@ class Line:
     untrusted: bool = False
     estimate_usd: float | None = None
     unpriced: int = 0
+    account: str | None = None
+    until: str | None = None
     since: str = ""
 
 
@@ -187,6 +191,27 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime) -> list[Line]:
             )
         )
 
+    from engine.worker import RESTART_NEEDED
+
+    held = [
+        r
+        for r in requests.values()
+        if r.data.get("state") == "queued" and not r.data.get("dismissed") and r.data.get("waiting") == RESTART_NEEDED
+    ]
+    if held:
+        # Work held until a restart is never a silent stop: the first line of the day, with the count. It only asks;
+        # the restart is the person's to start.
+        lines.append(
+            Line(
+                key="restart",
+                group="decide",
+                kind="restart",
+                count=len(held),
+                waiting=RESTART_NEEDED,
+                since=min(str(r.data.get("created_at") or "") for r in held),
+            )
+        )
+
     if first_go:
         priced = [r.data["estimate_usd"] for r in first_go if r.data.get("estimate_usd") is not None]
         lines.append(
@@ -201,6 +226,33 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime) -> list[Line]:
                 since=min(str(r.data.get("created_at") or "") for r in first_go),
             )
         )
+
+    # Risk: an AI account paused until its usage limit resets, with the work waiting on it.
+    from engine.ai.pauses import Pauses, pauses_path, waiting_text
+
+    for account, until in sorted(Pauses(pauses_path(store), lambda: now).active().items(), key=lambda x: (x[1], x[0])):
+        waiting = [
+            r
+            for r in requests.values()
+            if r.data.get("state") == "queued"
+            and not r.data.get("dismissed")
+            and (r.data.get("cause") or {}).get("kind") == "paused"
+            and (r.data.get("cause") or {}).get("account") == account
+        ]
+        if waiting:
+            lines.append(
+                Line(
+                    key=f"paused:{account}",
+                    group="risk",
+                    kind="paused",
+                    count=len(waiting),
+                    text=account,
+                    account=account,
+                    until=until.isoformat(),
+                    waiting=waiting_text(cfg, account, until, now),
+                    since=until.isoformat(),
+                )
+            )
 
     # Risk: the person's own overdue to-dos, as one line.
     overdue = []
@@ -300,6 +352,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime) -> list[Line]:
 
 
 _KIND_ORDER = {
+    "restart": -2,
     "first_go": -1,
     "decision": 0,
     "who_is": 1,
@@ -309,7 +362,8 @@ _KIND_ORDER = {
     "refused": 5,
     "question": 6,
     "failed": 0,
-    "overdue": 1,
+    "paused": 1,
+    "overdue": 2,
     "review": 0,
     "send": 0,
     "nudge": 1,

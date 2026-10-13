@@ -7,7 +7,16 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 ErrorKind = Literal[
-    "rate_limited", "quota", "auth", "no_key", "timeout", "invalid_output", "provider_down", "refused", "other"
+    "rate_limited",
+    "quota",
+    "auth",
+    "no_key",
+    "timeout",
+    "invalid_output",
+    "no_output",  # the program finished without error but gave no answer
+    "provider_down",
+    "refused",
+    "other",
 ]
 
 

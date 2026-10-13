@@ -22,6 +22,7 @@ import tempfile
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -85,7 +86,7 @@ class CliAgentAdapter:
             if self.agent.output_via == "outbox":
                 path = outbox / answer_name
                 if not path.is_file():
-                    raise AiError("invalid_output", f"the agent finished without writing {answer_name}")
+                    raise AiError("no_output", f"the agent finished without writing {answer_name}")
                 return self._result(done.stdout, path.read_text(encoding="utf-8", errors="replace"), model, seconds)
             return self._result(done.stdout, None, model, seconds)
 
@@ -160,11 +161,21 @@ class CliAgentAdapter:
         return home
 
     def _result(self, stdout: str, answer: str | None, model: str, seconds: float) -> AiResult:
+        """The run's result. A program that finished without error but left no answer (nothing on its output, or an
+        empty answer file) is its own outcome, never an empty answer."""
+        result = self._read_result(stdout, answer, model, seconds)
+        if not result.text.strip():
+            raise AiError("no_output", "the agent finished without an answer")
+        return result
+
+    def _read_result(self, stdout: str, answer: str | None, model: str, seconds: float) -> AiResult:
         fields = self.agent.output_fields
         if not self.agent.output_json:
             return AiResult(
                 text=(answer if answer is not None else stdout).strip(), model_served=model, seconds=seconds
             )
+        if answer is None and not stdout.strip():
+            raise AiError("no_output", "the agent finished without an answer")
         try:
             data = json.loads(stdout)
         except ValueError:
@@ -205,7 +216,8 @@ class CliAgentAdapter:
         detail = tail.strip() or f"the agent stopped with exit code {exit_code}"
         if kind == "auth":
             return AiError("auth", detail, hint=self.sign_in_hint() or None)
-        return AiError(kind or "other", detail)
+        wait = _reset_seconds(tail, errors.reset) if kind in ("quota", "rate_limited") else None
+        return AiError(kind or "other", detail, retry_after=wait)
 
     def sign_in_hint(self) -> str:
         return self.agent.sign_in_hint
@@ -282,6 +294,28 @@ MAX_ARGUMENT_CHARS = 100_000
 
 def _fill(part: str, values: dict[str, str]) -> str:
     return re.sub(r"\{(model|packet|outbox|scratch|prompt)\}", lambda m: values[m.group(1)], part)
+
+
+def _reset_seconds(text: str, patterns: list[str]) -> float | None:
+    """Seconds until a limit resets, from the first pattern that matches the error stream: its first group is a number
+    of seconds or an ISO 8601 date and time. None when nothing matches or the group can't be read."""
+    for pattern in patterns:
+        found = re.search(pattern, text, re.I)
+        if not found or not found.groups():
+            continue
+        said = (found.group(1) or "").strip()
+        try:
+            return max(0.0, float(said))
+        except ValueError:
+            pass
+        try:
+            when = datetime.fromisoformat(said.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=UTC)
+        return max(0.0, (when - datetime.now(UTC)).total_seconds())
+    return None
 
 
 def _at(data: Any, path: str) -> Any:

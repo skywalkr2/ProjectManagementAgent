@@ -117,11 +117,12 @@ they apply to. Those guarded by an invariant or code still give the model their 
 |---|---|
 | Rules before AI: most changes are no-ops; deterministic rules close them | triage |
 | Never let two versions of one change race | supersede |
-| A run that produced nothing is retried, then goes to the PM | dispatcher attempts (partly enforced: fix rounds exist; an empty or failed run is retried by hand) |
-| A usage limit is a pause until reset, not a failure loop | AI adapters' `classify_error` (partly enforced: rate-limit waits resume; a quota or budget pause does not resume by itself at reset) |
+| A run that produced nothing is retried, then goes to the PM | dispatcher `dispatch.retries` and `retry_wait_seconds` (enforced: an empty or unreadable answer, a timeout, an outage, another failure and `no_output` are tried again by themselves with a doubling wait, then the request comes to the person saying how many times it was tried and why, with Try again: `tests/test_silent_stops.py::test_an_empty_answer_is_retried_with_a_growing_wait_then_goes_to_the_person_with_why`, `tests/test_silent_stops.py::test_a_failed_call_that_another_try_may_clear_is_retried`, `tests/test_silent_stops.py::test_a_failure_another_try_cannot_clear_goes_to_the_person_at_once`, `tests/test_journeys.py::test_j10_an_empty_run_is_retried_by_itself_then_goes_to_me_with_why_and_try_again_works`) |
+| A usage limit is a pause until reset, not a failure loop | AI adapters' `classify_error`, the router's pauses (enforced for a quota or a request to wait that comes with a reset time: the account is paused until the reset, kept across a restart, and the waiting requests run by themselves then: `tests/test_silent_stops.py::test_waiting_requests_resume_by_themselves_at_the_reset_without_anyone_pressing_anything`, `tests/test_journeys.py::test_j7_a_usage_limit_pauses_the_account_shows_on_today_and_the_work_resumes_by_itself`; a spending budget stops new runs and says until when, and resumes with the new day or month) |
+| Held work and paused accounts are Today lines, never only a chip | the `restart` and `paused` lines of the ranked queue (enforced in the engine and the queue route: `tests/test_silent_stops.py::test_held_work_is_the_first_decide_line_with_its_count_and_nothing_restarts`, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`; the ranked queue is not yet on the Today screen, roadmap L0) |
 | Runner errors are classified from the runner's exit code and error stream only, never from the model's output; both streams are kept | `classify_error` contract, `Run` record |
 | No network on wake is not a failure or an outage; a failed refresh never counts as fresh | connectivity check, scheduler |
-| Every waiting state shows why and until when | `Request.waiting`, UI rule |
+| Every waiting state shows why and until when | `Request.waiting`, UI rule (enforced for the new waiting states: a pause says "Waiting for <account>'s limit to reset at <time>", a retry says "Trying again at <time> (try 2 of 3)": `tests/test_silent_stops.py::test_a_waiting_request_says_whose_limit_and_when_in_the_persons_time_and_no_model_name`) |
 | A correction is checked against the data before anything is changed or reported | feedback task packet, `dev.request` validator (partly enforced: Send back is built; the data check is not) |
 | Shared masters edited outside the tool are checked for an open lock and diffed, never overwritten | channel `lock_status`, pull-edits (not yet enforced): no publisher or shared masters yet |
 | Edits by our own accounts are ours: no one is asked who made them | `our_accounts`, `by_us` |
@@ -198,9 +199,10 @@ this list is what gets enforced and tested, each is a row. The guard kind is in 
 
 **What is enforced first, for the first real use.** The first real use is a writer's own work plus mail and calendar, so the
 rules that bite first are not the workplace ones:
-- **Phase L0, the start of L-core, before real use:** dates from the day received (8.5, built); a usage limit resuming by itself at its reset (8.6); an empty or failed run
-  retried automatically, then sent to the person (8.6). Without the last two, the assistant stops silently on the first quota
-  day and the person thinks it's broken.
+- **Phase L0, the start of L-core, before real use:** dates from the day received (8.5, built); a usage limit resuming by itself at its reset (8.6, built); an empty or failed run
+  retried automatically, then sent to the person (8.6, built); an agent that exits 0 with no answer (6.16, built); held work and
+  paused accounts as lines of Today's queue (6.15, built in the engine). Without these, the assistant stops silently on the
+  first quota day and the person thinks it's broken. Waking up after sleep (8.6) is the one silent-stop item left in L0.
 - **Phase L, before real use starts:**
   - the knowledge rules (8.4);
   - verbatim versus paraphrase, and unattributed lines (8.1);

@@ -9,6 +9,7 @@ import os
 import threading
 import time
 from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +64,38 @@ def code_fingerprint() -> str:
     """The newest modification time of the running program's own source files."""
     newest = max((p.stat().st_mtime for root in CODE_ROOTS if root.is_dir() for p in root.rglob("*.py")), default=0.0)
     return repr(newest)
+
+
+def waits_for_its_time(request: dict[str, Any], now: datetime) -> bool:
+    """Whether a queued request is waiting for a time to come (an account's limit to reset, or the next automatic try)
+    and that time is still ahead."""
+    cause = request.get("cause") or {}
+    if cause.get("kind") not in ("paused", "retry") or not cause.get("until"):
+        return False
+    until = datetime.fromisoformat(str(cause["until"]))
+    return (until if until.tzinfo else until.replace(tzinfo=UTC)) > now
+
+
+def release_paused(store: Store) -> int:
+    """Lift every pause on the accounts and let the requests waiting for one try again at once: used when the AI
+    accounts changed, since a different account may be able to take the work. Returns how many requests were let go."""
+    from engine.ai.pauses import Pauses, pauses_path
+
+    Pauses(pauses_path(store)).clear()
+    ctx = WriteContext(actor="engine", trust="trusted", op="worker.release")
+    released = 0
+    with store.transaction() as tx:
+        for r in tx.list("request"):
+            if r.data["state"] == "queued" and (r.data.get("cause") or {}).get("kind") == "paused":
+                tx.update(
+                    "request",
+                    r.id,
+                    {"cause": None, "waiting": "With the assistant, next in line"},
+                    ctx,
+                    read_version=r.version,
+                )
+                released += 1
+    return released
 
 
 def requeue_interrupted(store: Store) -> tuple[list[str], list[str]]:
@@ -130,8 +163,10 @@ class Worker:
         events: Events,
         router_factory: Callable[[], Router] | None = None,
         on_restart: Callable[[], None] | None = None,
+        now: Callable[[], datetime] = lambda: datetime.now(UTC),
     ):
         self.ws, self.store, self.cfg, self.events = ws, store, cfg, events
+        self.now = now
         self.router_factory = router_factory or (lambda: Router(cfg, store, env=os.environ))
         # Called once, between requests, when settings or code changed: the process restarts to use them (6.14).
         self.on_restart = on_restart
@@ -184,6 +219,8 @@ class Worker:
                 del self.cfg.sources[key]
             self.cfg.sources.update({k: v for k, v in fresh.sources.items() if k.startswith(name + ".")})
         self._config_seen = seen
+        if any(k.startswith(("ai.providers.", "ai.tiers.")) for k in changed):
+            release_paused(self.store)
         if changed:
             log.info("Took in changed settings: %s", ", ".join(sorted(changed)))
             self.events.changed()
@@ -206,8 +243,11 @@ class Worker:
     def _hold_queued(self) -> None:
         ctx = WriteContext(actor="engine", trust="trusted", op="worker.hold")
         held = False
+        now = self.now()
         with self.store.transaction() as tx:
             for r in tx.list("request"):
+                if waits_for_its_time(r.data, now):
+                    continue
                 if r.data["state"] == "queued" and r.data.get("waiting") != RESTART_NEEDED:
                     tx.update("request", r.id, {"waiting": RESTART_NEEDED}, ctx, read_version=r.version)
                     held = True
@@ -278,14 +318,19 @@ class Worker:
         """Process every queued request now. Returns how many were processed."""
         done = 0
         while not self._stop.is_set():
-            queued = [r for r in self.store.read().list("request") if r.data["state"] == "queued"]
+            now = self.now()
+            queued = [
+                r
+                for r in self.store.read().list("request")
+                if r.data["state"] == "queued" and not waits_for_its_time(r.data, now)
+            ]
             if not queued:
                 break
             if self._changed_since_start():
                 self._hold_queued()
                 break
             try:
-                process(self.ws, self.store, self.cfg, self.router_factory(), queued[0].id)
+                process(self.ws, self.store, self.cfg, self.router_factory(), queued[0].id, now=now)
             except StoreError as err:  # a write refused with a plain reason
                 log.warning("Request %s couldn't be processed: %s", queued[0].id, err)
                 needs_you(self.store, queued[0].id, f"This couldn't be processed: {str(err).rstrip('.')}.")

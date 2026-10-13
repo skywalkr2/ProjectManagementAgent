@@ -1,6 +1,8 @@
 version: 1
 max_input_chars: 40000
 fix_rounds: 1
+retries: 2
+retry_wait_seconds: 30
 cleaning:
   remove_quoted: true
   signature_markers: ["-- ", "Sent from my ", "Best regards,"]

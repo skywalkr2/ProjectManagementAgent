@@ -292,7 +292,7 @@ providers:                       # every AI account the workspace may use; names
       output_fields: {text: result, input_tokens: usage.input_tokens, output_tokens: usage.output_tokens, cost_usd: cost}
       pass_env: []               # variables it may see besides PATH, HOME and the language settings
       key_env: <variable>        # the variable it reads its key from, when the account uses a key
-      errors: {auth: ["<its not-signed-in message>"], rate_limited: [], quota: ["<its usage-limit message>"], exit_codes: {}}
+      errors: {auth: ["<its not-signed-in message>"], rate_limited: [], quota: ["<its usage-limit message>"], reset: ["<its reset time: the first group is seconds or an ISO date and time>"], exit_codes: {}}
       sign_in_hint: <its login command>
       home: shared               # fresh: each run gets an empty home with only home_files copied in
       home_files: []
@@ -316,7 +316,7 @@ budgets:
 prices: {}                       # by provider/model, for models whose catalog gives none: {input_per_million, output_per_million, cached_input_per_million}
 evaluation: {runs: 3, min_score: 0.9}
 catalog_refresh_hours: 24        # how old an account's model list and prices may get before they are fetched again
-rate_limits: {tries: 3, max_wait_seconds: 30}   # when the last account says to slow down: wait and try again; with another account, move on at once
+rate_limits: {tries: 3, max_wait_seconds: 30, pause_seconds: 600}   # when the last account says to slow down: wait and try again; with another account, move on at once; a limit with a reset time, or one that keeps coming, pauses the account (6.16)
 routing:                         # rules checked in order before a call that send some requests to another tier; the first match wins
   - when: {task: notes, quoted_messages_over: 3}   # also input_chars_over and data_level
     tier: deep
@@ -360,7 +360,7 @@ so nothing expensive happens unless the person chose it.
 ## 4.9 `config/dispatch.yaml`, `config/governor.yaml`
 
 **Dispatch** (built): `max_input_chars` (60000; a longer input is refused with a request to split it or raise the key),
-`fix_rounds` (1, up to 3: how many times a failing answer goes back to the AI) and `cleaning` (6.6): `remove_quoted` (true),
+`fix_rounds` (1, up to 3: how many times a failing answer goes back to the AI), `retries` (2, up to 5: how many times a run that gave no usable answer or failed is tried again by itself before it goes to the person, 6.16, 8.6), `retry_wait_seconds` (30: the wait before the first retry, doubled for each later one) and `cleaning` (6.6): `remove_quoted` (true),
 `signature_markers` (default "-- " and "Sent from my "; a line starting with one ends the message) and `remove_patterns`
 (regular expressions for disclaimers and footers).
 

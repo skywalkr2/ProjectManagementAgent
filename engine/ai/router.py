@@ -5,11 +5,12 @@ from __future__ import annotations
 import time
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from engine.ai.adapters import Adapter, make_adapter
 from engine.ai.catalog import Catalogs
+from engine.ai.pauses import Pauses, pauses_path, waiting_text
 from engine.ai.task import AiError, AiResult, AiTask, ModelInfo
 from engine.config import Config
 from engine.secrets import SecretError, resolve_secret
@@ -46,6 +47,16 @@ class NoProvider(Exception):
         super().__init__(message)
         self.level = level
         self.blocked = blocked
+
+
+class AccountPaused(NoProvider):
+    """Every account that could take the work is paused until a usage limit resets. `account` is the one that resets
+    first and `until` when; the message is what the work waits on, in plain words."""
+
+    def __init__(self, account: str, until: datetime, message: str):
+        super().__init__(message)
+        self.account = account
+        self.until = until
 
 
 class BudgetReached(Exception):
@@ -190,6 +201,7 @@ class Router:
         self.env = env
         self.adapter_factory = adapter_factory
         self.now = now
+        self.pauses = Pauses(pauses_path(store), now)
 
     def call(
         self,
@@ -208,7 +220,13 @@ class Router:
         last: AiError | None = None
         picked = choices(self.cfg, task.kind, data_level, tier=tier, use=use, content=content, independent=independent)
         options = self._that_fit(task, list(picked))
+        paused: dict[str, datetime] = {}
         for position, choice in enumerate(options):
+            held = self.pauses.until(choice.provider)
+            if held is not None:
+                # A usage limit isn't over: this account isn't called, and the next in line takes the work.
+                paused[choice.provider] = held
+                continue
             settings = self.cfg.ai.providers[choice.provider]
             started = self.now()
             clock = time.monotonic()
@@ -225,6 +243,10 @@ class Router:
             except AiError as err:
                 last = err
                 self._record(task, request_id, choice, started, time.monotonic() - clock, None, err, independent)
+                until = self._pause_until(err, position == len(options) - 1)
+                if until is not None:
+                    self.pauses.pause(choice.provider, until)
+                    paused[choice.provider] = until
                 if err.kind in FALLBACK_ON:
                     continue
                 raise
@@ -232,8 +254,27 @@ class Router:
                 task, request_id, choice, started, time.monotonic() - clock, result, None, independent
             )
             return result, choice, run_id
+        if paused and len(paused) == len(options):
+            account, until = min(paused.items(), key=lambda item: item[1])
+            raise AccountPaused(account, until, waiting_text(self.cfg, account, until, self.now()))
         assert last is not None
         raise last
+
+    def _pause_until(self, err: AiError, last_in_line: bool) -> datetime | None:
+        """When a failed call's account can be used again, if the failure is a usage limit with a reset to wait for:
+        the reset the account gave, or for a request to slow down that kept coming after the waits in the call, the
+        configured pause. A short wait the call itself made, or a limit with no reset time, is no pause."""
+        limits = self.cfg.ai.rate_limits
+        if err.kind == "quota":
+            seconds = err.retry_after
+        elif err.kind == "rate_limited":
+            known = err.retry_after
+            seconds = known if known is not None and known > limits.max_wait_seconds else None
+            if seconds is None and last_in_line:
+                seconds = limits.pause_seconds
+        else:
+            return None
+        return self.now() + timedelta(seconds=seconds) if seconds else None
 
     def _run_paced(
         self,

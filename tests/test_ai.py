@@ -2,14 +2,14 @@
 levels, budgets and run records. Account settings come from tests/fixtures/ai/ai.yaml."""
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
 import pytest
 
 from engine.ai.adapters import ADAPTERS
-from engine.ai.router import BudgetReached, NoProvider, Router, choices
+from engine.ai.router import AccountPaused, BudgetReached, NoProvider, Router, choices
 from engine.ai.task import AiError, AiTask
 from engine.config import load_config
 from engine.storage import Store, WriteContext
@@ -184,9 +184,9 @@ def test_a_wait_longer_than_the_limit_gives_up_without_sleeping(cfg, store):
     cfg.ai.tiers["routine"].fallback = []
     router, seen = router_with(cfg, store, {"main": lambda r: httpx.Response(429, headers={"retry-after": "3600"})})
     router.sleep = lambda s: pytest.fail("must not wait an hour")
-    with pytest.raises(AiError, match="rate_limited"):
+    with pytest.raises(AccountPaused) as paused:
         router.call(TASK, request_id="REQ-1")
-    assert len(seen) == 1
+    assert len(seen) == 1 and paused.value.account == "main" and paused.value.until == NOW + timedelta(hours=1)
 
 
 def test_an_answer_stopped_at_the_output_limit_is_marked_cut_off(cfg, store):

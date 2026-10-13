@@ -168,7 +168,7 @@ def classify_http_error(response: httpx.Response) -> AiError:
     if status in (401, 403):
         return AiError("auth", detail)
     if status == 402:
-        return AiError("quota", detail)
+        return AiError("quota", detail, retry_after=retry_after)
     if status == 429:
         return AiError("rate_limited", detail, retry_after=retry_after)
     if status >= 500:

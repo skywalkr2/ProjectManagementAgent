@@ -570,7 +570,8 @@ def test_parse_repairs_fences_prose_and_trailing_commas():
 
 
 def test_unreadable_answers_go_back_then_need_the_pm(env):
-    _, _, store = env
+    _, cfg, store = env
+    cfg.dispatch.retries = 0  # the automatic tries have their own tests (tests/test_silent_stops.py)
     set_responder(lambda task: "I can't help with that.")
     handed, cs_id = run(env, "Anything.")
     assert cs_id is None
@@ -581,7 +582,8 @@ def test_unreadable_answers_go_back_then_need_the_pm(env):
 def test_an_answer_that_fails_twice_says_so_in_plain_words_and_tells_the_assistant_what_was_wrong(env):
     """The person's path: an op without its name, twice. The second round is told which op lacks it; the person sees
     no internal words."""
-    _, _, store = env
+    _, cfg, store = env
+    cfg.dispatch.retries = 0  # the automatic tries have their own tests (tests/test_silent_stops.py)
     asked = answers({"summary": "Explained the app.", "ops": [{"text": "It files notes."}]})
     handed, cs_id = run(env, "", note="how does this application work?")
     assert cs_id is None and len(asked) >= 2

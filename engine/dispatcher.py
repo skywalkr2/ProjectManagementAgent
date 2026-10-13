@@ -7,12 +7,14 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
 
+from engine.ai.pauses import when_text
 from engine.ai.router import (
     LEVELS,
+    AccountPaused,
     BudgetReached,
     Independence,
     NoProvider,
@@ -260,8 +262,12 @@ def process(
         )
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
+    if outcome.cause and outcome.cause.get("kind") == "paused":
+        # Every account that could take it is waiting for a limit to reset: it stays in line and runs by itself then.
+        _set(store, request_id, state="queued", waiting=outcome.stop, cause=outcome.cause)
+        return None
     if outcome.changeset is None:
-        return needs_you(store, request_id, outcome.stop or "The assistant couldn't finish this.", cause=outcome.cause)
+        return stop_or_retry(store, cfg, request_id, outcome, now)
     if outcome.stop is not None:
         return needs_you(store, request_id, outcome.stop, cause=outcome.cause)
     changeset, problems, run_id = outcome.changeset, outcome.problems, outcome.run_id
@@ -383,6 +389,7 @@ class _Outcome:
     stop: str | None = None  # why the PM is needed instead of a changeset
     cause: dict | None = None  # what the screen can offer to clear the stop, when it has a way to
     escalate: bool = False  # the answer still fails its checks: a stronger tier may do better
+    retry: str | None = None  # a run that gave no usable answer or failed: why, in a few words; it is tried again
 
 
 def _rounds(
@@ -416,6 +423,11 @@ def _rounds(
                 content=content,
                 independent=independent,
             )
+        except AccountPaused as err:
+            cause = {"kind": "paused", "account": err.account, "until": err.until.isoformat()}
+            return _Outcome(
+                changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=str(err), cause=cause
+            )
         except (BudgetReached, NoProvider) as err:
             return _Outcome(
                 changeset=out.changeset,
@@ -426,13 +438,19 @@ def _rounds(
             )
         except AiError as err:
             stop = _refused(store, None, err.detail) if err.kind == "refused" else _ai_failure(err)
-            return _Outcome(changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=stop)
+            return _Outcome(
+                changeset=out.changeset,
+                problems=out.problems,
+                run_id=out.run_id,
+                stop=stop,
+                retry=_failure(err) if err.kind in RETRIED else None,
+            )
         if result.refused:
             return _Outcome(run_id=out.run_id, stop=_refused(store, out.run_id, result.refusal or ""))
         if draft is not None:
             text, stop = _drafted(router, task, result, request_id, tier, data_level, use, content, independent)
             if stop:
-                return _Outcome(run_id=out.run_id, stop=stop)
+                return _Outcome(run_id=out.run_id, stop=stop, retry=stop.rstrip(".") if not text.strip() else None)
             from engine.texts import AnchorProblem, parse_anchored, splice_after, splice_span, split_questions
 
             mapping: list = []
@@ -487,7 +505,7 @@ def _rounds(
                 log.warning("Output limit reached; it is set at ai.tasks.%s.max_output", task.kind)
                 return _Outcome(run_id=out.run_id, stop=stop)
             log.warning("The assistant's answer couldn't be read after a second try: %s", err)
-            return _Outcome(run_id=out.run_id, stop=UNREADABLE, escalate=True)
+            return _Outcome(run_id=out.run_id, stop=UNREADABLE, escalate=True, retry=UNREADABLE_WHY)
         if previous_ops is not None and _ops_of(changeset) == previous_ops:
             if not last:
                 task = replace(task, request=base.request + "\n\n" + REPEATED)
@@ -505,6 +523,10 @@ def _rounds(
     return out
 
 
+#: The failures of a run that are tried again by themselves: no usable answer, or the call itself failed. A limit, a
+#: refused key and a refusal are not: they need the account or the person.
+RETRIED = ("invalid_output", "no_output", "timeout", "provider_down", "other")
+UNREADABLE_WHY = "The assistant's answer wasn't in the form this work needs"
 #: What a request waits on when the assistant's answer wasn't in the form the work needs, even when asked again.
 UNREADABLE = (
     "The assistant's answer wasn't in the form this work needs, even when asked again. Try again, or pick another "
@@ -622,15 +644,26 @@ def _refused(store: Store, run_id: str | None, reason: str) -> str:
     return f"{REFUSED}{why}.{spent} Pick another account to try it, change the request, or set it aside."
 
 
+_PLAIN_FAILURE = {
+    "rate_limited": "The AI account is rate limited",
+    "quota": "The AI account is out of credit",
+    "auth": "The AI account refused the key",
+    "no_key": "The AI account's key wasn't found",
+    "timeout": "The AI account didn't answer in time",
+    "provider_down": "The AI service is down",
+    "invalid_output": "The AI account's answer couldn't be read",
+    "no_output": "The AI account finished without giving an answer",
+}
+
+
+def _failure(err: AiError) -> str:
+    """A failed call in a few plain words: what happened and the provider's own reason, if it gave one."""
+    reason = provider_reason(err.detail)
+    return _PLAIN_FAILURE.get(err.kind, "The AI call failed") + (f" ({reason})" if reason else "")
+
+
 def _ai_failure(err: AiError) -> str:
-    plain = {
-        "rate_limited": "The AI account is rate limited",
-        "quota": "The AI account is out of credit",
-        "auth": "The AI account refused the key",
-        "no_key": "The AI account's key wasn't found",
-        "timeout": "The AI account didn't answer in time",
-        "provider_down": "The AI service is down",
-    }.get(err.kind, "The AI call failed")
+    plain = _PLAIN_FAILURE.get(err.kind, "The AI call failed")
     when = f"; it can try again in {int(err.retry_after)} seconds" if err.retry_after else ""
     reason = provider_reason(err.detail)
     why = f" ({reason})" if reason else ""
@@ -652,6 +685,32 @@ def _set(store: Store, request_id: str, **changes: object) -> None:
     with store.transaction() as tx:
         cur = tx.get("request", request_id)
         tx.update("request", request_id, changes, _ENGINE, read_version=cur.version)
+
+
+def stop_or_retry(store: Store, cfg: Config, request_id: str, outcome: _Outcome, now: datetime) -> None:
+    """A run that ended without a changeset. One that gave no usable answer, or failed in a way another try may
+    clear, is queued again after a wait that doubles each time, up to `dispatch.retries`; after that, or for any
+    other stop, the person is needed, with why. Nothing is retried in a loop: each try waits for its time."""
+    tries = store.read().get("request", request_id).data.get("retries", 0)
+    limit = cfg.dispatch.retries
+    if outcome.retry and tries < limit:
+        at = now + timedelta(seconds=cfg.dispatch.retry_wait_seconds * 2**tries)
+        why = (
+            f"{outcome.retry.rstrip('.')}. Trying again at {when_text(cfg, at, now)} (try {tries + 2} of {limit + 1})."
+        )
+        _set(
+            store,
+            request_id,
+            state="queued",
+            retries=tries + 1,
+            waiting=why,
+            cause={"kind": "retry", "until": at.isoformat()},
+        )
+        return None
+    stop = outcome.stop or "The assistant couldn't finish this."
+    if outcome.retry and limit:
+        stop = f"Tried {tries + 1} times without a usable answer. {stop}"
+    return needs_you(store, request_id, stop, cause=outcome.cause)
 
 
 def needs_you(store: Store, request_id: str, why: str, cause: dict | None = None) -> None:
@@ -716,7 +775,12 @@ def retry(store: Store, request_id: str, use: str | None = None) -> None:
             raise ValueError(wording(store.plugins.cfg, "retry_blocked"))
         if cur.data["state"] not in ("needs_you", "failed"):
             raise ValueError("this isn't waiting on you")
-        changes: dict[str, object] = {"state": "queued", "waiting": "With the assistant, next in line", "cause": None}
+        changes: dict[str, object] = {
+            "state": "queued",
+            "waiting": "With the assistant, next in line",
+            "cause": None,
+            "retries": 0,
+        }
         if use is not None:
             changes["use"] = use
         tx.update("request", request_id, changes, _ENGINE, read_version=cur.version)

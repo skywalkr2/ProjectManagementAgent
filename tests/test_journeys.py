@@ -4,7 +4,10 @@ init command with no template, with the stand-in assistant as the only account. 
 
 from __future__ import annotations
 
+import json
 import sqlite3
+import sys
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml
@@ -12,6 +15,7 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from engine.ai.adapters.stub import set_responder
+from engine.ai.router import Router
 from engine.backup import restore_backup
 from engine.cli import main
 from engine.workspace import Workspace
@@ -127,5 +131,219 @@ def test_j5_a_backup_of_a_working_workspace_restores_to_the_same_screens_and_led
         said = capsys.readouterr().out
         assert str(target.resolve()) in said and "serve" in said
         assert _counts(target / "cockpit.db") == before
+    finally:
+        set_responder(None)
+
+
+# ---- no silent stops: what a person sees when the assistant cannot go on ----------------------------
+
+
+def _started(tmp_path, *, account: dict | None = None):
+    """A workspace made by the init command with the stand-in account (or the given account), and a clock the test
+    moves. Returns the workspace and the clock."""
+    from tests.test_silent_stops import Clock
+
+    me = fixture_records(DEMO_B, "person")[0]["full_name"]
+    workspace = tmp_path / "workspace"
+    assert main(["init", str(workspace), "--you", me, "--no-git"]) == 0
+    ws = Workspace(workspace)
+    _stand_in_account(ws)
+    if account is not None:
+        path = ws.config_dir / "ai.yaml"
+        settings = yaml.safe_load(path.read_text(encoding="utf-8"))
+        settings["providers"] = {"agent": account}
+        settings["tiers"] = {tier: {"use": "agent/default", "fallback": []} for tier in ("routine", "deep")}
+        path.write_text(yaml.safe_dump(settings, sort_keys=False), encoding="utf-8")
+    return ws, Clock(datetime.now(UTC))
+
+
+def _open_with_clock(ws, tmp_path, clock, on_restart=None):
+    """The app on a workspace, its worker keeping the test's time and its router never sleeping."""
+    app = create_app(
+        ws, ws.config(env={}), TOKEN, ui_dist=tmp_path / "no-ui", start_worker=False, on_restart=on_restart
+    )
+    worker = app.state.worker
+    worker.now = clock
+    worker.router_factory = lambda: Router(worker.cfg, worker.store, env={}, now=clock, sleep=lambda s: None)
+    return TestClient(app, headers=HEADERS), worker
+
+
+def _changes(client) -> dict[str, dict]:
+    return {c["id"]: c for c in client.get("/api/changes").json()}
+
+
+def _lines(client, kind: str) -> list[dict]:
+    return [line for line in client.get("/api/today/queue").json() if line["kind"] == kind]
+
+
+NOTES = ("Proof copies ship on the fifth.", "The cover files are due on the ninth.")
+NOTHING_TO_DO = json.dumps({"summary": "Nothing to do.", "ops": []})
+
+
+def test_j7_a_usage_limit_pauses_the_account_shows_on_today_and_the_work_resumes_by_itself(tmp_path):
+    """J7. I hand in two notes and give my first go. The account says its usage limit is reached and when it resets.
+    Today tells me which account waits until when and how many items wait; nothing is asked of me; I press nothing; at
+    the reset (also across a restart of the app) both items are read."""
+    from tests.test_silent_stops import Scripted, quota
+
+    ws, clock = _started(tmp_path)
+    provider = Scripted(quota(7200), NOTHING_TO_DO)
+    set_responder(provider)
+    try:
+        client, worker = _open_with_clock(ws, tmp_path, clock)
+        with client:
+            for text in NOTES:
+                assert client.post("/api/handin", json={"note": "", "pasted": text}).status_code == 200
+            worker.run_pending()
+            assert client.post("/api/runs/first-go").json()["started"] == 2
+            worker.run_pending()
+            account = next(iter(worker.cfg.ai.providers))
+            [paused] = _lines(client, "paused")
+            assert paused["group"] == "risk" and paused["count"] == 2 and paused["account"] == account
+            assert paused["waiting"].startswith(f"Waiting for {account}'s limit to reset at ")
+            assert [c["state"] for c in _changes(client).values()] == ["queued", "queued"]
+            assert all(c["waiting"] == paused["waiting"] for c in _changes(client).values())
+            assert provider.calls == 1
+        # The app is closed and opened again an hour later: the pause is still in force.
+        clock.move(hours=1)
+        client, worker = _open_with_clock(ws, tmp_path, clock)
+        with client:
+            assert worker.run_pending() == 0 and provider.calls == 1
+            assert _lines(client, "paused")
+            clock.move(hours=1, seconds=1)
+            assert worker.run_pending() == 2
+            assert sorted(c["state"] for c in _changes(client).values()) == ["review", "review"]
+            assert not _lines(client, "paused") and provider.calls == 3
+    finally:
+        set_responder(None)
+
+
+def test_j8_an_agent_that_exits_cleanly_with_no_answer_is_retried_then_sent_to_me_and_never_done(tmp_path):
+    """J8. My account is a command-line agent that finishes without error and writes no answer. The item is not
+    marked done: it is tried again by itself, then it comes to me, saying so in plain words, and Try again works once
+    the agent answers."""
+    script = tmp_path / "agent.py"
+    script.write_text(
+        "import re, sys\n"
+        "prompt = sys.stdin.read()\n"
+        "if sys.argv[1] == 'answers':\n"
+        "    open(re.findall(r'(/\\S+?answer\\.json)', prompt)[-1], 'w').write(" + repr(NOTHING_TO_DO) + ")\n"
+    )
+
+    def agent(mode: str) -> dict:
+        return {
+            "adapter": "cli-agent",
+            "models": {"default": "agent-model"},
+            "allowed_data": ["open", "internal", "restricted"],
+            "timeout_seconds": 10,
+            "agent": {"command": [sys.executable, str(script), mode], "output_via": "outbox"},
+        }
+
+    ws, clock = _started(tmp_path, account=agent("silent"))
+    client, worker = _open_with_clock(ws, tmp_path, clock)
+    with client:
+        client.post("/api/handin", json={"note": "", "pasted": NOTES[0]})
+        worker.run_pending()
+        assert client.post("/api/runs/first-go").json()["started"] == 1
+        seen = set()
+        for wait in (0, 30, 60):
+            clock.move(seconds=wait)
+            worker.run_pending()
+            [item] = _changes(client).values()
+            seen.add(item["state"])
+        assert seen == {"queued", "needs_you"}, "never done, never a result"
+        [item] = _changes(client).values()
+        assert item["state"] == "needs_you" and item["changeset"] is None
+        assert item["waiting"].startswith("Tried 3 times without a usable answer.")
+        assert "finished without giving an answer" in item["waiting"]
+        [line] = [x for x in client.get("/api/today/queue").json() if x["request"] == item["id"]]
+        assert line["group"] == "decide" and line["waiting"] == item["waiting"]
+        # The agent is fixed (its account is edited and taken in), and Try again reads the item.
+        path = ws.config_dir / "ai.yaml"
+        settings = yaml.safe_load(path.read_text(encoding="utf-8"))
+        settings["providers"]["agent"]["agent"]["command"][-1] = "answers"
+        path.write_text(yaml.safe_dump(settings, sort_keys=False), encoding="utf-8")
+        assert worker.apply_live()
+        assert client.post(f"/api/requests/{item['id']}/retry").status_code == 200
+        worker.run_pending()
+        assert _changes(client)[item["id"]]["state"] == "review"
+
+
+def test_j9_work_held_for_a_restart_is_the_first_line_on_today_and_runs_after_the_restart_i_choose(tmp_path):
+    """J9. A setting that needs a restart changes while the app runs. New work is held; Today's first line says how
+    many requests wait and offers Restart now. Nothing restarts until I press it; after the restart the held work is
+    read."""
+    from tests.test_silent_stops import Scripted
+
+    ws, clock = _started(tmp_path)
+    provider = Scripted(NOTHING_TO_DO)
+    set_responder(provider)
+    restarted: list[int] = []
+    try:
+        client, worker = _open_with_clock(ws, tmp_path, clock, on_restart=lambda: restarted.append(1))
+        with client:
+            assert client.post("/api/handin", json={"note": "", "pasted": NOTES[0]}).status_code == 200
+            worker.run_pending()
+            assert client.post("/api/runs/first-go").json()["started"] == 1
+            worker.run_pending()
+            # A setting the running app can't take in is changed (a person's edit in Settings does the same).
+            path = ws.config_dir / "dispatch.yaml"
+            settings = yaml.safe_load(path.read_text(encoding="utf-8"))
+            settings["fix_rounds"] = 2
+            path.write_text(yaml.safe_dump(settings, sort_keys=False), encoding="utf-8")
+            for text in NOTES:
+                client.post("/api/handin", json={"note": "", "pasted": text + " (after the change)"})
+            worker.run_pending()
+            assert client.get("/api/status").json()["restart_needed"]
+            lines = client.get("/api/today/queue").json()
+            assert lines[0]["kind"] == "restart" and lines[0]["group"] == "decide" and lines[0]["count"] == 2
+            calls = provider.calls
+            worker.run_pending()
+            assert provider.calls == calls and restarted == [] and not worker.restart_requested
+            # Restart now is the person's choice.
+            assert client.post("/api/restart").json() == {"restarting": True}
+            assert worker.restart_due() and restarted == [1]
+        client, worker = _open_with_clock(ws, tmp_path, clock)
+        with client:
+            worker.run_pending()
+            assert not _lines(client, "restart")
+            states = [c["state"] for c in _changes(client).values()]
+            assert states.count("review") == 3 and provider.calls > calls
+    finally:
+        set_responder(None)
+
+
+def test_j10_an_empty_run_is_retried_by_itself_then_goes_to_me_with_why_and_try_again_works(tmp_path):
+    """J10. The assistant answers with nothing. The item waits and says when it will try again, twice; then it comes
+    to me, saying it was tried three times; Try again reads it once the assistant answers."""
+    from tests.test_silent_stops import Scripted
+
+    ws, clock = _started(tmp_path)
+    set_responder(Scripted(""))
+    try:
+        client, worker = _open_with_clock(ws, tmp_path, clock)
+        with client:
+            client.post("/api/handin", json={"note": "", "pasted": NOTES[0]})
+            worker.run_pending()
+            assert client.post("/api/runs/first-go").json()["started"] == 1
+            worker.run_pending()
+            [item] = _changes(client).values()
+            assert item["state"] == "queued" and "Trying again at" in item["waiting"]
+            assert "try 2 of 3" in item["waiting"]
+            assert not [x for x in client.get("/api/today/queue").json() if x["request"] == item["id"]]
+            clock.move(seconds=30)
+            worker.run_pending()
+            assert "try 3 of 3" in _changes(client)[item["id"]]["waiting"]
+            clock.move(seconds=60)
+            worker.run_pending()
+            stopped = _changes(client)[item["id"]]
+            assert stopped["state"] == "needs_you"
+            assert stopped["waiting"].startswith("Tried 3 times without a usable answer.")
+            [line] = [x for x in client.get("/api/today/queue").json() if x["request"] == item["id"]]
+            assert line["group"] == "decide" and line["waiting"] == stopped["waiting"]
+            set_responder(Scripted(NOTHING_TO_DO))
+            assert client.post(f"/api/requests/{item['id']}/retry").status_code == 200
+            worker.run_pending()
+            assert _changes(client)[item["id"]]["state"] == "review"
     finally:
         set_responder(None)

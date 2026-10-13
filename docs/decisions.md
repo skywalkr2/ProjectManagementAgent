@@ -2682,3 +2682,22 @@ assistant, and a deletion on one computer read as a divergence on the other.
 **Impact:** Design 5.1 (signal kinds), 5.2 (the comparison), 6.5 and 6.20 say so; plugin guide regenerated. The learning pair
 for set-aside mail waits for L4, which defines the fixture format. No change to scope.
 
+
+## 2026-10-13: A usage limit pauses its account; an empty or failed run is retried by itself
+
+**Decided by:** project owner (the phase L0 item "No silent stops" in the roadmap); wording and settings by the builder.
+
+**What:** A quota that comes with a reset time, or a request to slow down that asks for longer than the router will wait or
+keeps coming, pauses that account until the reset (kept in the workspace's private folder). Requests that need only paused
+accounts stay queued, say whose limit resets when, and the worker runs them again by itself at the reset. An empty or
+unreadable answer, a timeout, an outage, another failure and the new `no_output` outcome (an agent that finishes without
+an answer) are retried by themselves: `dispatch.retries` (2) times, the wait starting at `dispatch.retry_wait_seconds` (30)
+and doubling; then the request comes to the person with why. A limit with no reset time is not a pause. An agent's reset
+time is read from its error stream by the account's `errors.reset` patterns. Held work and paused accounts are queue lines
+(`restart`, first in Decide; `paused`, in Risk).
+
+**Why:** Without these the assistant stops without a word on the first quota day, and the person thinks it is broken.
+
+**Impact:** Design 4.9, 5.1, 6.15, 6.16 and Part 8. New settings `dispatch.retries`, `dispatch.retry_wait_seconds`,
+`ai.rate_limits.pause_seconds` and the agent `errors.reset`, with demo values. `Request` gains `retries` and the causes
+`paused` and `retry`. No change to scope.

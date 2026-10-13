@@ -5696,8 +5696,20 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts.",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself.",
         "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The AI account waiting for its limit to reset (paused).",
+            "title": "Account"
+          },
           "actions": {
             "items": {
               "type": "string"
@@ -5769,7 +5781,9 @@
               "go",
               "first_go",
               "refused",
+              "restart",
               "failed",
+              "paused",
               "overdue",
               "review",
               "send",
@@ -5900,6 +5914,19 @@
             "description": "How many of the things the line starts have no price (first_go).",
             "title": "Unpriced",
             "type": "integer"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the account's limit resets and the work waiting on it runs again by itself (paused).",
+            "title": "Until"
           },
           "untrusted": {
             "default": false,

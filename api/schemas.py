@@ -6,7 +6,7 @@ Models carry data, not wording: the UI words everything through its wording shee
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -900,7 +900,10 @@ class TodoView(BaseModel):
 
 
 class QueueLineView(BaseModel):
-    """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts."""
+    """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`
+    is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
+    POST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`
+    waiting), after which the work runs again by itself."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -913,7 +916,9 @@ class QueueLineView(BaseModel):
         "go",
         "first_go",
         "refused",
+        "restart",
         "failed",
+        "paused",
         "overdue",
         "review",
         "send",
@@ -945,6 +950,10 @@ class QueueLineView(BaseModel):
         None, description="The estimated cost of everything the line starts (first_go), when any has a price."
     )
     unpriced: int = Field(0, description="How many of the things the line starts have no price (first_go).")
+    account: str | None = Field(None, description="The AI account waiting for its limit to reset (paused).")
+    until: datetime | None = Field(
+        None, description="When the account's limit resets and the work waiting on it runs again by itself (paused)."
+    )
 
 
 class FirstGoStarted(BaseModel):

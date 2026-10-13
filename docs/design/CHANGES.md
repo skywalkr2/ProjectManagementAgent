@@ -670,6 +670,16 @@ yet follow, that it is *designed*, with its phase.
 | An action changed after it was told (6.9) | Stayed "told" | Counts as to send again for that person. Built: `tests/test_followups_backup_eval.py::test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_for_that_person` |
 | Names resolve on which fields (6.11) | Unsaid | Two: an action's owners and a question's recipient; every other field is picked from a list |
 
+## 31. Phase L0: no silent stops (2026-10-13)
+
+| Item | What the code did | What it does now |
+|---|---|---|
+| A usage limit | A quota or a long request to wait stopped the request for the person, and nothing resumed it | The account is paused until the reset (kept on disk, so it holds across a restart); the waiting requests say "Waiting for <account>'s limit to reset at <time>" and run again by themselves then (6.16, 8.6). Built: `tests/test_silent_stops.py::test_waiting_requests_resume_by_themselves_at_the_reset_without_anyone_pressing_anything` |
+| An empty or failed run | The request stopped for the person at once, and Try again was by hand | Retried by itself `dispatch.retries` times (2) with a wait that doubles from `dispatch.retry_wait_seconds` (30), then it comes to the person saying how many times it was tried and why (8.6). Built: `tests/test_silent_stops.py::test_an_empty_answer_is_retried_with_a_growing_wait_then_goes_to_the_person_with_why` |
+| An agent that exits 0 with no answer | Empty output was an answer that failed to parse, a missing answer file was `invalid_output` | Its own outcome, `no_output`, retried like the above (6.16). Built: `tests/test_silent_stops.py::test_a_program_that_exits_cleanly_with_nothing_on_its_output_is_no_output_never_an_empty_answer` |
+| A reset time from an agent | Not read | `errors.reset` patterns (seconds, or an ISO date and time) give an agent's reset time from its error stream (6.16) |
+| Held work and paused accounts on Today | Only the header's restart chip and each request's own waiting text | Queue lines `restart` (first Decide line, with the count) and `paused` (Risk, with the time and the count waiting) (6.15). Built: `tests/test_silent_stops.py::test_held_work_is_the_first_decide_line_with_its_count_and_nothing_restarts`. The Today screen does not draw the ranked queue yet |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

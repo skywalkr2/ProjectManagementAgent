@@ -742,9 +742,11 @@ started (a hash of the config files; the newest modification time of the program
 - If any changed key is not live, or the code changed, the settings in use stay as they were, no new job starts, queued AI work
   is held ("Settings or code changed since the cockpit started; restart it to use them"), and the screens say a restart is
   needed and for which settings. The person chooses **Restart now** or **Later**. **The app never restarts on its own.**
-  Old code never quietly runs new settings; nothing is half-reloaded. **Held work is never a silent stop** (*phase L0, before real use*): the
-  first Decide line on Today says "Restart to run 7 waiting requests", with the count, for someone who opens the laptop and
-  never looks at the header.
+  Old code never quietly runs new settings; nothing is half-reloaded. **Held work is never a silent stop** (built:
+  `tests/test_silent_stops.py::test_held_work_is_the_first_decide_line_with_its_count_and_nothing_restarts`,
+  `tests/test_journeys.py::test_j9_work_held_for_a_restart_is_the_first_line_on_today_and_runs_after_the_restart_i_choose`): the
+  first Decide line on Today (kind `restart`) says "Restart to run 7 waiting requests", with the count, for someone who opens the
+  laptop and never looks at the header. It only asks: the restart starts when the person chooses Restart now.
 - **Restart now** (`POST /api/restart`) restarts between requests, at once if none is running; locally the process re-executes
   itself. A copy that can't start itself again (it was not started by `cockpit serve`) says to close it and start it. The
   serve command stops its web server without a signal, so the restart cannot end the process by raising the stop signal
@@ -763,8 +765,8 @@ order, each line with a kind:
 
 | Group | Lines (kind) |
 |---|---|
-| **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; *phase L0, before real use*); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
-| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, *phase L0, before real use*); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line (`overdue`) |
+| **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; built, `tests/test_silent_stops.py::test_the_restart_line_comes_before_the_first_go_and_before_decisions`); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
+| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, built, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line (`overdue`) |
 | **Review** | the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
 | **Send** | messages to send, one line per person (`send`); a person who hasn't answered in `ui.today.nudge_after_days` days (`nudge`: questions sent and actions told, 4.11) |
 
@@ -862,8 +864,9 @@ registers its own, plugins add theirs (3.3).
   access, code editing, max context, max output, streaming, prompt caching: whether a marked stable prefix is cached or
   discounted) and price per billing unit, from the provider's catalog where it has one;
 - `run(task) -> result` with output, usage and timing;
-- `classify_error(exit_code, error_stream, transport_error) -> rate_limited | quota_until(date) | auth | timeout |
-  invalid_output | provider_down | other`. It reads **only** the runner's own exit code, error stream and transport errors,
+- `classify_error(exit_code, error_stream, transport_error) -> rate_limited | quota | auth | timeout |
+  invalid_output | no_output | provider_down | other`, with `retry_after` (seconds to the reset) when the runner gave one:
+  an HTTP `Retry-After`, or, for an agent, the first group of a pattern in `errors.reset` matched in the error stream. It reads **only** the runner's own exit code, error stream and transport errors,
   never the model's output: a model writing "not logged in" in a report is text, not an auth failure. An agent that prints
   its errors on its output instead (its account sets `agent.errors.report_on_output`) has that output read as its error
   report, and only for a run that exited with an error. An agent sees the user name and temporary folder as well as PATH,
@@ -921,10 +924,13 @@ model doesn't accept.
 output. Everything else works from its classification. A sign-in failure (`auth`) always becomes a question to the PM that
 includes the adapter's `sign_in_hint()` (its own login command or page), and never reaches any other path.
 
-**Exit 0 with no answer is a failure** (*phase L0, before real use*). Some agents exit 0 after printing a limit or sign-in message to their
-output, with no changeset. That is its own outcome, `no_output`, never "done": it is retried, then counts toward the
-empty-run rule (8.6). Today an agent that should answer in its outbox and doesn't is already `invalid_output`, so nothing is
-marked done. The separate outcome lets the empty-run rule and the quality panel count it apart from a malformed answer.
+**Exit 0 with no answer is a failure** (built: `tests/test_silent_stops.py::test_a_program_that_exits_cleanly_with_nothing_on_its_output_is_no_output_never_an_empty_answer`,
+`test_an_empty_answer_file_and_a_missing_one_are_both_no_output`,
+`tests/test_journeys.py::test_j8_an_agent_that_exits_cleanly_with_no_answer_is_retried_then_sent_to_me_and_never_done`).
+Some agents exit 0 after printing a limit or sign-in message to their
+output, with no changeset. That is its own outcome, `no_output` (nothing on its output, no answer file in the outbox, or an
+empty one), never "done": it is retried, then counts toward the empty-run rule (8.6). A malformed answer stays
+`invalid_output`, so the empty-run rule and the quality panel count the two apart.
 
 **Probation for a new account** (*designed, not yet built*; the learning check with a switch is phase L, 6.22). A switch of a
 tier's account or model offers to run the learning fixture pairs first, with their cost estimate. **A command-line agent's
@@ -985,7 +991,19 @@ provider, the model as reported, the tier, tokens, cost, outcome and error; the 
 routing are not built.)
 
 **Usage, limits and cost.** Every run is a `Run` record: provider, model, units and cost. A usage limit pauses that provider
-until its reset (and the fallback takes over); it is not retried in a loop. Notes and messages cost little; drafting work
+until its reset (and the fallback takes over); it is not retried in a loop. **The pause** (built:
+`tests/test_silent_stops.py::test_a_usage_limit_with_a_reset_pauses_the_account_and_it_is_not_called_before_then`,
+`test_the_pause_is_kept_on_disk_so_a_new_process_still_honors_it`,
+`test_a_fallback_account_takes_the_work_while_the_first_is_paused`,
+`test_waiting_requests_resume_by_themselves_at_the_reset_without_anyone_pressing_anything`): a quota that comes with a reset
+time, a request to slow down that asks for longer than `ai.rate_limits.max_wait_seconds`, or one that keeps coming after the
+tries (then for `pause_seconds`), pauses that account until the reset. The pause is kept in the workspace's private folder, so it
+holds across a restart. A paused account is not called; the router uses the next account in the tier's chain when one is allowed;
+when none is, the request stays queued, says "Waiting for <account>'s limit to reset at <local time>" (the account's name, never
+a model), and the worker leaves it alone until then and runs it again by itself at the reset, with nobody pressing anything. A
+limit with no reset time is not a pause: the request waits for the person ("out of credit"). Changing the accounts or tiers lifts
+the pauses, since another account may take the work
+(`tests/test_silent_stops.py::test_changing_the_accounts_lets_waiting_requests_try_the_new_setup_at_once`). Notes and messages cost little; drafting work
 (proposals, statements of work, long copy, research, independent reviews) can cost the person real money, so spending is something they decide,
 never something that happens to them:
 

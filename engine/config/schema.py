@@ -320,6 +320,11 @@ class AgentErrorPatterns(ConfigModel):
     quota: list[str] = Field(
         default_factory=list, description="Patterns in the error stream meaning: the plan's usage limit is reached."
     )
+    reset: list[str] = Field(
+        default_factory=list,
+        description="Patterns in the error stream for a limit's reset time: the first group is a number of seconds "
+        "from now or a date and time (ISO 8601). Used for a usage limit or a request to wait.",
+    )
     exit_codes: dict[int, Literal["auth", "rate_limited", "quota", "provider_down"]] = Field(
         default_factory=dict, description="Exit codes the agent documents, mapped to what they mean."
     )
@@ -518,6 +523,13 @@ class RateLimitSettings(ConfigModel):
     max_wait_seconds: float = Field(
         30, ge=0, le=300, description="The longest wait before trying again; a longer requested wait moves on."
     )
+    pause_seconds: int = Field(
+        600,
+        ge=60,
+        le=86400,
+        description="How long an account is left alone, and its work waits or moves to the next account, when it keeps "
+        "asking to slow down without saying for how long. A longer wait it asks for is used instead.",
+    )
 
 
 class RouteWhen(ConfigModel):
@@ -615,6 +627,19 @@ class CleaningSettings(ConfigModel):
 class DispatchFile(FileModel):
     max_input_chars: int = Field(60000, ge=1000, description="The largest input sent in one call; longer ones split.")
     fix_rounds: int = Field(1, ge=0, le=3, description="How many times a failing answer goes back to the AI.")
+    retries: int = Field(
+        2,
+        ge=0,
+        le=5,
+        description="How many times a run that gave no usable answer, or failed, is tried again by itself before it "
+        "goes to you with why.",
+    )
+    retry_wait_seconds: int = Field(
+        30,
+        ge=1,
+        le=3600,
+        description="The wait before the first automatic retry; each later one waits twice as long as the one before.",
+    )
     cleaning: CleaningSettings = Field(default_factory=CleaningSettings, description="Input cleaning before AI calls.")
 
 

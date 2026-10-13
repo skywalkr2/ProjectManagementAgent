@@ -202,6 +202,18 @@ def test_a_draft_cut_off_twice_waits_for_the_person(env, monkeypatch):
     assert waiting["state"] == "needs_you" and "cut off at the output limit twice" in waiting["waiting"]
 
 
+def test_an_empty_draft_is_tried_again_by_itself_and_files_nothing(env, monkeypatch):
+    _, _, store = env
+    record = chapter(env)
+    answers(monkeypatch, prose("  \n"))
+    request_id = start(env, record)
+    assert run(env, request_id) is None
+    waiting = store.read().get("request", request_id).data
+    assert waiting["state"] == "queued" and waiting["retries"] == 1 and waiting["cause"]["kind"] == "retry"
+    assert "came back empty" in waiting["waiting"] and "Trying again at" in waiting["waiting"]
+    assert not [v for v in store.read().list("text_version") if v.data["source"] == "draft"]
+
+
 def test_a_return_lint_on_a_draft_gets_a_fix_round(env, monkeypatch):
     _, _, store = env
     record = chapter(env)
