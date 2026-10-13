@@ -95,6 +95,14 @@ the change that records it also edits the design section it affects, and `docs/d
   functions exist) for the subagent to check before it builds on it.
 - A subagent's "this can't be done" or "this needs a new op" comes back to the main session, never straight into a design
   change or a report.
+- **Quality and efficiency governance is the prime directive** (owner, 2026-10-13):
+  - Coding, tests, audits and docs go to Sonnet subagents wherever a brief can say what done looks like. The main
+    session keeps only judgment and review.
+  - While iterating, a subagent runs only the tests for what it touched. The full suites run once, before a push.
+  - Tests stay fast: no sleeps, no real network, shared fixtures over new workspaces, and the cheapest level that
+    proves the behavior (a unit test before an API test, an API test before a browser test).
+  - Every push reports the suite times. The main session checks `uv run pytest --durations=15` and fixes or flags any
+    test that got slow.
 
 ## How work reaches the owner (review, 2026-10-12)
 - The plan is `docs/project/roadmap-to-1.0.md`: one phase at a time, each ending on its exit test. One stream of work at
