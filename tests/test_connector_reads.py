@@ -106,10 +106,10 @@ def test_what_the_code_and_the_manifest_say_a_connector_reads_must_match(signing
     store.close()
     _streaming(ws, in_code=True, in_manifest=False)
     reason, active = _plugin(ws)
-    assert not active and "connector reads do not match" in reason
+    assert not active and "don't read what it says they read" in reason
     _streaming(ws, in_code=False, in_manifest=True)
     reason, active = _plugin(ws)
-    assert not active and "connector reads do not match" in reason
+    assert not active and "don't read what it says they read" in reason
     _streaming(ws)
     assert _plugin(ws)[1]
 

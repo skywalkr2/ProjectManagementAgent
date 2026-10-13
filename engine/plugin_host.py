@@ -23,6 +23,7 @@ from typing import Any
 import yaml
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
+from pydantic import ValidationError
 
 from engine.config.stages import validate_rules, validate_stages
 from engine.ops import OP_MODELS, TIERS
@@ -37,7 +38,7 @@ from engine.plugin_api import (
     Settings,
     StageCheckResult,
 )
-from engine.plugin_manifest import NOT_YET, Manifest, installed_manifest, read_manifest
+from engine.plugin_manifest import MANIFEST_PARTS, NOT_YET, Manifest, installed_manifest, plain_error, read_manifest
 from engine.records import REFERENCES, REGISTRY, ref_fields, values_at
 from engine.storage import StoreError, WriteContext
 from engine.tasks import TASKS
@@ -342,7 +343,7 @@ class PluginHost:
 
         match = re.fullmatch(INTERFACE_USE, spec)
         if match is None or plugin is None or not self._uses(plugin, match.group(1)):
-            raise PluginMisuse(f"read an interface this plugin declares in interfaces.uses, as <name>@<major>: {spec}")
+            raise PluginMisuse(f"read an interface this plugin says it uses, as <name>@<major>: {spec}")
         name, major, minor = match.group(1), int(match.group(2)), int(match.group(3) or 0)
         definition = self.definition(name)
         if definition is None or definition.major != major or definition.minor < minor:
@@ -1100,7 +1101,10 @@ class PluginHost:
             if name not in self.candidates:
                 raise ValueError("enabled plugin was not found")
             path = self.candidates[name]
-            manifest = read_manifest(path)
+            try:
+                manifest = read_manifest(path)
+            except ValidationError as err:
+                raise ValueError(plain_error(err, MANIFEST_PARTS)) from None
             if manifest.name != name:
                 raise ValueError("manifest name must match its discovery name")
             self.manifests[name] = manifest
@@ -1138,10 +1142,13 @@ class PluginHost:
                 raise ValueError("this add-on's settings aren't built the way the app requires")
             for key, info in schema.model_fields.items():
                 if info.is_required() or not info.description:
-                    raise ValueError(f"config key {key} needs a default and description")
+                    raise ValueError(f"the setting {key} needs a default and a description")
             config_path = self.store.path.parent / "config" / "plugins" / f"{name}.yaml"
             raw = load_yaml(config_path.read_text()) if config_path.exists() else {}
-            config = schema.model_validate({} if raw is None else raw)
+            try:
+                config = schema.model_validate({} if raw is None else raw)
+            except ValidationError as err:
+                raise ValueError(plain_error(err)) from None
             for new_name, old_name in schema.renamed_keys(raw):
                 self.status[name].notes.append(
                     f"its settings use the old name {old_name}; it now reads as {new_name}. Saving its "
@@ -1351,16 +1358,16 @@ class PluginHost:
                     raise ValueError(f"sign-in {sign_in.name}: settings for {source['connector']}: {err}") from None
         said = {name: c.reads for name, c in registrar.connectors.items() if c.reads}
         if said != dict(expected.connector_reads):
-            raise ValueError("registered connector reads do not match provides.connector_reads exactly")
+            raise ValueError("the connectors it registers don't read what it says they read")
         if set(manifest.interfaces.defines) != set(registrar.interface_definitions):
-            raise ValueError("registered interface definitions do not match interfaces.defines exactly")
+            raise ValueError("the interfaces it registers to define don't match the ones it says it defines")
         provided = {f"{p.interface}@{p.major}" for p in registrar.interface_provisions.values()}
         if set(manifest.interfaces.provides) != provided:
-            raise ValueError("registered interface providers do not match interfaces.provides exactly")
+            raise ValueError("the interfaces it registers to provide don't match the ones it says it provides")
         if set(manifest.events()) != set(registrar.handlers):
-            raise ValueError("registered handlers do not match subscribes exactly")
+            raise ValueError("the events it registers handlers for don't match the events it says it handles")
         if len(manifest.events()) != len(set(manifest.events())):
-            raise ValueError("subscribe to each event once; one handler can route the kinds it gets")
+            raise ValueError("handle each event once; one handler can route the kinds it gets")
         for event in manifest.events():
             kinds = manifest.kinds_for(event)
             if not kinds:

@@ -147,8 +147,8 @@ the change that records it also edits the design section it affects, and `docs/d
   reviews) are not claims; they stay marked unreviewed until approved, and checkable facts inside them still need evidence. One input per AI call.
   Anything derived from untrusted content stays marked untrusted, and lessons from inputs wait for the PM (design 6.6, 6.22).
   Escalate to a stronger model on check failures, never on a model's self-reported confidence.
-- Lints that still fail after one return are held for the PM when the item will reach another person, and only warn when it
-  stays internal.
+- Lints that still fail after one return are held for the PM when the item will reach another person. A wording lint on an
+  item that stays internal only warns, with no return round.
 - Checks are invariants (always refuse, not configurable) or lints (severity in `config/checks.yaml`). Don't make a fuzzy check
   an invariant, and never lower an invariant.
 - Local mode listens only on loopback, and checks `Host` and `Origin` on every request (design 12.1).

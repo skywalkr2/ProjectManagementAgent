@@ -472,12 +472,12 @@ Checks come in two kinds, so that fuzzy checks can't block real work and firm on
 - Op-specific checks (paths stay under allowed roots; files don't overwrite unless told).
 
 **Lints** are judgment calls. Each has a severity in `config/checks.yaml` (4.17): `return` (default), `warn`, `off`, or raised
-to `refuse`. `return` sends the changeset back to the AI once with the reasons; if the problem is still there, what happens next
-depends on where the item goes:
-
-- anything that will **reach another person** (a question to someone else, a draft for a channel) is **held for the PM**,
-  because the PM sends questions as written and a warning on a ready-to-send item gets missed;
-- anything that **stays internal** (a note, a fact, an action's notes) applies with a **warning** on its row.
+to `refuse`. `return` sends the changeset back to the AI once with the reasons when the item will **reach another person** (a question to
+someone else, a draft for a channel); if the problem is still there, that item is **held for the PM**, because the PM sends
+questions as written and a warning on a ready-to-send item gets missed. A **wording** lint (`blocked-wording`, `run-on-list`)
+on an item that **stays internal** (an action, a note, a fact) never costs a fix round: it applies with a **warning** on its
+row. Lints about correctness (`near-duplicate-action`, `evidence-fit`) keep their configured severity on every item. Lints
+look only at the assistant's own words, never at quoted evidence from the input.
 
 Built: `blocked-wording` (blocked phrases, including "confirm / check whether" in actions), `run-on-list` (run-on separators),
 `near-duplicate-action` and `evidence-fit`, below, plus any lint a plugin registers (4.17).
@@ -1452,7 +1452,10 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
   appear in that material (whitespace and quote marks aside), the same check as evidence (6.7). A made-up button, setting or
   feature can't be cited, so it is refused; when the material doesn't answer, the answer says so and cites the closest words.
   Links back to the records it used are shown beside it.
-- **A setting the person can change** comes as a `setting.propose` op (a `setting_proposal`): the key, the new value and why.
+- **A setting the person can change** comes as a `setting.propose` op (a `setting_proposal`): the setting, the new value and
+  why. The material names each setting by its screen name and a short **handle** made from its key (a stable hash), never the
+  key itself; the op names the handle and the applier resolves it against the current settings list, so a key never reaches
+  an answer or the screen (*decided; built with the roadmap's wording item, L0*).
   Nothing changes until the person applies it, with one click, through the same settings save as any change (the files'
   fingerprint, validation, the record of the change, 4.22), so it can be undone. A locked key, or one changed only in a file, is
   never proposed; the answer says where it is changed instead.

@@ -680,6 +680,14 @@ yet follow, that it is *designed*, with its phase.
 | A reset time from an agent | Not read | `errors.reset` patterns (seconds, or an ISO date and time) give an agent's reset time from its error stream (6.16) |
 | Held work and paused accounts on Today | Only the header's restart chip and each request's own waiting text | Queue lines `restart` (first Decide line, with the count) and `paused` (Risk, with the time and the count waiting) (6.15). Built: `tests/test_silent_stops.py::test_held_work_is_the_first_decide_line_with_its_count_and_nothing_restarts`. The Today screen draws both lines at the top of Today (Restart now; AI accounts): `web/src/shell/HeldLines.test.tsx::Restart now calls the restart route, and only the click does`; the full ranked queue is phase B |
 
+## 32. Phase L0: a wording lint on an internal item warns without a fix round (2026-10-13)
+
+| Item | What the code did | What it does now |
+|---|---|---|
+| A `return` wording lint (blocked wording, run-on list) on an item that stays internal | Sent the whole changeset back to the assistant, so a blocked word in an action cost a second request (and a third on the stronger tier) | Applies with a warning on the row; only an item that reaches another person gets the fix round and is held if it still fails (6.7). Lints about correctness (near-duplicate, evidence fit) keep their configured severity. Lints read only the assistant's own words, never the quoted evidence. Built: `tests/test_pipeline.py::test_a_blocked_word_in_an_internal_items_own_words_warns_without_a_second_request`, `tests/test_pipeline.py::test_a_blocked_word_in_the_quoted_evidence_costs_one_request_and_no_warning`, `tests/test_near_duplicate.py::test_a_near_duplicate_on_an_internal_item_still_returns` |
+| Why an add-on didn't load | A manifest or plugin-settings failure showed the validator's own text (field paths, error types, a link); a few registration messages named manifest fields or a settings file | Said as where and what in plain words; the wording check also catches `interfaces.*`, `depends_on` and `config_schema` (7.0, 7.1). Built: `tests/test_plugin_messages.py` |
+| How Ask names a setting | Each settings line in Ask's material ended with the setting's key, which an answer could quote onto the screen | Decided, not built: a screen name and a stable short handle made from the key; `setting.propose` names the handle and the applier resolves it (6.25) |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

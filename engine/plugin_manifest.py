@@ -9,7 +9,7 @@ from typing import Literal
 
 from packaging.specifiers import SpecifierSet
 from packaging.version import Version
-from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, ValidationInfo, field_validator, model_validator
 
 from engine.yaml_load import load_yaml
 
@@ -183,7 +183,7 @@ class Provides(Strict):
     def _wording_paths(cls, value: list[str]) -> list[str]:
         for path in value:
             if path.startswith("/") or ".." in Path(path).parts or not path.endswith((".yaml", ".yml")):
-                raise ValueError(f"{path!r}: a wording file is a .yaml path inside the plugin")
+                raise ValueError("a wording file must be a YAML file inside the plugin")
         return value
 
     playbook: str | None = Field(None, description="The plugin's own playbook. Not yet available.")
@@ -295,6 +295,47 @@ def installed_manifest(entry_point: object) -> Path:
             if (Path(location) / "plugin.yaml").is_file():
                 return Path(location) / "plugin.yaml"
     return Path(entry_point.dist.locate_file(module)) / "plugin.yaml"
+
+
+#: What each part of a manifest is called in a message a person reads.
+MANIFEST_PARTS = {
+    "name": "its name",
+    "version": "its version",
+    "plugin_api": "the versions of the app it works with",
+    "description": "its description",
+    "depends_on": "the add-ons it needs",
+    "interfaces": "how it works with other add-ons",
+    "subscribes": "the events it handles",
+    "provides": "what it provides",
+    "config_schema": "its settings",
+    "requires": "what it may reach and needs",
+    "entry": "where it starts",
+}
+
+
+def _position(loc: list[str]) -> list[str]:
+    return [f"item {int(x) + 1}" if x.isdigit() else x for x in loc]
+
+
+def plain_error(err: ValidationError, parts: dict[str, str] | None = None) -> str:
+    """A validation failure in plain words: where it is (a named part of the manifest, else a setting), then what is
+    wrong. Nothing of the validator's own wording (error types, links, echoed input) is kept."""
+    lines = []
+    for found in err.errors():
+        loc = [str(x) for x in found["loc"]]
+        if found["type"] == "missing":
+            what = "is missing"
+        elif found["type"] == "extra_forbidden":
+            what = "isn't something this app knows" if parts else "isn't a setting it has"
+        else:
+            what = found["msg"].removeprefix("Value error, ")
+        if parts:
+            where = parts.get(loc[0], f"'{loc[0]}'") if loc else "it"
+        else:
+            where = f"the setting '{loc[0]}'" if loc else "its settings"
+        rest = _position(loc[1:])
+        lines.append(f"{where}{' (' + ', '.join(rest) + ')' if rest else ''}: {what}")
+    return "; ".join(lines)
 
 
 def read_manifest(path: Path) -> Manifest:

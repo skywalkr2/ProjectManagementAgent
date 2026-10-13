@@ -59,3 +59,11 @@ def test_the_similarity_is_between_zero_and_one():
     for value in (-0.1, 1.1):
         with pytest.raises(ValueError):
             NearDuplicateActionTuning(similarity=value)
+
+
+def test_a_near_duplicate_on_an_internal_item_still_returns(env):  # noqa: F811
+    # Only wording lints drop to a warning on an item that stays internal; a lint about correctness keeps its severity.
+    seed(env, "open")
+    env[1].checks.lints["near-duplicate-action"] = "return"
+    (problem,) = near_duplicates(env, EXISTING)
+    assert problem.severity == "return"

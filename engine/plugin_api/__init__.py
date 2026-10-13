@@ -1591,7 +1591,7 @@ class Registrar:
         if not re.fullmatch(r"[a-z0-9_-]+(/[a-z0-9_-]+)*", folder):
             raise ValueError("a data form's folder is a relative path of lowercase names, like templates")
         if not re.fullmatch(r"([a-z0-9_*-]+/)?[a-z0-9_*-]+\.yaml", str(pattern)):
-            raise ValueError("a data form's pattern ends in .yaml and has at most one folder, like */item.yaml")
+            raise ValueError("a data form's pattern names YAML files and has at most one folder level")
         if single and "*" in pattern:
             raise ValueError("a single-file data form names its file in pattern, with no *")
         if not isinstance(schema, type) or not issubclass(schema, BaseModel):

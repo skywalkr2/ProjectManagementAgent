@@ -133,6 +133,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
 
     def lint(i: int, name: str, message: str) -> None:
         severity = lints.get(name, "off")
+        if severity == "return" and name in WORDING_LINTS and not _reaches_someone_else(cs.ops[i], ctx):
+            severity = "warn"  # wording on an item that stays internal only warns; no fix round is spent on it
         if severity != "off":
             problems.append(Problem(name, severity, i, message))
 
@@ -635,12 +637,18 @@ def _record_changeset(
     )
 
 
-def _returned_to_someone_else(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
-    if not any(p.severity == "return" for p in mine):
-        return False
+WORDING_LINTS = frozenset({"blocked-wording", "run-on-list"})
+
+
+def _reaches_someone_else(op: OpModel, ctx: Context) -> bool:
+    """Whether the op's item will be put in front of another person, as a question to someone other than the PM."""
     if isinstance(op, QuestionAddOp):
         return ctx.people.resolve(op.to).person != ctx.people.pm
     return False
+
+
+def _returned_to_someone_else(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
+    return any(p.severity == "return" for p in mine) and _reaches_someone_else(op, ctx)
 
 
 def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:

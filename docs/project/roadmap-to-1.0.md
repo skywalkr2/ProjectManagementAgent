@@ -391,10 +391,16 @@ them are needed before the owner's daily use, which starts when L-core passes.
   Folder items carry the file's modified time, kept on the snapshot, so the person can hand in what is already there
   (found by the phase A fixes; the add-source hint then points to it).
 - [ ] **What the mail journey found** (phase A3, J2):
-  - **A blocked word costs a second AI request:** a fixture mail with a blocked word in it sent the item through the
+  - [x] **A blocked word costs a second AI request:** a fixture mail with a blocked word in it sent the item through the
     fix round, so real mail could cost double. First check in the code whether wording lints look at quoted outside
-    text (evidence) or only at the assistant's own words. Quoted evidence is never linted. A lint on an item that stays
-    internal warns without a return round (CLAUDE.md: lints only warn when the item stays internal).
+    text (evidence) or only at the assistant's own words. Quoted evidence is never linted. A wording lint on an item that
+    stays internal warns without a return round (lints about correctness still return:
+    `test_a_near_duplicate_on_an_internal_item_still_returns`) (CLAUDE.md: lints only warn when the item stays internal). Built: the lints
+    already read only the assistant's own words (`test_a_blocked_word_in_the_quoted_evidence_costs_one_request_and_no_warning`);
+    the cost came from the return round, which an item that stays internal no longer gets: it applies with a warning
+    (`test_a_blocked_word_in_an_internal_items_own_words_warns_without_a_second_request`, and
+    `test_blocked_wording_warns_on_internal_items_and_holds_what_goes_to_others` for the question to someone else, which
+    still returns and is held), all in `tests/test_pipeline.py`; design 6.7 and `docs/decisions.md` say so.
   - **Machine timestamps in filed notes** ("When: 2026-10-12T18:19:04Z"): notes show dates and times in the person's
     format and time zone.
 - [ ] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
@@ -417,7 +423,22 @@ them are needed before the owner's daily use, which starts when L-core passes.
   mail yet; the pair is built with the other pairs.
 - [ ] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
   (manifest validation, registration errors) get plain words and a test that produces each; Ask's material names
-  settings without their keys, with `setting.propose` finding the key another way.
+  settings without their keys, with `setting.propose` finding the key another way. **Built, the first half:** a manifest
+  or a plugin-settings validation failure is said as where and what (`plain_error` in `engine/plugin_manifest.py`, used
+  when an add-on loads), the registration messages that named manifest fields or a settings file are reworded, and the
+  wording check also catches `interfaces.*`, `depends_on` and `config_schema`. Each message is produced by a broken
+  add-on in `tests/test_plugin_messages.py` (`test_a_manifest_the_app_refuses_is_explained_in_plain_words`,
+  `test_a_registration_the_app_refuses_is_explained_in_plain_words`,
+  `test_a_setting_without_a_description_is_explained_in_plain_words`,
+  `test_a_data_form_with_a_pattern_the_app_refuses_is_explained_in_plain_words`,
+  `test_a_settings_file_with_a_value_the_add_on_doesnt_have_is_explained_in_plain_words`), and every literal error
+  message in the plugin host, manifest and plugin API passes the check
+  (`test_no_error_an_add_on_can_raise_names_the_insides_of_the_product`); the connector-reads message is produced in
+  `tests/test_connector_reads.py`. **Left: Ask's material.** Today each settings line ends "Key for a setting proposal
+  only: <key>", so an answer can quote a key onto the screen. Decided (design 6.25): the material names each setting
+  by its screen name and a stable short handle made from its key; `setting.propose` names the handle and the applier
+  resolves it against the current settings list, so a key never reaches an answer. Left: building that, with a test that
+  an answer citing a settings line shows no key.
 - [ ] Settings that do nothing are wired or removed: `owner_format` (wired for showing owners: `tests/test_names.py::test_an_owner_is_written_in_the_owner_format_with_the_team_on_the_entry_else_the_persons_own`). **The scheduled export is wired** to the workspace's
   own git, so a readable copy is written regularly once real knowledge accumulates; the backups copy the database, which
   is not readable on its own. The export's remote is not offered until phase E gives it the care of backups (design 12.1).

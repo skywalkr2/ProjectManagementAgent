@@ -166,7 +166,7 @@ def test_an_interface_the_plugin_doesnt_use_is_refused(env):
     from engine.plugin_api import PluginMisuse
 
     _, _, store = env
-    with pytest.raises(PluginMisuse, match="interfaces.uses"):
+    with pytest.raises(PluginMisuse, match="says it uses"):
         store.plugins.read_interface("p17", "p16/source@1")
     with pytest.raises(PluginMisuse):
         store.plugins.read_interface("p16", "p16/other@1")
@@ -254,7 +254,7 @@ def test_the_manifest_must_match_what_is_registered(tmp_path):
     wrong = {**PROVIDER_MANIFEST, "interfaces": {"provides": ["p16/source@2"]}}
     ws, cfg, store = workspace(tmp_path, provider=wrong)
     try:
-        assert "interfaces.provides" in store.plugins.status["p17"].reason
+        assert "to provide don't match" in store.plugins.status["p17"].reason
     finally:
         store.close()
 

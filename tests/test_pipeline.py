@@ -397,6 +397,50 @@ def test_blocked_wording_warns_on_internal_items_and_holds_what_goes_to_others(e
     assert [o["status"] for o in outcomes(store, cs_id)] == ["applied", "held"]
 
 
+def test_a_blocked_word_in_the_quoted_evidence_costs_one_request_and_no_warning(env):
+    _, cfg, store = env
+    blocked = cfg.language.blocked_phrases[0]
+    pasted = f"Please {blocked} the print run with the printer before Friday."
+    asked = answers(
+        {
+            "ops": [
+                {
+                    "op": "action.add",
+                    "text": "Call the printer about the print run",
+                    "owners": ["me"],
+                    "evidence": {"quote": f"{blocked} the print run with the printer"},
+                }
+            ]
+        }
+    )
+    _, cs_id = run(env, pasted)
+    (outcome,) = outcomes(store, cs_id)
+    assert len(asked) == 1
+    assert outcome["status"] == "applied" and outcome["problems"] == []
+
+
+def test_a_blocked_word_in_an_internal_items_own_words_warns_without_a_second_request(env):
+    _, cfg, store = env
+    blocked = cfg.language.blocked_phrases[0]
+    asked = answers(
+        {
+            "ops": [
+                {
+                    "op": "action.add",
+                    "text": f"{blocked.capitalize()} the print run",
+                    "owners": ["me"],
+                    "evidence": {"quote": "the print run"},
+                }
+            ]
+        }
+    )
+    _, cs_id = run(env, "We need to settle the print run.")
+    (outcome,) = outcomes(store, cs_id)
+    assert len(asked) == 1
+    assert outcome["status"] == "applied"
+    assert [(p["check"], p["severity"]) for p in outcome["problems"]] == [("blocked-wording", "warn")]
+
+
 def test_model_names_never_reach_text_people_see(env):
     from tests.conftest import add_example_account
 

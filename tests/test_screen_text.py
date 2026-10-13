@@ -65,7 +65,18 @@ def test_the_key_set_is_built_from_the_schema_and_covers_groups_and_mappings():
     assert problems(f"{mapping}.chosen_name.field")
 
 
-@pytest.mark.parametrize("field", ["requires.secrets", "requires.network", "provides.data", "plugin_api"])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "requires.secrets",
+        "requires.network",
+        "provides.data",
+        "plugin_api",
+        "interfaces.uses",
+        "depends_on",
+        "config_schema",
+    ],
+)
 def test_a_manifest_field_is_caught(field):
     assert problems(f"The add-on's {field} lists it.")
 

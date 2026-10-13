@@ -95,7 +95,7 @@ def test_invalid_manifests_are_refused(mutate):
         (lambda d: d.update(plugin_api=">=2"), "another version of the add-on interface"),
         (lambda d: d.update(depends_on=[{"name": "missing", "version": ">=1"}]), "not enabled"),
         (lambda d: d["provides"].update(ops=[]), "does not match"),
-        (lambda d: d.update(subscribes=[]), "handlers do not match"),
+        (lambda d: d.update(subscribes=[]), "handlers for don't match"),
         (lambda d: d["provides"].update(playbook="playbook"), "doesn't provide yet"),
     ],
 )
@@ -160,7 +160,7 @@ def test_bad_config_and_load_crash_do_not_stop_core(tmp_path):
     config_dir.mkdir(parents=True)
     (config_dir / "scratch.yaml").write_text("unknown: true")
     store = Store(tmp_path / "db", cfg=config(tmp_path, ["scratch"]))
-    assert "Extra inputs" in store.plugins.status["scratch"].reason
+    assert "isn't a setting it has" in store.plugins.status["scratch"].reason
     store.close()
     (config_dir / "scratch.yaml").unlink()
     (root / "__init__.py").write_text("raise RuntimeError('broken load')")

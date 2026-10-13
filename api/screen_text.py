@@ -26,7 +26,7 @@ _FILE_NAME = re.compile(r"\S*\.ya?ml\b")
 #: Phrases that name where settings are kept, which a person never needs to know ("your settings" says it).
 _BANNED_PHRASES = re.compile(r"\bsettings? files?\b", re.IGNORECASE)
 _SECRET_REF = re.compile(r"\b(?:env|keychain):|\bfile:/|\bfile:~")
-_MANIFEST_FIELD = re.compile(r"\b(?:requires|provides)\.[a-z_]+|\bplugin_api\b")
+_MANIFEST_FIELD = re.compile(r"\b(?:requires|provides|interfaces)\.[a-z_]+|\b(?:plugin_api|depends_on|config_schema)\b")
 _DOTTED = re.compile(r"(?<![\w.-])[A-Za-z_][\w-]*(?:\.[A-Za-z_][\w-]*)+(?![\w-])")
 _OTHER_COMMANDS = re.compile(
     r"\buv (?:run|sync|lock|pip|tool)\b"

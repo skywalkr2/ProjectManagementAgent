@@ -18,6 +18,24 @@ make improving the product faster.
 
 **Impact:** The roadmap gains C3c. No change to the core's scope; `report.draft` already exists.
 
+## 2026-10-13: Ask names a setting by a short handle, never its key (phase L0)
+
+**Decided by:** the technical PM (main session, on review). **What:** Ask's material names each setting by its screen name
+and a stable short handle made from its key; `setting.propose` names the handle, and the applier resolves it against the
+current settings list. **Why:** an answer cites the material word for word, so a key in the material can reach the screen;
+a handle is unambiguous where screen names can repeat across groups and add-ons, and scrubbing keys out of quotes would
+break the citation check. **Impact:** design 6.25; `engine/help.py`, `engine/ops.py` and the applier when built (roadmap
+L0, the wording item).
+
+## 2026-10-13: A wording lint on an item that stays internal warns, with no fix round (phase L0)
+
+**Decided by:** the roadmap's L0 item "A blocked word costs a second AI request", from the mail journey. **What:** wording
+lints read only the assistant's own words, never the quoted evidence. A `return` wording lint (blocked wording, run-on
+list) on an item that stays internal (anything but a question to someone other than the PM) is applied as `warn`; only items that reach
+another person get the fix round and, if it still fails, are held. **Why:** a fix round doubles the cost of a mail for a
+warning nobody needed to wait for. Near-duplicate actions and evidence fit are about correctness, not style, so they keep
+their configured severity on every item (the technical PM, on review). **Impact:** design 6.7 (lints); `engine/applier.py`; no setting, no API change.
+
 ## 2026-10-13: Where the code and the design differed, decided (phase L0)
 
 **Decided by:** the technical PM (roadmap, phase L0). **What:** a question's stored kind stays and the screen follows it
