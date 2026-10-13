@@ -728,11 +728,35 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 - [ ] **Top priorities, always current** (owner, 2026-10-13: the version used at work has "a constantly updated top
   priority items" list). A short ranked list on Today across every project, rebuilt as records change and ranked by
   rules (due and overdue, at risk, blocked, waiting on the person, the project's priority), never by an AI call. Shaped
-  by the owner's picture of the work version's screen (open promise P11).
+  by the owner's screens of the work version (open promise P11, received 2026-10-13): one row per thing with a date chip
+  (red when due), a verb first ("Follow up with <person>: 3 questions waiting up to 5 days", "Send <person> 1 question",
+  "Review and publish 3 drafts"), who suggested it and why on the second line ("The assistant suggests · no answer
+  yet"), and the row's actions (Mark done, Reassign, Hand to the assistant). Dated entries whose day has passed and
+  that aren't marked done are lines ("passed, not marked done"), and the next two weeks' entries are listed after.
 - [ ] **The Monday briefing, in the app** (owner, 2026-10-13: the work version has "monday briefings"). On the first
   open of the week (the day is a setting), a briefing: what is due this week, what is late or at risk, what is
   blocked, who the person is waiting on, and decisions still open, built from the records by rules. A short written
   summary on top is an optional AI task kind with its estimate, off by default. Sending it to the person is phase E.
+- [ ] **What the work version's screens show** (owner's screens, 2026-10-13; the screens hold real names, so only
+  what they do is written here):
+  - [ ] **Follow-ups by person, or by project** (a switch): the person's own items first, including corrections the
+    assistant is still working on, with the person's note shown under each; then each person with their open questions
+    ("waiting 5d", red past the follow-up time), Record reply and Respond to the assistant on each; Copy and Mark sent
+    for the person's unsent items; their action items folded under a count, with "1 to send".
+  - [ ] **Hand an action to the assistant** from its row (beside Mark done and Reassign): the assistant drafts the work
+    (a message, a list, a page) as a pending draft for the person, under the usual estimate and approval. The action
+    stays the person's until they close it.
+  - [ ] **A fix ready for what was held:** when a check holds the assistant's work, the line offers the corrected
+    version (Apply the fix, See the change, Discard), not only the reason.
+  - [ ] **Projects at a glance:** the Projects table grouped under their parent project, with the stage, the target
+    date and when it was last updated ("5 days ago"); the health (on track, at risk, on hold) comes from the project
+    management pack when it is on (C2).
+  - [ ] **Links to the person's own pages** in the header: a list in Settings (name and address), each opening in a new
+    tab, so the boards and pages they check daily are one click away.
+  - [ ] **A meeting added in one line** (what and when) on the calendar, the assistant merging it with a duplicate.
+  - [ ] **The hand-in takes a pasted screenshot** as well as text and files. Check first what the drawer does today.
+  - [ ] **Never raw data on screen:** the work version shows a raw data structure in a milestone's title. Our wording
+    check covers server text; add a check that no title or line holds braces or quoted keys.
 - [ ] **An action can be blocked** (from comparing the design with an outside list of core features): "Blocked, waiting
   on <a person, an action or a thing>", shown on the row and counted in Top priorities. The assistant proposes
   unblocking when an input says the blocker is gone (L3b). Dependencies between work items stay in the project
@@ -812,6 +836,12 @@ being done, builds schedules and tracks action items.
     plan and a schedule. The person approves it as any change.
   - [ ] **Tracking:** what is late or at risk each day goes to Today, with the action items behind it; a weekly status
     report is drafted for the person to send.
+  - [ ] **A project update on request** (owner's screens, 2026-10-13): pick a project (or a parent and everything under
+    it), a start date and who it is from and to; the assistant drafts the update from everything recorded since then
+    (milestones, decisions, changes, inputs) in the sender's voice, with internal notes left out, for the person to
+    approve.
+  - [ ] **Health per project** (on track, at risk, on hold, not started) with the person's say, shown in the core's
+    Projects table and in Top priorities.
   - [ ] **RAID:** risks, issues, assumptions and decisions, with owners and review dates.
   - [ ] **On the app's own calendar** (owner, 2026-10-13): milestones, due dates and meetings are entries in the
     core's calendar (the same records as `event.add`, phase L0), so the agenda and Today show them with everything

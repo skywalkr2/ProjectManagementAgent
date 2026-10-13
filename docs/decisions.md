@@ -3,6 +3,15 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: What the work version's screens add to phase B and the project management pack
+
+**Decided by:** project owner (sent screens of the version they use at work; open promise P11). **What:** phase B gains
+follow-ups by person or project, handing an action to the assistant, a fix offered for held work, projects grouped
+under their parent with stage, target and last update, links to the person's own pages, a meeting added in one line, a
+pasted screenshot in the hand-in and a check against raw data on screen; Top priorities is shaped from the screens. The
+project management pack (C2) gains a project update on request and health per project. **Why:** these are what the
+owner uses every day. **Impact:** roadmap phase B and C2 only; no design section changes until each is built.
+
 ## 2026-10-14: A business analysis pack and a systems architect pack are planned
 
 **Decided by:** project owner ("two more obvious plugins ... Business Analysis and Systems Architect ... they can be used
