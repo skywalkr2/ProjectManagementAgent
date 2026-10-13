@@ -50,6 +50,16 @@ def _context(store: Store, plugin: str, record: Any, field: str, version: int | 
     return store.plugins._with_files(WorkingCopyContext(store.read(), plugin, config, record, field, version))
 
 
+def _level_of(store: Store, record: Any) -> str:
+    """The data level a file made from a record takes: the highest of its record type's level and the level kept on the
+    record itself, when it has one."""
+    from engine.ai.router import LEVELS
+
+    model = store.plugins.records.get(record.kind)
+    levels = [model.data_level if model is not None else "internal", record.data.get("sensitivity") or "internal"]
+    return max(levels, key=LEVELS.index)
+
+
 def _call(store: Store, plugin: str, what: str, fn: Any, *args: Any) -> Any:
     try:
         return fn(*args)
@@ -95,6 +105,7 @@ def hand_out(store: Store, cfg: Config, format_name: str, kind: str, record_id: 
         media_type=fmt.media_type,
         project=project_of(record),
         origin="tool",
+        data_level=_level_of(store, record),
         context=_PM,
     )
     with store.transaction() as tx:
@@ -154,6 +165,7 @@ def take_back(
         name=name or f"returned{fmt.extension}",
         media_type=fmt.media_type,
         project=project_of(record),
+        data_level=_level_of(store, record),
         context=_PM,
     )
     op = {

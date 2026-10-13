@@ -400,8 +400,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `test_a_file_a_person_action_makes_takes_the_kinds_level`, `test_a_pack_cannot_change_a_files_level_afterwards`,
   `test_a_manifest_that_doesnt_list_the_level_is_refused_in_plain_words`,
   `test_a_file_kinds_level_must_be_one_of_the_three`,
-  `test_a_run_on_a_restricted_file_goes_only_to_an_account_allowed_restricted`. Left: files a program writes for a working
-  copy are plain attachments and take no kind's level.
+  `test_a_run_on_a_restricted_file_goes_only_to_an_account_allowed_restricted`. A working copy (hand-out and take-back) is
+  never less sensitive than its record: `test_a_working_copy_of_a_restricted_record_is_restricted_and_a_run_on_it_needs_such_an_account`.
 - [x] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
   both, and they differ). Tests: `tests/test_names.py::test_a_watched_items_received_date_is_its_own_received_time_not_when_it_changed_or_was_read`,
   `test_an_item_with_no_received_time_is_dated_when_it_was_read`.

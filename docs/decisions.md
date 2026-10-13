@@ -2932,7 +2932,8 @@ is now optional (it was `internal` when left out), and the upload screen has no 
 every screen upload takes its kind's level. The person's explicit choice, higher or lower, stands. A file a person action
 makes (`file.add`) takes its kind's level. Only the person changes `sensitivity` afterwards (it was already person-only,
 and a pack's ops cannot write core records). A run about a file or a source now counts the level kept on it, which the
-0.3.60 text promised and the code did not do for a run named on the file itself. Files read into a source by a connector
+0.3.60 text promised and the code did not do for a run named on the file itself. A file a working copy writes (hand-out or take-back) takes the highest of its record type's level and the level kept
+on the record, so it is never less sensitive than what it was made from. Files read into a source by a connector
 are unchanged: a source's level is its own setting, else its connector's, else the default (4.x), already a declared level.
 
 **Decided by:** the technical PM, on the writing pack builder's question 192.

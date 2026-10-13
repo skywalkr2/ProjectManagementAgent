@@ -18,7 +18,8 @@ Manifests stay `'>=0.3,<0.4'`.
   `open`, `internal` or `restricted` (none means internal), and a level the manifest's `requires.data_levels` doesn't
   list refuses the plugin, as for a record type. A file added under the kind (an upload, or a file a person action
   makes) gets that level unless the person chose another at the upload, and a run about the file goes only to accounts
-  allowed it. Only the person changes the level afterwards.
+  allowed it. Only the person changes the level afterwards. A file a working copy writes takes at least its record's
+  level.
 
 ## What 0.3.60 adds
 

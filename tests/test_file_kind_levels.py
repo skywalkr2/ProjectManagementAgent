@@ -17,10 +17,34 @@ from tests.conftest import DEMO_B
 NOW = datetime(2026, 10, 13, 9, 0, tzinfo=UTC)
 
 FIXTURE = """
-from engine.plugin_api import NewFile, PacketParts, Part, Proposal, Settings
+from typing import Annotated, ClassVar, Literal
+from engine.plugin_api import LongText, NewFile, OpModel, PacketParts, Part, Proposal, Record, Settings, TakeBack
 
 class Config(Settings):
     pass
+
+class Chapter(Record):
+    record_kind: ClassVar[str] = "p14/chapter"
+    prefix: ClassVar[str] = "CHK"
+    data_level: ClassVar[str] = "restricted"
+    title: str
+    body: Annotated[str | None, LongText("plain")] = None
+
+class AddChapter(OpModel):
+    op: Literal["p14/add-chapter"] = "p14/add-chapter"
+    writes: ClassVar[dict] = {"p14/chapter": ("*",)}
+    title: str
+    text: str
+
+def add_chapter(op, writer, cfg):
+    chapter = writer.create("p14/chapter", {"title": op.title})
+    writer.set_text("p14/chapter", chapter.id, "body", op.text)
+
+def hand_out(text, context):
+    return text.encode()
+
+def take_back(data, base_text, context):
+    return TakeBack(data.decode(), [])
 
 def packet(target, view, settings, note):
     return PacketParts(request=[Part("File", target.data["name"])])
@@ -29,6 +53,11 @@ def make_file(target, context, choices):
     return Proposal("Add a file", files=[NewFile("made.txt", "text/plain", b"made", file_kind="p14/secret")])
 
 def register(registrar):
+    registrar.record_type(Chapter)
+    registrar.op(AddChapter, "data", add_chapter)
+    registrar.working_copy(
+        "p14/lines", label="Lines", extension=".txt", media_type="text/plain", hand_out=hand_out, take_back=take_back
+    )
     registrar.file_kind("p14/secret", label="Secret document", accept=("text/plain",), data_level="restricted")
     registrar.file_kind("p14/plain", label="Plain document", accept=("text/plain",))
     registrar.task_kind("p14/read", label="Read", ops=("note",), on="file", packet=packet)
@@ -36,6 +65,9 @@ def register(registrar):
 """
 
 PROVIDES = {
+    "record_types": ["p14/chapter"],
+    "ops": ["p14/add-chapter"],
+    "working_copies": ["p14/lines"],
     "file_kinds": ["p14/secret", "p14/plain"],
     "ai_task_kinds": ["p14/read"],
     "actions": ["p14/make"],
@@ -133,7 +165,11 @@ def test_a_pack_cannot_change_a_files_level_afterwards(env):
 
 
 def test_a_manifest_that_doesnt_list_the_level_is_refused_in_plain_words(tmp_path):
-    ws, cfg, store = workspace(tmp_path, levels=("open", "internal"))
+    ws, cfg, store = workspace(
+        tmp_path,
+        levels=("open", "internal"),
+        fixture=FIXTURE.replace('    data_level: ClassVar[str] = "restricted"\n', ""),
+    )
     try:
         assert not store.plugins.active("p14")
         reason = store.plugins.status["p14"].reason
@@ -202,3 +238,30 @@ def test_a_run_on_a_restricted_file_goes_only_to_an_account_allowed_restricted(e
     for account in accounts.values():
         account.allowed_data = ["open", "internal", "restricted"]
     assert process(env, stopped) is not None
+
+
+def test_a_working_copy_of_a_restricted_record_is_restricted_and_a_run_on_it_needs_such_an_account(env, monkeypatch):
+    from engine import working
+    from engine.applier import apply_as_person
+
+    _, cfg, store = env
+    answers(monkeypatch)
+    apply_as_person(store, cfg, [{"op": "p14/add-chapter", "title": "One", "text": "A line.\n"}], "Add a chapter")
+    record = store.read().list("p14/chapter")[-1]
+    copy = working.hand_out(store, cfg, "p14/lines", record.kind, record.id, "body")
+    handed = store.read().get("file", copy.data["file"])
+    assert handed.data["sensitivity"] == "restricted"
+
+    edited = working.take_back(store, cfg, copy.id, b"A changed line.\n")
+    assert edited["version"] is not None
+    returned = max(store.read().list("file"), key=lambda f: int(f.id.split("-")[1]))
+    assert returned.id != handed.id and returned.data["sensitivity"] == "restricted"
+
+    for account in cfg.ai.providers.values():
+        account.allowed_data = ["open", "internal"]
+    request_id = start(store, handed)
+    assert process(env, request_id) is None
+    assert store.read().get("request", request_id).data["cause"]["level"] == "restricted"
+    for account in cfg.ai.providers.values():
+        account.allowed_data = ["open", "internal", "restricted"]
+    assert process(env, request_id) is not None
