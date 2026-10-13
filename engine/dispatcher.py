@@ -31,6 +31,7 @@ from engine.packet import PacketRefused, build, target_of
 from engine.projects import budget_problem
 from engine.storage import Store, StoreError, WriteContext
 from engine.tasks import settings as task_settings
+from engine.today import zone
 from engine.workspace import Workspace
 
 log = logging.getLogger(__name__)
@@ -125,7 +126,8 @@ def process(
     )
 
     try:
-        packet = build(ws, store, cfg, request_id, now.date())
+        # Today in the person's time zone, as the received date beside it is, so the two never disagree by a day.
+        packet = build(ws, store, cfg, request_id, now.astimezone(zone(cfg)).date())
     except PacketRefused as err:
         return needs_you(store, request_id, str(err))
     if packet.too_long:

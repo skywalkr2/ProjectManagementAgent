@@ -539,3 +539,18 @@ def test_a_kind_of_work_stops_at_its_own_daily_budget(env):
     with pytest.raises(BudgetReached, match="this kind of work"):
         router._check_budget("notes")
     router._check_budget("other-kind")
+
+
+def test_today_in_the_packet_is_the_persons_day_like_the_received_date(env):
+    """Late in the evening UTC it is already tomorrow for someone east of it: the packet's "Today is" and "received on"
+    lines both use the workspace's time zone, so they never disagree by a day."""
+    from datetime import timedelta
+
+    ws, cfg, store = env
+    cfg.workspace.user.timezone = "Pacific/Auckland"
+    asked = answers({"summary": "Nothing to record.", "ops": []})
+    late = datetime(2026, 10, 9, 20, 0, tzinfo=UTC)
+    handed = hand_in(ws, store, note="A note.", now=late)
+    process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=late)
+    tomorrow = (late + timedelta(days=1)).date().isoformat()
+    assert f"Today is {tomorrow}" in asked[0].request and f"received on {tomorrow}" in asked[0].request
