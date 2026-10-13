@@ -2870,3 +2870,25 @@ for the network without fuss.
 **Impact:** Design 6.16 (error kinds, the wait), 8.6, 5.1 (request cause, run error kind), 4.9 (two `dispatch` keys), 7.7 (a
 Today line) and CHANGES section 38. New settings `dispatch.offline_check_seconds` and `dispatch.offline_line_after_minutes`
 with demo values in both workspaces. No change to scope.
+
+## 2026-10-13: A start takes over from a copy on this computer that is no longer running (phase L0)
+
+**Decision:** The instance lease's holder id begins with the process id (`<pid>-<random>`); ids without a process id (older
+leases, any other writer) are unknown. A start that finds an unexpired lease takes it at once, without `cockpit takeover`,
+when the lease was written on this computer (same host name), its holder names a process, and that process is no longer
+running (a signal-0 check: no such process is "not running", a permission refusal is "running"; where the platform offers
+no safe check, such as Windows, the answer is "unknown", so the lease is refused as before). Otherwise it is refused as
+before. The refusal says in plain words where the workspace is open: "It is already open in another window on this
+computer. Close it there." or on another computer by its name; the command is named only for a copy that has stopped but
+this computer can't tell (another computer, or no process id). `cockpit takeover` and `--force` are unchanged. One log line
+records a start taking over. A reused process id counts as running, so the safe side is a refusal that waits out the
+heartbeat.
+
+**Decided by:** the technical PM.
+
+**Why:** The app that would show a start-up screen can't run without the lease, so the stale-lease item could not be a
+screen. The common case, a copy that crashed or was killed on the same computer, can be settled without any person action
+because the computer can see the process is gone; only the cases it can't see keep the command.
+
+**Impact:** Design 5.0 (one running instance, the lease paragraph in the handover screen item) and CHANGES section 40. No new
+setting, no change to scope. Roadmap L0: the instance-lease sub-item is built.

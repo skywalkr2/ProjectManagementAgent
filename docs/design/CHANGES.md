@@ -737,6 +737,14 @@ yet follow, that it is *designed*, with its phase.
 | Today | Nothing said the work was waiting for the network | One risk line, however many requests wait, once the oldest has waited `dispatch.offline_line_after_minutes` (15): check the network connection, with the count and since when; gone when the work runs again (7.7). The queue route now reads the worker's clock. Built: `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`, `web/src/shell/HeldLines.test.tsx` |
 | Settings | n/a | `dispatch.offline_check_seconds` and `dispatch.offline_line_after_minutes`, with descriptions and demo values in both workspaces (4.9) |
 
+## 40. Phase L0: a start takes over from a stopped copy on this computer (2026-10-13)
+
+| Item | What the code did | What it does now |
+|---|---|---|
+| The instance lease's holder | A random id | `<process id>-<random>`; an id with no process id is unknown (5.0) |
+| A start that finds a lease not yet expired | Refused every time, for up to a minute, and told the person to run `cockpit takeover` | Takes the lease at once and logs one line when it was written on this computer by a process that is no longer running; refuses a running process, another computer and an id with no process id as before. Where the platform has no safe check (Windows) the answer is unknown and the lease is refused (5.0). Built: `tests/test_lease.py::test_a_lease_left_by_a_stopped_copy_on_this_computer_is_taken_without_force`, `::test_a_lease_whose_process_is_running_is_refused_and_says_it_is_open_here`, `::test_a_lease_from_another_computer_is_refused_and_names_it`, `::test_a_holder_id_without_a_process_is_refused_as_before`, `::test_a_new_lease_names_this_process_in_its_holder_id` |
+| The refusal | "Already open on <host>, close it there, or run the command once that copy has stopped" | Says where: "It is already open in another window on this computer. Close it there." or on the other computer by its name; the command is named only where this computer can't tell the copy has stopped |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

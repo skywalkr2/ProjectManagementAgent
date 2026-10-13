@@ -76,8 +76,12 @@ so a crashed worker's job is picked up again. Only one scheduler holding the sch
 yet built* (6.14); today the instance lease keeps a second copy of the app from running at all.
 
 **One running instance per workspace.** The engine takes an instance lease at start (instance id, host, heartbeat). A second
-instance on the same workspace (the laptop and a host at once, say) refuses to start and says who holds it. `cockpit takeover`
-takes the lease after the holder's heartbeat has expired, or immediately with a confirmation.
+instance on the same workspace (the laptop and a host at once, say) refuses to start and says where it is open: in another
+window on this computer, or on another computer by its name. The holder's id begins with its process id. A start takes the
+lease at once, without a command, when the lease was written on this computer and that process is no longer running (one
+log line says so); a lease whose process is running, one from another computer, and one whose id names no process are
+refused until the heartbeat expires, and the refusal names `cockpit takeover` only as the last resort for a copy that has
+stopped but this computer can't tell. `cockpit takeover` takes the lease immediately with a confirmation.
 
 **Two computers through a synced folder.** A person who works on two computers keeps one workspace and hands it over through
 a folder that a file-sync service keeps in step (4.15, `sync`). File-by-file syncing corrupts live databases and git
@@ -129,9 +133,10 @@ repositories, so neither ever lives in the synced folder:
     then it can be taken back; the restart is the person's click. Built: `tests/test_handover_screen.py`,
     `web/src/components/Handover.test.tsx`.
   - **A copy that lost the workspace** to another computer while running gets the same line (Close this copy) and a page
-    saying who, since when and how long until it can be opened here. The app's own instance lease (above) is not settled
-    from a screen: a copy that stopped without closing leaves it for up to a minute, and `cockpit takeover --force` takes it
-    at once, because the app that would show the screen can't run without it.
+    saying who, since when and how long until it can be opened here. The app's own instance lease (above) needs no screen:
+    a start takes it at once from a copy on this computer that is no longer running (its process id is in the holder id);
+    only a copy on another computer, or one this computer can't tell about, waits for the heartbeat to expire or for
+    `cockpit takeover --force`. Built: `tests/test_lease.py`.
 - **Edits made outside:** the folder is checked for changes every few seconds (`storage.sync.watch_outside_edits`). Long
   text changed in another editor comes back as a proposed version (`text.propose`, 6.7) made from the version written
   there, marked as edited outside the cockpit. It counts as the person's own work only when the folder isn't shared; when

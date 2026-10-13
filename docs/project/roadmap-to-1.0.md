@@ -527,7 +527,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `tests/test_export_schedule.py::test_a_workspace_without_a_repository_gets_no_scheduled_export_and_says_so_once`,
   `tests/test_export_schedule.py::test_the_interval_is_taken_in_at_once_and_the_commit_switch_waits_for_a_restart`); the
   remote is not offered on the Settings screen (`tests/test_setup.py::test_settings_are_described_for_the_forms`).
-- [ ] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command. Moved from phase
+- [x] A divergence between two computers, or a stale lease, is resolved from a screen, not with a command. Moved from phase
   A: the exit test uses one computer, but real use may not. Design 5.0, decisions 2026-10-13.
   - [x] **Diverged copies.** The app starts on this computer's copy and holds the folder (no writes, no lease); a Today line
     opens a page with both sides in plain words and the two choices with what each does; the choice is noted and carried out
@@ -538,9 +538,13 @@ them are needed before the owner's daily use, which starts when L-core passes.
     `web/src/shell/HeldLines.test.tsx`.
   - [x] **A copy that lost the workspace to another computer** says so on Today and on the page (who, since when, the wait):
     `tests/test_handover_screen.py::test_a_copy_that_lost_the_workspace_to_the_other_computer_says_so`.
-  - [ ] **The app's own instance lease** (a copy that stopped without closing; `cockpit takeover --force`). Left: the app
-    that would show the screen cannot run without the lease, so this needs a start-up screen the app serves before it holds the
-    lease (a design decision for the main session). It stays a command; the start-up message says so.
+  - [x] **The app's own instance lease** (a copy that stopped without closing). Decided: no start-up screen; the holder id
+    carries the process id, and a start takes the lease at once from a copy on this computer that is no longer running (one
+    log line); the refusal says where the workspace is open and names the command only as the last resort. Left, by design:
+    a copy on another computer, or one with no process id, still waits out the heartbeat (up to a minute) or
+    `cockpit takeover --force`. Built: `tests/test_lease.py::test_a_lease_left_by_a_stopped_copy_on_this_computer_is_taken_without_force`,
+    `::test_a_lease_whose_process_is_running_is_refused_and_says_it_is_open_here`,
+    `::test_a_lease_from_another_computer_is_refused_and_names_it`, `::test_a_holder_id_without_a_process_is_refused_as_before`.
 - [x] **The audit trail:** sign-ins, sign-outs and turning a plugin on or off are recorded, as `audit_entry` records (no
   screen until the Admin tab, phase E; the ledger and the export hold them). Built: `tests/test_audit.py`
   (`test_turning_an_add_on_on_and_off_and_undoing_it_is_recorded`, `test_applying_a_template_records_each_add_on_it_turned_on`,
