@@ -402,6 +402,11 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `test_a_snapshot_from_before_modified_times_were_kept_is_filled_in_by_the_next_read`,
   `test_the_look_at_the_last_day_route_hands_in_a_folders_recent_files`; the hint in `Sources.test.tsx` ("Items already
   there are noted, not handed in...").
+- [ ] **No set-aside rule for a whole public mail domain** (the original designer, on review, 2026-10-13): "Always for
+  this domain" is never offered for a public mail domain (the free mail services everyone has an address at), whether on
+  a Set aside row, after "This is work", or when Confirm all finds several senders on one domain; only the sender rule
+  is offered there, or one sender would hide every contact with a personal address. The list of public domains ships
+  with the app as data and is extendable in the person's settings.
 - [ ] **What the mail journey found** (phase A3, J2):
   - [x] **A blocked word costs a second AI request:** a fixture mail with a blocked word in it sent the item through the
     fix round, so real mail could cost double. First check in the code whether wording lints look at quoted outside
