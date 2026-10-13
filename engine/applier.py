@@ -906,6 +906,8 @@ def _apply_op(
             from engine.organizations import resolve
 
             value = resolve(tx, value, w)  # the assistant names an organization; people refer to it by id
+        if w.actor != "pm" and model_for(op.kind).needs_person(op.field, value):
+            raise NeedsPerson(f"only you can set {op.field} on a {op.kind}")
         tx.update(op.kind, op.id, {op.field: value}, w, read_version=cur.version)
         made(op.kind, op.id)
     elif isinstance(op, RecordLogOp):

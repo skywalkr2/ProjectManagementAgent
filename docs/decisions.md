@@ -2539,3 +2539,17 @@ message and Copy. Items already sent or told appear only under Waiting on them, 
 
 **Impact:** Design 7.5 and the wording sheet. Each question in the follow-ups response carries its sent date. No change to
 scope or to the ops.
+
+## 2026-10-13: A project's priority is held for the person, not refused
+
+**Decided by:** project owner (the phase L0 item in the roadmap); wording by the builder.
+
+**What:** `project.priority` is person-only (design 5.1, 6.7). The assistant's `record.set` of it is held and shown as
+waiting for the person, like a plugin's person-only value; releasing it applies it. A person-only declaration with no
+values means every value of the field. The person's own change (a screen edit, or a person action) applies at once.
+
+**Why:** Design 6.7 said the assistant's op was refused as an invariant, while the code's person-only mechanism holds the
+op, so the proposal isn't lost. A priority has an open set of values, so the declaration cannot list them.
+
+**Impact:** Design 5.1, 6.7 and the product-rules table in Part 8 say so. Plugin guide wording for `person_only`
+regenerated. No change to scope.

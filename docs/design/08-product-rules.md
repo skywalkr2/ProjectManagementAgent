@@ -180,7 +180,7 @@ this list is what gets enforced and tested, each is a row. The guard kind is in 
 
 | Rule | Enforced by |
 |---|---|
-| Unknown stays blank or TBD, never a placeholder. Some fields are filled only from one named person's input (a priority, say), and the gap becomes a question to that person | [invariant] person-owned fields in the applier (partly enforced: plugins have person-only values, 0.2; core fields have no owner yet) |
+| Unknown stays blank or TBD, never a placeholder. Some fields are filled only from one named person's input (a priority, say), and the gap becomes a question to that person | [invariant] person-owned fields in the applier (partly enforced: plugins have person-only values, 0.2; a core project's priority is person-only; other core fields have no owner yet) |
 | Out-of-scope items are parked with the reason, never dropped, and can be brought back on request | [code] a parked state and the scope sweep (not yet enforced: scope, 6.18, is phase E) |
 | If the area's expert says it isn't theirs and doesn't know whose, stop: park it, don't reroute it around the organization | [code] routing entries and the question flow (not yet enforced: routing entries come in phase L) |
 | Values written to an outside system are in its canonical form; after a publish, re-pull and check that no difference remains | [code] the publisher and connector normalizers (not yet enforced: no publisher) |

@@ -313,7 +313,8 @@ research finding) still need evidence, listed beside the draft. A task kind says
 draft.
 
 **Person-owned fields.** A record type can mark fields that only the person sets (a project's priority or capacity): an op
-from the assistant that sets one is refused as an invariant. `project.add` adds a project as a row of the portfolio (name,
+from the assistant that sets one is held for the person, who releases it or leaves it (a person-only declaration with no values
+means every value of the field; a project's priority is one, **built:** `tests/test_projects_series.py::test_the_assistant_never_sets_a_projects_priority_but_the_person_does`). `project.add` adds a project as a row of the portfolio (name,
 parent, group, status, phase, target, notes) without anything else a pack would attach; person-owned fields stay empty
 for the person to fill.
 

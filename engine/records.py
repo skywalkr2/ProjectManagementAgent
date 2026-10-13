@@ -26,7 +26,8 @@ class Record(BaseModel):
     prefix: ClassVar[str]
     #: What one record of this kind is called on screen and in messages ("chapter"); empty: made from the kind's id.
     record_label: ClassVar[str] = ""
-    #: Field values only the person may set; an op from anyone else that sets one is held for the person.
+    #: Field values only the person may set; an op from anyone else that sets one is held for the person. An empty
+    #: tuple means every value of that field.
     person_only: ClassVar[dict[str, tuple[Any, ...]]] = {}
     #: Field groups whose values must be unique among live records of this kind.
     unique: ClassVar[tuple[tuple[str, ...], ...]] = ()
@@ -58,6 +59,12 @@ class Record(BaseModel):
     id: str = Field(description='The record\'s id: "<prefix>-<number>", never reused.')
     stage: str | None = Field(None, description="Current configured stage id; its wording is set with the stages.")
     ext: dict[str, dict[str, Any]] = Field(default_factory=dict, description="Fields added by plugins, by plugin name.")
+
+    @classmethod
+    def needs_person(cls, field: str, value: Any) -> bool:
+        """Whether only the person may set this field to this value (see `person_only`)."""
+        values = cls.person_only.get(field)
+        return values is not None and (not values or value in values)
 
 
 @dataclass(frozen=True)
@@ -256,11 +263,13 @@ class Team(Record):
 class Project(Record):
     """A piece of work being run, possibly inside another (a book in its series). `project.add` starts one;
     `record.set` changes status, phase, target, priority, summary, parent and language; `record.log` adds to its log;
-    the person edits the rest in the app, and only the person sets its content levels and budget."""
+    the person edits the rest in the app, and only the person sets its content levels, budget and priority (the
+    assistant's `record.set` of the priority waits for the person)."""
 
     record_kind: ClassVar[str] = "project"
     prefix: ClassVar[str] = "PRJ"
     content_levels_field: ClassVar[str | None] = "content_levels"
+    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"priority": ()}
 
     name: str = Field(min_length=1, description="The name shown wherever the project appears.")
     group: Annotated[str | None, InList("project-group")] = Field(

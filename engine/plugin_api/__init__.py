@@ -350,8 +350,8 @@ class OpWriter(ReadView):
         if model is None:
             return
         if self.__context.actor != "pm":
-            for field, values in model.person_only.items():
-                if field in data and data[field] in values:
+            for field in model.person_only:
+                if field in data and model.needs_person(field, data[field]):
                     raise NeedsPerson(f"only you can set {field} to {data[field]}")
             levels = model.content_levels_field
             if levels and data.get(levels):

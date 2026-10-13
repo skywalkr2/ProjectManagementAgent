@@ -271,7 +271,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   It records the chase, keeps the action open and counts it as told. Today the only button there closes the action. The
   action gains `followed_up`, `done_by` and `reported_by` (design 5.1), so a chase has somewhere to be written and credit
   goes to the owner.
-- [ ] `project.priority` is person-only: the assistant may propose it, never set it.
+- [x] `project.priority` is person-only: the assistant may propose it, never set it. Test:
+  `tests/test_projects_series.py::test_the_assistant_never_sets_a_projects_priority_but_the_person_does` (held for the
+  person; the person's own change applies; another project field the assistant sets still applies).
 - [ ] Sources and files carry their `data_level`, from the hand-in's choice or the watched source's setting (with a default
   per connector). Today it lives only on the request.
 - [ ] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports

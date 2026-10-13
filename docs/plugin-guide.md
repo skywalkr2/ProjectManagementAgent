@@ -241,7 +241,7 @@ Base for every stored record. A plugin's record type subclasses it and sets `rec
 | `record_kind` | ClassVar[str] | The kind's id: "<plugin>/<name>" for a plugin's record type. |
 | `prefix` | ClassVar[str] | The id prefix, capital letters, unique in the workspace: ids are "<prefix>-<number>" and never reused. |
 | `record_label` | ClassVar[str] | What one record of this kind is called on screen and in messages ("chapter"); empty: made from the kind's id. |
-| `person_only` | ClassVar[dict[str, tuple[Any, ...]]] | Field values only the person may set; an op from anyone else that sets one is held for the person. |
+| `person_only` | ClassVar[dict[str, tuple[Any, ...]]] | Field values only the person may set; an op from anyone else that sets one is held for the person. An empty tuple means every value of that field. |
 | `unique` | ClassVar[tuple[tuple[str, ...], ...]] | Field groups whose values must be unique among live records of this kind. |
 | `data_level` | ClassVar[str] | How sensitive these records are: packets that include them go only to accounts allowed this level. |
 | `content_levels_field` | ClassVar[str \| None] | The field (a list of ids from ai.content_levels) holding the content levels the person set on a record; work on the record goes only to accounts that take them. Only the person sets it. |
@@ -1080,7 +1080,7 @@ A group of people. The person edits it in the app; no core op changes it.
 
 ### `project` (PRJ-n)
 
-A piece of work being run, possibly inside another (a book in its series). `project.add` starts one; `record.set` changes status, phase, target, priority, summary, parent and language; `record.log` adds to its log; the person edits the rest in the app, and only the person sets its content levels and budget.
+A piece of work being run, possibly inside another (a book in its series). `project.add` starts one; `record.set` changes status, phase, target, priority, summary, parent and language; `record.log` adds to its log; the person edits the rest in the app, and only the person sets its content levels, budget and priority (the assistant's `record.set` of the priority waits for the person).
 
 | Field | Type | Default | What it is |
 |---|---|---|---|

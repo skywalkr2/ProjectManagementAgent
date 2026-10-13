@@ -196,3 +196,49 @@ def test_project_add_refuses_children_that_would_make_a_loop(env):  # noqa: F811
     assert add(env, "Middle", parent=inner.id, children=[outer.id])[1] == ["refused"]
     assert add(env, "Twice", children=[outer.id, outer.id])[1] == ["refused"]
     assert add(env, "Missing", children=["PRJ-999"])[1] == ["refused"]
+
+
+def _priority_set(env, project, value, *, actor="assistant"):  # noqa: F811
+    """One `record.set` of a project's priority, applied as the assistant or as the person."""
+    from engine.applier import Context, Inputs, apply_changeset
+    from engine.names import People
+    from engine.ops import CHANGESET
+
+    _, cfg, store = env
+    op = {"op": "record.set", "kind": "project", "id": project.id, "field": "priority", "value": value}
+    cs = CHANGESET.validate_python({"ops": [op]}, context={"op_models": store.plugins.ops})
+    ctx = Context(
+        store, cfg, People(store, cfg), tuple(store.plugins.ops), Inputs("REQ-1", None, "", "", "trusted"), actor=actor
+    )
+    cs_id = apply_changeset(cs, [], ctx, run=None)
+    return cs_id, store.read().get("changeset", cs_id).data["ops"][0]
+
+
+def test_the_assistant_never_sets_a_projects_priority_but_the_person_does(env):  # noqa: F811
+    from engine.applier import release
+    from engine.lists import core_lists
+
+    _, cfg, store = env
+    add(env, "Ranked")
+    project = projects(store)["Ranked"]
+    values = core_lists()["project-priority"]["values"]
+    low, high = values[0], values[-1]
+
+    cs_id, outcome = _priority_set(env, project, low)
+    assert outcome["status"] == "held" and "only you can set priority" in outcome["reason"]
+    assert projects(store)["Ranked"].data["priority"] is None
+
+    _, outcome = _priority_set(env, project, high, actor="pm")
+    assert outcome["status"] == "applied" and projects(store)["Ranked"].data["priority"] == high
+
+    release(store, cfg, cs_id, 0)  # the person accepts the assistant's proposal
+    assert projects(store)["Ranked"].data["priority"] == low
+
+
+def test_another_project_field_from_the_assistant_still_applies(env):  # noqa: F811
+    _, _, store = env
+    add(env, "Plain")
+    project = projects(store)["Plain"]
+    op = {"op": "record.set", "kind": "project", "id": project.id, "field": "summary", "value": "A short summary."}
+    assert apply(env, [op])[1] == ["applied"]
+    assert projects(store)["Plain"].data["summary"] == "A short summary."
