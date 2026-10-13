@@ -13,7 +13,7 @@ import shutil
 import tempfile
 from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -26,7 +26,7 @@ from engine.intake import hand_in
 from engine.storage import Store
 from engine.workspace import init_workspace
 
-NOW = datetime(2026, 10, 9, 14, 0, tzinfo=UTC)
+RECEIVED_HOUR = 14  # a case that gives only a day is received at this hour, UTC
 
 
 @dataclass
@@ -89,8 +89,32 @@ class Report:
         )
 
 
+def received_of(case: dict[str, Any]) -> datetime:
+    """When a case's input arrived: its `received` day (at a fixed hour) or date-time (with an offset)."""
+    value = case.get("received")
+    if isinstance(value, datetime):
+        when = value
+    elif isinstance(value, date):
+        when = datetime(value.year, value.month, value.day, RECEIVED_HOUR, tzinfo=UTC)
+    elif isinstance(value, str) and value.strip():
+        try:
+            when = datetime.fromisoformat(value.strip())
+        except ValueError:
+            raise ValueError(f"case {case['id']}: received {value!r} is not a day or a date-time") from None
+        if len(value.strip()) == 10:
+            when = when.replace(hour=RECEIVED_HOUR)
+    else:
+        raise ValueError(
+            f"case {case['id']} has no received date: say when its input arrived, for example received: '2026-10-09'"
+        )
+    return when if when.tzinfo is not None else when.replace(tzinfo=UTC)
+
+
 def load_cases(template: Path) -> list[dict[str, Any]]:
-    return [yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted((template / "evals").glob("*.yaml"))]
+    cases = [yaml.safe_load(p.read_text(encoding="utf-8")) for p in sorted((template / "evals").glob("*.yaml"))]
+    for case in cases:
+        received_of(case)
+    return cases
 
 
 def evaluate(
@@ -163,8 +187,9 @@ def _run_case(
         store = Store(ws.db_path)
         try:
             people_before = len(store.read().list("person"))
-            handed = hand_in(ws, store, note=case.get("note", ""), pasted=case.get("pasted", ""), now=NOW)
-            cs_id = process(ws, store, cfg, Router(cfg, store, env=env, on_wait=on_wait), handed.request, now=NOW)
+            now = received_of(case)
+            handed = hand_in(ws, store, note=case.get("note", ""), pasted=case.get("pasted", ""), now=now)
+            cs_id = process(ws, store, cfg, Router(cfg, store, env=env, on_wait=on_wait), handed.request, now=now)
             runs = [r.data for r in store.read().list("run")]
             cost = sum(r.get("cost_usd") or 0.0 for r in runs)
             seconds = sum(r.get("seconds") or 0.0 for r in runs)
@@ -216,12 +241,13 @@ def _has_words(text: str, words: list[str]) -> bool:
 
 def _matches(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store) -> bool:
     if e.get("held") == "who-is":
+        found = 0
         for o in outcomes:
             if o["status"] == "held" and o.get("question"):
                 q = store.read().get("question", o["question"])
                 if q and len(q.data.get("options", [])) == e.get("options", len(q.data.get("options", []))):
-                    return True
-        return False
+                    found += 1
+        return found == e["count"] if "count" in e else found > 0
     op = e["op"]
     for o in _applied(outcomes, op):
         if op == "action.add":

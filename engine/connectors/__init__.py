@@ -47,13 +47,17 @@ class MessageDetails:
     date-time with its offset. `unread`: whether the person hasn't opened it yet, when the service says. `bulk`:
     whether the message says it was sent to many (it has a list-unsubscribe header, or a bulk or list precedence),
     None when the connector can't tell. `categories`: the service's own categories or labels for it, as read and in
-    lower case (promotions, social, say); empty when it has none or doesn't say."""
+    lower case (promotions, social, say); empty when it has none or doesn't say. `participants`: everyone else on the
+    message (the people it was sent to, and those copied), each as the service names them, with the address in angle
+    brackets when it has one; empty when there are none or the service doesn't say. A first name in the text means
+    the person of that name who is on the message."""
 
     sender: str | None = None
     received: str | None = None
     unread: bool | None = None
     bulk: bool | None = None
     categories: tuple[str, ...] = ()
+    participants: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -188,6 +192,9 @@ def _check_details(item: SourceItem) -> None:
         categories = item.message.categories
         if not isinstance(categories, (tuple, list)) or not all(isinstance(c, str) for c in categories):
             raise ValueError(f"message {item.key!r}: categories is a list of text")
+        participants = item.message.participants
+        if not isinstance(participants, (tuple, list)) or not all(isinstance(p, str) for p in participants):
+            raise ValueError(f"message {item.key!r}: participants is a list of text")
 
 
 @dataclass(frozen=True)
@@ -312,7 +319,13 @@ def _read_fake(settings: FakeSettings, state: dict[str, Any], context: Connector
             SourceItem(
                 **item,
                 event=EventDetails(**event) if event else None,
-                message=MessageDetails(**{**message, "categories": tuple(message.get("categories", ()))})
+                message=MessageDetails(
+                    **{
+                        **message,
+                        "categories": tuple(message.get("categories", ())),
+                        "participants": tuple(message.get("participants", ())),
+                    }
+                )
                 if message
                 else None,
             )

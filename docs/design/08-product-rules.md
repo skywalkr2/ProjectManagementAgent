@@ -107,7 +107,7 @@ they apply to. Those guarded by an invariant or code still give the model their 
 | Rule | Enforced by |
 |---|---|
 | "This week" means through the configured week end (e.g. Friday), one helper everywhere | calendar config (not yet enforced): no calendar config yet |
-| Date inputs from the day received, not the day processed: "by Friday" in a message received on Monday means that week's Friday | the packet header carries the input's received date (partly enforced: the prompt counts from the message's date line, but the packet gives the processing date; fixed in phase L0, before real use) |
+| Date inputs from the day received, not the day processed: "by Friday" in a message received on Monday means that week's Friday | the packet header carries the input's received date, the source item's own received time (enforced: `tests/test_names.py::test_the_packet_states_the_inputs_received_date_beside_todays`, `test_a_watched_items_received_date_is_its_own_received_time_not_when_it_changed_or_was_read`) |
 | Store zoned times; never slice a timestamp string | storage layer (partly enforced: nothing requires timezone-aware values) |
 | Per-team non-working days count for that team's dates | calendar config (not yet enforced): no calendar config yet |
 
@@ -198,7 +198,7 @@ this list is what gets enforced and tested, each is a row. The guard kind is in 
 
 **What is enforced first, for the first real use.** The first real use is a writer's own work plus mail and calendar, so the
 rules that bite first are not the workplace ones:
-- **Phase L0, the start of L-core, before real use:** dates from the day received (8.5); a usage limit resuming by itself at its reset (8.6); an empty or failed run
+- **Phase L0, the start of L-core, before real use:** dates from the day received (8.5, built); a usage limit resuming by itself at its reset (8.6); an empty or failed run
   retried automatically, then sent to the person (8.6). Without the last two, the assistant stops silently on the first quota
   day and the person thinks it's broken.
 - **Phase L, before real use starts:**

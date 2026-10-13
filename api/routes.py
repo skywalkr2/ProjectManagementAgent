@@ -1193,7 +1193,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.post("/changesets/{cs_id}/ops/{index}/release")
     def release_op(cs_id: str, index: int, body: PersonChoice) -> Ok:
         need("changeset", cs_id)
-        guard(lambda: release(store, cfg, cs_id, index, person=body.person))
+        guard(lambda: release(store, cfg, cs_id, index, person=body.person, ws=ws))
         changed()
         return Ok(ok=cs_id)
 
@@ -1220,7 +1220,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         if resolves.get("kind") == "owner":
             guard(lambda: pick_owner(store, qid, body.person))
         elif resolves.get("kind") == "held-op":
-            guard(lambda: release(store, cfg, resolves["changeset"], resolves["op"], person=body.person))
+            guard(lambda: release(store, cfg, resolves["changeset"], resolves["op"], person=body.person, ws=ws))
         else:
             if not (body.text or "").strip():
                 raise HTTPException(status_code=422, detail="Write an answer.")

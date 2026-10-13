@@ -182,7 +182,7 @@ because one of them "handles it". Remove a line in the change that builds it.
 - The governor: stale sweeps, outage handling, point-in-time restore (6.13; phase E).
 - Knowledge in packets, learning proposals and the search round (6.22; phase L-core). Today no run reads facts, rules,
   lessons or a glossary.
-- The silent-stop fixes, Followed up and first names in context (phase L0).
+- The silent-stop fixes other than the received date in the packet, and Followed up (phase L0).
 
 ## Product rules that shape every feature
 - The assistant drafts; the human approves everything outward. Nothing publishes, sends or posts without the PM approving

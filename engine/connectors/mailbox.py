@@ -16,6 +16,7 @@ import re
 import socket
 import ssl
 from email.message import EmailMessage
+from email.utils import getaddresses
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -63,10 +64,25 @@ def message_item(raw: bytes) -> SourceItem | None:
     if attached:
         lines += ["", "Attached: " + ", ".join(attached)]
     received = _received(str(message.get("Date") or ""))
-    details = MessageDetails(sender=sender, received=received, bulk=is_bulk(message))
+    details = MessageDetails(
+        sender=sender, received=received, bulk=is_bulk(message), participants=participants(message)
+    )
     return SourceItem(
         key, subject[:200], "\n".join(lines).strip(), sender, str(message.get("Date") or "") or None, message=details
     )
+
+
+def participants(message: EmailMessage) -> tuple[str, ...]:
+    """Everyone else on the message: the people in its To and Cc headers, each once, as `Name <address>` (or the
+    address or the name alone), in the order the headers list them."""
+    found: list[str] = []
+    for header in ("To", "Cc"):
+        values = [" ".join(str(v).split()) for v in message.get_all(header, [])]
+        for name, address in getaddresses(values):
+            written = f"{name} <{address}>" if name and address else (address or name)
+            if written and written not in found:
+                found.append(written)
+    return tuple(found)
 
 
 #: Values of the Precedence header that mark a message as sent to many.

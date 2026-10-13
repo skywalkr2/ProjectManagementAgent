@@ -616,6 +616,16 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 | Labels and answers | 16 core ops had no label ("op.answer" showed); an answer showed its first 150 characters | Every core op has a label; an answer shows whole (7.4). **Built:** `tests/test_wording.py` |
 | The app's own calendar | The agenda showed only connected calendars; a dated item was only a fact | A core calendar; a dated item becomes an entry beside its fact (1, 6.7, 7.7; phase L0; the PM pack builds on it) |
 
+## 26. Phase L0: first names in context and the received date (2026-10-13)
+
+| Item | What the code did | What it does now |
+|---|---|---|
+| A bare first name | Any first name one person had resolved to that person, with no context | Resolves only for a person in the input's context (6.11): the PM, the sender and the others on the message, the project's people. Built: `tests/test_names.py` |
+| "Maya R." | Unknown, with no candidates | A first name with a fragment that fits no one is held with the people who share the first name |
+| Who is on a message | A mail item carried a sender only | `participants` on a mail item (plugin API 0.3.58, optional); the core's mail folder fills it from To and Cc |
+| The received date | The source was dated when the app read it, and the packet gave the processing date | The source is dated by the item's own received time, and the packet states the day the input was received, in the workspace's time zone |
+| Golden cases | One frozen clock for every case | Every case has `received:` and the clock freezes there; three new cases for these fixes |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

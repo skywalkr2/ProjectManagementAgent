@@ -397,7 +397,9 @@ class Source(Record):
     prefix: ClassVar[str] = "SRC"
     fixed_fields: ClassVar[tuple[str, ...]] = ("received_at", "kind", "content_hash", "trust", "url", "watched")
 
-    received_at: datetime = Field(description="When the input arrived.")
+    received_at: datetime = Field(
+        description="When the input arrived: a mail's own received time, else when it was handed in or first read."
+    )
     kind: str = Field(description="How it arrived, such as pasted.")
     title: str = Field(description="A short name for it, shown in lists.")
     content_hash: str = Field(description="Hash of its text; the saved text is named by it in the sources folder.")
@@ -523,6 +525,7 @@ class SnapshotMessage(BaseModel):
     unread: bool | None = None
     bulk: bool | None = None
     categories: list[str] = Field(default_factory=list)
+    participants: list[str] = Field(default_factory=list)
 
 
 class Snapshot(Record):

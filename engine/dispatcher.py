@@ -145,7 +145,8 @@ def process(
     allowed = store.plugins.task_kind(req.data["task"]).ops
     if req.data["task"] == "notes":
         allowed = ops_for_level(store, allowed, _data_level(store, req.data))
-    ctx = Context(store, cfg, People(store, cfg), allowed, inputs, hidden_words(cfg))
+    people = People.for_input(store, cfg, request_id, packet.raw_input if req.data.get("source") else "")
+    ctx = Context(store, cfg, people, allowed, inputs, hidden_words(cfg))
 
     previous_ops = _previous_ops(store, req.data.get("previous"))
     level = _data_level(store, req.data)

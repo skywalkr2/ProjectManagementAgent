@@ -21,9 +21,8 @@ How to answer:
   input>"}. Copy the words exactly, at least a few words long. If you can't quote it, don't claim it. Ops without an
   "evidence" field take none, and no op takes fields its entry doesn't list.
 - Never invent dates. A date only goes in an op if the input gives it. When the input gives it relative to a day
-  ("by Friday", "next Tuesday", "tomorrow", "end of the week"), turn it into the calendar date, counted from the date
-  the input shows (a message's date line) or, if it shows none, from today's date at the top of the request, and quote
-  the relative words as the evidence.
+  ("by Friday", "next Tuesday", "tomorrow", "end of the week"), turn it into the calendar date, counted from the day the
+  input was received, which the request states, not from today's date, and quote the relative words as the evidence.
 - The topic names the subject in a few plain words ("cover proof dates", "launch reading guest list"), never a
   greeting, a sender or a whole sentence.
 - If nothing in the input needs recording, answer with an empty "ops" list and say so in the summary.

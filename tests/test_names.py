@@ -66,11 +66,11 @@ def test_a_first_name_two_people_share_resolves_to_the_one_in_context():
 
 def test_full_names_aliases_ids_and_me_resolve_without_context():
     sam = person("Typesetter")
-    theo = person("Cover designer")
+    designer = person("Cover designer")
     assert people().resolve(sam["full_name"].upper()).person == sam["id"]
     assert people().resolve(sam["id"]).person == sam["id"]
-    assert theo["aliases"][0] == first(theo), "the fixture gives this person their first name as an alias"
-    assert people().resolve(theo["aliases"][0]).person == theo["id"], "a set alias resolves as it always did"
+    assert designer["aliases"][0] == first(designer), "the fixture gives this person their first name as an alias"
+    assert people().resolve(designer["aliases"][0]).person == designer["id"], "a set alias resolves as it always did"
     for me in ("me", "Me", "myself", "I"):
         assert people().resolve(me).person == PM
 
@@ -118,15 +118,15 @@ def test_header_entries_come_from_the_leading_header_block_only():
 
 
 def test_entries_match_a_person_by_address_or_full_name():
-    maya = shared_first_name()[0]
-    address = maya.get("how_to_reach", {}).get("email")
+    colleague = shared_first_name()[0]
+    address = colleague.get("how_to_reach", {}).get("email")
     by_name = people().match_entries(
-        [f"{maya['full_name']} <someone@example.com>", "Nobody Atall", "A <a@example.com>"]
+        [f"{colleague['full_name']} <someone@example.com>", "Nobody Atall", "A <a@example.com>"]
     )
-    assert by_name == {maya["id"]}
+    assert by_name == {colleague["id"]}
     if address:
-        assert people().match_entries([f"Another Name <{address.upper()}>"]) == {maya["id"]}
-    assert people().match_entries([first(maya)]) == set(), "a bare first name on a header says nothing"
+        assert people().match_entries([f"Another Name <{address.upper()}>"]) == {colleague["id"]}
+    assert people().match_entries([first(colleague)]) == set(), "a bare first name on a header says nothing"
 
 
 # ---- the context of an input -----------------------------------------------------------------------------------------
@@ -147,28 +147,24 @@ def test_a_hand_ins_project_and_thread_headers_put_people_in_context(tmp_path):
     from engine.intake import hand_in
 
     one, other = shared_first_name()
-    owner_of_project_work = next(
-        a["owners"][0]["person"]
+    project_people = {
+        o["person"]
         for a in fixture_records(DEMO_B, "action")
-        if a.get("project") == "PRJ-1" and a.get("owners")
-    )
+        if a.get("project") == "PRJ-1"
+        for o in a.get("owners", [])
+    }
+    in_project = next(p for p in (one, other) if p["id"] in project_people)
     ws, cfg, store = workspace(tmp_path)
     try:
         plain = hand_in(ws, store, pasted=f"Notes: {first(one)} will call.")
         assert People.for_input(store, cfg, plain.request).resolve(first(one)).status == "ambiguous"
-        with_headers = hand_in(ws, store, pasted=f"From: {PEOPLE[PM]['full_name']}\nTo: {other['full_name']}\n\nHi")
-        context = People.for_input(
-            store, cfg, with_headers.request, text="From: x\nTo: " + other["full_name"] + "\n\nHi"
-        )
-        assert context.resolve(first(other)).person == other["id"]
-        in_project = hand_in(ws, store, pasted="Notes: a note", project="PRJ-1")
-        roster = People.for_input(store, cfg, in_project.request)
-        assert owner_of_project_work in roster.in_context and PM in roster.in_context
-        project_owners = {
-            a["owners"][0]["person"] for a in fixture_records(DEMO_B, "action") if a.get("project") == "PRJ-1"
-        }
-        in_project_person = next(p for p in PEOPLE.values() if first(p) == first(one) and p["id"] in project_owners)
-        assert roster.resolve(first(one)).person == in_project_person["id"]
+        headed = hand_in(ws, store, pasted="Hi")
+        text = f"From: {PEOPLE[PM]['full_name']}\nTo: {other['full_name']}\n\nHi"
+        assert People.for_input(store, cfg, headed.request, text=text).resolve(first(other)).person == other["id"]
+        about_project = hand_in(ws, store, pasted="Notes: a note", project="PRJ-1")
+        roster = People.for_input(store, cfg, about_project.request)
+        assert project_people <= roster.in_context and PM in roster.in_context
+        assert roster.resolve(first(one)).person == in_project["id"]
     finally:
         store.close()
 
@@ -196,7 +192,7 @@ def test_a_watched_messages_sender_and_participants_put_people_in_context(tmp_pa
         snap = store.read().find("snapshot", {"source": "m"})[0]
         assert snap.data["message"]["participants"] == [f"{other['full_name']} <b@example.com>"]
         assert People.for_input(store, cfg, result.new[0]).resolve(first(other)).person == other["id"]
-        assert People.for_input(store, cfg, result.new[0]).resolve(first(one)).status == "ambiguous"
+        assert one["id"] not in People.for_input(store, cfg, result.new[0]).in_context
     finally:
         store.close()
 
@@ -223,7 +219,7 @@ def test_a_watched_items_received_date_is_its_own_received_time_not_when_it_chan
         result = refresh(ws, store, cfg, "m", received + timedelta(days=3))
         request = store.read().get("request", result.new[0])
         source = store.read().get("source", request.data["source"])
-        assert source.data["received_at"] == received
+        assert datetime.fromisoformat(source.data["received_at"]) == received
     finally:
         store.close()
 
@@ -240,7 +236,8 @@ def test_an_item_with_no_received_time_is_dated_when_it_was_read(tmp_path):
         read_at = datetime(2026, 10, 9, 9, 0, tzinfo=UTC)
         result = refresh(ws, store, cfg, "m", read_at)
         request = store.read().get("request", result.new[0])
-        assert store.read().get("source", request.data["source"]).data["received_at"] == read_at
+        source = store.read().get("source", request.data["source"])
+        assert datetime.fromisoformat(source.data["received_at"]) == read_at
     finally:
         store.close()
 

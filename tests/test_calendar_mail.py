@@ -68,19 +68,16 @@ def test_a_message_becomes_an_item_with_its_plain_text():
 
 
 def test_a_message_lists_who_else_is_on_it_from_its_to_and_cc_headers():
-    raw = (
-        b"Message-ID: <msg-2@mail.example.com>\r\nFrom: Odile Fenwick <odile@example.com>\r\n"
-        b'To: Rafael Quist <rafael@example.com>, "Quist, Marta" <marta@example.com>\r\n'
-        b"Cc: plain@example.com,\r\n Rafael Quist <rafael@example.com>\r\n"
-        b"Date: Tue, 05 Mar 2030 09:15:00 +0000\r\nSubject: Plan\r\n\r\nBody\r\n"
+    to = next(line for line in MESSAGE.decode().splitlines() if line.startswith("To: "))[4:]
+    raw = MESSAGE.decode().replace(
+        f"To: {to}\n", f'To: {to}, "Last, First" <other@example.com>\nCc: plain@example.com,\n {to}\n', 1
     )
-    details = message_item(raw).message
-    assert details.participants == (
-        "Rafael Quist <rafael@example.com>",
-        "Quist, Marta <marta@example.com>",
-        "plain@example.com",
-    ), "to then cc, each person once, the address with the name when there is one"
-    assert message_item(MESSAGE).message.participants == ("Rafael Quist <rafael@example.com>",)
+    assert raw != MESSAGE.decode()
+    details = message_item(raw.encode()).message
+    assert details.participants == (to, "Last, First <other@example.com>", "plain@example.com"), (
+        "to then cc, each person once, the address with the name when there is one"
+    )
+    assert message_item(MESSAGE).message.participants == (to,)
     bare = b"Message-ID: <m3@x>\r\nFrom: a@example.com\r\nSubject: S\r\n\r\nBody\r\n"
     assert message_item(bare).message.participants == ()
 

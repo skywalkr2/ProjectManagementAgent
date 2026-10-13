@@ -45,6 +45,26 @@ list of core features. The comparison found two gaps: actions can't be blocked, 
 
 **Impact:** The roadmap: phase B, L3b and phase E. Design 7.7 when designed from the picture. A weekday setting and an
 optional task kind when built.
+## 2026-10-13: First names in context, and the received date, are built as designed (phase L0)
+
+**Decided by:** the design (6.11, as changed by the review of 2026-10-12) is built as written; the choices it left open,
+marked below as "builder's choice", are for the owner to confirm or overrule.
+
+**What:**
+- A bare first name resolves only for a person in the input's context: the PM, the sender and the others on the message,
+  and the people of the input's project. The others on a message (builder's choice) come from the add-on (`participants`, plugin API 0.3.58) or
+  the From, To and Cc lines at the head of the input's own text, so a pasted message works the same as a read one.
+- A name with an initial or surname fragment resolves only to a person it fits; otherwise it is held with the people who
+  share the first name, even when one of them is in the thread.
+- An alias a person or the PM set still resolves as before. Two people who share an alias are told apart by the context
+  (builder's choice).
+- A watched mail's received date is its own received time. Every golden case carries `received:` and the clock freezes there.
+
+**Why:** a unique first name used to resolve with no context, so a stranger with a common first name was taken for a
+colleague.
+
+**Impact:** design 6.6, 6.11, Part 5 (source, snapshot), 8.5 and the golden-set section of 6.16; plugin API 0.3.58
+(optional `participants`); no new setting.
 
 ## 2026-10-13: Phase A done; the obvious next step from what came in is planned
 

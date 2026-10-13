@@ -10,6 +10,22 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.58 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A mail item can say who else is on it**: `MessageDetails(..., participants=("Name <name@example.com>",))`: the
+  people it was sent to and those copied, each as the service names them, with the address in angle brackets when it
+  has one. It is optional and defaults to empty, so an add-on that doesn't set it works as before. The core uses it
+  to read a bare first name in the message's text: the name means the person of that name who is the sender or one
+  of the participants, so a first name that two people share resolves for the one on the message and is held for the
+  PM otherwise. A person is matched by an address in their record's `how_to_reach` or by their full name, so give
+  addresses where the service has them. The core's own mail folder fills it from the To and Cc headers.
+- **A watched item's received date is the item's own**: for a mail item the date the assistant counts "by Friday"
+  from is `MessageDetails.received`, never `SourceItem.changed_at`, which a service may move when the message is
+  edited, labeled or read. An item with no `received` is dated when it was first read. Nothing changes for an add-on
+  that already sets `received`.
+
 ## What 0.3.57 adds
 
 Manifests stay `'>=0.3,<0.4'`.

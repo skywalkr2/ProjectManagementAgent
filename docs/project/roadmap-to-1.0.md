@@ -251,7 +251,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
   L3, where every correction records its signal; `draft_edited` ties to the run that wrote the questions there too.
   "Add a new person" is L3b.
 - [ ] **No silent stops** (design 8.5, 8.6, 8.8):
-  - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived;
+  - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived (done:
+    `tests/test_names.py::test_the_packet_states_the_inputs_received_date_beside_todays`);
   - a usage limit resumes by itself at its reset;
   - an empty or failed run is retried automatically, then goes to the person with why;
   - an agent that exits 0 with no answer is its own outcome (`no_output`), retried, never "done";
@@ -264,13 +265,18 @@ them are needed before the owner's daily use, which starts when L-core passes.
   that proves it, and the self-check fails when a cited test doesn't exist. Rows already marked Built get their tests
   cited in the same change (design 10.5). Built: `tests/test_built_claims.py` (the claim kinds, a missing file, a wrong
   name, "checked by reading", and `test_the_roadmap_and_the_design_make_no_unproven_claim_of_built` on the real docs).
-- [ ] **A bare first name resolves only in context** (design 6.11): same project, or a participant in the thread; a
-  different initial or surname fragment is held.
-- [ ] The golden-set cases for these fixes are written first, as their failing tests:
-  - a `received:` date on every case;
-  - a bare first name resolving when the person is in the thread;
-  - "Maya R." held when only another Maya is known;
-  - an unknown person producing one "who is this" decision.
+- [x] **A bare first name resolves only in context** (design 6.11): same project, or a participant in the thread; a
+  different initial or surname fragment is held. Tests: `tests/test_names.py` (the resolving rules, the context of a
+  hand-in and of a watched message) and the golden cases `first-name-in-thread` and `different-initial-held`.
+  Mail add-ons give `participants` (plugin API 0.3.58); until they do, only the sender, the text's own header lines
+  and the project put people in context.
+- [x] The golden-set cases for these fixes are written first, as their failing tests (committed before the fixes):
+  - a `received:` date on every case (refused when missing: `test_a_case_without_a_received_date_is_refused`);
+  - a bare first name resolving when the person is in the thread (`first-name-in-thread`);
+  - "Maya R." held when only another Maya is known (`different-initial-held`);
+  - an unknown person producing one "who is this" decision (`unknown-person`: one op, one decision, which passed
+    before the fix; the case with two ops naming the same person comes with "one who is this per name per input",
+    which stays open above).
 - [ ] **Followed up** on Waiting on them (design 7.5, 6.9): the primary for an action waiting past the nudge threshold.
   It records the chase, keeps the action open and counts it as told. Today the only button there closes the action. The
   action gains `followed_up`, `done_by` and `reported_by` (design 5.1), so a chase has somewhere to be written and credit
@@ -280,8 +286,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   person; the person's own change applies; another project field the assistant sets still applies).
 - [ ] Sources and files carry their `data_level`, from the hand-in's choice or the watched source's setting (with a default
   per connector). Today it lives only on the request.
-- [ ] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
-  both, and they differ).
+- [x] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
+  both, and they differ). Tests: `tests/test_names.py::test_a_watched_items_received_date_is_its_own_received_time_not_when_it_changed_or_was_read`,
+  `test_an_item_with_no_received_time_is_dated_when_it_was_read`.
 - [ ] **After A5:**
   - "Set aside" corrections record a signal (today only "This is work" records `pulled_back`); this needs a signal kind.
   - Learning skips any request or snapshot marked `set_aside`, proved by a learning pair.

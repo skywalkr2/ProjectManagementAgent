@@ -163,7 +163,9 @@ never reaches the assistant and never feeds learning:
 A mail item carries, besides its sender, received time and unread mark, `bulk` (the message has a list-unsubscribe header or a
 bulk or list precedence; the core's mail folder reads it from the headers) and `categories` (the service's own, as read, in
 lower case). Both come from the add-on (plugin API 0.3.57) and default to unknown, so an add-on that doesn't set them works as
-before.
+before. It also carries `participants`, everyone else on the message (to and cc, each as `Name <address>` when the service gives
+the address), from the add-on (plugin API 0.3.58, optional, empty by default) or, for the core's own mail folder, from the To and
+Cc headers; the snapshot keeps it. It lets a first name in the text mean the person on the message (6.11).
 
 It is sorted in this order, first match wins:
 1. **The person's own rules**, in the `triage:` list (4.5). A rule with `set_aside: personal` or `sales` sets mail aside in that
@@ -222,7 +224,7 @@ aside") that opens the folder. Set-aside mail is kept like other sources and fol
 
 **As built.** The packet holds, stable parts first and the request last: the instructions, the op reference for the task kind,
 the task's playbook guidance, every open action and open question in a compact form, the people, the projects, the values each
-list-bound field takes (5.4), then the date, the PM's note (trusted) and the cleaned input (untrusted). Input cleaning, one input
+list-bound field takes (5.4), then the date and the day the input was received, the PM's note (trusted) and the cleaned input (untrusted). Input cleaning, one input
 per call, the fix round, the fallback chain and the escalation tier are built. **No knowledge reaches the packet yet:** facts,
 rules, lessons, the glossary, routing and style notes arrive with the learning slice (6.22, phase L), and scope and looked-up
 facts with 6.18 and 6.19.
@@ -262,7 +264,7 @@ facts with 6.18 and 6.19.
   **current** (all open actions and questions). The request-specific
   parts follow: the knowledge that depends on the input (lessons targeted at its projects or people, routing, the glossary
   terms it uses, style notes, ranked facts; 6.22), scope, related records, today's date **and the input's received date**
-  (phase L0, before real use), and the input last. Most providers discount or cache a repeated prefix, and only an identical one: so each layer is serialized in a
+  (**built**, phase L0: `tests/test_names.py::test_the_packet_states_the_inputs_received_date_beside_todays`), and the input last. Most providers discount or cache a repeated prefix, and only an identical one: so each layer is serialized in a
   deterministic order with no dates, counts or other volatile values, and the batch's calls run close together because cached
   prefixes expire after minutes. **The prefix is not frozen for a batch** (*changed after the first design author's review*):
   each request's packet is built from the current state, so input 2 sees the action or question input 1 just created or
@@ -560,11 +562,21 @@ People, teams and projects are referred to by id everywhere (5.1). Names are res
 wherever they are shown.
 
 - **Resolving** (every write path: AI ops, PM forms, edits pulled back from published pages): an id passes; a full name or
-  alias that matches one person becomes that id; the PM's aliases become the PM; a bare first name only one known person has
-  becomes that person **only when the input's context matches** (the person is on the same project, or is a participant in
-  the thread); anything with a different initial or surname fragment is held (*changed after the first design author's
-  review; the code today resolves any unique first name, fixed in phase L0, before real use*); an owner written in the workspace's `owner_format` is parsed into person and team. Anything ambiguous or
-  unknown holds the op and files one routing decision ("Who is 'Sam'?", with the candidates and "Add a new person").
+  alias that matches one person becomes that id; the PM's aliases become the PM; a bare first name (one that no one has set as
+  an alias) becomes a person **only when that person is in the input's context**, and only if exactly one person of that first
+  name is; a first name with an initial or surname fragment ("Ada L.") becomes the one person that fragment fits, and when it
+  fits no one the op is held and the people who share the first name are offered, however many of them are in the thread;
+  an owner written in the workspace's `owner_format` is parsed into person and team (*designed, not built*).
+  Anything ambiguous or unknown holds the op and files one routing decision per held op ("Who is 'Sam'?", with the candidates;
+  "Add a new person" is *designed*, L3b; one decision per name per input is *designed*, L0).
+- **The input's context** (**built**, phase L0): the PM; the sender and the others on the message (a watched message's saved
+  `participants`, and the From, To and Cc lines at the head of the input's own text, which also covers a pasted message); and
+  the people of the project the input is about (the project the person chose at hand-in or the watched source's project: its
+  owner and the owners of its actions). A person is matched by an address in their record's `how_to_reach`, else by a full name
+  or an alias that is theirs alone. Outside content can therefore say who is in a thread, which only decides between people the
+  workspace already knows. The same context is rebuilt when a held op is released, so a name is read the same way both times.
+  Tests: `tests/test_names.py` (the resolving rules with and without context, the context of a hand-in and of a watched
+  message) and the golden cases `first-name-in-thread`, `different-initial-held`, `shared-first-name` and `unknown-person`.
 - **Rendering:** owners in `owner_format` ("Product (Jane Doe)"), recipients by full name, greetings by first name. Changing
   the format changes every output at the next render.
 - **No sweep needed:** nothing stores a short name, so nothing needs rewriting later. Free text (notes, fact text) keeps names
@@ -874,11 +886,13 @@ it meets the configured score, and the PM approves the switch (a scheduled job c
 never switch on its own). Plugins can add fixtures for their own task kinds.
 
 **How a case is scored** (*the harness as built, then the first design author's review of the golden set; designed, phase
-L-core*). Today every case runs with the clock frozen at one moment, on a fresh copy of the fictional workspace. A case
+L-core*). Every case runs with the clock frozen at its own received time, on a fresh copy of the fictional workspace. A case
 lists the ops it expects and, optionally, ops it forbids. The review found the set too easy in ways that would let a
 low-cost model look as good as a strong one, so each case gains:
-- **`received:`,** the date and time the input arrived. The harness freezes the clock there and puts it in the packet header
-  (the received-date fix in L0), so a relative date ("by Tuesday") is tested against the input's own date.
+- **`received:`,** the date (or date and time with an offset) the input arrived, **built** (phase L0): every case has one, a case
+  without one is refused, the harness freezes the clock there and the packet header states it, so a relative date ("by
+  Tuesday") is tested against the input's own date (`tests/test_names.py::test_every_golden_case_carries_its_received_date_and_the_clock_freezes_there`,
+  `test_a_case_without_a_received_date_is_refused`). An expected held name can say how many decisions it files (`count`).
 - **`exact: true` by default:** no applied ops beyond the expected ones, except `note` and `source`. A case relaxes it when
   more is acceptable. Over-extraction was the running version's most frequent real failure: duplicate actions, actions for
   people outside the area, notes nobody needed.

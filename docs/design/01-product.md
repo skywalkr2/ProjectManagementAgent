@@ -102,7 +102,7 @@ follow-ups and stages.
   rail shows the day's Agenda, Your to-dos and what Came in, and on a wide screen an inspector shows the selected line. The
   layout is in 7.7 (decisions, 2026-10-11, "The UI redesign").
 - **Events and messages carry structure.** A source can hand in a calendar event (start, end, place, cancelled) or a mail
-  message (sender, received, unread) beside its text, so the agenda and the inbox show them without an AI call. The assistant
+  message (sender, received, unread, the others on it) beside its text, so the agenda and the inbox show them without an AI call. The assistant
   still reads the text.
 - **The cockpit keeps its own calendar** (owner, 2026-10-13). It is a core part of the product, not a view of the
   connected calendars. Its entries come from what came in (a dated item that isn't set aside becomes an entry beside its

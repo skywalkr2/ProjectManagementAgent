@@ -100,6 +100,8 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         if part.strip()
     )
     request_parts = [f"Today is {today.isoformat()} ({today.strftime('%A')})."]
+    if raw or note:
+        request_parts.append(_received_line(store, cfg, req))
     about_project = store.read().get("project", req.data["project"]) if req.data.get("project") else None
     if about_project is not None:
         # The person said which project this is about; their choice, so it is trusted.
@@ -125,6 +127,26 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     request = "\n\n".join(request_parts)
     task = _task(cfg, store, kind, instructions, stable, request)
     return Packet(task, raw, cleaned, note, too_long=len(cleaned.text) > cfg.dispatch.max_input_chars)
+
+
+def received_on(store: Store, cfg: Config, req: Stored) -> date | None:
+    """The day an input arrived, in the workspace's time zone: the source's own received time (a watched message's
+    own date, or when something was handed in), else when the request was made."""
+    from datetime import datetime
+
+    from engine.today import zone
+
+    source = store.read().get("source", req.data["source"]) if req.data.get("source") else None
+    when = source.data["received_at"] if source is not None else req.data.get("created_at")
+    try:
+        return datetime.fromisoformat(str(when)).astimezone(zone(cfg)).date() if when else None
+    except ValueError:
+        return None
+
+
+def _received_line(store: Store, cfg: Config, req: Stored) -> str:
+    day = received_on(store, cfg, req)
+    return f"The input was received on {day.isoformat()} ({day.strftime('%A')})." if day else ""
 
 
 def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: TaskKind, today: date) -> Packet:

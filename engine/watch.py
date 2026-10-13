@@ -278,12 +278,12 @@ def _input_text(source: Any, item: SourceItem, change: str, old: str | None) -> 
 
 
 def _message_dict(message: Any) -> dict[str, Any] | None:
-    """A message's details as plain data, the way the snapshot keeps them (categories as a list)."""
+    """A message's details as plain data, the way the snapshot keeps them (categories and participants as lists)."""
     from dataclasses import asdict
 
     if message is None:
         return None
-    return {**asdict(message), "categories": list(message.categories)}
+    return {**asdict(message), "categories": list(message.categories), "participants": list(message.participants)}
 
 
 def _set_aside_of(closed: dict[str, str] | None) -> dict[str, str] | None:
@@ -349,11 +349,12 @@ def _hand_in(
         earlier = [_read_text(ws, tx.get("source", r.data["source"]).data["content_hash"]) for r in folded]
         text = "\n\nThen:\n\n".join([*earlier, text])
     digest = _keep_text(ws, text)
+    received = item.message.received if item.message is not None and item.message.received else None
     by_us = bool(item.author) and item.author.strip().lower() in {a.lower() for a in cfg.workspace.our_accounts}
     record = tx.create(
         "source",
         {
-            "received_at": now.isoformat(),
+            "received_at": received or now.isoformat(),
             "kind": f"watched:{source.connector}",
             "title": f"{item.title}"[:120],
             "content_hash": digest,

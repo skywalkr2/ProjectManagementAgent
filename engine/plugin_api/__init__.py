@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.57"
+PLUGIN_API_VERSION = "0.3.58"
 
 
 class Settings(BaseModel):
@@ -1816,8 +1816,8 @@ class Registrar:
         the text read this time ("" for a removed item, whose author is None). For a changed item, `added` and
         `removed` are the lines that appeared and disappeared (a line diff of `before` and `now`); for a new or
         removed item both are empty, so read `now` or `before`. For a mail item, `message` holds its details
-        (sender, received, unread, bulk, categories), and is None for anything else. Deterministic and quick; it never
-        calls AI. The person sees what it closed and why, and can take a closer look."""
+        (sender, received, unread, bulk, categories, participants), and is None for anything else. Deterministic and
+        quick; it never calls AI. The person sees what it closed and why, and can take a closer look."""
         self._name(name)
         if name in self.triage_matchers or not callable(match):
             raise ValueError("duplicate triage matcher or invalid match function")

@@ -18,6 +18,7 @@ from pydantic import ValidationError
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
 from engine.config.yaml_edit import set_key
+from engine.intake import source_text
 from engine.names import People
 from engine.ops import (
     EVIDENCE_FIELDS,
@@ -54,6 +55,7 @@ from engine.plugin_api import NeedsPerson
 from engine.records import model_for
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
+from engine.workspace import Workspace
 
 Severity = Literal["refuse", "return", "hold", "warn"]
 
@@ -1020,9 +1022,17 @@ def _routing_question(tx: Tx, op: OpModel, index: int, cs_id: str, ctx: Context,
 
 
 def release(
-    store: Store, cfg: Config, changeset_id: str, index: int, *, person: str | None = None, now: datetime | None = None
+    store: Store,
+    cfg: Config,
+    changeset_id: str,
+    index: int,
+    *,
+    person: str | None = None,
+    now: datetime | None = None,
+    ws: Workspace | None = None,
 ) -> None:
-    """Apply a held op, optionally saying who an unresolved name is."""
+    """Apply a held op, optionally saying who an unresolved name is. With `ws`, the names in it are read in the
+    context of the input's saved text, as they were when the changeset was made."""
     now = now or datetime.now(UTC)
     cs = store.read().get("changeset", changeset_id)
     if cs is None:
@@ -1041,8 +1051,9 @@ def release(
     name = (outcome.get("question") and _question_name(store, outcome["question"])) or None
     if person is not None and name is not None:
         op = _substitute(op, name, person)
-    people = People(store, cfg)
     req = store.read().get("request", cs.data["request"])
+    text = source_text(ws, store, req.data.get("source")) if ws is not None and req is not None else ""
+    people = People.for_input(store, cfg, cs.data["request"], text)
     inputs = Inputs(cs.data["request"], req.data.get("source") if req else None, "", "", cs.data["trust"])
     ctx = Context(store, cfg, people, tuple(), inputs, confirmed_by_pm=True)
     refusals = store.plugins.validators(op)
