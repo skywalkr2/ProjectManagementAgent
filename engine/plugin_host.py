@@ -778,14 +778,14 @@ class PluginHost:
             import os
 
             from engine.plugin_api import PluginMisuse
+            from engine.state_file import write_whole
 
             if name not in declared:
                 raise PluginMisuse(f"{name} isn't one of the secrets this add-on says it needs")
             keys.mkdir(parents=True, exist_ok=True)
             os.chmod(keys, 0o700)
             target = keys / name
-            target.write_text(value.strip() + "\n", encoding="utf-8")
-            os.chmod(target, 0o600)
+            write_whole(target, value.strip() + "\n", mode=0o600)
 
         return ConnectorContext(
             workspace_root=Path(workspace_root),

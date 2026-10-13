@@ -5,7 +5,7 @@
 // with a release the app can install has an Install button; one the app installed can be removed once it is off. Both
 // need a restart before the app uses the change, and neither turns anything on.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { Heading, Tab, TabList, TabPanel, Tabs } from "react-aria-components";
 import { api, ApiError, type S } from "../lib/api";
 import { whenText as when } from "../lib/dates";
@@ -96,20 +96,31 @@ function useSwitch(name: string, label: string) {
   return { busy, problem, run };
 }
 
-/** Installing, updating or removing an add-on from the screen: acts at once, then the row says a restart is needed. A
- * refusal is kept for the row to show in the server's own words; `note` is what the row says after a success. */
+/** Installing, updating or removing an add-on from the screen: acts at once, then the row says a restart is needed until
+ * the app has restarted. A refusal is kept for the row to show in the server's own words; `note` is what the row says
+ * after a success. */
 function usePackChange(packId: string, name: string, focusRow: () => void) {
   const { t } = useWords();
   const client = useQueryClient();
   const [busy, setBusy] = useState<"install" | "remove" | null>(null);
   const [problem, setProblem] = useState("");
-  const [done, setDone] = useState<"installed" | "removed" | null>(null);
+  const restarts = useRestart().restarts;
+  // What was done, and how many restarts had happened by then: once another has, the restart it asked for is over.
+  const [last, setLast] = useState<{ what: "installed" | "removed"; at: number } | null>(null);
+  const done = last && last.at === restarts ? last.what : null;
+  useEffect(() => {
+    if (last && last.at !== restarts) {
+      setLast(null);
+      void client.invalidateQueries({ queryKey: ["packs"] });
+      void client.invalidateQueries({ queryKey: ["status"] });
+    }
+  }, [last, restarts, client]);
   const run = async (what: "install" | "remove") => {
     setBusy(what);
     setProblem("");
     try {
       await (what === "install" ? api.installPack : api.removePack)(packId);
-      setDone(what === "install" ? "installed" : "removed");
+      setLast({ what: what === "install" ? "installed" : "removed", at: restarts });
       await Promise.all([
         client.invalidateQueries({ queryKey: ["packs"] }),
         client.invalidateQueries({ queryKey: ["status"] }),

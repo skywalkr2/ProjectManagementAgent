@@ -171,6 +171,28 @@ def test_a_workspace_with_its_own_rules_or_written_earlier_still_sets_aside_bulk
             store.close()
 
 
+def test_the_set_aside_count_is_what_the_folder_holds_so_a_confirmed_item_is_not_in_it(tmp_path):
+    """Came in's "N set aside" opens the Set aside folder, so it counts what that folder lists: an item the person
+    confirmed has left the folder (and is later deleted down to a marker) and is no longer counted."""
+    from engine import today
+    from engine.set_aside import confirm_items, folder, purge
+
+    items = [mail("bulk", f"a@{LISTS}", bulk=True), mail("social", f"b@{SHOP}", categories=["social"])]
+    ws, cfg, store = make(tmp_path, items)
+    try:
+        from engine.watch import refresh
+
+        refresh(ws, store, cfg, "m", NOW)
+        assert today.arrived(store, cfg, NOW).set_aside == 2 == len(folder(ws, store, cfg))
+        first = next(s.id for s in store.read().list("snapshot") if s.data["key"] == "bulk")
+        confirm_items(store, [first], NOW)
+        assert today.arrived(store, cfg, NOW).set_aside == 1 == len(folder(ws, store, cfg))
+        assert purge(ws, store, [first]) == 1
+        assert today.arrived(store, cfg, NOW).set_aside == 1 == len(folder(ws, store, cfg))
+    finally:
+        store.close()
+
+
 def test_the_setting_turns_the_built_in_sorting_off(tmp_path):
     from engine.watch import refresh
 

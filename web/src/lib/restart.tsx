@@ -13,6 +13,9 @@ type Phase = "idle" | "asking" | "waiting" | "done" | "stuck" | "refused";
 interface RestartApi {
   waiting: boolean;
   phase: Phase;
+  /** How many restarts the app has come back from since this screen opened; a note about one that was still to come
+   * compares it with the count it saw. */
+  restarts: number;
   /** The words for a restart the app couldn't do, when the phase is "refused". */
   problem: string;
   /** A restart was asked for and the answer has not come yet. */
@@ -29,6 +32,7 @@ interface RestartApi {
 const RestartContext = createContext<RestartApi>({
   waiting: false,
   phase: "idle",
+  restarts: 0,
   problem: "",
   busy: false,
   begin: () => undefined,
@@ -51,6 +55,7 @@ export function RestartProvider(props: { hellos: number; seconds?: number; doneS
   const [phase, setPhase] = useState<Phase>("idle");
   const [problem, setProblem] = useState("");
   const [busy, setBusy] = useState(false);
+  const [restarts, setRestarts] = useState(0);
   const [since, setSince] = useState(0);
   // The start the app was on when the wait began: a text, null when the server doesn't say, undefined while it is looked up.
   const [baseline, setBaseline] = useState<string | null | undefined>(undefined);
@@ -120,7 +125,10 @@ export function RestartProvider(props: { hellos: number; seconds?: number; doneS
   useEffect(() => {
     if (phase !== "waiting") return;
     const mine = round.current;
-    const finish = () => setPhase("done");
+    const finish = () => {
+      setPhase("done");
+      setRestarts((n) => n + 1);
+    };
     if (baseline === undefined) return;
     if (baseline === null) {
       if (props.hellos > since) finish();
@@ -147,8 +155,8 @@ export function RestartProvider(props: { hellos: number; seconds?: number; doneS
   }, [phase, doneSeconds]);
 
   const value = useMemo(
-    () => ({ waiting: phase === "waiting", phase, problem, busy, begin, offer, now, dismiss }),
-    [phase, problem, busy, begin, offer, now, dismiss],
+    () => ({ waiting: phase === "waiting", phase, restarts, problem, busy, begin, offer, now, dismiss }),
+    [phase, restarts, problem, busy, begin, offer, now, dismiss],
   );
   return <RestartContext.Provider value={value}>{props.children}</RestartContext.Provider>;
 }

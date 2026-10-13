@@ -436,13 +436,28 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `test_a_domain_rule_for_a_public_domain_is_refused_in_plain_words_and_nothing_is_saved`; the screen hides the domain
   button when none comes: `web/src/components/SetAside.test.tsx` ("offers only Always for this sender when the server sends no
   domain").
-- [ ] **What the browser-test failures found** (2026-10-13; the walkthrough's screen race and J4's restart race are fixed:
-  `tests/test_setup.py::test_setup_state_survives_changes_made_at_the_same_time`). Left:
-  - an add-on's install note and its Restart now stay on the row after the restart they asked for, saying a restart is
-    still needed when none is;
-  - the other small state files in the workspace's private folder are written in place; check each for the same
-    read-change-write race and write them whole;
-  - J2 once waited 30 seconds for "1 set aside" in a full run; find the cause.
+- [x] **What the browser-test failures found** (2026-10-13; the walkthrough's screen race and J4's restart race are fixed:
+  `tests/test_setup.py::test_setup_state_survives_changes_made_at_the_same_time`):
+  - [x] An add-on's install note and its Restart now no longer stay on the row after the restart they asked for; a restart
+    still to come keeps them. Built: `src/components/Addons.test.tsx` ("the install note and its Restart now go once the
+    app has restarted, and stay while the restart is still to come"). A restart made outside this screen (the app started
+    again from a terminal) is noticed only when the page is opened again.
+  - [x] The other small state files in the workspace's private folder are written whole through `engine/state_file.py`,
+    and the ones changed by more than one thread hold a per-file lock. Built, in `tests/test_state_files.py`:
+    `test_write_whole_replaces_the_file_in_one_step_and_leaves_nothing_behind`,
+    `test_write_whole_with_a_mode_is_never_readable_more_widely`,
+    `test_changing_one_file_runs_one_change_at_a_time_and_is_reentrant`,
+    `test_sign_ins_finishing_together_each_stay_recorded_as_started`,
+    `test_the_install_id_and_the_token_are_made_once_whoever_asks_first`,
+    `test_model_catalogs_kept_by_two_readers_of_one_file_both_stay`,
+    `test_pauses_made_together_each_stay_and_a_reader_never_finds_half_a_file`,
+    `test_the_last_backup_result_is_never_read_half_written` and
+    `test_the_last_connection_test_is_never_read_half_written`.
+  - [x] J2's wait for "1 set aside": the count included messages the person had confirmed, which have left the folder it
+    opens, so after a confirmed message and a new set-aside one it read "2 set aside"; the test only passed by catching
+    the count at 1 before the new message was read. The count is what the folder lists. Built:
+    `tests/test_set_aside.py::test_the_set_aside_count_is_what_the_folder_holds_so_a_confirmed_item_is_not_in_it`; J2 now
+    checks that nothing is counted before the new message is read.
 - [ ] **What the mail journey found** (phase A3, J2):
   - [x] **A blocked word costs a second AI request:** a fixture mail with a blocked word in it sent the item through the
     fix round, so real mail could cost double. First check in the code whether wording lints look at quoted outside

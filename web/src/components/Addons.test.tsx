@@ -637,6 +637,41 @@ test("an add-on with a release has Install as its one action: it installs, then 
   await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
 });
 
+test("the install note and its Restart now go once the app has restarted, and stay while the restart is still to come", async () => {
+  const user = userEvent.setup();
+  let installed = false;
+  let instance = "first";
+  const calls = fakeApi({
+    "GET packs": () => view({ available: [pack("tool", { installable: true, installed_version: installed ? "1.0.0" : null })] }),
+    "GET status": () => ({ restart_needed: installed ? "add-ons" : null, can_restart: true, restart_for: [] }),
+    "GET runtime-config": () => ({ instance }),
+    "POST packs/tool/install": () => {
+      installed = true;
+      return INSTALLED("tool");
+    },
+    "POST restart": () => ({ restarting: true }),
+  });
+  renderApp(
+    <RestartProvider hellos={1} pollSeconds={0.05} doneSeconds={0.05}>
+      <Addons onBack={() => undefined} />
+    </RestartProvider>,
+  );
+  const tool = await row("Name of tool");
+  await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
+  await within(tool).findByText(/Name of tool is installed\./);
+  // Asking for the restart is not the restart: the note stays while the app is still on the same start.
+  await user.click(await within(tool).findByRole("button", { name: "Restart now" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
+  await waitFor(() => expect(calls.filter((c) => c.route === "GET runtime-config").length).toBeGreaterThan(2));
+  expect(within(tool).getByText(/Name of tool is installed\./)).toBeInTheDocument();
+  const reads = calls.filter((c) => c.route === "GET packs").length;
+  // The app answers as a new start: the note and its button are gone, and the list is read again.
+  instance = "second";
+  await waitFor(() => expect(within(tool).queryByText(/Name of tool is installed\./)).toBeNull());
+  expect(within(tool).queryByRole("button", { name: "Restart now" })).toBeNull();
+  await waitFor(() => expect(calls.filter((c) => c.route === "GET packs").length).toBeGreaterThan(reads));
+});
+
 test("a refusal to install is the server's own words, with Install still there to try again", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({

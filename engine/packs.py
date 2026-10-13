@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from engine.config import Config
 from engine.connectors import READS_WORDS, reads
+from engine.state_file import write_whole
 from engine.yaml_load import load_yaml
 
 #: The largest feed read, in bytes.
@@ -140,6 +141,14 @@ def parse(url: str, text: str) -> Feed:
     return feed
 
 
+def _read_cache(path: Any) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def read_feeds(
     urls: list[str],
     cache_dir: Any,
@@ -156,10 +165,7 @@ def read_feeds(
 
     now = time.time() if now is None else now
     path = cache_dir / CACHE_FILE
-    try:
-        kept = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        kept = {}
+    kept = _read_cache(path)
     feeds = []
     changed = False
     for url in urls:
@@ -190,8 +196,7 @@ def read_feeds(
         feed.read_at = copy.get("read_at")
         feeds.append(feed)
     if changed:
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({u: kept[u] for u in urls if u in kept}), encoding="utf-8")
+        write_whole(path, json.dumps({u: kept[u] for u in urls if u in kept}))
     return feeds
 
 

@@ -35,6 +35,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from engine.state_file import changing, write_whole
 from engine.sync import INDEX, MACHINE, MANIFEST, _write_atomic, folder_problem, placement_problem
 
 LEASE = f"{MACHINE}/lease.json"
@@ -73,12 +74,12 @@ class Opened:
 def install_id(ws: Any) -> str:
     """This install's own id, made once and kept with the workspace on this computer."""
     path = ws.private_dir / "install-id"
-    if path.exists():
-        return path.read_text(encoding="utf-8").strip()
-    ws.private_dir.mkdir(parents=True, exist_ok=True)
-    value = uuid.uuid4().hex
-    path.write_text(value + "\n", encoding="utf-8")
-    return value
+    with changing(path):
+        if path.exists():
+            return path.read_text(encoding="utf-8").strip()
+        value = uuid.uuid4().hex
+        write_whole(path, value + "\n")
+        return value
 
 
 def _folder(cfg: Any) -> Path:
@@ -482,8 +483,7 @@ def choose(ws: Any, cfg: Any, which: str, *, now: datetime | None = None) -> Non
     found = situation(ws, cfg, now)
     if found is None or found.kind != "diverged":
         raise Refused("There is nothing to choose between: the two copies agree, or the folder can't be read now.")
-    ws.private_dir.mkdir(parents=True, exist_ok=True)
-    (ws.private_dir / CHOICE).write_text(which + "\n", encoding="utf-8")
+    write_whole(ws.private_dir / CHOICE, which + "\n")
 
 
 def settle_chosen(ws: Any, cfg: Any, *, now: datetime | None = None) -> tuple[str, str] | None:

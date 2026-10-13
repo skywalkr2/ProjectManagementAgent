@@ -739,6 +739,10 @@ the workspace's private folder, `<workspace>/.cockpit/`, which the workspace's g
 - which setup steps were skipped, the result of the last backup per target, and which sign-ins have already had their sources
   started.
 
+Each of these small files is written whole (a temporary file replaced over the old one), so a reader never finds half of
+one, and a change that reads, changes and writes one holds that file's lock, so changes made at the same moment (request
+threads and the worker's threads) are applied one after the other and none is lost (`engine/state_file.py`).
+
 What the synced folder carries instead is in 5.0.
 
 ## 4.25 Knowledge (`knowledge:` in `config/dispatch.yaml`)

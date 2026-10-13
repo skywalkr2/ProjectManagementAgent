@@ -23,6 +23,8 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode, urlsplit
 
+from engine.state_file import write_whole
+
 #: How long a started sign-in waits for the service's answer.
 PENDING_SECONDS = 600
 #: An access token this close to running out is renewed first.
@@ -130,8 +132,7 @@ def bring_back_app(keys: Path, sign_in: SignIn) -> bool:
 
 
 def _write_private(path: Path, value: str) -> None:
-    path.write_text(value + "\n", encoding="utf-8")
-    os.chmod(path, 0o600)
+    write_whole(path, value + "\n", mode=0o600)
 
 
 @dataclass
@@ -248,8 +249,7 @@ def keep(keys: Path, sign_in: SignIn, tokens: dict[str, Any]) -> None:
     keys.mkdir(parents=True, exist_ok=True)
     os.chmod(keys, 0o700)
     path = _path(keys, sign_in)
-    path.write_text(json.dumps(tokens), encoding="utf-8")
-    os.chmod(path, 0o600)
+    write_whole(path, json.dumps(tokens), mode=0o600)
 
 
 def kept(keys: Path, sign_in: SignIn) -> dict[str, Any] | None:

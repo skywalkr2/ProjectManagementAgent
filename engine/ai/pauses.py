@@ -7,6 +7,7 @@ Nothing here calls a provider or reads a provider's words: the reset time comes 
 
 from __future__ import annotations
 
+import contextlib
 import json
 import threading
 from collections.abc import Callable
@@ -14,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from engine.state_file import write_whole
 from engine.today import zone
 
 _LOCK = threading.Lock()
@@ -41,13 +43,8 @@ class Pauses:
         )
 
     def _save(self, data: dict[str, str]) -> None:
-        try:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self.path.with_name(self.path.name + ".tmp")
-            tmp.write_text(json.dumps(data, sort_keys=True), encoding="utf-8")
-            tmp.replace(self.path)
-        except OSError:
-            pass
+        with contextlib.suppress(OSError):
+            write_whole(self.path, json.dumps(data, sort_keys=True))
 
     def active(self) -> dict[str, datetime]:
         """The accounts paused now and when each one's limit resets. A pause whose time has passed is dropped."""

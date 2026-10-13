@@ -224,6 +224,9 @@ test.describe.serial("journey: mail", () => {
     const later = await (await fetch(`${FAKE}/__e2e/mail-later`, { method: "POST" })).json();
     await openView(page, "Today");
     const cameIn = page.getByRole("region", { name: "Came in" });
+    // The confirmed message has left the folder, so nothing is counted until the new one is read.
+    await expect(cameIn.getByRole("button", { name: "Check now" })).toBeVisible();
+    await expect(cameIn.getByRole("button", { name: /set aside$/ })).toHaveCount(0);
     await cameIn.getByRole("button", { name: "Check now" }).click();
     await expect(cameIn.getByRole("button", { name: "1 set aside" })).toBeVisible({ timeout: 30_000 });
     await expect(cameIn.getByText(later.subject)).toHaveCount(0);

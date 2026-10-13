@@ -6,6 +6,7 @@ fetch keeps the last copy; with none, prices come only from config.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import time
 from collections.abc import Callable
@@ -14,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.ai.task import ModelInfo
+from engine.state_file import changing, write_whole
 
 
 class Catalogs:
@@ -35,19 +37,21 @@ class Catalogs:
         info = (entry or {}).get("models", {}).get(model_id)
         return ModelInfo(**info) if info else None
 
+    def _read(self) -> dict[str, dict[str, Any]]:
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return data if isinstance(data, dict) else {}
+
     def _load(self) -> dict[str, dict[str, Any]]:
         if self._cache is None:
-            try:
-                self._cache = json.loads(self.path.read_text(encoding="utf-8"))
-            except (OSError, ValueError):
-                self._cache = {}
+            self._cache = self._read()
         return self._cache
 
     def _save(self, provider: str, entry: dict[str, Any]) -> None:
-        cache = self._load()
-        cache[provider] = entry
-        try:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            self.path.write_text(json.dumps(cache), encoding="utf-8")
-        except OSError:
-            pass
+        # Read again under the file's lock, so a copy kept meanwhile by another reader of the same file stays.
+        with changing(self.path):
+            cache = self._cache = {**(self._cache or {}), **self._read(), provider: entry}
+            with contextlib.suppress(OSError):
+                write_whole(self.path, json.dumps(cache))

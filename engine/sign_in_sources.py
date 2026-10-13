@@ -13,6 +13,7 @@ from typing import Any
 
 from engine import settings as config_screens
 from engine.config import ConfigError, load_config
+from engine.state_file import changing, write_whole
 
 STATE = "sign-in-sources.json"
 
@@ -29,11 +30,10 @@ def _started(ws: Any) -> set[str]:
 
 
 def _remember(ws: Any, names: set[str]) -> None:
-    path = _state_path(ws)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(".saving")
-    temporary.write_text(json.dumps(sorted(names)), encoding="utf-8")
-    temporary.replace(path)
+    """Add `names` to the sign-ins that have had their sources added. The file is read again under its lock, so
+    sign-ins finishing at the same moment each stay recorded."""
+    with changing(_state_path(ws)):
+        write_whole(_state_path(ws), json.dumps(sorted(_started(ws) | names)))
 
 
 def not_read(ws: Any, sign_in: Any) -> list[str]:
@@ -49,7 +49,13 @@ def not_read(ws: Any, sign_in: Any) -> list[str]:
 
 def start_sources(ws: Any, cfg: Any, store: Any, sign_in: Any, *, again: bool = False) -> list[str]:
     """Add the sign-in's declared sources the workspace doesn't read yet: once per sign-in, or `again` when the
-    person asks for them. Returns the labels added."""
+    person asks for them. Returns the labels added. Sign-ins finishing at the same moment are handled one after the
+    other, so the check that a sign-in's sources were added and the adding itself never interleave."""
+    with changing(_state_path(ws)):
+        return _start_sources(ws, cfg, store, sign_in, again=again)
+
+
+def _start_sources(ws: Any, cfg: Any, store: Any, sign_in: Any, *, again: bool) -> list[str]:
     started = _started(ws)
     if (sign_in.name in started and not again) or not sign_in.sources:
         return []
@@ -98,7 +104,7 @@ def start_sources(ws: Any, cfg: Any, store: Any, sign_in: Any, *, again: bool = 
             env=dict(os.environ),
             allow=("watch.sources",),
         )
-    _remember(ws, started | {sign_in.name})
+    _remember(ws, {sign_in.name})
     return added
 
 

@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from engine.config import Config
+from engine.state_file import write_whole
 from engine.storage import Store
 from engine.storage.export import commit_export, export_data
 from engine.workspace import Workspace
@@ -63,5 +64,4 @@ def _load(ws: Workspace) -> dict[str, Any]:
 
 
 def _save(ws: Workspace, status: dict[str, Any]) -> None:
-    ws.private_dir.mkdir(parents=True, exist_ok=True)
-    (ws.private_dir / STATUS_FILE).write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_whole(ws.private_dir / STATUS_FILE, json.dumps(status, indent=2, sort_keys=True) + "\n")

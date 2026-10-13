@@ -381,7 +381,8 @@ freeze"). A pack's catalog entry says where its release is and how to check it. 
 
 **Built (phase A2):** installing a single release file of pure Python whose needs the app already has, the read token,
 the Install button, Update now for a newer release, and Remove for a pack this app installed and that is off. Installing
-or removing a pack that isn't running leaves the assistant's work going, and the row offers Restart now; updating one
+or removing a pack that isn't running leaves the assistant's work going, and the row offers Restart now until the app has
+restarted (the note goes once the app's start differs from the one it was made on); updating one
 that is running holds new work until the restart, so old and new files never mix (`tests/test_pack_install.py`,
 `web/src/components/Addons.test.tsx`). **Not yet built:** the list of what will be added, the conflict check and a pack's
 own libraries (phase C1). A pack with no release still shows the publisher's install command to copy. Installing code the person chose,

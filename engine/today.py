@@ -162,7 +162,7 @@ def _sort_key(item: AgendaItem, here: ZoneInfo) -> str:
 
 def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
     """Messages received within the configured hours, newest first, leaving out what a triage rule closed or set
-    aside; each is counted."""
+    aside; each is counted. Set-aside mail counts only while it is in the Set aside folder, not once confirmed."""
     since = now - timedelta(hours=cfg.ui.today.mail_hours)
     found, left_out, set_aside = [], 0, 0
     for snap in store.read().list("snapshot"):
@@ -176,8 +176,11 @@ def arrived(store: Any, cfg: Any, now: datetime) -> Inbox:
             continue
         if not since <= received <= now + timedelta(minutes=5):
             continue
-        if data.get("set_aside"):
-            set_aside += 1
+        mark = data.get("set_aside")
+        if mark:
+            # The count is what the Set aside folder lists: an item the person confirmed has left it.
+            if not mark.get("confirmed_at") and not data.get("deleted"):
+                set_aside += 1
             continue
         if data.get("closed_by"):
             left_out += 1

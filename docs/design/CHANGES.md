@@ -719,6 +719,14 @@ yet follow, that it is *designed*, with its phase.
 |---|---|---|
 | What Copy puts on the clipboard | Plain text only; the work version the owner uses opens a generated page with its own copy button | The message as previewed, in two versions at once (formatted for mail and documents, plain for chat); Copy as plain text in the menu; built by the app with every piece of text escaped, never a separate page (7.5). Decided, not built (roadmap phase B) |
 
+## 37. Phase L0: what the browser-test failures left (2026-10-13)
+
+| Item | Before | Now |
+|---|---|---|
+| An add-on's install note after the restart it asked for (3.11) | The note and its Restart now stayed on the row after the restart, saying one was still needed | The note goes once the app has come back from a restart (the app's start differs from the one it was made on); a restart still to come keeps it. The packs list is read again at that point |
+| Small state files in the workspace's private folder (4.24) | Several were written in place and some were read, changed and written by more than one thread | Every one is written whole through one helper; the ones with a read-change-write hold a per-file lock (sign-ins' started sources, the install id and token made once, the model catalog copy). The backup, connection-test and export results read as "nothing kept" when unreadable instead of failing |
+| Came in's "N set aside" (6.5) | Counted items the person had confirmed, which have left the folder it opens, so the count and the folder disagreed | Counts what the folder lists |
+
 ## 38. Phase L0: a lost network waits, without using up tries (2026-10-13)
 
 | Item | What the code did | What it does now |

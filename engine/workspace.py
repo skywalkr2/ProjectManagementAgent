@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from engine.config import FILES, Config, load_config, render_default_file
+from engine.state_file import changing, write_whole
 from engine.storage import Store
 from engine.storage.export import commit_export, export_data, import_data
 
@@ -56,13 +57,12 @@ class Workspace:
     def install_token(self) -> str:
         """The token the browser presents in local mode, created on first use and readable only by this user."""
         path = self.private_dir / "token"
-        if path.exists():
-            return path.read_text(encoding="utf-8").strip()
-        self.private_dir.mkdir(parents=True, exist_ok=True)
-        token = secrets.token_urlsafe(32)
-        path.write_text(token + "\n", encoding="utf-8")
-        path.chmod(0o600)
-        return token
+        with changing(path):
+            if path.exists():
+                return path.read_text(encoding="utf-8").strip()
+            token = secrets.token_urlsafe(32)
+            write_whole(path, token + "\n", mode=0o600)
+            return token
 
 
 def resolve(path: str | os.PathLike[str] | None) -> Workspace:

@@ -18,6 +18,7 @@ from engine.ai.adapters import make_adapter
 from engine.ai.task import AiError, AiTask, provider_reason
 from engine.config import Config
 from engine.secrets import SecretError, describe_secret, resolve_secret
+from engine.state_file import write_whole
 from engine.storage import Store
 from engine.workspace import Workspace
 
@@ -148,7 +149,6 @@ def ai_fingerprint(ws: Workspace) -> str:
 
 
 def record(ws: Workspace, results: list[SmokeResult]) -> None:
-    ws.private_dir.mkdir(parents=True, exist_ok=True)
     passed = all(r.ok for r in results if r.main)
     data = {
         "fingerprint": ai_fingerprint(ws),
@@ -156,15 +156,14 @@ def record(ws: Workspace, results: list[SmokeResult]) -> None:
         "at": datetime.now(UTC).isoformat(),
         "results": [asdict(r) for r in results],
     }
-    (ws.private_dir / STATUS_FILE).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    write_whole(ws.private_dir / STATUS_FILE, json.dumps(data, indent=2) + "\n")
 
 
 def untested_since_change(ws: Workspace) -> bool:
     """True when ai.yaml changed since the last passing smoke test (or there never was one)."""
-    path = ws.private_dir / STATUS_FILE
-    if not path.exists():
+    data = last_test(ws)
+    if data is None:
         return True
-    data = json.loads(path.read_text(encoding="utf-8"))
     return not data.get("passed") or data.get("fingerprint") != ai_fingerprint(ws)
 
 

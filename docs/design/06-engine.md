@@ -224,7 +224,7 @@ Sorting corrections tune sorting only. They never become content lessons.
 
 **On screen:** the folder is a section of Sources beside Auto-closed, one row per message (subject, sender, date, why it was
 set aside), grouped into Personal and Sales and promotions. Today never lists set-aside mail; Came in shows a count ("6 set
-aside") that opens the folder. Set-aside mail is kept like other sources and follows retention (5.2).
+aside") that opens the folder and counts what the folder lists, so a confirmed message is no longer in it. Set-aside mail is kept like other sources and follows retention (5.2).
 
 ## 6.6 Dispatcher
 

@@ -1454,7 +1454,7 @@ What a watched item looked like when last read: its text is kept in the sources 
 | `message.categories` | list[str] | `[]` |  |
 | `message.participants` | list[str] | `[]` |  |
 | `closed_by` | str \| None | `None` | The triage rule that closed its latest change, so Today leaves it out (a newsletter, say). |
-| `set_aside` | dict[str, str] \| None | `None` | For a mail item set aside as not work: {section (personal or sales), rule, reason}, and {confirmed_at} once the person confirmed it (it is then deleted from the app after a short while). Today leaves it out and counts it; the Set aside folder lists it. |
+| `set_aside` | dict[str, str] \| None | `None` | For a mail item set aside as not work: {section (personal or sales), rule, reason}, and {confirmed_at} once the person confirmed it (it is then deleted from the app after a short while). Today leaves it out and counts it until it is confirmed; the Set aside folder lists it. |
 | `deleted` | bool | `False` | The person confirmed the message was rightly set aside and its content was deleted from the app. Only a marker is kept (the source, key, sender address, date, section and rule), so a later read doesn't hand it in again. |
 
 ### `watch_run` (WRUN-n)

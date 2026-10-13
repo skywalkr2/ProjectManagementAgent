@@ -26,6 +26,7 @@ import yaml
 
 from engine.connectors import CORE, declared_reads, reads
 from engine.shipped import shipped
+from engine.state_file import write_whole
 from engine.storage import StoreError
 from engine.yaml_load import load_yaml
 
@@ -81,11 +82,7 @@ def _state(ws: Any) -> dict[str, Any]:
 
 def _save_state(ws: Any, data: dict[str, Any]) -> None:
     """Write the whole file in one step, so a read never finds it half written."""
-    ws.private_dir.mkdir(parents=True, exist_ok=True)
-    target = ws.private_dir / STATE_FILE
-    temporary = target.with_suffix(".json.saving")
-    temporary.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    temporary.replace(target)
+    write_whole(ws.private_dir / STATE_FILE, json.dumps(data, indent=2) + "\n")
 
 
 #: Held while the state is read, changed and written, so changes made at the same moment (a screen sends several when it
@@ -412,6 +409,5 @@ def keep_key(ws: Any, account: str, key: str) -> str:
     folder.mkdir(parents=True, exist_ok=True)
     os.chmod(folder, 0o700)
     path = folder / account
-    path.write_text(key.strip() + "\n", encoding="utf-8")
-    os.chmod(path, 0o600)
+    write_whole(path, key.strip() + "\n", mode=0o600)
     return f"file:{path.resolve()}"

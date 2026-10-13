@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.config import Config
+from engine.state_file import write_whole
 from engine.workspace import WORKSPACE_GITIGNORE, Workspace
 
 #: The folders a backup holds beside its database, copied into a restored workspace.
@@ -155,12 +156,15 @@ def _prune(base: Path, name: str, keep: int) -> None:
 
 def _load(ws: Workspace) -> dict[str, Any]:
     path = ws.private_dir / STATUS_FILE
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _save(ws: Workspace, status: dict[str, Any]) -> None:
-    ws.private_dir.mkdir(parents=True, exist_ok=True)
-    (ws.private_dir / STATUS_FILE).write_text(json.dumps(status, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_whole(ws.private_dir / STATUS_FILE, json.dumps(status, indent=2, sort_keys=True) + "\n")
 
 
 # ---- restoring a whole backup ----------------------------------------------------------------------------------------
