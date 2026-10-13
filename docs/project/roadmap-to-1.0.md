@@ -334,6 +334,15 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [ ] **The audit trail:** sign-ins, sign-outs and turning a plugin on or off are recorded.
 - [ ] **A shared synced folder** (`storage.sync.shared`, asked when the folder is chosen): outside edits from a shared
   folder arrive as content, not the person's own words.
+- [ ] **Test and start-up efficiency, what the speed pass left** (prime directive; the pass itself: 72 s to 43 s wall,
+  half the CPU, `tests/speedups.py` and the faster repository scan):
+  - the product reads its settings with the C YAML parser when it is installed, so every start and settings load is
+    faster and the tests run the product's own parser (today only the tests use it);
+  - the same stub evaluation of the demo cases runs in three tests; keep each layer's assertion on fewer cases;
+  - each store re-imports every plugin package; caching the plugin classes across stores needs a design for isolation;
+  - tests that build several apps for one assertion share one;
+  - the browser test "a value added to the project status list ... still there after a reload" fails under heavy load
+    (seen three times); find the wait it is missing.
 - [ ] Journey tests:
   - **no silent stops,** each with a fake provider:
     - a usage limit, then the work resuming by itself at the reset;
@@ -616,6 +625,9 @@ being done, builds schedules and tracks action items.
   pack adds planning on top, through ops and the core's records:
   - [ ] **The charter:** drafted from a brief or notes for the person to approve (goals, scope, stakeholders, risks).
   - [ ] **Minutes of meetings:** drafted from notes or a transcript, with the decisions and actions filed as records.
+  - [ ] **The files a project manager hands around** (owner, 2026-10-13: "PPTs, excels, etc"): slide decks, spreadsheets
+    (schedules, trackers, budgets) and documents, built from the records in the person's template and saved or shared
+    through the core's publisher after the person approves the exact file (C4).
   - [ ] **The plan:** goals, phases, deliverables and milestones.
   - [ ] **The schedule:** work items with durations and dependencies, a critical path, dates worked out from the
     dependencies, baselines, and slips against them. Only the person rebaselines.
