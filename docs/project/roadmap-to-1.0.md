@@ -58,7 +58,7 @@ Within 0.3 every change is additive: a pack built for an earlier 0.3 version kee
 | L-core: L5 | The text-extractor extension point; a connector item that carries files (mail attachments) | 0.3.x | No |
 | B | Nothing planned: panels, Today lines and jobs keep their contract through the redesign | none | No |
 | C1 to C3 | What the packs' builders ask for, answered in the weekly round (round 39: a conversation on a record, context-sized task kinds, data-form previews, a pack's value on a request, computed-column headings); interfaces between packs (such as `pm/schedule@1`) belong to the packs | 0.3.x | No |
-| C4 | The publisher and the file channel for a pack's outputs, and fact lookups from configured sources. Whether a pack's "send" changes shape is decided here; if it does, this is 0.4 | 0.3.x or 0.4 | Only if 0.4, announced a round ahead |
+| C4 | The publisher and the file channel for a pack's outputs, fact lookups from configured sources, and a kind of author for edits made outside the app in a shared folder. Whether a pack's "send" changes shape is decided here; if it does, this is 0.4 | 0.3.x or 0.4 | Only if 0.4, announced a round ahead |
 | D | Frozen: no new names, only fixes, anything deprecated removed | 0.9 | Removals only, listed a round ahead |
 | Publish 1.0 | 1.0 once the writing pack and the project management pack run on it unchanged through phase D's week of real use | 1.0 | No |
 
@@ -291,7 +291,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
     the re-check of every other open question, one store interface over every action store, the notice baseline date,
     `track_only` notices, `owner_format` parsing and `person.merge`.
   "Add a new person" is L3b.
-- [ ] **Where the code and the design differ, decided** (found by the design pass; the technical PM's calls, 2026-10-13):
+- [x] **Where the code and the design differ, decided** (found by the design pass; the technical PM's calls, 2026-10-13):
   - [x] a question's stored kind (question or decision) stays: the assistant says which, and it is checkable. The design
     (6.8) is corrected to say so, and Follow-ups uses the kind instead of treating every question to the PM as a
     decision (here, L0). Built: `web/src/components/FollowUps.test.tsx` ("a question to the PM shows as a decision or as a
@@ -313,8 +313,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
     `tests/test_record_page.py::test_the_owner_format_applies_to_the_owners_on_the_review_screen_and_the_record_page`;
   - [x] a change to an action's due date or text after it was told is marked "to send" again (here, L0). Built:
     `tests/test_followups_backup_eval.py::test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_for_that_person`.
-  - Left in this item: the "to send" marker on each action row (phase B) and the references table's new keys (with
-    `person.merge`), so the item stays open.
+  - Moved (2026-10-13, closing L0): the "to send" marker on each action row to phase B's Work item, and the references
+    table's new keys to `person.merge`, which stays unscheduled.
 - [x] **No silent stops** (design 8.5, 8.6, 8.8; waking up after sleep is its own item below):
   - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived (done:
     `tests/test_names.py::test_the_packet_states_the_inputs_received_date_beside_todays`);
@@ -386,8 +386,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [x] Sources and files carry their `data_level`, from the hand-in's choice or the watched source's setting (with a default
   per connector). The record field is `sensitivity` (`data_level` is a record type's own level on the base record). A
   source's level is its own setting, else its kind's (`watch.connector_data_levels`), else `watch.default_data_level`; a
-  run is at the highest of its record type, its request and its source. Left: `sync.sources` (encrypt or leave out above a
-  level) stays designed, not built. Tests: `tests/test_data_levels.py::test_a_hand_ins_choice_is_kept_on_its_source_and_decides_the_runs_level`,
+  run is at the highest of its record type, its request and its source. `sync.sources` (encrypt or leave out above a
+  level) moved to phase E with the governor. Tests: `tests/test_data_levels.py::test_a_hand_ins_choice_is_kept_on_its_source_and_decides_the_runs_level`,
   `test_a_watched_sources_level_is_its_own_setting_else_its_kinds_else_the_default`,
   `test_the_level_is_chosen_from_the_source_then_its_kind_then_the_default`,
   `test_a_file_carries_the_level_it_was_added_with`, `test_an_upload_names_its_level_and_the_list_shows_it`,
@@ -408,7 +408,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
     (`engine/handover.py::apply_redactions`), so two computers don't read it as a divergence. Forgetting a person (5.2,
     phase E) will use the same step. Built:
     `tests/test_set_aside.py::test_a_confirmed_set_asides_redaction_matches_its_original_when_two_histories_are_compared`.
-- [ ] **Personal and sales mail set aside, the rest** (owner, 2026-10-12; design 6.5; the rules part is phase A5,
+- [x] **Personal and sales mail set aside, the rest** (owner, 2026-10-12; design 6.5; the rules part is phase A5,
   `tests/test_set_aside.py`; the sorting run is `tests/test_mail_sorting.py`):
   - a Set aside folder (Personal; Sales and promotions);
   - sorting by the person's sender and domain rules, then the mail's own category and bulk headers, then a low-cost
@@ -436,9 +436,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
   the pair and the evaluation case are tests; moving them into fixtures is part of L4.
   The first go sorts what was handed in while it was pending, then runs only the work mail:
   `test_the_first_go_sorts_the_mail_handed_in_before_it_sets_aside_the_newsletter_and_runs_only_the_work`.
-  Left: a sorting run that couldn't be made for its own reason (its own budget, an estimate above the amount to ask
-  about) is told only in the read's note, which no screen shows yet; showing it on the source's row in Sources is
-  phase B. The item is unticked until then.
+  Moved to phase B's Work item: a sorting run that couldn't be made for its own reason (its own budget, an estimate
+  above the amount to ask about) shown on the source's row in Sources; today it is told only in the read's note.
 - [x] **"Look at the last day" works for a folder:** today it hands in nothing, because folder items carry no time.
   Folder items carry the file's modified time, kept on the snapshot, so the person can hand in what is already there
   (found by the phase A fixes; the add-source hint then points to it). Tests:
@@ -480,7 +479,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
     the count at 1 before the new message was read. The count is what the folder lists. Built:
     `tests/test_set_aside.py::test_the_set_aside_count_is_what_the_folder_holds_so_a_confirmed_item_is_not_in_it`; J2 now
     checks that nothing is counted before the new message is read.
-- [ ] **What the mail journey found** (phase A3, J2):
+- [x] **What the mail journey found** (phase A3, J2):
   - [x] **A blocked word costs a second AI request:** a fixture mail with a blocked word in it sent the item through the
     fix round, so real mail could cost double. First check in the code whether wording lints look at quoted outside
     text (evidence) or only at the assistant's own words. Quoted evidence is never linted. A wording lint on an item that
@@ -497,7 +496,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
     before the changeset is stored). Tests: `tests/test_moments.py::test_a_filed_note_shows_the_time_in_the_persons_format_and_the_evidence_keeps_the_inputs_words`,
     `test_a_date_time_with_its_zone_is_written_in_the_persons_zone_and_format`,
     `test_text_without_a_complete_timestamp_is_left_as_it_is`.
-- [ ] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
+- [x] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
   concept that the PM pack (phase C) builds on, so its records are designed for both. When an input that isn't set aside
   names a date or a date range for something (a delivery window, a deadline, an appointment), the assistant records a
   calendar entry in the app's own calendar, with its date or range and the quoted words, beside the fact it records.
@@ -513,7 +512,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `test_own_entries_follow_the_connected_events_and_a_removed_entry_is_gone`,
   `test_the_agenda_route_marks_an_own_entry`; the label in `TodayBoard.test.tsx`), and the golden case
   `workspaces/demo-b/evals/delivery-window.yaml` (`test_the_delivery_window_case_gives_the_fact_and_an_entry_spanning_it`).
-  **Left: the learning pair (L4).** Knowledge isn't in packets until L-core, so a corrected date can't carry to the next
+  **The learning pair moved to L4** (with the other pairs). Knowledge isn't in packets until L-core, so a corrected date can't carry to the next
   mail yet; the pair is built with the other pairs.
 - [x] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
   (manifest validation, registration errors) get plain words and a test that produces each; Ask's material names
@@ -580,9 +579,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   (`test_edits_from_a_shared_folder_are_untrusted_content_the_person_still_reviews`,
   `test_a_working_copy_from_a_shared_folder_is_untrusted_too`, `test_edits_from_a_folder_only_the_person_uses_stay_the_persons_own`);
   the question when the folder is chosen: `web/src/components/Setup.test.tsx` ("after choosing a folder the question about
-  sharing comes first ..."). Left: an accepted passage is still credited to the person (a fourth kind of author is a plugin
-  API question).
-- [ ] **Test and start-up efficiency, what the speed pass left** (prime directive; the pass itself: 72 s to 43 s wall,
+  sharing comes first ..."). An accepted passage from a shared folder is still credited to the
+  person; a kind of author for outside edits moved to the plugin API's C4 row (a pack's authorship answers depend on it).
+- [x] **Test and start-up efficiency, what the speed pass left** (prime directive; the pass itself: 72 s to 43 s wall,
   half the CPU, `tests/speedups.py` and the faster repository scan):
   - [x] the product reads YAML with the C parser when it is installed (`engine/yaml_load.py`, used everywhere the
     engine parses YAML), so every start and settings load is faster and the tests run the product's own parser
@@ -592,7 +591,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - [x] the same stub evaluation of the demo cases ran in three tests; the full run stays in
     `test_every_case_passes_with_its_ideal_answer`, and the two CLI tests assert their own layer on one case
     (`test_evaluate_with_the_stub_checks_the_cases`, `test_evaluate_runs_a_workspaces_own_cases_with_its_own_ai_setup`);
-  - each store re-imports every plugin package; caching the plugin classes across stores needs a design for isolation;
+  - each store re-imports every plugin package; caching the plugin classes across stores is not done (decided
+    2026-10-13): the suite runs in about 75 s and caching would weaken the isolation between workspaces; revisit if
+    the suite passes two minutes;
   - [x] tests that build several apps for one assertion share one: the base-path and policy test builds one workspace and
     one app per base (`tests/test_api.py::test_the_ui_gets_a_base_for_the_configured_path_and_a_strict_policy`), the
     sign-in callback test uses a second client of the same app
@@ -729,7 +730,8 @@ around. Each is the person's choice, with Undo, and each answer is learned (L3).
 The buttons are laid out with the rest of the screens in phase B; their behavior and tests are here.
 
 L4. **Proving it** (from the design author's review of this plan).
-- [ ] **15 to 20 fictional fixture pairs, about a third negative.** A negative pair's later input must not change; a loop
+- [ ] **15 to 20 fictional fixture pairs, about a third negative.** They include the pairs L0 left here: a corrected
+  date that carries to the next mail's calendar entry, and set-aside mail (today tests, moved into fixtures here). A negative pair's later input must not change; a loop
   that over-learns is as harmful as one that doesn't learn. Each pair is (a) an input, the wrong output, the correction and
   the expected proposal, and (b) a later input. The cases, in generic form:
   - **look it up, don't ask:** a date a published schedule holds is asked of a person; afterwards a similar input produces a
@@ -816,7 +818,8 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   top-level. Review & copy and send back are placed as designed, and the keyboard starts on the queue. The `restart` line
   (with Restart now) and the `paused` line are in the queue already (L0) and need drawing, with the wording keys
   `queue.restart.*` and `queue.paused.*`.
-- [ ] **Work:** What changed and Follow-ups as list | detail. Waiting to go out is a designed screen with its empty
+- [ ] **Work:** What changed and Follow-ups as list | detail, with a "to send" marker on each action row (from L0).
+  Sources shows on a source's row when its mail couldn't be sorted and why (from L0). Waiting to go out is a designed screen with its empty
   state.
 - [ ] **Records:** the Projects table and the People table with detail panes; record pages; forms in drawers. The
   synced folder lives only in Settings.
@@ -1086,7 +1089,7 @@ time, nothing went out without approval, a backup succeeded, and the repeat-corr
 ## Phase E: the rest of version 1
 
 Order by what protects real data first, then by what the packs ask for:
-- [ ] **The governor:** stale-item sweeps, outage handling, the scheduled export with its remote; restore to a point in
+- [ ] **The governor:** stale-item sweeps, outage handling, `sync.sources` (sources above a level encrypted or left out of the synced folder), the scheduled export with its remote; restore to a point in
   time (a single record comes in phase L).
   Outage handling includes a draft cut off at the output limit whose continuation call finds no network: today it is
   held with a note; it should wait for the network like any run.
