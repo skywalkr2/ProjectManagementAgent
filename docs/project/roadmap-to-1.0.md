@@ -269,7 +269,7 @@ How the numbers are read:
 
 If the repeat-correction rate doesn't fall, the loop isn't closing, and that is fixed before more pack work.
 
-L0. **Before real use: moved from phase A** (done 2026-10-13; every item below is ticked with its tests or moved by name to a later phase). Waiting for the original designer's review before L1 starts (open promise P13). None of these is needed for phase A's exit test. All of
+L0. **Before real use: moved from phase A** (done 2026-10-13; every item below is ticked with its tests or moved by name to a later phase). Signed off by the original designer on 2026-10-13; L1 starts when the owner says. None of these is needed for phase A's exit test. All of
 them are needed before the owner's daily use, which starts when L-core passes.
 - [x] **Audit design 6.8 to 6.11 against the code** first, before the learning loop is built on them: the questions, actions, notices and names
   services. Fix what differs, or correct the design, so the learning loop's signals are right from the start. Done
