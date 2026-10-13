@@ -760,6 +760,11 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   "Review and publish 3 drafts"), who suggested it and why on the second line ("The assistant suggests · no answer
   yet"), and the row's actions (Mark done, Reassign, Hand to the assistant). Dated entries whose day has passed and
   that aren't marked done are lines ("passed, not marked done"), and the next two weeks' entries are listed after.
+- [ ] **Copy puts the formatted message and its plain text on the clipboard together** (owner, 2026-10-13: the work
+  version opens a generated page with a copy button; decided on review, design 7.5): the preview on screen is what is
+  pasted, mail and documents get the formatting, chat gets clean plain text, and the menu has Copy as plain text. Every
+  Copy in the app uses it (questions, follow-ups, the briefing, reports). A browser test pastes both versions and checks
+  the formatted one escapes every piece of text.
 - [ ] **The Monday briefing, in the app** (owner, 2026-10-13: the work version has "monday briefings"). On the first
   open of the week (the day is a setting), a briefing: what is due this week, what is late or at risk, what is
   blocked, who the person is waiting on, and decisions still open, built from the records by rules. A short written

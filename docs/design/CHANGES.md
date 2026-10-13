@@ -707,6 +707,12 @@ yet follow, that it is *designed*, with its phase.
 | The audit trail | Settings changes were recorded; sign-ins, sign-outs and turning add-ons on or off were not (12.1) | Each is an `audit_entry` record, written in the same transaction as the change where there is one; never a token, a secret or the account's name. No screen lists them yet (the Admin tab is phase E); they are in the ledger and the export. Built: `tests/test_audit.py` |
 | A shared synced folder | Outside edits always counted as the person's own | `storage.sync.shared` (false), asked when the folder is chosen and changeable on the folder's panel (a live setting). From a shared folder an outside edit is filed as an outside input, its changeset and every write are untrusted, and its notes say it may be someone else's change; the person's review is unchanged (5.0, 12.8). Built: `tests/test_shared_folder.py` |
 
+## 36. Copy puts formatted text and plain text on the clipboard together (2026-10-13)
+
+| Item | Before | Now |
+|---|---|---|
+| What Copy puts on the clipboard | Plain text only; the work version the owner uses opens a generated page with its own copy button | The message as previewed, in two versions at once (formatted for mail and documents, plain for chat); Copy as plain text in the menu; built by the app with every piece of text escaped, never a separate page (7.5). Decided, not built (roadmap phase B) |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

@@ -3,6 +3,16 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: Copy puts formatted text and plain text on the clipboard; no generated page to copy from
+
+**Decided by:** the technical PM, on the owner's request to decide as a UI/UX question (the work version opens a
+generated page with a copy button). **What:** Copy writes the previewed message to the clipboard as both formatted text
+and plain text in one step; the place it is pasted chooses. No separate page or file. Copy as plain text is in the menu.
+**Why:** the preview the person reviewed is exactly what they paste, with one fewer window and no files piling up; it
+works the same hosted, local and on a phone; the formatting is built by the app from escaped text, so nothing the
+assistant writes becomes markup (design 7.0, never render raw HTML); chat apps that mangle formatting get clean plain
+text. **Impact:** design 7.5; the roadmap's phase B item; the existing Copy and Mark sent flow is unchanged otherwise.
+
 ## 2026-10-13: What the work version's screens add to phase B and the project management pack
 
 **Decided by:** project owner (sent screens of the version they use at work; open promise P11). **What:** phase B gains
