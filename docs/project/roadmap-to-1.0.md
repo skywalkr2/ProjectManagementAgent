@@ -367,7 +367,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
     internal warns without a return round (CLAUDE.md: lints only warn when the item stays internal).
   - **Machine timestamps in filed notes** ("When: 2026-10-12T18:19:04Z"): notes show dates and times in the person's
     format and time zone.
-- [x] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
+- [ ] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
   concept that the PM pack (phase C) builds on, so its records are designed for both. When an input that isn't set aside
   names a date or a date range for something (a delivery window, a deadline, an appointment), the assistant records a
   calendar entry in the app's own calendar, with its date or range and the quoted words, beside the fact it records.
@@ -412,6 +412,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - [x] the browser test "a value added to the project status list ... still there after a reload" waits for the
     reloaded People view before opening it (`acceptance.spec.ts`, "a value added to the project status list from a
     project form is selected, and still there after a reload"; passed twice, root project).
+  - [ ] the web test "the views are links, in the fixed groups" (`Sidebar.test.tsx`) timed out once under heavy load
+    and passes alone; find what it waits on.
   - [ ] the journey J4 (an add-on installed from the list) failed once while other test runs shared the machine and passed
     on its own; find what it waits on too.
 - [ ] Journey tests:
