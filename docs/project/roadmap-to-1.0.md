@@ -305,7 +305,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
     `tests/test_pipeline.py::test_closing_an_action_from_a_sender_nobody_knows_leaves_reported_by_empty`;
   - the screen: `web/src/components/FollowUps.test.tsx` ("past the nudge threshold, Followed up is the primary and They
     finished it moves to the row's menu"; "Followed up records the chase, says so on the row and can be undone").
-  - Left: Mark done on the PM's own action doesn't set `done_by` or `reported_by`.
+  - Mark done from a row credits the owners and records the PM as the reporter
+    (`tests/test_routes.py::test_marking_an_action_done_credits_its_owners_and_records_the_pm_as_the_reporter`).
 - [x] `project.priority` is person-only: the assistant may propose it, never set it. Test:
   `tests/test_projects_series.py::test_the_assistant_never_sets_a_projects_priority_but_the_person_does` (held for the
   person; the person's own change applies; another project field the assistant sets still applies).
@@ -368,6 +369,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - tests that build several apps for one assertion share one;
   - the browser test "a value added to the project status list ... still there after a reload" fails under heavy load
     (seen three times); find the wait it is missing.
+  - the journey J4 (an add-on installed from the list) failed once while other test runs shared the machine and passed
+    on its own; find what it waits on too.
 - [ ] Journey tests:
   - **no silent stops,** each with a fake provider:
     - a usage limit, then the work resuming by itself at the reset;

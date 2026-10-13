@@ -566,3 +566,16 @@ def test_a_run_held_for_its_cost_can_be_dismissed_and_put_back(gated):
     assert back.status_code == 200
     restored = _item(client, base, item["id"])
     assert restored["state"] == "needs_you" and not restored["dismissed"] and restored["approval"] == "required"
+
+
+def test_marking_an_action_done_credits_its_owners_and_records_the_pm_as_the_reporter(api):
+    """The person's path: they tick their own action on Today. The work is credited to its owners, and they are the
+    one who said it was done."""
+    client, base, _ = api
+    store = client.app.state.store
+    action = next(a for a in store.read().list("action") if a.data["status"] == "open" and a.data.get("owners"))
+    owners = [o["person"] for o in action.data["owners"]]
+    assert client.post(f"{base}/actions/{action.id}/status", json={"status": "done"}).status_code == 200
+    data = store.read().get("action", action.id).data
+    pm = next(s["person"] for s in client.get(f"{base}/followups").json() if s["is_pm"])
+    assert data["status"] == "done" and data["done_by"] == owners and data["reported_by"] == pm

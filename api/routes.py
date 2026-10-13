@@ -1264,6 +1264,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 change: dict[str, Any] = {"status": body.status}
                 if body.status == "open":
                     change |= {"done_by": [], "reported_by": None}  # reopening takes the credit back
+                elif body.status == "done":
+                    # The work is credited to its owners; the person who ticked it is the one who said it was done.
+                    owners = [o["person"] for o in cur.data.get("owners", [])]
+                    change |= {"done_by": owners, "reported_by": cfg.workspace.user.person}
                 tx.update("action", action_id, change, _PM, read_version=cur.version)
 
         guard(do)
