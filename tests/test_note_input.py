@@ -290,7 +290,8 @@ def test_a_change_to_how_the_product_behaves_from_a_typed_note_waits_for_the_per
     client, base, worker = api
     store = client.app.state.store
     on = golden()["typed_on"]
-    answer = {"summary": "A new status", "ops": [{"op": "list.add", "list": "project-status", "value": "Waiting on art"}]}
+    added = {"op": "list.add", "list": "project-status", "value": "Waiting on art"}
+    answer = {"summary": "A new status", "ops": [added]}
     set_responder(lambda task: json.dumps(answer))
     r = client.post(f"{base}/followups/{on['person']}/actions/{on['id']}/finished", json={"note": LONG})
     assert worker.run_pending() == 1
