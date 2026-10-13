@@ -1225,6 +1225,9 @@ C4. **What the packs need from the core.**
 - [ ] **Round 45** (received 2026-10-13): 202 answered at once from the code (a superseded request's `state` is set to
   done in the same change that sets `superseded_by`); 203, a stable code on the core's failures for packs' tests, and
   the guide saying the wording is not the contract, answered in the weekly round.
+- [ ] **Round 46** (received 2026-10-13; answered in the weekly round): 204, `where` and `start_where` reading a field
+  through a reference (with 195); 205, a request in a proposal `about` an existing record an item's op changes, dropped
+  with it (with 194); 206, the guide saying a request waiting for the go is `needs_you` with approval `required`.
 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
