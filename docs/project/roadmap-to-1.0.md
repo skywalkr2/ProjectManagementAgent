@@ -601,9 +601,9 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - [x] the same stub evaluation of the demo cases ran in three tests; the full run stays in
     `test_every_case_passes_with_its_ideal_answer`, and the two CLI tests assert their own layer on one case
     (`test_evaluate_with_the_stub_checks_the_cases`, `test_evaluate_runs_a_workspaces_own_cases_with_its_own_ai_setup`);
-  - each store re-imports every plugin package; caching the plugin classes across stores is not done (decided
-    2026-10-13): the suite runs in about 75 s and caching would weaken the isolation between workspaces; revisit if
-    the suite passes two minutes;
+  - each store re-imports every plugin package; caching the plugin classes across stores moved out of L0 (the
+    original designer's review, 2026-10-13): it needs its own design for the isolation between workspaces, and is not
+    scheduled while the suite runs in about 75 s; revisit if it passes two minutes;
   - [x] tests that build several apps for one assertion share one: the base-path and policy test builds one workspace and
     one app per base (`tests/test_api.py::test_the_ui_gets_a_base_for_the_configured_path_and_a_strict_policy`), the
     sign-in callback test uses a second client of the same app
@@ -633,6 +633,19 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - [x] **waking up** (for the scheduled reads: `tests/test_journeys.py::test_j11_a_scheduled_read_missed_in_sleep_runs_once_on_waking_and_a_lost_network_files_nothing`): the computer sleeps through a scheduled batch and wakes. The batch runs once, nothing looks fresh that
     isn't, and nothing is filed for the lost network (design 8.6). Most people open the lid rather than start fresh, and
     waking was where most "it just stopped" reports came from.
+- [ ] **A lost network, as the original designer's version held** (their review, 2026-10-13: after a wake with no
+  network their runs failed and paused two AI accounts that stayed paused a day). On top of what is built below:
+  - `offline` never pauses an account and never counts toward one being failing; check every path that pauses one;
+  - a successful run clears any pause on its account;
+  - the header's status line shows the offline state while it lasts;
+  - the Today line appears after `dispatch.offline_line_after_minutes`, default 60 (most waits clear within minutes
+    of opening the lid).
+- [ ] **Text where text belongs** (the original designer's review, 2026-10-13: a change written as YAML turned
+  "Team wireless: KEY-1 release on top" in a table cell into a mapping, and its commas split one title across three
+  columns, and it was published that way). Every text field in an op is a string: an op with a mapping or a list where
+  text belongs is refused at the applier with "put text with ': ' in quotes", never coerced. Check every place the
+  assistant's answer is parsed (JSON or YAML) and every op field typed loosely (`Any`, mappings of values, record
+  edits). A golden case with a colon in a title, and one in a list-like value. The screen check stays.
 - [x] **A lost network while the assistant works** (found by the waking-up journey; decided 2026-10-13): a call that can
   make no connection is the error kind `offline`, not `provider_down`; the request waits for the network without counting
   a try, says why and since when, is looked at again after `dispatch.offline_check_seconds`, and after
@@ -856,13 +869,23 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   wrong comes from the code, not memory. Then one place for each: every open action with its owner, due date, project
   and where it came from; every open question with who it's waiting on and since when. Filter by project, person and
   state; edit, close and reassign from the row, with Undo; duplicates offered for merging; anything stale or with no
-  owner surfaced on Today. Exit check: the owner works through their own open items on a laptop and a phone.
+  owner surfaced on Today. From the original designer's review (2026-10-13): "where it came from" is a link that opens
+  the source, not a label; a note typed on any action button reaches the assistant; each row carries its project (and
+  parent project) tag, with its notes on hover; actions are worded to stand on their own (a playbook rule and a lint
+  on the assistant's wording); and the follow-up rule above. Exit check: the owner works through their own open items on a laptop and a phone.
+- [ ] **When something is due a follow-up** (the original designer's review, 2026-10-13: counting from when a notice
+  was sent made an action due in a month come up three days later). One rule, used by Top priorities, Today's lines
+  and the Follow-ups pills ("red past the follow-up time"), so all three agree: a notice of an action for someone is
+  chased only when its action is due within 7 days or overdue, never while it is on hold, and an undated one after 14
+  days with no word; a plain question is chased after 4 days. Each number is a setting. Check what the code does today
+  first (`engine/followups.py`, the nudge threshold) and test the rule at the engine.
 - [ ] **Top priorities, always current** (owner, 2026-10-13: the version used at work has "a constantly updated top
   priority items" list). A short ranked list on Today across every project, rebuilt as records change and ranked by
   rules (due and overdue, at risk, blocked, waiting on the person, the project's priority), never by an AI call. Shaped
   by the owner's screens of the work version (open promise P11, received 2026-10-13): one row per thing with a date chip
-  (red when due), a verb first ("Follow up with <person>: 3 questions waiting up to 5 days", "Send <person> 1 question",
-  "Review and publish 3 drafts"), who suggested it and why on the second line ("The assistant suggests · no answer
+  (red when due), a verb first, **one line per person** ("<person>: send 1 question, follow up on 3 waiting up to 5
+  days", with the items in the line's tooltip; the original designer's review: two lines per person made seven lines
+  where five said it all), "Review and publish 3 drafts", who suggested it and why on the second line ("The assistant suggests · no answer
   yet"), and the row's actions (Mark done, Reassign, Hand to the assistant). Dated entries whose day has passed and
   that aren't marked done are lines ("passed, not marked done"), and the next two weeks' entries are listed after.
 - [ ] **Copy puts the formatted message and its plain text on the clipboard together** (owner, 2026-10-13: the work

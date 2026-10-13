@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: The original designer's review of L0 and the work version's screens
+
+**Decided by:** the original designer, on review; accepted by the technical PM. **What:** a lost network never pauses an
+account or counts toward one failing, a successful run clears its account's pause, the header shows the offline state,
+and the Today line waits an hour by default; every text field in an op must be text, refused when it arrives as a
+mapping or a list; one follow-up rule for Top priorities, Today and the Follow-ups pills (an action notice is chased
+only when its action is due within 7 days or overdue, never on hold, an undated one after 14 days; a plain question
+after 4 days); Top priorities writes one line per person; the action-items item gains a source link, notes from any
+action button, project tags and stand-alone wording. **Why:** each was found in real use of the work version.
+**Impact:** two L0 items (the network follow-up, text where text belongs); phase B's Top priorities and action items;
+the follow-up rule's numbers are settings. Design 6.9 and 8.6 change when each is built.
+
 ## 2026-10-13: The plugin API has its own road to 1.0 in the plan
 
 **Decided by:** project owner ("the API updates ... are important to define timeline plan on"). **What:** the roadmap
