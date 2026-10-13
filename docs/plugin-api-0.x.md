@@ -20,6 +20,10 @@ Manifests stay `'>=0.3,<0.4'`.
   makes) gets that level unless the person chose another at the upload, and a run about the file goes only to accounts
   allowed it. Only the person changes the level afterwards. A file a working copy writes takes at least its record's
   level.
+- **A run record may serve no request**: the core `run` record's `request` is now optional (`None` for a run that serves
+  no single request, such as the core's mail sorting). A plugin that reads runs should allow it.
+- **`setting.propose` names a setting code**: the core Ask op's field is `setting` (a short code from the settings list)
+  instead of `key`. It is not offered to plugins' own task kinds, so no plugin is affected.
 
 ## What 0.3.60 adds
 
