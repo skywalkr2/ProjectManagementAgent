@@ -2,7 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
-import { useSignInReturn } from "../lib/sign-in-return";
+import { rememberReturn, useSignInReturn } from "../lib/sign-in-return";
 import { Refuse, fakeApi, renderApp } from "../test-utils";
 import { SignIns } from "./SignIns";
 
@@ -531,6 +531,17 @@ describe("coming back from the service", () => {
     expect(window.location.pathname).toBe("/tools/cockpit/");
     expect(window.location.search).toBe("?keep=1");
     expect(window.location.hash).toBe("#/settings");
+  });
+
+  test("coming back opens the screen the sign-in was started from, once", async () => {
+    window.history.replaceState(null, "", "/#/setup");
+    rememberReturn();
+    window.history.replaceState(null, "", "/?sign_in=done&name=demo%2Ftwo");
+    fakeApi({ "GET sign-ins": () => LIST });
+    renderApp(<Return />);
+    await screen.findByText("Signed in to Service demo/two.");
+    expect(window.location.hash).toBe("#/setup");
+    expect(window.sessionStorage.getItem("cockpit.sign-in-from")).toBeNull();
   });
 
   test("nothing is shown when the address has no sign-in outcome", async () => {

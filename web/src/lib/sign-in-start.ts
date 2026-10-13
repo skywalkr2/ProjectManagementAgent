@@ -3,6 +3,7 @@
 // (see lib/sign-in-return.ts).
 import { useState } from "react";
 import { api } from "./api";
+import { rememberReturn } from "./sign-in-return";
 import { problemText } from "./problem";
 import { useWords } from "./wording";
 
@@ -15,7 +16,8 @@ export function useStartSignIn(name: string): { start: () => Promise<void>; busy
     setProblem("");
     try {
       const started = await api.startSignIn(name);
-      // The service's own page replaces this one; the busy state stays until it does.
+      // The service's own page replaces this one; the busy state stays until it does. Coming back opens this screen.
+      rememberReturn();
       window.location.assign(started.url);
     } catch (err) {
       setProblem(problemText(err, t));

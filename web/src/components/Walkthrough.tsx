@@ -64,11 +64,13 @@ export function Walkthrough(
     }
   };
 
-  // Opening it is the person's choice, so a walkthrough closed or finished before is open again from here.
+  // Opening it is the person's choice, so a walkthrough closed or finished before is open again from here. Keeping its
+  // screen also records that it was shown, so it opens by itself again only while something it needs is missing.
   useEffect(() => {
-    if (!data || reopened.current) return;
+    if (!data || !current || reopened.current) return;
     reopened.current = true;
-    if (data.walkthrough.closed || data.walkthrough.finished) void keep({ closed: false, finished: false });
+    const again = data.walkthrough.closed || data.walkthrough.finished ? { closed: false, finished: false } : {};
+    void keep({ step: current, ...again });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 

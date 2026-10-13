@@ -392,6 +392,10 @@ field):
 Plugins register more, namespaced, each with its tier. Reading notes is offered every op except those that are the person's own
 or only for actions and asks (deleting, `file.add`, `project.add`, `record.edit`, the long-text ops, and the asking ops).
 
+*Designed, phase L0:* `event.add`, a calendar entry in the app's own calendar (a date or a date range, a title, the
+project it belongs to, and evidence), recorded when an input that isn't set aside names a date for something (a delivery
+window, a deadline, an appointment), beside the fact. It is never written to a calendar service (owner, 2026-10-13).
+
 *Designed, not yet built* (the first design's list): data ops `record.add`, `record.del`, `record.rename`, `action.update`,
 `action.assign`, `decision.add`, `milestone.add`, `risk.add`, `question.update`, `question.move`, `question.drop`,
 `meeting.add`, `meeting.update`, `person.merge`, `dependency.add`, `dependency.update`, `issue.add`, `issue.update`,

@@ -62,6 +62,9 @@ Started 2026-10-12.
 
 None of it takes a file edit, a second terminal command or a demo. Automated journey tests cover the same path.
 
+**Status (owner, 2026-10-13):** the owner has done steps 1 to 4 and 6 on their own workspace, with fixes along the
+way. Phase A's exit test counts as passed once the owner hands in a note on the next run (step 5) and sees the result.
+
 **Known while running it** (from the first design author): the test reads real mail before the received-date and
 first-name fixes, which are in L0. Nothing goes out during the test, so it is safe. Expect "by Friday" counted from the
 processing day, and some bare first names guessed. These are already planned and are not new bugs.
@@ -271,6 +274,15 @@ them are needed before the owner's daily use, which starts when L-core passes.
     internal warns without a return round (CLAUDE.md: lints only warn when the item stays internal).
   - **Machine timestamps in filed notes** ("When: 2026-10-12T18:19:04Z"): notes show dates and times in the person's
     format and time zone.
+- [ ] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
+  concept that the PM pack (phase C) builds on, so its records are designed for both. When an input that isn't set aside
+  names a date or a date range for something (a delivery window, a deadline, an appointment), the assistant records a
+  calendar entry in the app's own calendar, with its date or range and the quoted words, beside the fact it records.
+  The agenda shows these entries next to the connected calendars' events. Nothing is written to the person's calendar
+  service: the mail and calendar add-ons stay read-only. Today the agenda shows only events read from a connected
+  calendar, and a delivery window is recorded only as a fact. Exit check: a golden-set case (an order mail with an
+  estimated delivery window gives the fact and an entry spanning the window) and a learning pair (a corrected date on an
+  entry carries to the next similar mail).
 - [ ] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
   (manifest validation, registration errors) get plain words and a test that produces each; Ask's material names
   settings without their keys, with `setting.propose` finding the key another way.
@@ -458,6 +470,10 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   whose values are known is a list to pick from. Audit each free-text field and convert it, with a test per screen. The
   time zone is done (`test_the_time_zone_setting_is_a_list_of_known_time_zones`; the Settings screen and the
   walkthrough). Settings name their lists with `choices`.
+- [ ] **The app's own kit, offered where it's wanted** (owner, 2026-10-13: "i dont want to see these fake plugins"): the
+  add-ons that come with the app (the define-your-own kit and the example) no longer show in setup or on the Add-ons
+  screen while off. The kit is offered where a person asks for kinds of items of their own (Ask, the record forms),
+  not as an add-on to turn on.
 - [ ] **The walkthrough's look** (owner, 2026-10-12: "this looks rough"):
   - fields sized to what they hold, not the full page width;
   - one clear primary button per screen ("Save and continue"), with Skip as a quiet link;
@@ -523,6 +539,9 @@ being done, builds schedules and tracks action items.
   - [ ] **Tracking:** what is late or at risk each day goes to Today, with the action items behind it; a weekly status
     report is drafted for the person to send.
   - [ ] **RAID:** risks, issues, assumptions and decisions, with owners and review dates.
+  - [ ] **On the app's own calendar** (owner, 2026-10-13): milestones, due dates and meetings are entries in the
+    core's calendar (the same records as `event.add`, phase L0), so the agenda and Today show them with everything
+    else that is dated.
   - [ ] **An interface other packs use** to put their milestones into the schedule (`pm/schedule@1`). The writing pack
     puts in the book's chapters and edits; the publishing pack puts in the launch plan.
 - [ ] Design 6.23 (dependencies and baselines) and 6.24 (RAID, risk reviews, escalation suggestions, cadence,

@@ -253,7 +253,16 @@ describe("opening", () => {
     open();
     await screenTitle();
     await waitFor(() =>
-      expect(calls.find((c) => c.route === "POST setup/walkthrough")?.body).toEqual({ closed: false, finished: false }),
+      expect(calls.find((c) => c.route === "POST setup/walkthrough")?.body).toMatchObject({ closed: false, finished: false }),
+    );
+  });
+
+  test("opening it records the screen it shows, so it doesn't open by itself again once nothing it needs is missing", async () => {
+    const calls = fakeApi(routes({}, CORE.map((id) => step(id)), { step: "people" }));
+    open();
+    await screenTitle();
+    await waitFor(() =>
+      expect(calls.find((c) => c.route === "POST setup/walkthrough")?.body).toEqual({ step: "people" }),
     );
   });
 });

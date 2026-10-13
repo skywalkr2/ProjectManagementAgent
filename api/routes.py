@@ -1673,6 +1673,8 @@ def _op_view(o: dict[str, Any], store: Store, people: People, projects: dict[str
             record = (ref["kind"], rec)
             break
     title = o.get("label") or op.get("text") or op.get("title") or op.get("answer") or op.get("full_name") or ""
+    if op["op"] == "answer":
+        title = op["text"]  # the whole answer is what the person reads, not its one-line label
     meta: dict[str, Any] = {}
     if record:
         kind, rec = record

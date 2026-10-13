@@ -249,7 +249,16 @@ test.describe.serial("acceptance scenario", () => {
       .poll(() => page.evaluate(() => ["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName ?? "")))
       .toBe(true);
     const screens = page.getByRole("navigation", { name: "Setup steps" });
+    const kept = page.waitForResponse(
+      (r) => r.url().includes("setup/walkthrough") && (r.request().postData() ?? "").includes('"done"'),
+    );
     await screens.getByRole("button", { name: /^Done/ }).click();
+    await kept;
+    // Opened fresh at a screen with no field, the cursor is on its heading, which shows no ring: it isn't a control.
+    await page.reload();
+    await expect(page.getByRole("heading", { level: 2, name: "Done" })).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).toBe("H2");
+    expect((await focusRing(page)).shown).toBe(false);
     await page.locator('[data-step="first_note"]').getByRole("button", { name: "Hand something in" }).click();
     await expect(page.getByLabel("Paste or type it here")).toBeFocused();
     await checkAccessibility(page);

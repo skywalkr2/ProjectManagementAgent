@@ -175,11 +175,18 @@ class Walkthrough:
     finished: bool  # the person pressed the last button
 
 
+def missing_essentials(cfg: Any, found: list[Step]) -> bool:
+    """Whether something the assistant can't work without is missing: the person hasn't named themselves, or no AI
+    account has been chosen for any kind of work. An account that fails its test is said on Today, not here."""
+    named = next((s.done for s in found if s.id == "workspace"), True)
+    return not named or not any(tier.use for tier in cfg.ai.tiers.values())
+
+
 def walkthrough(ws: Any, cfg: Any, found: list[Step]) -> Walkthrough:
-    """Where the walkthrough stands. It opens by itself until the person closes it or finishes it, on a workspace whose
-    setup is not finished (or that it was already started on, so it doesn't vanish when the last step is done), and
-    never on the sandbox workspaces. It resumes at the screen kept from the last visit, else at the first one with a
-    step still to do."""
+    """Where the walkthrough stands. It opens by itself on every visit while an essential is missing (naming yourself,
+    choosing an AI account), even after Finish later; otherwise only on the first visit to a workspace whose setup isn't
+    finished, so the optional steps wait on Today's setup line. Never on the sandbox workspaces. It resumes at the
+    screen kept from the last visit, else at the first one with a step still to do."""
     mine = _state(ws).get("walkthrough")
     mine = mine if isinstance(mine, dict) else {}
     closed, ended, started = bool(mine.get("closed")), bool(mine.get("finished")), bool(mine.get("started"))
@@ -188,7 +195,8 @@ def walkthrough(ws: Any, cfg: Any, found: list[Step]) -> Walkthrough:
         todo = next((s for s in found if s.counted and not (s.done or s.skipped)), None)
         step = todo.group if todo else "done"
     return Walkthrough(
-        open=not closed and not ended and not cfg.workspace.demo and (started or not finished(found)),
+        open=not cfg.workspace.demo
+        and (missing_essentials(cfg, found) or not (started or closed or ended or finished(found))),
         step=step,
         closed=closed,
         finished=ended,
@@ -213,15 +221,16 @@ def keep_walkthrough(ws: Any, step: str | None = None, closed: bool | None = Non
 
 
 def addons_off(ws: Any, cfg: Any) -> list[str]:
-    """Add-ons installed on this computer (in the workspace's plugins folder or as packages) that aren't turned on."""
-    from engine.plugin_manifest import declared_plugins
+    """Add-ons the person installed on this computer (in the workspace's plugins folder or as packages) that aren't
+    turned on. The ones that come with the app aren't the person's to decide about here."""
+    from engine.plugin_manifest import declared_plugins, shipped_plugins
 
     enabled = set(cfg.workspace.plugins.enabled)
     try:
         installed = {m.name for m in declared_plugins(ws.config_dir, None)}
     except Exception:  # an add-on whose manifest doesn't read is listed on the Add-ons screen, not here
         return []
-    return sorted(installed - enabled)
+    return sorted(installed - enabled - shipped_plugins())
 
 
 def decide_addons(ws: Any, names: list[str]) -> None:

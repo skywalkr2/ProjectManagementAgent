@@ -1,5 +1,6 @@
 """The new-start walkthrough (design 7.8): the server keeps where it stands (the screen the person is on, closed,
-finished) so it opens by itself once, resumes after a restart and stays closed once closed. The setup steps it is a view
+finished). It opens by itself on every visit while naming yourself or choosing an AI account is missing, otherwise only
+on the first visit, and resumes at the kept screen. The setup steps it is a view
 of are grouped by screen: an add-on that reads mail or a calendar has its sign-in and steps under mail and calendar, and
 the optional extras never count toward finishing."""
 
@@ -56,25 +57,42 @@ def test_the_screen_the_person_is_on_is_kept_and_is_where_it_resumes_after_a_res
     assert walk["open"] and walk["step"] == "mail" and not walk["closed"]
 
 
-def test_finish_later_closes_it_for_good_and_opening_it_again_is_the_persons_choice(tmp_path):
+def test_finish_later_keeps_its_screen_and_it_opens_again_next_visit_while_you_or_an_ai_account_is_missing(tmp_path):
     ws, c = _fresh(tmp_path)
     c.post("/api/setup/walkthrough", json={"step": "ai"})
     closed = c.post("/api/setup/walkthrough", json={"closed": True}).json()
-    assert closed["closed"] and not closed["open"] and closed["step"] == "ai"
-    restarted = _open(ws)  # also after a restart
-    again = _view(restarted)
-    assert again["walkthrough"]["closed"] and not again["walkthrough"]["open"]
+    assert closed["closed"] and closed["step"] == "ai"
+    again = _view(_open(ws))  # the next visit, after a restart
+    assert again["walkthrough"]["open"] and again["walkthrough"]["step"] == "ai"
     assert not again["finished"]  # Today's setup line still has work to show
-    reopened = restarted.post("/api/setup/walkthrough", json={"closed": False}).json()
-    assert reopened["open"] and reopened["step"] == "ai"
 
 
-def test_finishing_it_closes_it_for_good(tmp_path):
+def _found(named=True):
+    """Setup steps as the walkthrough sees them: You done or not, People not done."""
+    return [setup.Step(i, d, False, group=i, counted=True) for i, d in {"workspace": named, "people": False}.items()]
+
+
+def test_once_you_and_an_ai_account_are_set_it_opens_by_itself_only_on_the_first_visit(tmp_path):
+    """The person's path: they don't add people yet. The walkthrough doesn't come back on later visits; People waits on
+    Today's setup line. Without their name or any AI account chosen, it comes back on every visit."""
     ws, c = _fresh(tmp_path)
-    c.post("/api/setup/walkthrough", json={"step": "done"})
-    done = c.post("/api/setup/walkthrough", json={"finished": True}).json()
-    assert done["finished"] and not done["open"]
-    assert not _view(_open(ws))["walkthrough"]["open"]
+    from types import SimpleNamespace
+
+    def settings(use):
+        tiers = {"routine": SimpleNamespace(use=use)}
+        return SimpleNamespace(workspace=SimpleNamespace(demo=False), ai=SimpleNamespace(tiers=tiers))
+
+    cfg, no_account = settings("an-account/a-model"), settings(None)
+    assert setup.walkthrough(ws, cfg, _found()).open  # the first visit
+    c.post("/api/setup/walkthrough", json={"step": "people"})  # it was shown
+    assert not setup.walkthrough(ws, cfg, _found()).open
+    c.post("/api/setup/walkthrough", json={"closed": True})
+    assert not setup.walkthrough(ws, cfg, _found()).open
+    assert setup.walkthrough(ws, cfg, _found(named=False)).open
+    assert setup.walkthrough(ws, no_account, _found()).open
+    c.post("/api/setup/walkthrough", json={"finished": True})
+    assert setup.walkthrough(ws, no_account, _found()).open
+    assert not setup.walkthrough(ws, cfg, _found()).open
 
 
 def test_an_unknown_screen_is_refused_and_nothing_is_kept(tmp_path):
@@ -88,21 +106,12 @@ def test_the_sandbox_workspaces_do_not_open_it_by_themselves(tmp_path):
     assert not _view(_open(ws))["walkthrough"]["open"]
 
 
-def test_it_does_not_open_when_everything_that_counts_was_already_dealt_with(tmp_path):
+def test_skipping_every_step_still_brings_it_back_while_you_and_an_ai_account_are_missing(tmp_path):
     ws, c = _fresh(tmp_path)
     for step in ("workspace", "ai", "mail", "backup", "people"):
         c.post(f"/api/setup/{step}/skip")
     view = _view(c)
-    assert view["finished"] and not view["walkthrough"]["open"] and view["walkthrough"]["step"] == "done"
-
-
-def test_a_walkthrough_already_started_stays_open_when_its_last_step_is_done(tmp_path):
-    ws, c = _fresh(tmp_path)
-    c.post("/api/setup/walkthrough", json={"step": "people"})
-    for step in ("workspace", "ai", "mail", "backup", "people"):
-        c.post(f"/api/setup/{step}/skip")
-    view = _view(c)
-    assert view["finished"] and view["walkthrough"]["open"] and view["walkthrough"]["step"] == "people"
+    assert view["finished"] and view["walkthrough"]["open"]
 
 
 def test_the_screen_to_open_at_is_the_first_with_something_left_when_none_was_kept(tmp_path):
@@ -134,7 +143,8 @@ def test_finishing_does_not_need_the_optional_extras(tmp_path):
     for step in ("workspace", "ai", "mail", "backup", "people"):
         c.post(f"/api/setup/{step}/skip")
     view = _view(c)
-    extras = [s for s in view["steps"] if s["group"] == "done"]
+    # The extras stay undone (add-ons is done here only because nothing the person installed is off).
+    extras = [s for s in view["steps"] if s["group"] == "done" and s["id"] != "addons"]
     assert view["finished"] and extras and not any(s["done"] or s["skipped"] for s in extras)
 
 
@@ -182,3 +192,17 @@ def test_a_sign_in_of_an_add_on_that_reads_no_mail_is_an_optional_extra(signing)
     found = next(s for s in setup.steps(ws, cfg, store) if s.sign_in == "p18/service")
     assert found.group == "done" and not found.counted
     assert not {s.id: s for s in setup.steps(ws, cfg, store)}["mail"].done
+
+
+def test_the_add_ons_that_come_with_the_app_are_not_listed_to_turn_on_and_not_on_the_add_ons_screen_while_off(tmp_path):
+    """The person's path: a new workspace never asks about the app's own samples and kits, and the Add-ons screen only
+    shows them once turned on, or in a sandbox workspace."""
+    from engine.plugin_manifest import shipped_plugins
+
+    ws, c = _fresh(tmp_path)
+    shipped = shipped_plugins()
+    assert shipped and not shipped & set(setup.addons_off(ws, ws.config(env={})))
+    listed = {p["name"] for p in c.get("/api/packs").json()["installed"]}
+    assert not shipped & listed
+    sandbox = init_workspace(tmp_path / "sandbox", template=DEMO_B, git=False)
+    assert shipped <= {p["name"] for p in _open(sandbox).get("/api/packs").json()["installed"]}

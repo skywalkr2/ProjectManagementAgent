@@ -300,6 +300,13 @@ def read_manifest(path: Path) -> Manifest:
     return Manifest.model_validate(yaml.safe_load(path.read_text(encoding="utf-8")))
 
 
+def shipped_plugins() -> set[str]:
+    """The add-ons that come with the app itself (its own `plugins` folder): samples and building kits for trying things
+    and making add-ons, not ones the person installed."""
+    root = Path(__file__).resolve().parents[1] / "plugins"
+    return {path.parent.name for path in root.glob("*/plugin.yaml")}
+
+
 def declared_plugins(config_dir: Path | None, enabled: list[str] | None):
     """Read available declarations without executing plugin code: the enabled plugins', or with `enabled` None,
     every installed plugin's."""

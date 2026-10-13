@@ -104,6 +104,10 @@ follow-ups and stages.
 - **Events and messages carry structure.** A source can hand in a calendar event (start, end, place, cancelled) or a mail
   message (sender, received, unread) beside its text, so the agenda and the inbox show them without an AI call. The assistant
   still reads the text.
+- **The cockpit keeps its own calendar** (owner, 2026-10-13). It is a core part of the product, not a view of the
+  connected calendars. Its entries come from what came in (a dated item that isn't set aside becomes an entry beside its
+  fact, `event.add`, 6.7), from the person, and from plugins: the project management pack's milestones and meetings
+  build on it. The agenda shows it beside the connected calendars' events. Nothing is written to a calendar service.
 - **Signing in is the whole setup** for mail and calendar from a named service. A sign-in starts reading the inbox and the
   main calendar at once. Nothing has to be chosen first; the person narrows, adds or removes sources afterwards, and their
   changes stand (3.12; decisions, 2026-10-12).

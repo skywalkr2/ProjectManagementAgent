@@ -611,6 +611,10 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 | Agent errors | A Claude Code account failed its test with "other: the agent stopped with exit code 1": the agent puts its reason on its output, which wasn't read, and it couldn't see the user name its keychain sign-in is kept under | The user name and temporary folder reach the agent; `agent.errors.report_on_output` reads a failed run's output as its error report; a failed test reads in plain words (6.16). **Built:** `tests/test_cli_agent.py` |
 | Focus rings | A row's ring was drawn 4px inside rows with no side padding, over their text, and showed after a click | Keyboard focus only, inside the padding or outside the row (7.10). **Built:** the focus ring test in `web/e2e/acceptance.spec.ts` |
 | A question handed in | "how does this application work?" in the hand-in box failed as notes, and the failure named internal terms | The person's own note that is a question becomes an ask; an unreadable answer says so in plain words (6.25). **Built:** `tests/test_pipeline.py` |
+| The walkthrough's return | It opened by itself every visit until Finish later or the last button, so an optional step brought it back | Every visit only while You or an AI account is missing; otherwise only the first visit; a sign-in returns to the screen it started from (7.8). **Built:** `tests/test_walkthrough.py`, `src/components/SignIns.test.tsx` |
+| The app's own add-ons | The example and the kit were listed in setup as the person's add-ons to turn on | Not in setup; on the Add-ons screen only once on, or in a sandbox (7.8). **Built:** `tests/test_walkthrough.py` |
+| Labels and answers | 16 core ops had no label ("op.answer" showed); an answer showed its first 150 characters | Every core op has a label; an answer shows whole (7.4). **Built:** `tests/test_wording.py` |
+| The app's own calendar | The agenda showed only connected calendars; a dated item was only a fact | A core calendar; a dated item becomes an entry beside its fact (1, 6.7, 7.7; phase L0; the PM pack builds on it) |
 
 ## Plugin host, API 0.1 (2026-10-09)
 

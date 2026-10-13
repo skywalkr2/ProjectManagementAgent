@@ -13,7 +13,7 @@ from api.schemas import InstalledPackView, PackFeedView, PackInstalled, PackSumm
 from engine import packs
 from engine.config import Config, ConfigError, load_config
 from engine.plugin_api import PLUGIN_API_VERSION
-from engine.plugin_manifest import declared_plugins
+from engine.plugin_manifest import declared_plugins, shipped_plugins
 from engine.shipped import product
 from engine.storage import Store
 from engine.worker import Worker
@@ -74,6 +74,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
         except ConfigError:
             enabled = set(cfg.workspace.plugins.enabled)
         on_disk = {m.name: m for m in declared_plugins(ws.config_dir, None)}
+        shipped = shipped_plugins()
         available = []
         for feed in feeds:
             for entry in feed.entries:
@@ -114,6 +115,8 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                 removable=name in mine,
             )
             for name, manifest in sorted({**on_disk, **host.manifests}.items())
+            # The app's own samples and kits show only when turned on, or in a sandbox workspace for trying them.
+            if name in enabled or name not in shipped or cfg.workspace.demo
         ]
         return PacksView(
             enabled=settings.enabled,

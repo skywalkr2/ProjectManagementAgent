@@ -3,6 +3,45 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: The walkthrough, the app's own add-ons, answers on screen, and dated items in the calendar
+
+**Decided by:** project owner ("if a person doesnt want to add other people at the beginning they shouldn't keep
+getting the wizard"; "no you need the wizard opened everytime if the user never setup their user info"; "i dont want to
+see these fake plugins"; "When a dated item comes in and is not filtered out it should create a calendar entry").
+
+**What:**
+- **When the walkthrough opens by itself:**
+  - On every visit while you haven't named yourself or no AI account is chosen for any kind of work, whatever was
+    pressed before. The assistant can't work without them. An account that fails its test is said on Today, not by
+    reopening the walkthrough (the built-in stand-in counts as chosen).
+  - Otherwise only on a workspace's first visit. Mail, backups and people wait on Today's setup line.
+  - A sign-in returns to the screen it was started from, so leaving for the service's page no longer depends on the
+    walkthrough reopening.
+- **Headings show no focus ring.** A heading takes focus when a screen opens or changes, for screen readers. It isn't
+  something to press, so the ring only looked like a stray outline.
+- **The add-ons that come with the app** (its own `plugins` folder: the example and the define-your-own kit) are
+  never listed in setup as add-ons to turn on. The Add-ons screen shows them only once turned on, or in a sandbox
+  workspace. Offering the kit where it's wanted is phase B.
+- **What the assistant did is always in words.** Every core op has a label on the wording sheet (16 had none, so
+  "op.answer" showed). An answer shows whole, not its 150-character label.
+- **The app keeps its own calendar, and a dated item becomes an entry in it** (owner: "the calendar (internal) is an
+  important part of the whole project cockpit and especially when we do the PM plugin").
+  - The calendar is a core concept, not a view of the connected calendars. Its entries come from what came in, from the
+    person, and from plugins (the PM pack's milestones and meetings build on it).
+  - A dated item that isn't set aside becomes an entry (`event.add`) beside the fact, and shows on the agenda.
+  - Nothing is ever written to the calendar service.
+  - Phase L0 for the entries from what came in; the PM pack (phase C) uses the same records.
+
+**Why:** The walkthrough kept returning for an optional step. Sample add-ons read as the person's own. Internal names
+and cut-off answers showed on screen. A delivery window was only a fact, not on the agenda, and the design didn't say
+otherwise.
+
+**Impact:**
+- Design 1 (the app's own calendar), 7.8 (when the walkthrough opens), 7.10 (headings), 6.7 and 7.7 (`event.add`,
+  agenda).
+- The roadmap gains the calendar entry (L0) and the kit's place (phase B).
+- No new setting.
+
 ## 2026-10-13: Running from a checkout makes `cockpit` work in any folder
 
 **Decided by:** project owner's report (`cockpit update` gave "command not found", then `uv run cockpit` in the workspace

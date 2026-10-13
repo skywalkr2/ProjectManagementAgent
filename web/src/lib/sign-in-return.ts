@@ -23,6 +23,28 @@ export function clearSignInParams(): void {
   window.history.replaceState(window.history.state, "", `${url.pathname}${query ? `?${query}` : ""}${url.hash}`);
 }
 
+/** Where a sign-in was started (the screen's address part after "#"), kept for this tab while the service's page is open. */
+const RETURN_KEY = "cockpit.sign-in-from";
+
+export function rememberReturn(): void {
+  try {
+    window.sessionStorage.setItem(RETURN_KEY, window.location.hash);
+  } catch {
+    // Without it the person comes back to Today, and the toast still says how it went.
+  }
+}
+
+/** The screen a sign-in was started from, once: it is forgotten as it is read. */
+function startedFrom(): string {
+  try {
+    const hash = window.sessionStorage.getItem(RETURN_KEY) ?? "";
+    window.sessionStorage.removeItem(RETURN_KEY);
+    return hash;
+  } catch {
+    return "";
+  }
+}
+
 export function useSignInReturn(): void {
   const { t } = useWords();
   const { push } = useToasts();
@@ -34,8 +56,11 @@ export function useSignInReturn(): void {
     const name = params.get("name");
     const error = cut(params.get("error") ?? "", MAX_ERROR);
     const detail = cut(params.get("detail") ?? "", MAX_DETAIL);
-    // The address is cleaned first, so a second run of this effect (or a reload) finds nothing to announce.
+    // The address is cleaned first, so a second run of this effect (or a reload) finds nothing to announce. Then the
+    // screen the sign-in was started from opens again.
     clearSignInParams();
+    const from = startedFrom();
+    if (from && !window.location.hash) window.location.hash = from;
     if (!OUTCOMES.has(outcome)) return;
     void (async () => {
       let message = t(`sign_in.return.${outcome}`);

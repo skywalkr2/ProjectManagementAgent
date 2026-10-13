@@ -20,7 +20,8 @@ h1 { font-size: var(--text-xl); line-height: var(--lh-xl); }
 h2 { font-size: var(--text-lg); line-height: var(--lh-lg); }
 h3, h4, h5 { font-size: var(--text-md); line-height: var(--lh-md); }
 h1:focus, h2:focus, h3:focus, main:focus { outline: none; }
-h1:focus-visible { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); border-radius: var(--radius-sm); }
+/* A heading takes focus only when a screen opens or changes, for screen readers; it is not something to press, so it shows no ring. */
+h1:focus-visible, h2:focus-visible, h3:focus-visible, h4:focus-visible, h5:focus-visible { box-shadow: none; outline: none; }
 main p { max-width: var(--measure); }
 
 /* Buttons that screens not yet rebuilt on the shared Button still use */
@@ -254,7 +255,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .guide-step { scroll-margin-top: calc(var(--header-h) + var(--space-4)); }
 .guide-step .heading h3 { font-size: var(--text-lg); line-height: var(--lh-lg); margin: 0; }
 .guide-step .heading h3:focus { outline: none; }
-.guide-step .heading h3:focus-visible { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); border-radius: var(--radius-sm); }
 .guide-step .pill { margin-left: 0; }
 .guide-step[data-state="done"] .pill { background: var(--ok-soft); color: var(--ok); }
 .guide-step[data-state="skipped"] .pill { background: var(--surface-sunk); color: var(--text-muted); }
@@ -406,7 +406,6 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .source-form h3, .data-file-form h5 { font-size: var(--text-lg); line-height: var(--lh-lg); margin: 0; }
 .data-file-form h5 { font-size: var(--text-md); line-height: var(--lh-md); }
 .source-form h3:focus, .data-file-form h5:focus { outline: none; }
-.source-form h3:focus-visible, .data-file-form h5:focus-visible { box-shadow: 0 0 0 2px var(--focus-gap), 0 0 0 4px var(--focus-ring); border-radius: var(--radius-sm); }
 .source-form fieldset.details .setting:first-of-type { border-top: 0; padding-top: 0; }
 .data-forms-kind { display: grid; gap: var(--space-3); border-top: 1px solid var(--border); padding-top: var(--space-3); }
 .data-forms-kind h4 { font-size: var(--text-md); margin: 0; }
