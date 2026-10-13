@@ -768,7 +768,10 @@ registers its own, plugins add theirs (3.3).
 - `run(task) -> result` with output, usage and timing;
 - `classify_error(exit_code, error_stream, transport_error) -> rate_limited | quota_until(date) | auth | timeout |
   invalid_output | provider_down | other`. It reads **only** the runner's own exit code, error stream and transport errors,
-  never the model's output: a model writing "not logged in" in a report is text, not an auth failure. Output and error stream
+  never the model's output: a model writing "not logged in" in a report is text, not an auth failure. An agent that prints
+  its errors on its output instead (its account sets `agent.errors.report_on_output`) has that output read as its error
+  report, and only for a run that exited with an error. An agent sees the user name and temporary folder as well as PATH,
+  HOME and the language settings, since a system keychain keeps its sign-in under the user name. Output and error stream
   are both kept on the `Run`, so a usage limit is never hidden behind "failed before doing any work";
 - `health()` for the governor.
 
@@ -1340,6 +1343,9 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
 - **Changes** the question asks for (a new action, a decision, a note) come as ops in a changeset under the usual tiers and
   checks (6.7), with the ops reading notes uses; a draft for someone else waits for approval like any other. Plugins' ops are
   not offered to asks.
+- **A question handed in as a note becomes an ask.** When the person's own note, with nothing pasted, is a question to the
+  assistant, the notes run answers `"ask": true` with no ops, and the same request becomes an ask. Only a trusted request
+  with no source qualifies; pasted or outside material never turns into an ask.
 - With no account set up, the stand-in answers by quoting the first guide passage chosen for the question (7.8).
 - An ask that comes up again and again is a signal (6.20): it may deserve a Today line, a panel or a playbook entry.
 

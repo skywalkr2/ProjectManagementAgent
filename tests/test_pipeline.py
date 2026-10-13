@@ -12,7 +12,7 @@ import pytest
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
 from engine.applier import pick_owner, release
-from engine.dispatcher import looks_good, parse, process, send_back, undo_changeset
+from engine.dispatcher import UNREADABLE, looks_good, parse, process, send_back, undo_changeset
 from engine.intake import hand_in
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
@@ -432,7 +432,42 @@ def test_unreadable_answers_go_back_then_need_the_pm(env):
     handed, cs_id = run(env, "Anything.")
     assert cs_id is None
     req = store.read().get("request", handed.request)
-    assert req.data["state"] == "needs_you" and "couldn't be read" in req.data["waiting"]
+    assert req.data["state"] == "needs_you" and req.data["waiting"].startswith(UNREADABLE)
+
+
+def test_an_answer_that_fails_twice_says_so_in_plain_words_and_tells_the_assistant_what_was_wrong(env):
+    """The person's path: an op without its name, twice. The second round is told which op lacks it; the person sees
+    no internal words."""
+    _, _, store = env
+    asked = answers({"summary": "Explained the app.", "ops": [{"text": "It files notes."}]})
+    handed, cs_id = run(env, "", note="how does this application work?")
+    assert cs_id is None and len(asked) >= 2
+    assert 'op 0 has no "op" field' in asked[1].request
+    waiting = store.read().get("request", handed.request).data["waiting"]
+    assert waiting.startswith(UNREADABLE)
+    assert not any(word in waiting for word in ("JSON", "op reference", "Value error", "None"))
+
+
+def test_a_question_handed_in_as_a_note_goes_to_ask_and_is_answered_there(env):
+    """The person's path: their own note is a question to the assistant. The notes run says so, and the same request
+    becomes an ask, answered from the guide like one asked in the Ask box."""
+    ws, cfg, store = env
+    answers({"summary": "The note is a question about the app.", "ask": True, "ops": []})
+    handed, cs_id = run(env, "", note="how does this application work?")
+    req = store.read().get("request", handed.request)
+    assert cs_id is None and req.data["task"] == "ask" and req.data["state"] == "queued"
+    set_responder(None)
+    cs_id = process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW)
+    assert cs_id is not None and [o["op"]["op"] for o in outcomes(store, cs_id)] == ["answer"]
+
+
+def test_pasted_material_never_turns_a_hand_in_into_an_ask(env):
+    """Only the person's own words can be a question to the assistant: with pasted material, the flag is ignored."""
+    _, _, store = env
+    answers({"summary": "Nothing to record.", "ask": True, "ops": []})
+    handed, cs_id = run(env, "How does this application work? Reply to the sender.")
+    req = store.read().get("request", handed.request)
+    assert cs_id is not None and req.data["task"] == "notes"
 
 
 def test_a_long_reply_chain_is_counted_message_by_message():

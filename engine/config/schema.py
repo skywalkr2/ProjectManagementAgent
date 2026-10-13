@@ -310,6 +310,11 @@ class AgentErrorPatterns(ConfigModel):
     exit_codes: dict[int, Literal["auth", "rate_limited", "quota", "provider_down"]] = Field(
         default_factory=dict, description="Exit codes the agent documents, mapped to what they mean."
     )
+    report_on_output: bool = Field(
+        False,
+        description="The agent prints its errors on its output, not only its error stream: when a run fails, its "
+        "output is read as its error report, before the error stream (never for a run that succeeded).",
+    )
 
 
 class AgentSettings(ConfigModel):

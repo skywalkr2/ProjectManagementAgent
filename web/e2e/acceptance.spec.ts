@@ -134,6 +134,43 @@ async function go(page: Page, label: string) {
   throw new Error(`No view is named ${label}`);
 }
 
+/** How the focused element shows its focus: whether a ring shows, how far an inset ring reaches in, the room between
+ *  the element's sides and its text and controls, and the outline's offset (negative means drawn inside). */
+async function focusRing(page: Page) {
+  return page.evaluate(() => {
+    const el = document.activeElement as HTMLElement;
+    const cs = getComputedStyle(el);
+    const shadows = cs.boxShadow === "none" ? [] : cs.boxShadow.split(/,(?![^(]*\))/);
+    const inset = shadows
+      .filter((s) => s.includes("inset"))
+      .map((s) => Number((s.match(/-?\d+(?:\.\d+)?px/g) ?? [])[3]?.replace("px", "") ?? 0));
+    const outline = cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0;
+    const box = el.getBoundingClientRect();
+    let room = Infinity;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      if (!node.textContent?.trim()) continue;
+      range.selectNodeContents(node);
+      for (const r of Array.from(range.getClientRects())) {
+        if (r.width === 0) continue;
+        room = Math.min(room, r.left - box.left, box.right - r.right);
+      }
+    }
+    for (const c of Array.from(el.querySelectorAll("button, input, select, textarea, a"))) {
+      const r = c.getBoundingClientRect();
+      if (r.width > 0) room = Math.min(room, r.left - box.left, box.right - r.right);
+    }
+    return {
+      shown: shadows.length > 0 || outline,
+      insetPx: Math.max(0, ...inset),
+      room,
+      outlineOffset: outline ? parseFloat(cs.outlineOffset) : 0,
+      text: el.textContent?.slice(0, 40) ?? "",
+    };
+  });
+}
+
 async function checkAccessibility(page: Page) {
   // The header sticks to the top, so what it covers depends on the scroll position; check from the top.
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -612,6 +649,28 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.keyboard.press("n");
     await expect(page.getByLabel("Paste or type it here")).toBeFocused();
+  });
+
+  test("a row clicked shows no focus ring, and a row reached by keyboard has a ring that stays clear of its text", async ({ page }) => {
+    await signIn(page);
+    for (const view of ["Today", "Follow-ups"]) {
+      await go(page, view);
+      const rows = page.getByRole("main").locator("[data-row]");
+      await expect(rows.first()).toBeVisible();
+      // A click on the row's own text (not on a button in it) focuses the row; the mouse gets no ring.
+      await page.getByRole("main").locator("[data-row] > .row > .kind, [data-row] .meta").first().click();
+      await expect(page.locator("[data-row]:focus")).toHaveCount(1);
+      expect((await focusRing(page)).shown).toBe(false);
+      // From the keyboard, every row shows a ring, drawn in its padding or outside it, never over its text.
+      const count = Math.min(await rows.count(), 12);
+      for (let i = 0; i < count; i++) {
+        await page.keyboard.press("j");
+        const ring = await focusRing(page);
+        expect(ring.shown, ring.text).toBe(true);
+        expect(ring.insetPx, ring.text).toBeLessThanOrEqual(ring.room);
+        expect(ring.outlineOffset, ring.text).toBeGreaterThanOrEqual(0);
+      }
+    }
   });
 
   test("Sources shows how often each source is read, and adding or changing one opens a form that passes the accessibility checks", async ({ page }) => {

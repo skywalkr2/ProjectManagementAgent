@@ -75,10 +75,7 @@ def smoke_test(
                 except SecretError as err:
                     ok, detail, key_source = False, f"key not found: {err}", describe_secret(settings.auth)
                 except AiError as err:
-                    reason = provider_reason(err.detail)
-                    ok, detail = False, f"{err.kind}: {reason}" if reason else err.kind
-                    if err.hint:
-                        detail += f". {err.hint}"
+                    ok, detail = False, _problem(err)
                     if err.kind in ("auth", "no_key"):
                         key_source = describe_secret(settings.auth)
                 except ValueError as err:
@@ -91,6 +88,27 @@ def smoke_test(
                 locked.add(ref)
                 results.extend(_lockdown(tier_name, ref, position == 0, settings, model_id, env, adapter_factory))
     return results
+
+
+#: What a failed test call means, in plain words, by the kind of failure.
+PROBLEMS = {
+    "auth": "It isn't signed in, or the key was refused",
+    "no_key": "The key wasn't found",
+    "quota": "The account is out of credit or at its plan's limit",
+    "rate_limited": "The account asked to wait; try again shortly",
+    "timeout": "It didn't answer in time",
+    "provider_down": "It couldn't be reached",
+    "invalid_output": "Its answer couldn't be read",
+    "refused": "It refused the request",
+}
+
+
+def _problem(err: AiError) -> str:
+    """A failed test call in plain words: what it means, the account's own words for it, and what to do."""
+    reason = provider_reason(err.detail)
+    plain = PROBLEMS.get(err.kind, "It stopped with an error")
+    detail = f"{plain} ({reason})" if reason else plain
+    return f"{detail}. {err.hint}" if err.hint else f"{detail}."
 
 
 def _lockdown(

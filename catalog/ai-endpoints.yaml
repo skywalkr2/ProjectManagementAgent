@@ -115,6 +115,11 @@ endpoints:
           output_tokens: usage.output_tokens
           cached_input_tokens: usage.cache_read_input_tokens
           cost_usd: total_cost_usd
+        errors:
+          report_on_output: true
+          auth: ["not logged in", "please run /login", "invalid api key", "oauth token (has expired|has been revoked)"]
+          quota: ["usage limit reached", "hit your limit"]
+          rate_limited: ["rate limit", "overloaded"]
         sign_in_hint: Open a terminal, run claude and sign in, then press Test again.
     note: Uses your Claude subscription or account through Claude Code, with its tools turned off.
   - id: copilot

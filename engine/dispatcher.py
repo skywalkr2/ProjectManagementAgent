@@ -58,8 +58,9 @@ def parse(text: str, op_models: dict | None = None) -> ChangesetIn:
         raise Unreadable(f"the JSON is broken ({err.msg} at character {err.pos})") from None
     models = op_models if op_models is not None else OP_MODELS
     if isinstance(data, dict):
-        # Only the summary, the topic and the ops mean anything at the top; a model's extra remarks are left out.
-        data = {key: value for key, value in data.items() if key in ("summary", "topic", "ops")}
+        # Only the summary, the topic, the ops and the ask flag mean anything at the top; a model's extra remarks are
+        # left out.
+        data = {key: value for key, value in data.items() if key in ("summary", "topic", "ops", "ask")}
     _drop_unused_evidence(data, models)
     try:
         return CHANGESET.validate_python(data, context={"op_models": op_models} if op_models is not None else None)
@@ -89,7 +90,7 @@ def _describe_error(error: dict, data: object, models: dict) -> str:
             if model is not None and key in op and key not in model.model_fields:
                 fields = ", ".join(name for name in model.model_fields if name != "group")
                 return f"op {index} ({op['op']}) has a field {key!r} it doesn't take; it takes: {fields}"
-    return f"{where}: {error['msg']}"
+    return f"{where}: {error['msg'].removeprefix('Value error, ')}"
 
 
 def hidden_words(cfg: Config) -> list[str]:
@@ -262,6 +263,12 @@ def process(
         return needs_you(store, request_id, outcome.stop, cause=outcome.cause)
     changeset, problems, run_id = outcome.changeset, outcome.problems, outcome.run_id
     assert changeset is not None
+    own_note = req.data["task"] == "notes" and trust == "trusted" and not req.data.get("source")
+    if own_note and changeset.ask and not changeset.ops:
+        # The person's own note is a question to the assistant: the same request becomes an ask, answered from the
+        # guide and the records (6.25). Pasted or outside material never does this.
+        _set(store, request_id, task="ask", state="queued", waiting="With the assistant, starting now")
+        return None
     cs_id = apply_changeset(
         changeset, problems, ctx, run=run_id, now=now, all_or_nothing=getattr(kind, "all_or_nothing", False)
     )
@@ -476,7 +483,8 @@ def _rounds(
                 )
                 log.warning("Output limit reached; it is set at ai.tasks.%s.max_output", task.kind)
                 return _Outcome(run_id=out.run_id, stop=stop)
-            return _Outcome(run_id=out.run_id, stop=f"The assistant's answer couldn't be read: {err}.", escalate=True)
+            log.warning("The assistant's answer couldn't be read after a second try: %s", err)
+            return _Outcome(run_id=out.run_id, stop=UNREADABLE, escalate=True)
         if previous_ops is not None and _ops_of(changeset) == previous_ops:
             if not last:
                 task = replace(task, request=base.request + "\n\n" + REPEATED)
@@ -494,6 +502,11 @@ def _rounds(
     return out
 
 
+#: What a request waits on when the assistant's answer wasn't in the form the work needs, even when asked again.
+UNREADABLE = (
+    "The assistant's answer wasn't in the form this work needs, even when asked again. Try again, or pick another "
+    "account for this work."
+)
 #: What a run waits on while the workspace has no person set; the setup step that names them clears it.
 SAY_WHO_FIRST = "Say who you are first"
 UNPRICED_GO = "Its cost can't be estimated on this account. Waiting for your go."

@@ -6,9 +6,10 @@
 }
 .row:last-child { border-bottom: 0; }
 .row:hover { background: var(--surface-hover); }
-.row:focus { outline: none; box-shadow: inset 0 0 0 2px var(--focus-gap), inset 0 0 0 4px var(--focus-ring); }
+.row:focus { outline: none; }
+.row:focus-visible { box-shadow: inset 0 0 0 2px var(--focus-ring); }
 .selected, .selected:hover { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
-.selected:focus { box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 2px var(--focus-gap), inset 0 0 0 4px var(--focus-ring); }
+.selected:focus-visible { box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 2px var(--focus-ring); }
 
 .pill { grid-column: 1; align-self: center; justify-self: start; min-width: 0; }
 .main { grid-column: 2; min-width: 0; }

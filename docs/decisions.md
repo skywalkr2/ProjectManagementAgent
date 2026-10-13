@@ -3,6 +3,40 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: Three fixes from the exit test: an agent's own error, focus rings, a question handed in
+
+**Decided by:** project owner's report ("claude code CLI isnt working, several places in the code put an outline around
+things that clips into elements and i asked the AI a question and got a JSON error"; the question ran on the Copilot
+account).
+
+**What:**
+- **An agent's own error is read and shown.**
+  - What the code did: the Claude Code agent ran with only PATH, HOME and the language settings. It exits 1 and prints
+    its reason in the JSON on its output, with nothing (or only a code) on its error stream. So the test said only "other:
+    the agent stopped with exit code 1".
+  - What changes:
+    - The agent also sees the user name (`USER`, `LOGNAME`, `USERNAME`), which a system keychain files its sign-in
+      under, and the user's `TMPDIR`.
+    - An agent account can say it reports its errors on its output (`agent.errors.report_on_output`). Then, for a failed
+      run only, that output is read as its error report, before the error stream. The Claude Code preset says so and
+      lists its sign-in, plan-limit and rate-limit wording.
+    - A failed test reads in plain words (what it means, the agent's own words, what to do), never an internal kind.
+- **Focus rings never sit on text.** A row shows its ring only for keyboard focus, not after a click or when the
+  screen moves focus. The ring is drawn inside the row's padding, or outside a row with none. A row title's button gets
+  its ring outside, with room.
+- **A question handed in as a note goes to Ask.** When the person's own note, with nothing pasted, is a question to the
+  assistant, the notes run answers `"ask": true` with no ops. The same request then becomes an ask and is answered from
+  the guide and the records. Pasted or outside material never does this. An answer that still isn't in the form asked
+  for after the second round now says so in plain words, and the second round tells the assistant which op lacks its
+  name.
+
+**Why:** All three left the person stuck with words they can't act on, or with a screen that looked broken.
+
+**Impact:**
+- Design 6.16 (agent accounts), 6.25 (asking) and 7.10 (focus ring).
+- One new agent setting, with a default (off) and a description.
+- The notes prompt gains one line. No new op.
+
 ## 2026-10-13: One command to start: `cockpit` on its own
 
 **Decided by:** project owner ("I will never remember all these command lines").

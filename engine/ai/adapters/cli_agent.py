@@ -2,11 +2,13 @@
 
 The agent runs locked down in a scratch folder of its own, outside the workspace: it gets the packet on its input or
 as a file there, and answers on its output or in the folder's `outbox/`. It sees only PATH, HOME, the language
-settings and the variables the account lists. The command, its locked-down flags, how the packet goes in and where
-the answer comes out are all the account's settings; `lockdown_test()` checks that the flags hold.
+settings, the user name (where a system keychain keeps its sign-in), the temporary folder and the variables the account
+lists. The command, its locked-down flags, how the packet goes in and where the answer comes out are all the account's
+settings; `lockdown_test()` checks that the flags hold.
 
 Errors are read only from the program's exit code and error stream, never from its answer, using the patterns and
-exit codes the account's settings give.
+exit codes the account's settings give. An agent that prints its errors on its output instead says so in its settings;
+then, and only for a run that failed, that output is read as its error report.
 """
 
 from __future__ import annotations
@@ -26,8 +28,21 @@ from typing import Any
 from engine.ai.task import AiError, AiResult, AiTask, ModelInfo
 from engine.prompts import render
 
-#: Variables every agent sees: where programs are, its home (where its own sign-in lives) and the language settings.
-BASE_ENV = ("PATH", "HOME", "USERPROFILE", "SYSTEMROOT", "LANG", "LC_ALL", "LC_CTYPE")
+#: Variables every agent sees: where programs are, its home and user name (where its own sign-in is kept, in a file
+#: or the system's keychain), this user's temporary folder and the language settings.
+BASE_ENV = (
+    "PATH",
+    "HOME",
+    "USERPROFILE",
+    "SYSTEMROOT",
+    "USER",
+    "LOGNAME",
+    "USERNAME",
+    "TMPDIR",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+)
 ERROR_TAIL = 4000
 
 Runner = Callable[..., subprocess.CompletedProcess]
@@ -66,7 +81,7 @@ class CliAgentAdapter:
                 prompt += "\n\n" + render("agent-answer", {"answer": str(outbox / answer_name)})
             done, seconds = self._start(prompt, model, scratch, outbox)
             if done.returncode != 0:
-                raise self.classify_error(done.returncode, done.stderr, None)
+                raise self.classify_error(done.returncode, self._error_report(done), None)
             if self.agent.output_via == "outbox":
                 path = outbox / answer_name
                 if not path.is_file():
@@ -103,6 +118,21 @@ class CliAgentAdapter:
         except OSError as err:
             raise AiError("provider_down", f"the agent program couldn't start: {err}") from None
         return done, time.monotonic() - started
+
+    def _error_report(self, done: subprocess.CompletedProcess) -> str:
+        """What a failed run says about its failure: its error stream, preceded, for an agent whose settings say it
+        reports on its output, by that output (the text field when the output is JSON)."""
+        stream = (done.stderr or "").strip()
+        if not self.agent.errors.report_on_output:
+            return stream
+        out = (done.stdout or "").strip()
+        if self.agent.output_json and self.agent.output_fields.text:
+            try:
+                said = _at(json.loads(out), self.agent.output_fields.text)
+            except ValueError:
+                said = None
+            out = said.strip() if isinstance(said, str) else out
+        return "\n".join(part for part in (out, stream) if part)
 
     def _env(self, home: Path | None = None) -> dict[str, str]:
         env = {name: os.environ[name] for name in (*BASE_ENV, *self.agent.pass_env) if name in os.environ}

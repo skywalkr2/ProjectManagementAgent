@@ -315,7 +315,7 @@ def test_workspace_registries_do_not_leak(workspace, tmp_path):
     disabled = Store(tmp_path / "empty.db", cfg=config(tmp_path, []))
     assert KIND in enabled.plugins.records and KIND not in disabled.plugins.records
     assert OP not in disabled.plugins.ops and TASK not in disabled.plugins.tasks
-    with pytest.raises(Exception, match="unknown op"):
+    with pytest.raises(Exception, match="isn't in the op reference"):
         changeset(disabled)
     enabled.close()
     disabled.close()

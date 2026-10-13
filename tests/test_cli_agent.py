@@ -31,6 +31,9 @@ elif mode == "silent":
 elif mode == "signed-out":
     print("Please sign in again", file=sys.stderr)
     sys.exit(1)
+elif mode == "reports-on-output":
+    print(json.dumps({"type": "result", "is_error": True, "result": "Not logged in. Please run the login command"}))
+    sys.exit(1)
 elif mode == "limit":
     sys.exit(7)
 elif mode == "sleep":
@@ -197,3 +200,54 @@ def test_a_sign_in_failure_says_what_to_do():
     told = _ai_failure(AiError("auth", "Please sign in again", hint="Run the agent's login command"))
     assert told.startswith("The AI account isn't signed in (Please sign in again).")
     assert told.endswith("Run the agent's login command, then try again.")
+
+
+def test_the_agent_sees_the_user_name_its_own_sign_in_is_kept_under(agent_script, monkeypatch):
+    """An agent whose sign-in is kept in the system's keychain finds it by the user name."""
+    monkeypatch.setenv("USER", "someone")
+    monkeypatch.setenv("LOGNAME", "someone")
+    names = json.loads(CliAgentAdapter(settings(agent_script, "env")).run(task(), "m").text)
+    assert {"USER", "LOGNAME"} <= set(names)
+
+
+def test_an_agent_that_reports_its_failure_on_its_output_is_understood(agent_script):
+    """Some agents print their errors on their output, not on the error stream; the account says so, and only then
+    (and only for a failed run) is that report read."""
+    fields = {"text": "result"}
+    told = settings(
+        agent_script,
+        "reports-on-output",
+        output_json=True,
+        output_fields=fields,
+        errors={"auth": ["not logged in"], "report_on_output": True},
+        sign_in_hint="Run the agent's login command",
+    )
+    with pytest.raises(AiError) as failed:
+        CliAgentAdapter(told).run(task(), "m")
+    assert failed.value.kind == "auth" and "Not logged in" in failed.value.detail
+    untold = settings(agent_script, "reports-on-output", output_json=True, output_fields=fields)
+    with pytest.raises(AiError) as unread:
+        CliAgentAdapter(untold).run(task(), "m")
+    assert unread.value.kind == "other" and "Not logged in" not in unread.value.detail
+
+
+def test_an_agent_preset_shows_why_a_signed_out_test_failed_in_plain_words(agent_script):
+    """The person's path: an agent account made from a preset whose agent prints its errors on its output, not signed
+    in, tested. The test says it isn't signed in, quotes the agent's own words and says what to do, with no internal
+    label."""
+    from engine.ai.smoke import smoke_test
+    from engine.setup import known_endpoints
+
+    presets = [e for e in known_endpoints() if e["adapter"] == CliAgentAdapter.name]
+    reporting = [e for e in presets if e["settings"].get("agent", {}).get("errors", {}).get("report_on_output")]
+    assert reporting
+    for preset in reporting:
+        agent = dict(preset["settings"]["agent"])
+        agent["command"] = [sys.executable, agent_script, "reports-on-output"]
+        account = ProviderSettings(adapter=CliAgentAdapter.name, models={"default": "agent-model"}, agent=agent)
+        tier = SimpleNamespace(use="agent/default", fallback=[], escalate_to=None)
+        cfg = SimpleNamespace(ai=SimpleNamespace(providers={"agent": account}, tiers={"account": tier}, tasks={}))
+        first = smoke_test(cfg, {})[0]
+        assert not first.ok, preset["id"]
+        assert "Not logged in" in first.detail and agent["sign_in_hint"].rstrip(".") in first.detail, first.detail
+        assert not first.detail.startswith(("auth", "other")) and "exit code" not in first.detail

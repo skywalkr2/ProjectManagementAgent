@@ -496,6 +496,8 @@ class ChangesetIn(BaseModel):
     summary: str = ""
     topic: str = ""
     ops: list[Any] = Field(default_factory=list)
+    #: Reading notes only: the person's own note is a question to the assistant, not material to record.
+    ask: bool = False
 
     @field_validator("topic", mode="before")
     @classmethod
@@ -513,11 +515,13 @@ class ChangesetIn(BaseModel):
         if not isinstance(values, list):
             raise ValueError("ops must be a list")
         parsed = []
-        for value in values:
+        for index, value in enumerate(values):
             data = value.model_dump() if isinstance(value, OpModel) else value
             name = data.get("op") if isinstance(data, dict) else None
+            if name is None:
+                raise ValueError(f'op {index} has no "op" field naming one of the ops in the op reference')
             if name not in models:
-                raise ValueError(f"unknown op {name!r}")
+                raise ValueError(f"op {index} names {name!r}, which isn't in the op reference")
             parsed.append(models[name].model_validate(data))
         return parsed
 
