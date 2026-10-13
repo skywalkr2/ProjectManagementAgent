@@ -488,10 +488,8 @@ def cmd_serve(args: argparse.Namespace) -> int:
     lease = Lease(store)
     lease.acquire()
     lease.keep_alive(on_lost=lambda: print("cockpit: another copy took over this workspace.", file=sys.stderr))
-    from engine.ai.smoke import untested_since_change
-
-    if untested_since_change(ws):
-        print("Note: the AI settings haven't passed `cockpit ai test` since they last changed.", file=sys.stderr)
+    if note := untested_ai_note(ws, cfg, store):
+        print(note, file=sys.stderr)
     for notice in (web_build_notice(repo_root()), temp_folder_notice(ws.root, system_temp_roots())):
         if notice:
             print(notice, file=sys.stderr)
@@ -548,6 +546,19 @@ RESTARTED = "COCKPIT_RESTARTED"
 #: Options that act once, at the start the person typed, never again on a restart: starting the demo over would erase
 #: everything done in it since.
 ONCE_ONLY = ("--fresh",)
+
+
+def untested_ai_note(ws: Any, cfg: Any, store: Any) -> str | None:
+    """A note for the terminal when an AI account exists and hasn't passed its test since its settings changed. A new
+    workspace has no account yet, and its walkthrough adds and tests one, so it gets no note."""
+    from engine.ai.smoke import ai_state, untested_since_change
+
+    if not untested_since_change(ws) or ai_state(ws, cfg, store)[0] == "not_set_up":
+        return None
+    return (
+        "Note: the AI account hasn't passed its test since its settings changed. Press Test on its screen, or run "
+        "`cockpit ai test`."
+    )
 
 
 def restart_args(args: list[str]) -> list[str]:

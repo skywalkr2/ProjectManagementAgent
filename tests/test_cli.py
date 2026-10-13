@@ -1,6 +1,8 @@
 import subprocess
 from pathlib import Path
 
+import yaml
+
 from engine.cli import main
 from engine.storage import Store
 from engine.storage.lease import Lease
@@ -210,3 +212,37 @@ def test_evaluate_without_cases_says_where_to_find_some(tmp_path, capsys):
     (tmp_path / "ws" / "config").mkdir(parents=True)
     assert main(["evaluate", "-w", str(tmp_path / "ws")]) == 1
     assert "--from" in capsys.readouterr().err
+
+
+def test_a_new_workspace_gets_no_note_about_an_untested_ai_account(tmp_path):
+    from engine.cli import untested_ai_note
+    from engine.storage import Store
+    from engine.workspace import init_workspace
+
+    ws = init_workspace(tmp_path / "fresh", git=False)
+    cfg = ws.config(env={})
+    store = Store(ws.db_path, cfg=cfg)
+    try:
+        assert untested_ai_note(ws, cfg, store) is None
+    finally:
+        store.close()
+
+
+def test_a_workspace_with_an_untested_ai_account_gets_the_note(tmp_path):
+    from engine.cli import untested_ai_note
+    from engine.storage import Store
+    from engine.workspace import init_workspace
+    from tests.conftest import add_example_account
+
+    ws = init_workspace(tmp_path / "with-account", git=False)
+    provider, model, _ = add_example_account(ws.config_dir / "ai.yaml")
+    ai = yaml.safe_load((ws.config_dir / "ai.yaml").read_text())
+    ai.setdefault("tiers", {})["routine"] = {"use": f"{provider}/{model}"}
+    (ws.config_dir / "ai.yaml").write_text(yaml.safe_dump(ai))
+    cfg = ws.config(env={})
+    store = Store(ws.db_path, cfg=cfg)
+    try:
+        note = untested_ai_note(ws, cfg, store)
+    finally:
+        store.close()
+    assert note is not None and "hasn't passed its test" in note
