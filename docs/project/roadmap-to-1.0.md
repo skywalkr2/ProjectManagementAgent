@@ -222,8 +222,21 @@ If the repeat-correction rate doesn't fall, the loop isn't closing, and that is 
 
 L0. **Before real use: moved from phase A** (about 2 sessions). None of these is needed for phase A's exit test. All of
 them are needed before the owner's daily use, which starts when L-core passes.
-- [ ] **Audit design 6.8 to 6.11 against the code** first, before the learning loop is built on them: the questions, actions, notices and names
-  services. Fix what differs, or correct the design, so the learning loop's signals are right from the start.
+- [x] **Audit design 6.8 to 6.11 against the code** first, before the learning loop is built on them: the questions, actions, notices and names
+  services. Fix what differs, or correct the design, so the learning loop's signals are right from the start. Done
+  2026-10-13, checked by reading (the findings are in the items below; 57 statements checked).
+- [ ] **What the audit found, fixed here:**
+  - one "who is this?" per name per input, releasing every op that waits on it (today one question per held op);
+  - answering "who is this?" or "Pick an owner" records a signal with the person chosen (today nothing is recorded,
+    so the same name asks again);
+  - undoing the person's own release records no signal against the assistant (today it records `undone`);
+  - `near-duplicate-action` compares with done actions too, as 4.17 says, or 4.17 is corrected.
+- [ ] **What the audit found, put right in the design:** 6.8 to 6.11 describe in the present tense what isn't built:
+  question `key` dedupe, `on_answer`, link enrichment, reroute proposals, the pending flag, Reassign, meeting sync, the
+  notice baseline date, `track_only`, `owner_format` parsing and `person.merge`. Each gets "designed" and its phase.
+  Dropping, rewording and rerouting a question, and the feedback run built from the named item's current state, move to
+  L3, where every correction records its signal; `draft_edited` ties to the run that wrote the questions there too.
+  "Add a new person" is L3b.
 - [ ] **No silent stops** (design 8.5, 8.6, 8.8):
   - the input's received date in the packet header, so "by Friday" counts from the day the mail arrived;
   - a usage limit resumes by itself at its reset;
