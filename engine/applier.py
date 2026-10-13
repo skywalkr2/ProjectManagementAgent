@@ -941,7 +941,7 @@ def _apply_op(
                 f"Pick an owner: {op.text}",
                 "routing",
                 options=[],
-                resolves={"kind": "owner", "action": action.id},
+                resolves={"kind": "owner", "action": action.id, "changeset": w.changeset},
             )
             made("question", q)
             return touched, q
@@ -1002,6 +1002,9 @@ def _pm_question(
 
 def _routing_question(tx: Tx, op: OpModel, index: int, cs_id: str, ctx: Context, reason: str) -> str:
     _, name, candidates = reason.split(":", 2)
+    waiting = _open_who_is(tx, cs_id, name)
+    if waiting is not None:
+        return waiting
     options = [c for c in candidates.split(",") if c]
     w = WriteContext(
         actor="engine", trust="trusted", op=f"routing#{index}", changeset=cs_id, request=ctx.inputs.request
@@ -1018,6 +1021,20 @@ def _routing_question(tx: Tx, op: OpModel, index: int, cs_id: str, ctx: Context,
     )
 
 
+def _same_name(a: Any, b: Any) -> bool:
+    """Whether two names as written are the same, ignoring case and surrounding space."""
+    return isinstance(a, str) and isinstance(b, str) and a.strip().casefold() == b.strip().casefold()
+
+
+def _open_who_is(tx: Tx, cs_id: str, name: str) -> str | None:
+    """The open "who is this?" question of a changeset for this name, if one was already asked."""
+    for q in tx.find("question", {"kind": "routing", "status": "open"}):
+        r = q.data.get("resolves") or {}
+        if r.get("kind") == "held-op" and r.get("changeset") == cs_id and _same_name(r.get("name"), name):
+            return q.id
+    return None
+
+
 # ---- releasing held ops and answering routing questions --------------------------------------------------------------
 
 
@@ -1032,8 +1049,36 @@ def release(
     ws: Workspace | None = None,
 ) -> None:
     """Apply a held op, optionally saying who an unresolved name is. With `ws`, the names in it are read in the
-    context of the input's saved text, as they were when the changeset was made."""
+    context of the input's saved text, as they were when the changeset was made. Saying who a name is also applies
+    every other op of the changeset waiting on the same question, and records one signal."""
     now = now or datetime.now(UTC)
+    cs = store.read().get("changeset", changeset_id)
+    if cs is None:
+        raise StoreError(f"there is no changeset {changeset_id}")
+    first = cs.data["ops"][index]
+    qid = first.get("question")
+    name = (qid and _question_name(store, qid)) or None
+    others = []
+    if person is not None and name is not None:
+        others = [o["index"] for o in cs.data["ops"] if o["index"] != index and o["status"] == "held"]
+        others = [i for i in others if cs.data["ops"][i].get("question") == qid]
+    routed = {"question": qid, "person": person, "name": name} if person is not None and name is not None else None
+    _release_one(store, cfg, changeset_id, index, person=person, now=now, ws=ws, routed=routed)
+    for other in others:
+        _release_one(store, cfg, changeset_id, other, person=person, now=now, ws=ws)
+
+
+def _release_one(
+    store: Store,
+    cfg: Config,
+    changeset_id: str,
+    index: int,
+    *,
+    person: str | None,
+    now: datetime,
+    ws: Workspace | None,
+    routed: dict[str, Any] | None = None,
+) -> None:
     cs = store.read().get("changeset", changeset_id)
     if cs is None:
         raise StoreError(f"there is no changeset {changeset_id}")
@@ -1070,6 +1115,8 @@ def release(
                     WriteContext(actor="pm", trust="trusted", op="question.answer"),
                     read_version=q.version,
                 )
+        if routed is not None:
+            _record_routed(tx, now, changeset_id, routed["question"], routed["person"], routed["name"])
         still = _needs_person_choice(op, ctx)
         if still is not None and still.startswith("who-is"):
             outcome["op"] = op.model_dump(mode="json", exclude_none=True)
@@ -1120,6 +1167,16 @@ def pick_owner(store: Store, question_id: str, person: str) -> None:
         a = tx.get("action", action_id)
         tx.update("action", action_id, {"owners": [{"person": person}], "status": "open"}, w, read_version=a.version)
         tx.update("question", question_id, {"status": "answered", "answer": person}, w, read_version=q.version)
+        _record_routed(tx, datetime.now(UTC), q.data["resolves"].get("changeset"), question_id, person, None)
+
+
+def _record_routed(
+    tx: Tx, now: datetime, changeset_id: str | None, question_id: str, person: str, name: str | None
+) -> None:
+    """Record that the person said who a name or an owner is."""
+    refs = [r for r in (changeset_id, question_id, person) if r]
+    w = WriteContext(actor="pm", trust="trusted", op="routed")
+    tx.create("signal", {"kind": "routed", "refs": refs, "note": name, "at": now.isoformat()}, w)
 
 
 def _question_name(store: Store, qid: str) -> str | None:
@@ -1129,8 +1186,8 @@ def _question_name(store: Store, qid: str) -> str | None:
 
 def _substitute(op: OpModel, name: str, person: str) -> OpModel:
     if isinstance(op, ActionAddOp):
-        return op.model_copy(update={"owners": [person if o == name else o for o in op.owners]})
-    if isinstance(op, QuestionAddOp) and op.to == name:
+        return op.model_copy(update={"owners": [person if _same_name(o, name) else o for o in op.owners]})
+    if isinstance(op, QuestionAddOp) and _same_name(op.to, name):
         return op.model_copy(update={"to": person})
     return op
 

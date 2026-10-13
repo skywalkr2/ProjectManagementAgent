@@ -1,0 +1,29 @@
+id: unknown-person-twice
+title: One unknown person named twice gets one question
+received: '2026-10-09'
+pasted: 'Launch: Jordan Vale will bring the banners to the reading by Nov 18 and will also collect the signed copies
+  afterward.'
+expect:
+- held: who-is
+  options: 0
+  count: 1
+forbid:
+- new_person: true
+stub_answer:
+  summary: Two actions; both name the same owner, who isn't a known person.
+  ops:
+  - op: action.add
+    text: Bring the banners to the reading
+    owners:
+    - Jordan Vale
+    due: '2026-11-18'
+    project: PRJ-1
+    evidence:
+      quote: Jordan Vale will bring the banners to the reading by Nov 18
+  - op: action.add
+    text: Collect the signed copies after the reading
+    owners:
+    - jordan vale
+    project: PRJ-1
+    evidence:
+      quote: will also collect the signed copies afterward

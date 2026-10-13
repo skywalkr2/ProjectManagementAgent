@@ -184,6 +184,104 @@ def test_an_unknown_name_is_held_with_a_who_is_this_question(env):
     assert store.read().get("question", q.id).data["status"] == "answered"
 
 
+def _two_actions_for(stranger: str, again: str) -> tuple[str, dict]:
+    pasted = f"{stranger} will book the venue. {again} will also print the signs."
+    body = {
+        "ops": [
+            {
+                "op": "action.add",
+                "text": "Book the venue",
+                "owners": [stranger],
+                "evidence": {"quote": f"{stranger} will book the venue"},
+            },
+            {
+                "op": "action.add",
+                "text": "Print the signs",
+                "owners": [again],
+                "evidence": {"quote": f"{again} will also print the signs"},
+            },
+        ]
+    }
+    return pasted, body
+
+
+def _signals(store, kind):
+    return [s.data for s in store.read().list("signal") if s.data["kind"] == kind]
+
+
+def test_one_unknown_name_in_two_ops_gets_one_question_and_one_answer_releases_both(env):
+    _, cfg, store = env
+    stranger = "Jordan " + "Pike"
+    pasted, body = _two_actions_for(stranger, f" {stranger.upper()} ".strip())
+    answers(body)
+    _, cs_id = run(env, pasted)
+    first, second = outcomes(store, cs_id)
+    assert first["status"] == second["status"] == "held"
+    assert first["question"] == second["question"]
+    asked = [q for q in store.read().list("question") if q.data["kind"] == "routing"]
+    assert len(asked) == 1 and asked[0].data["status"] == "open"
+    publicist = person("Publicist")["id"]
+    release(store, cfg, cs_id, 0, person=publicist)
+    first, second = outcomes(store, cs_id)
+    assert first["status"] == second["status"] == "applied"
+    for done in (first, second):
+        owners = store.read().get("action", done["records"][0]["id"]).data["owners"]
+        assert [o["person"] for o in owners] == [publicist]
+    assert store.read().get("question", asked[0].id).data["status"] == "answered"
+    assert store.read().get("changeset", cs_id).data["status"] == "applied"
+    (routed,) = _signals(store, "routed")
+    assert routed["refs"] == [cs_id, asked[0].id, publicist] and routed["note"] == stranger
+
+
+def test_a_second_unknown_name_in_both_ops_is_asked_once_after_the_first_answer(env):
+    _, cfg, store = env
+    one, two = "Jordan " + "Pike", "Casey " + "Moor"
+    pasted = f"{one} and {two} will book the venue. {one} and {two} will also print the signs."
+    ops = [
+        {"op": "action.add", "text": text, "owners": [one, two], "evidence": {"quote": quote}}
+        for text, quote in (
+            ("Book the venue", f"{one} and {two} will book the venue"),
+            ("Print the signs", f"{one} and {two} will also print the signs"),
+        )
+    ]
+    answers({"ops": ops})
+    _, cs_id = run(env, pasted)
+    first, _ = outcomes(store, cs_id)
+    release(store, cfg, cs_id, 0, person=person("Publicist")["id"])
+    first, second = outcomes(store, cs_id)
+    assert first["status"] == second["status"] == "held" and first["question"] == second["question"]
+    open_now = [q.data["title"] for q in store.read().list("question") if q.data["status"] == "open"]
+    assert open_now.count(f"Who is “{two}”?") == 1
+
+
+def test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal(env):
+    _, cfg, store = env
+    answers(
+        {"ops": [{"op": "action.add", "text": "Book a photographer", "evidence": {"quote": "book a photographer"}}]}
+    )
+    _, cs_id = run(env, "Launch: someone should book a photographer.")
+    (outcome,) = outcomes(store, cs_id)
+    chosen = person("Publicist")["id"]
+    pick_owner(store, outcome["question"], chosen)
+    (routed,) = _signals(store, "routed")
+    assert routed["refs"] == [cs_id, outcome["question"], chosen]
+
+
+def test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does(env):
+    _, cfg, store = env
+    newcomer = "Mallory " + "Quince"
+    answers({"ops": [{"op": "note", "text": "Venue talk started."}, {"op": "person.add", "full_name": newcomer}]})
+    _, cs_id = run(env, f"{newcomer} will join the venue talks.")
+    assert [o["status"] for o in outcomes(store, cs_id)] == ["applied", "held"]
+    release(store, cfg, cs_id, 1)
+    report = undo_changeset(store, cs_id, [1])
+    assert report.restored == [1], report.skipped
+    assert _signals(store, "undone") == []
+    assert undo_changeset(store, cs_id, [0]).restored == [0]
+    (undone,) = _signals(store, "undone")
+    assert undone["refs"] == [cs_id] and "[0]" in undone["note"]
+
+
 def test_a_first_name_two_people_share_offers_both(env):
     _, _, store = env
     first = shared_first_name()

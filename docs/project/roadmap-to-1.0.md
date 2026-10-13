@@ -237,13 +237,17 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [x] **Audit design 6.8 to 6.11 against the code** first, before the learning loop is built on them: the questions, actions, notices and names
   services. Fix what differs, or correct the design, so the learning loop's signals are right from the start. Done
   2026-10-13, checked by reading (the findings are in the items below; 57 statements checked).
-- [ ] **What the audit found, fixed here:**
-  - one "who is this?" per name per input, releasing every op that waits on it (today one question per held op);
-  - answering "who is this?" or "Pick an owner" records a signal with the person chosen (today nothing is recorded,
-    so the same name asks again);
-  - undoing the person's own release records no signal against the assistant (today it records `undone`);
-  - `near-duplicate-action` compares with done actions too, as 4.17 says (done, `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too`; the box stays open for the
-    other items above);
+- [x] **What the audit found, fixed here:**
+  - one "who is this?" per name per input, releasing every op that waits on it (done:
+    `tests/test_pipeline.py::test_one_unknown_name_in_two_ops_gets_one_question_and_one_answer_releases_both`,
+    `tests/test_pipeline.py::test_a_second_unknown_name_in_both_ops_is_asked_once_after_the_first_answer`, and the golden case
+    `unknown-person-twice`);
+  - answering "who is this?" or "Pick an owner" records a `routed` signal with the person chosen (done:
+    `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal`; keeping the name as an
+    alias is not built and stays with the learning step, L3);
+  - undoing the person's own release records no signal against the assistant (done:
+    `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does`);
+  - `near-duplicate-action` compares with done actions too, as 4.17 says (done, `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too`).
 - [ ] **What the audit found, put right in the design:** 6.8 to 6.11 describe in the present tense what isn't built:
   question `key` dedupe, `on_answer`, link enrichment, reroute proposals, the pending flag, Reassign, meeting sync, the
   notice baseline date, `track_only`, `owner_format` parsing and `person.merge`. Each gets "designed" and its phase.
@@ -274,9 +278,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - a `received:` date on every case (refused when missing: `test_a_case_without_a_received_date_is_refused`);
   - a bare first name resolving when the person is in the thread (`first-name-in-thread`);
   - "Maya R." held when only another Maya is known (`different-initial-held`);
-  - an unknown person producing one "who is this" decision (`unknown-person`: one op, one decision, which passed
-    before the fix; the case with two ops naming the same person comes with "one who is this per name per input",
-    which stays open above).
+  - an unknown person producing one "who is this" decision (`unknown-person`: one op, one decision; `unknown-person-twice`:
+    two ops naming the same person, one decision).
 - [ ] **Followed up** on Waiting on them (design 7.5, 6.9): the primary for an action waiting past the nudge threshold.
   It records the chase, keeps the action open and counts it as told. Today the only button there closes the action. The
   action gains `followed_up`, `done_by` and `reported_by` (design 5.1), so a chase has somewhere to be written and credit

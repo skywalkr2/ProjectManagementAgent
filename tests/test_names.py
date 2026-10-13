@@ -313,4 +313,4 @@ def test_the_new_golden_cases_exist():
     from engine.evaluate import load_cases
 
     ids = {c["id"] for c in load_cases(DEMO_B)}
-    assert {"first-name-in-thread", "different-initial-held", "unknown-person"} <= ids
+    assert {"first-name-in-thread", "different-initial-held", "unknown-person", "unknown-person-twice"} <= ids

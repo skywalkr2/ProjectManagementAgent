@@ -792,9 +792,21 @@ def signal(store: Store, kind: str, refs: list[str], note: str | None = None, no
 
 def undo_changeset(store: Store, changeset_id: str, indices: list[int] | None = None):
     report = undo(store, changeset_id, indices)
-    if report.restored:
-        signal(store, "undone", [changeset_id], note=f"ops {report.restored}")
+    corrected = [i for i in report.restored if _written_by_assistant(store, changeset_id, i)]
+    if corrected:
+        signal(store, "undone", [changeset_id], note=f"ops {corrected}")
     return report
+
+
+def _written_by_assistant(store: Store, changeset_id: str, index: int) -> bool:
+    """Whether the op's changes were made by the assistant or a plugin. An op the person released or ran themselves
+    is their own decision, so undoing it is not a correction of the assistant's work."""
+    actors = {
+        e["actor"]
+        for e in store.read().ledger()
+        if e["changeset"] == changeset_id and e["op"].rpartition("#")[2] == str(index)
+    }
+    return not actors or bool(actors & {"assistant", "plugin"})
 
 
 def send_back(

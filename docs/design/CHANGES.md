@@ -626,6 +626,14 @@ Each phase A item was checked in the code before it was designed. Three gaps wer
 | The received date | The source was dated when the app read it, and the packet gave the processing date | The source is dated by the item's own received time, and the packet states the day the input was received, in the workspace's time zone |
 | Golden cases | One frozen clock for every case | Every case has `received:` and the clock freezes there; three new cases for these fixes |
 
+## 27. Phase L0: the audit's fixes to names and questions (2026-10-13)
+
+| Item | What the code did | What it does now |
+|---|---|---|
+| "Who is X?" | One question per held op, even for one name | One per name per input; answering it applies every op waiting on it (6.11). Built: `tests/test_pipeline.py::test_one_unknown_name_in_two_ops_gets_one_question_and_one_answer_releases_both` |
+| The answer | Recorded nothing | A `routed` signal with the person chosen (6.20). Built: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal` |
+| Undoing the person's own release | Recorded `undone` against the assistant | Records nothing. Built: `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

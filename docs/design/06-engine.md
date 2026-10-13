@@ -567,8 +567,12 @@ wherever they are shown.
   name is; a first name with an initial or surname fragment ("Ada L.") becomes the one person that fragment fits, and when it
   fits no one the op is held and the people who share the first name are offered, however many of them are in the thread;
   an owner written in the workspace's `owner_format` is parsed into person and team (*designed, not built*).
-  Anything ambiguous or unknown holds the op and files one routing decision per held op ("Who is 'Sam'?", with the candidates;
-  "Add a new person" is *designed*, L3b; one decision per name per input is *designed*, L0).
+  Anything ambiguous or unknown holds the op and files one routing decision per name per input ("Who is 'Sam'?", with the
+  candidates; names compare ignoring case and surrounding space). Every op of that input that waits on the name hangs on
+  that one question, and answering it applies them all. **Built**: `tests/test_pipeline.py::test_one_unknown_name_in_two_ops_gets_one_question_and_one_answer_releases_both`,
+  `tests/test_pipeline.py::test_a_second_unknown_name_in_both_ops_is_asked_once_after_the_first_answer` and the golden case
+  `unknown-person-twice`. "Add a new person" is *designed*, L3b. The answer is a correction of the routing guess, so it
+  records a `routed` signal (6.20) with the person chosen; keeping the name as an alias is *designed*, L3.
 - **The input's context** (**built**, phase L0): the PM; the sender and the others on the message (a watched message's saved
   `participants`, and the From, To and Cc lines at the head of the input's own text, which also covers a pasted message); and
   the people of the project the input is about (the project the person chose at hand-in or the watched source's project: its
@@ -1010,6 +1014,7 @@ cases from signals and rule suggestions are *designed, not yet built*):
 | pulled back | the PM pulls an auto-closed change back ("This is ours") |
 | draft edited | the approved content differs from the assistant's draft (the difference is kept) |
 | held op declined | the PM declines a held system op or a routing guess |
+| routed | the person said who a name or an owner is, answering "Who is X?" or "Pick an owner" (refs: the changeset, the question, the person chosen; the note is the name as written). Undoing the person's own release of a held op records no signal: it is their decision, not the assistant's work. **Built**: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal`, `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |
 | edited | the person changes a field the assistant set (a fact, an owner, a due date, an item's project, a question's wording before it is sent). The ledger shows who set each field, so this needs no AI. A silent correction, learned from in the batch (*designed, phase L*) |
 | repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item (*designed, phase L*) |
 

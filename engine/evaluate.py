@@ -241,12 +241,13 @@ def _has_words(text: str, words: list[str]) -> bool:
 
 def _matches(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store) -> bool:
     if e.get("held") == "who-is":
-        found = 0
+        asked = set()
         for o in outcomes:
             if o["status"] == "held" and o.get("question"):
                 q = store.read().get("question", o["question"])
                 if q and len(q.data.get("options", [])) == e.get("options", len(q.data.get("options", []))):
-                    found += 1
+                    asked.add(q.id)
+        found = len(asked)  # ops waiting on one question count once
         return found == e["count"] if "count" in e else found > 0
     op = e["op"]
     for o in _applied(outcomes, op):

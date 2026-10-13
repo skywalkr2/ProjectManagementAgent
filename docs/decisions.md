@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: One "who is this?" per name, a signal for the answer, and no signal for undoing the person's own release (phase L0)
+
+**Decided by:** the design (6.8, 6.11, 6.20) is built as the audit of 6.8 to 6.11 found it should be.
+
+**What:**
+- Ops of one input that wait on the same unresolved name (compared ignoring case and surrounding space) share one question;
+  answering it applies every one of them. At most one open question per name per input.
+- Answering "Who is X?" or "Pick an owner" records a `routed` signal (a new kind: the person said who a name or an owner
+  is), with the changeset, the question and the person chosen.
+- Undoing an op the person released or ran themselves records no `undone` signal; undoing the assistant's work still does.
+
+**Why:** several questions for one name tired the person and inflated the counts; the best correction the person makes was
+thrown away; and undoing their own decision is not a correction of the assistant.
+
+**Impact:** design 5.1 (signal kinds), 6.8, 6.11, 6.20; one additive signal kind; no new setting; keeping the chosen name as
+an alias stays with L3.
+
 ## 2026-10-13: Review earned per kind of change; the PM pack's charter and minutes; a sales pack waiting on requirements
 
 **Decided by:** project owner ("the human approver is there for most everything, but over time the AI should learn what
