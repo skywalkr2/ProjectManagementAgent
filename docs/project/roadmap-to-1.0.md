@@ -26,6 +26,9 @@ blocks; everything else goes ahead without it.
 |---|---|---|---|---|
 | O1 | **The "before" run of the golden set** on real models: today's 14 cases × 3 runs, on a low-cost and a stronger account, with today's scoring. Steps below. | The owner's computer, with their AI accounts | Only L4's last step: the "after" report and its comparison with this one. That report also has to exist before real use starts. | All of phase A, and L-core's code, including the harder set itself. The run is pinned to commit `802538e`, so changing the cases, the scoring or the packet afterwards doesn't spoil it. |
 
+**When:** best now, while L1 is being built, not at the end (the original designer's L0 sign-off, 2026-10-13): it is the
+only owner action on the critical path, and it blocks the comparison at the end of L4.
+
 **O1 steps.** In the owner's copy of the repository, on their own computer:
 ```
 git fetch origin claude/tender-tesla-16a8ob
@@ -241,6 +244,17 @@ real use starts. The rest (L-more) comes after the packs.
   - Every fixture pair passes (L4): the later input comes out right with no correction repeated, and every negative pair's
     later input is unchanged.
   - The day-30 scenario meets its written expectations.
+- **Ready for real use** (the original designer's L0 sign-off, 2026-10-13): five things the first week of real use needs, each a small screen change built here
+  with its test; phase B keeps only their final layout:
+  - [ ] the note box on the action buttons (the intake is built; the screens send no note yet);
+  - [ ] the header's "alive" line (the assistant's last run and what is queued, amber or red when something is wrong);
+  - [ ] on hold isn't due: held actions leave Today's ranking, due and overdue counts, and the numbers the weekly review
+    reads;
+  - [ ] the follow-up rule (an action notice chased only when its action is due within 7 days or overdue, never on hold;
+    an undated one after 14 days; a plain question after 4 days; each a setting), in Today, Top priorities' lines and
+    the Follow-ups pills;
+  - [ ] "where it came from" as a working link on actions, questions, decisions and knowledge records, so Keep can be
+    judged against the evidence.
 
 **Then the owner's real use starts** (owner, 2026-10-12), running through phases B and C beside the build. Building stays
 one stream; the owner uses it daily on their own mail, calendar and notes. For the first month, two numbers are reviewed
@@ -729,7 +743,19 @@ them are needed before the owner's daily use, which starts when L-core passes.
     nothing more is needed. A draft cut off at the output limit whose continuation finds no network moved to phase E's
     outage handling.
 
-L1. **Knowledge as records.**
+L1. **Knowledge as records.** Settled before L1 starts (the original designer's L0 sign-off, 2026-10-13):
+- [ ] **A note's author follows the button.** Mark done and the person's own notes edits are the person's words. They
+  finished it, Followed up, and an answer recorded for someone else are content the person reports, authored by the
+  action's owner (or the named sender): facts from it apply as usual, but rules and lessons from it wait for Keep.
+  Today every typed note is a trusted source of the person's own words, with system ops held (L0); this narrows it.
+  A learning pair: a pasted reply containing "from now on we always…" never becomes an active rule.
+- [ ] **Knowledge proposals are writable on every account a chain can hold.** `learn.*` proposals and `lesson.update`
+  are allowed for every account a fallback chain can hold, locked-down agents included, and the switch check tests it;
+  a loop that learns only on the main account stops learning silently on a fallback day.
+- [ ] **Knowledge keeps its provenance.** Each knowledge record's evidence carries the same "where it came from" link as
+  an action: the input, or the change and request that taught it.
+- [ ] **Scopes have exclusions as well as targets.** `applies_to: workspace` with `except: [project, ...]`, shown on the
+  Learned line, so a rule that holds everywhere but one program isn't copied onto every other project.
 - [ ] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,
   status and an `applies_to` target. Their ops, with Undo.
 - [ ] Rules become records, with `rules.yaml` as the starting set; stage checks read them.
@@ -742,6 +768,9 @@ L1. **Knowledge as records.**
 - [ ] Signals name the `run` and `changeset` they correct.
 
 L2. **Every run reads what applies.**
+- [ ] **The stable prefix has a budget** (the original designer's L0 sign-off, 2026-10-13): rules arrive in bursts, so the stable section has a size budget (a setting)
+  and the knowledge log counts its rules; a rule that hasn't applied in 30 days (a setting) is flagged for review on
+  the daily card instead of the prefix growing forever.
 - [ ] The knowledge section, split so the cached prefix holds:
   - stable: all rules, task-kind lessons and a small glossary;
   - per input: the rest.
@@ -792,7 +821,12 @@ L3. **Every correction teaches.**
   "from outside". Bulk Keep only for glossary terms and facts with evidence (design 12.8).
 - [ ] The repeat-correction signal and the knowledge-used rate (`applied` on each changeset, checked against the knowledge
   log).
-- [ ] The corrections recorded before this phase are learned from once, into one catch-up list.
+- [ ] The corrections recorded before this phase are learned from once, into one catch-up list, capped for one sitting
+  (the original designer's L0 sign-off, 2026-10-13): at most 20 (a setting), ranked by how often the same kind of correction repeated; the rest expire with their
+  count shown, as daily proposals do.
+- [ ] **A correction fixes the class, not the instance** (the original designer's L0 sign-off, 2026-10-13): the learner's one proposal states the general case and its
+  test (with evidence such as dates), and its learning pair checks the negative: a row that does name our work still
+  gets its question.
 - [ ] Fallback chains hold only checked accounts, or ones the person accepted unchecked; the first run on a fallback account
   is tagged on its cards.
 - [ ] On screen (7.18), the parts the loop can't be trusted without:
@@ -909,6 +943,9 @@ L6. **The rules that bite in the first week of real use** (design 8.8).
 - [ ] Every link checked before it is shown.
 
 ## Phase B: finish the UI/UX redesign (about 4 sessions)
+
+The note box on action buttons, the header's "alive" line, on hold isn't due, the follow-up rule and the "where it came
+from" link are built for real use at the end of L-core ("Ready for real use"); phase B gives them their final layout.
 
 The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 

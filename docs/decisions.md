@@ -3,6 +3,20 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: L0 signed off; what the original designer settled for L-core
+
+**Decided by:** the original designer (L0 review, relayed by the owner); placed by the technical PM. **What:** L0 is
+signed off and P13 closes. L-core's exit gains "Ready for real use": the note box on action buttons, the header's alive
+line, on hold isn't due, the follow-up rule and the working source link, built at the end of L-core with phase B keeping
+only their layout. Before L1: a note's author follows the button (They finished it, Followed up and an answer for someone
+else are content the person reports, authored by the owner or sender; facts apply, rules and lessons wait for Keep),
+knowledge proposals are writable on every account a chain can hold (tested in the switch check), knowledge keeps its
+provenance link, and scopes take exclusions (`applies_to: workspace` with `except`). L2 budgets the stable prefix and
+flags rules unused for 30 days; the catch-up list is capped at 20; the learner states the class and its test. The O1
+"before" run is best done while L1 is built. **Why:** real use starts when L-core passes, and these are what the first
+week needs. **Impact:** L-core grows by these items; phase B's scope shrinks to layout for the five; L1 starts only when
+the owner says so.
+
 ## 2026-10-13: The original designer's lessons from running, placed in the plan
 
 **Decided by:** the original designer (lessons from running the work version, relayed by the owner); placed by the
