@@ -588,6 +588,8 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`,
   `tests/test_journeys.py::test_j12_a_request_run_with_no_network_waits_for_it_and_runs_once_when_it_is_back`,
   `web/src/shell/HeldLines.test.tsx`.
+  - Left: a draft cut off at the output limit whose continuation call finds no network is held with a note instead of waiting for the network.
+  - Left: changing the AI accounts does not end an offline wait early (`release_paused` lifts only usage-limit pauses); the wait is at most `dispatch.offline_check_seconds`.
 
 L1. **Knowledge as records.**
 - [ ] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,

@@ -6,6 +6,7 @@ base URL, a key (except for local servers) and model ids, all from config.
 
 from __future__ import annotations
 
+import ipaddress
 import time
 from typing import Any
 
@@ -49,7 +50,7 @@ class OpenAICompatibleAdapter:
         except httpx.TimeoutException as err:
             raise AiError("timeout", str(err)) from None
         except httpx.TransportError as err:
-            raise transport_error(err) from None
+            raise transport_error(err, self.settings.base_url) from None
         seconds = time.monotonic() - started
         if response.status_code >= 400:
             raise classify_http_error(response)
@@ -96,7 +97,7 @@ class OpenAICompatibleAdapter:
         except httpx.TimeoutException as err:
             raise AiError("timeout", str(err)) from None
         except httpx.TransportError as err:
-            raise transport_error(err) from None
+            raise transport_error(err, self.settings.base_url) from None
         if response.status_code >= 400:
             raise classify_http_error(response)
         try:
@@ -176,11 +177,24 @@ def classify_http_error(response: httpx.Response) -> AiError:
     return AiError("other", detail)
 
 
-def transport_error(err: httpx.TransportError) -> AiError:
+def is_local(base_url: str) -> bool:
+    """Whether an account's address is on this computer: localhost or a loopback address."""
+    host = (httpx.URL(base_url).host or "").lower().rstrip(".")
+    if host == "localhost" or host.endswith(".localhost"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def transport_error(err: httpx.TransportError, base_url: str = "") -> AiError:
     """A call that got no answer, from the kind of transport failure: no connection could be made at all (the name
     didn't resolve, or the connection couldn't be opened) is `offline`; any other break in the exchange is
-    `provider_down`."""
-    return AiError("offline" if isinstance(err, httpx.ConnectError) else "provider_down", str(err))
+    `provider_down`. A connection refused by a server on this computer is no loss of network: that server is not
+    running, so it is `provider_down`."""
+    no_connection = isinstance(err, httpx.ConnectError) and not (base_url and is_local(base_url))
+    return AiError("offline" if no_connection else "provider_down", str(err))
 
 
 def _retry_after(response: httpx.Response) -> float | None:

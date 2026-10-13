@@ -332,3 +332,29 @@ def test_route_sends_matching_requests_to_another_tier():
     )
     assert route(cfg, "notes", input_chars=100, quoted_messages=5, data_level="internal") == "deep"
     assert route(cfg, "notes", input_chars=100, quoted_messages=1, data_level="internal") == "routine"
+
+
+@pytest.mark.parametrize(
+    "host_part,kind",
+    [
+        ("localhost:11434", "provider_down"),
+        ("127.0.0.1:8080", "provider_down"),
+        ("127.3.4.5", "provider_down"),
+        ("[::1]:8080", "provider_down"),
+        ("models.example.net", "offline"),
+        ("192.168.1.20:8080", "offline"),
+    ],
+)
+def test_a_refused_connection_to_this_computer_is_a_stopped_server_not_a_lost_network(cfg, host_part, kind):
+    def refused(request):
+        raise httpx.ConnectError("connection refused", request=request)
+
+    scheme = httpx.URL(cfg.ai.providers["main"].base_url).scheme
+    settings = cfg.ai.providers["main"].model_copy(update={"base_url": f"{scheme}://{host_part}/v1"})
+    local = ADAPTERS[settings.adapter](settings, "k", transport=httpx.MockTransport(refused))
+    with pytest.raises(AiError) as err:
+        local.run(TASK, "m")
+    assert err.value.kind == kind
+    with pytest.raises(AiError) as listing:
+        local.list_models()
+    assert listing.value.kind == kind

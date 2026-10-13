@@ -1029,15 +1029,16 @@ the pauses, since another account may take the work
 no connection could be made at all: the name did not resolve or the connection could not be opened. Any answer from the
 service, a 5xx included, is still `provider_down`, and a break after the connection was made stays `provider_down`. Only
 the adapter decides it, from the kind of transport failure and never from text (the OpenAI-compatible adapter: a connect
-error is `offline`, any other transport error `provider_down`; the command-line agent adapter classifies from the exit
+error is `offline`, except when the account's own address is on this computer (localhost or a loopback address), where a refused connection means the local server is not running and is `provider_down`, decided from the configured address (`tests/test_ai.py::test_a_refused_connection_to_this_computer_is_a_stopped_server_not_a_lost_network`); any other transport error `provider_down`; the command-line agent adapter classifies from the exit
 code and error stream and none of its errors says plainly that no connection could be made, so it does not use `offline`).
 The router tries the next account in the chain on `offline`, since another account may be reachable. When every account
 in the chain that is not paused is `offline`, the call ends in `NetworkOffline` and the request waits: it stays queued,
 says "Waiting for the network since <time>. Checking again at <time>.", has the cause `offline` with `since` (kept from the
 first time it found no network) and `until`, and **no try is counted** (`retries` is unchanged), so being offline never
 uses up the tries a failing service gets and never brings the request to the person. The worker leaves it alone until
-`until` (`dispatch.offline_check_seconds`, 60) and then tries again; it never loops. Each look is a recorded run with the
-error kind `offline`. Once a request has waited longer than `dispatch.offline_line_after_minutes` (15), Today's queue has one
+`until` (`dispatch.offline_check_seconds`, 60) and then tries again; it never loops. The first miss of a wait is a recorded run
+with the error kind `offline`, so the history shows it; later looks of the same wait record none, until the request runs or the wait
+ends another way (`tests/test_silent_stops.py::test_a_wait_for_the_network_records_its_first_miss_only_not_one_run_per_look`). Once a request has waited longer than `dispatch.offline_line_after_minutes` (15), Today's queue has one
 risk line, however many requests wait, to check the network connection, with how many wait and since when; it goes when the
 requests run again (7.7). Notes and messages cost little; drafting work
 (proposals, statements of work, long copy, research, independent reviews) can cost the person real money, so spending is something they decide,

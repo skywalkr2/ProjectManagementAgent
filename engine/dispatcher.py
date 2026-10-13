@@ -235,8 +235,22 @@ def process(
             draft["base_text"] = base_text
             draft["units"] = packet.anchor_units or (units_of(store, fmt, base_text) if base_text.strip() else [])
             draft["split"] = lambda text, fmt=fmt: units_of(store, fmt, text)
+    waited = offline_since is not None  # already waiting for the network: a repeat miss adds no run record
     first = _rounds(
-        store, cfg, router, packet.task, tier, request_id, ctx, previous_ops, level, use, content, draft, independent
+        store,
+        cfg,
+        router,
+        packet.task,
+        tier,
+        request_id,
+        ctx,
+        previous_ops,
+        level,
+        use,
+        content,
+        draft,
+        independent,
+        offline_known=waited,
     )
     outcome = first
     # The person's pick of account is theirs: no escalation away from it.
@@ -263,6 +277,7 @@ def process(
             content,
             draft,
             independent,
+            offline_known=waited,
         )
         if second.changeset is not None or first.changeset is None:
             outcome = second if second.stop is None or first.changeset is None else first
@@ -424,6 +439,7 @@ def _rounds(
     content: frozenset[str] = frozenset(),
     draft: dict | None = None,
     independent: Independence | None = None,
+    offline_known: bool = False,
 ) -> _Outcome:
     """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong. A refusal
     stops at once: no fix round, no other account, no escalation."""
@@ -440,6 +456,7 @@ def _rounds(
                 use=use,
                 content=content,
                 independent=independent,
+                offline_known=offline_known,
             )
         except AccountPaused as err:
             cause = {"kind": "paused", "account": err.account, "until": err.until.isoformat()}

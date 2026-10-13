@@ -353,6 +353,28 @@ def test_a_lost_network_waits_without_counting_a_try_and_runs_when_the_network_i
     assert provider.calls == 5
 
 
+def test_a_wait_for_the_network_records_its_first_miss_only_not_one_run_per_look(env):
+    _, cfg, store, clock = env
+    set_responder(Scripted(offline(), offline(), offline(), offline(), ANSWER))
+    request = hand(env)
+    worker = worker_of(env)
+
+    def runs(kind):
+        return [r for r in store.read().list("run") if r.data.get("error_kind") == kind]
+
+    worker.run_pending()
+    for _ in range(2):
+        clock.move(seconds=cfg.dispatch.offline_check_seconds)
+        assert worker.run_pending() == 1
+    assert data(env, request)["state"] == "queued" and len(runs("offline")) == 1
+    clock.move(seconds=cfg.dispatch.offline_check_seconds)
+    worker.run_pending()
+    clock.move(seconds=cfg.dispatch.offline_check_seconds)
+    worker.run_pending()
+    assert data(env, request)["state"] == "review" and len(runs("offline")) == 1
+    assert [r.data["outcome"] for r in store.read().list("run")].count("ok") == 1
+
+
 def test_a_lost_network_never_reaches_the_person_however_long_it_lasts(env):
     _, cfg, _, clock = env
     set_responder(Scripted(offline()))

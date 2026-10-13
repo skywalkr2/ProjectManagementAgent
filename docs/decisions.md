@@ -2856,7 +2856,10 @@ queued with "Waiting for the network since <time>. Checking again at <time>.", t
 person. The worker looks again after `dispatch.offline_check_seconds` (60), never in a tight loop. Once a request has waited
 longer than `dispatch.offline_line_after_minutes` (15), Today's queue has one line however many wait, asking the person to
 check the network connection, with how many wait and since when; it goes when the work runs again. The command-line agent
-adapter is unchanged: none of its errors says plainly that no connection could be made.
+adapter is unchanged: none of its errors says plainly that no connection could be made. A refused connection to an account whose
+address is on this computer (localhost, a loopback address) is `provider_down`, since a stopped local server is not a lost
+network. Only the first offline miss of a wait is recorded as a run; later looks record none until the request runs or the
+wait ends another way.
 
 **Decided by:** the technical PM.
 

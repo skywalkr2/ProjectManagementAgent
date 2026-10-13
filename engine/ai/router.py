@@ -221,9 +221,11 @@ class Router:
         use: str | None = None,
         content: frozenset[str] = frozenset(),
         independent: Independence | None = None,
+        offline_known: bool = False,
     ) -> tuple[AiResult, Choice, str]:
         """Run the task on the first account that can serve it. Returns the result, the choice and the Run id. A
-        refusal is returned like an answer (marked refused), never handed to the next account."""
+        refusal is returned like an answer (marked refused), never handed to the next account. `offline_known`: the
+        request is already waiting for the network, so a call that again finds none is not recorded as another run."""
         self._check_budget(task.kind)
         last: AiError | None = None
         picked = choices(self.cfg, task.kind, data_level, tier=tier, use=use, content=content, independent=independent)
@@ -253,7 +255,8 @@ class Router:
                 last = err
                 if err.kind == "offline":
                     offline += 1
-                self._record(task, request_id, choice, started, time.monotonic() - clock, None, err, independent)
+                if not (err.kind == "offline" and offline_known):
+                    self._record(task, request_id, choice, started, time.monotonic() - clock, None, err, independent)
                 until = self._pause_until(err, position == len(options) - 1)
                 if until is not None:
                     self.pauses.pause(choice.provider, until)
