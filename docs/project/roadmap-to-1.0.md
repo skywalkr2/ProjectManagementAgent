@@ -890,6 +890,8 @@ being done, builds schedules and tracks action items.
 C3. **The publishing pack: started.** It doesn't exist yet. Its launch plan goes into the project management pack's
 schedule when both are on, and is a plain list of milestones when it is alone.
 - [ ] Create its private repository, with a brief and a builder session like the other packs.
+- [ ] Fold in the publishing features the writing pack's builder set aside (owner, 2026-10-13; open promise P12), in
+  generic terms, before the repository is made.
 - [ ] First version, from design 9.7 and the writing pack's `docs/publishing-pack.md`:
   - the title record;
   - a launch plan from a template, with lead times;
