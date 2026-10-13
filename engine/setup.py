@@ -15,6 +15,9 @@ import json
 import os
 import re
 import shutil
+import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -77,8 +80,26 @@ def _state(ws: Any) -> dict[str, Any]:
 
 
 def _save_state(ws: Any, data: dict[str, Any]) -> None:
+    """Write the whole file in one step, so a read never finds it half written."""
     ws.private_dir.mkdir(parents=True, exist_ok=True)
-    (ws.private_dir / STATE_FILE).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    target = ws.private_dir / STATE_FILE
+    temporary = target.with_suffix(".json.saving")
+    temporary.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(target)
+
+
+#: Held while the state is read, changed and written, so changes made at the same moment (a screen sends several when it
+#: opens) are applied one after the other and none is lost.
+_STATE_LOCK = threading.RLock()
+
+
+@contextmanager
+def _changing(ws: Any) -> Iterator[dict[str, Any]]:
+    """The state for one change: the block edits it, and it is written when the block ends without an error."""
+    with _STATE_LOCK:
+        state = _state(ws)
+        yield state
+        _save_state(ws, state)
 
 
 def mail_plugins(store: Any) -> set[str]:
@@ -209,16 +230,15 @@ def keep_walkthrough(ws: Any, step: str | None = None, closed: bool | None = Non
     until they open it again), or that they finished it."""
     if step is not None and step not in WALKTHROUGH_STEPS:
         raise StoreError(f"there is no walkthrough screen {step}")
-    state = _state(ws)
-    mine = dict(state["walkthrough"]) if isinstance(state.get("walkthrough"), dict) else {}
-    if step is not None:
-        mine["step"], mine["started"] = step, True
-    if closed is not None:
-        mine["closed"] = closed
-    if ended is not None:
-        mine["finished"] = ended
-    state["walkthrough"] = mine
-    _save_state(ws, state)
+    with _changing(ws) as state:
+        mine = dict(state["walkthrough"]) if isinstance(state.get("walkthrough"), dict) else {}
+        if step is not None:
+            mine["step"], mine["started"] = step, True
+        if closed is not None:
+            mine["closed"] = closed
+        if ended is not None:
+            mine["finished"] = ended
+        state["walkthrough"] = mine
 
 
 def addons_off(ws: Any, cfg: Any) -> list[str]:
@@ -237,9 +257,8 @@ def addons_off(ws: Any, cfg: Any) -> list[str]:
 def decide_addons(ws: Any, names: list[str]) -> None:
     """Remember that the person chose about these add-ons (turned on, turned off or left off), so the add-ons step
     stops asking about them."""
-    state = _state(ws)
-    state["addons_decided"] = sorted(set(state.get("addons_decided", [])) | set(names))
-    _save_state(ws, state)
+    with _changing(ws) as state:
+        state["addons_decided"] = sorted(set(state.get("addons_decided", [])) | set(names))
 
 
 def _template_in_use(ws: Any, cfg: Any) -> bool:
@@ -259,16 +278,14 @@ def _pm_named(cfg: Any, view: Any) -> bool:
 
 def skip(ws: Any, step: str, skipped: bool = True) -> None:
     """Skip a step for now, or bring it back."""
-    state = _state(ws)
-    names = [s for s in state.get("skipped", []) if s != step]
-    state["skipped"] = [*names, step] if skipped else names
-    _save_state(ws, state)
+    with _changing(ws) as state:
+        names = [s for s in state.get("skipped", []) if s != step]
+        state["skipped"] = [*names, step] if skipped else names
 
 
 def template_applied(ws: Any, template: str) -> None:
-    state = _state(ws)
-    state["template"] = template
-    _save_state(ws, state)
+    with _changing(ws) as state:
+        state["template"] = template
 
 
 # ---- folders ---------------------------------------------------------------------------------------------------------

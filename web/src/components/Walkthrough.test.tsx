@@ -266,6 +266,37 @@ describe("opening", () => {
       expect(calls.find((c) => c.route === "POST setup/walkthrough")?.body).toEqual({ step: "people" }),
     );
   });
+
+  test("where it stands is sent one request at a time, in the order the person made them", async () => {
+    const user = userEvent.setup();
+    fakeApi(routes({}, CORE.map((id) => step(id)), { open: false, closed: true }));
+    // Answers to the keeps are held until the test lets them go, to see whether the next is sent before the last is back.
+    const answer = globalThis.fetch;
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    let sending = 0;
+    let most = 0;
+    const sent: S["WalkthroughIn"][] = [];
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (!String(input).endsWith("setup/walkthrough")) return answer(input, init);
+      sent.push(JSON.parse(String(init?.body)) as S["WalkthroughIn"]);
+      sending += 1;
+      most = Math.max(most, sending);
+      await held;
+      sending -= 1;
+      return answer(input, init);
+    });
+    open({ at: { screen: "people", n: 1 } });
+    await screenTitle();
+    await waitFor(() => expect(sent.length).toBeGreaterThan(0));
+    // Opening asks twice (the screen itself and the request to open at it), and the person moves on meanwhile.
+    await user.click(screen.getByRole("button", { name: /^Backups/ }));
+    expect(sent).toHaveLength(1);
+    release();
+    await waitFor(() => expect(sent).toHaveLength(3));
+    expect(most).toBe(1);
+    expect(sent.map((body) => body.step)).toEqual(["people", "people", "backup"]);
+  });
 });
 
 describe("closing", () => {

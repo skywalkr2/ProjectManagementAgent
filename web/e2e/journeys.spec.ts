@@ -229,7 +229,9 @@ test.describe.serial("journeys", () => {
     // After the restart the row says it is installed and off; turning it on waits for another restart.
     await expect(row).toContainText("Installed (version 0.1.0) and off");
     await row.getByRole("button", { name: "Turn on Example panel" }).click();
-    await expect(row).toContainText("restart");
+    // The row still carries the install note ("ready after a restart"), so that text proves nothing about Turn on. Wait
+    // for the row to say what was saved: a restart asked for before then can reach the app ahead of the request.
+    await expect(row).toContainText("Installed (version 0.1.0) and on after a restart");
     await expect(page.getByRole("link", { name: /Example overview/ })).toHaveCount(0);
     await row.getByRole("button", { name: "Restart now" }).first().click();
     await expect(page.getByText("Restarted with the new settings.")).toBeVisible({ timeout: 90_000 });
@@ -255,7 +257,10 @@ test.describe.serial("journeys", () => {
     // The menu offers Remove as soon as it is off, and Remove works then: it still runs until the restart, so new work
     // waits for that restart, which the header offers.
     await installed.getByRole("button", { name: "More actions for journey-panel" }).click();
+    const removed = page.waitForResponse((r) => r.url().endsWith("/uninstall") && r.request().method() === "POST");
     await page.getByRole("menuitem", { name: "Remove" }).click();
+    // The restart below must come after the removal has been answered, not race it.
+    expect((await removed).ok()).toBe(true);
     await expect(installed.getByRole("alert")).toHaveCount(0);
     await page.getByRole("button", { name: /^Status: / }).click();
     await page.getByRole("dialog", { name: "Status" }).getByRole("button", { name: "Restart now" }).click();

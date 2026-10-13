@@ -901,3 +901,37 @@ def test_the_time_zone_setting_is_a_list_of_known_time_zones():
     zone = next(s for s in describe(cfg) if s.key == "workspace.user.timezone")
     assert zone.type == "choice"
     assert "UTC" in zone.options and len(zone.options) > 100
+
+
+def test_setup_state_survives_changes_made_at_the_same_time(tmp_path):
+    """The walkthrough's screen, the skipped steps and the decided add-ons share one small file. Changes arriving
+    together (the screen sends two when it opens) each keep what the others wrote and never read it half written."""
+    import threading
+
+    from engine import setup as setup_module
+
+    ws, _cfg, store = make(tmp_path)
+    store.close()
+    names = [f"addon-{n}" for n in range(8)]
+    start = threading.Barrier(len(names) + 1)
+    problems: list[BaseException] = []
+
+    def decide(name: str) -> None:
+        try:
+            start.wait()
+            for _ in range(6):
+                setup_module.decide_addons(ws, [name])
+                setup_module.keep_walkthrough(ws, step="ai", closed=False)
+        except BaseException as err:  # reported by the test thread
+            problems.append(err)
+
+    threads = [threading.Thread(target=decide, args=(name,)) for name in names]
+    for t in threads:
+        t.start()
+    start.wait()
+    for t in threads:
+        t.join()
+    assert not problems
+    kept = setup_module._state(ws)
+    assert kept["addons_decided"] == sorted(names)
+    assert kept["walkthrough"] == {"step": "ai", "started": True, "closed": False}

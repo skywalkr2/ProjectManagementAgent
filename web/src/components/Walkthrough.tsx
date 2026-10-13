@@ -54,14 +54,23 @@ export function Walkthrough(
   if (data && first.current === null) first.current = data.walkthrough.step;
   const current: Screen | null = data ? (chosen ?? props.at?.screen ?? first.current) : null;
 
-  /** Keep where the walkthrough stands on the server, and in the list the other screens read. */
-  const keep = async (body: S["WalkthroughIn"]) => {
-    try {
-      const view = await api.keepWalkthrough(body);
-      client.setQueryData<S["SetupView"]>(["setup"], (old) => (old ? { ...old, walkthrough: view } : old));
-    } catch {
-      // The screen still works; it just won't be remembered.
-    }
+  // The request being sent, so the next waits for it: requests sent together can be handled in either order, and an
+  // earlier screen arriving after a later one would be the one remembered.
+  const sending = useRef<Promise<void>>(Promise.resolve());
+
+  /** Keep where the walkthrough stands on the server, and in the list the other screens read. One request at a time,
+   * in the order they were made. */
+  const keep = (body: S["WalkthroughIn"]): Promise<void> => {
+    const send = async () => {
+      try {
+        const view = await api.keepWalkthrough(body);
+        client.setQueryData<S["SetupView"]>(["setup"], (old) => (old ? { ...old, walkthrough: view } : old));
+      } catch {
+        // The screen still works; it just won't be remembered.
+      }
+    };
+    sending.current = sending.current.then(send);
+    return sending.current;
   };
 
   // Opening it is the person's choice, so a walkthrough closed or finished before is open again from here. Keeping its
