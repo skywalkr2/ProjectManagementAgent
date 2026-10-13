@@ -913,8 +913,10 @@ being done, builds schedules and tracks action items.
 C3. **The publishing pack: started.** It doesn't exist yet. Its launch plan goes into the project management pack's
 schedule when both are on, and is a plain list of milestones when it is alone.
 - [ ] Create its private repository, with a brief and a builder session like the other packs.
-- [ ] Fold in the publishing features the writing pack's builder set aside (owner, 2026-10-13; open promise P12), in
-  generic terms, before the repository is made.
+- [x] Fold in the publishing features the writing pack's builder set aside (owner, 2026-10-13; open promise P12), in
+  generic terms, before the repository is made: received 2026-10-13 and written into the lists below, checked by reading.
+  The details and links stay in the writing pack's private repository; its builder sends them again when this
+  pack's repository is made, and the brief links them there.
 - [ ] First version, from design 9.7 and the writing pack's `docs/publishing-pack.md`:
   - the title record;
   - a launch plan from a template, with lead times;
@@ -923,6 +925,13 @@ schedule when both are on, and is a plain list of milestones when it is alone.
   - the listing sheet per platform and the price calculator, from dated platform data;
   - the AI-disclosure answers filled from the authorship breakdown;
   - the `publishing/manuscript-source@1` hand-off.
+- [ ] After the first version:
+  - the hand-off's next minor version, which says where each edition's book number comes from (the writer's own, a
+    platform's free one, or none);
+  - for editions with the writer's own number, a registration sheet in the order of the national numbering agency's
+    form, and later a standard book-metadata file per title that the writer uploads. The pack sends nothing itself, and
+    the agency's current terms are checked before this is built.
+- Staying with the writing pack: the cover wrap specification and advance reader editions.
 
 C3c. **A business analysis pack and a systems architect pack** (owner, 2026-10-14: "pretty much barely disguised
 standard AI that would take inputs and generate outputs that those roles would typically do ... they would also fit
