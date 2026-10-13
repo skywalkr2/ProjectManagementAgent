@@ -644,7 +644,7 @@ yet follow, that it is *designed*, with its phase.
 | Question `key`, `on_answer`, `batch`, link enrichment, the pending flag, the re-check of other open questions | Present tense | Designed, not yet built, not scheduled |
 | Reword, reroute, drop, move a question; "not me, ask X"; narrowing; the feedback run from the named item's state; learning from the PM's own answer | Present tense | Designed, phase L3 (one sub-item added to L3) |
 | `near-duplicate-question` | Phase L | Phase L2 |
-| Followed up, `done_by`, `reported_by`; `owner_format` in rendering | Present tense | Designed, phase L0 |
+| `owner_format` in rendering | Present tense | Designed, phase L0 (Followed up, `done_by` and `reported_by` were built in the same phase, section 6.9) |
 | Reassign | Present tense | Designed, phase B |
 | Meeting sync; escalation suggestion | Present tense | Designed, phase C2 (project management pack) |
 | Edits pulled back from published pages | Present tense | Designed, phase C4 |
