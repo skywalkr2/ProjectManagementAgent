@@ -3,6 +3,25 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: Top priorities, the Monday briefing, and blocked actions
+
+**Decided by:** project owner ("go ahead and add, because in the original version of this that I use at work, it has
+monday briefings as well as a constantly updated top priority items"), after the design was compared with an outside
+list of core features. The comparison found two gaps: actions can't be blocked, and nothing is sent to the person.
+
+**What:**
+- Top priorities on Today, ranked by rules, always current (phase B).
+- The Monday briefing, built by rules in the app, with an optional AI summary (phase B). Sending it is phase E, under
+  7.19's rule on content in notifications.
+- An action can be blocked, waiting on something. Unblocking from an input is L3b; dependencies stay in the project
+  management pack.
+- The owner's picture of the work version shapes both before they are built (open promise P11).
+
+**Why:** Both are what the owner relies on at work every day. A blocked action is everyday state, not methodology.
+
+**Impact:** The roadmap: phase B, L3b and phase E. Design 7.7 when designed from the picture. A weekday setting and an
+optional task kind when built.
+
 ## 2026-10-13: Phase A done; the obvious next step from what came in is planned
 
 **Decided by:** project owner ("I think we can mark A done"; "when the AI asks who someone is it should allow you to

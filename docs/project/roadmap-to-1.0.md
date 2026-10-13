@@ -414,6 +414,7 @@ around. Each is the person's choice, with Undo, and each answer is learned (L3).
   - an action with a date in the input gets that due date;
   - a reply that answers an open question proposes marking it answered;
   - a meeting invitation shows on the agenda, under its project.
+  - an input saying a blocker is gone proposes unblocking the action that waited on it.
 - [ ] **Exit check:** a golden-set case for each kind and a learning pair for each answer kind (the second time, no
   question). A journey test presses each button and sees the record made and Undo work.
 
@@ -531,6 +532,18 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   and where it came from; every open question with who it's waiting on and since when. Filter by project, person and
   state; edit, close and reassign from the row, with Undo; duplicates offered for merging; anything stale or with no
   owner surfaced on Today. Exit check: the owner works through their own open items on a laptop and a phone.
+- [ ] **Top priorities, always current** (owner, 2026-10-13: the version used at work has "a constantly updated top
+  priority items" list). A short ranked list on Today across every project, rebuilt as records change and ranked by
+  rules (due and overdue, at risk, blocked, waiting on the person, the project's priority), never by an AI call. Shaped
+  by the owner's picture of the work version's screen (open promise P11).
+- [ ] **The Monday briefing, in the app** (owner, 2026-10-13: the work version has "monday briefings"). On the first
+  open of the week (the day is a setting), a briefing: what is due this week, what is late or at risk, what is
+  blocked, who the person is waiting on, and decisions still open, built from the records by rules. A short written
+  summary on top is an optional AI task kind with its estimate, off by default. Sending it to the person is phase E.
+- [ ] **An action can be blocked** (from comparing the design with an outside list of core features): "Blocked, waiting
+  on <a person, an action or a thing>", shown on the row and counted in Top priorities. The assistant proposes
+  unblocking when an input says the blocker is gone (L3b). Dependencies between work items stay in the project
+  management pack (C2).
 - [ ] **The obvious next steps on screen** (L3b): "Add a new person" in the who-is-this chooser, "Add a project",
   "It's part of" and "Not a project", and the other one-click offers, in the row's menu or as its primary.
 - [ ] **The app's own kit, offered where it's wanted** (owner, 2026-10-13: "i dont want to see these fake plugins"): the
@@ -681,6 +694,8 @@ Order by what protects real data first, then by what the packs ask for:
   forgotten value.
 - [ ] Scope resolver (6.18), the scheduled rules and lessons review with promotion (6.21), and read-backs (6.7).
   Dependencies, baselines and RAID moved to the project management pack (C2).
+- [ ] **The Monday briefing sent to the person** (owner, 2026-10-13), and a morning summary if they want one: to a
+  notification target, with content only where the target is allowed for the data level (7.19), counts otherwise.
 - [ ] Native AI adapters and reproducible runs (6.16).
 - [ ] **M0, the desktop installer:** no Python, uv, Node or terminal; it updates itself.
 

@@ -66,6 +66,8 @@ def test_removing_a_pack_that_ran_leaves_nothing_of_it_behind(tmp_path):
         (wheel(extra={"pack_demo-0.1.0.data/scripts/run": "x"}), "paths"),
         (b"not a zip", "isn't a package"),
     ],
+    # Named, not derived from the bytes: a zip carries its build time, which would change the ids between workers.
+    ids=["compiled", "not-purelib", "missing-requirement", "escaping-path", "data-script", "not-a-zip"],
 )
 def test_what_cant_be_installed_from_here_is_refused(tmp_path, data, problem):
     with pytest.raises(InstallError, match=problem):
