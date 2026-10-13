@@ -195,7 +195,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 if ctx.inputs.evidence_source(cite.quote) is None:
                     refuse(i, "evidence", f"the quote {cite.quote!r} isn't in the material; copy the words exactly")
         if isinstance(op, SettingProposeOp):
-            why = setting_problem(ctx.store, op.key, op.value)
+            why = setting_problem(ctx.store, op.setting, op.value)
             if why:
                 refuse(i, "targets", why)
         # targets
@@ -321,22 +321,38 @@ def _openable(url: str) -> bool:
 LANGUAGE_TAG = r"[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*"
 
 
-def setting_problem(store: Store, key: str, value: Any) -> str | None:
-    """Why a suggested setting can't be offered: not a setting the screens change, or a value its file refuses."""
+def resolve_setting(store: Store, handle: str) -> tuple[Any, str | None]:
+    """The setting a handle names among the settings the screens show now, or why there isn't one."""
     import os
 
     from engine import settings as config_screens
+    from engine.help import askable_settings
 
     config_dir = store.path.parent / "config"  # the workspace's own folder holds its database and its config
     try:
         current = load_config(config_dir, env=dict(os.environ))
     except ConfigError as err:
-        return f"the settings have a problem to fix first: {err.plain}"
-    shown = {s.key: s for s in config_screens.describe(current)}
-    setting = shown.get(key)
-    if setting is None or not setting.editable:
-        return "that isn't a setting the PM can change from the screens"
-    name, *path = key.split(".")
+        return None, f"the settings have a problem to fix first: {err.plain}"
+    try:
+        setting = config_screens.resolve_handle(handle, askable_settings(current))
+    except config_screens.SettingsError as err:
+        return None, str(err)
+    if not setting.editable:
+        return None, "that isn't a setting the PM can change from the screens"
+    return setting, None
+
+
+def setting_problem(store: Store, handle: str, value: Any) -> str | None:
+    """Why a suggested setting can't be offered: not a setting the screens change, or a value its file refuses."""
+    import os
+
+    from engine import settings as config_screens
+
+    setting, why = resolve_setting(store, handle)
+    if setting is None:
+        return why
+    config_dir = store.path.parent / "config"
+    name, *path = setting.key.split(".")
     source = config_dir / f"{name}.yaml"
     text = source.read_text(encoding="utf-8") if source.exists() else "version: 1\n"
     try:
@@ -918,7 +934,8 @@ def _apply_op(
         data = {"request": ctx.inputs.request, "text": op.text, "cites": cites}
         made("answer", tx.create("answer", data, w).id)
     elif isinstance(op, SettingProposeOp):
-        data = {"request": ctx.inputs.request, "key": op.key, "value": op.value, "why": op.why}
+        setting, _ = resolve_setting(ctx.store, op.setting)
+        data = {"request": ctx.inputs.request, "key": setting.key, "value": op.value, "why": op.why}
         made("setting_proposal", tx.create("setting_proposal", data, w).id)
     elif isinstance(op, ReportDraftOp):
         data = {"request": ctx.inputs.request, "title": " ".join(op.title.split()), "text": op.text}

@@ -377,15 +377,15 @@ class AnswerOp(OpModel):
 
 class SettingProposeOp(OpModel):
     """Propose a change to one setting, when the answer is a setting the PM can change. Nothing changes until the PM
-    applies it. The key is a setting key from the settings list."""
+    applies it. The setting is named by its setting code from the settings list."""
 
     op: Literal["setting.propose"]
-    key: str = Field(description="The setting's dotted key, exactly as in the settings list.")
+    setting: str = Field(description="The setting's code, exactly as the settings list gives it.")
     value: Any = Field(description="Its new value, of the type the settings list shows for it.")
     why: str = Field(min_length=1, max_length=500, description="Why this change answers the question, in one line.")
 
     def describe(self) -> str | None:
-        return f"Suggest setting {self.key}"
+        return f"Suggest setting {self.setting}"
 
 
 class ListAddOp(OpModel):

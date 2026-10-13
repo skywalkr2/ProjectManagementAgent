@@ -52,8 +52,8 @@ make improving the product faster.
 and a stable short handle made from its key; `setting.propose` names the handle, and the applier resolves it against the
 current settings list. **Why:** an answer cites the material word for word, so a key in the material can reach the screen;
 a handle is unambiguous where screen names can repeat across groups and add-ons, and scrubbing keys out of quotes would
-break the citation check. **Impact:** design 6.25; `engine/help.py`, `engine/ops.py` and the applier when built (roadmap
-L0, the wording item).
+break the citation check. **Impact:** design 6.25; `engine/help.py`, `engine/ops.py` and the applier (roadmap L0, the
+wording item; built). The op's field changed from `key` to `setting`, which is in the generated plugin guide.
 
 ## 2026-10-13: A wording lint on an item that stays internal warns, with no fix round (phase L0)
 

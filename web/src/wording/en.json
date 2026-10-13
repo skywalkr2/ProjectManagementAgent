@@ -1113,6 +1113,7 @@
   "ask.based_on": "Based on",
   "ask.suggestion": "Suggested change",
   "ask.suggestion_line": "{label}: {value}",
+  "ask.setting_unnamed": "A setting",
   "ask.apply": "Apply",
   "ask.apply_named": "Apply: {label}",
   "ask.not_now": "Not now",

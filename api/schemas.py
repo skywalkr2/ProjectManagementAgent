@@ -1551,12 +1551,12 @@ class AskIn(BaseModel):
 
 
 class CiteView(BaseModel):
-    quote: str
+    quote: ScreenText
     source: str | None = None
 
 
 class AnswerView(BaseModel):
-    text: str
+    text: ScreenText
     cites: list[CiteView]
 
 
@@ -1565,7 +1565,7 @@ class SettingProposalView(BaseModel):
     version: int
     key: str
     value: Any = None
-    why: str
+    why: ScreenText
     status: Literal["open", "applied", "dismissed"]
 
 

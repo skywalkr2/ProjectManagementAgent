@@ -71,21 +71,28 @@ def chosen_sections(question: str, limit: int = 4, sections: list[Section] | Non
     return picked or sections[:1]
 
 
-def settings_lines(cfg: Any) -> list[str]:
-    """One line per setting the screens show: what it is called and does, its current value and default, whether the
-    screens can change it, and its key (which only a setting proposal uses). Nothing that says where a key comes
-    from."""
+def askable_settings(cfg: Any) -> list[Any]:
+    """The settings an ask may name: the ones the screens show, without anything secret."""
     from engine import settings as config_screens
 
+    return [i for i in config_screens.describe(cfg) if not PRIVATE_KEYS.search(i.key) and i.type != "other"]
+
+
+def settings_lines(cfg: Any) -> list[str]:
+    """One line per setting the screens show: what it is called and does, its current value and default, whether the
+    screens can change it, and its setting code (which only a setting proposal uses). Never the key, and nothing
+    that says where a setting comes from."""
+    from engine import settings as config_screens
+
+    shown = askable_settings(cfg)
+    codes = config_screens.handles([i.key for i in shown])
     lines = []
-    for item in config_screens.describe(cfg):
-        if PRIVATE_KEYS.search(item.key) or item.type == "other":
-            continue
+    for item in shown:
         change = "changeable" if item.editable else "locked" if item.locked else "not changed from this screen"
         now = json.dumps(item.value, ensure_ascii=False)
         lines.append(
             f"{config_screens.screen_name(item)}: {item.description.rstrip('. ')}. Now {now} "
-            f"(default {json.dumps(item.default)}, {change}). Key for a setting proposal only: {item.key}"
+            f"(default {json.dumps(item.default)}, {change}). Setting code: {codes[item.key]}"
         )
     return lines
 

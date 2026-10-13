@@ -106,6 +106,43 @@ def screen_name(setting: Setting | None) -> str:
     return f"“{first}”" if first else "that setting"
 
 
+HANDLE_PREFIX = "s-"
+HANDLE_LENGTH = 6
+
+
+def _digest(key: str) -> str:
+    return hashlib.sha256(key.encode("utf-8")).hexdigest()
+
+
+def handle_of(key: str, length: int = HANDLE_LENGTH) -> str:
+    """A setting's short handle: a fixed prefix and the first characters of a hash of its key. It stays the same
+    while the key does, and says nothing about where the setting lives."""
+    return HANDLE_PREFIX + _digest(key)[:length]
+
+
+def handles(keys: list[str]) -> dict[str, str]:
+    """The handle of each key in a list. Keys whose short handles would be the same all get longer ones, just long
+    enough to tell them apart, so a handle names one setting among the keys given."""
+    digests = {key: _digest(key) for key in keys}
+    out = {}
+    for key, digest in digests.items():
+        length = HANDLE_LENGTH
+        while length < len(digest) and any(o[:length] == digest[:length] for k, o in digests.items() if k != key):
+            length += 1
+        out[key] = HANDLE_PREFIX + digest[:length]
+    return out
+
+
+def resolve_handle(handle: str, items: list[Setting]) -> Setting:
+    """The setting a handle names among the settings now, or a refusal in plain words."""
+    wanted = handle.strip().lower()
+    by_handle = handles([i.key for i in items])
+    for item in items:
+        if by_handle[item.key] == wanted:
+            return item
+    raise SettingsError("that isn't one of the settings; use a setting code from the settings list")
+
+
 def fingerprint(config_dir: Path) -> str:
     """A hash of the config files the screens edit, the add-ons' settings files included."""
     digest = hashlib.sha256()

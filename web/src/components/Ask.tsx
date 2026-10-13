@@ -188,7 +188,7 @@ function Proposal(props: { proposal: S["SettingProposalView"]; onApplied: () => 
   const open = p.status === "open";
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled: open });
   const item = settings.data?.items.find((i) => i.key === p.key);
-  const label = item ? labelOf(item, t, has) : has(`settings.key.${p.key}`) ? t(`settings.key.${p.key}`) : p.key;
+  const label = item ? labelOf(item, t, has) : has(`settings.key.${p.key}`) ? t(`settings.key.${p.key}`) : t("ask.setting_unnamed");
 
   const apply = async () => {
     setBusy(true);

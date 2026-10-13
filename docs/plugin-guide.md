@@ -1767,12 +1767,12 @@ Draft a report to the product's maintainers when the PM asks for something the p
 
 ### `setting.propose`
 
-Propose a change to one setting, when the answer is a setting the PM can change. Nothing changes until the PM applies it. The key is a setting key from the settings list.
+Propose a change to one setting, when the answer is a setting the PM can change. Nothing changes until the PM applies it. The setting is named by its setting code from the settings list.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
-| `key` | str | required | The setting's dotted key, exactly as in the settings list. |
+| `setting` | str | required | The setting's code, exactly as the settings list gives it. |
 | `value` | Any | required | Its new value, of the type the settings list shows for it. |
 | `why` | str | required | Why this change answers the question, in one line. |
 

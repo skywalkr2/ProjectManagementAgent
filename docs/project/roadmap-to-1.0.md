@@ -478,7 +478,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `workspaces/demo-b/evals/delivery-window.yaml` (`test_the_delivery_window_case_gives_the_fact_and_an_entry_spanning_it`).
   **Left: the learning pair (L4).** Knowledge isn't in packets until L-core, so a corrected date can't carry to the next
   mail yet; the pair is built with the other pairs.
-- [ ] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
+- [x] **The wording check's remainder** (from phase A2): plugin-authoring messages the test suite never produces
   (manifest validation, registration errors) get plain words and a test that produces each; Ask's material names
   settings without their keys, with `setting.propose` finding the key another way. **Built, the first half:** a manifest
   or a plugin-settings validation failure is said as where and what (`plain_error` in `engine/plugin_manifest.py`, used
@@ -491,11 +491,17 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `test_a_settings_file_with_a_value_the_add_on_doesnt_have_is_explained_in_plain_words`), and every literal error
   message in the plugin host, manifest and plugin API passes the check
   (`test_no_error_an_add_on_can_raise_names_the_insides_of_the_product`); the connector-reads message is produced in
-  `tests/test_connector_reads.py`. **Left: Ask's material.** Today each settings line ends "Key for a setting proposal
-  only: <key>", so an answer can quote a key onto the screen. Decided (design 6.25): the material names each setting
-  by its screen name and a stable short handle made from its key; `setting.propose` names the handle and the applier
-  resolves it against the current settings list, so a key never reaches an answer. Left: building that, with a test that
-  an answer citing a settings line shows no key.
+  `tests/test_connector_reads.py`.
+  **Ask's material is built:** each settings line names the setting by its screen name and a setting code (`s-` and the
+  first six hex characters of a hash of the key), never the key; `setting.propose` takes that code as `setting` and the
+  applier resolves it against the settings shown (an unknown code is refused in plain words; matching codes get longer
+  ones). Tests: `tests/test_ask.py::test_a_setting_handle_is_short_and_stays_the_same`,
+  `test_the_material_names_settings_by_a_code_and_never_by_a_key`,
+  `test_a_handle_resolves_among_the_current_settings_and_an_unknown_one_is_refused`,
+  `test_handles_that_collide_get_longer_so_each_names_one_setting`,
+  `test_an_answer_rests_on_quoted_words_and_suggests_a_setting` (a proposal naming a code applies through the settings
+  save), `test_a_suggestion_naming_an_unknown_setting_code_is_refused`,
+  `test_an_answer_that_cites_a_settings_line_shows_no_settings_key`.
 - [x] Settings that do nothing are wired or removed: `owner_format` (wired for showing owners: `tests/test_names.py::test_an_owner_is_written_in_the_owner_format_with_the_team_on_the_entry_else_the_persons_own`). **The scheduled export is wired** to the workspace's
   own git, so a readable copy is written regularly once real knowledge accumulates; the backups copy the database, which
   is not readable on its own. The export's remote is not offered until phase E gives it the care of backups (design 12.1).

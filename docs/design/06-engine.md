@@ -1466,8 +1466,10 @@ core is complete on its own…", and 2026-10-11, "Asking the assistant answers f
   Links back to the records it used are shown beside it.
 - **A setting the person can change** comes as a `setting.propose` op (a `setting_proposal`): the setting, the new value and
   why. The material names each setting by its screen name and a short **handle** made from its key (a stable hash), never the
-  key itself; the op names the handle and the applier resolves it against the current settings list, so a key never reaches
-  an answer or the screen (*decided; built with the roadmap's wording item, L0*).
+  key itself; the op names the handle and the applier resolves it against the current settings list (an unknown handle is
+  refused in plain words, and two keys whose short handles match both get longer ones), so a key never reaches an answer or
+  the screen. The proposal keeps the resolved key for the settings save; the screens show the setting's screen name. Built:
+  `tests/test_ask.py::test_a_setting_handle_is_short_and_stays_the_same`, `test_the_material_names_settings_by_a_code_and_never_by_a_key`, `test_a_handle_resolves_among_the_current_settings_and_an_unknown_one_is_refused`, `test_handles_that_collide_get_longer_so_each_names_one_setting`, `test_an_answer_rests_on_quoted_words_and_suggests_a_setting` (a proposal naming a code applies through the settings save), `test_a_suggestion_naming_an_unknown_setting_code_is_refused`, `test_an_answer_that_cites_a_settings_line_shows_no_settings_key`.
   Nothing changes until the person applies it, with one click, through the same settings save as any change (the files'
   fingerprint, validation, the record of the change, 4.22), so it can be undone. A locked key, or one changed only in a file, is
   never proposed; the answer says where it is changed instead.
