@@ -1154,7 +1154,8 @@ Order by what protects real data first, then by what the packs ask for:
 
 ## Not in 1.0
 
-- Hosted mode and sign-in (Part 11).
+- Hosted mode and sign-in (Part 11), and its end state: an organization install where members from the People list have
+  roles, their own views and approvals by role (design 11.8; owner, 2026-10-13).
 - Social, email and newsletter channels.
 - The sales pack (13.3).
 - Licensed (paid) packs: the design is accepted, but whether to charge is the owner's call, after launch.

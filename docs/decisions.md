@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-13: The hosted end state is an organization install with roles
+
+**Decided by:** project owner ("an organization level install - like publisher where approved users from the people list
+would have access to certain roles & responsibilities ... we won't build this now, but that overall organization wide
+architecture needs to be part of the end state hosted setup"). **What:** design 11.8 describes it: members are people
+on the People list, roles set what each sees and does (per person and per project), each role has its own views, packs
+declare which roles their parts are for, the ledger records the person behind each change, approvals belong to roles.
+**Why:** a publisher with many writers, editors and staff is the product's natural end state. **Impact:** nothing built
+in 1.0; from now on new core code never assumes a single person (CLAUDE.md), and plugin API additions are designed with
+roles in mind.
+
 ## 2026-10-13: The original designer's review of L0 and the work version's screens
 
 **Decided by:** the original designer, on review; accepted by the technical PM. **What:** a lost network never pauses an

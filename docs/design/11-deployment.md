@@ -161,3 +161,32 @@ that everything reads at the moment of use applies at once (`LIVE_KEYS` in `engi
 who the person is, names, wording and shortcuts, the accounts counted as ours). Any other change, or a change to the app's code,
 is said in words, holds new AI work, and waits for the person to choose Restart now or Later. The app never restarts on its
 own. A copy that cannot start itself again says to close and start it.
+
+## 11.8 The end state: an organization install (not in 1.0)
+
+The ultimate goal (owner, 2026-10-13) is a hosted install for a whole organization, a publisher say, where several
+people work in one workspace, each with their own role. Nothing here is built in 1.0; it is written now so that what is
+built doesn't rule it out.
+
+- **Members are people.** Anyone who signs in is a person on the People list, given sign-in by someone allowed to.
+  Sign-in uses the hosted methods (11.4), with `auth.users` naming person ids.
+- **Roles are responsibilities.** A role is a named set of what a member may see and do: which packs and screens, which
+  projects (all, or only those they take part in), which kinds of records, and which steps (approve a kind of change,
+  send or publish, change settings, administer). Roles are assigned per person and, where it differs, per project. A
+  writer on the list sees their own books; the publisher's staff see every title.
+- **Views per role.** Each member's Today and panels are built from what their role may see. Packs serve roles: a
+  writer works mostly in the writing pack's views, the publisher's staff in the publishing pack's, and both meet in the
+  shared records through the interfaces between packs (3.9). Packs declare which roles their panels, actions and task
+  kinds are for; the core enforces it.
+- **One record of who did what.** The ledger records the person behind every change, not only "the person running the
+  app", and data levels (5.1) apply per member as well as per AI account.
+- **Approvals belong to roles.** "The PM approves" becomes "a member whose role may approve that kind of change". The
+  rule that a person approves the exact content of anything outward stays.
+- **Learning has an owner.** A member's own corrections teach their own lessons first; organization rules are kept by
+  the members allowed to change them (6.21, 6.22).
+- **AI accounts and budgets** can be the organization's, with budgets per member and per role (6.16).
+
+What this means today: new core code never assumes there is only ever one person. Whoever acts is a person id (the
+person running the app is one of them), screens never hard-code "the PM", and a plugin API addition that would need
+changing for roles is designed with roles in mind.
+

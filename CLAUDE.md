@@ -82,6 +82,8 @@ the change that records it also edits the design section it affects, and `docs/d
 - Restart only when necessary, and only when the person says so: a setting that everything reads at the moment of use
   applies at once (`LIVE_KEYS` in `engine/worker.py`); any other change says a restart is needed, holds new work, and
   waits for the person to choose "Restart now". The app never restarts on its own.
+- The hosted end state is an organization install with roles (design 11.8), not built in 1.0. New core code never
+  assumes one person: whoever acts is a person id, and screens never hard-code "the PM".
 - Hosting platform names appear only in `deploy/` and docs. No user's domain, account or secret anywhere in the repository;
   examples use `example.com`.
 
