@@ -144,21 +144,28 @@ function usePackChange(packId: string, name: string, focusRow: () => void) {
 
 /** What a row says once an install or removal needs the restart, with the same Restart now the other rows have. */
 function RestartLine(props: { text: string }) {
-  const { t } = useWords();
-  const restart = useRestart();
-  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   return (
     <p className="sub pack-restart" role="status">
       {props.text}
-      {status.data?.can_restart && (
-        <>
-          {" "}
-          <button type="button" className="btn quiet small" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
-            {t("restart.now")}
-          </button>
-        </>
-      )}
+      <RestartNowButton />
     </p>
+  );
+}
+
+/** The row's own Restart now, offered whenever the app can restart itself. Asking is the person's choice: nothing
+ * restarts until it is pressed. */
+function RestartNowButton() {
+  const { t } = useWords();
+  const restart = useRestart();
+  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
+  if (!status.data?.can_restart) return null;
+  return (
+    <>
+      {" "}
+      <button type="button" className="btn quiet small" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+        {t("restart.now")}
+      </button>
+    </>
   );
 }
 
@@ -340,6 +347,7 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
               {t(props.restartNeeded ? "addons.state.restart_version" : pack.enabled ? "addons.state.on_version" : "addons.state.off_version", {
                 version: pack.installed_version ?? "",
               })}
+              {props.restartNeeded && !change.note && <RestartNowButton />}
             </p>
           )}
           {installed && update && (
@@ -549,8 +557,6 @@ function InstalledRow(props: { item: Installed; index: number }) {
     actions.push({ id: "remove", label: t("addons.remove"), run: () => void change.remove() });
   }
   const isOn = item.enabled;
-  const restart = useRestart();
-  const status = useQuery({ queryKey: ["status"], queryFn: api.status });
   const pending = waitsForRestart(item);
   const statusText = pending
     ? t(isOn ? "addons.state.after_restart" : "addons.state.off_after_restart")
@@ -568,14 +574,7 @@ function InstalledRow(props: { item: Installed; index: number }) {
           {item.description && <p className="pack-summary">{item.description}</p>}
           <p className="sub">
             {statusText}
-            {pending && status.data?.can_restart && (
-              <>
-                {" "}
-                <button type="button" className="btn quiet small" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
-                  {t("restart.now")}
-                </button>
-              </>
-            )}
+            {pending && <RestartNowButton />}
           </p>
           {change.note && <RestartLine text={change.note} />}
           {problem && (

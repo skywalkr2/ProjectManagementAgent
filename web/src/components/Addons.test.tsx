@@ -672,6 +672,43 @@ test("the install note and its Restart now go once the app has restarted, and st
   await waitFor(() => expect(calls.filter((c) => c.route === "GET packs").length).toBeGreaterThan(reads));
 });
 
+test("after an install and its restart, Turn on on the same row says a restart is needed and offers its own Restart now", async () => {
+  const user = userEvent.setup();
+  let enabled = false;
+  let instance = "first";
+  const calls = fakeApi({
+    "GET packs": () =>
+      view({
+        available: [pack("tool", { installable: true, installed_version: "1.0.0", enabled })],
+        installed: [{ ...installedRows(enabled)[0], name: "tool", state: "off" }],
+      }),
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "GET status": () => ({ restart_needed: "add-ons", can_restart: true, restart_for: [] }),
+    "GET runtime-config": () => ({ instance }),
+    "POST packs/tool/on": () => {
+      enabled = true;
+      return SAVED(true);
+    },
+    "POST restart": () => ({ restarting: true }),
+  });
+  renderApp(
+    <RestartProvider hellos={1} pollSeconds={0.05} doneSeconds={0.05}>
+      <Addons onBack={() => undefined} />
+    </RestartProvider>,
+  );
+  const tool = await row("Name of tool");
+  // The add-on was installed in an earlier start; nothing waits for a restart yet.
+  expect(within(tool).queryByRole("button", { name: "Restart now" })).toBeNull();
+  await user.click(within(tool).getByRole("button", { name: "Turn on Name of tool" }));
+  await waitFor(() => expect(tool).toHaveTextContent("Installed (version 1.0.0) and on after a restart"));
+  expect(within(tool).queryByText(/is installed\. It is ready after a restart/)).toBeNull();
+  // Turning on is not a restart: nothing restarted by itself, and the row has its own way to ask for one.
+  expect(calls.some((c) => c.route === "POST restart")).toBe(false);
+  await user.click(within(tool).getByRole("button", { name: "Restart now" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST restart")).toBe(true));
+  instance = "second";
+});
+
 test("a refusal to install is the server's own words, with Install still there to try again", async () => {
   const user = userEvent.setup();
   const calls = fakeApi({

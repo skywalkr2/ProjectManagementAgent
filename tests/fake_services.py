@@ -106,10 +106,21 @@ class State:
 # ---- the AI service --------------------------------------------------------------------------------------------------
 
 
+#: How a sorting run's request opens: a batch of message headers, marked as outside content.
+SORTING_MARK = '<untrusted source="mail headers">'
+
+
+def is_sorting(user: str) -> bool:
+    """Whether this packet asks to sort mail headers (the assistant's sorting of mail the rules can't place)."""
+    return SORTING_MARK in user
+
+
 def answer_to(system: str, user: str) -> str:
     """The text a model would send back for this packet, from the stand-in's rules."""
     if "Reply with exactly this JSON" in user:
         return json.dumps({"ok": True})
+    if is_sorting(user):
+        return json.dumps(stand_in.sort_mail(user))
     if "<question>" in user:
         return json.dumps(stand_in.answer(user, system))
     if "<untrusted" in user or "<note>" in user:
@@ -136,7 +147,13 @@ def ai_routes(state: State) -> list[Route]:
         user = next((m["content"] for m in reversed(messages) if m.get("role") == "user"), "")
         first = " / ".join(stand_in.input_lines(user))
         state.chats.append(
-            {"model": body.get("model"), "at": time.time(), "smoke": "Reply with exactly" in user, "input": first[:200]}
+            {
+                "model": body.get("model"),
+                "at": time.time(),
+                "smoke": "Reply with exactly" in user,
+                "sorting": is_sorting(user),
+                "input": first[:200],
+            }
         )
         text = answer_to(system, user)
         usage = {"prompt_tokens": max(1, len(system + user) // 4), "completion_tokens": max(1, len(text) // 4)}
@@ -513,12 +530,14 @@ def helper_routes(state: State, base: str) -> list[Route]:
         )
 
     async def requests(_request: Request) -> JSONResponse:
-        work = [c for c in state.chats if not c["smoke"]]
+        asked = [c for c in state.chats if not c["smoke"]]
+        work = [c for c in asked if not c["sorting"]]
         inputs = [c["input"] for c in work]
         return JSONResponse(
             {
                 "total": len(state.chats),
-                "smoke": len(state.chats) - len(work),
+                "smoke": len(state.chats) - len(asked),
+                "sorting": len(asked) - len(work),
                 "work": len(work),
                 "inputs": inputs,
                 "models": [c["model"] for c in work],

@@ -218,6 +218,8 @@ test.describe.serial("journey: new start", () => {
     await expect(page.locator("li.line", { hasText: "Start the assistant" })).toHaveCount(0);
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
     const asked = await requests();
+    // The work mail the rules could not place was sorted in one run for the whole batch; it is not counted as work.
+    expect(asked.sorting).toBe(1);
     for (const title of [...mail, ...events]) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
     for (const title of noted) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(0);
 

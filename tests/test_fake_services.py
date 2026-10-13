@@ -5,6 +5,7 @@ by the standard environment variable. A journey that passed against a lenient fa
 
 import base64
 import hashlib
+import json
 import socket
 from urllib.parse import parse_qs, urlsplit
 
@@ -182,3 +183,19 @@ def test_the_app_trusts_the_throwaway_authority_only_through_the_standard_variab
             client.close()
     finally:
         server.should_exit = True
+
+
+def test_a_sorting_packet_gets_an_answer_for_every_id_and_is_counted_apart_from_work(tmp_path):
+    state = State(tmp_path)
+    client = TestClient(build_app(state, 0), follow_redirects=False)
+    headers = "\n".join(f'{{"id": "m{n}", "from": "a", "subject": "s{n}", "categories": []}}' for n in (1, 2, 3))
+    packet = f"{fake_services.SORTING_MARK}\n{headers}\n</untrusted>"
+    sent = client.post(
+        "/ai/v1/chat/completions",
+        json={"model": "m", "messages": [{"role": "system", "content": "sort"}, {"role": "user", "content": packet}]},
+    )
+    answers = json.loads(sent.json()["choices"][0]["message"]["content"])["answers"]
+    assert [a["id"] for a in answers] == ["m1", "m2", "m3"]
+    assert {a["answer"] for a in answers} == {"work"}
+    seen = client.get("/__e2e/ai-requests").json()
+    assert (seen["sorting"], seen["work"], seen["smoke"]) == (1, 0, 0)
