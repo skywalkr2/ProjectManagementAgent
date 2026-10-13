@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.60"
+PLUGIN_API_VERSION = "0.3.61"
 
 
 class Settings(BaseModel):
@@ -1303,9 +1303,13 @@ class Registrar:
         accept: tuple[str, ...] = (),
         max_mb: float | None = None,
         label: str = "",
+        data_level: str | None = None,
     ) -> None:
         """Declare what a kind of file is for: the details asked for when one is added (a pydantic model), the media
-        types it accepts (within the workspace's), and a size cap (never above the workspace's)."""
+        types it accepts (within the workspace's), and a size cap (never above the workspace's). `data_level` ("open",
+        "internal" or "restricted"; default internal) is the level a file added under this kind gets when the person
+        doesn't choose one at the upload; a level the manifest's `requires.data_levels` doesn't list refuses the
+        plugin. A person's explicit choice at the upload stands, and only the person changes it afterwards."""
         from engine.files import AnyDetails, FileKind
 
         self._name(name)
@@ -1313,7 +1317,9 @@ class Registrar:
             raise ValueError("duplicate file kind")
         if details is not None and not issubclass(details, BaseModel):
             raise ValueError("file kind details must be a pydantic model")
-        self.file_kinds[name] = FileKind(name, details or AnyDetails, tuple(accept), max_mb, label)
+        if data_level not in (None, "open", "internal", "restricted"):
+            raise ValueError("a file kind's data_level must be open, internal or restricted")
+        self.file_kinds[name] = FileKind(name, details or AnyDetails, tuple(accept), max_mb, label, data_level)
 
     def action(
         self,

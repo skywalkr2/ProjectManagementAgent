@@ -1410,6 +1410,11 @@ class PluginHost:
             for field, target in ref_fields(model):
                 if target not in REGISTRY and target not in registrar.records:
                     raise ValueError(f"{field} refers to an unknown record kind {target}")
+        for file_kind in registrar.file_kinds.values():
+            if file_kind.data_level is not None and file_kind.data_level not in manifest.requires.data_levels:
+                raise ValueError(
+                    f"{file_kind.name} holds {file_kind.data_level} material, which the add-on doesn't say it keeps"
+                )
         own_files = set(CORE_KINDS) | set(registrar.file_kinds)
         for action in registrar.actions.values():
             if action.on is not None and action.on not in REGISTRY and action.on not in registrar.records:

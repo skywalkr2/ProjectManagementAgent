@@ -46,7 +46,7 @@ config_schema: personal_projects.config:Settings
 requires:
   network: []                     # hosts it may reach; empty means none
   secrets: []                     # secret names it reads (values come from env or keychain)
-  data_levels: [open, internal]   # every data level its record types use
+  data_levels: [open, internal]   # every data level its record types and file kinds use
   tools: []                       # programs it runs, e.g. [{name: java, min_version: "17", probe: "java -version",
                                   #   optional: true, features: [<plugin>/advanced-validator]}]
 entry: personal_projects:register # called with a registrar from engine.plugin_api
@@ -74,7 +74,7 @@ Each row gives the call a plugin makes (or the manifest key), what it adds, and 
 | Stages | the steps a record type moves through, with entry checks | `registrar.stages(record_type, stages)` and `registrar.stage_check(id, fn)`: pure checks, never AI; a stage may apply to some records only (`applies_if`); defaults for `config/stages.yaml` (6.26) | 0.1; `applies_if` 0.3.23 |
 | AI task kind | a new kind of AI work | `registrar.task_kind(name, ...)`: the ops its answer may use, or a draft for a long text field (`output="draft"`, anchored when it revises); its own prompt and guidance; the record it works on (`on`); a packet function saying what each run sees; a role (write, check or research); tier and output size defaults | 0.1 with the core prompt; own prompts, guidance, packets and `on` 0.3.2; drafts 0.3.7; anchored 0.3.9; roles 0.3.13; `all_or_nothing` 0.3.45; `requires_ops` 0.3.49 |
 | Person action | deterministic work the person starts on a record, a file or the workspace | `registrar.action(name, label=, run=, on=)`: `run(target, context, choices)` returns one proposal of ops, new files, previews, named choices and notes. The person reviews it and what they approve applies as theirs, with one Undo | 0.3 |
-| File kind | what a kind of uploaded file is for | `registrar.file_kind(name, details=, accept=, max_mb=)`: the details asked for when one is added and the media types it takes. Raises `file.added` | 0.3 |
+| File kind | what a kind of uploaded file is for | `registrar.file_kind(name, details=, accept=, max_mb=, data_level=)`: the details asked for when one is added, the media types it takes and the data level a file added under it gets unless the person chooses another at the upload (the manifest must list a level above internal in `requires.data_levels`). Raises `file.added` | 0.3; `data_level` 0.3.61 |
 | Declared program | an outside program the plugin runs | `requires.tools` in the manifest; `context.tools.run(name, args, files, timeout, collect=)` in person actions only. Found per computer, no shell, a fresh folder, capped output (3.5) | 0.3 |
 | Text format | how a long text format divides into units (paragraphs, blocks, poems) | `registrar.text_format(name, units)`: pure, deterministic spans that cover the text exactly; atomic units are never split or merged. The core ships "plain" and "markdown" | 0.3.6 |
 | Working-copy format | a file format people edit long text in with their own tools (5.0) | `registrar.working_copy(name, hand_out=, take_back=)`: deterministic, no AI. What it cannot map is reported, never dropped; the core refuses a format that does not read its own untouched file back to the same text | 0.3.11 |

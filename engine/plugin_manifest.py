@@ -100,7 +100,7 @@ class Requires(Strict):
 
     data_levels: list[Literal["open", "internal", "restricted"]] = Field(
         default_factory=lambda: ["open", "internal"],
-        description="Every data level the plugin's record types use, the default internal included.",
+        description="Every data level the plugin's record types and file kinds use, the default internal included.",
     )
     tools: list[Tool] = Field(default_factory=list, description="Outside programs the plugin runs.")
 

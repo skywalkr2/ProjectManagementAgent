@@ -10,6 +10,16 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.61 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **A file kind declares the data level of what is added under it**: `registrar.file_kind(..., data_level=)` takes
+  `open`, `internal` or `restricted` (none means internal), and a level the manifest's `requires.data_levels` doesn't
+  list refuses the plugin, as for a record type. A file added under the kind (an upload, or a file a person action
+  makes) gets that level unless the person chose another at the upload, and a run about the file goes only to accounts
+  allowed it. Only the person changes the level afterwards.
+
 ## What 0.3.60 adds
 
 Manifests stay `'>=0.3,<0.4'`.

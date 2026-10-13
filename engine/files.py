@@ -32,11 +32,17 @@ class FileKind:
     accept: tuple[str, ...] = ()  # media types; empty means the workspace's accepted types
     max_mb: float | None = None  # narrower than the workspace's limit, never wider
     label: str = ""  # what to call it on screen
+    data_level: str | None = None  # the level a file added under this kind gets without a choice; None is internal
 
 
 CORE_KINDS: dict[str, FileKind] = {"attachment": FileKind("attachment", label="Attachment")}
 
 _PM = WriteContext(actor="pm", trust="trusted", op="file.add")
+
+
+def level_for(kind: FileKind | None, chosen: str | None) -> str:
+    """The data level a new file gets: the explicit choice when there is one, else its kind's, else internal."""
+    return chosen or (kind.data_level if kind is not None else None) or "internal"
 
 
 def files_dir(store: Store) -> Path:
@@ -127,15 +133,17 @@ def add_file(
     meta: dict[str, Any] | None = None,
     origin: str = "upload",
     replaces: str | None = None,
-    data_level: str = "internal",
+    data_level: str | None = None,
     context: WriteContext = _PM,
     now: datetime | None = None,
 ) -> Stored:
-    """Check a file against the limits and its kind, store its bytes once, and record it."""
+    """Check a file against the limits and its kind, store its bytes once, and record it. `data_level` is the person's
+    explicit choice; without one the file takes its kind's level."""
     check_file(
         store, cfg, store.read(), name=name, media_type=media_type, size=len(data), file_kind=file_kind, meta=meta
     )
     digest = store_blob(store, data)
+    level = level_for(store.plugins.file_kinds().get(file_kind), data_level)
     with store.transaction() as tx:
         name, details = check_file(
             store,
@@ -163,7 +171,7 @@ def add_file(
                 "trust": "trusted" if origin == "upload" else "untrusted",
                 "replaces": replaces,
                 "added_at": (now or datetime.now(UTC)).isoformat(),
-                "sensitivity": data_level,
+                "sensitivity": level,
             },
             context,
         )

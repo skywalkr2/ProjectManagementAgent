@@ -951,9 +951,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         project: str | None = None,
         meta: str = "{}",
         replaces: str | None = None,
-        data_level: Literal["open", "internal", "restricted"] = "internal",
+        data_level: Literal["open", "internal", "restricted"] | None = None,
     ) -> FileView:
-        """Add a file: the request body is the file's bytes, its Content-Type the media type, details as JSON."""
+        """Add a file: the request body is the file's bytes, its Content-Type the media type, details as JSON. Without
+        a `data_level` the file takes its kind's level (internal unless the kind says otherwise)."""
         import json
 
         from engine.files import add_file

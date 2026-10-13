@@ -52,7 +52,7 @@ Within 0.3 every change is additive: a pack built for an earlier 0.3 version kee
 
 | When (phase) | What the plugin API gains | Version | Breaks anything? |
 |---|---|---|---|
-| L0, now | Data levels on sources and files, when a watched item last changed, the audit trail | 0.3.60, done | No |
+| L0, now | Data levels on sources and files, a file kind's default data level, when a watched item last changed, the audit trail | 0.3.61, done | No |
 | L-core: L2 | One call that gives a pack's packets the knowledge section; `learning: own` for a record type or task kind | 0.3.x | No |
 | L-core: L4 | Packs' own evaluation cases (`provides.evals`) and domain scorers (`registrar.scorer`) | 0.3.x | No |
 | L-core: L5 | The text-extractor extension point; a connector item that carries files (mail attachments) | 0.3.x | No |
@@ -392,6 +392,16 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `test_the_level_is_chosen_from_the_source_then_its_kind_then_the_default`,
   `test_a_file_carries_the_level_it_was_added_with`, `test_an_upload_names_its_level_and_the_list_shows_it`,
   `test_a_watched_restricted_source_stops_for_the_person_when_no_account_may_see_it`.
+- [x] A file kind declares the data level of what is added under it (`registrar.file_kind(..., data_level=)`, plugin API
+  0.3.61): an upload with no choice and a file a person action makes take the kind's level, the person's explicit choice at
+  the upload stands, a manifest that doesn't list the level is refused, and a run about the file goes only to an account
+  allowed it. Tests: `tests/test_file_kind_levels.py::test_a_restricted_kinds_file_is_restricted_with_no_choice_and_the_persons_lower_choice_is_kept`,
+  `test_an_upload_with_no_choice_takes_the_kinds_level_and_an_explicit_choice_stands`,
+  `test_a_file_a_person_action_makes_takes_the_kinds_level`, `test_a_pack_cannot_change_a_files_level_afterwards`,
+  `test_a_manifest_that_doesnt_list_the_level_is_refused_in_plain_words`,
+  `test_a_file_kinds_level_must_be_one_of_the_three`,
+  `test_a_run_on_a_restricted_file_goes_only_to_an_account_allowed_restricted`. Left: files a program writes for a working
+  copy are plain attachments and take no kind's level.
 - [x] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
   both, and they differ). Tests: `tests/test_names.py::test_a_watched_items_received_date_is_its_own_received_time_not_when_it_changed_or_was_read`,
   `test_an_item_with_no_received_time_is_dated_when_it_was_read`.

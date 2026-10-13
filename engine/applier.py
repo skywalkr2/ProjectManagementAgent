@@ -892,7 +892,7 @@ def _apply_op(
             moved.append({"kind": "project", "id": child})
         return [{"kind": "project", "id": made.id}, *moved], None
     if isinstance(op, FileAddOp):
-        from engine.files import blob_matches, check_file
+        from engine.files import blob_matches, check_file, level_for
 
         if not blob_matches(ctx.store, op.sha256, op.size):
             raise StoreError(f"the bytes for {op.name} aren't stored")
@@ -920,6 +920,7 @@ def _apply_op(
             "trust": "untrusted",
             "replaces": op.replaces,
             "added_at": ctx.store.clock(),
+            "sensitivity": level_for(ctx.store.plugins.file_kinds().get(op.file_kind), None),
         }
         return [{"kind": "file", "id": tx.create("file", data, w, record_id=op.id).id}], None
     trust = ctx.inputs.trust

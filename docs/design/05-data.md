@@ -201,7 +201,7 @@ generated plugin guide lists each one with its description.
 | `changeset` (CS) | what the assistant proposed for one request, how it was checked and what was applied | request, summary, **topic** (a few words naming what the input was about, for the item's title, 6.15), ops[] (one outcome per op: the op, its status applied, held, refused or undone, group, the records it touched, the reason), status (applied, held, rejected, undone, partly_undone), problems, trust, reviewed, run, action (the plugin action it came from) |
 | `run` (RUN) | one call to an AI provider | request, task, provider, model, tier, characters and tokens in and out, cached tokens, cost_usd, seconds, outcome (ok, invalid_output, error, **refused**), independence (other_account, same_account; for a check), error_kind (including `offline`: no connection could be made), error_detail |
 | `signal` (SIG) | a correction by the PM (6.20) | kind (sent_back, undone, dropped, reworded, pulled_back, draft_edited, held_declined, routed, set_aside; *phase L-core:* edited), refs, note, at. *Phase L-core:* **run** and **changeset**, the run and changeset it corrects, so the repeat-correction rate can read that run's knowledge log; `refs` keeps the records it is about |
-| `file` (FILE) | a file a person added or a program wrote (5.3) | name, media_type, size, sha256, file_kind, project, meta, origin (upload, tool), trust, replaces, added_at. **sensitivity**, as on `source`, set from the upload's `data_level` choice (default internal) |
+| `file` (FILE) | a file a person added or a program wrote (5.3) | name, media_type, size, sha256, file_kind, project, meta, origin (upload, tool), trust, replaces, added_at. **sensitivity**, as on `source`, set from the upload's `data_level` choice, else its file kind's level, else internal; a file a person action makes takes its kind's level |
 | `text_version` (TXT) | one version of a long text field (5.0) | owner_kind, owner_id, field, number, sha256, format, words, source (edit, draft, proposal, merge, import), status (pending, accepted, merged, discarded), base, replaces, authorship[], paragraph_map[], unmapped, questions, run |
 | `working_copy` (WC) | a long text field handed out as a file for the person's own tool, and what came back (5.0) | owner_kind, owner_id, field, format, base, file, sha256, status (out, returned, dropped), returned_file, proposal |
 | `value_list` (LIST) | the values a field may take (5.4) | name, label, values, retired. *Phase B:* each value's **tone** and, for a status list, its **meaning** (5.4) |
@@ -322,7 +322,9 @@ Files people add (a cover image, a logo, a manuscript, a font) and files program
   one project by reference), metadata, where it came from (`upload` or a tool run), and trust. Uploads by the person are
   trusted as files but their **content** is material, never instructions; files from tool runs are untrusted.
 - **File kinds** say what a file is for: the core's `attachment`, and kinds a plugin or a template declares, each with a
-  metadata schema (validated on upload), accepted media types and a size cap. A new version of a file is a new file
+  metadata schema (validated on upload), accepted media types, a size cap and, when the kind's files are confidential by
+  nature, a data level (a file added under it gets that level unless the person chose another at the upload; the add-on's
+  manifest must list it, as for a record type). A new version of a file is a new file
   record that points to the one it replaces, so history stays.
 - **Reading and showing:** downloads are served with the stored media type, `Content-Disposition: attachment` except
   for images shown in the app, and `nosniff`; HTML and SVG are never rendered inline. Plugins read bytes through the

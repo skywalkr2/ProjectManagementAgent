@@ -334,15 +334,23 @@ def has_account(
 
 def _data_level(store: Store, request: dict) -> str:
     """How sensitive the material in a request is: work on a record (named, or whose stage entry started it) carries
-    that record, at its record type's level; the person's choice on the request and the level kept on its source only
-    raise it."""
+    that record, at its record type's level, or the level kept on it when it is a file or a source; the person's choice
+    on the request and the level kept on its source only raise it."""
     about = target_of(store, request)
     model = store.plugins.records.get(about[0]) if about else None
     level = model.data_level if model is not None else "internal"
-    for said in (request.get("sensitivity"), _source_level(store, request)):
+    for said in (_target_level(store, about), request.get("sensitivity"), _source_level(store, request)):
         if said in LEVELS and LEVELS.index(said) > LEVELS.index(level):
             level = said
     return level
+
+
+def _target_level(store: Store, about: tuple[str, str] | None) -> str | None:
+    """The data level kept on the file or source a request is about, if that is what it is about."""
+    if about is None or about[0] not in ("file", "source"):
+        return None
+    target = store.read().get(*about)
+    return target.data.get("sensitivity") if target is not None else None
 
 
 def _source_level(store: Store, request: dict) -> str | None:

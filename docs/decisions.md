@@ -2922,3 +2922,24 @@ a guess must never hide mail.
 
 **Impact:** Design 6.5, 4.x and CHANGES section 39. New settings `watch.sorting` and `watch.sorting_batch` (live), demo
 values in both workspaces, the `sort-mail` prompt and playbook practice. No change to scope.
+
+## 2026-10-13: A file kind declares the data level of what is added under it (phase L0)
+
+**Decision:** `registrar.file_kind(...)` takes an optional `data_level` (`open`, `internal` or `restricted`; none means
+internal). A level the manifest's `requires.data_levels` doesn't list refuses the add-on, in the same words as for a record
+type. A file added under the kind takes that level unless the person chose one at the upload: the upload's `data_level`
+is now optional (it was `internal` when left out), and the upload screen has no level picker, so it never sends one and
+every screen upload takes its kind's level. The person's explicit choice, higher or lower, stands. A file a person action
+makes (`file.add`) takes its kind's level. Only the person changes `sensitivity` afterwards (it was already person-only,
+and a pack's ops cannot write core records). A run about a file or a source now counts the level kept on it, which the
+0.3.60 text promised and the code did not do for a run named on the file itself. Files read into a source by a connector
+are unchanged: a source's level is its own setting, else its connector's, else the default (4.x), already a declared level.
+
+**Decided by:** the technical PM, on the writing pack builder's question 192.
+
+**Why:** An unpublished document uploaded to be imported is confidential by nature, yet it arrived as internal, so a run on
+it could go to an account allowed only internal material. The kind knows what its files are; the person can still lower
+one, because they own the material.
+
+**Impact:** Design 3.3 (file kind), 5.3 (files), 5.1 (the `file` record) and CHANGES section 41. Plugin API 0.3.61. No new
+settings. No change to scope.
