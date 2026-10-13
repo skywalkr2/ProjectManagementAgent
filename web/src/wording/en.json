@@ -304,6 +304,8 @@
   "followups.reply_label": "{name}'s reply (paste it as received; {assistant} records what it answers)",
   "followups.reply_go": "Hand in reply",
   "followups.they_finished": "They finished it",
+  "followups.followed_up": "Followed up",
+  "followups.followed_up_on": "followed up {date}",
   "followups.copy_message": "Copy message",
   "followups.mark_sent": "Mark sent",
 
@@ -357,6 +359,7 @@
   "toast.marked_active": "{name} is active again.",
   "toast.reply_handed_in": "Handed in {name}'s reply. {assistant} is on it.",
   "toast.they_finished": "Marked done for {name}.",
+  "toast.followed_up": "Recorded that you followed up with {name}. It stays open.",
   "toast.action_done": "Marked done.",
   "toast.stage_moved": "Moved {title} to {stage}.",
   "toast.stage_go": "Approved. {assistant} is on it.",

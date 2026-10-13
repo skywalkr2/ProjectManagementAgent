@@ -436,6 +436,51 @@ def test_question_done_records_the_answer_and_undo_restores_both(env):
     assert [s.data["kind"] for s in store.read().list("signal")] == ["undone"]
 
 
+def _open_action_with_owners() -> dict:
+    return next(
+        a for a in fixture_records(DEMO_B, "action") if a.get("status", "open") == "open" and len(a["owners"]) > 1
+    )
+
+
+def _close(action: dict, quote: str) -> dict:
+    return {"ops": [{"op": "action.close", "id": action["id"], "evidence": {"quote": quote}}]}
+
+
+def test_closing_an_action_from_a_message_credits_its_owners_and_names_the_sender(env):
+    _, _, store = env
+    action = _open_action_with_owners()
+    sender = person("Cover designer")
+    quote = f"{action['text']} is finished"
+    answers(_close(action, quote))
+    run(env, f"From: {sender['full_name']} <someone@example.com>\nSubject: Update\n\n{quote}.")
+    data = store.read().get("action", action["id"]).data
+    assert data["status"] == "done"
+    assert data["done_by"] == [o["person"] for o in action["owners"]]
+    assert data["reported_by"] == sender["id"]
+
+
+def test_closing_an_action_from_the_pms_own_note_is_reported_by_the_pm(env):
+    _, cfg, store = env
+    action = _open_action_with_owners()
+    quote = f"{action['text']} is finished"
+    answers(_close(action, quote))
+    run(env, "", note=f"{quote}.")
+    data = store.read().get("action", action["id"]).data
+    assert data["reported_by"] == cfg.workspace.user.person
+    assert data["done_by"] == [o["person"] for o in action["owners"]]
+
+
+def test_closing_an_action_from_a_sender_nobody_knows_leaves_reported_by_empty(env):
+    _, _, store = env
+    action = _open_action_with_owners()
+    quote = f"{action['text']} is finished"
+    answers(_close(action, quote))
+    run(env, f"From: someone@example.com\nSubject: Update\n\n{quote}.")
+    data = store.read().get("action", action["id"]).data
+    assert data["status"] == "done" and data["reported_by"] is None
+    assert data["done_by"] == [o["person"] for o in action["owners"]]
+
+
 def test_undo_skips_a_group_someone_changed_since(env):
     _, _, store = env
     a = fixture_records(DEMO_B, "action")[0]

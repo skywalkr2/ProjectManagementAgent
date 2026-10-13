@@ -288,10 +288,24 @@ them are needed before the owner's daily use, which starts when L-core passes.
   - "Maya R." held when only another Maya is known (`different-initial-held`);
   - an unknown person producing one "who is this" decision (`unknown-person`: one op, one decision; `unknown-person-twice`:
     two ops naming the same person, one decision).
-- [ ] **Followed up** on Waiting on them (design 7.5, 6.9): the primary for an action waiting past the nudge threshold.
+- [x] **Followed up** on Waiting on them (design 7.5, 6.9): the primary for an action waiting past the nudge threshold.
   It records the chase, keeps the action open and counts it as told. Today the only button there closes the action. The
   action gains `followed_up`, `done_by` and `reported_by` (design 5.1), so a chase has somewhere to be written and credit
-  goes to the owner.
+  goes to the owner. Tests:
+  - the chase stays open, counts as told, and undo removes it:
+    `tests/test_followups_backup_eval.py::test_followed_up_records_a_chase_keeps_the_action_open_and_counts_as_told`,
+    `tests/test_followups_backup_eval.py::test_undoing_a_chase_restores_the_told_day_and_removes_the_chase`,
+    `tests/test_routes.py::test_followed_up_records_the_chase_keeps_the_action_open_and_undo_removes_it`;
+  - They finished it credits the owner and records the PM as reporter:
+    `tests/test_followups_backup_eval.py::test_they_finished_credits_the_owner_and_reports_it_as_the_pm`,
+    `tests/test_routes.py::test_they_finished_it_credits_the_owner_and_records_the_pm_as_the_reporter`;
+  - `action.close` from an input sets both fields:
+    `tests/test_pipeline.py::test_closing_an_action_from_a_message_credits_its_owners_and_names_the_sender`,
+    `tests/test_pipeline.py::test_closing_an_action_from_the_pms_own_note_is_reported_by_the_pm`,
+    `tests/test_pipeline.py::test_closing_an_action_from_a_sender_nobody_knows_leaves_reported_by_empty`;
+  - the screen: `web/src/components/FollowUps.test.tsx` ("past the nudge threshold, Followed up is the primary and They
+    finished it moves to the row's menu"; "Followed up records the chase, says so on the row and can be undone").
+  - Left: Mark done on the PM's own action doesn't set `done_by` or `reported_by`.
 - [x] `project.priority` is person-only: the assistant may propose it, never set it. Test:
   `tests/test_projects_series.py::test_the_assistant_never_sets_a_projects_priority_but_the_person_does` (held for the
   person; the person's own change applies; another project field the assistant sets still applies).

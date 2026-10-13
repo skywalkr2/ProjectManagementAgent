@@ -72,6 +72,9 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
             continue
         for owner in d.get("owners", []):
             told = d.get("told", {}).get(owner["person"])
+            chases = (d.get("followed_up") or {}).get(owner["person"]) or []
+            last_chase = str(max(chases)) if chases else None
+            told_days = (today - date.fromisoformat(told)).days if told else None
             section(owner["person"]).actions.append(
                 {
                     "id": a.id,
@@ -80,7 +83,9 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                     "project": d.get("project"),
                     "project_name": projects.get(d.get("project"), ""),
                     "told": told,
-                    "told_days": (today - date.fromisoformat(told)).days if told else None,
+                    "told_days": told_days,
+                    "followed_up": last_chase,
+                    "chase_due": told_days is not None and told_days >= cfg.ui.today.nudge_after_days,
                 }
             )
     for s in by_person.values():
@@ -161,3 +166,63 @@ def unmark_sent(store: Store, person: str, question_ids: list[str], action_ids: 
             if rec is not None and person in rec.data.get("told", {}):
                 told = {k: v for k, v in rec.data["told"].items() if k != person}
                 tx.update("action", aid, {"told": told}, _PM, read_version=rec.version)
+
+
+class FollowUpError(ValueError):
+    """A chase or a finish that can't be recorded; the message says why in plain words."""
+
+
+def _owned_open_action(tx: Any, action_id: str, person: str) -> Any:
+    rec = tx.get("action", action_id)
+    if rec is None or rec.data["status"] != "open":
+        raise FollowUpError("that action isn't open")
+    if person not in [o["person"] for o in rec.data.get("owners", [])]:
+        raise FollowUpError("that person doesn't own the action")
+    return rec
+
+
+def follow_up(store: Store, action_id: str, person: str, *, now: datetime | None = None) -> dict[str, str | None]:
+    """Record that the PM chased `person` about an open action: today is added to the action's chases and counts as
+    told again, so the waiting count starts over. The action stays open. Returns the day recorded and the told day it
+    replaced, which `undo_follow_up` takes."""
+    today = (now or datetime.now(UTC)).date().isoformat()
+    with store.transaction() as tx:
+        rec = _owned_open_action(tx, action_id, person)
+        previous = rec.data.get("told", {}).get(person)
+        chases = dict(rec.data.get("followed_up") or {})
+        chases[person] = [*chases.get(person, []), today]
+        told = {**rec.data.get("told", {}), person: today}
+        tx.update("action", action_id, {"followed_up": chases, "told": told}, _PM, read_version=rec.version)
+    return {"on": today, "previous_told": str(previous) if previous else None}
+
+
+def undo_follow_up(store: Store, action_id: str, person: str, on: str, previous_told: str | None) -> None:
+    """Take back the chase recorded on day `on`: it leaves the action's chases and the told day goes back to what it
+    was."""
+    with store.transaction() as tx:
+        rec = tx.get("action", action_id)
+        if rec is None:
+            return
+        chases = dict(rec.data.get("followed_up") or {})
+        days = [str(d) for d in chases.get(person, [])]
+        if on in days:
+            days.remove(on)
+        if days:
+            chases[person] = days
+        else:
+            chases.pop(person, None)
+        told = dict(rec.data.get("told", {}))
+        if previous_told:
+            told[person] = previous_told
+        else:
+            told.pop(person, None)
+        tx.update("action", action_id, {"followed_up": chases, "told": told}, _PM, read_version=rec.version)
+
+
+def they_finished(store: Store, cfg: Config, action_id: str, person: str) -> None:
+    """Close an open action because the PM was told `person` finished it: the work is credited to that person, and the
+    PM is recorded as the one who reported it."""
+    with store.transaction() as tx:
+        rec = _owned_open_action(tx, action_id, person)
+        credit = {"status": "done", "done_by": [person], "reported_by": People(store, cfg).pm}
+        tx.update("action", action_id, credit, _PM, read_version=rec.version)

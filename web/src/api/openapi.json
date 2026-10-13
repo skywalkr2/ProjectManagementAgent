@@ -2897,8 +2897,40 @@
         "title": "FolderListView",
         "type": "object"
       },
+      "FollowedUp": {
+        "properties": {
+          "on": {
+            "description": "The day the chase was recorded (a date).",
+            "title": "On",
+            "type": "string"
+          },
+          "previous_told": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day they were told before it, for undoing the chase.",
+            "title": "Previous Told"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "FollowedUp",
+        "type": "object"
+      },
       "FollowupAction": {
         "properties": {
+          "chase_due": {
+            "default": false,
+            "description": "Whether it has waited as long as the nudge setting says, so chasing is the next step.",
+            "title": "Chase Due",
+            "type": "boolean"
+          },
           "due": {
             "anyOf": [
               {
@@ -2909,6 +2941,18 @@
               }
             ],
             "title": "Due"
+          },
+          "followed_up": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day the person was last chased about it (a date).",
+            "title": "Followed Up"
           },
           "id": {
             "title": "Id",
@@ -8544,6 +8588,32 @@
         "title": "UndoReport",
         "type": "object"
       },
+      "Unfollow": {
+        "properties": {
+          "on": {
+            "description": "The day the chase was recorded, from the response that recorded it.",
+            "title": "On",
+            "type": "string"
+          },
+          "previous_told": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day they were told before the chase, if any.",
+            "title": "Previous Told"
+          }
+        },
+        "required": [
+          "on"
+        ],
+        "title": "Unfollow",
+        "type": "object"
+      },
       "Unmark": {
         "properties": {
           "action_ids": {
@@ -10472,6 +10542,162 @@
           }
         },
         "summary": "Followups"
+      }
+    },
+    "/api/followups/{person}/actions/{action_id}/finished": {
+      "post": {
+        "description": "Close an action because the person it waits on finished it: credited to them, reported by the PM.",
+        "operationId": "action_they_finished_api_followups__person__actions__action_id__finished_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person",
+            "required": true,
+            "schema": {
+              "title": "Person",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Action They Finished"
+      }
+    },
+    "/api/followups/{person}/actions/{action_id}/followed-up": {
+      "post": {
+        "description": "Record that the PM chased a person about an open action: it stays open and counts as told again.",
+        "operationId": "action_followed_up_api_followups__person__actions__action_id__followed_up_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person",
+            "required": true,
+            "schema": {
+              "title": "Person",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FollowedUp"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Action Followed Up"
+      }
+    },
+    "/api/followups/{person}/actions/{action_id}/unfollow": {
+      "post": {
+        "operationId": "action_unfollowed_api_followups__person__actions__action_id__unfollow_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person",
+            "required": true,
+            "schema": {
+              "title": "Person",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Unfollow"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Action Unfollowed"
       }
     },
     "/api/followups/{person}/mark-sent": {

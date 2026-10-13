@@ -45,6 +45,7 @@ from api.schemas import (
     FileKindView,
     FileView,
     FirstGoStarted,
+    FollowedUp,
     FollowupAction,
     FollowupQuestion,
     FollowupSection,
@@ -117,6 +118,7 @@ from api.schemas import (
     TodoView,
     UndoChoice,
     UndoReport,
+    Unfollow,
     Unmark,
     ValueListView,
     WorkingCopyFormatView,
@@ -138,7 +140,7 @@ from engine.dispatcher import (
     undo_changeset,
     waits_on_first_go,
 )
-from engine.followups import mark_sent, sections, unmark_sent
+from engine.followups import follow_up, mark_sent, sections, they_finished, undo_follow_up, unmark_sent
 from engine.intake import IntakeError, hand_in, source_text
 from engine.names import People
 from engine.ops import StageMoveOp
@@ -1259,9 +1261,38 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 cur = _existing(tx, "action", action_id)
                 if cur.data["status"] == "held":
                     raise ValueError("this action needs an owner first")
-                tx.update("action", action_id, {"status": body.status}, _PM, read_version=cur.version)
+                change: dict[str, Any] = {"status": body.status}
+                if body.status == "open":
+                    change |= {"done_by": [], "reported_by": None}  # reopening takes the credit back
+                tx.update("action", action_id, change, _PM, read_version=cur.version)
 
         guard(do)
+        changed()
+        return Ok(ok=action_id)
+
+    @r.post("/followups/{person}/actions/{action_id}/followed-up")
+    def action_followed_up(person: str, action_id: str) -> FollowedUp:
+        """Record that the PM chased a person about an open action: it stays open and counts as told again."""
+        need("person", person)
+        need("action", action_id)
+        done = guard(lambda: follow_up(store, action_id, person))
+        changed()
+        return FollowedUp(**done)
+
+    @r.post("/followups/{person}/actions/{action_id}/unfollow")
+    def action_unfollowed(person: str, action_id: str, body: Unfollow) -> Ok:
+        need("person", person)
+        need("action", action_id)
+        guard(lambda: undo_follow_up(store, action_id, person, body.on, body.previous_told))
+        changed()
+        return Ok(ok=action_id)
+
+    @r.post("/followups/{person}/actions/{action_id}/finished")
+    def action_they_finished(person: str, action_id: str) -> Ok:
+        """Close an action because the person it waits on finished it: credited to them, reported by the PM."""
+        need("person", person)
+        need("action", action_id)
+        guard(lambda: they_finished(store, cfg, action_id, person))
         changed()
         return Ok(ok=action_id)
 
@@ -1740,6 +1771,8 @@ def _section(s: Any, people: People) -> FollowupSection:
             project_name=a["project_name"],
             told=a["told"],
             told_days=a["told_days"],
+            followed_up=a["followed_up"],
+            chase_due=a["chase_due"],
         )
         for a in s.actions
     ]

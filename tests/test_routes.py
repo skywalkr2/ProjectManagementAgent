@@ -140,6 +140,56 @@ def test_followups_put_the_pm_first_and_mark_sent_clears_a_person(api):
     assert all(a["told"] for a in sec["actions"])
 
 
+def _waiting_action_of_the_editor(client, base):
+    """Mark the editor's message sent, and return the editor's id and one action now waiting on them."""
+    editor = by_role("Editor")
+    sec = next(s for s in client.get(f"{base}/followups").json() if s["person"] == editor["id"])
+    client.post(f"{base}/followups/{editor['id']}/mark-sent", json={"text": sec["message"]})
+    sec = next(s for s in client.get(f"{base}/followups").json() if s["person"] == editor["id"])
+    return editor["id"], sec["actions"][0]["id"]
+
+
+def test_followed_up_records_the_chase_keeps_the_action_open_and_undo_removes_it(api):
+    client, base, _ = api
+    person, action_id = _waiting_action_of_the_editor(client, base)
+    store = client.app.state.store
+    before = store.read().get("action", action_id).data
+    r = client.post(f"{base}/followups/{person}/actions/{action_id}/followed-up")
+    assert r.status_code == 200
+    chase = r.json()
+    data = store.read().get("action", action_id).data
+    assert data["status"] == "open"
+    assert [str(d) for d in data["followed_up"][person]] == [chase["on"]]
+    assert str(data["told"][person]) == chase["on"] and chase["previous_told"] == str(before["told"][person])
+    row = next(
+        a
+        for s in client.get(f"{base}/followups").json()
+        if s["person"] == person
+        for a in s["actions"]
+        if a["id"] == action_id
+    )
+    assert row["followed_up"] == chase["on"] and not row["chase_due"]
+    body = {"on": chase["on"], "previous_told": chase["previous_told"]}
+    assert client.post(f"{base}/followups/{person}/actions/{action_id}/unfollow", json=body).status_code == 200
+    data = store.read().get("action", action_id).data
+    assert data.get("followed_up", {}) == {} and data["status"] == "open"
+    assert str(data["told"][person]) == str(before["told"][person])
+
+
+def test_they_finished_it_credits_the_owner_and_records_the_pm_as_the_reporter(api):
+    client, base, _ = api
+    person, action_id = _waiting_action_of_the_editor(client, base)
+    store = client.app.state.store
+    assert client.post(f"{base}/followups/{person}/actions/{action_id}/finished").status_code == 200
+    data = store.read().get("action", action_id).data
+    assert data["status"] == "done" and data["done_by"] == [person]
+    assert data["reported_by"] == next(s["person"] for s in client.get(f"{base}/followups").json() if s["is_pm"])
+    assert client.post(f"{base}/followups/{person}/actions/{action_id}/finished").status_code == 409
+    assert client.post(f"{base}/actions/{action_id}/status", json={"status": "open"}).status_code == 200
+    data = store.read().get("action", action_id).data
+    assert data["status"] == "open" and data["done_by"] == [] and data["reported_by"] is None
+
+
 def test_answering_a_question(api):
     client, base, _ = api
     q = fixture_records(DEMO_B, "question")[0]

@@ -359,7 +359,7 @@ function WaitingSection(props: { section: S["FollowupSection"]; compact: boolean
             <WaitingQuestion key={q.id} question={q} person={s.name} />
           ))}
           {actions.map((a) => (
-            <WaitingAction key={a.id} action={a} person={s.name} />
+            <WaitingAction key={a.id} action={a} person={s.person} name={s.name} />
           ))}
         </ul>
       </div>
@@ -440,17 +440,32 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
   );
 }
 
-function WaitingAction(props: { action: S["FollowupAction"]; person: string }) {
+// A waiting action's one primary is Followed up once it has waited past the nudge threshold, and They finished it before
+// then; the other is in the row's menu. A chase keeps the action open and counts as told again.
+function WaitingAction(props: { action: S["FollowupAction"]; person: string; name: string }) {
   const { t, tn } = useWords();
   const act = useAct();
   const a = props.action;
-  const first = props.person.split(" ")[0];
+  const first = props.name.split(" ")[0];
   const finished = () =>
     act(
-      () => api.actionStatus(a.id, "done"),
+      () => api.theyFinished(props.person, a.id),
       () => ({ message: t("toast.they_finished", { name: first }), undo: () => api.actionStatus(a.id, "open") }),
     );
-  const meta = sentLine(a.told, a.told_days, a.project_name, tn, t);
+  const followedUp = () =>
+    act(
+      () => api.followedUp(props.person, a.id),
+      (done) => ({
+        message: t("toast.followed_up", { name: first }),
+        undo: () => api.unfollow(props.person, a.id, { on: done.on, previous_told: done.previous_told }),
+      }),
+    );
+  const chase = a.chase_due;
+  const meta = a.followed_up
+    ? [a.project_name, t("followups.followed_up_on", { date: day(a.followed_up) })].filter(Boolean).join(" · ")
+    : sentLine(a.told, a.told_days, a.project_name, tn, t);
+  const finish: MenuAction = { id: "finished", label: t("followups.they_finished"), run: () => void finished() };
+  const chased: MenuAction = { id: "followed-up", label: t("followups.followed_up"), run: () => void followedUp() };
   return (
     <li className="child">
       <div>
@@ -458,9 +473,10 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string }) {
         {meta && <div className="meta">{meta}</div>}
       </div>
       <div className="acts">
-        <button type="button" className="btn quiet" onClick={() => void finished()}>
-          {t("followups.they_finished")}
+        <button type="button" className="btn primary" onClick={() => void (chase ? followedUp() : finished())}>
+          {t(chase ? "followups.followed_up" : "followups.they_finished")}
         </button>
+        <RowMenu label={a.text} actions={[chase ? finish : chased]} />
       </div>
     </li>
   );

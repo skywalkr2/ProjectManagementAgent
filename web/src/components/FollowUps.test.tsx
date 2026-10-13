@@ -10,7 +10,7 @@ const sections: S["FollowupSection"][] = [
     name: "Pat Example",
     is_pm: true,
     questions: [],
-    actions: [{ id: "ACT-9", text: "Approve the proof", due: "2026-11-03", project_name: "Book", told: null, told_days: null }],
+    actions: [{ id: "ACT-9", text: "Approve the proof", due: "2026-11-03", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false }],
     message: "",
     to_send: 0,
   },
@@ -21,7 +21,7 @@ const sections: S["FollowupSection"][] = [
     questions: [
       { id: "Q-1", title: "Is the index final?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, about: null, options: [] },
     ],
-    actions: [{ id: "ACT-1", text: "Send the index", due: "2026-10-16", project_name: "Book", told: null, told_days: null }],
+    actions: [{ id: "ACT-1", text: "Send the index", due: "2026-10-16", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false }],
     message: "Hi Robin,\n\nIs the index final?\n\nAction items with you:\n- Send the index\n\nThanks!",
     to_send: 2,
   },
@@ -121,7 +121,7 @@ test("a card lists only what is still to send, with no buttons or pills on the i
   mixed[1].questions.push({
     id: "Q-2", title: "Did the cover ship?", text: "", links: [], kind: "question", status: "sent", sent: "2026-10-08", waiting_days: 2, about: null, options: [],
   });
-  mixed[1].actions.push({ id: "ACT-2", text: "Return the proof", due: null, project_name: "Book", told: "2026-10-08", told_days: 2 });
+  mixed[1].actions.push({ id: "ACT-2", text: "Return the proof", due: null, project_name: "Book", told: "2026-10-08", told_days: 2, followed_up: null, chase_due: false });
   mixed[1].to_send = 2;
   fakeApi({ "GET followups": () => mixed, "GET people": () => [] });
   renderApp(<FollowUps />);
@@ -204,15 +204,74 @@ test("a waiting question takes its reply right on its line", async () => {
   );
 });
 
-test("They finished it closes the action with Undo", async () => {
+const finishRoutes = {
+  "POST followups/PER-2/actions/ACT-1/finished": () => ({ ok: "ACT-1" }),
+  "POST actions/ACT-1/status": () => ({ ok: "ACT-1" }),
+  "POST followups/PER-2/actions/ACT-1/followed-up": () => ({ on: "2026-10-13", previous_told: "2026-10-09" }),
+  "POST followups/PER-2/actions/ACT-1/unfollow": () => ({ ok: "ACT-1" }),
+};
+
+function chaseSections(): S["FollowupSection"][] {
+  const waiting = waitingSections();
+  waiting[0].actions[0].told_days = 5;
+  waiting[0].actions[0].chase_due = true;
+  return waiting;
+}
+
+test("They finished it closes the action as the person's work and offers Undo", async () => {
   const user = userEvent.setup();
-  const calls = fakeApi({
-    "GET followups": () => waitingSections(),
-    "GET people": () => [],
-    "POST actions/ACT-1/status": () => ({ ok: "ACT-1" }),
-  });
+  const calls = fakeApi({ "GET followups": () => waitingSections(), "GET people": () => [], ...finishRoutes });
   renderApp(<FollowUps />);
   await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  expect(screen.queryByRole("button", { name: "Followed up" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "They finished it" }));
-  await waitFor(() => expect(calls.some((c) => c.route.includes("ACT-1"))).toBe(true));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/actions/ACT-1/finished")).toBe(true));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/status")?.body).toEqual({ status: "open" }));
+});
+
+test("past the nudge threshold, Followed up is the primary and They finished it moves to the row's menu", async () => {
+  const user = userEvent.setup();
+  fakeApi({ "GET followups": () => chaseSections(), "GET people": () => [], ...finishRoutes });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  expect(within(row).getByRole("button", { name: "Followed up" })).toBeInTheDocument();
+  expect(within(row).queryByRole("button", { name: "They finished it" })).toBeNull();
+  await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
+  expect(await screen.findByRole("menuitem", { name: "They finished it" })).toBeInTheDocument();
+});
+
+test("Followed up records the chase, says so on the row and can be undone", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({ "GET followups": () => chaseSections(), "GET people": () => [], ...finishRoutes });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  await user.click(screen.getByRole("button", { name: "Followed up" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/actions/ACT-1/followed-up")).toBe(true));
+  expect(calls.some((c) => c.route === "POST actions/ACT-1/status")).toBe(false);
+  expect(await screen.findByText("Recorded that you followed up with Robin. It stays open.")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST followups/PER-2/actions/ACT-1/unfollow")?.body).toEqual({
+      on: "2026-10-13",
+      previous_told: "2026-10-09",
+    }),
+  );
+});
+
+test("a followed-up row shows when, and the menu can chase again", async () => {
+  const user = userEvent.setup();
+  const chased = chaseSections();
+  chased[0].actions[0].followed_up = "2026-10-10";
+  chased[0].actions[0].chase_due = false;
+  const calls = fakeApi({ "GET followups": () => chased, "GET people": () => [], ...finishRoutes });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  expect(row).toHaveTextContent(/followed up .*/);
+  expect(row).not.toHaveTextContent(/sent .*\(/);
+  await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Followed up" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST followups/PER-2/actions/ACT-1/followed-up")).toBe(true));
 });

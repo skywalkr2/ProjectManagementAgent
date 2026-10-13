@@ -1107,7 +1107,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 
 ### `action` (ACT-n)
 
-Something a person will do. Added by `action.add`, closed by `action.close`; `record.set` changes text, due and notes, and sending a notice marks who was told.
+Something a person will do. Added by `action.add`, closed by `action.close`; `record.set` changes text, due and notes, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and who said it was done.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1120,6 +1120,9 @@ Something a person will do. Added by `action.add`, closed by `action.close`; `re
 | `status` | Literal['held', 'open', 'done'] | `'open'` | held: waiting for an owner to be picked. open: to be done. done: finished. |
 | `notes` | str \| None | `None` | Extra detail about the action. |
 | `told` | dict[str, datetime.date] | `{}` | Who has been told about it: a person id mapped to the day they were told. |
+| `followed_up` | dict[str, list[datetime.date]] | `{}` | Who has been chased about it: a person id mapped to the days they were chased, oldest first. A chase is not a notice (`told`) and never closes the action. |
+| `done_by` | list[str] | `[]` | The ids of the people who did the work, set when the action is closed. |
+| `reported_by` | str \| None | `None` | The id of the person who said it was done, set when the action is closed. |
 | `source` | str \| None | `None` | The id of the source it came from, if any. |
 | `evidence` | Evidence \| None | see below | The words in the source that justify the action. |
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |

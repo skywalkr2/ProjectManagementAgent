@@ -8,6 +8,7 @@ from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.config import load_config
 from engine.evaluate import load_cases
+from engine.followups import follow_up, they_finished
 from engine.selfcheck import check_workspace_fixture
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.export import commit_export, export_data, import_data
@@ -133,8 +134,14 @@ def test_a_workspace_used_through_the_screens_round_trips(tmp_path):
             assert {e["op"] for e in entries} >= {"undo"}
             assert store.read().list("fact") == []
             assert len(store.read().list("fact", include_deleted=True)) == 1
+            open_actions = [a for a in store.read().list("action") if a.data["status"] == "open"]
+            chased, finished = open_actions[0], open_actions[1]
+            follow_up(store, chased.id, chased.data["owners"][0]["person"])
+            they_finished(store, cfg, finished.id, finished.data["owners"][0]["person"])
             report = round_trip(store, cfg, tmp_path / "round-trip")
             assert report["differences"] == []
             assert report["ledger"] > len(entries)
+            kept = store.read().get("action", chased.id).data["followed_up"]
+            assert kept and store.read().get("action", finished.id).data["done_by"]
     finally:
         set_responder(None)

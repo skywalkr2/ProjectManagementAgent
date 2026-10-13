@@ -55,6 +55,7 @@ from engine.plugin_api import NeedsPerson
 from engine.records import model_for
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
+from engine.titles import title_for
 from engine.workspace import Workspace
 
 Severity = Literal["refuse", "return", "hold", "warn"]
@@ -688,6 +689,26 @@ def origin_of(ctx: Context) -> dict[str, Any]:
     return {"actor": actor, "trust": ctx.inputs.trust, "via": via, **run}
 
 
+def _reporter(ctx: Context) -> str | None:
+    """The person who said the work was done: the PM for their own note, else the one person the input came from
+    (its sender or author); none when that isn't one known person."""
+    view = ctx.store.read()
+    request = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    if request is None:
+        return None
+    if request.data["origin"] == "pm" and ctx.inputs.trust == "trusted":
+        return ctx.people.pm
+    source = view.get("source", ctx.inputs.source) if ctx.inputs.source else None
+    return title_for(
+        request.data,
+        source.data if source is not None else None,
+        None,
+        people=ctx.people,
+        skip=list(ctx.cfg.language.title_skip),
+        head=ctx.inputs.raw_input,
+    ).person
+
+
 class _DryRun(Exception):
     pass
 
@@ -947,7 +968,12 @@ def _apply_op(
             return touched, q
     elif isinstance(op, ActionCloseOp):
         cur = tx.get("action", op.id)
-        tx.update("action", op.id, {"status": "done"}, w, read_version=cur.version)
+        credit = {
+            "status": "done",
+            "done_by": [o["person"] for o in cur.data.get("owners", [])],
+            "reported_by": _reporter(ctx),
+        }
+        tx.update("action", op.id, credit, w, read_version=cur.version)
         made("action", op.id)
     elif isinstance(op, QuestionAddOp):
         to = ctx.people.resolve(op.to).person

@@ -122,6 +122,12 @@ export const api = {
     call<S["SentCounts"]>("POST", `followups/${id(person)}/mark-sent`, { text }),
   unmarkSent: (person: string, body: S["Unmark"]) =>
     call<S["Ok"]>("POST", `followups/${id(person)}/unmark-sent`, body),
+  followedUp: (person: string, action: string) =>
+    call<S["FollowedUp"]>("POST", `followups/${id(person)}/actions/${id(action)}/followed-up`),
+  unfollow: (person: string, action: string, body: S["Unfollow"]) =>
+    call<S["Ok"]>("POST", `followups/${id(person)}/actions/${id(action)}/unfollow`, body),
+  theyFinished: (person: string, action: string) =>
+    call<S["Ok"]>("POST", `followups/${id(person)}/actions/${id(action)}/finished`),
   backup: () => call<S["Status"]>("POST", "backup"),
   projects: () => call<S["ProjectView"][]>("GET", "projects"),
   notes: () => call<S["NoteView"][]>("GET", "notes"),

@@ -4,8 +4,8 @@ import pytest
 
 from engine.backup import run_backup, state
 from engine.evaluate import evaluate, load_cases
-from engine.followups import mark_sent, sections, unmark_sent
-from engine.storage import Store
+from engine.followups import FollowUpError, follow_up, mark_sent, sections, they_finished, undo_follow_up, unmark_sent
+from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records
 
@@ -88,6 +88,72 @@ def test_an_unedited_message_records_no_signal(env):
     sec = next(s for s in sections(store, cfg, NOW.date()) if s.person == editor["id"])
     mark_sent(store, cfg, editor["id"], sent_text=sec.message, now=NOW)
     assert store.read().list("signal") == []
+
+
+def _waiting_action(env, days_ago: int):
+    """An open action with a told date `days_ago` days before NOW, and the person it waits on."""
+    _, cfg, store = env
+    action = next(a for a in store.read().list("action") if a.data["status"] == "open")
+    owner = action.data["owners"][0]["person"]
+    told = (NOW - timedelta(days=days_ago)).date().isoformat()
+    with store.transaction() as tx:
+        tx.update(
+            "action",
+            action.id,
+            {"told": {owner: told}},
+            WriteContext(actor="pm", trust="trusted", op="test"),
+            read_version=action.version,
+        )
+    return action.id, owner, told
+
+
+def _action_row(env, action_id, owner):
+    _, cfg, store = env
+    sec = next(s for s in sections(store, cfg, NOW.date()) if s.person == owner)
+    return next(a for a in sec.actions if a["id"] == action_id)
+
+
+def test_followed_up_records_a_chase_keeps_the_action_open_and_counts_as_told(env):
+    _, cfg, store = env
+    action_id, owner, told = _waiting_action(env, cfg.ui.today.nudge_after_days + 2)
+    assert _action_row(env, action_id, owner)["chase_due"]
+    done = follow_up(store, action_id, owner, now=NOW)
+    assert done == {"on": NOW.date().isoformat(), "previous_told": told}
+    data = store.read().get("action", action_id).data
+    assert data["status"] == "open"
+    assert [str(d) for d in data["followed_up"][owner]] == [NOW.date().isoformat()]
+    assert str(data["told"][owner]) == NOW.date().isoformat()
+    row = _action_row(env, action_id, owner)
+    assert row["followed_up"] == NOW.date().isoformat() and row["told_days"] == 0 and not row["chase_due"]
+
+
+def test_undoing_a_chase_restores_the_told_day_and_removes_the_chase(env):
+    _, cfg, store = env
+    action_id, owner, told = _waiting_action(env, cfg.ui.today.nudge_after_days + 2)
+    done = follow_up(store, action_id, owner, now=NOW)
+    undo_follow_up(store, action_id, owner, done["on"], done["previous_told"])
+    data = store.read().get("action", action_id).data
+    assert data.get("followed_up", {}) == {} and str(data["told"][owner]) == told and data["status"] == "open"
+
+
+def test_they_finished_credits_the_owner_and_reports_it_as_the_pm(env):
+    _, cfg, store = env
+    action_id, owner, _ = _waiting_action(env, 1)
+    they_finished(store, cfg, action_id, owner)
+    data = store.read().get("action", action_id).data
+    assert data["status"] == "done" and data["done_by"] == [owner]
+    assert data["reported_by"] == cfg.workspace.user.person
+    with pytest.raises(FollowUpError):
+        they_finished(store, cfg, action_id, owner)
+
+
+def test_a_chase_is_refused_for_someone_who_doesnt_own_the_action(env):
+    _, _, store = env
+    action_id, owner, _ = _waiting_action(env, 1)
+    owners = [o["person"] for o in store.read().get("action", action_id).data["owners"]]
+    stranger = next(p["id"] for p in fixture_records(DEMO_B, "person") if p["id"] not in owners)
+    with pytest.raises(FollowUpError):
+        follow_up(store, action_id, stranger, now=NOW)
 
 
 # ---- backups ---------------------------------------------------------------------------------------------------------

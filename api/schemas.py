@@ -55,11 +55,21 @@ class ActionState(BaseModel):
     status: Literal["open", "done"]
 
 
+class Unfollow(BaseModel):
+    on: str = Field(description="The day the chase was recorded, from the response that recorded it.")
+    previous_told: str | None = Field(None, description="The day they were told before the chase, if any.")
+
+
 # ---- responses -------------------------------------------------------------------------------------------------------
 
 
 class Ok(BaseModel):
     ok: str
+
+
+class FollowedUp(BaseModel):
+    on: str = Field(description="The day the chase was recorded (a date).")
+    previous_told: str | None = Field(None, description="The day they were told before it, for undoing the chase.")
 
 
 class RequestChanged(BaseModel):
@@ -292,6 +302,10 @@ class FollowupAction(BaseModel):
     project_name: str
     told: str | None
     told_days: int | None
+    followed_up: str | None = Field(None, description="The day the person was last chased about it (a date).")
+    chase_due: bool = Field(
+        False, description="Whether it has waited as long as the nudge setting says, so chasing is the next step."
+    )
 
 
 class FollowupSection(BaseModel):

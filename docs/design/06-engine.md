@@ -545,6 +545,12 @@ a system op, or otherwise needs a decision. Everything else is filed quietly (st
 - One store interface over every action store (project records, portfolio actions, plugin stores), each action with a stable key.
 - **Mark done** for the PM's own; for others' actions **Followed up** (recorded internally, stays open, counts as told) and
   **They finished it** (credited to the owner, "reported by" the PM). Never credit the PM for someone else's work.
+  **Built:** Followed up adds the day to the action's `followed_up` for that person and sets their told day to the same
+  day, so the waiting count starts over; undo removes the day and puts the told day back (`tests/test_followups_backup_eval.py::test_followed_up_records_a_chase_keeps_the_action_open_and_counts_as_told`, `tests/test_followups_backup_eval.py::test_undoing_a_chase_restores_the_told_day_and_removes_the_chase`). They finished it
+  closes the action with `done_by` the person it waited on and `reported_by` the PM (`tests/test_followups_backup_eval.py::test_they_finished_credits_the_owner_and_reports_it_as_the_pm`, `tests/test_routes.py::test_they_finished_it_credits_the_owner_and_records_the_pm_as_the_reporter`); `action.close` from an
+  input sets `done_by` to the owners and `reported_by` to the input's sender when that is one known person (`tests/test_pipeline.py::test_closing_an_action_from_a_message_credits_its_owners_and_names_the_sender`, `tests/test_pipeline.py::test_closing_an_action_from_the_pms_own_note_is_reported_by_the_pm`,
+  `tests/test_pipeline.py::test_closing_an_action_from_a_sender_nobody_knows_leaves_reported_by_empty`). The generic status route reopening an action clears both.
+  **Not yet:** Mark done on the PM's own action doesn't set `done_by` or `reported_by`.
 - **Reassign:** swap one person in the owners list, keeping their team ("Product (Jane Doe)" to "Product (Sam Lee)"); the
   other owners stay. Told dates, Followed up and They finished it are per person.
 - **Assign:** give a held action (one waiting for "Pick an owner") its first owner, which adds it.

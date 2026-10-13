@@ -314,7 +314,8 @@ class Project(Record):
 
 class Action(Record):
     """Something a person will do. Added by `action.add`, closed by `action.close`; `record.set` changes text, due and
-    notes, and sending a notice marks who was told."""
+    notes, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the
+    work and who said it was done."""
 
     record_kind: ClassVar[str] = "action"
     prefix: ClassVar[str] = "ACT"
@@ -332,6 +333,17 @@ class Action(Record):
     notes: str | None = Field(None, description="Extra detail about the action.")
     told: dict[str, date] = Field(
         default_factory=dict, description="Who has been told about it: a person id mapped to the day they were told."
+    )
+    followed_up: dict[str, list[date]] = Field(
+        default_factory=dict,
+        description="Who has been chased about it: a person id mapped to the days they were chased, oldest first. "
+        "A chase is not a notice (`told`) and never closes the action.",
+    )
+    done_by: list[str] = Field(
+        default_factory=list, description="The ids of the people who did the work, set when the action is closed."
+    )
+    reported_by: str | None = Field(
+        None, description="The id of the person who said it was done, set when the action is closed."
     )
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     evidence: Evidence | None = Field(None, description="The words in the source that justify the action.")
@@ -980,7 +992,14 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "person": [("team", "team"), ("org", "organization")],
     "team": [("members[]", "person")],
     "project": [("owner", "person"), ("parent", "project")],
-    "action": [("project", "project"), ("owners[].person", "person"), ("owners[].team", "team"), ("source", "source")],
+    "action": [
+        ("project", "project"),
+        ("owners[].person", "person"),
+        ("owners[].team", "team"),
+        ("done_by[]", "person"),
+        ("reported_by", "person"),
+        ("source", "source"),
+    ],
     "question": [("to", "person"), ("projects[]", "project"), ("source", "source")],
     "source": [("projects[]", "project")],
     "request": [
