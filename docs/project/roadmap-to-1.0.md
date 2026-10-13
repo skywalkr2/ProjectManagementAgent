@@ -360,8 +360,15 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [x] `project.priority` is person-only: the assistant may propose it, never set it. Test:
   `tests/test_projects_series.py::test_the_assistant_never_sets_a_projects_priority_but_the_person_does` (held for the
   person; the person's own change applies; another project field the assistant sets still applies).
-- [ ] Sources and files carry their `data_level`, from the hand-in's choice or the watched source's setting (with a default
-  per connector). Today it lives only on the request.
+- [x] Sources and files carry their `data_level`, from the hand-in's choice or the watched source's setting (with a default
+  per connector). The record field is `sensitivity` (`data_level` is a record type's own level on the base record). A
+  source's level is its own setting, else its kind's (`watch.connector_data_levels`), else `watch.default_data_level`; a
+  run is at the highest of its record type, its request and its source. Left: `sync.sources` (encrypt or leave out above a
+  level) stays designed, not built. Tests: `tests/test_data_levels.py::test_a_hand_ins_choice_is_kept_on_its_source_and_decides_the_runs_level`,
+  `test_a_watched_sources_level_is_its_own_setting_else_its_kinds_else_the_default`,
+  `test_the_level_is_chosen_from_the_source_then_its_kind_then_the_default`,
+  `test_a_file_carries_the_level_it_was_added_with`, `test_an_upload_names_its_level_and_the_list_shows_it`,
+  `test_a_watched_restricted_source_stops_for_the_person_when_no_account_may_see_it`.
 - [x] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
   both, and they differ). Tests: `tests/test_names.py::test_a_watched_items_received_date_is_its_own_received_time_not_when_it_changed_or_was_read`,
   `test_an_item_with_no_received_time_is_dated_when_it_was_read`.
@@ -387,22 +394,31 @@ them are needed before the owner's daily use, which starts when L-core passes.
 
   Exit check: a learning pair and an evaluation case prove that set-aside mail produces no request, signal or
   knowledge, and that "This is work" hands it in.
-- [ ] **"Look at the last day" works for a folder:** today it hands in nothing, because folder items carry no time.
+- [x] **"Look at the last day" works for a folder:** today it hands in nothing, because folder items carry no time.
   Folder items carry the file's modified time, kept on the snapshot, so the person can hand in what is already there
-  (found by the phase A fixes; the add-source hint then points to it).
+  (found by the phase A fixes; the add-source hint then points to it). Tests:
+  `tests/test_watch_recent.py::test_a_folder_item_carries_the_files_modified_time_on_its_snapshot`,
+  `test_look_at_the_last_day_hands_in_the_folder_files_modified_in_the_last_day_once`,
+  `test_a_snapshot_from_before_modified_times_were_kept_is_filled_in_by_the_next_read`,
+  `test_the_look_at_the_last_day_route_hands_in_a_folders_recent_files`; the hint in `Sources.test.tsx` ("Items already
+  there are noted, not handed in...").
 - [ ] **What the mail journey found** (phase A3, J2):
   - [x] **A blocked word costs a second AI request:** a fixture mail with a blocked word in it sent the item through the
     fix round, so real mail could cost double. First check in the code whether wording lints look at quoted outside
     text (evidence) or only at the assistant's own words. Quoted evidence is never linted. A wording lint on an item that
     stays internal warns without a return round (lints about correctness still return:
-    `test_a_near_duplicate_on_an_internal_item_still_returns`) (CLAUDE.md: lints only warn when the item stays internal). Built: the lints
+    `test_a_near_duplicate_on_an_internal_item_still_returns`). Built: the lints
     already read only the assistant's own words (`test_a_blocked_word_in_the_quoted_evidence_costs_one_request_and_no_warning`);
     the cost came from the return round, which an item that stays internal no longer gets: it applies with a warning
     (`test_a_blocked_word_in_an_internal_items_own_words_warns_without_a_second_request`, and
     `test_blocked_wording_warns_on_internal_items_and_holds_what_goes_to_others` for the question to someone else, which
     still returns and is held), all in `tests/test_pipeline.py`; design 6.7 and `docs/decisions.md` say so.
-  - **Machine timestamps in filed notes** ("When: 2026-10-12T18:19:04Z"): notes show dates and times in the person's
-    format and time zone.
+  - [x] **Machine timestamps in filed notes** ("When: 2026-10-12T18:19:04Z"): notes show dates and times in the person's
+    format and time zone. The timestamp came from the add-on's item text, which the assistant copies into the note; the
+    core adds none. Fixed where the assistant's words are kept (`engine/moments.py`, applied in `engine/dispatcher.py`
+    before the changeset is stored). Tests: `tests/test_moments.py::test_a_filed_note_shows_the_time_in_the_persons_format_and_the_evidence_keeps_the_inputs_words`,
+    `test_a_date_time_with_its_zone_is_written_in_the_persons_zone_and_format`,
+    `test_text_without_a_complete_timestamp_is_left_as_it_is`.
 - [ ] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
   concept that the PM pack (phase C) builds on, so its records are designed for both. When an input that isn't set aside
   names a date or a date range for something (a delivery window, a deadline, an appointment), the assistant records a

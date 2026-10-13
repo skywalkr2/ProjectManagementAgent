@@ -7,6 +7,7 @@ sources:
     every_minutes: 30
     first_run: baseline   # the first read only notes what is there
     report_removed: false
+    data_level: internal  # this source's own level; left out, the kind's level or the default applies
     settings:
       path: inbox         # inside the workspace's folder; a full path works too
       patterns: ["*.txt", "*.md"]
@@ -38,6 +39,8 @@ sources:
       password: env:PROJECT_MAIL_PASSWORD
       folder: Projects
 failures_before_asking: 3
+default_data_level: internal   # how sensitive a watched source's items are when nothing else says
+connector_data_levels: {mailbox: restricted}   # per kind of source; a source's own data_level wins over this
 set_aside_defaults: true   # mailing lists and promotions are set aside with no AI run
 set_aside_keep_seconds: 60   # how long a confirmed message's copy is kept so Undo can bring it back
 triage:

@@ -2745,3 +2745,19 @@ primary action: Restart now for held work, and AI accounts for a paused account 
 
 **Impact:** Design 6.15, 7.7 and 8.6 text, and the wording sheet. No new setting; no change to scope. The full ranked queue
 stays in phase B.
+
+## 2026-10-13: Input levels, folders in the last day, and local timestamps (phase L0)
+
+**Decision:** The data level of an input is kept on its record: `source` and `file` carry `sensitivity` (named so because
+`data_level` is a record type's own level on the base record). Its value comes from the hand-in's or upload's choice or the
+watched source's setting, else its kind's (`watch.connector_data_levels`), else `watch.default_data_level`; only the person
+changes it; a run is at the highest of its record type, its request and its source. The folder connector gives a file's
+modified time as the item's `changed_at`, which the snapshot keeps for "Look at the last day". Machine timestamps with a
+zone in an assistant's prose are rewritten in the person's time zone and `language.messages.date_time_format` before they
+are kept; they came from the add-on's item text, copied by the assistant, not from anything the core adds.
+
+**Why:** A source read later had no level; a folder item had no time; a note showed a time the person doesn't read.
+
+**Impact:** Design 4.x (watch keys, `date_time_format`), 5.1 (source, file, snapshot), 6.7, 7.x. New settings
+`watch.default_data_level`, `watch.connector_data_levels`, a source's `data_level` and `language.messages.date_time_format`,
+with demo values. `sync.sources` stays unbuilt. No change to scope.

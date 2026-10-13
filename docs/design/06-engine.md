@@ -308,6 +308,13 @@ person makes on screen, or approves in a plugin's action, is not a claim and car
 quote; the quote is still checked word for word. Evidence is kept in the ledger and shown on the row ("closed because the
 email said: ...").
 
+**Dates and times in the assistant's own words.** An input's text often carries machine timestamps (a date-time with its
+zone, as an add-on writes a meeting's time), and the assistant copies them into what it writes. Before an assistant's changeset
+is kept, each such timestamp in the prose of its ops (a note's, fact's, action's or question's text, an entry's title, an
+answer) is rewritten in the person's time zone (`workspace.user.timezone`) and format (`language.messages.date_time_format`).
+Evidence quotes, dates a field holds (`due`, an entry's `start`) and times with no zone are left as they are. **Built:**
+`tests/test_moments.py::test_a_filed_note_shows_the_time_in_the_persons_format_and_the_evidence_keeps_the_inputs_words`.
+
 **Drafts are not claims.** Some work is writing, not extracting: a proposal, a statement of work, a status update, a blurb.
 A draft has no quote to cite, so it is not held to the evidence rule; instead it is written only into a `long_text` field
 (5.0) through a `text.draft` op, marked as written by the assistant, and shown as **not yet reviewed** until the person

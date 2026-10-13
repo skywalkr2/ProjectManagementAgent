@@ -27,6 +27,7 @@ from engine.ai.task import AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.cleaning import quoted_messages
 from engine.config import Config
+from engine.moments import localize_ops
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
 from engine.packet import PacketRefused, build, target_of
@@ -278,6 +279,7 @@ def process(
         # guide and the records (6.25). Pasted or outside material never does this.
         _set(store, request_id, task="ask", state="queued", waiting="With the assistant, starting now")
         return None
+    changeset = changeset.model_copy(update={"ops": localize_ops(changeset.ops, cfg)})
     cs_id = apply_changeset(
         changeset, problems, ctx, run=run_id, now=now, all_or_nothing=getattr(kind, "all_or_nothing", False)
     )
@@ -310,12 +312,21 @@ def _has_account(
 
 def _data_level(store: Store, request: dict) -> str:
     """How sensitive the material in a request is: work on a record (named, or whose stage entry started it) carries
-    that record, at its record type's level."""
+    that record, at its record type's level; the person's choice on the request and the level kept on its source only
+    raise it."""
     about = target_of(store, request)
     model = store.plugins.records.get(about[0]) if about else None
     level = model.data_level if model is not None else "internal"
-    said = request.get("sensitivity")
-    return said if said in LEVELS and LEVELS.index(said) > LEVELS.index(level) else level
+    for said in (request.get("sensitivity"), _source_level(store, request)):
+        if said in LEVELS and LEVELS.index(said) > LEVELS.index(level):
+            level = said
+    return level
+
+
+def _source_level(store: Store, request: dict) -> str | None:
+    """The data level kept on the source a request is about, if it has one."""
+    source = store.read().get("source", request["source"]) if request.get("source") else None
+    return source.data.get("sensitivity") if source is not None else None
 
 
 def ops_for_level(store: Store, ops: tuple[str, ...], level: str) -> tuple[str, ...]:

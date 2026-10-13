@@ -59,6 +59,7 @@ def hand_in(
                     "title": title,
                     "content_hash": digest,
                     "trust": "untrusted",
+                    "sensitivity": data_level or "internal",
                 },
                 _PM,
             ).id

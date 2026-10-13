@@ -969,7 +969,7 @@
   "sources.failures": "Failed {n} times in a row",
   "sources.problem_generic": "It couldn't be read.",
   "sources.recent": "Look at the last day",
-  "sources.first_read_noted": "Items already there are noted, not handed in. New ones go to the assistant.",
+  "sources.first_read_noted": "Items already there are noted, not handed in. New ones go to the assistant. To hand in what arrived or changed in the last day, choose Look at the last day in its menu.",
   "sources.recent_toast": "{assistant} is looking at the last day from {label}",
   "sources.read_now": "Read now",
   "sources.read_toast": "{label}: {result}",

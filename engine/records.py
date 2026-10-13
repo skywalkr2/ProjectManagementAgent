@@ -412,6 +412,7 @@ class Source(Record):
     record_kind: ClassVar[str] = "source"
     prefix: ClassVar[str] = "SRC"
     fixed_fields: ClassVar[tuple[str, ...]] = ("received_at", "kind", "content_hash", "trust", "url", "watched")
+    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"sensitivity": ()}
 
     received_at: datetime = Field(
         description="When the input arrived: a mail's own received time, else when it was handed in or first read."
@@ -430,6 +431,11 @@ class Source(Record):
         description="never: the person allows using this source but never quoting it beyond a word or two; checks "
         "that compare drafts with sources apply a stricter limit to it. Set by the person only.",
     )
+    sensitivity: Literal["open", "internal", "restricted"] = Field(
+        "internal",
+        description="Its data level, how sensitive its text is: it goes only to AI accounts allowed this level. From "
+        "the person's choice when they handed it in, or the watched source's setting. Only the person changes it.",
+    )
 
 
 class File(Record):
@@ -438,6 +444,7 @@ class File(Record):
 
     record_kind: ClassVar[str] = "file"
     prefix: ClassVar[str] = "FILE"
+    person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"sensitivity": ()}
 
     name: str = Field(min_length=1, description="The file's name as added, for showing and downloading.")
     media_type: str = Field(description="What kind of content it is, such as image/png.")
@@ -452,6 +459,11 @@ class File(Record):
     )
     replaces: str | None = Field(None, description="The earlier file this one is a new version of.")
     added_at: datetime = Field(description="When the record was added.")
+    sensitivity: Literal["open", "internal", "restricted"] = Field(
+        "internal",
+        description="Its data level, how sensitive its content is: it goes only to AI accounts allowed this level. "
+        "From the person's choice when they added it. Only the person changes it.",
+    )
 
 
 class JobRun(Record):
@@ -559,6 +571,11 @@ class Snapshot(Record):
     seen_at: datetime = Field(description="When this version was first seen.")
     gone: bool = Field(False, description="It was no longer in the source at the last complete read.")
     link: str | None = Field(None, description="Where the person can open it, as the source gave it.")
+    changed_at: str | None = Field(
+        None,
+        description="When the item last changed or arrived, as the source said (a file's modified time, say), so "
+        "'Look at the last day' can find what is already there.",
+    )
     event: SnapshotEvent | None = Field(None, description="For a calendar item: when and where, for the agenda.")
     message: SnapshotMessage | None = Field(None, description="For a mail item: from whom and when.")
     closed_by: str | None = Field(

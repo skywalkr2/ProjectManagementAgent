@@ -18,6 +18,7 @@ function file(id: string, name: string, extra: Partial<S["FileView"]> = {}): S["
     origin: "upload",
     replaces: null,
     added_at: "2026-10-09T14:00:00Z",
+    data_level: "internal",
     ...extra,
   };
 }

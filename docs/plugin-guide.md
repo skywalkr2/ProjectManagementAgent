@@ -1171,6 +1171,7 @@ One input the workspace received, such as pasted text; the text is kept by its h
 | `watched.author` | str \| None | `None` | Who changed it last, as the source says. |
 | `watched.by_us` | bool | `False` | The author is one of the workspace's own accounts. |
 | `excerpts` | Literal['allowed', 'never'] | `'allowed'` | never: the person allows using this source but never quoting it beyond a word or two; checks that compare drafts with sources apply a stricter limit to it. Set by the person only. |
+| `sensitivity` | Literal['open', 'internal', 'restricted'] | `'internal'` | Its data level, how sensitive its text is: it goes only to AI accounts allowed this level. From the person's choice when they handed it in, or the watched source's setting. Only the person changes it. |
 
 ### `request` (REQ-n)
 
@@ -1327,6 +1328,7 @@ A file a person added or a program wrote. The bytes live in the workspace's file
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted: its content is material to read, never instructions. |
 | `replaces` | str \| None | `None` | The earlier file this one is a new version of. |
 | `added_at` | datetime | required | When the record was added. |
+| `sensitivity` | Literal['open', 'internal', 'restricted'] | `'internal'` | Its data level, how sensitive its content is: it goes only to AI accounts allowed this level. From the person's choice when they added it. Only the person changes it. |
 
 ### `tool_run` (TOOL-n)
 
@@ -1423,6 +1425,7 @@ What a watched item looked like when last read: its text is kept in the sources 
 | `seen_at` | datetime | required | When this version was first seen. |
 | `gone` | bool | `False` | It was no longer in the source at the last complete read. |
 | `link` | str \| None | `None` | Where the person can open it, as the source gave it. |
+| `changed_at` | str \| None | `None` | When the item last changed or arrived, as the source said (a file's modified time, say), so 'Look at the last day' can find what is already there. |
 | `event` | SnapshotEvent \| None | see below | For a calendar item: when and where, for the agenda. |
 | `event.start` | str | required |  |
 | `event.end` | str \| None | `None` |  |

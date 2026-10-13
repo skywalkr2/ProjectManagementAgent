@@ -299,12 +299,19 @@ def _kept_set_aside(before: Any) -> dict[str, str] | None:
     return mark if mark and mark.get("by") == "person" else None
 
 
+def data_level_of(cfg: Any, source: Any) -> str:
+    """How sensitive what a watched source holds is: the source's own setting, else the one for its kind of source,
+    else the default for all sources."""
+    return source.data_level or cfg.watch.connector_data_levels.get(source.connector) or cfg.watch.default_data_level
+
+
 def _details(item: SourceItem) -> dict[str, Any]:
     """What a calendar or mail item is, as the snapshot keeps it."""
     from dataclasses import asdict
 
     return {
         "link": item.link,
+        "changed_at": item.changed_at,
         "event": asdict(item.event) if item.event is not None else None,
         "message": _message_dict(item.message),
     }
@@ -360,6 +367,7 @@ def _hand_in(
             "content_hash": digest,
             "trust": "untrusted",
             "projects": [source.project] if source.project else [],
+            "sensitivity": data_level_of(cfg, source),
             "url": item.link,
             "watched": {
                 "source": source.id,
@@ -519,6 +527,7 @@ def hand_in_snapshot(ws: Any, store: Any, cfg: Any, snapshot_id: str, now: datet
         data["title"],
         _read_text(ws, data["content_hash"]),
         author=data.get("author"),
+        changed_at=data.get("changed_at"),
         link=data.get("link"),
         event=EventDetails(**data["event"]) if data.get("event") else None,
         message=_message_of(data.get("message")),
@@ -565,13 +574,14 @@ def _hand_in_recent(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime
         data = snap.data
         if data.get("gone") or data.get("deleted") or data.get("set_aside") or data["key"] in handed:
             continue
-        if not is_recent(data, None, now, window):
+        if not is_recent(data, data.get("changed_at"), now, window):
             continue
         item = SourceItem(
             data["key"],
             data["title"],
             _read_text(ws, data["content_hash"]),
             author=data.get("author"),
+            changed_at=data.get("changed_at"),
             link=data.get("link"),
             event=EventDetails(**data["event"]) if data.get("event") else None,
             message=_message_of(data.get("message")),

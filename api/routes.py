@@ -10,7 +10,7 @@ import base64
 import json
 import logging
 from datetime import UTC, date, datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
@@ -235,6 +235,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     "added_at",
                 )
             },
+            data_level=record.data.get("sensitivity", "internal"),
         )
 
     def _last_refused(request_id: str) -> bool:
@@ -888,6 +889,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         project: str | None = None,
         meta: str = "{}",
         replaces: str | None = None,
+        data_level: Literal["open", "internal", "restricted"] = "internal",
     ) -> FileView:
         """Add a file: the request body is the file's bytes, its Content-Type the media type, details as JSON."""
         import json
@@ -915,6 +917,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 project=project,
                 meta=details,
                 replaces=replaces,
+                data_level=data_level,
             )
         )
         changed()

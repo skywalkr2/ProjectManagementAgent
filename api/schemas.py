@@ -651,6 +651,9 @@ class FileView(BaseModel):
     origin: Literal["upload", "tool"]
     replaces: str | None
     added_at: str
+    data_level: Literal["open", "internal", "restricted"] = Field(
+        "internal", description="How sensitive its content is: it goes only to AI accounts allowed this level."
+    )
 
 
 class RetryRequest(BaseModel):

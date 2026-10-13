@@ -189,6 +189,8 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
     `first_run_hours` of the read (the last day's mail, today's meetings). `all`: everything there is is handed in as new;
   - `first_run_hours` (24, 1 to 336): how many hours around the first read count as recent;
   - `report_removed` (true): hand in an item that disappeared from a complete listing;
+  - `data_level` (open, internal or restricted; empty): how sensitive its items are, so they go only to AI accounts allowed
+    that level. Empty: the level for its kind of source (`connector_data_levels`, below), else `default_data_level`;
   - `settings`: the connector's own settings, checked against the connector's schema (a folder's path, a mail folder and
     its secret references).
 - `triage`: rules, in order; the first match closes the change before the assistant reads it. Each rule has `name`, `kind`
@@ -205,6 +207,8 @@ beside the watched sources"; there is no `triage.yaml`). Keys:
   are *designed, not yet built*.
 - `set_aside_defaults` (true): after the `triage` list, mail that is bulk, or that the mail service files under promotions,
   social or forums, is set aside as sales mail with no AI run. It needs no rule in the file, so every workspace has it.
+- `default_data_level` (internal) and `connector_data_levels` (a map from a connector's name to a level; empty): the data
+  level a watched source's items carry when the source sets none. It is kept on each source record (5.1).
 - `set_aside_keep_seconds` (60): how long the app keeps the copy of mail the person confirmed was rightly set aside, so
   Undo can bring it back; then its content is deleted from the app (6.5). 0 deletes at once.
 - `failures_before_asking` (3): failed reads in a row before the person is asked about a source; one question, not one per
@@ -224,7 +228,8 @@ every few seconds, and the settings in 6.14.
 Built keys:
 
 - `messages`: `greeting` ("Hi {first_name},"), `actions_heading` ("Action items with you:"), `closing` ("Thanks!") and
-  `date_format` (strftime codes, default `%a, %b %d`) for copied messages.
+  `date_format` (strftime codes, default `%a, %b %d`) for copied messages, and `date_time_format` (default
+  `%a, %b %d, %Y, %H:%M`) for a date and time in the assistant's own text, written in the person's time zone (6.7).
 - `self_words`: the words the language uses for the person themselves (default "me", "myself" and "I"); a name written as
   one of them, in any case, resolves to the person (6.11).
 - `self_words`: the words the language uses for the person themselves (default "me", "myself" and "I"); a name written as
@@ -528,8 +533,7 @@ Built keys:
 Designed, not yet built: `path` (where the workspace lives; today it is the `--workspace` folder or `COCKPIT_WORKSPACE`),
 `sources_store` (an object store), `backups.encrypt` (a key reference for any target outside the PM's control; phase L,
 6.22), `sync.layout`
-(`by_project` is the only layout today), `sync.sources` (include, encrypt above a data level, or exclude above one; every
-source is copied until sources and files carry a data level) and `sync.outputs_folder` (fixed as `outputs` today), and
+(`by_project` is the only layout today), `sync.sources` (include, encrypt above a data level, or exclude above one; sources and files now carry a data level, but the setting is not built, so every source is copied) and `sync.outputs_folder` (fixed as `outputs` today), and
 `retention`: per source kind and restriction level, how long raw text is kept after its facts are recorded, and
 `forget_person` behavior (delete or anonymize free text that names them, repoint their records to "former contact"). The
 ledger keeps that a source existed and what was learned from it.

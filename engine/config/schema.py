@@ -701,6 +701,11 @@ class MessageSettings(ConfigModel):
     actions_heading: str = Field("Action items with you:", description="The line above someone's action items.")
     closing: str = Field("Thanks!", description="The last line of a copied message.")
     date_format: str = Field("%a, %b %d", description="How dates appear in messages (strftime codes).")
+    date_time_format: str = Field(
+        "%a, %b %d, %Y, %H:%M",
+        description="How a date and time appear in the assistant's notes and other text it writes (strftime codes), "
+        "in your time zone.",
+    )
 
 
 DEFAULT_SELF_WORDS = ("me", "myself", "I")
@@ -1021,6 +1026,11 @@ class WatchSource(ConfigModel):
         24, ge=1, le=336, description="With first_run recent: how many hours around the first read count as recent."
     )
     report_removed: bool = Field(True, description="Hand in an item that disappeared from the source.")
+    data_level: Literal["open", "internal", "restricted"] | None = Field(
+        None,
+        description="How sensitive what this source holds is: its items go only to AI accounts allowed this level. "
+        "Empty: the level set for its kind of source, else the default for all sources.",
+    )
     settings: dict[str, Any] = Field(
         default_factory=dict, description="The connector's own settings (a folder's path, say), checked by it."
     )
@@ -1069,6 +1079,14 @@ class WatchFile(FileModel):
         3,
         ge=1,
         description="Failed reads in a row before the person is asked about a source; one question, not one per read.",
+    )
+    default_data_level: Literal["open", "internal", "restricted"] = Field(
+        "internal",
+        description="How sensitive what a watched source holds is, when the source and its kind say nothing.",
+    )
+    connector_data_levels: dict[str, Literal["open", "internal", "restricted"]] = Field(
+        default_factory=dict,
+        description="The data level for each kind of source (by its connector name), for sources that set none.",
     )
 
     @model_validator(mode="after")

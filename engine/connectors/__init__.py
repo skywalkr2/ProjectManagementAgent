@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -283,15 +283,19 @@ def _read_folder(settings: FolderSettings, state: dict[str, Any], context: Conne
                 continue
             found.add(path)
             key = path.relative_to(folder).as_posix()
-            if path.stat().st_size > settings.max_kb * 1024:
-                items.append(SourceItem(key, path.name, f"(not read: larger than {settings.max_kb} KB)"))
+            stat = path.stat()
+            modified = datetime.fromtimestamp(stat.st_mtime, UTC).isoformat()
+            if stat.st_size > settings.max_kb * 1024:
+                items.append(
+                    SourceItem(key, path.name, f"(not read: larger than {settings.max_kb} KB)", changed_at=modified)
+                )
                 continue
             try:
                 text = path.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
-                items.append(SourceItem(key, path.name, "(not read: not plain text)"))
+                items.append(SourceItem(key, path.name, "(not read: not plain text)", changed_at=modified))
                 continue
-            items.append(SourceItem(key, path.name, text))
+            items.append(SourceItem(key, path.name, text, changed_at=modified))
     return Poll(items, state, complete=True)
 
 

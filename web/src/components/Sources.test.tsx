@@ -281,7 +281,7 @@ describe("adding a source", () => {
     const form = await screen.findByRole("form", { name: "Add a source" });
     expect(form.querySelector("[data-first-read]")).toBeNull();
     await user.click(within(form).getByRole("radio", { name: "A folder" }));
-    expect(within(form).getByText("Items already there are noted, not handed in. New ones go to the assistant.")).toBeInTheDocument();
+    expect(within(form).getByText("Items already there are noted, not handed in. New ones go to the assistant. To hand in what arrived or changed in the last day, choose Look at the last day in its menu.")).toBeInTheDocument();
     // A kind that also hands in the recent past has nothing to explain.
     await user.click(within(form).getByRole("radio", { name: "A mailbox" }));
     expect(form.querySelector("[data-first-read]")).toBeNull();

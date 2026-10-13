@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 import yaml
 
 from engine.config import load_config
+from engine.storage import WriteContext
 from tests.test_watch import make
 
 PLUGIN = """
@@ -126,3 +127,94 @@ def test_two_presses_at_once_hand_in_the_recent_items_once(tmp_path):
         assert handed_titles(store) == ["Printer call", "Proofs are ready"]
     finally:
         store.close()
+
+
+# ---- a folder's files carry their modified time ----------------------------------------------------------------------
+
+
+def folder_with_files(tmp_path, now):
+    """A watched folder holding one file modified two hours before `now` and one modified five days before."""
+    import os
+
+    folder = tmp_path / "shared"
+    folder.mkdir()
+    for name, hours in (("fresh.md", 2), ("stale.md", 120)):
+        (folder / name).write_text(f"Text of {name}.")
+        stamp = (now - timedelta(hours=hours)).timestamp()
+        os.utime(folder / name, (stamp, stamp))
+    sources = [{"id": "box", "connector": "folder", "settings": {"path": str(folder)}}]
+    ws, cfg, store = make(tmp_path, sources)
+    return ws, cfg, store
+
+
+def test_a_folder_item_carries_the_files_modified_time_on_its_snapshot(tmp_path):
+    from engine.watch import refresh
+
+    now = datetime.now(UTC)
+    ws, cfg, store = folder_with_files(tmp_path, now)
+    try:
+        refresh(ws, store, cfg, "box")
+        kept = {s.data["key"]: s.data["changed_at"] for s in store.read().find("snapshot", {"source": "box"})}
+        assert abs(datetime.fromisoformat(kept["fresh.md"]) - (now - timedelta(hours=2))) < timedelta(seconds=2)
+        assert abs(datetime.fromisoformat(kept["stale.md"]) - (now - timedelta(hours=120))) < timedelta(seconds=2)
+    finally:
+        store.close()
+
+
+def test_look_at_the_last_day_hands_in_the_folder_files_modified_in_the_last_day_once(tmp_path):
+    from engine.watch import hand_in_recent, refresh
+
+    now = datetime.now(UTC)
+    ws, cfg, store = folder_with_files(tmp_path, now)
+    try:
+        assert refresh(ws, store, cfg, "box").outcome == "baseline" and handed_titles(store) == []
+        assert len(hand_in_recent(ws, store, cfg, "box", now)) == 1
+        assert handed_titles(store) == ["fresh.md"]
+        assert hand_in_recent(ws, store, cfg, "box", now) == []
+    finally:
+        store.close()
+
+
+def test_a_snapshot_from_before_modified_times_were_kept_is_filled_in_by_the_next_read(tmp_path):
+    from engine.watch import refresh
+
+    now = datetime.now(UTC)
+    ws, cfg, store = folder_with_files(tmp_path, now)
+    try:
+        refresh(ws, store, cfg, "box")
+        with store.transaction() as tx:
+            for snap in tx.find("snapshot", {"source": "box"}):
+                tx.update(
+                    "snapshot",
+                    snap.id,
+                    {"changed_at": None},
+                    WriteContext("watcher", "untrusted", "test"),
+                    read_version=snap.version,
+                )
+        refresh(ws, store, cfg, "box")
+        assert all(s.data["changed_at"] for s in store.read().find("snapshot", {"source": "box"}))
+    finally:
+        store.close()
+
+
+def test_the_look_at_the_last_day_route_hands_in_a_folders_recent_files(tmp_path):
+    from fastapi.testclient import TestClient
+
+    from api.app import create_app
+    from engine.watch import refresh
+
+    now = datetime.now(UTC)
+    ws, cfg, store = folder_with_files(tmp_path, now)
+    refresh(ws, store, cfg, "box")
+    store.close()
+    client = TestClient(create_app(ws, cfg, "t", start_worker=False))
+    client.headers["Authorization"] = "Bearer t"
+    api = cfg.server.base_path.rstrip("/") + "/api"
+    assert client.post(f"{api}/watch/box/recent").status_code == 200
+    from engine.storage import Store
+
+    check = Store(ws.db_path, cfg=cfg)
+    try:
+        assert handed_titles(check) == ["fresh.md"]
+    finally:
+        check.close()

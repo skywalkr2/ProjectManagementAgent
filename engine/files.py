@@ -127,6 +127,7 @@ def add_file(
     meta: dict[str, Any] | None = None,
     origin: str = "upload",
     replaces: str | None = None,
+    data_level: str = "internal",
     context: WriteContext = _PM,
     now: datetime | None = None,
 ) -> Stored:
@@ -162,6 +163,7 @@ def add_file(
                 "trust": "trusted" if origin == "upload" else "untrusted",
                 "replaces": replaces,
                 "added_at": (now or datetime.now(UTC)).isoformat(),
+                "sensitivity": data_level,
             },
             context,
         )

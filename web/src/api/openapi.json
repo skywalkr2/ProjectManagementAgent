@@ -2722,6 +2722,17 @@
             "title": "Added At",
             "type": "string"
           },
+          "data_level": {
+            "default": "internal",
+            "description": "How sensitive its content is: it goes only to AI accounts allowed this level.",
+            "enum": [
+              "open",
+              "internal",
+              "restricted"
+            ],
+            "title": "Data Level",
+            "type": "string"
+          },
           "file_kind": {
             "title": "File Kind",
             "type": "string"
@@ -10526,6 +10537,21 @@
                 }
               ],
               "title": "Replaces"
+            }
+          },
+          {
+            "in": "query",
+            "name": "data_level",
+            "required": false,
+            "schema": {
+              "default": "internal",
+              "enum": [
+                "open",
+                "internal",
+                "restricted"
+              ],
+              "title": "Data Level",
+              "type": "string"
             }
           }
         ],

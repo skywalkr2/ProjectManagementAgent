@@ -11,3 +11,4 @@ messages:
   actions_heading: "Action items with you:"
   closing: "Thanks so much!"
   date_format: "%a, %b %d"
+  date_time_format: "%a, %b %d, %Y, %I:%M %p"
