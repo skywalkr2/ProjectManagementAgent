@@ -436,6 +436,13 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `test_a_domain_rule_for_a_public_domain_is_refused_in_plain_words_and_nothing_is_saved`; the screen hides the domain
   button when none comes: `web/src/components/SetAside.test.tsx` ("offers only Always for this sender when the server sends no
   domain").
+- [ ] **What the browser-test failures found** (2026-10-13; the walkthrough's screen race and J4's restart race are fixed:
+  `tests/test_setup.py::test_setup_state_survives_changes_made_at_the_same_time`). Left:
+  - an add-on's install note and its Restart now stay on the row after the restart they asked for, saying a restart is
+    still needed when none is;
+  - the other small state files in the workspace's private folder are written in place; check each for the same
+    read-change-write race and write them whole;
+  - J2 once waited 30 seconds for "1 set aside" in a full run; find the cause.
 - [ ] **What the mail journey found** (phase A3, J2):
   - [x] **A blocked word costs a second AI request:** a fixture mail with a blocked word in it sent the item through the
     fix round, so real mail could cost double. First check in the code whether wording lints look at quoted outside
