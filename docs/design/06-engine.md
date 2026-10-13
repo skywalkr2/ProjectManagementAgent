@@ -193,7 +193,8 @@ It is sorted in this order, first match wins:
 - **Any item in Came in or What changed that is a mail message** has "Set aside: personal" and "Set aside: sales" in its menu.
   The message moves to the folder at once, and a request of it that hasn't started (queued, or stopped for the person) is
   closed, remembering where it was. Undo puts both back. What the person set aside by hand stays set aside if the message
-  changes.
+  changes. Each records a `set_aside` signal (6.20; undo records none). Learning (6.22) reads requests and snapshots only through
+  `engine.set_aside.learnable`, which leaves out anything marked set aside, so mail the person set aside is never taught from.
 - **Any set-aside item** has "This is work", which hands it in after all (a request set aside by a rule is queued; one the
   person had set aside goes back where it was; a message that was never handed in is handed in now) and records a `pulled_back`
   signal (6.20). It shows in Today's Came in again. Undo sets it aside again.
@@ -1053,6 +1054,7 @@ cases from signals and rule suggestions are *designed, not yet built*):
 | undone | the PM undoes a changeset or part of one |
 | dropped / reworded | the PM drops or rewords a question the assistant filed |
 | pulled back | the PM pulls an auto-closed change back ("This is ours") |
+| set aside | the person sets a mail item aside by hand ("Set aside: personal" or "Set aside: sales", 6.5). Refs: the requests closed by it, or the snapshot when none was waiting; the note is the section, and says when a sorting rule was offered for the sender. Undoing it records no signal, and learning never reads anything marked set aside (6.5). **Built**: `tests/test_set_aside.py::test_set_aside_by_hand_records_a_set_aside_signal_and_putting_it_back_records_none` |
 | draft edited | the approved content differs from the assistant's draft (the difference is kept) |
 | held op declined | the PM declines a held system op or a routing guess |
 | routed | the person said who a name or an owner is, answering "Who is X?" or "Pick an owner" (refs: the changeset, the question, the person chosen; the note is the name as written). Undoing the person's own release of a held op records no signal: it is their decision, not the assistant's work. **Built**: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal`, `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |

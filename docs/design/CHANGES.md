@@ -651,6 +651,14 @@ yet follow, that it is *designed*, with its phase.
 | One store interface over every action store; the notice baseline date; `track_only` notices; `owner_format` parsing; `person.merge` | Present tense | Designed, not yet built, not scheduled |
 | 6.7, links enriched before apply | Present tense | Designed, not yet built |
 
+## 29. Phase L0: set-aside corrections, learning and the synced folder (2026-10-13)
+
+| Item | Before | Now |
+|---|---|---|
+| Signal kinds (5.1, 6.20) | "Set aside" corrections recorded nothing | A `set_aside` kind, recorded when mail is set aside by hand; putting it back records none |
+| Learning and set-aside mail (6.5) | Stated, not guarded | `engine.set_aside.learnable` is the one place learning reads requests and snapshots; it leaves out set-aside ones. The learning pair waits for L4 |
+| Synced-folder comparison (5.2) | A confirmed set-aside's deletion rewrote earlier ledger entries on one computer, which read as a divergence on the other | Each deletion found in either history is applied to both before comparing |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

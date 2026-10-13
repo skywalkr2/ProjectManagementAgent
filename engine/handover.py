@@ -186,8 +186,47 @@ def _local_ledger(ws: Any) -> list[str]:
     return [dumps(_ledger_row(r)) for r in rows]
 
 
+def _redacted_records(*histories: list[str]) -> dict[tuple[str, str], list[str]]:
+    """{(kind, record id): fields} for every record a confirmed set-aside deleted, found in any of the histories."""
+    from engine.set_aside import DELETE_OP, REDACTED_FIELDS
+
+    found: dict[tuple[str, str], list[str]] = {}
+    for history in histories:
+        for line in history:
+            entry = json.loads(line)
+            if entry.get("op") == DELETE_OP and entry.get("kind") in REDACTED_FIELDS:
+                found[(entry["kind"], entry["record_id"])] = REDACTED_FIELDS[entry["kind"]]
+    return found
+
+
+def apply_redactions(local: list[str], folder: list[str]) -> tuple[list[str], list[str]]:
+    """Both histories with every set-aside deletion found in either applied to both, the way the store blanks the
+    earlier values of a deleted item's fields, so a redacted entry matches its original and the comparison doesn't
+    read a deletion made on one computer as a divergence."""
+    from engine.storage.store import dumps
+
+    targets = _redacted_records(local, folder)
+    if not targets:
+        return local, folder
+
+    def redact(history: list[str]) -> list[str]:
+        out = []
+        for line in history:
+            entry = json.loads(line)
+            if entry.get("field") in targets.get((entry.get("kind"), entry.get("record_id")), ()):
+                for key in ("before", "after"):
+                    if entry.get(key) is not None:
+                        entry[key] = None
+                line = dumps(entry)
+            out.append(line)
+        return out
+
+    return redact(local), redact(folder)
+
+
 def compare(local: list[str], folder: list[str]) -> str:
-    """same, folder_newer, newer_here or diverged."""
+    """same, folder_newer, newer_here or diverged. Set-aside deletions in either history count in both."""
+    local, folder = apply_redactions(local, folder)
     if local == folder:
         return "same"
     if folder[: len(local)] == local:

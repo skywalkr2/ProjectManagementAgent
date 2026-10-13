@@ -27,6 +27,10 @@ _SOURCE_FIELDS = ["title", "content_hash", "url", "watched"]
 
 SECTION_WORDS = {"personal": "personal mail", "sales": "sales mail"}
 
+#: The op that deletes a confirmed item's content, and the fields it redacts in the ledger, by record kind.
+DELETE_OP = _DELETE.op
+REDACTED_FIELDS = {"snapshot": _SNAPSHOT_FIELDS, "source": _SOURCE_FIELDS}
+
 
 def domain_of(address: str) -> str:
     return address.rpartition("@")[2] if "@" in address else ""
@@ -62,12 +66,26 @@ def requests_of(tx: Any, snap: Any) -> list[Any]:
     return sorted(found, key=lambda r: str(r.data["created_at"]))
 
 
-def set_aside_item(store: Any, snapshot_id: str, section: str) -> None:
+def is_set_aside(record: Any) -> bool:
+    """Whether a request or snapshot is marked as set aside (by a rule or by the person, confirmed or not)."""
+    return bool(record.data.get("set_aside"))
+
+
+def learnable(view: Any, kind: str) -> list[Any]:
+    """The requests or snapshots learning may read: every one of the kind not marked set aside. Learning reads these
+    two kinds only through here, so mail set aside as not work is never taught from."""
+    if kind not in ("request", "snapshot"):
+        raise ValueError('learning reads "request" or "snapshot" records')
+    return [r for r in view.list(kind) if not is_set_aside(r)]
+
+
+def set_aside_item(store: Any, snapshot_id: str, section: str) -> list[str]:
     """Set a mail item aside by hand. A request for it that hasn't started (queued, or stopped for the person) is
-    closed, remembering what it was so putting the item back restores it."""
+    closed, remembering what it was so putting the item back restores it. Returns the ids of the requests closed."""
     if section not in SECTIONS:
         raise StoreError("Choose personal or sales.")
     reason = f"you set it aside as {SECTION_WORDS[section]}"
+    closed_ids: list[str] = []
     with store.transaction() as tx:
         snap = _mail_snapshot(tx, snapshot_id)
         mark = {"section": section, "rule": BY_PERSON, "reason": reason, "by": "person"}
@@ -86,6 +104,8 @@ def set_aside_item(store: Any, snapshot_id: str, section: str) -> None:
                 _PM,
                 read_version=req.version,
             )
+            closed_ids.append(req.id)
+    return closed_ids
 
 
 def put_back(

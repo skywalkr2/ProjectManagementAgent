@@ -2656,3 +2656,19 @@ overrides rely on. A sibling key keeps that contract and gives later lints (such
 for their settings.
 
 **Impact:** Design 4.17, 6.7 and Part 8 say so. No change to scope.
+
+## 2026-10-13: Set-aside corrections are signals, learning skips set-aside mail, and a deletion compares as matching
+
+**Decided by:** project owner (the phase L0 item "After A5"); wording by the builder.
+
+**What:** A new signal kind `set_aside` is recorded when the person sets mail aside by hand (refs: the requests it closed,
+else the snapshot; note: the section). Learning reads requests and snapshots only through `engine.set_aside.learnable`,
+which leaves out anything marked set aside. The synced folder's history comparison applies each confirmed set-aside's
+deletion to both histories before comparing, so the redacted earlier values match their originals.
+
+**Why:** Set-aside corrections were the one correction left unmeasured, mail the person said is not work must never teach the
+assistant, and a deletion on one computer read as a divergence on the other.
+
+**Impact:** Design 5.1 (signal kinds), 5.2 (the comparison), 6.5 and 6.20 say so; plugin guide regenerated. The learning pair
+for set-aside mail waits for L4, which defines the fixture format. No change to scope.
+

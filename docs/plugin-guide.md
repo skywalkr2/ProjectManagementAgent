@@ -1285,7 +1285,7 @@ A correction by the PM, the measure of how well the assistant does. The engine r
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is. |
+| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand. |
 | `refs` | list[str] | `[]` | The ids of the records the correction is about. |
 | `note` | str \| None | `None` | What the person said or changed, if anything. |
 | `at` | datetime | required | When the correction was made. |

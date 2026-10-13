@@ -195,13 +195,18 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
     def set_aside_mail(snapshot_id: str, body: SetAsideIn) -> SetAsideDone:
         """Move a mail item to the Set aside folder, as personal or sales mail, and close its request if one is
         waiting for the assistant."""
+        from engine.dispatcher import signal
+
         mail_snapshot(snapshot_id)
         try:
-            set_aside.set_aside_item(store, snapshot_id, body.section)
+            closed = set_aside.set_aside_item(store, snapshot_id, body.section)
         except StoreError as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
+        result = done(snapshot_id, body.section)
+        note = body.section + (", with a sorting rule offered for the sender" if result.address else "")
+        signal(store, "set_aside", closed or [snapshot_id], note)
         events.changed()
-        return done(snapshot_id, body.section)
+        return result
 
     @r.post("/set-aside/{snapshot_id}/work")
     def set_aside_is_work(snapshot_id: str, body: ReadVersion) -> SetAsideDone:

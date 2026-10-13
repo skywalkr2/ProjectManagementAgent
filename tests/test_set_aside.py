@@ -339,7 +339,77 @@ def test_set_aside_by_hand_closes_a_waiting_request_and_put_back_restores_it(app
     version = done.json()["version"]
     assert client.post(f"{base}/set-aside/{work.id}/put-back", json={"read_version": version}).status_code == 200
     assert [r.id for r in requests_in(store, "queued")] == [waiting[0].id]
-    assert not store.read().has("signal"), "putting it back as an undo is not a correction of the rules"
+    signals = store.read().list("signal")
+    assert len(signals) == 1, "putting it back as an undo is not a correction of the rules"
+
+
+def test_set_aside_by_hand_records_a_set_aside_signal_and_putting_it_back_records_none(app):
+    ws, cfg, store, client, base = app
+    read(ws, store)
+    work = next(s for s in store.read().list("snapshot") if s.data["key"] == "work")
+    waiting = requests_in(store, "queued")[0]
+    done = client.post(f"{base}/mail/{work.id}/set-aside", json={"section": "personal"}).json()
+    signals = store.read().list("signal")
+    assert [(s.data["kind"], s.data["refs"]) for s in signals] == [("set_aside", [waiting.id])]
+    assert signals[0].data["note"].startswith("personal") and "rule" in signals[0].data["note"]
+    # Nothing was waiting for an item a rule had set aside, so the signal refers to the message.
+    bulk = next(s for s in store.read().list("snapshot") if s.data["key"] == "bulk")
+    assert client.post(f"{base}/mail/{bulk.id}/set-aside", json={"section": "personal"}).status_code == 200
+    again = store.read().list("signal")[-1].data
+    assert again["kind"] == "set_aside" and again["refs"] == [bulk.id]
+    version = done["version"]
+    assert client.post(f"{base}/set-aside/{work.id}/put-back", json={"read_version": version}).status_code == 200
+    assert len(store.read().list("signal")) == 2
+
+
+def test_learning_reads_requests_and_snapshots_only_through_a_guard_that_leaves_out_set_aside_ones(app):
+    from engine.set_aside import learnable
+
+    ws, cfg, store, client, base = app
+    read(ws, store)
+    keys = lambda: {s.data["key"] for s in learnable(store.read(), "snapshot")}  # noqa: E731
+    assert keys() == {"work"}, "mail a rule set aside is left out"
+    assert {r.id for r in learnable(store.read(), "request")} == {
+        r.id for r in store.read().list("request") if not r.data.get("set_aside")
+    }
+    work = next(s for s in store.read().list("snapshot") if s.data["key"] == "work")
+    client.post(f"{base}/mail/{work.id}/set-aside", json={"section": "personal"})
+    assert keys() == set(), "mail the person set aside is left out, with the request it closed"
+    assert all(not r.data.get("set_aside") for r in learnable(store.read(), "request"))
+    assert len(learnable(store.read(), "request")) < len(store.read().list("request"))
+    version = store.read().get("snapshot", work.id).version
+    client.post(f"{base}/set-aside/{work.id}/put-back", json={"read_version": version})
+    assert keys() == {"work"}
+    with pytest.raises(ValueError):
+        learnable(store.read(), "signal")
+
+
+def test_a_confirmed_set_asides_redaction_matches_its_original_when_two_histories_are_compared(app):
+    from engine.handover import _local_ledger as ledger_of
+    from engine.handover import apply_redactions, backup_local, compare
+    from engine.set_aside import confirm_items, purge
+
+    class Computer:  # what the comparison reads of a workspace: where its database is
+        def __init__(self, db_path):
+            self.db_path = db_path
+
+    ws, cfg, store, client, base = app
+    read(ws, store)
+    ids = [i["id"] for i in folder(client, base)["items"]]
+    confirm_items(store, ids)
+    other = Computer(backup_local(ws, "other"))  # the other computer, before the content was deleted
+    assert purge(ws, store, ids) == 2
+    deleted, original = ledger_of(ws), ledger_of(other)
+    assert deleted[: len(original)] != original, "the deletion rewrote earlier entries, so a plain comparison fails"
+    assert compare(original, deleted) == "folder_newer" and compare(deleted, original) == "newer_here"
+    # Work done apart is still a divergence.
+    store.close()
+    extra = sqlite3.connect(other.db_path)
+    extra.execute("UPDATE ledger SET actor = 'someone' WHERE seq = (SELECT MAX(seq) FROM ledger)")
+    extra.commit()
+    extra.close()
+    assert compare(ledger_of(other), deleted) == "diverged"
+    assert apply_redactions([], []) == ([], [])
 
 
 def test_a_rule_written_by_the_corrections_route_applies_to_the_next_matching_item(app):

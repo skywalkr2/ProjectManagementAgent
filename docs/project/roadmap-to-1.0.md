@@ -335,11 +335,19 @@ them are needed before the owner's daily use, which starts when L-core passes.
 - [x] The received date comes from the source item's own received time, never its last-changed time (a mail add-on reports
   both, and they differ). Tests: `tests/test_names.py::test_a_watched_items_received_date_is_its_own_received_time_not_when_it_changed_or_was_read`,
   `test_an_item_with_no_received_time_is_dated_when_it_was_read`.
-- [ ] **After A5:**
-  - "Set aside" corrections record a signal (today only "This is work" records `pulled_back`); this needs a signal kind.
-  - Learning skips any request or snapshot marked `set_aside`, proved by a learning pair.
-  - A confirmed set-aside's ledger redaction is applied to both histories before the synced folder compares them, as
-    forgetting a person is (5.2), so two computers don't read it as a divergence.
+- [x] **After A5:**
+  - [x] "Set aside" corrections record a `set_aside` signal (refs: the requests the correction closed, else the message's
+    snapshot; note: the section, and that a sorting rule was offered). Putting it back records none. Built:
+    `tests/test_set_aside.py::test_set_aside_by_hand_records_a_set_aside_signal_and_putting_it_back_records_none`.
+  - [x] Learning skips any request or snapshot marked `set_aside`: the guard is `engine.set_aside.learnable`, the one
+    function learning reads those two kinds through. Built:
+    `tests/test_set_aside.py::test_learning_reads_requests_and_snapshots_only_through_a_guard_that_leaves_out_set_aside_ones`.
+    The learning pair itself (a mistake and a corrected later case for set-aside mail) is left to L4: no learning-pair
+    fixture format exists yet, so it is part of the exit check of the next item and of L4.
+  - [x] A confirmed set-aside's ledger redaction is applied to both histories before the synced folder compares them
+    (`engine/handover.py::apply_redactions`), so two computers don't read it as a divergence. Forgetting a person (5.2,
+    phase E) will use the same step. Built:
+    `tests/test_set_aside.py::test_a_confirmed_set_asides_redaction_matches_its_original_when_two_histories_are_compared`.
 - [ ] **Personal and sales mail set aside, the rest** (owner, 2026-10-12; design 6.5; the rules part is phase A5):
   - a Set aside folder (Personal; Sales and promotions);
   - sorting by the person's sender and domain rules, then the mail's own category and bulk headers, then a low-cost
