@@ -699,6 +699,20 @@ class KnowledgeSettings(ConfigModel):
         description="When a check that always refuses keeps refusing a kind of work, its fuller guidance joins that "
         "kind of work's packets.",
     )
+    rule_review_days: int = Field(
+        30,
+        ge=1,
+        le=730,
+        description="How many days a standing rule may be given to runs without ever applying before it is offered "
+        "for review. Keeping it starts the count again.",
+    )
+    rule_review_every_days: int = Field(
+        7,
+        ge=1,
+        le=365,
+        description="How many days must pass after you act on the review of standing rules before Today offers it "
+        "again.",
+    )
 
 
 class DispatchFile(FileModel):
@@ -1167,6 +1181,11 @@ class StandingRule(ConfigModel):
     check: str | None = Field(
         None,
         description="Optional deterministic code check implementing this rule; prose alone cannot pass a stage gate.",
+    )
+    constrains: list[str] = Field(
+        default_factory=list,
+        description="What the rule is about: op kinds (`question.add`) or op fields (`action.add.owners`). A run that "
+        "produces one counts the rule as applied; a rule that constrains nothing is only ever present.",
     )
 
 

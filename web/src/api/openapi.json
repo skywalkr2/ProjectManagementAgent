@@ -4167,6 +4167,28 @@
         "title": "KnowledgeKeep",
         "type": "object"
       },
+      "KnowledgeNarrow": {
+        "additionalProperties": false,
+        "description": "Narrow what a rule or entry applies to: the person's own change to its scope.",
+        "properties": {
+          "applies_to": {
+            "$ref": "#/components/schemas/Scope",
+            "description": "What it applies to from now on."
+          },
+          "read_version": {
+            "description": "The entry's version that was read.",
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "read_version",
+          "applies_to"
+        ],
+        "title": "KnowledgeNarrow",
+        "type": "object"
+      },
       "KnowledgeView": {
         "description": "One piece of what the assistant learned: a lesson, glossary entry, routing entry or style note. `learned_from`\nsays whose words it is (person, input, assistant, pack, seed or import); `origin` is the link to where it came from,\ndecided on the server like an action's. The fields after `applies_to` are those of its kind and are empty for\nthe others.",
         "properties": {
@@ -6811,6 +6833,18 @@
             "title": "Count",
             "type": "integer"
           },
+          "days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a rule_review line: how many days the flagged rules have been given and never applied.",
+            "title": "Days"
+          },
           "due": {
             "anyOf": [
               {
@@ -6867,11 +6901,24 @@
               "offline",
               "overdue",
               "review",
+              "rule_review",
               "send",
               "nudge"
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "moved": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a rule_review line: how many rules the latest run had moved out of the always-sent part, so they go only to the runs they cover.",
+            "title": "Moved"
           },
           "op": {
             "anyOf": [
@@ -6966,6 +7013,38 @@
               }
             ],
             "title": "Request"
+          },
+          "rules": {
+            "description": "For a rule_review line: the ids of the rules flagged, most present first.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Rules",
+            "type": "array"
+          },
+          "stable_budget": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a rule_review line: the size that section may be before rules move out of it.",
+            "title": "Stable Budget"
+          },
+          "stable_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a rule_review line: the size of what every run is sent, in characters, on the latest run.",
+            "title": "Stable Size"
           },
           "state": {
             "anyOf": [
@@ -7467,6 +7546,100 @@
           }
         },
         "title": "RetryRequest",
+        "type": "object"
+      },
+      "RuleReviewRule": {
+        "description": "A standing rule offered for review: given to runs and never shown to apply.",
+        "properties": {
+          "applied": {
+            "description": "How many runs in the window showed it applied.",
+            "title": "Applied",
+            "type": "integer"
+          },
+          "applies_to": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "present": {
+            "description": "How many runs in the window were given it without it showing as applied.",
+            "title": "Present",
+            "type": "integer"
+          },
+          "text": {
+            "description": "The rule in the person's wording.",
+            "title": "Text",
+            "type": "string"
+          },
+          "version": {
+            "description": "The rule's version, to send back with Keep, Narrow or Retire.",
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "name",
+          "text",
+          "applies_to",
+          "present",
+          "applied"
+        ],
+        "title": "RuleReviewRule",
+        "type": "object"
+      },
+      "RuleReviewView": {
+        "description": "The weekly review of standing rules (design 6.22): the rules to look over, most present first, and how large the\nalways-sent section is against its budget.",
+        "properties": {
+          "days": {
+            "description": "The window the counts cover, in days.",
+            "title": "Days",
+            "type": "integer"
+          },
+          "due": {
+            "description": "Whether Today offers the review now.",
+            "title": "Due",
+            "type": "boolean"
+          },
+          "flagged": {
+            "items": {
+              "$ref": "#/components/schemas/RuleReviewRule"
+            },
+            "title": "Flagged",
+            "type": "array"
+          },
+          "moved": {
+            "description": "How many rules the latest run had moved out of the always-sent part.",
+            "title": "Moved",
+            "type": "integer"
+          },
+          "stable_budget": {
+            "description": "The size that section may be before rules move out of it.",
+            "title": "Stable Budget",
+            "type": "integer"
+          },
+          "stable_chars": {
+            "description": "The size of what every run is sent, in characters, on the latest run.",
+            "title": "Stable Chars",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "flagged",
+          "stable_chars",
+          "stable_budget",
+          "moved",
+          "due"
+        ],
+        "title": "RuleReviewView",
         "type": "object"
       },
       "RuntimeConfig": {
@@ -12526,6 +12699,25 @@
         "summary": "Entries"
       }
     },
+    "/api/knowledge/rules/review": {
+      "get": {
+        "description": "The standing rules to look over: active rules given to runs over the review window and never shown to apply,\nmost present first, with the size of what every run is sent and how many rules the latest run had moved out of\nit. A rule a code check enforces is never in the list.",
+        "operationId": "rule_review_api_knowledge_rules_review_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleReviewView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rule Review"
+      }
+    },
     "/api/knowledge/{entry_id}/discard": {
       "post": {
         "description": "Discard a proposed entry. It is kept, with the reason if one is given. Undo puts it back to proposed.",
@@ -12624,6 +12816,106 @@
           }
         },
         "summary": "Keep"
+      }
+    },
+    "/api/knowledge/{entry_id}/keep-rule": {
+      "post": {
+        "description": "Keep a standing rule as it is in the review: the clock for its next review starts now. Undo puts the old\nclock back.",
+        "operationId": "keep_rule_api_knowledge__entry_id__keep_rule_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Keep Rule"
+      }
+    },
+    "/api/knowledge/{entry_id}/narrow": {
+      "post": {
+        "description": "Narrow what an active rule or entry applies to. It is the person's own change of its scope, so Undo puts the\nold scope back.",
+        "operationId": "narrow_api_knowledge__entry_id__narrow_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeNarrow"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Narrow"
       }
     },
     "/api/knowledge/{entry_id}/retire": {

@@ -43,6 +43,7 @@ def active_rules(source: Any) -> list[StandingRule]:
                 source=data.get("source"),
                 status="active",
                 check=data.get("check"),
+                constrains=list(data.get("constrains") or []),
             )
         )
     return found
@@ -70,6 +71,7 @@ def seed_rules(store: Any) -> list[str]:
                     "text": rule.text,
                     "applies_to": rule.applies_to.model_dump(),
                     "check": rule.check,
+                    "constrains": list(rule.constrains),
                     "origin": "seed",
                     # A rule the file already gave up on is kept as history, not put back in force.
                     "status": "active" if rule.status == "active" else "retired",
@@ -100,6 +102,7 @@ def add_rule(tx: Any, store: Any, op: Any, w: WriteContext, *, origin: str, kept
         "text": " ".join(op.text.split()),
         "applies_to": op.applies_to.model_dump(mode="json", by_alias=True),
         "check": op.check,
+        "constrains": list(dict.fromkeys(op.constrains)),
         "origin": origin,
         "status": "active",
         "evidence": evidence,

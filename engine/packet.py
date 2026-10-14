@@ -22,7 +22,7 @@ from engine.names import People
 from engine.ops import reference_for, schema_for
 from engine.playbook import guidance
 from engine.prompts import render
-from engine.records import RunKnowledge
+from engine.records import Rule, RunKnowledge
 from engine.refusals import seed_section
 from engine.storage import Store, Stored, StoreError
 from engine.tasks import TaskKind, settings
@@ -205,11 +205,22 @@ def _learned(
         scope_projects=with_ancestors(view, in_input),
     )
     stable_text = "\n\n".join(part for part in (stable.text, seeds.text) if part)
-    stable_log = RunKnowledge(given=list(dict.fromkeys([*stable.ids, *seeds.ids])), stable_chars=len(stable_text))
+
+    def rules(ids: list[str]) -> list[str]:
+        # Every rule it was given is present until the run's output shows it applied (engine/rule_use.py).
+        return [i for i in dict.fromkeys(ids) if i.startswith(f"{Rule.prefix}-")]
+
+    stable_log = RunKnowledge(
+        given=list(dict.fromkeys([*stable.ids, *seeds.ids])),
+        stable_chars=len(stable_text),
+        rules_present=rules(stable.ids),
+        rules_moved=list(stable.moved),
+    )
     per_input_log = RunKnowledge(
         given=list(dict.fromkeys(per_input.ids)),
         left_out_by_scope=per_input.left_out_by_scope,
         facts_left_out=per_input.facts_left_out,
+        rules_present=rules(per_input.ids),
     )
     return _Learned(stable_text, per_input.text, _merged_logs([stable_log, per_input_log]), stable_log, per_input_log)
 
@@ -222,6 +233,8 @@ def _merged_logs(logs: list[RunKnowledge]) -> RunKnowledge:
         left_out_by_scope=list(dict.fromkeys(i for log in logs for i in log.left_out_by_scope)),
         facts_left_out=sum(log.facts_left_out for log in logs),
         stable_chars=max((log.stable_chars for log in logs), default=0),
+        rules_present=list(dict.fromkeys(i for log in logs for i in log.rules_present)),
+        rules_moved=list(dict.fromkeys(i for log in logs for i in log.rules_moved)),
     )
 
 

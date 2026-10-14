@@ -50,7 +50,9 @@ class Line:
     paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), offline (work
     that has waited for the network longer than the configured time: `count` waiting and `waiting_since`, when the
     oldest began), overdue,
-    review, send or nudge. `count` is how many things the line covers; `text` the
+    review, rule_review (standing rules to look over: `count` flagged as never applying in `days`, their ids in `rules`,
+    the always-sent section's `stable_size` against its `stable_budget`, and `moved` rules sent only with the runs they
+    cover), send or nudge. `count` is how many things the line covers; `text` the
     decision, question or held item in one line; `title` the input the line is about; `outcome` what the assistant
     did, counted by kind; `waiting` why the work stopped, as the engine said it."""
 
@@ -79,6 +81,11 @@ class Line:
     until: str | None = None
     waiting_since: str | None = None
     state: str | None = None
+    rules: list[str] = field(default_factory=list)
+    stable_size: int | None = None
+    stable_budget: int | None = None
+    moved: int | None = None
+    days: int | None = None
     since: str = ""
 
 
@@ -349,6 +356,27 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # Review: the standing rules to look over, offered at most once a period.
+    from engine.rule_review import due, last_acted, review
+
+    found = review(reader, cfg.dispatch.knowledge, now)
+    if due(reader, cfg.dispatch.knowledge, now, found):
+        acted = last_acted(reader)
+        lines.append(
+            Line(
+                key="rule_review",
+                group="review",
+                kind="rule_review",
+                count=len(found.flagged),
+                rules=[f.id for f in found.flagged],
+                stable_size=found.stable_chars,
+                stable_budget=found.stable_budget,
+                moved=found.moved,
+                days=found.days,
+                since=acted.isoformat() if acted else "",
+            )
+        )
+
     # Send and follow up: who has something to send, then who hasn't answered for a while.
     for s in sections(store, cfg, today):
         if s.is_pm:
@@ -403,6 +431,7 @@ _KIND_ORDER = {
     "offline": 1,
     "overdue": 2,
     "review": 0,
+    "rule_review": 1,
     "send": 0,
     "nudge": 1,
 }

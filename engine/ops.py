@@ -451,6 +451,10 @@ class RuleAddOp(OpModel):
     check: str | None = Field(
         None, description="The id of a deterministic check that implements the rule, when one exists."
     )
+    constrains: list[str] = Field(
+        default_factory=list,
+        description="What the rule is about: op kinds (`question.add`) or op fields (`action.add.owners`).",
+    )
     evidence: EvidenceIn | None = Field(None, description="The words from the input that justify the rule, if any.")
 
     def describe(self) -> str | None:

@@ -1301,6 +1301,8 @@ A standing instruction the assistant follows, kept as a record so changing one h
 | `learned_at` | datetime.datetime \| None | `None` | When the rule was learned or added. |
 | `kept_by` | str \| None | `None` | The id of the person who made it active. |
 | `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `constrains` | list[str] | `[]` | What it is about, so a run's log can tell a rule that applied from one that was only present: op kinds (`question.add`) or op fields (`action.add.owners`). Empty means nothing is checked, so the rule is only ever present. |
+| `reviewed_at` | datetime.datetime \| None | `None` | When the person last chose to keep it in a review; the clock for its next review starts here. |
 
 ### `event` (EVT-n)
 
@@ -1491,6 +1493,9 @@ One call to an AI provider. The engine writes it after each call, for usage and 
 | `knowledge.left_out_by_scope` | list[str] | `[]` | The ids of rules and entries left out because their scope excludes the input. |
 | `knowledge.facts_left_out` | int | `0` | How many facts of the input's projects didn't fit the facts budget. |
 | `knowledge.stable_chars` | int | `0` | The size of the knowledge sent with every run, in characters. |
+| `knowledge.rules_applied` | list[str] | `[]` | The ids of the rules it was given that the run's changeset, the check on its output or a later correction shows were applied. Never the model's own claim. |
+| `knowledge.rules_present` | list[str] | `[]` | The ids of the rules it was given that were not shown to apply. |
+| `knowledge.rules_moved` | list[str] | `[]` | The ids of the rules moved out of the always-sent part because it passed its size budget. |
 | `knowledge.searches` | list[RunSearch] | `[]` | The searches it asked for. |
 | `knowledge.searches[].words` | str | `''` | The words searched for. |
 | `knowledge.searches[].kinds` | list[str] | `[]` | The kinds searched: facts, inputs, records, knowledge. |
@@ -1503,7 +1508,7 @@ A correction by the PM, the measure of how well the assistant does. The engine r
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry or style note). |
+| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to. |
 | `refs` | list[str] | `[]` | The ids of the records the correction is about. |
 | `run` | str \| None | `None` | The id of the AI run whose work was corrected, when there was one. |
 | `changeset` | str \| None | `None` | The id of the changeset the correction is about, when there is one. |
@@ -2104,6 +2109,7 @@ Add a standing rule: an instruction the assistant follows from now on. A system 
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
 | `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `check` | str \| None | `None` | The id of a deterministic check that implements the rule, when one exists. |
+| `constrains` | list[str] | `[]` | What the rule is about: op kinds (`question.add`) or op fields (`action.add.owners`). |
 | `evidence` | EvidenceIn \| None | see below | The words from the input that justify the rule, if any. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 

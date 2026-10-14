@@ -1057,6 +1057,16 @@ class Rule(Record):
     learned_at: datetime | None = Field(None, description="When the rule was learned or added.")
     kept_by: str | None = Field(None, description="The id of the person who made it active.")
     kept_at: datetime | None = Field(None, description="When it was made active.")
+    constrains: list[str] = Field(
+        default_factory=list,
+        description="What it is about, so a run's log can tell a rule that applied from one that was only present: "
+        "op kinds (`question.add`) or op fields (`action.add.owners`). Empty means nothing is checked, so the rule "
+        "is only ever present.",
+    )
+    reviewed_at: datetime | None = Field(
+        None,
+        description="When the person last chose to keep it in a review; the clock for its next review starts here.",
+    )
 
 
 class CalendarEntry(Record):
@@ -1297,6 +1307,18 @@ class RunKnowledge(BaseModel):
     )
     facts_left_out: int = Field(0, description="How many facts of the input's projects didn't fit the facts budget.")
     stable_chars: int = Field(0, description="The size of the knowledge sent with every run, in characters.")
+    rules_applied: list[str] = Field(
+        default_factory=list,
+        description="The ids of the rules it was given that the run's changeset, the check on its output or a later "
+        "correction shows were applied. Never the model's own claim.",
+    )
+    rules_present: list[str] = Field(
+        default_factory=list, description="The ids of the rules it was given that were not shown to apply."
+    )
+    rules_moved: list[str] = Field(
+        default_factory=list,
+        description="The ids of the rules moved out of the always-sent part because it passed its size budget.",
+    )
     searches: list[RunSearch] = Field(default_factory=list, description="The searches it asked for.")
     refused_checks: list[str] = Field(
         default_factory=list,
@@ -1366,12 +1388,14 @@ class Signal(Record):
         "kept",
         "discarded",
         "retired",
+        "narrowed",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
         "routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; "
         "put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired "
-        "a piece of what the assistant learned (a lesson, glossary entry, routing entry or style note)."
+        "a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); "
+        "narrowed, limited what a rule applies to."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")

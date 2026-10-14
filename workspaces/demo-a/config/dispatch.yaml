@@ -19,3 +19,5 @@ knowledge:
     share: 0.05
     of_last: 50
     min_runs: 10
+  rule_review_days: 30
+  rule_review_every_days: 7

@@ -35,6 +35,7 @@ from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
 from engine.packet import PacketRefused, build, target_of
 from engine.projects import budget_problem
+from engine.rule_use import record_applied, record_named
 from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Stored, Tx
 from engine.tasks import settings as task_settings
@@ -343,6 +344,8 @@ def process(
     cs_id = apply_changeset(
         changeset, problems, ctx, run=run_id, now=now, all_or_nothing=getattr(kind, "all_or_nothing", False)
     )
+    if run_id is not None:
+        record_applied(store, run_id, cs_id)
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
     if _applied_something(store, cs_id):
         retire_earlier_attempts(store, request_id)
@@ -1173,7 +1176,9 @@ def signal(
             made = tx.get("changeset", changeset)
             run = made.data.get("run") if made is not None else None
         data = {"kind": kind, "refs": refs, "changeset": changeset, "run": run, "note": note, "at": now.isoformat()}
-        return tx.create("signal", data, _PM).id
+        signal_id = tx.create("signal", data, _PM).id
+        record_named(tx, run, refs)  # a correction that names a rule counts it as applied on the run it corrects
+        return signal_id
 
 
 def undo_changeset(store: Store, changeset_id: str, indices: list[int] | None = None):

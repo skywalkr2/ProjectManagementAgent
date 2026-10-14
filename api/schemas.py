@@ -1089,6 +1089,7 @@ class QueueLineView(BaseModel):
         "offline",
         "overdue",
         "review",
+        "rule_review",
         "send",
         "nudge",
     ]
@@ -1134,6 +1135,24 @@ class QueueLineView(BaseModel):
         description="For a handover line: diverged (this computer and the synced folder each changed; the person "
         "chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened "
         "the workspace, so this copy stopped writing to the folder). `text` is the other computer's name.",
+    )
+    rules: list[str] = Field(
+        default_factory=list, description="For a rule_review line: the ids of the rules flagged, most present first."
+    )
+    stable_size: int | None = Field(
+        None,
+        description="For a rule_review line: the size of what every run is sent, in characters, on the latest run.",
+    )
+    stable_budget: int | None = Field(
+        None, description="For a rule_review line: the size that section may be before rules move out of it."
+    )
+    moved: int | None = Field(
+        None,
+        description="For a rule_review line: how many rules the latest run had moved out of the always-sent part, so "
+        "they go only to the runs they cover.",
+    )
+    days: int | None = Field(
+        None, description="For a rule_review line: how many days the flagged rules have been given and never applied."
     )
 
 
@@ -2190,6 +2209,39 @@ class KnowledgeKeep(BaseModel):
     read_version: int = Field(ge=1, description="The entry's version that was read.")
     text: str | None = Field(None, min_length=1, description="The entry's wording, when the person changed it.")
     applies_to: Scope | None = Field(None, description="What it applies to, when the person changed it.")
+
+
+class KnowledgeNarrow(BaseModel):
+    """Narrow what a rule or entry applies to: the person's own change to its scope."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    read_version: int = Field(ge=1, description="The entry's version that was read.")
+    applies_to: Scope = Field(description="What it applies to from now on.")
+
+
+class RuleReviewRule(BaseModel):
+    """A standing rule offered for review: given to runs and never shown to apply."""
+
+    id: str
+    version: int = Field(description="The rule's version, to send back with Keep, Narrow or Retire.")
+    name: str
+    text: str = Field(description="The rule in the person's wording.")
+    applies_to: Scope
+    present: int = Field(description="How many runs in the window were given it without it showing as applied.")
+    applied: int = Field(description="How many runs in the window showed it applied.")
+
+
+class RuleReviewView(BaseModel):
+    """The weekly review of standing rules (design 6.22): the rules to look over, most present first, and how large the
+    always-sent section is against its budget."""
+
+    days: int = Field(description="The window the counts cover, in days.")
+    flagged: list[RuleReviewRule]
+    stable_chars: int = Field(description="The size of what every run is sent, in characters, on the latest run.")
+    stable_budget: int = Field(description="The size that section may be before rules move out of it.")
+    moved: int = Field(description="How many rules the latest run had moved out of the always-sent part.")
+    due: bool = Field(description="Whether Today offers the review now.")
 
 
 class KnowledgeDiscard(BaseModel):

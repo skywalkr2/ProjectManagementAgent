@@ -4,17 +4,28 @@ at once, with Undo through the change it makes, and records a signal (6.20)."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 
-from api.schemas import Applied, KnowledgeDiscard, KnowledgeKeep, KnowledgeView, ReadVersion
+from api.schemas import (
+    Applied,
+    KnowledgeDiscard,
+    KnowledgeKeep,
+    KnowledgeNarrow,
+    KnowledgeView,
+    ReadVersion,
+    RuleReviewRule,
+    RuleReviewView,
+)
 from engine import knowledge
 from engine.applier import apply_as_person
 from engine.config import Config
 from engine.dispatcher import SAY_WHO_FIRST, signal
 from engine.origin import origins
-from engine.records import Rule
+from engine.records import Rule, Scope
+from engine.rule_review import due, review
 from engine.storage import Store, StoreError
 from engine.worker import Events
 
@@ -128,5 +139,53 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events) -> APIRout
         found = entry(entry_id, body.read_version, rules=True)
         op = "rule.retire" if found.kind == "rule" else "knowledge.retire"
         return act(found, {"op": op, "id": found.id}, "Retired what was learned", "retired")
+
+    @r.get("/knowledge/rules/review")
+    def rule_review() -> RuleReviewView:
+        """The standing rules to look over: active rules given to runs over the review window and never shown to apply,
+        most present first, with the size of what every run is sent and how many rules the latest run had moved out of
+        it. A rule a code check enforces is never in the list."""
+        view = store.read()
+        now = datetime.now(UTC)
+        settings = cfg.dispatch.knowledge
+        found = review(view, settings, now)
+        return RuleReviewView(
+            days=found.days,
+            flagged=[
+                RuleReviewRule(
+                    id=f.id,
+                    version=f.version,
+                    name=f.name,
+                    text=f.text,
+                    applies_to=Scope.model_validate(f.applies_to),
+                    present=f.present,
+                    applied=f.applied,
+                )
+                for f in found.flagged
+            ],
+            stable_chars=found.stable_chars,
+            stable_budget=found.stable_budget,
+            moved=found.moved,
+            due=due(view, settings, now, found),
+        )
+
+    @r.post("/knowledge/{entry_id}/keep-rule")
+    def keep_rule(entry_id: str, body: ReadVersion) -> Applied:
+        """Keep a standing rule as it is in the review: the clock for its next review starts now. Undo puts the old
+        clock back."""
+        found = entry(entry_id, body.read_version, rules=True)
+        if found.kind != "rule" or found.data["status"] != "active":
+            raise HTTPException(status_code=409, detail=f"{entry_id} isn't an active rule")
+        return act(found, edit(found, {"reviewed_at": store.clock()}), "Kept a standing rule", "kept")
+
+    @r.post("/knowledge/{entry_id}/narrow")
+    def narrow(entry_id: str, body: KnowledgeNarrow) -> Applied:
+        """Narrow what an active rule or entry applies to. It is the person's own change of its scope, so Undo puts the
+        old scope back."""
+        found = entry(entry_id, body.read_version, rules=True)
+        if found.data["status"] != "active":
+            raise HTTPException(status_code=409, detail=f"{entry_id} isn't active")
+        scope = body.applies_to.model_dump(mode="json", by_alias=True)
+        return act(found, edit(found, {"applies_to": scope}), "Narrowed what was learned", "narrowed")
 
     return r
