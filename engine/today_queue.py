@@ -50,7 +50,9 @@ class Line:
     the other computer), failed,
     paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), offline (work
     that has waited for the network longer than the configured time: `count` waiting and `waiting_since`, when the
-    oldest began), overdue,
+    oldest began), overdue, account_check (an AI account in a fallback chain that can't stand in yet: its `account`, the
+    `tier` whose chain it is in, its `model`, and `check_failed` when its last check failed rather than it never having
+    been checked),
     review, rule_review (standing rules to look over: `count` flagged as never applying in `days`, their ids in `rules`,
     the always-sent section's `stable_size` against its `stable_budget`, and `moved` rules sent only with the runs they
     cover), learned (proposals of what the assistant learned from inputs and from the person's corrections, to look
@@ -95,6 +97,9 @@ class Line:
     expired: int | None = None
     left_out: int | None = None
     suggestion: dict[str, Any] | None = None
+    tier: str | None = None
+    model: str | None = None
+    check_failed: bool | None = None
     since: str = ""
 
 
@@ -309,6 +314,23 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 )
             )
 
+    # Risk: an account in a fallback chain that is neither checked for that work nor accepted unchecked, or whose last
+    # check failed; its line goes once its check passes.
+    from engine.ai.checked import cannot_stand_in
+
+    for found in cannot_stand_in(ws, cfg):
+        lines.append(
+            Line(
+                key=f"account_check:{found.tier}:{found.ref}",
+                group="risk",
+                kind="account_check",
+                account=found.account,
+                tier=found.tier,
+                model=found.model,
+                check_failed=found.failed,
+            )
+        )
+
     # Risk: the person's own overdue to-dos, as one line.
     overdue = []
     for action in reader.list("action"):
@@ -478,6 +500,7 @@ _KIND_ORDER = {
     "paused": 1,
     "offline": 1,
     "overdue": 2,
+    "account_check": 1,
     "review": 0,
     "rule_review": 1,
     "learned": 2,

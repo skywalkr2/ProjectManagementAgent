@@ -922,6 +922,15 @@ yet follow, that it is *designed*, with its phase.
 | Fallback chains (6.16) | Designed | The settings save refuses an unchecked account newly added to a chain unless `accepted_unchecked`; the account check adds a learning round-trip; the first run on a fallback account sets `first_on_account`. Built: `tests/test_quality.py` |
 | Restart (6.14) | A save landing while the worker checked could read as a restart | The worker judges from the files its take-in read. Built: `tests/test_provider_safety.py::test_a_live_change_saved_while_the_worker_checks_never_asks_for_a_restart` |
 
+## 58. L3, third wave, part A: the Knowledge screen, the rules review, use counts and accounts that can't stand in (2026-10-14)
+
+| Where | Before | Now |
+|---|---|---|
+| Use on every row (7.18) | Designed only | Each entry and rule carries `used`, `given` and `last_used` from the runs' knowledge logs, shown as "Used 12 times · last 2 days ago" or "Never used". Built: `tests/test_knowledge_screen.py::test_use_counts_runs_that_applied_an_entry_runs_that_were_given_it_and_when_it_was_last_used` |
+| Knowledge screen (7.18) | Designed only | Records > Knowledge: every entry and rule by kind, filtered Proposed, Active, Unused or Retired, with where it came from, what it reaches and its use; Keep or Narrow as the row's action, the rest in its menu, each with an undo toast. `GET /api/knowledge/rules` lists the rules. Edit is on proposals only. Built: `web/src/components/Knowledge.test.tsx`, `tests/test_knowledge_screen.py::test_the_rules_list_has_each_rule_with_its_reach_what_it_constrains_where_it_came_from_and_its_use` |
+| Rules review (6.22, 7.18) | The line and routes, no screen | The line opens a screen of the flagged rules with their counts, the size against its budget, the rules moved, and Keep, Narrow and Retire. Built: `web/src/components/RuleReview.test.tsx` |
+| Fallback chains (6.16) | A hand-edited chain was not flagged | A Today line per account in a chain that is unchecked for that tier and not accepted, or whose last check failed; its action runs the test for that tier. Built: `tests/test_knowledge_screen.py::test_an_unchecked_account_in_a_hand_edited_chain_has_a_line_until_its_check_passes`, `tests/test_knowledge_screen.py::test_a_failed_check_has_a_line_that_says_so_even_for_an_accepted_account_and_goes_when_it_passes` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

@@ -1,9 +1,13 @@
-// Today's lines for work that has stopped (design 7.7, 8.5): work held until the app restarts, an AI account paused
-// until its usage limit resets, work waiting for the network, and the synced folder that can't be used until the person settles which copy to keep.
+// Today's lines for work that has stopped or that needs a look before it can go on (design 7.7, 8.5): work held until the
+// app restarts, an AI account paused until its usage limit resets, work waiting for the network, the synced folder that
+// can't be used until the person settles which copy to keep, a backup account that hasn't passed its check, and the
+// standing rules to look over.
 // Each is one row that says what to do first, with the one button that does it. The lines come from the Today queue; a
 // line is gone once its cause is, and only the person's own click ever restarts the app.
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api, type S } from "../lib/api";
+import { useAct } from "../lib/act";
 import { wallWhen } from "../lib/dates";
 import { useRestart, useRestartText } from "../lib/restart";
 import { useWords } from "../lib/wording";
@@ -13,10 +17,11 @@ import styles from "./HeldLines.module.css";
 
 type Line = S["QueueLineView"];
 
-export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void }) {
+const SHOWN: Line["kind"][] = ["restart", "paused", "offline", "handover", "account_check", "rule_review"];
+
+export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
   const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
-  const lines = (queue.data ?? []).filter((line) => line.kind === "restart" || line.kind === "paused" || line.kind === "offline" || line.kind === "handover",
-  );
+  const lines = (queue.data ?? []).filter((line) => SHOWN.includes(line.kind));
   if (!lines.length) return null;
   return (
     <div className={styles.lines} data-held-lines="">
@@ -27,6 +32,10 @@ export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover:
           <HandoverLine key={line.key} line={line} onOpen={props.onOpenHandover} />
         ) : line.kind === "offline" ? (
           <OfflineLine key={line.key} line={line} />
+        ) : line.kind === "account_check" ? (
+          <AccountCheckLine key={line.key} line={line} />
+        ) : line.kind === "rule_review" ? (
+          <RuleReviewLine key={line.key} line={line} onOpen={props.onOpenRules} />
         ) : (
           <PausedLine key={line.key} line={line} onOpenAiAccounts={props.onOpenAiAccounts} />
         ),
@@ -130,6 +139,65 @@ function HandoverLine(props: { line: Line; onOpen: () => void }) {
           {t(`queue.handover.open_${state}`)}
         </Button>
       </div>
+    </section>
+  );
+}
+
+/** A backup account that hasn't passed its check for the work it would stand in for: Check now runs that test, and the
+ * line is gone once it passes. */
+function AccountCheckLine(props: { line: Line }) {
+  const { t, has } = useWords();
+  const act = useAct();
+  const [checking, setChecking] = useState(false);
+  const { line } = props;
+  const account = line.account ?? "";
+  const work = t(has(`queue.account_check.work.${line.tier}`) ? `queue.account_check.work.${line.tier}` : "queue.account_check.work.other");
+  const run = async () => {
+    setChecking(true);
+    await act(
+      () => api.testAccount(account, line.tier ?? undefined, line.model ?? undefined),
+      (results) => {
+        const bad = results.find((r) => !r.ok);
+        return { message: bad ? t("queue.account_check.not_passed", { account, detail: bad.detail }) : t("queue.account_check.passed", { account, work }) };
+      },
+    );
+    setChecking(false);
+  };
+  return (
+    <section className={styles.line} aria-label={t("queue.account_check.label")} data-queue-line="account_check">
+      <Pill tone="warn">{t("queue.account_check.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t("queue.account_check", { account, work })}</p>
+        <p className={styles.sub}>{t(line.check_failed ? "queue.account_check.sub_failed" : "queue.account_check.sub")}</p>
+      </div>
+      <div className={styles.actions}>
+        <Button size="sm" variant="primary" loading={checking} aria-label={t("queue.account_check.run_named", { account, work })} onClick={() => void run()}>
+          {t("queue.account_check.run")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/** The standing rules given to runs and never shown applying: the line opens the review. */
+function RuleReviewLine(props: { line: Line; onOpen?: () => void }) {
+  const { t, tn } = useWords();
+  const { line } = props;
+  const text = line.count > 0 ? tn("queue.rule_review", line.count, { days: line.days ?? "" }) : t("queue.rule_review.moved");
+  return (
+    <section className={styles.line} aria-label={t("queue.rule_review.label")} data-queue-line="rule_review">
+      <Pill tone="neutral">{t("queue.rule_review.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{text}</p>
+        <p className={styles.sub}>{t("queue.rule_review.sub")}</p>
+      </div>
+      {props.onOpen && (
+        <div className={styles.actions}>
+          <Button size="sm" variant="primary" onClick={props.onOpen}>
+            {t("queue.rule_review.open")}
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

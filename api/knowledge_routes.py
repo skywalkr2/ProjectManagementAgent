@@ -21,8 +21,9 @@ from api.schemas import (
     ReadVersion,
     RuleReviewRule,
     RuleReviewView,
+    RuleView,
 )
-from engine import catch_up, knowledge, proposals
+from engine import catch_up, knowledge, knowledge_use, proposals
 from engine.applier import apply_as_person
 from engine.config import Config
 from engine.dispatcher import SAY_WHO_FIRST, signal
@@ -36,7 +37,12 @@ Kind = Literal["lesson", "glossary_entry", "routing_entry", "style_note"]
 Status = Literal["proposed", "active", "discarded", "expired", "retired"]
 
 
-def _view(stored: Any, origin: dict[str, Any] | None) -> KnowledgeView:
+def _use(uses: dict[str, knowledge_use.Use], entry_id: str) -> dict[str, Any]:
+    found = uses.get(entry_id, knowledge_use.Use())
+    return {"used": found.used, "given": found.given, "last_used": found.last_used}
+
+
+def _view(stored: Any, origin: dict[str, Any] | None, uses: dict[str, knowledge_use.Use]) -> KnowledgeView:
     data = dict(stored.data)
     own = {name: data.get(name) for names in knowledge.OWN_FIELDS.values() for name in names}
     return KnowledgeView(
@@ -55,11 +61,35 @@ def _view(stored: Any, origin: dict[str, Any] | None) -> KnowledgeView:
         applies_to=data["applies_to"],
         evidence=data.get("evidence"),
         origin=origin,
+        **_use(uses, stored.id),
         **{
             name: value
             for name, value in own.items()
             if name in knowledge.OWN_FIELDS[stored.kind] and (value is not None or name == "negative")
         },
+    )
+
+
+def _rule(stored: Any, origin: dict[str, Any] | None, uses: dict[str, knowledge_use.Use]) -> RuleView:
+    data = dict(stored.data)
+    return RuleView(
+        id=stored.id,
+        version=stored.version,
+        name=data["name"],
+        text=data.get("text") or "",
+        status=data["status"],
+        learned_from=data["origin"],
+        trust=data.get("trust", "trusted"),
+        learned_at=data.get("learned_at"),
+        kept_by=data.get("kept_by"),
+        kept_at=data.get("kept_at"),
+        discard_reason=data.get("discard_reason"),
+        applies_to=Scope.model_validate(data.get("applies_to") or {}),
+        constrains=list(data.get("constrains") or []),
+        enforced=bool(data.get("check")),
+        evidence=data.get("evidence"),
+        origin=origin,
+        **_use(uses, stored.id),
     )
 
 
@@ -138,12 +168,24 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events) -> APIRout
     def entries(kind: Kind | None = None, status: Status | None = None) -> list[KnowledgeView]:
         """What the assistant learned, newest first, with where each piece came from; filter by kind and by status."""
         view = store.read()
+        uses = knowledge_use.use_of(view)
         found = []
         for name in [kind] if kind else knowledge.KINDS:
             links = origins(view, name, [s.id for s in view.list(name)])
             found += [(s, links.get(s.id)) for s in view.list(name) if status is None or s.data["status"] == status]
         found.sort(key=lambda pair: (pair[0].data["learned_at"], pair[0].id), reverse=True)
-        return [_view(stored, link) for stored, link in found]
+        return [_view(stored, link, uses) for stored, link in found]
+
+    @r.get("/knowledge/rules")
+    def rules(status: Status | None = None) -> list[RuleView]:
+        """The standing rules, newest first, each with where it came from, what it applies to and constrains, and how
+        much the runs used it; filter by status."""
+        view = store.read()
+        uses = knowledge_use.use_of(view)
+        found = [s for s in view.list("rule") if status is None or s.data["status"] == status]
+        found.sort(key=lambda s: (str(s.data.get("learned_at") or ""), s.id), reverse=True)
+        links = origins(view, "rule", [s.id for s in found])
+        return [_rule(stored, links.get(stored.id), uses) for stored in found]
 
     @r.post("/knowledge/{entry_id}/keep")
     def keep(entry_id: str, body: KnowledgeKeep) -> Applied:

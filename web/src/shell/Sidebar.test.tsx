@@ -49,6 +49,7 @@ test("the views are links, in the fixed groups, with plugin panels only under Wo
     "Projects",
     "People",
     "Files",
+    "Knowledge",
     "Contacts",
     "Sources",
     "Add-ons",

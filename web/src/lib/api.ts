@@ -300,8 +300,29 @@ export const api = {
   removeAccount: (name: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}/remove`, { fingerprint } satisfies S["FingerprintIn"]),
   testAi: () => call<S["AiTestResult"][]>("POST", "ai/test"),
-  /** Tests one account on its first model, whether or not any work uses it. */
-  testAccount: (name: string) => call<S["AiTestResult"][]>("POST", `ai/accounts/${id(name)}/test`),
+  /** Tests one account on its first model, whether or not any work uses it; with a tier and a model, with that tier's
+   * kinds of work and their exact parameters, which is what lets the account stand in for it. */
+  testAccount: (name: string, tier?: string, model?: string) => {
+    const query = new URLSearchParams();
+    if (tier) query.set("tier", tier);
+    if (model) query.set("model", model);
+    const text = query.toString();
+    return call<S["AiTestResult"][]>("POST", `ai/accounts/${id(name)}/test${text ? `?${text}` : ""}`);
+  },
+
+  knowledge: () => call<S["KnowledgeView"][]>("GET", "knowledge"),
+  knowledgeRules: () => call<S["RuleView"][]>("GET", "knowledge/rules"),
+  ruleReview: () => call<S["RuleReviewView"]>("GET", "knowledge/rules/review"),
+  keepKnowledge: (entry: string, body: S["KnowledgeKeep"]) => call<S["Applied"]>("POST", `knowledge/${id(entry)}/keep`, body),
+  discardKnowledge: (entry: string, readVersion: number, reason?: string) =>
+    call<S["Applied"]>("POST", `knowledge/${id(entry)}/discard`, { read_version: readVersion, reason: reason ?? null } satisfies S["KnowledgeDiscard"]),
+  retireKnowledge: (entry: string, readVersion: number) =>
+    call<S["Applied"]>("POST", `knowledge/${id(entry)}/retire`, { read_version: readVersion } satisfies S["ReadVersion"]),
+  justThisTime: (entry: string, readVersion: number) =>
+    call<S["Applied"]>("POST", `knowledge/${id(entry)}/just-this-time`, { read_version: readVersion } satisfies S["ReadVersion"]),
+  narrowKnowledge: (entry: string, body: S["KnowledgeNarrow"]) => call<S["Applied"]>("POST", `knowledge/${id(entry)}/narrow`, body),
+  keepRule: (entry: string, readVersion: number) =>
+    call<S["Applied"]>("POST", `knowledge/${id(entry)}/keep-rule`, { read_version: readVersion } satisfies S["ReadVersion"]),
 };
 
 export const EVENTS_PATH = "api/events";

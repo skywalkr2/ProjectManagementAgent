@@ -3,6 +3,21 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: L3, third wave, part A: choices made while building the Knowledge screen
+
+**Decided by:** the builder, for the technical PM to review. **What:**
+- **Use is counted per run,** not per citation: a run counts once for an entry whether its log lists it as applied or one or
+  more of its changesets cite it. Rules count by the log's own `rules_applied`, so the review and the screen agree.
+- **Unused means active and never applied.** A proposal's use is shown too ("Never used"), so every row says it.
+- **A failed check shows even for an account the person accepted unchecked.** Accepting waives the need for a check, not
+  the news that one failed; the line's action tests again. The failed parameters of a test are kept beside the passed
+  ones, so "failed" is told from "never checked for this work".
+- **Edit is offered on a proposal only,** as Keep with the person's own wording. An active entry's wording has no op or
+  signal kind of its own, so editing it waits for the design to add them.
+- **The account line and the rules line are rows in the held-lines strip above Today's board,** where the other lines for
+  work that needs a look live; the board's own Review line for what was learned is wave 3's other half.
+*Kind:* concepts (core). *Impact:* none on scope; design text updated in 6.16 and 7.18.
+
 ## 2026-10-14: L3, second wave: learning from inputs, the measures, and accounts a fallback may use
 
 **Decided by:** the technical PM, reviewing and merging L3's second wave. **What:**

@@ -366,6 +366,7 @@ test.describe("screen use and the shell", () => {
       "#records/projects": "Projects",
       "#records/people": "People",
       "#records/files": "Files",
+      "#records/knowledge": "Knowledge",
       "#sources": "Sources",
       "#addons": "Add-ons",
       "#settings": "Settings",

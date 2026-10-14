@@ -9,6 +9,8 @@ const routes = [
   "records/projects",
   "records/people",
   "records/files",
+  "records/knowledge",
+  "records/rules-review",
   "sources",
   "addons",
   "settings",

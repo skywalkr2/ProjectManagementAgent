@@ -23,12 +23,13 @@ function show(lines: S["QueueLineView"][], routes: Record<string, (body: unknown
   });
   const onOpenAiAccounts = vi.fn();
   const onOpenHandover = vi.fn();
+  const onOpenRules = vi.fn();
   renderApp(
     <RestartProvider hellos={1}>
-      <HeldLines onOpenAiAccounts={onOpenAiAccounts} onOpenHandover={onOpenHandover} />
+      <HeldLines onOpenAiAccounts={onOpenAiAccounts} onOpenHandover={onOpenHandover} onOpenRules={onOpenRules} />
     </RestartProvider>,
   );
-  return { calls, onOpenAiAccounts, onOpenHandover };
+  return { calls, onOpenAiAccounts, onOpenHandover, onOpenRules };
 }
 
 test("nothing is drawn while the queue has neither a restart nor a paused line", async () => {
@@ -156,4 +157,66 @@ test("a copy that lost the workspace to another computer names it and offers the
 test("an unknown other computer is said without a name", async () => {
   show([handover("elsewhere", null)]);
   expect(await screen.findByRole("region", { name: "Two copies" })).toHaveTextContent("Close this copy: another computer opened the workspace");
+});
+
+const backup = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("account_check", { key: "account_check:routine:second/default", account: "second", tier: "routine", model: "default", check_failed: false, ...over });
+
+test("a backup account that was never checked is a line that starts with checking it, for the work it would stand in for", async () => {
+  show([backup()]);
+  const row = await screen.findByRole("region", { name: "Check an account" });
+  expect(row).toHaveTextContent("Check second before it stands in for everyday work");
+  expect(row).toHaveTextContent("hasn't passed the connection check for it yet");
+  expect(row.textContent).not.toMatch(/routine|tier|fallback/i);
+});
+
+test("a failed check says so, and another kind of work is named in plain words", async () => {
+  show([backup({ check_failed: true, tier: "deep" }), backup({ key: "other", tier: "something-new", account: "third" })]);
+  const rows = await screen.findAllByRole("region", { name: "Check an account" });
+  expect(rows[0]).toHaveTextContent("Check second before it stands in for harder work");
+  expect(rows[0]).toHaveTextContent("Its last check didn't pass.");
+  expect(rows[1]).toHaveTextContent("Check third before it stands in for this kind of work");
+});
+
+test("Check now runs the account's test for that work, and the line is gone once the queue no longer has it", async () => {
+  const user = userEvent.setup();
+  let checked = false;
+  const lines = () => (checked ? [] : [backup()]);
+  const { calls } = show([], {
+    "GET today/queue": () => lines(),
+    "POST ai/accounts/second/test?tier=routine&model=default": () => {
+      checked = true;
+      return [{ tier: "account", account: "second", main: true, ok: true, detail: "answered" }];
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Check an account" });
+  await user.click(within(row).getByRole("button", { name: "Check second for everyday work" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/accounts/second/test?tier=routine&model=default")).toBe(true));
+  expect(await screen.findByText("second passed. It can stand in for everyday work.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Check an account" })).toBeNull());
+});
+
+test("a check that doesn't pass says why and leaves the line", async () => {
+  const user = userEvent.setup();
+  show([backup()], { "POST ai/accounts/second/test?tier=routine&model=default": () => [{ tier: "account", account: "second", main: true, ok: false, detail: "the key was refused" }] });
+  const row = await screen.findByRole("region", { name: "Check an account" });
+  await user.click(within(row).getByRole("button", { name: "Check second for everyday work" }));
+  expect(await screen.findByText("second didn't pass: the key was refused")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Check an account" })).toBeInTheDocument();
+});
+
+test("rules to look over are a line that starts with the look and opens the review", async () => {
+  const user = userEvent.setup();
+  const { onOpenRules } = show([line("rule_review", { key: "rule_review", group: "review", count: 3, days: 30, rules: ["RULE-1"] })]);
+  const row = await screen.findByRole("region", { name: "Rules to look over" });
+  expect(row).toHaveTextContent("Look over 3 rules that never applied in the last 30 days");
+  await user.click(within(row).getByRole("button", { name: "Look over" }));
+  expect(onOpenRules).toHaveBeenCalledTimes(1);
+});
+
+test("one rule is singular, and rules only moved out of the always-sent part have their own words", async () => {
+  show([line("rule_review", { key: "one", group: "review", count: 1, days: 14 }), line("rule_review", { key: "moved", group: "review", count: 0, moved: 2 })]);
+  const rows = await screen.findAllByRole("region", { name: "Rules to look over" });
+  expect(rows[0]).toHaveTextContent("Look over 1 rule that never applied in the last 14 days");
+  expect(rows[1]).toHaveTextContent("Look over the rules: some moved out of the part sent every time");
 });

@@ -1,0 +1,18 @@
+/* The Knowledge screen and the rules review: filters, a list of rows, and the form that narrows what a row applies to. */
+.intro { margin: 0 0 var(--space-3); color: var(--text-muted); }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-3); }
+.kind { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.review { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); margin: 0 0 var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.review p { margin: 0; min-width: 0; }
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.facts { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-1); }
+.narrow { display: flex; flex-direction: column; gap: var(--space-2); margin: 0; padding: 0; border: 0; min-width: 0; }
+.narrow legend { padding: 0; font-weight: var(--weight-semibold); }
+.choice { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.projects { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.buttons { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.sizes { margin: 0 0 var(--space-3); display: flex; flex-direction: column; gap: var(--space-1); }
+.sizes p { margin: 0; }
+.back { margin: 0 0 var(--space-3); }
+.edit { display: flex; flex-direction: column; gap: var(--space-2); }
+.edit textarea { width: 100%; }

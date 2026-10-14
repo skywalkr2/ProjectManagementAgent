@@ -959,8 +959,10 @@ Settled with the original designer (answers to L2's three questions and notes fr
 
 L3. **Every correction teaches.**
 From L2:
-- [ ] The screen for the weekly "Review your standing rules" line: the flagged rules with their counts, the section's size
+- [x] The screen for the weekly "Review your standing rules" line: the flagged rules with their counts, the section's size
   and the rules moved, and Keep, Narrow and Retire on each (the routes are built), with the Knowledge screen (7.18).
+  Built: `web/src/components/RuleReview.test.tsx` (the view and its acts with Undo), `web/src/shell/HeldLines.test.tsx::rules to look over are a line that starts with the look and opens the review`
+  (the line, in the strip above Today's board), `web/src/components/Knowledge.test.tsx::rules to look over show as a line that opens the review`.
 From L1:
 - [x] **Knowledge proposals are writable on every account a chain can hold.** `learn-*` proposals and `lesson.update`
   are allowed for every account a fallback chain can hold, locked-down agents included, and the switch check tests it;
@@ -1089,8 +1091,11 @@ From the original designer's lessons of 2026-10-14:
   is tagged on its cards. Built: the settings save refuses an unchecked account newly added to a chain, and the first run
   is tagged on its changeset (`tests/test_quality.py::test_an_unchecked_account_is_refused_from_a_chain_until_it_passes_for_that_tier_or_the_person_accepts_it`,
   `tests/test_quality.py::test_the_first_run_on_a_fallback_account_is_tagged_on_its_changeset_and_a_later_one_is_not`).
-  Left: an unchecked account in a hand-edited chain is neither skipped nor shown as a Today line, and the tag on the cards
-  (the screens).
+  An unchecked account in a hand-edited chain, or one whose last check failed, is now a Today line with Check now
+  (`tests/test_knowledge_screen.py::test_an_unchecked_account_in_a_hand_edited_chain_has_a_line_until_its_check_passes`,
+  `tests/test_knowledge_screen.py::test_a_failed_check_has_a_line_that_says_so_even_for_an_accepted_account_and_goes_when_it_passes`,
+  `web/src/shell/HeldLines.test.tsx::Check now runs the account's test for that work, and the line is gone once the queue no longer has it`).
+  Left: the router still doesn't skip an unchecked account at run time, and the tag on the cards (the screens).
 - [ ] On screen (7.18), the parts the loop can't be trusted without:
   - the Learned line on the correction's card, with **Keep for: this project ▾**, defaulting to the narrowest target;
   - the knowledge each output applied, on its evidence line, with **This doesn't apply here** (narrow or retire);
@@ -1259,7 +1264,9 @@ From the original designer's lessons of 2026-10-14:
   for real use"; what is left here is the final layout and a browser check of the header at about 1,000 px wide.)
 - [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
 - [ ] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
-  Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago").
+  Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago"). Built: the Knowledge screen and
+  each row's use (`web/src/components/Knowledge.test.tsx`, `tests/test_knowledge_screen.py::test_the_knowledge_list_carries_how_much_each_entry_was_used`).
+  Left: the per-project section.
 - [ ] **Review after the first Go** (found by journey J2): What changed shows "5 new · Show" with Needs attention
   empty while Needs you counts 5, and only one review opens by default, so an owner question can sit closed. The
   Today redesign makes the first results one clear list. After Remove, the add-on's row vanishes along with its note.

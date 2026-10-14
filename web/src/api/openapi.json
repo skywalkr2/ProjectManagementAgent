@@ -4428,6 +4428,12 @@
             ],
             "description": "The words and records it was learned from."
           },
+          "given": {
+            "default": 0,
+            "description": "How many runs were given it.",
+            "title": "Given",
+            "type": "integer"
+          },
           "guard": {
             "anyOf": [
               {
@@ -4483,6 +4489,19 @@
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "last_used": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the latest run that applied it began.",
+            "title": "Last Used"
           },
           "learned_at": {
             "format": "date-time",
@@ -4656,6 +4675,12 @@
             ],
             "title": "Trust",
             "type": "string"
+          },
+          "used": {
+            "default": 0,
+            "description": "How many runs applied it.",
+            "title": "Used",
+            "type": "integer"
           },
           "version": {
             "title": "Version",
@@ -7121,6 +7146,12 @@
             "description": "When it expires unreviewed; none for one that never does.",
             "title": "Expires At"
           },
+          "given": {
+            "default": 0,
+            "description": "How many runs were given it.",
+            "title": "Given",
+            "type": "integer"
+          },
           "guard": {
             "anyOf": [
               {
@@ -7183,6 +7214,19 @@
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "last_used": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the latest run that applied it began.",
+            "title": "Last Used"
           },
           "learned_at": {
             "format": "date-time",
@@ -7376,6 +7420,12 @@
             ],
             "title": "Trust",
             "type": "string"
+          },
+          "used": {
+            "default": 0,
+            "description": "How many runs applied it.",
+            "title": "Used",
+            "type": "integer"
           },
           "version": {
             "title": "Version",
@@ -7808,6 +7858,18 @@
             ],
             "title": "Changeset"
           },
+          "check_failed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an account_check line: true when the account's last check failed, false when it was never checked for that work.",
+            "title": "Check Failed"
+          },
           "count": {
             "title": "Count",
             "type": "integer"
@@ -7891,6 +7953,7 @@
               "paused",
               "offline",
               "overdue",
+              "account_check",
               "review",
               "rule_review",
               "learned",
@@ -7912,6 +7975,18 @@
             ],
             "description": "For a catch_up line: how many kinds of earlier correction were too many for the list and expired unread.",
             "title": "Left Out"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an account_check line: the short name of the account's model in that chain.",
+            "title": "Model"
           },
           "moved": {
             "anyOf": [
@@ -8098,6 +8173,18 @@
             ],
             "description": "The decision, question, name or held item in one line.",
             "title": "Text"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an account_check line: the tier whose fallback chain holds the account.",
+            "title": "Tier"
           },
           "title": {
             "anyOf": [
@@ -8664,6 +8751,183 @@
           "due"
         ],
         "title": "RuleReviewView",
+        "type": "object"
+      },
+      "RuleView": {
+        "description": "One standing rule, as the Knowledge screen lists it: its wording, what it applies to and constrains, where it\ncame from and how much the runs used it.",
+        "properties": {
+          "applies_to": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "constrains": {
+            "description": "What it is about: op kinds or op fields. Empty means nothing is checked, so it is only present.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Constrains",
+            "type": "array"
+          },
+          "discard_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discard Reason"
+          },
+          "enforced": {
+            "default": false,
+            "description": "A code check enforces it, so it holds whether or not anything triggers it.",
+            "title": "Enforced",
+            "type": "boolean"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The words and records it was learned from."
+          },
+          "given": {
+            "default": 0,
+            "description": "How many runs were given it.",
+            "title": "Given",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kept_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kept At"
+          },
+          "kept_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person who made it active.",
+            "title": "Kept By"
+          },
+          "last_used": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the latest run that applied it began.",
+            "title": "Last Used"
+          },
+          "learned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learned At"
+          },
+          "learned_from": {
+            "enum": [
+              "seed",
+              "person",
+              "input",
+              "assistant",
+              "pack",
+              "import"
+            ],
+            "title": "Learned From",
+            "type": "string"
+          },
+          "name": {
+            "description": "The rule's own name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where it came from, for its link."
+          },
+          "status": {
+            "enum": [
+              "proposed",
+              "active",
+              "discarded",
+              "expired",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "description": "The rule in the person's wording.",
+            "title": "Text",
+            "type": "string"
+          },
+          "trust": {
+            "enum": [
+              "trusted",
+              "untrusted"
+            ],
+            "title": "Trust",
+            "type": "string"
+          },
+          "used": {
+            "default": 0,
+            "description": "How many runs applied it.",
+            "title": "Used",
+            "type": "integer"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "name",
+          "text",
+          "status",
+          "learned_from",
+          "trust",
+          "applies_to"
+        ],
+        "title": "RuleView",
         "type": "object"
       },
       "RuntimeConfig": {
@@ -13850,6 +14114,64 @@
           }
         },
         "summary": "Waiting Proposals"
+      }
+    },
+    "/api/knowledge/rules": {
+      "get": {
+        "description": "The standing rules, newest first, each with where it came from, what it applies to and constrains, and how\nmuch the runs used it; filter by status.",
+        "operationId": "rules_api_knowledge_rules_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "proposed",
+                    "active",
+                    "discarded",
+                    "expired",
+                    "retired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuleView"
+                  },
+                  "title": "Response Rules Api Knowledge Rules Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rules"
       }
     },
     "/api/knowledge/rules/review": {

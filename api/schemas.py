@@ -1155,6 +1155,7 @@ class QueueLineView(BaseModel):
         "paused",
         "offline",
         "overdue",
+        "account_check",
         "review",
         "rule_review",
         "learned",
@@ -1237,6 +1238,17 @@ class QueueLineView(BaseModel):
         None,
         description="For a catch_up line: how many kinds of earlier correction were too many for the list and expired "
         "unread.",
+    )
+    tier: str | None = Field(
+        None, description="For an account_check line: the tier whose fallback chain holds the account."
+    )
+    model: str | None = Field(
+        None, description="For an account_check line: the short name of the account's model in that chain."
+    )
+    check_failed: bool | None = Field(
+        None,
+        description="For an account_check line: true when the account's last check failed, false when it was never "
+        "checked for that work.",
     )
     suggestion: OwnerSuggestionView | None = Field(
         None,
@@ -2253,7 +2265,16 @@ class PackInstalled(BaseModel):
     needs_restart: bool = Field(description="It is used after a restart the person chooses; turning it on is separate.")
 
 
-class KnowledgeView(BaseModel):
+class KnowledgeUse(BaseModel):
+    """How much the runs used a piece of knowledge, from their knowledge logs (design 6.22): `given` runs listed it,
+    `used` runs applied it, and `last_used` is when the latest of those began. All zero for one no run was given."""
+
+    used: int = Field(0, description="How many runs applied it.")
+    given: int = Field(0, description="How many runs were given it.")
+    last_used: datetime | None = Field(None, description="When the latest run that applied it began.")
+
+
+class KnowledgeView(KnowledgeUse):
     """One piece of what the assistant learned: a lesson, glossary entry, routing entry or style note. `learned_from`
     says whose words it is (person, input, assistant, pack, seed or import); `origin` is the link to where it came from,
     decided on the server like an action's. The fields after `applies_to` are those of its kind and are empty for
@@ -2288,6 +2309,33 @@ class KnowledgeView(BaseModel):
     look_up: str | None = None
     audience: str | None = None
     observation: str | None = None
+
+
+class RuleView(KnowledgeUse):
+    """One standing rule, as the Knowledge screen lists it: its wording, what it applies to and constrains, where it
+    came from and how much the runs used it."""
+
+    id: str
+    version: int
+    name: str = Field(description="The rule's own name.")
+    text: str = Field(description="The rule in the person's wording.")
+    status: Literal["proposed", "active", "discarded", "expired", "retired"]
+    learned_from: Literal["seed", "person", "input", "assistant", "pack", "import"]
+    trust: Literal["trusted", "untrusted"]
+    learned_at: datetime | None = None
+    kept_by: str | None = Field(None, description="The person who made it active.")
+    kept_at: datetime | None = None
+    discard_reason: str | None = None
+    applies_to: Scope
+    constrains: list[str] = Field(
+        default_factory=list,
+        description="What it is about: op kinds or op fields. Empty means nothing is checked, so it is only present.",
+    )
+    enforced: bool = Field(
+        False, description="A code check enforces it, so it holds whether or not anything triggers it."
+    )
+    evidence: KnowledgeEvidence | None = Field(None, description="The words and records it was learned from.")
+    origin: Origin | None = Field(None, description="Where it came from, for its link.")
 
 
 class KnowledgeKeep(BaseModel):

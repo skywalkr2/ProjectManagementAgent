@@ -1112,9 +1112,17 @@ A fallback is a switch nobody chose at that moment, so (6.22):
   learning round-trip is one small call per account: a fixed correction, expecting one proposal the app's own checks
   accept, and a failure says which part failed. A result is kept per account and model with a fingerprint of the
   account's settings, so a changed account is checked again. *As built,* the settings save refuses an unchecked account
-  newly added to a chain, in plain words; a hand-edited file is not checked, and the router does not skip an unchecked
-  account at run time. **Built:** `tests/test_quality.py::test_an_unchecked_account_is_refused_from_a_chain_until_it_passes_for_that_tier_or_the_person_accepts_it`,
-  `tests/test_quality.py::test_the_learning_round_trip_fails_saying_which_part_failed`.
+  newly added to a chain, in plain words. A hand-edited file is not refused, but every account in a chain that is neither
+  checked for that tier nor accepted unchecked, or whose last check failed (accepted or not), is a Today line,
+  "Check <account> before it stands in for <work>", whose Check now runs the account's test for that tier and goes when it
+  passes (`engine/ai/checked.py::cannot_stand_in`); the router still does not skip an unchecked account at run time.
+  **Built:** `tests/test_quality.py::test_an_unchecked_account_is_refused_from_a_chain_until_it_passes_for_that_tier_or_the_person_accepts_it`,
+  `tests/test_quality.py::test_the_learning_round_trip_fails_saying_which_part_failed`,
+  `tests/test_knowledge_screen.py::test_an_unchecked_account_in_a_hand_edited_chain_has_a_line_until_its_check_passes`,
+  `tests/test_knowledge_screen.py::test_a_checked_or_accepted_account_has_no_line_and_neither_has_an_account_outside_every_chain`,
+  `tests/test_knowledge_screen.py::test_a_failed_check_has_a_line_that_says_so_even_for_an_accepted_account_and_goes_when_it_passes`,
+  `tests/test_knowledge_screen.py::test_the_line_comes_back_when_the_account_is_changed_after_it_passed`,
+  `web/src/shell/HeldLines.test.tsx::Check now runs the account's test for that work, and the line is gone once the queue no longer has it`.
 - **The first run on a fallback account** is tagged on its changeset (`first_on_account`), and its cards will say "First
   run on <account label>" so its output gets a closer look (the cards are phase B's). **Built:**
   `tests/test_quality.py::test_the_first_run_on_a_fallback_account_is_tagged_on_its_changeset_and_a_later_one_is_not`.

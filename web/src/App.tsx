@@ -21,9 +21,11 @@ import { Files } from "./components/Files";
 import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Handover } from "./components/Handover";
+import { Knowledge } from "./components/Knowledge";
 import { Panel } from "./components/Panel";
 import { restoreFocus } from "./components/ModalPanel";
 import { RecordPage } from "./components/RecordPage";
+import { RuleReview } from "./components/RuleReview";
 import { Settings } from "./components/Settings";
 import { Sources, type AddRequest } from "./components/Sources";
 import { Setup } from "./components/Setup";
@@ -164,7 +166,11 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
             </div>
             <SetupLine workspace={rc.workspace_name} onOpenGuide={openGuide} />
             <BackupLine onOpenGuide={openGuide} />
-            <HeldLines onOpenAiAccounts={() => setView("settings")} onOpenHandover={() => setView("handover")} />
+            <HeldLines
+              onOpenAiAccounts={() => setView("settings")}
+              onOpenHandover={() => setView("handover")}
+              onOpenRules={() => setView("records/rules-review")}
+            />
             <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} onOpenGuide={openGuide} />
           </div>
         );
@@ -189,6 +195,10 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
         return <Setup lead="people" />;
       case "records/files":
         return <Files />;
+      case "records/knowledge":
+        return <Knowledge onOpenReview={() => setView("records/rules-review")} />;
+      case "records/rules-review":
+        return <RuleReview onBack={() => setView("records/knowledge")} />;
       case "sources":
         return (
           <Sources
@@ -201,7 +211,14 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       case "setup":
         return null;
       case "settings":
-        return <Settings onOpenGuide={() => openGuide()} onOpenAddons={() => setView("addons")} onChooseSource={openAddSource} />;
+        return (
+          <Settings
+            onOpenGuide={() => openGuide()}
+            onOpenAddons={() => setView("addons")}
+            onChooseSource={openAddSource}
+            onOpenKnowledge={() => setView("records/knowledge")}
+          />
+        );
       case "addons":
         return <Addons onBack={() => setView("settings")} />;
       case "handover":

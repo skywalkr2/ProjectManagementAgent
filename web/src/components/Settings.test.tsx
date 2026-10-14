@@ -521,3 +521,14 @@ test("with no add-on data files there is no Add-on files section", async () => {
   await screen.findByLabelText("The display name.");
   expect(screen.queryByRole("heading", { name: "Add-on files" })).toBeNull();
 });
+
+test("the standing instructions group points to the Knowledge screen, where the rules now live", async () => {
+  const user = userEvent.setup();
+  api([item("rules.rules", { type: "list", group: "rules", value: [], default: [] })]);
+  const onOpenKnowledge = vi.fn();
+  renderApp(<Settings onOpenGuide={() => undefined} onOpenAddons={() => undefined} onChooseSource={() => undefined} onOpenKnowledge={onOpenKnowledge} />);
+  const group = await screen.findByRole("form", { name: "Standing instructions" });
+  expect(group).toHaveTextContent("The rules Helper learns, and what you've kept, are on the Knowledge screen.");
+  await user.click(within(group).getByRole("button", { name: "Open Knowledge" }));
+  expect(onOpenKnowledge).toHaveBeenCalledTimes(1);
+});

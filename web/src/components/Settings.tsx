@@ -20,6 +20,8 @@ export function Settings(props: {
   onOpenGuide: () => void;
   onOpenAddons: () => void;
   onChooseSource: (plugin: string | null) => void;
+  /** Opens the Knowledge screen, where the standing rules are kept and reviewed. */
+  onOpenKnowledge?: () => void;
 }) {
   const { t, tn, has } = useWords();
   const client = useQueryClient();
@@ -132,6 +134,14 @@ export function Settings(props: {
                 }}
               >
                 <h3 id={titleId}>{groupLabel(group.group, t, has)}</h3>
+                {group.group === "rules" && props.onOpenKnowledge && (
+                  <p className="hint">
+                    {t("settings.rules_link")}{" "}
+                    <button type="button" className="link-button" onClick={props.onOpenKnowledge}>
+                      {t("settings.rules_open")}
+                    </button>
+                  </p>
+                )}
                 {group.items.map((item) => {
                   const gate = switchOf(item, everything);
                   return (
