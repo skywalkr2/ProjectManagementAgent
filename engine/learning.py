@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from engine.ops import KNOWLEDGE_OPS
+
 LEARNING = ("core", "own")
 
 
@@ -30,3 +32,9 @@ def request_learns(store: Any, request: dict[str, Any]) -> bool:
     target = request.get("about") or {}
     record_type = target.get("kind") or (request.get("stage_start") or {}).get("kind")
     return learns_on(store.plugins, task_kind=request.get("task"), record_type=record_type)
+
+
+def offered_ops(ops: tuple[str, ...], learns: bool) -> tuple[str, ...]:
+    """The ops a run on an input is offered: all of them, or, for work the core's learning doesn't run on, none of the
+    ones that keep what the assistant learned."""
+    return ops if learns else tuple(name for name in ops if name not in KNOWLEDGE_OPS)

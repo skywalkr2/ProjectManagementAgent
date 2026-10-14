@@ -8,9 +8,11 @@ pasted: |-
   Not me, ask Dmitri Salazar. He ran the September reconciliation and I only saw the summary.
 forbid:
 - op: question.done
-# Who ran the September reconciliation is a fact worth keeping; the question still stays open.
+# Who ran the September reconciliation is a fact worth keeping, and who answers that kind of question a routing entry
+# to keep; the question still stays open.
 allow:
 - fact
+- routing.add
 stub_answer:
   summary: Ines passed the question on to Dmitri; it stays open.
   ops: []

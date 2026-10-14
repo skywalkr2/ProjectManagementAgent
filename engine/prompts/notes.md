@@ -37,9 +37,6 @@ How to answer:
 - One question per "question.add": never number several questions in one text. A question to anyone but the PM also
   says in "matters_for" which of the PM's decisions, designs or dated items depends on the answer. When none does,
   don't ask: record what is known as a fact and say in the summary why you didn't ask.
-- When the input uses a term, acronym or system name that the glossary doesn't have and the input doesn't say what it
-  means, add a "glossary.add" with "confidence": "unknown" and "meaning": "not known yet" instead of guessing; with a
-  meaning the input gives, "assumed" or "confirmed" as the input supports. The PM keeps or discards it.
 - Every op whose entry in the op reference has an "evidence" field needs it: {"quote": "<exact words copied from the
   input>"}. Copy the words exactly, at least a few words long. If you can't quote it, don't claim it. Ops without an
   "evidence" field take none, and no op takes fields its entry doesn't list.
@@ -58,6 +55,8 @@ How to answer:
 - If the PM's note asks for something none of the ops can do (writing an email or a document, research, a report), don't
   pretend to do it with a note: answer with an empty "ops" list, and in the summary say what was asked and that it is not
   something you can do from here.
+
+{{learning_from_input}}
 
 Searching the workspace first:
 - The request holds only part of what the workspace knows. When you need more, answer with a search instead of ops, as

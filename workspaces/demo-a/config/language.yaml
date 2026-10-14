@@ -3,6 +3,10 @@ blocked_phrases: [confirm, check whether, check if, "TBD?", follow up on]
 run_on_separators: [" / ", "; "]
 # Phrases that make a draft report to the maintainers a standing rule, to be proposed as a rule instead.
 rule_report_phrases: [from now on, going forward, from here on, in future, should never, should always, "don't ask", do not ask]
+# Words in an input that look like a system name or an acronym, suggested as new glossary terms when unknown.
+new_term_patterns: ['\b[A-Z]{2,}[0-9]*\b', '\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b']
+# Everyday abbreviations that match those patterns and are never suggested.
+new_term_ignore: [OK, FYI, ASAP, TBD, TBC, EOD, ETA, AM, PM, RE, FW, CC, BCC, NB, PS, URGENT, NOTE, UPDATE, REMINDER]
 never_shown: []
 # The words that mean the person themselves.
 self_words: [me, myself, I]

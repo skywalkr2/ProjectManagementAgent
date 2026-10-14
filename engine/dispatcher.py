@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
 
-from engine import learn
+from engine import learn, new_terms
 from engine import search as workspace_search
 from engine.ai.pauses import when_text
 from engine.ai.router import (
@@ -30,7 +30,7 @@ from engine.ai.task import AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.cleaning import quoted_messages
 from engine.config import Config
-from engine.learning import request_learns
+from engine.learning import offered_ops, request_learns
 from engine.moments import localize_ops
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
@@ -170,14 +170,15 @@ def process(
     trust = "untrusted" if outside or scheduled or packet.untrusted_material else "trusted"
     inputs = Inputs(request_id, req.data.get("source"), packet.raw_input, packet.note, trust, cites=packet.cites)
     allowed = store.plugins.task_kind(req.data["task"]).ops
+    learns = request_learns(store, req.data)
     if req.data["task"] == "notes":
-        allowed = ops_for_level(store, allowed, _data_level(store, req.data))
+        allowed = offered_ops(ops_for_level(store, allowed, _data_level(store, req.data)), learns)
     people = People.for_input(
         store,
         cfg,
         request_id,
         packet.raw_input if req.data.get("source") else "",
-        learns=request_learns(store, req.data),
+        learns=learns,
     )
     ctx = Context(store, cfg, people, allowed, inputs, hidden_words(cfg), searched=False)
 
@@ -355,6 +356,8 @@ def process(
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
     if learn.is_learning(kind.name):
         learn.finish(store, request_id, cs_id)
+    if kind.name == "notes" and learns:
+        new_terms.scan(store, cfg, request_id, f"{packet.raw_input}\n{packet.note}", now, trust=trust)
     if _applied_something(store, cs_id):
         retire_earlier_attempts(store, request_id)
     return cs_id

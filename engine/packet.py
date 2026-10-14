@@ -18,7 +18,7 @@ from engine.config import Config
 from engine.intake import source_text
 from engine.knowledge_section import per_input_section, stable_section, with_ancestors
 from engine.learn import is_learning
-from engine.learning import request_learns
+from engine.learning import offered_ops, request_learns
 from engine.names import People
 from engine.ops import reference_for, schema_for
 from engine.playbook import guidance
@@ -96,10 +96,18 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         cleaned = clean(raw, cfg.dispatch.cleaning, _known_texts(ws, store, exclude=req.data.get("source")))
     note = req.data.get("note") or ""
 
-    instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
+    learns = request_learns(store, req.data)
+    # What an input teaches is part of its own run: its rules are in the prompt, and its ops are offered, only for work
+    # the core's learning runs on.
+    values = {
+        "assistant_name": cfg.workspace.assistant_name,
+        "learning_from_input": render("notes-learning", {}, ws.root) if kind.name == "notes" and learns else "",
+    }
+    instructions = render(kind.prompt, values, ws.root, kind.prompt_file)
     from engine.dispatcher import _data_level, ops_for_level
 
     offered = ops_for_level(store, kind.ops, _data_level(store, req.data)) if kind.name == "notes" else kind.ops
+    offered = offered_ops(offered, learns) if kind.name == "notes" else offered
     candidates = store.plugins.note_candidates(offered, req.data.get("project")) if kind.name == "notes" else ""
     people = People(store, cfg)
     about_project = store.read().get("project", req.data["project"]) if req.data.get("project") else None

@@ -760,6 +760,13 @@ class KnowledgeSettings(ConfigModel):
         description="The most characters of an earlier input that the assistant is shown when it learns from a "
         "correction. Longer inputs are cut and say so.",
     )
+    new_terms_per_input: int = Field(
+        3,
+        ge=0,
+        le=50,
+        description="The most unknown terms (acronyms and system names the glossary lacks) the assistant suggests "
+        "adding to the glossary from one input, found by the patterns in the language settings. 0 turns the scan off.",
+    )
     learn_later_inputs: int = Field(
         5,
         ge=0,
@@ -958,6 +965,13 @@ class ReportedSpeech(ConfigModel):
     )
 
 
+DEFAULT_NEW_TERM_PATTERNS = [r"\b[A-Z]{2,}[0-9]*\b", r"\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b"]
+DEFAULT_NEW_TERM_IGNORE = [
+    *("OK", "FYI", "ASAP", "TBD", "TBC", "EOD", "ETA", "AM", "PM", "RE", "FW", "CC", "BCC", "NB", "PS"),
+    *("URGENT", "NOTE", "UPDATE", "REMINDER"),
+]
+
+
 class LanguageFile(FileModel):
     messages: MessageSettings = Field(default_factory=MessageSettings, description="Wording of copied messages.")
     self_words: list[str] = Field(
@@ -988,6 +1002,17 @@ class LanguageFile(FileModel):
         "assistant rather than a request for a change to the product. Such a report is sent back to be proposed as "
         "a rule, which waits for you.",
     )
+    new_term_patterns: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_NEW_TERM_PATTERNS),
+        description="Patterns (regular expressions) for words in an input that look like the name of a system or an "
+        "acronym: by default two or more capital letters in a row, or a word of several capitalized parts. A word "
+        "that matches and is not in the glossary, the people or the projects is suggested as a new term.",
+    )
+    new_term_ignore: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_NEW_TERM_IGNORE),
+        description="Words that match a new-term pattern but are everyday abbreviations, never suggested as new "
+        "terms. Case is ignored.",
+    )
     never_shown: list[str] = Field(
         default_factory=list, description="Words that must never appear in anything people see (model names are added)."
     )
@@ -1011,7 +1036,7 @@ class LanguageFile(FileModel):
         "longer note, or one with a link, is handed in as the person's own words.",
     )
 
-    @field_validator("title_skip")
+    @field_validator("title_skip", "new_term_patterns")
     @classmethod
     def _patterns_compile(cls, value: list[str]) -> list[str]:
         for pattern in value:

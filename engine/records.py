@@ -1417,6 +1417,7 @@ class Signal(Record):
         "narrowed",
         "just_this_time",
         "change_requested",
+        "answered_assistant",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
@@ -1425,7 +1426,7 @@ class Signal(Record):
         "a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); "
         "narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for "
         "this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a "
-        "note on its row."
+        "note on its row; answered_assistant, wrote an answer to a question the assistant asked them."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")

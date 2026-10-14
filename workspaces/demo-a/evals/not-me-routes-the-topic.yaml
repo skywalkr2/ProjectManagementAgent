@@ -1,0 +1,39 @@
+id: not-me-routes-the-topic
+title: A reply that names who answers keeps the question open and proposes who to ask next time
+received: '2026-10-14'
+given_file: busy-portfolio.yaml
+pasted: |-
+  From: Tobias Wren
+
+  Not me, ask Marguerite Osei. She owns the pilot depot list and I only hear about it afterwards.
+# The question to Tobias stays open: the reply passes it on, it doesn't answer it. Two routing entries are proposed for
+# the person to keep: who answers pilot depot questions, and that Tobias doesn't.
+expect:
+- op: routing.add
+  topic_has: [depot]
+  person: PER-8
+- op: routing.add
+  topic_has: [depot]
+  person: PER-3
+  negative: true
+forbid:
+- op: question.done
+# Who owns the depot list is also a fact worth keeping.
+allow:
+- fact
+stub_answer:
+  summary: Tobias passed the depot question on to Marguerite; it stays open.
+  ops:
+  - op: routing.add
+    text: Questions about the pilot depot list go to Marguerite Osei.
+    topic: pilot depot list
+    person: PER-8
+    evidence:
+      quote: Not me, ask Marguerite Osei. She owns the pilot depot list
+  - op: routing.add
+    text: Tobias Wren does not answer questions about the pilot depot list.
+    topic: pilot depot list
+    person: PER-3
+    negative: true
+    evidence:
+      quote: I only hear about it afterwards

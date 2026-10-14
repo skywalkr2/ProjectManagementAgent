@@ -461,6 +461,14 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             and _has_words(f["text"], e.get("text_has", []))
             and ("as_of" not in e or f.get("as_of") == str(e["as_of"]))
         )
+    if op == "routing.add":
+        entry = _record(store, o, "routing_entry")
+        return bool(
+            entry
+            and _has_words(entry["topic"], e.get("topic_has", []))
+            and entry.get("person") == e.get("person", entry.get("person"))
+            and bool(entry.get("negative")) == bool(e.get("negative", False))
+        )
     if op == "event.add":
         entry = _record(store, o, "event")
         return bool(
@@ -551,7 +559,7 @@ def _people_text(outcome: dict[str, Any], store: Store) -> str:
 def _summarize(outcome: dict[str, Any]) -> str:
     """One produced op in a few words: its name, the fields that decide a match, and what happened to it."""
     op = outcome["op"]
-    keys = ("to", "kind", "owners", "id", "due", "field")
+    keys = ("to", "kind", "owners", "id", "due", "field", "person", "negative")
     fields = ", ".join(f"{k}={op[k]}" for k in keys if op.get(k) not in (None, [], ""))
     return f"{op['op']}({fields}) {outcome['status']}"
 

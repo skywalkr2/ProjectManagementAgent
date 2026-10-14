@@ -385,7 +385,9 @@ def test_the_learning_ops_are_not_offered_to_a_plugins_action_and_reading_notes_
     from engine.tasks import TASKS
 
     assert set(store.plugins.ops) >= KNOWLEDGE_OPS and not KNOWLEDGE_OPS & ACTION_CORE_OPS
-    assert KNOWLEDGE_OPS & set(TASKS["notes"].ops) == {"glossary.add"} and not KNOWLEDGE_OPS & set(TASKS["ask"].ops)
+    assert KNOWLEDGE_OPS & set(TASKS["notes"].ops) == {"glossary.add", "routing.add"} and not KNOWLEDGE_OPS & set(
+        TASKS["ask"].ops
+    )
     assert {store.plugins.tiers[name] for name in KNOWLEDGE_OPS} == {"system"}
 
 

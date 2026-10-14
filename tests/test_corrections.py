@@ -698,11 +698,11 @@ def test_glossary_add_is_offered_to_reading_notes_and_no_other_knowledge_op_is(e
     ws, cfg, store = env
     from engine.ops import KNOWLEDGE_OPS
 
-    assert KNOWLEDGE_OPS & set(TASKS["notes"].ops) == {"glossary.add"}
+    assert KNOWLEDGE_OPS & set(TASKS["notes"].ops) == {"glossary.add", "routing.add"}
     assert not KNOWLEDGE_OPS & set(TASKS["ask"].ops)
     handed = hand_in(ws, store, note="The brief mentions a system nobody has explained.", now=NOW)
     stable = build(ws, store, cfg, handed.request, TODAY).task.stable
-    assert '"glossary.add"' in stable and '"lesson.add"' not in stable and '"routing.add"' not in stable
+    assert '"glossary.add"' in stable and '"routing.add"' in stable and '"lesson.add"' not in stable
 
 
 UNKNOWN_TERM = {

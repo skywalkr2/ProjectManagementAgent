@@ -29,3 +29,4 @@ knowledge:
   learn_every_minutes: 30
   learn_input_chars: 6000
   learn_later_inputs: 5
+  new_terms_per_input: 3

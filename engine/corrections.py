@@ -44,3 +44,18 @@ def request_change(
     made = first["changeset"] if first is not None else None
     signal_id = signal(store, "change_requested", [record_id], note=" ".join(note.split()), changeset=made)
     return request, signal_id
+
+
+def answered_assistant(store: Store, cfg: Config, question_id: str, text: str) -> str | None:
+    """Record that the person wrote an answer to a question the assistant asked them, so the assistant learns from it at
+    once. The signal names the question, and the changeset and run that made it when there was one. A bare
+    confirmation, which says nothing to learn from, records nothing. Returns the signal's id."""
+    from engine.dispatcher import signal
+    from engine.intake import is_bare_confirmation
+
+    words = " ".join(text.split())
+    if not words or is_bare_confirmation(words, cfg.language.bare_confirmation_words):
+        return None
+    first: dict[str, Any] | None = next(iter(store.read().ledger(kind="question", record_id=question_id)), None)
+    made = first["changeset"] if first is not None else None
+    return signal(store, "answered_assistant", [question_id], note=words, changeset=made)

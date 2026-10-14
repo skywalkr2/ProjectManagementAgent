@@ -147,6 +147,7 @@ from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
 from engine.backup import run_backup, state
 from engine.config import Config
+from engine.corrections import answered_assistant
 from engine.dispatcher import (
     dismiss,
     grant_first_go,
@@ -1381,6 +1382,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             guard(do)
         asked = q.data.get("to")
         for_someone_else = bool(asked) and asked != People(store, cfg).pm
+        if not for_someone_else and resolves.get("kind") not in ("owner", "held-op"):
+            # What the answer teaches is learned at once.
+            guard(lambda: answered_assistant(store, cfg, qid, body.text or ""))
         request = hand_note(
             ("question", qid),
             body.text,

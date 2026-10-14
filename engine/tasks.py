@@ -11,9 +11,11 @@ from typing import Any
 
 from engine.ops import KNOWLEDGE_OPS, OP_MODELS, PERSON_ONLY_OPS
 
-#: The knowledge op reading notes offers: a term or name the note uses that isn't in the glossary can be recorded, or
-#: marked unknown. It still applies as a proposal unless the words are the person's own (design 6.22).
-OFFERED_TO_NOTES = frozenset({"glossary.add"})
+#: The knowledge ops reading notes offers, as the learning from an input that is part of its own run (design 6.22): a
+#: term or name the input uses that isn't in the glossary can be recorded, or marked unknown, and who answers a kind of
+#: question (or who doesn't) can be recorded as a routing entry. Each still applies as a proposal unless the words are
+#: the person's own.
+OFFERED_TO_NOTES = frozenset({"glossary.add", "routing.add"})
 
 #: Core ops reading notes never offers: deleting is the person's call, file.add is made only by person actions,
 #: starting projects is for actions and plugin work, the ops only the person makes are theirs alone, and the ops that
