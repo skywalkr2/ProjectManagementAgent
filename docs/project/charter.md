@@ -7,6 +7,9 @@ and gives them one screen to review and send. The design is in `docs/design/`.
 
 ## End state, beyond 1.0 (owner, 2026-10-14)
 
+**The intent:** to do with this tool what used to take many people and a large budget, and to finish real delivery, not
+just produce documents about it. The measure is delivered work that passed its own acceptance, not the volume of output.
+
 1. The core handles everyday project support, as designed.
 2. Packs extend it, each useful on its own.
 3. A full set of packs, bought together, carries a business requirement to delivery:
