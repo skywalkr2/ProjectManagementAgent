@@ -260,7 +260,9 @@ real use starts. The rest (L-more) comes after the packs.
   - Every fixture pair passes (L4): the later input comes out right with no correction repeated, and every negative pair's
     later input is unchanged.
   - The day-30 scenario meets its written expectations.
-- **Ready for real use** (the original designer's L0 sign-off, 2026-10-13): five things the first week of real use needs, each a small screen change built here
+- **Ready for real use** (the original designer's L0 sign-off, 2026-10-13; added to on 2026-10-14). The first five were built
+  early; the open items below are built **after L6, at the end of L-core, before the owner's real use starts**, not before
+  L2. The first five: things the first week of real use needs, each a small screen change built here
   with its test; phase B keeps only their final layout:
   - [x] the note box on the action buttons: the row's menu on Mark done (Follow-ups and Today's to-do list), They finished it, Followed up and the pick of an owner has Add a note, sent with the act on the same route. Built: `web/src/components/NoteBox.test.tsx` (every button: the note is sent with the act, no note sends none, the cursor starts in the box), `web/src/components/TodayBoard.test.tsx::a to-do's menu adds a note to Mark done, with the cursor in the box`;
   - [x] the header's "alive" line (the assistant's last run and what is queued, amber or red when something is wrong): built
@@ -829,12 +831,8 @@ L1. **Knowledge as records.** Settled before L1 starts (the original designer's 
     a fixture. Its seed is `::test_a_they_finished_it_note_saying_from_now_on_we_always_copy_the_client_on_approvals_is_never_active`.
     The knowledge ops are system-tier; from reported content an add makes a proposal and a change waits for the person:
     `tests/test_knowledge_records.py::test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input_it_is_proposed`.
-- [ ] **Knowledge proposals are writable on every account a chain can hold.** `learn.*` proposals and `lesson.update`
-  are allowed for every account a fallback chain can hold, locked-down agents included, and the switch check tests it;
-  a loop that learns only on the main account stops learning silently on a fallback day.
-  Decided (2026-10-14): the ops a task kind may use never depend on the account; the assistant never writes files, only
-  changesets, so a locked-down agent proposes knowledge like any account. The switch check's knowledge round-trip is
-  built with the `learn` task kinds (L3) and is tested there.
+- Moved to L3, where the `learn` task kinds are built: knowledge proposals writable on every account a chain can hold
+  (decided 2026-10-14), and the exclusions of a scope shown in words on the Learned line.
 - [x] **Knowledge keeps its provenance.** Each knowledge record's evidence carries the same "where it came from" link as
   an action: the input, or the change and request that taught it. Built: `GET /api/knowledge` carries `origin` on every
   entry; `tests/test_knowledge_records.py::test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_and_its_request`.
@@ -844,7 +842,6 @@ L1. **Knowledge as records.** Settled before L1 starts (the original designer's 
   knowledge, with `projects`, `people`, `scope` and `except`;
   `tests/test_knowledge_records.py::test_everywhere_except_a_project_round_trips_through_the_record_the_api_and_the_export`,
   `tests/test_knowledge_records.py::test_naming_projects_makes_the_scope_those_projects_and_except_is_its_own_key`.
-- [ ] Shown on the Learned line (L3, with the Learned line itself): the exclusions of a scope, in words.
 - [x] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,
   status and an `applies_to` target. Their ops, with Undo. Built:
   `tests/test_knowledge_records.py::test_the_four_kinds_are_core_records_with_their_own_fields_and_one_shape`,
@@ -952,6 +949,14 @@ Settled with the original designer (answers to L2's three questions and notes fr
   lesson, never both (design 6.22).
 
 L3. **Every correction teaches.**
+From L1:
+- [ ] **Knowledge proposals are writable on every account a chain can hold.** `learn.*` proposals and `lesson.update`
+  are allowed for every account a fallback chain can hold, locked-down agents included, and the switch check tests it;
+  a loop that learns only on the main account stops learning silently on a fallback day.
+  Decided (2026-10-14): the ops a task kind may use never depend on the account; the assistant never writes files, only
+  changesets, so a locked-down agent proposes knowledge like any account. The switch check's knowledge round-trip is
+  built with the `learn` task kinds (L3) and is tested there.
+- [ ] The exclusions of a scope, shown in words on the Learned line.
 From the original designer's lessons of 2026-10-14:
 - [ ] **"Change this" on every row the assistant made** (lesson 4): action, question, decision, calendar entry and fact
   each have a note on their row. The assistant rewords, re-dates, puts on hold, turns it into another kind (an action
