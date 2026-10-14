@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: The Today mockup's review: "Just this time", one learned line, and row rules
+
+**Decided by:** the original designer's review of the Today mockup, placed by the technical PM. **What:** the Learned
+line gains "Just this time" (signal kept, no proposal, counts toward a repeat), and a lesson is about what was corrected;
+the two Today review lines for learned things merge into one, each entry tagged by its origin; every row has a project
+tag; each item of a review card has its own "Change this"; a card is titled by what it holds; an overdue follow-up's menu
+has Followed up and They finished it; a to-do says what it waits on; the counts agree; a line offering another account
+names it. Followed up stays in the menu rather than beside Draft a nudge, because a row has one primary action and the
+rest in its menu (owner's UI rule). **Why:** each was a point where the screen said something the person couldn't act on
+or misread. **Impact:** design 7.7 and 7.18; roadmap L3 and phase B; no change to scope.
+
 ## 2026-10-14: A slice of scope moves before real use
 
 **Decided by:** the original designer, agreed by the owner. **What:** the person's role on each project (run, design,
