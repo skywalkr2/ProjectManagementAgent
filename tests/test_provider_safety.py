@@ -17,7 +17,7 @@ from engine.intake import hand_in
 from engine.storage import Store, WriteContext
 from engine.worker import RESTART_NEEDED, Events, Worker
 from engine.workspace import init_workspace
-from tests.conftest import DEMO_B, add_example_account
+from tests.conftest import DEMO_B, add_example_account, connection_answer
 
 NOW = datetime(2026, 10, 9, 14, 0, tzinfo=UTC)
 
@@ -62,7 +62,7 @@ def test_the_smoke_test_tries_every_tier_with_each_tasks_parameters(env):
 
     def responder(task):
         seen.append((task.temperature, task.max_output))
-        return '{"ok": true}'
+        return connection_answer(task)
 
     set_responder(responder)
     results = smoke_test(cfg, env={})
@@ -90,7 +90,7 @@ def test_the_smoke_test_reports_a_refused_parameter_and_a_missing_key(env, tmp_p
 
 def test_the_last_smoke_test_is_remembered_until_ai_settings_change(env):
     ws, _ = env
-    set_responder(lambda task: '{"ok": true}')
+    set_responder(connection_answer)
     assert untested_since_change(ws)
     record(ws, smoke_test(ws.config(env={}), env={}))
     assert not untested_since_change(ws)
@@ -177,7 +177,7 @@ def test_the_assistants_state_follows_the_account_the_test_and_the_last_refusal(
     # From here the stand-in plays a real account, answering through the test responder.
     monkeypatch.setattr("engine.ai.smoke.stand_in", lambda cfg: False)
     assert ai_state(ws, cfg, store) == ("untested", None)
-    set_responder(lambda task: '{"ok": true}')
+    set_responder(connection_answer)
     record(ws, smoke_test(cfg, env={}))
     assert ai_state(ws, cfg, store) == ("ok", None)
 

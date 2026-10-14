@@ -434,6 +434,12 @@ class ProviderSettings(ConfigModel):
     agent: AgentSettings | None = Field(
         None, description="For a command-line agent account: how to start it, pass the packet and read its answer."
     )
+    accepted_unchecked: bool = Field(
+        False,
+        description="Accept this account as a fallback for a kind of work without its connection check. An account "
+        "that stands in for another is a switch nobody chose in the moment, so only a checked account may do it "
+        "unless you accept it here.",
+    )
 
 
 class TierSettings(ConfigModel):
@@ -773,6 +779,20 @@ class KnowledgeSettings(ConfigModel):
         le=50,
         description="How many inputs that arrived after the corrected work, about the same items, the assistant is "
         "shown when it learns from a correction, so a change in the world isn't taken for a mistake.",
+    )
+    quality_window_days: int = Field(
+        28,
+        ge=7,
+        le=365,
+        description="How many days back the quality figures look: how often the assistant's work used what it was "
+        "given, and how many corrections repeated a mistake it had already been taught about.",
+    )
+    min_corrections_per_week: int = Field(
+        10,
+        ge=1,
+        le=1000,
+        description="The fewest corrections a week needs, for one kind of work, before its repeat-correction rate is "
+        "shown. A week with fewer is too small to say anything.",
     )
 
 

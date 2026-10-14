@@ -121,3 +121,14 @@ def add_example_account(ai_yaml: Path | dict) -> tuple[str, str, str]:
     if isinstance(ai_yaml, Path):
         ai_yaml.write_text(yaml.safe_dump(data, sort_keys=False))
     return example["name"], example["model"], example["env"]
+
+
+def connection_answer(task) -> str:
+    """What a working account answers the connection test with: the plain ok line for each kind of work, and one lesson
+    to keep for the learning round-trip."""
+    from engine.ai.learning_check import CHECK_REQUEST
+
+    if task.request != CHECK_REQUEST:
+        return '{"ok": true}'
+    lesson = {"op": "lesson.add", "text": "Ask whoever owns the delivery.", "guard": "Name the delivery's owner."}
+    return json.dumps({"summary": "A lesson.", "topic": "delivery dates", "ops": [lesson]})

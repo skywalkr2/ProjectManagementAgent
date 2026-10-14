@@ -34,7 +34,8 @@ ADD_ONS = "add-ons"
 #: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
 #: each request; where and how often backups go, for each backup; how often the readable export is written; the watched
 #: sources, for each read; whether and how corrections are learned from, for each correction and each learning run; the
-#: scan for new terms, for each input).
+#: scan for new terms, for each input; the window and the smallest week of the quality figures, for each time
+#: they are asked for).
 #: Any other change waits for a restart the person chooses.
 LIVE_KEYS = (
     "ai.",
@@ -56,6 +57,8 @@ LIVE_KEYS = (
     "dispatch.knowledge.learn_input_chars",
     "dispatch.knowledge.learn_later_inputs",
     "dispatch.knowledge.new_terms_per_input",
+    "dispatch.knowledge.quality_window_days",
+    "dispatch.knowledge.min_corrections_per_week",
 )
 
 

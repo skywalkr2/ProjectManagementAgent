@@ -586,8 +586,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         return found
 
     @r.post("/ai/accounts/{name}/test")
-    def ai_account_test(name: str) -> list[AiTestResult]:
-        """Test one account on its first model, whether or not any kind of work uses it yet."""
+    def ai_account_test(name: str, tier: str | None = None, model: str | None = None) -> list[AiTestResult]:
+        """Test one account, whether or not any kind of work uses it yet: on the model named, else its first. With a
+        tier, the test uses that tier's kinds of work and their exact parameters, which is what lets the account be
+        added to that tier's fallbacks."""
+        from engine.ai.checked import remember
         from engine.ai.smoke import account_test, lift_pauses
 
         try:
@@ -597,7 +600,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail=err.plain) from None
         if name not in now.ai.providers:
             raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
-        results = account_test(now, os.environ, name)
+        results = account_test(now, os.environ, name, tier=tier, model=model, store=store)
+        remember(ws, now, results)
         lift_pauses(ws, results)
         line = AiTestResult(tier="account", account=name, main=True, ok=True, detail="answered")
         for x in results:
@@ -805,6 +809,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
 
     @r.post("/ai/test")
     def ai_test() -> list[AiTestResult]:
+        from engine.ai.checked import remember
         from engine.ai.smoke import lift_pauses, record, smoke_test
 
         try:
@@ -812,8 +817,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         except ConfigError as err:
             log.warning("The settings couldn't be loaded: %s", err)
             raise HTTPException(status_code=400, detail=err.plain) from None
-        results = smoke_test(current, os.environ)
+        results = smoke_test(current, os.environ, store=store)
         record(ws, results)
+        remember(ws, current, results)
         lift_pauses(ws, results)
         events.changed()
         # One line per kind of work and account, in plain words: the run's own details are for `cockpit ai test`.

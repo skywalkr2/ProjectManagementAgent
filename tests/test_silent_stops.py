@@ -24,7 +24,7 @@ from engine.today import zone
 from engine.today_queue import queue
 from engine.worker import RESTART_NEEDED, Events, Worker, waits_for_its_time
 from engine.workspace import init_workspace
-from tests.conftest import DEMO_B
+from tests.conftest import DEMO_B, connection_answer
 
 START = datetime(2026, 10, 13, 15, 0, tzinfo=UTC)
 NOTE = "The printer says proof copies will ship on the fifth."
@@ -511,7 +511,9 @@ def test_a_connection_test_that_finds_no_network_is_not_kept_and_leaves_the_last
 
     def answering(name, settings, secret):
         return type(
-            "A", (), {"run": lambda self, task, model: AiResult(text='{"ok": true}', model_served="m", seconds=0)}
+            "A",
+            (),
+            {"run": lambda self, task, model: AiResult(text=connection_answer(task), model_served="m", seconds=0)},
         )()
 
     def cut_off(name, settings, secret):

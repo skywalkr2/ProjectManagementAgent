@@ -358,6 +358,12 @@ def save(
                     texts[name] = set_key(texts[name], [new_name], data[old_name])
     core = {name: text for name, text in texts.items() if name not in models}
     checked = _check_whole(config_dir, core, env) if core else cfg
+    if "ai" in core:
+        from engine.ai.checked import chain_problems
+
+        if problems := chain_problems(ws, cfg, checked):
+            log.warning("A save was refused: %s", problems[0])
+            raise SettingsError(problems[0])
     for name, text in texts.items():
         if name in models:
             _check_plugin(models[name], text)

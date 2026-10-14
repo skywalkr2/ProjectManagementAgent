@@ -7476,6 +7476,224 @@
         "title": "ProposedOp",
         "type": "object"
       },
+      "QualityKnowledgeUsed": {
+        "description": "How often one kind of work used what it was given (design 6.20): the runs whose answer listed an entry it had\nbeen given, over the runs given at least one.",
+        "properties": {
+          "dropped": {
+            "description": "Entries answers named as applied that the run had not been given; left out.",
+            "title": "Dropped",
+            "type": "integer"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Applied over given; none when no run was given anything.",
+            "title": "Rate"
+          },
+          "runs_applied": {
+            "description": "Of those, the runs whose answer listed at least one entry it was given.",
+            "title": "Runs Applied",
+            "type": "integer"
+          },
+          "runs_given": {
+            "description": "Runs in the window that were given at least one lesson, rule or fact.",
+            "title": "Runs Given",
+            "type": "integer"
+          },
+          "task": {
+            "description": "The kind of work.",
+            "title": "Task",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task",
+          "runs_given",
+          "runs_applied",
+          "dropped"
+        ],
+        "title": "QualityKnowledgeUsed",
+        "type": "object"
+      },
+      "QualityMissingGroup": {
+        "description": "What several answers said no op could do, in one wording.",
+        "properties": {
+          "changesets": {
+            "description": "The answers that said it, newest first.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Changesets",
+            "type": "array"
+          },
+          "count": {
+            "description": "How many answers said it.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the newest answer was made.",
+            "title": "Last Seen"
+          },
+          "tasks": {
+            "description": "The kinds of work that said it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Tasks",
+            "type": "array"
+          },
+          "wording": {
+            "description": "What was needed, in the most recent wording.",
+            "title": "Wording",
+            "type": "string"
+          }
+        },
+        "required": [
+          "wording",
+          "count",
+          "tasks",
+          "changesets"
+        ],
+        "title": "QualityMissingGroup",
+        "type": "object"
+      },
+      "QualityMissingWeek": {
+        "description": "The missing-op list for one week, most said first.",
+        "properties": {
+          "groups": {
+            "items": {
+              "$ref": "#/components/schemas/QualityMissingGroup"
+            },
+            "title": "Groups",
+            "type": "array"
+          },
+          "week": {
+            "description": "The Monday of the week, in the person's time zone.",
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "week",
+          "groups"
+        ],
+        "title": "QualityMissingWeek",
+        "type": "object"
+      },
+      "QualityRepeatWeek": {
+        "description": "One kind of work in one week: how many corrections repeated a mistake the assistant had been taught about.",
+        "properties": {
+          "corrections": {
+            "description": "Corrections of that work in the week.",
+            "title": "Corrections",
+            "type": "integer"
+          },
+          "enough": {
+            "description": "Whether the week had enough corrections to say anything.",
+            "title": "Enough",
+            "type": "boolean"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Repeats over corrections; none for a week without enough.",
+            "title": "Rate"
+          },
+          "repeats": {
+            "description": "Of those, the ones whose run had been given a lesson or rule for the same item.",
+            "title": "Repeats",
+            "type": "integer"
+          },
+          "task": {
+            "description": "The kind of work that was corrected.",
+            "title": "Task",
+            "type": "string"
+          },
+          "week": {
+            "description": "The Monday of the week, in the person's time zone.",
+            "format": "date",
+            "title": "Week",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task",
+          "week",
+          "corrections",
+          "repeats",
+          "enough"
+        ],
+        "title": "QualityRepeatWeek",
+        "type": "object"
+      },
+      "QualityView": {
+        "description": "The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week and the weekly\nmissing-op list, over the configured window.",
+        "properties": {
+          "days": {
+            "description": "The window the figures cover, in days.",
+            "title": "Days",
+            "type": "integer"
+          },
+          "knowledge_used": {
+            "items": {
+              "$ref": "#/components/schemas/QualityKnowledgeUsed"
+            },
+            "title": "Knowledge Used",
+            "type": "array"
+          },
+          "min_corrections_per_week": {
+            "description": "The fewest corrections a week needs for its rate to show.",
+            "title": "Min Corrections Per Week",
+            "type": "integer"
+          },
+          "missing": {
+            "items": {
+              "$ref": "#/components/schemas/QualityMissingWeek"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "repeat_corrections": {
+            "items": {
+              "$ref": "#/components/schemas/QualityRepeatWeek"
+            },
+            "title": "Repeat Corrections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "days",
+          "min_corrections_per_week",
+          "knowledge_used",
+          "repeat_corrections",
+          "missing"
+        ],
+        "title": "QualityView",
+        "type": "object"
+      },
       "QuestionDropIn": {
         "properties": {
           "reason": {
@@ -11941,7 +12159,7 @@
     },
     "/api/ai/accounts/{name}/test": {
       "post": {
-        "description": "Test one account on its first model, whether or not any kind of work uses it yet.",
+        "description": "Test one account, whether or not any kind of work uses it yet: on the model named, else its first. With a\ntier, the test uses that tier's kinds of work and their exact parameters, which is what lets the account be\nadded to that tier's fallbacks.",
         "operationId": "ai_account_test_api_ai_accounts__name__test_post",
         "parameters": [
           {
@@ -11951,6 +12169,38 @@
             "schema": {
               "title": "Name",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tier",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tier"
+            }
+          },
+          {
+            "in": "query",
+            "name": "model",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Model"
             }
           }
         ],
@@ -15408,6 +15658,25 @@
           }
         },
         "summary": "Restore Project"
+      }
+    },
+    "/api/quality": {
+      "get": {
+        "description": "The knowledge-used rate for each kind of work, the repeat-correction rate for each kind of work and week\n(only weeks with enough corrections have a rate), and the weekly list of what runs said no op could do,\ngrouped by wording with counts, over the configured window.",
+        "operationId": "quality_view_api_quality_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Quality View"
       }
     },
     "/api/questions/dropped": {

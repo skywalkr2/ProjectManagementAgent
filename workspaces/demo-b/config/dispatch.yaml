@@ -30,3 +30,5 @@ knowledge:
   learn_input_chars: 6000
   learn_later_inputs: 5
   new_terms_per_input: 3
+  quality_window_days: 28
+  min_corrections_per_week: 10

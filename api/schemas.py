@@ -2380,3 +2380,53 @@ class CatchUpView(BaseModel):
     waiting: int = Field(description="Kinds of correction chosen that the assistant hasn't learned from yet.")
     left_out: int = Field(description="Kinds of correction too many for the list; they expired unread.")
     most: int = Field(description="The most kinds of correction one list holds.")
+
+
+class QualityKnowledgeUsed(BaseModel):
+    """How often one kind of work used what it was given (design 6.20): the runs whose answer listed an entry it had
+    been given, over the runs given at least one."""
+
+    task: str = Field(description="The kind of work.")
+    runs_given: int = Field(description="Runs in the window that were given at least one lesson, rule or fact.")
+    runs_applied: int = Field(description="Of those, the runs whose answer listed at least one entry it was given.")
+    dropped: int = Field(description="Entries answers named as applied that the run had not been given; left out.")
+    rate: float | None = Field(None, description="Applied over given; none when no run was given anything.")
+
+
+class QualityRepeatWeek(BaseModel):
+    """One kind of work in one week: how many corrections repeated a mistake the assistant had been taught about."""
+
+    task: str = Field(description="The kind of work that was corrected.")
+    week: date = Field(description="The Monday of the week, in the person's time zone.")
+    corrections: int = Field(description="Corrections of that work in the week.")
+    repeats: int = Field(description="Of those, the ones whose run had been given a lesson or rule for the same item.")
+    enough: bool = Field(description="Whether the week had enough corrections to say anything.")
+    rate: float | None = Field(None, description="Repeats over corrections; none for a week without enough.")
+
+
+class QualityMissingGroup(BaseModel):
+    """What several answers said no op could do, in one wording."""
+
+    wording: str = Field(description="What was needed, in the most recent wording.")
+    count: int = Field(description="How many answers said it.")
+    tasks: list[str] = Field(description="The kinds of work that said it.")
+    changesets: list[str] = Field(description="The answers that said it, newest first.")
+    last_seen: datetime | None = Field(None, description="When the newest answer was made.")
+
+
+class QualityMissingWeek(BaseModel):
+    """The missing-op list for one week, most said first."""
+
+    week: date = Field(description="The Monday of the week, in the person's time zone.")
+    groups: list[QualityMissingGroup]
+
+
+class QualityView(BaseModel):
+    """The quality view (design 6.20, 6.13): the knowledge-used rate, the repeat-correction rate by week and the weekly
+    missing-op list, over the configured window."""
+
+    days: int = Field(description="The window the figures cover, in days.")
+    min_corrections_per_week: int = Field(description="The fewest corrections a week needs for its rate to show.")
+    knowledge_used: list[QualityKnowledgeUsed]
+    repeat_corrections: list[QualityRepeatWeek]
+    missing: list[QualityMissingWeek]

@@ -951,6 +951,23 @@ class Changeset(Record):
     action: dict[str, Any] | None = Field(
         None, description="The person action this came from: its name, target and the choices the person made."
     )
+    applied: list[str] = Field(
+        default_factory=list,
+        description="The ids of the knowledge entries the run said it applied, kept only when the run was given them "
+        "(its knowledge log). A checked citation, never the model's say-so alone.",
+    )
+    applied_dropped: int = Field(
+        0, description="How many ids the run named as applied that it had not been given, which were left out."
+    )
+    missing: list[str] = Field(
+        default_factory=list,
+        description="What the run needed and no op could do, each in a few words, for the weekly missing-op list.",
+    )
+    first_on_account: str | None = Field(
+        None,
+        description="The name of the AI account when this was the first run on an account that stands in a "
+        "fallback chain, so its cards can say so.",
+    )
     created_at: datetime = Field(description="When the changeset was recorded.")
 
 

@@ -4,6 +4,7 @@ providers:
   stub:
     adapter: stub
     models: {default: scripted}
+    accepted_unchecked: false
     allowed_data: [open, internal, restricted]
   # Examples of other accounts, left out so a new workspace lists only what it can use. Add one
   # from the setup guide's AI step, or uncomment one here and set its key.

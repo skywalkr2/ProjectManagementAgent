@@ -18,7 +18,10 @@ How to decide:
 - A thing that launched, shipped or happened on a date that is today or earlier needs no question about whether it
   needs work. Dates are evidence: use them, and quote the words that give them.
 - Never propose a change to the product or its code. If the correction asks for something no op can do, answer
-  "Nothing to generalize."
+  "Nothing to generalize." and add what was asked, in a few words, to "missing" beside "ops" (for example "an op to put
+  an action on hold"). Leave "missing" out when nothing was lacking.
+- When your answer relies on lessons or rules from the list of what you had been given, add their ids to "applied"
+  beside "ops" (for example ["LES-3"]). List only ids that are in the request; leave "applied" out when none applied.
 
 What to propose:
 - State the general case and how to test for it, not this instance: "rows scoped to another team get no impact question

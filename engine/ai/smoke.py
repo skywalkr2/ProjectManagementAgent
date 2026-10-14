@@ -10,10 +10,11 @@ import hashlib
 import json
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from engine.ai import learning_check
 from engine.ai.adapters import make_adapter
 from engine.ai.task import AiError, AiTask, provider_reason
 from engine.config import Config
@@ -38,6 +39,9 @@ class SmokeResult:
     provider: str = ""  # the account's short name
     answered: bool = False  # the account's call went through, whatever it said
     offline: bool = False  # no connection could be made at all: the test says nothing about the account
+    ref: str = ""  # the "account/model" the result is about
+    part: str = "call"  # call (one kind of work's parameters), lockdown or learning
+    params: list[Any] = field(default_factory=list)  # for a call: the kind of work, temperature and most output
 
 
 def _params_for_tier(cfg: Config, tier: str) -> list[tuple[str, float, int]]:
@@ -56,7 +60,11 @@ def smoke_test(
     cfg: Config,
     env: Mapping[str, str],
     adapter_factory: Callable[[str, Any, str | None], Any] = make_adapter,
+    store: Any = None,
 ) -> list[SmokeResult]:
+    """One small call per tier, account and kind of work with its exact parameters, the lockdown check for a
+    command-line agent, and the learning round-trip, each account's once. With a `store`, the round-trip's proposal is
+    also tried against the app's own checks."""
     results: list[SmokeResult] = []
     locked: set[str] = set()
     for tier_name, tier in cfg.ai.tiers.items():
@@ -99,11 +107,17 @@ def smoke_test(
                         provider_name,
                         answered,
                         no_network,
+                        ref,
+                        "call",
+                        [kind, temperature, max_output],
                     )
                 )
             if ref not in locked:
                 locked.add(ref)
                 results.extend(_lockdown(tier_name, ref, position == 0, settings, model_id, env, adapter_factory))
+                results.append(
+                    _learning(tier_name, ref, position == 0, cfg, settings, model_id, env, adapter_factory, store)
+                )
     return results
 
 
@@ -150,9 +164,65 @@ def _lockdown(
     checks = adapter.lockdown_test(model_id)
     seconds = time.monotonic() - start
     return [
-        SmokeResult(tier, f"{ref} (lockdown: {c.name})", main, c.ok, c.detail, seconds, provider=ref.partition("/")[0])
+        SmokeResult(
+            tier,
+            f"{ref} (lockdown: {c.name})",
+            main,
+            c.ok,
+            c.detail,
+            seconds,
+            provider=ref.partition("/")[0],
+            ref=ref,
+            part="lockdown",
+        )
         for c in checks
     ]
+
+
+def _learning(
+    tier: str,
+    ref: str,
+    main: bool,
+    cfg: Config,
+    settings: Any,
+    model_id: str,
+    env: Mapping[str, str],
+    adapter_factory: Callable[[str, Any, str | None], Any],
+    store: Any,
+) -> SmokeResult:
+    """The learning round-trip for one account: one call with a tiny fixed correction, expecting one proposal back that
+    the app accepts. The account's own call failing is said as it is; an answer that doesn't pass says which part."""
+    provider = ref.partition("/")[0]
+    label = f"{ref} (learning round-trip)"
+    start = time.monotonic()
+    answered = no_network = False
+    try:
+        reply = adapter_factory(settings.adapter, settings, resolve_secret(settings.auth, env)).run(
+            learning_check.task(cfg), model_id
+        )
+        answered = True
+        why = learning_check.problem(reply.text, cfg, store)
+        ok, detail = why is None, learning_check.PASSED if why is None else why
+    except SecretError as err:
+        ok, detail = False, f"key not found: {err}"
+    except AiError as err:
+        ok, detail = False, _problem(err)
+        no_network = err.kind == "offline"
+    except ValueError as err:
+        ok, detail = False, str(err)
+    return SmokeResult(
+        tier,
+        label,
+        main,
+        ok,
+        detail,
+        time.monotonic() - start,
+        provider=provider,
+        answered=answered,
+        offline=no_network,
+        ref=ref,
+        part="learning",
+    )
 
 
 def _is_ok(text: str) -> bool:
@@ -264,9 +334,15 @@ def account_test(
     env: Mapping[str, str],
     name: str,
     adapter_factory: Callable[[str, Any, str | None], Any] = make_adapter,
+    *,
+    tier: str | None = None,
+    model: str | None = None,
+    store: Any = None,
 ) -> list[SmokeResult]:
-    """Test one account on its first model, whether or not any kind of work uses it yet: one small call (and the
-    lockdown check for a command-line agent), reported under the tier name "account"."""
+    """Test one account, whether or not any kind of work uses it yet: one small call (and the lockdown check for a
+    command-line agent, and the learning round-trip), reported under the tier name "account". The model is the one
+    named, else the account's first. With a `tier`, the call uses that tier's kinds of work and their exact parameters,
+    which is what makes the result count for a place in that tier's fallback chain."""
     from dataclasses import replace
 
     from engine.config.schema import TierSettings
@@ -274,6 +350,8 @@ def account_test(
     provider = cfg.ai.providers.get(name)
     if provider is None or not provider.models:
         return [SmokeResult("account", name, True, False, "this account has no model to test")]
-    first = next(iter(provider.models))
-    ai = cfg.ai.model_copy(update={"tiers": {"account": TierSettings(use=f"{name}/{first}")}})
-    return smoke_test(replace(cfg, files={**cfg.files, "ai": ai}), env, adapter_factory)
+    chosen = model if model in provider.models else next(iter(provider.models))
+    named = tier if tier is not None and tier in cfg.ai.tiers else "account"
+    ai = cfg.ai.model_copy(update={"tiers": {named: TierSettings(use=f"{name}/{chosen}")}})
+    found = smoke_test(replace(cfg, files={**cfg.files, "ai": ai}), env, adapter_factory, store)
+    return [replace(r, tier="account") for r in found]

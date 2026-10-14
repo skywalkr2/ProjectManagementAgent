@@ -12,7 +12,7 @@ from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.evaluate import load_cases
 from engine.workspace import init_workspace
-from tests.conftest import DEMO_B, fixture_records
+from tests.conftest import DEMO_B, connection_answer, fixture_records
 
 TOKEN = "test-token-value"
 
@@ -475,7 +475,7 @@ def test_status_says_when_the_assistant_is_not_ready(api, tmp_path, monkeypatch)
     assert client.get(f"{base}/status").json()["ai"] == {"state": "untested", "detail": None}
     from engine.ai.smoke import record, smoke_test
 
-    set_responder(lambda task: '{"ok": true}')
+    set_responder(connection_answer)
     record(worker.ws, smoke_test(worker.cfg, env={}))
     assert client.get(f"{base}/status").json()["ai"] == {"state": "ok", "detail": None}
     # A request that ends with the account refusing its key makes the assistant "failing", with the provider's reason.
@@ -489,7 +489,7 @@ def test_status_says_when_the_assistant_is_not_ready(api, tmp_path, monkeypatch)
     worker.run_pending()
     assert client.get(f"{base}/status").json()["ai"] == {"state": "failing", "detail": "User not found"}
     # A later connection test that passes clears it.
-    set_responder(lambda task: '{"ok": true}')
+    set_responder(connection_answer)
     record(worker.ws, smoke_test(worker.cfg, env={}))
     assert client.get(f"{base}/status").json()["ai"]["state"] == "ok"
 

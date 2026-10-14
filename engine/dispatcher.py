@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
 
-from engine import learn, new_terms
+from engine import learn, new_terms, quality
 from engine import search as workspace_search
 from engine.ai.pauses import when_text
 from engine.ai.router import (
@@ -74,9 +74,11 @@ def parse(text: str, op_models: dict | None = None) -> ChangesetIn:
     data = _json_object(text)
     models = op_models if op_models is not None else OP_MODELS
     if isinstance(data, dict):
-        # Only the summary, the topic, the ops and the ask flag mean anything at the top; a model's extra remarks are
-        # left out.
-        data = {key: value for key, value in data.items() if key in ("summary", "topic", "ops", "ask")}
+        # Only the summary, the topic, the ops, the ask flag and the two lists of what it applied and what it lacked
+        # mean anything at the top; a model's extra remarks are left out.
+        data = {
+            key: value for key, value in data.items() if key in ("summary", "topic", "ops", "ask", "applied", "missing")
+        }
     _drop_unused_evidence(data, models)
     try:
         return CHANGESET.validate_python(data, context={"op_models": op_models} if op_models is not None else None)
@@ -348,8 +350,17 @@ def process(
     changeset = changeset.model_copy(update={"ops": localize_ops(changeset.ops, cfg)})
     if learn.is_learning(kind.name):
         changeset = learn.link_signal(changeset, learn.signal_of(req.data) or "")
+    extra = quality.claims(store, run_id, changeset.applied, changeset.missing)
+    if outcome.fallback is not None and quality.first_run_on(store, run_id) == outcome.fallback:
+        extra["first_on_account"] = outcome.fallback
     cs_id = apply_changeset(
-        changeset, problems, ctx, run=run_id, now=now, all_or_nothing=getattr(kind, "all_or_nothing", False)
+        changeset,
+        problems,
+        ctx,
+        run=run_id,
+        now=now,
+        extra=extra,
+        all_or_nothing=getattr(kind, "all_or_nothing", False),
     )
     if run_id is not None:
         record_applied(store, run_id, cs_id)
@@ -487,6 +498,7 @@ class _Outcome:
     abandoned: bool = False  # the request was closed or replaced before a follow-up call: nothing more is asked
     retry: str | None = None  # a run that gave no usable answer or failed: why, in a few words; it is tried again
     searched: bool = False  # the run asked to search the workspace before it answered
+    fallback: str | None = None  # the account that answered, when it stands in a tier's fallback chain
 
 
 def search_request(text: str) -> workspace_search.Query | None:
@@ -517,7 +529,7 @@ def _call(
     """One call, recording its run id on `out`. Returns the result, or None when the call ended the work: `out` then
     holds why."""
     try:
-        result, _choice, out.run_id = router.call(
+        result, choice, out.run_id = router.call(
             task,
             request_id=request_id,
             tier=tier,
@@ -539,6 +551,10 @@ def _call(
         out.stop = _refused(store, None, err.detail) if err.kind == "refused" else _ai_failure(err)
         out.retry = failure_in_words(err) if err.kind in RETRIED else None
     else:
+        tier_account = router.cfg.ai.tiers[choice.tier].use if choice.tier in router.cfg.ai.tiers else ""
+        out.fallback = (
+            choice.provider if use is None and f"{choice.provider}/{choice.model_key}" != tier_account else None
+        )
         return result
     return None
 
@@ -691,7 +707,13 @@ def _rounds(
             changeset = _draft_changeset(draft, text, out.run_id, mapping, asked)
             problems = check(changeset, ctx)
             _record_refusals(store, out.run_id, problems)
-            out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id, searched=searches > 0)
+            out = _Outcome(
+                changeset=changeset,
+                problems=problems,
+                run_id=out.run_id,
+                searched=searches > 0,
+                fallback=out.fallback,
+            )
             if needs_another_round(problems):
                 if not last:
                     task = replace(task, request=shown + "\n\n" + feedback(problems))
@@ -731,7 +753,9 @@ def _rounds(
             return _Outcome(run_id=out.run_id, stop=stop)
         problems = check(changeset, ctx)
         _record_refusals(store, out.run_id, problems)
-        out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id, searched=searches > 0)
+        out = _Outcome(
+            changeset=changeset, problems=problems, run_id=out.run_id, searched=searches > 0, fallback=out.fallback
+        )
         if needs_another_round(problems):
             if not last:
                 task = replace(task, request=shown + "\n\n" + feedback(problems))

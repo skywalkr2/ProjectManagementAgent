@@ -854,6 +854,9 @@ SETTABLE: dict[str, set[str]] = {
 
 
 TOPIC_MAX = 60
+#: The longest one entry of `applied` or `missing` is kept, and the most entries of either that one answer keeps.
+CLAIM_MAX = 200
+CLAIMS_MAX = 20
 
 
 class ChangesetIn(BaseModel):
@@ -864,6 +867,25 @@ class ChangesetIn(BaseModel):
     ops: list[Any] = Field(default_factory=list)
     #: Reading notes only: the person's own note is a question to the assistant, not material to record.
     ask: bool = False
+    #: The ids of the knowledge entries the run says it applied. The dispatcher keeps only those the run was given.
+    applied: list[str] = Field(default_factory=list)
+    #: What the run needed and no op could do, each in a few words, instead of improvising with another op.
+    missing: list[str] = Field(default_factory=list)
+
+    @field_validator("applied", "missing", mode="before")
+    @classmethod
+    def short_list(cls, value: Any) -> list[str]:
+        """A list of short words: anything else a model sends is dropped, blanks and repeats go, and each entry is
+        kept to one line."""
+        if not isinstance(value, list):
+            return []
+        found: list[str] = []
+        for item in value:
+            words = " ".join(item.split()) if isinstance(item, str) else ""
+            words = words[:CLAIM_MAX]
+            if words and words not in found:
+                found.append(words)
+        return found[:CLAIMS_MAX]
 
     @field_validator("topic", mode="before")
     @classmethod
@@ -905,6 +927,8 @@ def schema_for(op_names: list[str], registry: dict | None = None) -> dict[str, A
             "summary": {"type": "string"},
             "topic": {"type": "string"},
             "ops": {"type": "array", "items": {"anyOf": [m.model_json_schema() for m in models]}},
+            "applied": {"type": "array", "items": {"type": "string"}},
+            "missing": {"type": "array", "items": {"type": "string"}},
         },
     }
 
