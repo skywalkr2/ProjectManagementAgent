@@ -10,12 +10,17 @@ Reading an input, each line is looked at on its own:
 Every one cites its line word for word. Whatever else the input says is kept as one note.
 
 Answering a question, it quotes the first passage of the user guide chosen for the question.
+
+Learning from a correction, it generalizes nothing, except for the account check's fixed correction, which gets the one
+lesson the check expects.
 """
 
 from __future__ import annotations
 
 import re
 from typing import Any
+
+from engine.ai import learning_check
 
 _INPUT = re.compile(r"<untrusted[^>]*>\s*(.+?)\s*</untrusted>|<note>\s*(.+?)\s*</note>", re.S)
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
@@ -117,3 +122,20 @@ def sort_mail(request: str) -> dict[str, Any]:
     """Sorting mail headers: every message is work. The stand-in reads no headers and claims no judgment, so it hides
     nothing."""
     return {"answers": [{"id": name, "answer": "work"} for name in re.findall(r'"id": "(m\d+)"', request)]}
+
+
+def learn(request: str) -> dict[str, Any]:
+    """A learning run's answer: the one lesson the account check's correction teaches, and nothing for any other."""
+    if learning_check.CHECK_REQUEST not in request:
+        return {"summary": "Nothing to generalize.", "topic": "", "ops": []}
+    return {
+        "summary": "A lesson.",
+        "topic": "delivery dates",
+        "ops": [
+            {
+                "op": "lesson.add",
+                "text": "Questions about a delivery date go to whoever owns the delivery.",
+                "guard": "Ask the owner of the delivery, not the head of the project.",
+            }
+        ],
+    }

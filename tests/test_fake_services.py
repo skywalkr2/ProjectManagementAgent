@@ -199,3 +199,15 @@ def test_a_sorting_packet_gets_an_answer_for_every_id_and_is_counted_apart_from_
     assert {a["answer"] for a in answers} == {"work"}
     seen = client.get("/__e2e/ai-requests").json()
     assert (seen["sorting"], seen["work"], seen["smoke"]) == (1, 0, 0)
+
+
+def test_the_ai_service_passes_the_account_checks_learning_call_and_counts_it_as_part_of_the_check(tmp_path):
+    from engine.ai import learning_check
+
+    state = State(tmp_path)
+    client = TestClient(build_app(state, 0))
+    task = learning_check.task(None)
+    sent = {"messages": [{"role": "system", "content": task.instructions}, {"role": "user", "content": task.request}]}
+    answer = client.post("/ai/v1/chat/completions", json=sent).json()["choices"][0]["message"]["content"]
+    assert learning_check.problem(answer, None) is None
+    assert state.chats[-1]["smoke"]

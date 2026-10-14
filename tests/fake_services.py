@@ -48,6 +48,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, RedirectResponse, Response
 from starlette.routing import Route
 
+from engine.ai import learning_check
 from engine.ai.adapters import stand_in
 from tests import fake_tls
 from tests.conftest import DEMO_B, fixture_records
@@ -115,10 +116,17 @@ def is_sorting(user: str) -> bool:
     return SORTING_MARK in user
 
 
+def is_check(user: str) -> bool:
+    """Whether this packet is part of an account's connection check: the fixed reply, or the learning round-trip."""
+    return "Reply with exactly" in user or learning_check.CHECK_REQUEST in user
+
+
 def answer_to(system: str, user: str) -> str:
     """The text a model would send back for this packet, from the stand-in's rules."""
     if "Reply with exactly this JSON" in user:
         return json.dumps({"ok": True})
+    if is_check(user):
+        return json.dumps(stand_in.learn(user))
     if is_sorting(user):
         return json.dumps(stand_in.sort_mail(user))
     if "<question>" in user:
@@ -150,7 +158,7 @@ def ai_routes(state: State) -> list[Route]:
             {
                 "model": body.get("model"),
                 "at": time.time(),
-                "smoke": "Reply with exactly" in user,
+                "smoke": is_check(user),
                 "sorting": is_sorting(user),
                 "input": first[:200],
             }

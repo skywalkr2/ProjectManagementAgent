@@ -10,7 +10,6 @@ import json
 import re
 from collections.abc import Callable
 
-from engine.ai import learning_check
 from engine.ai.adapters import stand_in
 from engine.ai.task import AiResult, AiTask
 
@@ -43,20 +42,8 @@ class StubAdapter:
             body = stand_in.read(task.request)
         elif task.kind == "sort-mail":
             body = stand_in.sort_mail(task.request)
-        elif task.kind == "learn-correction" and task.request == learning_check.CHECK_REQUEST:
-            body = {
-                "summary": "A lesson.",
-                "topic": "delivery dates",
-                "ops": [
-                    {
-                        "op": "lesson.add",
-                        "text": "Questions about a delivery date go to whoever owns the delivery.",
-                        "guard": "Ask the owner of the delivery, not the head of the project.",
-                    }
-                ],
-            }
         elif task.kind == "learn-correction":
-            body = {"summary": "Nothing to generalize.", "topic": "", "ops": []}
+            body = stand_in.learn(task.request)
         else:
             body = {"summary": "Filed the input as a note.", "ops": [{"op": "note", "text": first or "(empty input)"}]}
         return AiResult(text=json.dumps(body), model_served="stub", seconds=0.0)
