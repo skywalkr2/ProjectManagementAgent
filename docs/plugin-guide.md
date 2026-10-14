@@ -1470,6 +1470,15 @@ One call to an AI provider. The engine writes it after each call, for usage and 
 | `error_kind` | str \| None | `None` | How the call failed, from the runner's own error; none if ok. |
 | `error_detail` | str \| None | `None` | The error's own text, for diagnosing a failure. |
 | `started_at` | datetime | required | When the call started. |
+| `knowledge` | RunKnowledge \| None | see below | What it was given from what was learned, and searched. |
+| `knowledge.given` | list[str] | `[]` | The ids of the knowledge entries and rules it was given. |
+| `knowledge.left_out_by_scope` | list[str] | `[]` | The ids of rules and entries left out because their scope excludes the input. |
+| `knowledge.facts_left_out` | int | `0` | How many facts of the input's projects didn't fit the facts budget. |
+| `knowledge.stable_chars` | int | `0` | The size of the knowledge sent with every run, in characters. |
+| `knowledge.searches` | list[RunSearch] | `[]` | The searches it asked for. |
+| `knowledge.searches[].words` | str | `''` | The words searched for. |
+| `knowledge.searches[].kinds` | list[str] | `[]` | The kinds searched: facts, inputs, records, knowledge. |
+| `knowledge.searches[].results` | int | `0` | How many results came back. |
 
 ### `signal` (SIG-n)
 

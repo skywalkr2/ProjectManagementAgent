@@ -764,12 +764,15 @@ What the synced folder carries instead is in 5.0.
 
 ## 4.25 Knowledge (`knowledge:` in `config/dispatch.yaml`)
 
-*Designed, phase L* (6.22). The settings of the learning loop, with their defaults:
+*Designed, phase L* (6.22). The settings of the learning loop, with their defaults. In the schema from L2's first
+commit: `glossary_all_below`, `facts_budget`, `stable_budget`, `search_rounds`, `search_results`; each run's knowledge
+log is the `knowledge` field of its `Run` record:
 
 ```yaml
 knowledge:
   glossary_all_below: 150      # the whole glossary goes in every packet while it has fewer terms than this
   facts_budget: 4000           # characters of ranked facts per input; the rest is counted and searchable
+  stable_budget: 8000          # characters of rules, lessons and glossary sent with every run; set from the logged sizes
   search_rounds: 2             # how many times a run may ask for a search before it must answer
   search_results: 20           # results per search
   learn: on                    # on or off; corrections with the person's words are learned from at once either way when on

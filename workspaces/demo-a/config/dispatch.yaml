@@ -9,3 +9,9 @@ cleaning:
   remove_quoted: true
   signature_markers: ["-- ", "Sent from my ", "Best regards,"]
   remove_patterns: ["(?is)^(confidentiality notice|this e-?mail and any attachments).*"]
+knowledge:
+  glossary_all_below: 150
+  facts_budget: 4000
+  stable_budget: 8000
+  search_rounds: 2
+  search_results: 20

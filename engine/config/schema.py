@@ -644,6 +644,34 @@ class CleaningSettings(ConfigModel):
     )
 
 
+class KnowledgeSettings(ConfigModel):
+    glossary_all_below: int = Field(
+        150,
+        ge=0,
+        le=5000,
+        description="The whole glossary goes in every packet while it has fewer terms than this; past it, only the "
+        "terms an input uses.",
+    )
+    facts_budget: int = Field(
+        4000,
+        ge=0,
+        le=100000,
+        description="Characters of ranked facts per input. The rest are counted, said in the packet, and searchable.",
+    )
+    stable_budget: int = Field(
+        8000,
+        ge=500,
+        le=200000,
+        description="Characters of standing rules, lessons and glossary sent with every run. Past it, the narrowest "
+        "rules move to the part sent only to the runs they cover. Every run logs the size, so this can be set from "
+        "real numbers.",
+    )
+    search_rounds: int = Field(
+        2, ge=0, le=5, description="How many times a run may ask to search the workspace before it must answer."
+    )
+    search_results: int = Field(20, ge=1, le=200, description="Results returned for each search a run asks for.")
+
+
 class DispatchFile(FileModel):
     max_input_chars: int = Field(60000, ge=1000, description="The largest input sent in one call; longer ones split.")
     fix_rounds: int = Field(1, ge=0, le=3, description="How many times a failing answer goes back to the AI.")
@@ -675,6 +703,9 @@ class DispatchFile(FileModel):
         "waits clear within minutes of opening the lid, so the default is an hour.",
     )
     cleaning: CleaningSettings = Field(default_factory=CleaningSettings, description="Input cleaning before AI calls.")
+    knowledge: KnowledgeSettings = Field(
+        default_factory=KnowledgeSettings, description="What each run is given from what the assistant has learned."
+    )
 
 
 # ---- config/checks.yaml and config/language.yaml ---------------------------------------------------------------------

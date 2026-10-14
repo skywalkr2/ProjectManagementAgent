@@ -1267,6 +1267,34 @@ class StyleNote(KnowledgeRecord):
     observation: str = Field(min_length=1, description="What they want or avoid.")
 
 
+class RunSearch(BaseModel):
+    """One search a run asked for, and how many results came back."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    words: str = Field("", description="The words searched for.")
+    kinds: list[str] = Field(default_factory=list, description="The kinds searched: facts, inputs, records, knowledge.")
+    results: int = Field(0, description="How many results came back.")
+
+
+class RunKnowledge(BaseModel):
+    """The knowledge log of one run (design 6.22): what it was given and what it searched for, so a bad result can be
+    traced to knowledge that was missing or ignored."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    given: list[str] = Field(
+        default_factory=list, description="The ids of the knowledge entries and rules it was given."
+    )
+    left_out_by_scope: list[str] = Field(
+        default_factory=list,
+        description="The ids of rules and entries left out because their scope excludes the input.",
+    )
+    facts_left_out: int = Field(0, description="How many facts of the input's projects didn't fit the facts budget.")
+    stable_chars: int = Field(0, description="The size of the knowledge sent with every run, in characters.")
+    searches: list[RunSearch] = Field(default_factory=list, description="The searches it asked for.")
+
+
 class Run(Record):
     """One call to an AI provider. The engine writes it after each call, for usage and cost reports; nothing changes
     it."""
@@ -1303,6 +1331,7 @@ class Run(Record):
     error_kind: str | None = Field(None, description="How the call failed, from the runner's own error; none if ok.")
     error_detail: str | None = Field(None, description="The error's own text, for diagnosing a failure.")
     started_at: datetime = Field(description="When the call started.")
+    knowledge: RunKnowledge | None = Field(None, description="What it was given from what was learned, and searched.")
 
 
 class Signal(Record):
