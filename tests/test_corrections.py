@@ -365,6 +365,8 @@ def test_change_this_on_something_a_run_made_names_its_changeset_and_run(env):
     request_change(ws, store, cfg, "decision", qid, "Ask it as a question to the editor instead")
     (signal,) = signals(store, "change_requested")
     assert signal["changeset"] == cs_id and signal["run"] == run_id
+    learning = [r for r in store.read().list("request") if r.data["task"] == "learn-correction"]
+    assert len(learning) == 1 and not (learning[0].data.get("cause") or {}), "the person wrote a note: learned at once"
 
 
 def test_change_this_needs_words_and_a_changeable_item_that_exists(env):
@@ -694,7 +696,7 @@ def test_picking_the_owner_still_opens_the_action_at_once_and_a_suggestion_is_on
 # ---- glossary ops offered to reading notes ---------------------------------------------------------------------------
 
 
-def test_glossary_add_is_offered_to_reading_notes_and_no_other_knowledge_op_is(env):
+def test_glossary_and_routing_proposals_are_offered_to_reading_notes_and_no_other_knowledge_op_is(env):
     ws, cfg, store = env
     from engine.ops import KNOWLEDGE_OPS
 

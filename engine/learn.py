@@ -27,7 +27,7 @@ from engine.storage import WriteContext
 TASK = "learn-correction"
 LEARNING_TASKS = (TASK,)
 #: Corrections the person wrote something for: looked at when they happen, while the person is still looking.
-AT_ONCE = ("sent_back", "routed", "answered_assistant")
+AT_ONCE = ("sent_back", "routed", "answered_assistant", "change_requested")
 #: Corrections made without writing anything: looked at in the next batch. `edited` is the person's own direct edit of
 #: something the assistant set.
 SILENT = ("undone", "pulled_back", "draft_edited", "dropped", "reworded", "held_declined", "edited")

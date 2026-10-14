@@ -379,7 +379,7 @@ def test_undo_of_each_op_takes_the_change_back(app):
     assert store.read().get("lesson", entry_id).data["status"] == "active"
 
 
-def test_the_learning_ops_are_not_offered_to_a_plugins_action_and_reading_notes_is_offered_only_glossary_add(app):
+def test_the_learning_ops_are_not_offered_to_a_plugins_action_and_reading_notes_is_offered_only_glossary_and_routing(app):
     _, store, _, _ = app
     from engine.actions import ACTION_CORE_OPS
     from engine.tasks import TASKS

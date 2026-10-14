@@ -494,7 +494,7 @@ field):
   a proposal and applies as a record; the rest wait for the person like any system op. Reading notes is offered
   `glossary.add` only, so a term or system name an input uses that the glossary lacks is recorded with `confidence:
   unknown` (or assumed or confirmed, as the input supports) as a proposal, or active when the words are the person's own.
-  **Built:** `tests/test_corrections.py::test_glossary_add_is_offered_to_reading_notes_and_no_other_knowledge_op_is`,
+  **Built:** `tests/test_corrections.py::test_glossary_and_routing_proposals_are_offered_to_reading_notes_and_no_other_knowledge_op_is`,
   `tests/test_corrections.py::test_an_unknown_term_from_an_input_is_added_as_a_proposal_and_from_the_persons_own_note_as_active`.
 - Project and stages: `project.add` (a system op: from the assistant it waits for the person) and `stage.move` (always waits
   for the person's confirmation).

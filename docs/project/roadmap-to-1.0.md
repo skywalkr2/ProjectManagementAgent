@@ -1014,7 +1014,7 @@ From the original designer's lessons of 2026-10-14:
 - [x] **Glossary ops offered to reading notes** (afternoon audit): `glossary.add` exists (L1) with `confidence: unknown`,
   but notes runs aren't offered it yet; they are with the learning task kinds here, so an unknown system name can be
   recorded or marked unknown. Built: reading notes is offered `glossary.add` and no other knowledge op, and it applies as a
-  proposal unless the words are the person's (`tests/test_corrections.py::test_glossary_add_is_offered_to_reading_notes_and_no_other_knowledge_op_is`,
+  proposal unless the words are the person's (`tests/test_corrections.py::test_glossary_and_routing_proposals_are_offered_to_reading_notes_and_no_other_knowledge_op_is`,
   `tests/test_corrections.py::test_an_unknown_term_from_an_input_is_added_as_a_proposal_and_from_the_persons_own_note_as_active`).
 - [x] **A question to someone else says why it matters** (lesson 3): its text names which of the person's decisions,
   designs or dated items depends on the answer (a `matters_for` field); one that can't name one is recorded as a fact and
