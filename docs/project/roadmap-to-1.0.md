@@ -875,6 +875,8 @@ before any L2 code.
   `tests/test_evaluate_harness.py::test_a_run_through_a_command_line_agent_records_its_version_and_account`.
 
 L2. **Every run reads what applies.**
+**Hold (owner, 2026-10-14):** after L2's first wave (the knowledge section in packets; search, `already-known` and
+`near-duplicate-question`) is merged, nothing more is built until the owner has made the O2 run and sent its report.
 Settled with the original designer (answers to L2's three questions and notes from their running version,
 2026-10-14):
 - [ ] **What "a rule applied" means**, checkable without asking the model, in two steps:
