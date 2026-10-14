@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass, field, replace
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 
 from pydantic import ValidationError
 
 from engine import knowledge
+from engine import search as workspace_search
 from engine.check_text import quoted_passages, without_links, words_of
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
@@ -112,6 +113,10 @@ class Context:
     confirmed_by_pm: bool = False
     actor: Literal["assistant", "pm"] = "assistant"  # "pm" for a person action, whose exact proposal the person saw
     via: str | None = None  # "handler" or "job" for ops a plugin staged; otherwise worked out from the inputs
+    # For an AI run: whether it searched the workspace before answering. None for anything that isn't one, which the
+    # search-first check leaves alone.
+    searched: bool | None = None
+    data_level: str = "restricted"  # the most sensitive material a search may quote back, for an AI run
 
 
 # ---- checks ----------------------------------------------------------------------------------------------------------
@@ -272,6 +277,26 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     refuse(i, "targets", f"{child} can't go inside a project that is inside it")
             if len(set(op.children)) != len(op.children):
                 refuse(i, "targets", "a project is named twice in children")
+        # a question or report from a run that never searched: is it already answered by what the workspace knows?
+        if (
+            name in workspace_search.ASKING_OPS
+            and ctx.actor != "pm"
+            and ctx.searched is False
+            and lints.get("already-known", "off") != "off"
+        ):
+            known = workspace_search.known_answer(
+                ctx.store,
+                workspace_search.ASKING_OPS[name](op),
+                similarity=ctx.cfg.checks.tuning.already_known.similarity,
+                level=ctx.data_level,
+            )
+            if known is not None:
+                lint(
+                    i,
+                    "already-known",
+                    f"this looks answered by {known.id}: {known.text} If it doesn't answer this, search for what is "
+                    "missing before asking.",
+                )
         # questions to other people
         if isinstance(op, QuestionAddOp):
             resolved = ctx.people.resolve(op.to)
@@ -283,6 +308,11 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     if not _openable(link.url):
                         refuse(i, "question-links", f"{link.url} isn't a link the recipient can open")
             _wording(i, op.title + " " + op.text, ctx, lint, _quotes_in(op, ctx))
+            if lints.get("near-duplicate-question", "off") != "off":
+                match = _near_duplicate_question(ctx, view, op.title)
+                if match is not None:
+                    state = "answered question" if match.data["status"] == "answered" else "open question"
+                    lint(i, "near-duplicate-question", f"looks like {state} {match.id}: {match.data['title']}")
         if isinstance(op, ActionAddOp):
             quotes = _quotes_in(op, ctx)
             reads = words_of(op.text, quotes)
@@ -482,6 +512,33 @@ _WORD = re.compile(r"[a-z0-9]{4,}")
 
 def _shares_words(a: str, b: str) -> bool:
     return bool(set(_WORD.findall(normalize(without_links(a)))) & set(_WORD.findall(normalize(without_links(b)))))
+
+
+def _near_duplicate_question(ctx: Context, view: Any, title: str) -> Any | None:
+    """The open question, or the one answered within the configured days, whose title is as alike as the configured
+    similarity to `title`; None when there is none."""
+    tuning = ctx.cfg.checks.tuning.near_duplicate_question
+    since = datetime.fromisoformat(ctx.store.clock()) - timedelta(days=tuning.days)
+    answered: dict[str, datetime] | None = None
+    for question in view.list("question"):
+        status = question.data["status"]
+        if status in ("open", "sent"):
+            pass
+        elif status == "answered":
+            if answered is None:
+                answered = {
+                    e["record_id"]: datetime.fromisoformat(e["at"])
+                    for e in ctx.store.read().ledger(kind="question")
+                    if e["field"] == "status" and e["after"] == "answered"
+                }
+            when = answered.get(question.id)
+            if when is None or when < since:
+                continue
+        else:
+            continue
+        if _similar(title, question.data["title"]) >= tuning.similarity:
+            return question
+    return None
 
 
 def _similar(a: str, b: str) -> float:

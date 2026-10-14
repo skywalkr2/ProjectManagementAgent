@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
 
+from engine import search as workspace_search
 from engine.ai.pauses import when_text
 from engine.ai.router import (
     LEVELS,
@@ -49,8 +50,8 @@ class Unreadable(Exception):
     pass
 
 
-def parse(text: str, op_models: dict | None = None) -> ChangesetIn:
-    """Read a changeset from model output, repairing the usual damage first: fences, prose, trailing commas."""
+def _json_object(text: str) -> object:
+    """The JSON in model output, repairing the usual damage first: fences, prose, trailing commas."""
     body = text.strip()
     fence = re.search(r"```(?:json)?\s*(.*?)```", body, re.S)
     if fence:
@@ -60,9 +61,14 @@ def parse(text: str, op_models: dict | None = None) -> ChangesetIn:
         raise Unreadable("the answer has no JSON object in it")
     body = re.sub(r",\s*([}\]])", r"\1", body[start : end + 1])
     try:
-        data = json.loads(body)
+        return json.loads(body)
     except json.JSONDecodeError as err:
         raise Unreadable(f"the JSON is broken ({err.msg} at character {err.pos})") from None
+
+
+def parse(text: str, op_models: dict | None = None) -> ChangesetIn:
+    """Read a changeset from model output."""
+    data = _json_object(text)
     models = op_models if op_models is not None else OP_MODELS
     if isinstance(data, dict):
         # Only the summary, the topic, the ops and the ask flag mean anything at the top; a model's extra remarks are
@@ -161,12 +167,13 @@ def process(
     if req.data["task"] == "notes":
         allowed = ops_for_level(store, allowed, _data_level(store, req.data))
     people = People.for_input(store, cfg, request_id, packet.raw_input if req.data.get("source") else "")
-    ctx = Context(store, cfg, people, allowed, inputs, hidden_words(cfg))
+    ctx = Context(store, cfg, people, allowed, inputs, hidden_words(cfg), searched=False)
 
     previous_ops = _previous_ops(store, req.data.get("previous"))
     level = _data_level(store, req.data)
     if packet.data_level and LEVELS.index(packet.data_level) > LEVELS.index(level):
         level = packet.data_level
+    ctx.data_level = level
     tier = route(
         cfg,
         packet.task.kind,
@@ -243,6 +250,11 @@ def process(
             draft["units"] = packet.anchor_units or (units_of(store, fmt, base_text) if base_text.strip() else [])
             draft["split"] = lambda text, fmt=fmt: units_of(store, fmt, text)
     waited = offline_since is not None  # already waiting for the network: a repeat miss adds no run record
+    # What a follow-up call after a search may cost: the per-run limit, and the amount that needs the person's go unless
+    # they gave it.
+    spend_limit = budgets.per_run_usd
+    if req.data.get("approval") != "granted":
+        spend_limit = min(spend_limit, budgets.confirm_above_usd)
     first = _rounds(
         store,
         cfg,
@@ -258,6 +270,8 @@ def process(
         draft,
         independent,
         offline_known=waited,
+        ws=ws,
+        spend_limit=spend_limit,
     )
     if first.abandoned:
         return None
@@ -287,6 +301,8 @@ def process(
             draft,
             independent,
             offline_known=waited,
+            ws=ws,
+            spend_limit=spend_limit,
         )
         if second.abandoned:
             return None
@@ -308,6 +324,8 @@ def process(
         return needs_you(store, request_id, outcome.stop, cause=outcome.cause)
     changeset, problems, run_id = outcome.changeset, outcome.problems, outcome.run_id
     assert changeset is not None
+    ctx.searched = outcome.searched
+    trust = ctx.inputs.trust  # material a search brought in from outside content makes the work untrusted
     own_note = req.data["task"] == "notes" and trust == "trusted" and not req.data.get("source")
     if own_note and changeset.ask and not changeset.ops:
         # The person's own note is a question to the assistant: the same request becomes an ask, answered from the
@@ -447,6 +465,74 @@ class _Outcome:
     escalate: bool = False  # the answer still fails its checks: a stronger tier may do better
     abandoned: bool = False  # the request was closed or replaced before a follow-up call: nothing more is asked
     retry: str | None = None  # a run that gave no usable answer or failed: why, in a few words; it is tried again
+    searched: bool = False  # the run asked to search the workspace before it answered
+
+
+def search_request(text: str) -> workspace_search.Query | None:
+    """What an answer asks to search for, when it is a search request instead of ops: an object with a `search` and no
+    ops. None for any other answer."""
+    try:
+        data = _json_object(text)
+    except Unreadable:
+        return None
+    if not isinstance(data, dict) or "search" not in data or data.get("ops"):
+        return None
+    return workspace_search.query_from(data["search"])
+
+
+def _call(
+    store: Store,
+    router: Router,
+    task: AiTask,
+    out: _Outcome,
+    request_id: str,
+    tier: str,
+    data_level: str,
+    use: str | None,
+    content: frozenset[str],
+    independent: Independence | None,
+    offline_known: bool,
+) -> object | None:
+    """One call, recording its run id on `out`. Returns the result, or None when the call ended the work: `out` then
+    holds why."""
+    try:
+        result, _choice, out.run_id = router.call(
+            task,
+            request_id=request_id,
+            tier=tier,
+            data_level=data_level,
+            use=use,
+            content=content,
+            independent=independent,
+            offline_known=offline_known,
+        )
+    except AccountPaused as err:
+        cause = {"kind": "paused", "account": err.account, "until": err.until.isoformat()}
+        out.stop, out.cause = str(err), cause
+    except NetworkOffline:
+        # No account could be reached at all: the work waits for the network, which is no failure and no try.
+        out.stop, out.cause = OFFLINE_WAITING, {"kind": "offline"}
+    except (BudgetReached, NoProvider) as err:
+        out.stop, out.cause = str(err), _data_level_cause(err)
+    except AiError as err:
+        out.stop = _refused(store, None, err.detail) if err.kind == "refused" else _ai_failure(err)
+        out.retry = failure_in_words(err) if err.kind in RETRIED else None
+    else:
+        return result
+    return None
+
+
+def _record_search(store: Store, run_id: str | None, query: workspace_search.Query, found: int) -> None:
+    """Add a search to the knowledge log of the run that asked for it."""
+    if run_id is None:
+        return
+    with store.transaction() as tx:
+        run = tx.get("run", run_id)
+        if run is None:
+            return
+        log_ = dict(run.data.get("knowledge") or {})
+        searches = [*log_.get("searches", []), {"words": query.words, "kinds": list(query.kinds), "results": found}]
+        tx.update("run", run_id, {"knowledge": {**log_, "searches": searches}}, _ENGINE, read_version=run.version)
 
 
 def _rounds(
@@ -464,57 +550,77 @@ def _rounds(
     draft: dict | None = None,
     independent: Independence | None = None,
     offline_known: bool = False,
+    ws: Workspace | None = None,
+    spend_limit: float | None = None,
 ) -> _Outcome:
     """Ask on one tier, sending a failing answer back up to `dispatch.fix_rounds` times with what was wrong. A refusal
-    stops at once: no fix round, no other account, no escalation."""
+    stops at once: no fix round, no other account, no escalation. An answer that asks to search the workspace is
+    answered with the results and asked again, up to `dispatch.knowledge.search_rounds` times; a search is no failure
+    and uses up no fix round, but each call is recorded and counted like any other."""
     task = base
+    shown = base.request  # the request as every round of this task starts from it: with the search results so far
     out = _Outcome()
+    searches = 0
     for attempt in range(cfg.dispatch.fix_rounds + 1):
         last = attempt == cfg.dispatch.fix_rounds
         if attempt and _closed(store, request_id):
             return _Outcome(run_id=out.run_id, abandoned=True)  # a fix round only runs while its cause stands
-        try:
-            result, _choice, out.run_id = router.call(
-                task,
-                request_id=request_id,
-                tier=tier,
-                data_level=data_level,
-                use=use,
-                content=content,
-                independent=independent,
-                offline_known=offline_known,
-            )
-        except AccountPaused as err:
-            cause = {"kind": "paused", "account": err.account, "until": err.until.isoformat()}
-            return _Outcome(
-                changeset=out.changeset, problems=out.problems, run_id=out.run_id, stop=str(err), cause=cause
-            )
-        except NetworkOffline:
-            # No account could be reached at all: the work waits for the network, which is no failure and no try.
+        result = _call(store, router, task, out, request_id, tier, data_level, use, content, independent, offline_known)
+        if result is None:
             return _Outcome(
                 changeset=out.changeset,
                 problems=out.problems,
                 run_id=out.run_id,
-                stop=OFFLINE_WAITING,
-                cause={"kind": "offline"},
+                stop=out.stop,
+                cause=out.cause,
+                retry=out.retry,
             )
-        except (BudgetReached, NoProvider) as err:
-            return _Outcome(
-                changeset=out.changeset,
-                problems=out.problems,
-                run_id=out.run_id,
-                stop=str(err),
-                cause=_data_level_cause(err),
+        while draft is None and not result.refused and ws is not None:
+            query = search_request(result.text)
+            if query is None or searches >= cfg.dispatch.knowledge.search_rounds:
+                break
+            limits = cfg.dispatch.knowledge
+            hits = workspace_search.search(
+                ws,
+                store,
+                query,
+                limit=limits.search_results,
+                level=data_level,
+                exclude_sources=[ctx.inputs.source] if ctx.inputs.source else (),
             )
-        except AiError as err:
-            stop = _refused(store, None, err.detail) if err.kind == "refused" else _ai_failure(err)
-            return _Outcome(
-                changeset=out.changeset,
-                problems=out.problems,
-                run_id=out.run_id,
-                stop=stop,
-                retry=failure_in_words(err) if err.kind in RETRIED else None,
+            _record_search(store, out.run_id, query, len(hits))
+            searches += 1
+            if any(hit.untrusted for hit in hits):
+                ctx.inputs.trust = "untrusted"  # what comes back from outside content keeps everything after it so
+            shown = shown + "\n\n" + workspace_search.render(hits, query, searches, limits.search_rounds - searches)
+            task = replace(task, request=shown)
+            if spend_limit is not None:
+                again = router.estimate(
+                    task, tier=tier, data_level=data_level, use=use, content=content, independent=independent
+                )
+                if again is not None and again > spend_limit:
+                    return _Outcome(
+                        run_id=out.run_id,
+                        stop=f"Searching first would make this cost about ${again:.2f}, above the amount you allowed. "
+                        "Hand in less, or raise the amount in Settings, AI spending.",
+                    )
+            result = _call(
+                store, router, task, out, request_id, tier, data_level, use, content, independent, offline_known
             )
+            if result is None:
+                return _Outcome(
+                    changeset=out.changeset,
+                    problems=out.problems,
+                    run_id=out.run_id,
+                    stop=out.stop,
+                    cause=out.cause,
+                    retry=out.retry,
+                    searched=True,
+                )
+            if _closed(store, request_id):
+                return _Outcome(run_id=out.run_id, abandoned=True)
+        out.searched = searches > 0
+        ctx.searched = out.searched
         if result.refused:
             return _Outcome(run_id=out.run_id, stop=_refused(store, out.run_id, result.refusal or ""))
         if draft is not None:
@@ -541,21 +647,25 @@ def _rounds(
             except AnchorProblem as err:
                 if not last:
                     why = f"Your draft doesn't follow the format asked for: {err}. Write it all again."
-                    task = replace(task, request=base.request + "\n\n" + why)
+                    task = replace(task, request=shown + "\n\n" + why)
                     continue
                 return _Outcome(
                     run_id=out.run_id, stop=f"The draft didn't follow the format asked for: {err}.", escalate=True
                 )
             changeset = _draft_changeset(draft, text, out.run_id, mapping, asked)
             problems = check(changeset, ctx)
-            out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id)
+            out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id, searched=searches > 0)
             if needs_another_round(problems):
                 if not last:
-                    task = replace(task, request=base.request + "\n\n" + feedback(problems))
+                    task = replace(task, request=shown + "\n\n" + feedback(problems))
                     continue
                 out.escalate = True
             return out
         try:
+            if search_request(result.text) is not None:
+                raise Unreadable(
+                    "it asks to search, and searching is over for this input. Answer now with the JSON object of ops"
+                )
             changeset = parse(result.text, store.plugins.ops)
         except Unreadable as err:
             limit = task.max_output
@@ -565,7 +675,7 @@ def _rounds(
                     if result.truncated
                     else f"Your previous answer couldn't be read: {err}. Answer with only the JSON object."
                 )
-                task = replace(task, request=base.request + "\n\n" + why)
+                task = replace(task, request=shown + "\n\n" + why)
                 continue
             if result.truncated:
                 stop = (
@@ -578,15 +688,15 @@ def _rounds(
             return _Outcome(run_id=out.run_id, stop=UNREADABLE, escalate=True, retry=UNREADABLE_WHY)
         if previous_ops is not None and _ops_of(changeset) == previous_ops:
             if not last:
-                task = replace(task, request=base.request + "\n\n" + REPEATED)
+                task = replace(task, request=shown + "\n\n" + REPEATED)
                 continue
             stop = "The assistant gave the same answer again after your note. Look at it with them."
             return _Outcome(run_id=out.run_id, stop=stop)
         problems = check(changeset, ctx)
-        out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id)
+        out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id, searched=searches > 0)
         if needs_another_round(problems):
             if not last:
-                task = replace(task, request=base.request + "\n\n" + feedback(problems))
+                task = replace(task, request=shown + "\n\n" + feedback(problems))
                 continue
             out.escalate = True
         return out

@@ -719,6 +719,8 @@ def _default_lints() -> dict[str, Severity]:
         "run-on-list": "return",
         "near-duplicate-action": "warn",
         "evidence-fit": "return",
+        "already-known": "return",
+        "near-duplicate-question": "warn",
     }
 
 
@@ -732,12 +734,46 @@ class NearDuplicateActionTuning(ConfigModel):
     )
 
 
+class AlreadyKnownTuning(ConfigModel):
+    similarity: float = Field(
+        0.7,
+        ge=0,
+        le=1,
+        description="How much of a question's or report's subject a recorded fact or a piece of knowledge must hold "
+        "for it to count as already answering it: 0 counts any shared words, 1 only a fact holding every word.",
+    )
+
+
+class NearDuplicateQuestionTuning(ConfigModel):
+    similarity: float = Field(
+        0.8,
+        ge=0,
+        le=1,
+        description="How alike a new question's words must be to an open question, or one answered recently, to count "
+        "as a near-duplicate: 0 flags any question that shares a word, 1 only one with the same words.",
+    )
+    days: int = Field(
+        30,
+        ge=0,
+        le=3650,
+        description="How many days back an answered question is still compared with a new one. Open questions are "
+        "always compared.",
+    )
+
+
 class LintTuning(ConfigModel):
     """Settings of the core lints that have more than a severity: one entry per lint, named as the lint is in `lints`
     with underscores for hyphens, so each setting has a plain dotted key and environment variable."""
 
     near_duplicate_action: NearDuplicateActionTuning = Field(
         default_factory=NearDuplicateActionTuning, description="Settings of the near-duplicate action check."
+    )
+    near_duplicate_question: NearDuplicateQuestionTuning = Field(
+        default_factory=NearDuplicateQuestionTuning, description="Settings of the near-duplicate question check."
+    )
+    already_known: AlreadyKnownTuning = Field(
+        default_factory=AlreadyKnownTuning,
+        description="Settings of the check that a question or report isn't about something already recorded.",
     )
 
 
