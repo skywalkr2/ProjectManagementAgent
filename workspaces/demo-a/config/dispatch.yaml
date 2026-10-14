@@ -15,3 +15,6 @@ knowledge:
   stable_budget: 8000
   search_rounds: 2
   search_results: 20
+  refusals_to_packet:
+    share: 0.05
+    of_last: 50

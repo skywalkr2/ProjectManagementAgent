@@ -1,0 +1,96 @@
+# The core's invariants: the checks that always refuse an op. Each has the one plain line the op reference shows under
+# the ops it constrains (`ops`: op names, or `any` for every op, shown once after the list) and a seed lesson, the
+# fuller guidance that joins a task kind's packets when the check refuses its runs often (`knowledge.refusals_to_packet`).
+# The self-check fails when a check the applier refuses by has no entry here, or an entry names an op that doesn't exist.
+# Order here is the order lines and lessons appear in, so a packet's text stays the same from run to run.
+invariants:
+  allowed-ops:
+    ops: any
+    line: Use only the ops listed here; any other op is refused.
+    seed: >-
+      Use only the ops in the op reference for this kind of work. An op that isn't listed there is refused, even when
+      it exists for other kinds of work. When no listed op fits, record the point in a note instead.
+  person-only:
+    ops: [text.edit, text.accept, text.discard, record.edit]
+    line: Only the person can make this change; from the assistant it is refused.
+    seed: >-
+      Some changes are the person's alone: editing text, accepting or discarding a proposed version, editing a
+      record's fields. Never include them. Propose the new text for the person to review, or ask a question.
+  targets:
+    ops:
+      - note
+      - fact
+      - event.add
+      - record.set
+      - record.log
+      - action.add
+      - action.close
+      - question.add
+      - question.done
+      - project.add
+      - record.edit
+      - text.edit
+      - text.propose
+      - text.accept
+      - text.discard
+      - text.draft
+      - setting.propose
+      - lesson.add
+      - lesson.update
+      - glossary.add
+      - glossary.update
+      - routing.add
+      - style.add
+      - knowledge.retire
+    line: Name only records, fields and values that exist now; anything else is refused.
+    seed: >-
+      Name only what exists now. Use the ids listed under open actions, open questions, people and projects, and
+      never make an id up. A record that an earlier op in the same answer creates doesn't exist yet when the checks
+      run. Change only the fields the op reference allows, with a value the field accepts. When you are not sure a
+      record exists, leave the op out and say so in a note.
+  record-changed:
+    ops: [text.accept, text.discard, record.delete]
+    line: A record that changed since it was read is refused; the op must rest on its current version.
+    seed: >-
+      An op that names a record or a version must rest on the state you were shown. If it has changed or gone since,
+      the op is refused. Don't repeat an op on a record that isn't shown to you in its current state.
+  still-referred-to:
+    ops: [record.delete]
+    line: A record that another record still refers to can't be deleted.
+    seed: >-
+      Before deleting a record, check that nothing else refers to it: an action's project, a question's person, a
+      record that points to it. A record that is still referred to is refused. Leave it, or change what refers to it
+      first.
+  evidence:
+    ops: [fact, event.add, action.add, action.close, question.done, record.set, answer]
+    line: Needs the exact words from the input that justify it; a quote that isn't in the input is refused.
+    seed: >-
+      Every claim from an input carries a quote: the exact words, in the same order, copied from the input, with no
+      summary, no corrected spelling and no words joined from different places. Quote the shortest passage that
+      justifies the op. When no words in the input support it, leave the op out. The input's own words count; your
+      reading of them does not.
+  question-links:
+    ops: [question.add]
+    line: A question to someone else needs a link to what it is about, and every link must be one they can open.
+    seed: >-
+      A question to anyone but the person needs at least one link, to the thing it is about, that the reader can
+      open: a public web address, never a file on a computer, a local address or a page inside this app. When no such
+      link exists, put the question to the person instead, or leave it out.
+  never-shown:
+    ops: any
+    line: Text people will see never mentions the AI model or service.
+    seed: >-
+      Never name or describe the assistant's model, its provider or the service behind it in text a person will read,
+      such as an action, a question, a note or a summary. Say what the work needs, not who produced it.
+  plugin-validator:
+    ops: any
+    line: An add-on's own rules can also refuse its ops, and say why.
+    seed: >-
+      An add-on's own ops are checked by that add-on's rules as well as the core's. When one refuses an op, the
+      reason says what to change. Change that part of the op; don't send the same op again.
+  required-ops:
+    ops: []
+    line: The answer must include at least one of the ops this kind of work requires.
+    seed: >-
+      This kind of work must always answer with at least one of the ops it requires, even when there is little to
+      report. An answer without one is refused as a whole. When nothing was found, use the required op to say so.

@@ -23,6 +23,7 @@ from engine.ops import reference_for, schema_for
 from engine.playbook import guidance
 from engine.prompts import render
 from engine.records import RunKnowledge
+from engine.refusals import seed_section
 from engine.storage import Store, Stored, StoreError
 from engine.tasks import TaskKind, settings
 from engine.texts import text_presence
@@ -190,6 +191,7 @@ def _learned(
     named = [*projects, *(source.data.get("projects", []) if source is not None else [])]
     in_input = [p for p in dict.fromkeys(named) if view.get("project", p) is not None]
     stable = stable_section(view, kind.name, settings)
+    seeds = seed_section(view, kind.name, settings)
     per_input = per_input_section(
         view,
         kind.name,
@@ -202,13 +204,16 @@ def _learned(
         facts=learns,
         scope_projects=with_ancestors(view, in_input),
     )
-    stable_log = RunKnowledge(given=list(dict.fromkeys(stable.ids)), stable_chars=len(stable.text))
+    stable_text = "
+
+".join(part for part in (stable.text, seeds.text) if part)
+    stable_log = RunKnowledge(given=list(dict.fromkeys([*stable.ids, *seeds.ids])), stable_chars=len(stable_text))
     per_input_log = RunKnowledge(
         given=list(dict.fromkeys(per_input.ids)),
         left_out_by_scope=per_input.left_out_by_scope,
         facts_left_out=per_input.facts_left_out,
     )
-    return _Learned(stable.text, per_input.text, _merged_logs([stable_log, per_input_log]), stable_log, per_input_log)
+    return _Learned(stable_text, per_input.text, _merged_logs([stable_log, per_input_log]), stable_log, per_input_log)
 
 
 def _merged_logs(logs: list[RunKnowledge]) -> RunKnowledge:

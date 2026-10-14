@@ -11,6 +11,7 @@ from engine.config import ConfigError, load_config
 from engine.records import REFERENCES, values_at
 from engine.selfcheck.built_claims import scan_built_claims
 from engine.selfcheck.free_text import check_free_text
+from engine.selfcheck.invariants import check_invariant_lines
 from engine.selfcheck.scans import (
     REPO,
     Finding,
@@ -152,6 +153,7 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
         ("boundary scan", scan_boundary),
         ("config coverage", scan_config_coverage),
         ("built claims", scan_built_claims),
+        ("invariant lines", check_invariant_lines),
     ]
     checks += [(f"workspace {ws.name}", lambda ws=ws: check_workspace_fixture(ws)) for ws in FIXTURES]
     checks += [(f"core alone {ws.name}", lambda ws=ws: check_workspace_fixture(ws, plugins=False)) for ws in FIXTURES]

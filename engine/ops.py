@@ -797,8 +797,12 @@ def schema_for(op_names: list[str], registry: dict | None = None) -> dict[str, A
     }
 
 
-def reference_for(op_names: list[str], registry: dict | None = None) -> str:
-    """A readable op reference for the prompt: each op, what it's for and its fields."""
+def reference_for(op_names: list[str], registry: dict | None = None, invariants: dict | None = None) -> str:
+    """A readable op reference for the prompt: each op, what it's for and its fields, with the one-line constraint of
+    each invariant that applies to it under it. Constraints that apply to every op follow the list once."""
+    from engine import invariants as shipped
+
+    known = invariants if invariants is not None else shipped.load()
     lines = []
     for name in op_names:
         model = (registry or OP_MODELS)[name]
@@ -810,4 +814,7 @@ def reference_for(op_names: list[str], registry: dict | None = None) -> str:
             fields.append(f"{key}{'' if required else '?'}")
         doc = (model.__doc__ or "").strip()
         lines.append(f'- "{name}": {doc} Fields: {", ".join(fields)}.')
+        lines += [f"  Always checked: {line}" for line in shipped.lines_for(name, known)]
+    if op_names:
+        lines += [f"Every op is checked: {line}" for line in shipped.lines_for_every_op(known)]
     return "\n".join(lines)

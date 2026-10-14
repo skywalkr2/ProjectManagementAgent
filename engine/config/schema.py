@@ -644,6 +644,23 @@ class CleaningSettings(ConfigModel):
     )
 
 
+class RefusalsToPacketSettings(ConfigModel):
+    share: float = Field(
+        0.05,
+        ge=0,
+        le=1,
+        description="When a check refused at least this share of a kind of work's recent runs, its fuller guidance is "
+        "added to that kind of work's packets. It leaves again once the share drops below it.",
+    )
+    of_last: int = Field(
+        50,
+        ge=1,
+        le=1000,
+        description="How many of a kind of work's most recent runs are counted when working out which checks refuse "
+        "it often.",
+    )
+
+
 class KnowledgeSettings(ConfigModel):
     glossary_all_below: int = Field(
         150,
@@ -670,6 +687,11 @@ class KnowledgeSettings(ConfigModel):
         2, ge=0, le=5, description="How many times a run may ask to search the workspace before it must answer."
     )
     search_results: int = Field(20, ge=1, le=200, description="Results returned for each search a run asks for.")
+    refusals_to_packet: RefusalsToPacketSettings = Field(
+        default_factory=RefusalsToPacketSettings,
+        description="When a check that always refuses keeps refusing a kind of work, its fuller guidance joins that "
+        "kind of work's packets.",
+    )
 
 
 class DispatchFile(FileModel):
