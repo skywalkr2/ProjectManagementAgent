@@ -27,6 +27,21 @@ blocks; everything else goes ahead without it.
 | O1 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-agent.json`: 42 of 42 passed on the owner's one account, a command-line agent). **The "before" run of the golden set** on real models: today's 14 cases × 3 runs, on a low-cost and a stronger account, with today's scoring. Steps below. | The owner's computer, with their AI accounts | Only L4's last step: the "after" report and its comparison with this one. That report also has to exist before real use starts. | All of phase A, and L-core's code, including the harder set itself. The run is pinned to commit `802538e`, so changing the cases, the scoring or the packet afterwards doesn't spoil it. |
 | O2 | **The harder set's "before" run** (the original designer's L1 check-in, 2026-10-14): the harder set (below, "L1b") on the owner's account, 3 runs per case, pinned to the commit that adds it, which is the last commit before any L2 code. The report records the agent's program version, and says plainly when every tier ran on the same account, so the run says nothing about a low-cost tier against a stronger one. Steps below, once the set lands. | The owner's computer, with their AI accounts | L4's comparison, which rests on this set. | L2's build: the run is pinned, so it can be made any time; L2 code only lands after the pinned commit. |
 
+**O2 steps** (pinned to commit `feb6b3f`, the last before any L2 code). In the owner's copy of the repository, on their
+own computer:
+```
+git fetch origin claude/tender-tesla-16a8ob
+git worktree add ../cockpit-before-harder feb6b3f
+cd ../cockpit-before-harder
+uv sync
+uv run cockpit evaluate --from workspaces/demo-a -w <your workspace folder> --account "<the account used for O1>" --runs 3 --json > before-harder.json
+```
+- **Cost:** 48 small runs (16 cases × 3) on the one account; on a subscription agent it is usage.
+- **What it shows:** the per-case pass rate, the agent's program version, and the line saying every tier ran on the same
+  account. A lower pass rate than O1's is expected: that headroom is what this set is for.
+- **Then:** send the file to the session, which checks it for account names or addresses and writes the summary in
+  `docs/project/evals/`. After that, `git worktree remove ../cockpit-before-harder`.
+
 **When:** best now, while L1 is being built, not at the end (the original designer's L0 sign-off, 2026-10-13): it is the
 only owner action on the critical path, and it blocks the comparison at the end of L4.
 
