@@ -1440,7 +1440,8 @@ rules as records are separate L1 items, not built here.
   1. every active rule that applies to the whole workspace (they are few, and most failures were a rule the run never
      saw); a rule narrowed to some projects or task kinds goes in the per-input part, so scope is filtered when the
      packet is built and never left to the model: an excluded project's rules (`except`) are not in its packets at all,
-     and the knowledge log says which were left out (*designed, phase L2*; the original designer, 2026-10-14);
+     and the knowledge log says which were left out (built in L2, `engine/knowledge_section.py`; the original designer,
+     2026-10-14);
   2. active lessons targeted at the task kind;
   3. the whole glossary while it is small (under `knowledge.glossary_all_below`).
 - **In the per-input part,** because it depends on the input:
@@ -1487,7 +1488,7 @@ material that is not workspace knowledge. A novel's facts are fiction, and its i
 A pack's own task kinds get the same section through one plugin API call. So a writing pack's runs see the person's lessons and
 glossary, and a pack's own knowledge (a series bible) can be offered the same way later.
 
-**The always-sent section has a size budget** (*designed, phase L2*; the original designer, 2026-10-14). Its size is in
+**The always-sent section has a size budget** (built in L2 except the weekly line; the original designer, 2026-10-14). Its size is in
 the knowledge log on every run from the first L2 commit, so the budget's default comes from real numbers. Over the budget,
 rules leave it narrowest first: those scoped to one project or one task kind before those scoped to several, and
 workspace-wide rules in the person's own words last. A rule a stage check enforces sends only its one-line form there and
@@ -1508,13 +1509,16 @@ project, which kinds (facts, past inputs, records, knowledge). It is not a live 
 account, command-line agents included. The engine runs the search, deterministically and bounded (`knowledge.search_results`),
 and runs the task again with the results, at most `knowledge.search_rounds` times (default 2). The instructions say to search
 the workspace's own knowledge before an outside lookup (6.19), a question to a person, or a report to the maintainers.
-**Local first** (*designed, phase L2*; the original designer, 2026-10-14): the search round runs over records, facts and
+**Local first** (built in L2, `engine/search.py`; the original designer, 2026-10-14): the search round runs over records, facts and
 past inputs before any outside lookup is proposed, and an outside lookup from a run that hasn't searched is sent back to
 search first, so no run looks outside for items that never existed.
 
 It is also checked where it can be. A `question.add` to anyone (the person included), an outside lookup or a `report.draft` whose subject a plain search
 already answers gets the lint `already-known` (4.17), which sends it back once with the match. It is a lint, not an invariant,
-because matching is fuzzy.
+because matching is fuzzy. The plain check reads facts and active knowledge; the run's own search also reaches past
+inputs and records. A search answer is its own shape (`search`: words, ids, project, kinds); a search uses no fix round
+and no try, is estimated and recorded like any call, and results from an outside input make the work untrusted (built:
+`tests/test_search.py`).
 
 **The knowledge log.** Each `Run` records:
 - which knowledge entries it was given, by id, and for each rule whether it was applied or only present (above);

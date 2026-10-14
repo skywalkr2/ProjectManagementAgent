@@ -870,6 +870,15 @@ yet follow, that it is *designed*, with its phase.
 | Rules from inputs (6.22) | Held as a decision on Today | From L3, proposals on the Learned line; the person's own words still apply at once. *Designed, phase L3* |
 | Plan | The harder golden set in L4 | Moved ahead as L1b, with its "before" run (O2) pinned ahead of L2; one account in the chain is a decision before real use |
 
+## 53. L2, first wave: the knowledge section, the knowledge log, search and the asking lints (2026-10-14)
+
+| Where | Before | Now |
+|---|---|---|
+| The packet (6.6, 6.22) | No knowledge in packets | The stable part holds workspace-wide active rules (a stage-checked rule as one line), task-kind lessons and the glossary while small; the per-input part holds narrower rules and lessons, routing, used glossary terms and the input's projects' facts, dated, sourced, ranked and cut at `knowledge.facts_budget`. Scope is filtered at build; untrusted entries show as data. Built: `tests/test_knowledge_section.py` |
+| The run (5.1, 6.22) | No knowledge log | `Run.knowledge`: given, left out by scope, facts left out, the stable section's size, and searches. Built: `tests/test_knowledge_section.py::test_a_processed_requests_run_records_the_knowledge_it_was_given` |
+| Search (6.22) | Designed | A run may answer with a search; the engine searches facts, past inputs, records and knowledge, at most `knowledge.search_rounds` times. Built: `tests/test_search.py` |
+| Lints (4.17) | Designed | `already-known` (return) on asking ops from a run that didn't search; `near-duplicate-question` (warn) against the same person's questions within 14 days. Built: `tests/test_search.py` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

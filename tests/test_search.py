@@ -175,7 +175,7 @@ def test_a_run_that_asks_to_search_gets_the_results_and_then_answers(env):
     assert first.data["knowledge"]["searches"] == [
         {"words": "interior file deadline", "kinds": ["facts"], "results": 1}
     ]
-    assert not second.data.get("knowledge")
+    assert second.data["knowledge"]["searches"] == []  # every run logs what it was given; only the asking run searched
 
 
 def test_a_search_uses_up_no_fix_round_and_no_try(env):

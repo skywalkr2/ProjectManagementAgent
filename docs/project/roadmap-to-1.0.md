@@ -901,25 +901,26 @@ Settled with the original designer (answers to L2's three questions and notes fr
   several; workspace-wide rules in the person's own words last. A rule enforced by a stage check sends only its one-line
   form in the always-sent section, and its full text in the per-input part for the runs it covers. Nothing is dropped
   silently. "Review your standing rules" shows at most once a week, with the section's size and the count moved.
-- [ ] **The section's size is in the knowledge log on every run, from the first L2 commit**, so the budget's default is
-  set from real numbers (five rules on one busy day is normal).
-- [ ] **Scope is filtered when the packet is built**, never left to the model: an excluded project's rules (`except`) are
-  left out of its packets altogether, and the knowledge log says they were left out.
-- [ ] **Local first:** the `search` round runs over records, facts and past inputs before any outside lookup is proposed,
+  Built so far: the order and the one-line form (`tests/test_knowledge_section.py::test_over_the_budget_rules_leave_narrowest_first_and_nothing_is_dropped`, `tests/test_knowledge_section.py::test_a_rule_a_stage_check_enforces_is_one_line_in_the_stable_part_and_whole_in_the_per_input_part`); the weekly "Review your standing rules" line is still to build.
+- [x] **The section's size is in the knowledge log on every run, from the first L2 commit**, so the budget's default is
+  set from real numbers (five rules on one busy day is normal). Built: `tests/test_knowledge_section.py::test_a_processed_requests_run_records_the_knowledge_it_was_given` (`stable_chars`).
+- [x] **Scope is filtered when the packet is built**, never left to the model: an excluded project's rules (`except`) are
+  left out of its packets altogether, and the knowledge log says they were left out. Built: `tests/test_knowledge_section.py::test_an_excluded_projects_run_gets_neither_the_rule_nor_the_lesson_and_the_log_says_so`, `tests/test_knowledge_section.py::test_a_narrowed_rule_reaches_only_the_runs_it_covers`.
+- [x] **Local first:** the `search` round runs over records, facts and past inputs before any outside lookup is proposed,
   and an outside lookup from a run that hasn't searched is sent back to search first. `already-known` runs before every
-  question op, to anyone, the person included, not only questions to others.
+  question op, to anyone, the person included, not only questions to others. Built: `tests/test_search.py::test_a_question_the_workspace_answers_is_sent_back_once_with_the_match`, `tests/test_search.py::test_already_known_checks_a_question_to_someone_else_and_a_report_too`, `tests/test_search.py::test_a_question_from_a_run_that_searched_is_not_sent_back`. There is no outside lookup op yet (C4); when it comes, it joins `ASKING_OPS` in `engine/search.py` and the same lint covers it.
 - [ ] **The stable prefix has a budget** (the original designer's L0 sign-off, 2026-10-13): rules arrive in bursts, so the stable section has a size budget (a setting)
   and the knowledge log counts its rules; a rule that hasn't applied in 30 days (a setting) is flagged for review on
   the daily card instead of the prefix growing forever.
-- [ ] The knowledge section, split so the cached prefix holds:
+- [x] The knowledge section, split so the cached prefix holds:
   - stable: all rules, task-kind lessons and a small glossary;
-  - per input: the rest.
+  - per input: the rest. Built: `tests/test_knowledge_section.py::test_the_stable_part_holds_only_workspace_wide_rules_task_kind_lessons_and_a_small_glossary`, `tests/test_knowledge_section.py::test_two_inputs_of_a_batch_share_the_same_stable_knowledge_in_their_packets`, `tests/test_knowledge_section.py::test_lessons_and_routing_reach_the_runs_for_their_projects_and_people`, `tests/test_knowledge_section.py::test_untrusted_entries_are_shown_as_data_with_their_source_and_never_as_guidance`, `tests/test_knowledge_section.py::test_proposed_discarded_expired_and_retired_entries_never_go_in`. Style notes come with the drafting tasks.
 - [ ] The batch prefix is not frozen, so each input sees what the inputs before it in the batch did.
-- [ ] Facts of the input's projects, with their date and source, ranked and cut at a budget, with what was left out said.
-- [ ] Superseded facts leave the packet.
-- [ ] The `search` round, at most two per run, over facts, past inputs, records and knowledge.
-- [ ] The `already-known` and `near-duplicate-question` lints.
-- [ ] The knowledge log on each run.
+- [x] Facts of the input's projects, with their date and source, ranked and cut at a budget, with what was left out said. Built: `tests/test_knowledge_section.py::test_facts_are_dated_sourced_and_ranked_key_first_then_overlap_then_newest`, `tests/test_knowledge_section.py::test_facts_are_cut_at_the_budget_and_the_count_left_out_is_said`.
+- [x] Superseded facts leave the packet. Built: `tests/test_knowledge_section.py::test_a_fact_a_newer_one_replaces_is_left_out_until_the_newer_one_goes`.
+- [x] The `search` round, at most two per run, over facts, past inputs, records and knowledge. Built: `tests/test_search.py::test_a_run_that_asks_to_search_gets_the_results_and_then_answers`, `tests/test_search.py::test_a_run_that_keeps_asking_must_answer_after_the_configured_rounds`, `tests/test_search.py::test_a_search_uses_up_no_fix_round_and_no_try`, `tests/test_search.py::test_a_search_that_would_push_the_next_call_over_the_run_limit_stops_the_run_with_the_usual_reason`, `tests/test_search.py::test_results_from_an_outside_input_make_the_work_untrusted`.
+- [x] The `already-known` and `near-duplicate-question` lints. Built: `tests/test_search.py::test_already_known_returns_a_question_a_fact_answers`, `tests/test_search.py::test_near_duplicate_question_fires_at_and_above_the_similarity_and_not_below`, `tests/test_search.py::test_near_duplicate_question_ignores_a_similar_question_to_a_different_person`. The plain check behind `already-known` reads facts and active knowledge; the run's own search also reaches past inputs and records.
+- [x] The knowledge log on each run. Built: `tests/test_knowledge_section.py::test_a_processed_requests_run_records_the_knowledge_it_was_given` and `tests/test_search.py::test_a_run_that_asks_to_search_gets_the_results_and_then_answers` (what it was given, left out by scope, facts left out, the section's size, its searches). Present and applied per rule is the item above.
 - [ ] Every invariant has a one-line constraint in the reference of the ops it constrains, checked by the self-check.
 - [ ] Refusals counted per check; a check that refuses often brings its seed lesson into the packet.
 - [ ] One plugin API call that gives a pack's packets the same section (phase C's exit test depends on it).

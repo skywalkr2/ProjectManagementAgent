@@ -10,6 +10,16 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.66 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.
+
+- **A run's knowledge log**: the core `run` record gains an optional `knowledge` (what it was given from what was learned,
+  what was left out by scope, facts left out, the size of the always-sent section, and its searches).
+- **Two core lints**, `already-known` and `near-duplicate-question`, on the core's asking ops; a workspace sets their
+  severity in its checks like any lint.
+- A pack's own packets don't get the knowledge section yet; that is one plugin API call, coming in L2's second wave.
+
 ## What 0.3.65 adds
 
 Manifests stay `'>=0.3,<0.4'`.
