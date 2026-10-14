@@ -22,6 +22,7 @@ from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
 from engine.config.yaml_edit import set_key
 from engine.intake import is_reported, source_text
+from engine.learning import request_learns
 from engine.names import People
 from engine.ops import (
     EVIDENCE_FIELDS,
@@ -1351,7 +1352,9 @@ def _release_one(
         op = _substitute(op, name, person)
     req = store.read().get("request", cs.data["request"])
     text = source_text(ws, store, req.data.get("source")) if ws is not None and req is not None else ""
-    people = People.for_input(store, cfg, cs.data["request"], text)
+    people = People.for_input(
+        store, cfg, cs.data["request"], text, learns=request_learns(store, req.data) if req is not None else True
+    )
     inputs = Inputs(cs.data["request"], req.data.get("source") if req else None, "", "", cs.data["trust"])
     ctx = Context(store, cfg, people, tuple(), inputs, confirmed_by_pm=True)
     refusals = store.plugins.validators(op)

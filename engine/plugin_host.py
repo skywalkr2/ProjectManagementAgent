@@ -1404,6 +1404,8 @@ class PluginHost:
                 raise ValueError(f"{model.record_kind}.content_levels_field must name one of its list[str] fields")
             if model.data_level not in ("open", "internal", "restricted"):
                 raise ValueError("data_level must be open, internal or restricted")
+            if model.learning not in ("core", "own"):
+                raise ValueError('learning must be "core" or "own"')
             if model.data_level not in manifest.requires.data_levels:
                 raise ValueError(
                     f"{model.record_kind} holds {model.data_level} material, which the add-on doesn't say it keeps"

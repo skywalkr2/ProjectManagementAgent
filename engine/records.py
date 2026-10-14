@@ -33,6 +33,11 @@ class Record(BaseModel):
     unique: ClassVar[tuple[tuple[str, ...], ...]] = ()
     #: How sensitive these records are: packets that include them go only to accounts allowed this level.
     data_level: ClassVar[str] = "internal"
+    #: "core" (the default) or "own". A pack whose records are not workspace knowledge (a story's cast and plan)
+    #: declares "own": the core's learning from inputs, new-term scan, first-name resolution against people and fact
+    #: ranking into the workspace's facts then don't run on work about these records. The pack keeps its own plan
+    #: records; its task kinds can still ask for the person's rules and lessons (`view.knowledge`).
+    learning: ClassVar[str] = "core"
     #: The field (a list of ids from ai.content_levels) holding the content levels the person set on a record; work on
     #: the record goes only to accounts that take them. Only the person sets it.
     content_levels_field: ClassVar[str | None] = None

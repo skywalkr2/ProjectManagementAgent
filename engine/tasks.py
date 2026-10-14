@@ -53,6 +53,7 @@ class TaskKind:
     start_where: dict[str, tuple[Any, ...]] = _field(default_factory=dict)  # and, for runs the person starts, these
     all_or_nothing: bool = False  # the answer's ops apply together or not at all
     requires_ops: tuple[str, ...] = ()  # an answer must include at least one of these ops
+    learning: str = "core"  # "own": the core's own learning steps don't run on this work (engine/learning.py)
 
     def offered_on(self, record: Any, texts: Callable[[str], bool | None] | None = None) -> bool:
         """Whether this work applies to a record (of kind `on`): every `where` field holds one of its values."""

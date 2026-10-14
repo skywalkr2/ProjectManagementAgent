@@ -108,10 +108,15 @@ class People:
         return self
 
     @classmethod
-    def for_input(cls, store: Store, cfg: Config, request_id: str, text: str = "") -> People:
+    def for_input(cls, store: Store, cfg: Config, request_id: str, text: str = "", *, learns: bool = True) -> People:
         """The people, with the context of one request's input: who it is from and to (the saved details of a watched
-        message, then the header lines of `text`), and the people of the project it is about."""
+        message, then the header lines of `text`), and the people of the project it is about. For work the core's
+        learning steps don't run on (`learns` False), first names are never resolved: a name resolves only as an id, a
+        full name or an alias."""
         people = cls(store, cfg)
+        if not learns:
+            people._firsts = {}
+            return people
         people.in_context = people.in_context | people._input_people(store, request_id, text)
         return people
 

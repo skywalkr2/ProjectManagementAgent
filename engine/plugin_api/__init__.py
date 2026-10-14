@@ -554,6 +554,32 @@ class PacketContext(ReadView):
         self.request = request
         self.part = dict(part) if part else None
 
+    #: Set by the host: builds the knowledge section for `knowledge`.
+    read_knowledge: Callable[[str, list[str]], KnowledgeParts] | None = None
+
+    def knowledge(self, text: str = "", *, projects: Sequence[str] = ()) -> KnowledgeParts:
+        """What the workspace has learned that applies to this run, as two parts the packet places: the standing
+        rules, the lessons for this task kind and a small glossary (the `stable` part, the same for every run of the
+        kind), and the rules, lessons, routing, glossary terms and facts that depend on this run (the `per_input`
+        part). Put `stable` in `PacketParts.stable` and `per_input` in `PacketParts.request`; the core logs on the
+        run what the parts gave it, as for its own tasks, and refuses a packet that puts a part in the wrong list.
+        `text` is the words that decide which terms and facts apply (a chapter's text, say); it is only read, never
+        sent. The run's projects are the request's project and the one the record is in; `projects` adds others. A
+        rule or lesson whose scope excludes every one of them is left out, and lessons and rules aimed at this task
+        kind (by its `<plugin>/<name>`) reach it. For work declared `learning` "own" (a task kind, or the record type
+        it works on), facts are left out and no names are matched against people. A packet that never calls this gets
+        nothing new."""
+        if not isinstance(text, str):
+            raise PluginMisuse("the text knowledge is chosen by must be a string")
+        named = list(projects) if isinstance(projects, (list, tuple)) else None
+        if named is None or not all(isinstance(p, str) for p in named):
+            raise PluginMisuse("projects must be a list of project ids")
+        if self.read_knowledge is None:
+            return KnowledgeParts(
+                KnowledgePart("Knowledge", "", True, section="stable"), KnowledgePart("Knowledge", "")
+            )
+        return self.read_knowledge(text, named)
+
 
 class ActionContext(ReadView):
     """What a person action sees: core and own records, file bytes, the plugin's settings and its declared programs.
@@ -909,6 +935,25 @@ class Part:
 
 
 @dataclass
+class KnowledgePart(Part):
+    """A `Part` made by `view.knowledge`: text the core wrote, shown as it is (its own headings, entries from outside
+    content marked as data) and never quotable as evidence. `section` says which list of `PacketParts` it belongs
+    in."""
+
+    section: str = "per_input"
+    _given: Any = field(default=None, repr=False, compare=False)
+
+
+@dataclass
+class KnowledgeParts:
+    """The two parts `view.knowledge` returns: `stable` for `PacketParts.stable` and `per_input` for
+    `PacketParts.request`. Either text may be empty, when nothing applies; an empty part is left out of the packet."""
+
+    stable: Part
+    per_input: Part
+
+
+@dataclass
 class PacketParts:
     """What a run of a plugin's task kind sees beyond its instructions. `stable` parts are the same on every run of the
     kind for the same record (a style sheet, the summaries around a chapter) and go first, so providers can reuse a
@@ -1152,6 +1197,7 @@ class Registrar:
         temperature: float | None = None,
         all_or_nothing: bool = False,
         requires_ops: tuple[str, ...] | list[str] = (),
+        learning: str = "core",
     ) -> None:
         """Register AI work: the core or own ops its answer may use, and `label`, what to call it on screen.
 
@@ -1205,7 +1251,12 @@ class Registrar:
         `requires_ops` names ops (from `ops`) an answer must include at least one of, for work whose every answer
         reports (findings, or an explicit "nothing found"): an answer with none of them is refused like any
         invariant, which gets the usual fix round, then a stronger tier; one still without them is held for the
-        person as refused."""
+        person as refused.
+
+        `learning` is "core" (the default) or "own". With "own" the core's learning from inputs, new-term scan,
+        first-name resolution against people and fact ranking into the workspace's facts don't run on this work, and
+        a run's knowledge section (`view.knowledge`) leaves out facts. A task kind working `on` a record type that
+        declares `learning = "own"` is treated the same."""
         from engine.config.schema import TaskSettings
 
         self._name(name)
@@ -1215,6 +1266,8 @@ class Registrar:
             raise ValueError("only a draft task kind is anchored or asks questions")
         if role not in ("write", "check", "research"):
             raise ValueError('a task kind\'s role is "write", "check" or "research"')
+        if learning not in ("core", "own"):
+            raise ValueError('a task kind\'s learning is "core" or "own"')
         if not isinstance(questions, int) or not 0 <= questions <= 20:
             raise ValueError("questions is how many a draft may ask, from 0 to 20")
         narrowed = _narrowed(where, on)
@@ -1264,6 +1317,7 @@ class Registrar:
             role=role,
             all_or_nothing=bool(all_or_nothing),
             requires_ops=tuple(requires_ops),
+            learning=learning,
         )
 
     def _own_file(self, name: str, folder: str) -> Path | None:
@@ -1959,6 +2013,7 @@ __all__ = [
     "LongText",
     "Unit",
     "Part",
+    "KnowledgeParts",
     "PacketParts",
     "Proposal",
     "NewFile",

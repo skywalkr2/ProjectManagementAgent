@@ -18,7 +18,7 @@ For a plugin's own tests, install the host from its repository without the web s
 
 One distribution may ship several plugins. They may share a helper package of their own (a module neither plugin registers from); what a plugin may not do is import another plugin's registered package or read its records.
 
-Import everything from `engine.plugin_api`: `ConnectorError`, `retry_after`, `Poll`, `SourceItem`, `EventDetails`, `MessageDetails`, `PLUGIN_API_VERSION`, `Settings`, `Record`, `OpModel`, `EvidenceIn`, `ANY`, `NeedsPerson`, `PluginMisuse`, `RefTo`, `InList`, `Tier`, `WriteContext`, `Stored`, `StoreError`, `ReadView`, `OpWriter`, `EventContext`, `ActionContext`, `LintFinding`, `TakeBack`, `WorkingCopyContext`, `InterfaceItem`, `TodayLine`, `CORE_LINE_ACTIONS`, `PacketContext`, `LongText`, `Unit`, `Part`, `PacketParts`, `Proposal`, `NewFile`, `Preview`, `Choice`, `Group`, `Item`, `Registrar`, `StageDefinition`, `StageCheckResult`, `StageStatus`, `SetupState`, `ToolBox`, `ToolResult`, `ToolError`. Nothing else in the host is an API.
+Import everything from `engine.plugin_api`: `ConnectorError`, `retry_after`, `Poll`, `SourceItem`, `EventDetails`, `MessageDetails`, `PLUGIN_API_VERSION`, `Settings`, `Record`, `OpModel`, `EvidenceIn`, `ANY`, `NeedsPerson`, `PluginMisuse`, `RefTo`, `InList`, `Tier`, `WriteContext`, `Stored`, `StoreError`, `ReadView`, `OpWriter`, `EventContext`, `ActionContext`, `LintFinding`, `TakeBack`, `WorkingCopyContext`, `InterfaceItem`, `TodayLine`, `CORE_LINE_ACTIONS`, `PacketContext`, `LongText`, `Unit`, `Part`, `KnowledgeParts`, `PacketParts`, `Proposal`, `NewFile`, `Preview`, `Choice`, `Group`, `Item`, `Registrar`, `StageDefinition`, `StageCheckResult`, `StageStatus`, `SetupState`, `ToolBox`, `ToolResult`, `ToolError`. Nothing else in the host is an API.
 
 ## The manifest: plugin.yaml
 
@@ -114,7 +114,7 @@ Register an op: an `OpModel` subclass with a single literal `op` id and a `write
 
 Check a core or own op before it applies: `fn(op, view, origin)` (or `fn(op, view)`; `origin` may also be keyword-only) returns a list of refusal messages, empty to let it through. The view is the changeset so far. `origin` is {"actor": "pm" | "assistant" | "rule" | "plugin", "trust": "trusted" | "untrusted", "via": "screen" | "note" | "input" | "task" | "rule" | "action" | "handler" | "job", "task": the run's task kind, "about": the record it works on as {"kind", "id"} or None, "request": the run's request id or None, "part": the part of the record the request names (as given to `queue_request(part=)`) or None}; ops a plugin's event handler or job staged with `apply_op` have actor "plugin" and via "handler" or "job". A validator with a parameter named `settings` (or `**kwargs`) also gets the plugin's settings by keyword, so a check that depends on a setting is a validator, and its refusal is fed back in a fix round like any other; a refusal raised from an op's `apply` refuses the op without a fix round. Before anything applies, the core dry-runs the whole changeset in order (text writes included) and rolls it back, so a validator sees what earlier ops in it created; with the check at the write boundary, a validator usually runs about three times per op, so it must be pure and quick. There is no cache the core keeps for a pass: the view is made anew for each call. Cache costly derived data by its content (a hash of the text it comes from, say, in a module-level dictionary of bounded size), never by record id or version alone, since the changeset so far may change what a version holds.
 
-#### `registrar.task_kind(name: str, *, ops: tuple[str, ...] = (), label: str = '', output: str = 'ops', field: str | None = None, anchored: bool = False, questions: int = 0, where: dict[str, Any] | None = None, start_where: dict[str, Any] | None = None, role: str = 'write', prompt: str = 'notes', playbook: str = 'notes', on: str | None = None, packet: Callable | None = None, tier: str | None = None, max_output: int | None = None, expected_output: int | None = None, temperature: float | None = None, all_or_nothing: bool = False, requires_ops: tuple[str, ...] | list[str] = ()) -> None`
+#### `registrar.task_kind(name: str, *, ops: tuple[str, ...] = (), label: str = '', output: str = 'ops', field: str | None = None, anchored: bool = False, questions: int = 0, where: dict[str, Any] | None = None, start_where: dict[str, Any] | None = None, role: str = 'write', prompt: str = 'notes', playbook: str = 'notes', on: str | None = None, packet: Callable | None = None, tier: str | None = None, max_output: int | None = None, expected_output: int | None = None, temperature: float | None = None, all_or_nothing: bool = False, requires_ops: tuple[str, ...] | list[str] = (), learning: str = 'core') -> None`
 
 Register AI work: the core or own ops its answer may use, and `label`, what to call it on screen.
 
@@ -131,6 +131,8 @@ Register AI work: the core or own ops its answer may use, and `label`, what to c
 `all_or_nothing=True` applies an answer's ops together: if any is refused, none applies, and the changeset is recorded as refused with each op's reason, for ops that depend on each other (notes that summarize findings made in the same answer). Ops held for the person still wait as usual.
 
 `requires_ops` names ops (from `ops`) an answer must include at least one of, for work whose every answer reports (findings, or an explicit "nothing found"): an answer with none of them is refused like any invariant, which gets the usual fix round, then a stronger tier; one still without them is held for the person as refused.
+
+`learning` is "core" (the default) or "own". With "own" the core's learning from inputs, new-term scan, first-name resolution against people and fact ranking into the workspace's facts don't run on this work, and a run's knowledge section (`view.knowledge`) leaves out facts. A task kind working `on` a record type that declares `learning = "own"` is treated the same.
 
 #### `registrar.stage_check(id: str, fn: Callable) -> None`
 
@@ -244,6 +246,7 @@ Base for every stored record. A plugin's record type subclasses it and sets `rec
 | `person_only` | ClassVar[dict[str, tuple[Any, ...]]] | Field values only the person may set; an op from anyone else that sets one is held for the person. An empty tuple means every value of that field. |
 | `unique` | ClassVar[tuple[tuple[str, ...], ...]] | Field groups whose values must be unique among live records of this kind. |
 | `data_level` | ClassVar[str] | How sensitive these records are: packets that include them go only to accounts allowed this level. |
+| `learning` | ClassVar[str] | "core" (the default) or "own". A pack whose records are not workspace knowledge (a story's cast and plan) declares "own": the core's learning from inputs, new-term scan, first-name resolution against people and fact ranking into the workspace's facts then don't run on work about these records. The pack keeps its own plan records; its task kinds can still ask for the person's rules and lessons (`view.knowledge`). |
 | `content_levels_field` | ClassVar[str \| None] | The field (a list of ids from ai.content_levels) holding the content levels the person set on a record; work on the record goes only to accounts that take them. Only the person sets it. |
 | `layout` | ClassVar[str \| None] | Where each record is written in the synced folder, relative to its project's folder (or the workspace's, for a record in no project), without an extension: "plan/chapters/{order:02}-{slug}". `{field}` and `{field:format}` take the record's own values (and `{id}`); a missing value becomes the id. The core adds the extension: a record with one long text field is a Markdown file, its other fields as front matter and the current text as the body; a record with none is a YAML file; one with several is a folder holding `record.yaml` and a file per field. Every version of its long text is kept beside it, in `.versions/`. None: the record is only in the folder's machine copy. |
 | `layout_collection` | ClassVar[bool] | With a layout, write every record whose path renders the same into one YAML file: a list of entries, each with its id. Not for record types with long text. Edits made outside come back per entry: a changed entry as a field edit and a removed one as a delete, both waiting for the person; an added entry is reported, not created. |
@@ -662,9 +665,22 @@ One piece of what an AI run sees, in a task kind's packet. Untrusted content (th
 | `data_level` | str \| None | `None` |
 | `no_copy` | bool | `False` |
 
+### KnowledgeParts
+
+The two parts `view.knowledge` returns: `stable` for `PacketParts.stable` and `per_input` for `PacketParts.request`. Either text may be empty, when nothing applies; an empty part is left out of the packet.
+
+| Field | Type | Default |
+|---|---|---|
+| `stable` | Part | required |
+| `per_input` | Part | required |
+
 ### PacketContext
 
 The read view a task kind's packet function gets, with `origin`, who started the run: "pm" (the person, so the note is their own words), "input" (an outside input) or "schedule" (a schedule, a stage entry or a plugin's request). A note from anyone but the person is shown to the run as untrusted material. `request` is the run's request id and `part` the part of the record it names (as given to `queue_request(part=)`), or None.
+
+#### `view.knowledge(text: str = '', *, projects: Sequence[str] = ()) -> KnowledgeParts`
+
+What the workspace has learned that applies to this run, as two parts the packet places: the standing rules, the lessons for this task kind and a small glossary (the `stable` part, the same for every run of the kind), and the rules, lessons, routing, glossary terms and facts that depend on this run (the `per_input` part). Put `stable` in `PacketParts.stable` and `per_input` in `PacketParts.request`; the core logs on the run what the parts gave it, as for its own tasks, and refuses a packet that puts a part in the wrong list. `text` is the words that decide which terms and facts apply (a chapter's text, say); it is only read, never sent. The run's projects are the request's project and the one the record is in; `projects` adds others. A rule or lesson whose scope excludes every one of them is left out, and lessons and rules aimed at this task kind (by its `<plugin>/<name>`) reach it. For work declared `learning` "own" (a task kind, or the record type it works on), facts are left out and no names are matched against people. A packet that never calls this gets nothing new.
 
 ## Lints
 

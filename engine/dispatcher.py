@@ -29,6 +29,7 @@ from engine.ai.task import AiError, AiTask, provider_reason
 from engine.applier import Context, Inputs, apply_changeset, check, feedback, needs_another_round, undo
 from engine.cleaning import quoted_messages
 from engine.config import Config
+from engine.learning import request_learns
 from engine.moments import localize_ops
 from engine.names import People
 from engine.ops import CHANGESET, OP_MODELS, ChangesetIn
@@ -166,7 +167,13 @@ def process(
     allowed = store.plugins.task_kind(req.data["task"]).ops
     if req.data["task"] == "notes":
         allowed = ops_for_level(store, allowed, _data_level(store, req.data))
-    people = People.for_input(store, cfg, request_id, packet.raw_input if req.data.get("source") else "")
+    people = People.for_input(
+        store,
+        cfg,
+        request_id,
+        packet.raw_input if req.data.get("source") else "",
+        learns=request_learns(store, req.data),
+    )
     ctx = Context(store, cfg, people, allowed, inputs, hidden_words(cfg), searched=False)
 
     previous_ops = _previous_ops(store, req.data.get("previous"))

@@ -17,6 +17,7 @@ from engine.cleaning import Cleaned, clean
 from engine.config import Config
 from engine.intake import source_text
 from engine.knowledge_section import per_input_section, stable_section
+from engine.learning import request_learns
 from engine.names import People
 from engine.ops import reference_for, schema_for
 from engine.playbook import guidance
@@ -105,6 +106,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         source=saved,
         text=f"{raw}\n{req.data.get('note') or ''}",
         today=today,
+        learns=request_learns(store, req.data),
     )
     stable = "\n\n".join(
         part
@@ -164,6 +166,8 @@ class _Learned:
     stable: str  # the knowledge every run of the task kind is sent
     per_input: str  # the knowledge that depends on the input
     log: RunKnowledge
+    stable_log: RunKnowledge  # the part of the log the stable text accounts for
+    per_input_log: RunKnowledge  # and the part the per-input text accounts for
 
 
 def _learned(
@@ -176,25 +180,45 @@ def _learned(
     source: Stored | None,
     text: str,
     today: date,
+    learns: bool = True,
 ) -> _Learned:
     """What the workspace has learned that applies to this run (design 6.22), and the log of it for the run's record.
     The input's projects are the one it was handed in for and the ones its source names; its people are those the text
-    mentions."""
+    mentions. Work the core's learning doesn't run on (`learns` False) is matched to no people and gets no facts."""
     settings = cfg.dispatch.knowledge
     view = store.read()
     named = [*projects, *(source.data.get("projects", []) if source is not None else [])]
     in_input = [p for p in dict.fromkeys(named) if view.get("project", p) is not None]
     stable = stable_section(view, kind.name, settings)
     per_input = per_input_section(
-        view, kind.name, in_input, people.mentioned_in(text), text, today, settings, moved=stable.moved
+        view,
+        kind.name,
+        in_input,
+        people.mentioned_in(text) if learns else (),
+        text,
+        today,
+        settings,
+        moved=stable.moved,
+        facts=learns,
     )
-    log = RunKnowledge(
-        given=list(dict.fromkeys([*stable.ids, *per_input.ids])),
+    stable_log = RunKnowledge(given=list(dict.fromkeys(stable.ids)), stable_chars=len(stable.text))
+    per_input_log = RunKnowledge(
+        given=list(dict.fromkeys(per_input.ids)),
         left_out_by_scope=per_input.left_out_by_scope,
         facts_left_out=per_input.facts_left_out,
-        stable_chars=len(stable.text),
     )
-    return _Learned(stable.text, per_input.text, log)
+    return _Learned(stable.text, per_input.text, _merged_logs([stable_log, per_input_log]), stable_log, per_input_log)
+
+
+def _merged_logs(logs: list[RunKnowledge]) -> RunKnowledge:
+    """One knowledge log from the logs of the parts a packet placed: what was given and left out, in order and once
+    each, the facts left out added up, and the size of the biggest stable text."""
+    return RunKnowledge(
+        given=list(dict.fromkeys(i for log in logs for i in log.given)),
+        left_out_by_scope=list(dict.fromkeys(i for log in logs for i in log.left_out_by_scope)),
+        facts_left_out=sum(log.facts_left_out for log in logs),
+        stable_chars=max((log.stable_chars for log in logs), default=0),
+    )
 
 
 def _note_attributes(store: Store, cfg: Config, source_id: str, source: Stored | None) -> str:
@@ -301,6 +325,7 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
         source=None,
         text=question,
         today=today,
+        learns=request_learns(store, req.data),
     )
     records = "\n\n".join(
         part
@@ -388,7 +413,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     """A run of a plugin's task kind sees its instructions, the op reference, its guidance and the parts the plugin's
     packet function returns: stable parts first, this run's parts last. Content is marked by trust; reference-only
     parts are marked not to be quoted."""
-    from engine.plugin_api import PacketContext, PacketParts
+    from engine.plugin_api import KnowledgePart, PacketContext, PacketParts
 
     plugin = kind.name.split("/", 1)[0]
     about = target_of(store, req.data)
@@ -405,6 +430,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         PacketContext(store.read(), plugin, req.data["origin"], request=req.id, part=req.data.get("part"))
     )
     config = store.plugins.registrars[plugin].config.model_copy(deep=True)
+    view.read_knowledge = _knowledge_reader(store, cfg, kind, req, target, today)
     try:
         parts = kind.packet(target, view, config, note)
     except StoreError as err:
@@ -416,6 +442,13 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         store.plugins.disable(plugin, f"packet for {kind.name} returned something other than PacketParts")
         raise PacketRefused("the add-on this work belongs to failed, and was turned off")
     every = [*parts.stable, *parts.request]
+    knowledge = [p for p in every if isinstance(p, KnowledgePart)]
+    placed_wrong = [p for p in parts.stable if isinstance(p, KnowledgePart) and p.section != "stable"] + [
+        p for p in parts.request if isinstance(p, KnowledgePart) and p.section != "per_input"
+    ]
+    if placed_wrong or any(p._given is None for p in knowledge):
+        store.plugins.disable(plugin, f"packet for {kind.name} placed a knowledge part in the wrong list")
+        raise PacketRefused("the add-on this work belongs to failed, and was turned off")
     instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
     drafting = kind.output == "draft"
     stable_parts = [
@@ -431,7 +464,7 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         request_parts.append(f'<untrusted source="note">\n{note}\n</untrusted>')
     elif note:
         request_parts.append(f"<note>\n{note}\n</note>")
-    request_parts += [_render_part(p) for p in parts.request]
+    request_parts += [rendered for p in parts.request if (rendered := _render_part(p))]
     anchor_units = None
     part = req.data.get("part")
     if drafting:
@@ -477,13 +510,16 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         "\n\n".join(request_parts),
     )
     task = _sized(cfg, kind, task, parts)
+    log = _merged_logs([p._given for p in {id(p): p for p in knowledge}.values()]) if knowledge else None
+    if log is not None:
+        task = replace(task, knowledge=log.model_dump())
     base = None
     if drafting:
         from engine.texts import current
 
         now = current(store.read(), target.kind, target.id, kind.field)
         base = now.data["number"] if now else None
-    quotable = "\n\n".join(p.text for p in every if not p.reference_only)
+    quotable = "\n\n".join(p.text for p in every if not p.reference_only and not isinstance(p, KnowledgePart))
     empty = Cleaned("", 0, 0, False, 0)
     return Packet(
         task,
@@ -497,7 +533,36 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
         draft_base=base,
         anchor_units=anchor_units,
         data_level=_highest([p.data_level for p in every if p.data_level]),
+        knowledge=log,
     )
+
+
+def _knowledge_reader(store: Store, cfg: Config, kind: TaskKind, req: Stored, target: Stored | None, today: date):
+    """What `view.knowledge` calls in a plugin's packet function: the knowledge section for this task kind, the
+    request's project and the record's project (and any the plugin adds), and the text the plugin names, as parts
+    that carry what they give to the run's log."""
+    from engine.plugin_api import KnowledgePart, KnowledgeParts
+
+    def read(text: str, more: list[str]) -> KnowledgeParts:
+        record = target.data.get("project") if target is not None else None
+        projects = [p for p in (req.data.get("project"), record, *more) if isinstance(p, str)]
+        learned = _learned(
+            store,
+            cfg,
+            kind,
+            People(store, cfg),
+            projects=projects,
+            source=None,
+            text=text,
+            today=today,
+            learns=request_learns(store, req.data),
+        )
+        return KnowledgeParts(
+            KnowledgePart("Standing knowledge", learned.stable, True, section="stable", _given=learned.stable_log),
+            KnowledgePart("Knowledge for this run", learned.per_input, True, _given=learned.per_input_log),
+        )
+
+    return read
 
 
 def _sized(cfg: Config, kind: TaskKind, task: AiTask, parts: object) -> AiTask:
@@ -533,6 +598,11 @@ def _field_format(store: Store, kind: str, field: str) -> str:
 
 
 def _render_part(part: object) -> str:
+    from engine.plugin_api import KnowledgePart
+
+    if isinstance(part, KnowledgePart):
+        # The knowledge section carries its own headings and marks outside entries as data.
+        return part.text
     title = " ".join(str(part.title).split()).replace('"', "'")
     if part.reference_only:
         return f'<reference quote="no" source="{title}">\n{part.text}\n</reference>'

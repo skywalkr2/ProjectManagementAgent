@@ -223,13 +223,14 @@ def per_input_section(
     today: date,
     settings: KnowledgeSettings,
     moved: Iterable[str] = (),
+    facts: bool = True,
 ) -> PerInput:
     """The knowledge that depends on the input: rules narrowed to some projects or task kinds that cover it, rules a
     stage check enforces (in full) and rules that moved out of the stable part; lessons for its projects or people;
     routing for its people and projects; the glossary terms it uses once the glossary is too large to send whole;
     then the facts of its projects, ranked and cut at `facts_budget`. `text` is the input's words, which decide the
     terms and rank the facts. Returns the text, the ids given, the ids left out by scope, and how many facts didn't
-    fit."""
+    fit. With `facts` False (work the core's learning doesn't run on) the facts are left out."""
     project_set, people_set, moved_set = set(projects), set(people), set(moved)
     ids: list[str] = []
     left_out: set[str] = set()
@@ -302,7 +303,9 @@ def per_input_section(
             terms.append((entry, _term_line(entry)))
     add(HEADINGS["input_glossary"], terms)
 
-    fact_text, fact_ids, cut = _facts_section(view, project_set, text, today, settings.facts_budget)
+    fact_text, fact_ids, cut = (
+        _facts_section(view, project_set, text, today, settings.facts_budget) if facts else ("", [], 0)
+    )
     if fact_text:
         sections.append(fact_text)
         ids.extend(fact_ids)

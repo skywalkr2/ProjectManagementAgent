@@ -267,9 +267,10 @@ def build() -> str:
                 _join(f"### {cls.__name__}", _para(_doc(cls)))
                 + "\n\n"
                 + _table(["Field", "Type", "Default"], _dataclass_rows(cls))
-                for cls in (api.PacketParts, api.Part)
+                for cls in (api.PacketParts, api.Part, api.KnowledgeParts)
             ),
             "### PacketContext\n\n" + _para(_doc(api.PacketContext)),
+            _methods(api.PacketContext, "view"),
         ),
         _section(
             "Lints",
