@@ -117,8 +117,8 @@ TASKS: dict[str, TaskKind] = {
     ),
     # Learning from one correction (design 6.22): at most one proposal, or none. A bad lesson is in every later packet,
     # so this is the stronger tier's work (engine/learn.py).
-    "learn.correction": TaskKind(
-        name="learn.correction",
+    "learn-correction": TaskKind(
+        name="learn-correction",
         ops=LEARN_OPS,
         prompt="learn-correction",
         playbook="learn-correction",

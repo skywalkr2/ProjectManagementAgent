@@ -23,7 +23,7 @@ KINDS: tuple[str, ...] = (*knowledge.KINDS, "rule")
 #: Where a proposal came from, for the line on Today: an input, or one of the person's corrections.
 FROM_INPUT, FROM_CORRECTION = "input", "correction"
 #: The task kinds whose proposals come from the person's corrections.
-CORRECTION_TASKS: tuple[str, ...] = ("learn.correction",)
+CORRECTION_TASKS: tuple[str, ...] = ("learn-correction",)
 #: The reasons a proposal is kept as discarded without the person having said no to its wording.
 JUST_THIS_TIME_REASON = "Just this time"
 NEAR_DISCARD_REASON = "Close to one you discarded"

@@ -793,6 +793,6 @@ knowledge:
   min_corrections_per_week: 10 # a task kind's week counts in the learning rates only with at least this many corrections
 ```
 
-Learning has two task kinds, so their tiers and budgets are set in `ai.yaml` like any other (4.8). `learn.correction` writes
-lessons and rules and defaults to the stronger tier. `learn.input` is part of an input's own run, so it uses that run's tier.
+Learning has two task kinds, so their tiers and budgets are set in `ai.yaml` like any other (4.8). `learn-correction` writes
+lessons and rules and defaults to the stronger tier. `learn-input` is part of an input's own run, so it uses that run's tier.
 

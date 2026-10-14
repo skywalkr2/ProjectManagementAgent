@@ -1710,13 +1710,13 @@ Built: `tests/test_proposals.py` (every test named in CHANGES.md section 55).
 
 **A direct edit isn't always a correction.** Sometimes the world changed, not the assistant: a later mail moved a due date,
 or work was handed over. Learning from that gives wrong lessons ("the assistant gets due dates wrong"). So:
-- the `learn.correction` packet carries every input received after the original run that touches the same records;
+- the `learn-correction` packet carries every input received after the original run that touches the same records;
 - it answers "nothing to generalize" unless the edit contradicts the evidence the run had at the time.
 
 **Which tier writes it.** A bad lesson is worse than none, because it is in every later packet. So there are two task kinds:
-- **`learn.correction`:** lessons, `lesson.update` and rules from corrections, on the stronger tier. These are rare and
+- **`learn-correction`:** lessons, `lesson.update` and rules from corrections, on the stronger tier. These are rare and
   high-value.
-- **`learn.input`:** glossary entries, routing and facts proposed from inputs. These come out of the input's own run, on its
+- **`learn-input`:** glossary entries, routing and facts proposed from inputs. These come out of the input's own run, on its
   tier, which is usually the low-cost one.
 
 Anything proposed after a repeat correction (a guard that already failed once) always runs on the stronger tier. Both kinds

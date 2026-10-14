@@ -10,6 +10,19 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.68 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes; a plugin that reads these records sees more fields.
+
+- **Learning from corrections:** a core task kind `learn-correction`, queued from a correction's signal; it proposes at
+  most one piece of knowledge. Rules from anyone but the person are proposals too (`rule.add` joins the knowledge adds).
+- **Core records:** a question gains `matters_for` and `dropped_reason`; a rule gains `trust`, `discard_reason`, the
+  origin `input` and the status `expired`; every knowledge record gains `more_evidence` (evidence merged from duplicate
+  proposals); signal kinds `just_this_time` and `change_requested`.
+- **Core ops:** `question.update`, `question.move`, `question.drop`, `question.mark_sent` (the person's), `mail.restore`
+  and `list.merge` (system tier).
+- **Core lints:** `several-questions` and `question-without-stake`.
+
 ## What 0.3.67 adds
 
 Manifests stay `'>=0.3,<0.4'`. A plugin that changes nothing keeps working unchanged.

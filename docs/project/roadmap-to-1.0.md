@@ -962,12 +962,12 @@ From L2:
 - [ ] The screen for the weekly "Review your standing rules" line: the flagged rules with their counts, the section's size
   and the rules moved, and Keep, Narrow and Retire on each (the routes are built), with the Knowledge screen (7.18).
 From L1:
-- [ ] **Knowledge proposals are writable on every account a chain can hold.** `learn.*` proposals and `lesson.update`
+- [ ] **Knowledge proposals are writable on every account a chain can hold.** `learn-*` proposals and `lesson.update`
   are allowed for every account a fallback chain can hold, locked-down agents included, and the switch check tests it;
   a loop that learns only on the main account stops learning silently on a fallback day.
   Decided (2026-10-14): the ops a task kind may use never depend on the account; the assistant never writes files, only
   changesets, so a locked-down agent proposes knowledge like any account. The switch check's knowledge round-trip is
-  built with the `learn` task kinds (L3) and is tested there.
+  built with the `learn` task kinds (L3) and is tested there. *Built in L3:* `tests/test_learn_correction.py::test_the_learning_proposal_applies_on_a_command_line_agent_account`. Left: the switch check's knowledge round-trip (L3 wave 2).
 - [ ] The exclusions of a scope, shown in words on the Learned line.
 From the original designer's lessons of 2026-10-14:
 - [ ] **"Change this" on every row the assistant made** (lesson 4): action, question, decision, calendar entry and fact
@@ -978,7 +978,7 @@ From the original designer's lessons of 2026-10-14:
   item, and the notes prompt's rules (`tests/test_corrections.py::test_change_this_records_a_signal_and_queues_a_notes_request_whose_packet_carries_the_item_as_it_is_now`,
   `tests/test_corrections.py::test_change_this_route_queues_the_request_and_names_the_signal`). Left: the note box on each
   row (the screens), and an op for the assistant to put an action on hold or drop an item (a note asking for either gets an
-  answer that says it can't).
+  answer that says it can't). *Built in L3 (engine and API):* `POST /api/items/{kind}/{id}/change` for the five kinds, with its signal and request (`tests/test_corrections.py`). Left: the row's button (wave 3), and ops for putting an item on hold or dropping it, which the assistant has none of yet (the missing-op list).
 - [ ] **The missing-op list** (lesson 2, design 6.13): every "no op can do this" in a run's result and every hand fix of
   the assistant's work, listed weekly on Quality, each becoming an op with its check and Undo or a recorded "the person
   does this". Checked against the code (2026-10-14), of the designer's six hand fixes: adding a person and logging a
@@ -996,12 +996,12 @@ From the original designer's lessons of 2026-10-14:
   everything learned, each entry tagged by where it came from. *Built in L3p (engine and API):* the route, the
   `just_this_time` signal, the mark on a repeat and the one Today line. Built: `tests/test_proposals.py::test_just_this_time_records_its_signal_discards_and_the_repeat_is_marked`, `tests/test_proposals.py::test_the_line_counts_both_origins_and_how_many_expired_since_the_person_last_looked`.
   *Left:* the button beside Keep on the Learned line, and the line's screen.
-- [ ] **One question per id** (afternoon lesson 2): the lint `several-questions` (default `return`) on a question or
+- [x] **One question per id** (afternoon lesson 2): the lint `several-questions` (default `return`) on a question or
   decision whose text holds two or more numbered questions, so each has its own answer and follow-through. A question
   about a gap in the person's own notes is asked only when a record depends on it (the `matters_for` item below), and
   questions that another tool wrote about an input are notes about the input, never passed on (the notes playbook).
   Built: the lint and its setting (`tests/test_corrections.py::test_several_questions_returns_a_question_or_decision_at_the_configured_number_and_not_below`),
-  and the notes prompt's one-question rule. Left: the playbook entry about questions another tool wrote.
+  and the notes prompt's one-question rule. Left: the playbook entry about questions another tool wrote. Built: `tests/test_corrections.py::test_several_questions_returns_a_question_or_decision_at_the_configured_number_and_not_below`, `tests/test_corrections.py::test_a_question_to_someone_else_without_a_stake_is_returned_and_then_held_so_it_is_never_sent`. The notes prompt says questions another tool wrote are notes about the input.
 - [ ] **An action with no owner is held with a suggestion** (afternoon lesson 4): the held "Pick an owner" proposes an
   owner and says why, from the workspace's routing entries, offers the nearest existing action to fold it into, and the
   unowned action stays visible until the owner is named, then is created at once. Before adding, the run looks for an
@@ -1010,7 +1010,7 @@ From the original designer's lessons of 2026-10-14:
   (`tests/test_corrections.py::test_an_unowned_action_is_held_with_the_owner_a_routing_entry_suggests_and_why`,
   `tests/test_corrections.py::test_the_nearest_open_action_is_offered_to_fold_it_into_at_the_near_duplicate_setting`,
   `tests/test_corrections.py::test_the_owner_suggestion_is_in_todays_line_and_the_held_items_ask`). Left: folding the
-  held action into the nearest one in one step, and the screen's use of the fields.
+  held action into the nearest one in one step, and the screen's use of the fields. *Built in L3:* the suggestion and the nearest action on the held item (`tests/test_corrections.py::test_an_unowned_action_is_held_with_the_owner_a_routing_entry_suggests_and_why`, `tests/test_corrections.py::test_the_nearest_open_action_is_offered_to_fold_it_into_at_the_near_duplicate_setting`). Left: folding it into that action in one step, and its screen.
 - [x] **Glossary ops offered to reading notes** (afternoon audit): `glossary.add` exists (L1) with `confidence: unknown`,
   but notes runs aren't offered it yet; they are with the learning task kinds here, so an unknown system name can be
   recorded or marked unknown. Built: reading notes is offered `glossary.add` and no other knowledge op, and it applies as a
@@ -1022,25 +1022,25 @@ From the original designer's lessons of 2026-10-14:
   its project tag on the row is phase B's. Built: the field on `question.add` and the question, and the lint
   `question-without-stake` (`tests/test_corrections.py::test_a_question_to_someone_else_without_a_stake_is_returned_and_then_held_so_it_is_never_sent`,
   `tests/test_corrections.py::test_the_stake_is_kept_on_the_question_and_both_lints_default_to_return_in_both_workspaces`).
-- [ ] **Rules become proposals like the rest of what is learned** (the original designer, 2026-10-14): one place to keep
+- [x] **Rules become proposals like the rest of what is learned** (the original designer, 2026-10-14): one place to keep
   or discard. Two guards: the person's own words (a rule stated in their note or answer) still apply at once with Undo,
   and only rules from the assistant, inputs or reported content become proposals, whose Keep shows the restatement the
   person agrees to; the held rule decisions already on Today move to the catch-up list once, when L3 starts, so nothing
   is lost and nothing is decided twice. *Built in L3p (engine and API):* `rule.add` from anyone but the person applies as a
   `proposed` rule, and the held decisions move once at startup. Built: `tests/test_proposals.py::test_a_rule_from_an_input_is_a_proposal_and_from_the_persons_note_is_active_with_undo`, `tests/test_proposals.py::test_held_rule_decisions_move_once_to_the_catch_up_list_and_running_twice_moves_them_once`,
   `tests/test_proposals.py::test_keeping_a_rule_proposal_makes_the_restatement_theirs_and_the_source_stays_outside_evidence`.
-  *Left:* the screen that shows the restatement and Keep (the Learned line and the review list).
+  *Left:* the screen that shows the restatement and Keep (the Learned line and the review list). Built: `tests/test_proposals.py::test_a_rule_from_an_input_is_a_proposal_and_from_the_persons_note_is_active_with_undo`, `tests/test_proposals.py::test_held_rule_decisions_move_once_to_the_catch_up_list_and_running_twice_moves_them_once`, `tests/test_learn_correction.py::test_a_lesson_change_from_learning_is_held_and_a_rule_from_learning_is_a_proposal`. The Keep screen is the "On screen" item's.
 - [ ] **A correction that will apply again is knowledge, never a code request** (the original designer's lessons from running, 2026-10-13): feedback on a question (Respond to
   the assistant) proposes a rule or a lesson whenever the correction generalizes, stated as the general case ("rows
   scoped to another team get no impact question unless they name our work"), not just this instance. A report to the
   maintainers (`report.draft`) whose content is a rule is refused and turned into that proposal. Dates are evidence: a
-  thing that launched today or earlier needs no question about whether it needs work. A learning pair for each.
-- [ ] A correction the person undid within its undo time doesn't teach: signals stay immutable, so learning nets out a
-  signal whose action was undone (a set-aside undone, a send-back withdrawn) instead of deleting it.
-- [ ] Learning from corrections (`learn.correction`, on the stronger tier): at most one proposal, or `lesson.update` when a
+  thing that launched today or earlier needs no question about whether it needs work. A learning pair for each. *Built in L3:* a report to the maintainers whose content is a rule is refused and turned into a proposal (`tests/test_learn_correction.py::test_a_report_to_the_maintainers_whose_content_is_a_rule_is_refused_and_a_real_one_is_not`), and a send-back or a picked owner is learned from at once. Left: an answer to "Respond to the assistant" queuing learning, and its learning pairs (L4).
+- [x] A correction the person undid within its undo time doesn't teach: signals stay immutable, so learning nets out a
+  signal whose action was undone (a set-aside undone, a send-back withdrawn) instead of deleting it. Built: `tests/test_learn_correction.py::test_a_message_the_person_took_back_within_its_undo_time_teaches_nothing`, `tests/test_learn_correction.py::test_learning_that_already_ran_is_undone_when_its_correction_is_netted` (`engine/learn.py::net_out`; the only undo in the code today that withdraws a correction is taking back Mark sent; others call it as they are built).
+- [x] Learning from corrections (`learn-correction`, on the stronger tier): at most one proposal, or `lesson.update` when a
   lesson should have caught it.
   - It runs at once when the person wrote something: a send-back note, or an answer to the assistant.
-  - Silent corrections are batched, including the `edited` signal for the person's direct edits.
+  - Silent corrections are batched, including the `edited` signal for the person's direct edits. Built: `tests/test_learn_correction.py::test_a_send_back_with_a_note_queues_one_learning_request_at_once_and_its_proposal_waits_for_keep`, `tests/test_learn_correction.py::test_silent_corrections_wait_for_the_next_batch_and_run_together`, `tests/test_learn_correction.py::test_more_than_one_proposal_refuses_the_whole_answer_and_asks_for_one`, `tests/test_learn_correction.py::test_nothing_to_generalize_makes_no_knowledge`, `tests/test_learn_correction.py::test_the_packet_holds_the_original_output_the_correction_and_the_given_knowledge_and_the_run_logs_it`.
 - [ ] **Questions can be corrected, and each correction is recorded** (design 6.8; found by the L0 audit): the question's
   own menu gets reword (`question.update`), reroute (`question.move`) and drop (`question.drop`, kept in a
   dropped-questions register with the reason), each person-only with Undo and each recording its signal (`reworded`,
@@ -1056,9 +1056,9 @@ From the original designer's lessons of 2026-10-14:
   `tests/test_corrections.py::test_an_edited_message_names_the_question_ids_and_the_run_that_wrote_them`). Left: the
   feedback task and its packet that states the item's current state, the "not me, ask X" routing proposal, and the menu
   on the question's row (the screens').
-- [ ] Learning from a direct edit sees the inputs that came after the original run, and says "nothing to generalize"
-  unless the edit contradicts the evidence the run had.
-- [ ] Learning from inputs (`learn.input`), with a rules-only scan for terms missing from the glossary: new terms, "not me,
+- [x] Learning from a direct edit sees the inputs that came after the original run, and says "nothing to generalize"
+  unless the edit contradicts the evidence the run had. Built: `tests/test_learn_correction.py::test_a_silent_corrections_packet_holds_the_inputs_that_arrived_after_the_original_run`.
+- [ ] Learning from inputs (`learn-input`), with a rules-only scan for terms missing from the glossary: new terms, "not me,
   ask X", rerouted questions, facts that supersede.
 - [x] Proposal rules:
   - the person's own words apply at once with Undo, and the rest wait for Keep;
@@ -1076,7 +1076,7 @@ From the original designer's lessons of 2026-10-14:
   (the original designer's L0 sign-off, 2026-10-13): at most 20 (a setting), ranked by how often the same kind of correction repeated; the rest expire with their
   count shown, as daily proposals do. *Built in L3p:* the selection, the ranking, the cap and the one-time start, the
   Today line and its route. Built: `tests/test_proposals.py::test_the_catch_up_list_caps_and_ranks_the_corrections_from_before_and_is_made_once`.
-  *Left:* queueing the learning runs for the chosen kinds (`learn.correction`, which doesn't exist yet: `catch_up.waiting`
+  *Left:* queueing the learning runs for the chosen kinds (`learn-correction`, which doesn't exist yet: `catch_up.waiting`
   is what it reads), and the list's screen.
 - [ ] **A correction fixes the class, not the instance** (the original designer's L0 sign-off, 2026-10-13): the learner's one proposal states the general case and its
   test (with evidence such as dates), and its learning pair checks the negative: a row that does name our work still

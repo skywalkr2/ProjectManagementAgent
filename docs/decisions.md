@@ -3,6 +3,42 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: Learning from corrections (L3a): choices made while building and merging
+
+**Decided by:** the technical PM, reviewing and merging L3's first wave. **What:** (1) the learning task kinds are named
+`learn-correction` and `learn-input` (a dot made their per-task settings path ambiguous); (2) a send-back and a picked
+owner are learned from at once, silent corrections in a batch every `knowledge.learn_every_minutes`, through ordinary
+requests with their estimate and go; (3) a learning run proposes at most one thing, and a second op refuses the answer;
+(4) a rule from learning is a proposal like any other (L3p's rule-status change wins over L3a's earlier hold), and
+`lesson.update` from learning is held; (5) netting reaches the one undo that withdraws a correction today (taking back
+Mark sent); (6) a report to the maintainers whose words match `language.rule_report_phrases` is refused and turned into
+a rule proposal, a phrase list by design; (7) learning runs show in What changed as task rows for now, to be labeled
+with the screens. **Impact:** design 6.22, roadmap L3; no change to scope.
+
+## 2026-10-14: The rules for proposals, built (phase L3p)
+
+**Decision:** The original designer's rules for proposals are built as designed (6.22, 7.18, 12.8): a rule is a proposal like the
+other kinds, duplicates merge, a close discard is not shown, "just this time" is a signal and a repeat is marked, one Today line
+holds everything learned, proposals from inputs expire in a daily sweep, and the corrections recorded before are chosen once
+into a catch-up list. Four choices the builder made, for review: (1) a `rule` record gains the status `expired`, the origin
+`input`, `trust`, `discard_reason` and `more_evidence`, the same as the four kinds, and every knowledge record gains
+`more_evidence` (the evidence of the proposals merged into it); (2) Keep also makes an entry's `trust` trusted, because the person
+kept its restatement and target as their own words (before, a kept entry from content stayed data in packets for good); (3) the
+catch-up list's state (when it was made, the chosen kinds, how many were left out, the rules moved) is a small file in the
+workspace's private folder, so it is made once per computer, because a record kind for it would be a design change; (4) a
+proposal "came from a correction" when it cites a signal or was written by a learning run on a correction, else from an input.
+
+**Decided by:** the technical PM's brief, from the original designer's answers; choices (1) to (4) are the builder's.
+
+**Why:** The brief needs somewhere to link merged evidence, to expire and discard rules, and to remember the one-time list; and
+Keep's promise (12.8) is that the person's own words become guidance.
+
+**Impact:** Design 6.22, 6.20, 7.18, 12.8 and CHANGES section 55. New settings `knowledge.discards_hold_days` (90),
+`knowledge.discard_similarity` (0.8), `knowledge.proposals_expire_days` (14) and `knowledge.catch_up_max` (20), with demo values in
+both workspaces. API: `GET /api/knowledge/proposals`, `GET /api/knowledge/catch-up`, `POST /api/knowledge/{id}/just-this-time`; the
+Today queue gains the kinds `learned` and `catch_up`; keep and discard take a rule id. The plugin guide is regenerated (core
+records changed). No change to scope.
+
 ## 2026-10-14: L3, correcting what the assistant made: the choices made while building
 
 **Decided by:** the builder, for the technical PM's review. **What:** (1) The corrections of a question are ops
@@ -19,7 +55,7 @@ by the same word-overlap matcher as the near-duplicate lint, and only offers; tw
 `owner_suggestion.match`). (7) `matters_for` and `dropped_reason` are kept on the question record. *Kind:* concepts
 (core), settings and a record field. **Why:** the designer's lessons from running named these hand fixes; each choice
 above was the narrowest one that keeps Undo and the signals truthful. **Impact:** design 4.17, 6.7, 6.8, 6.9, 6.13, 6.20,
-7.7 and CHANGES 55; plugin guide and OpenAPI regenerated; new lints default to `return`. No change to scope. Open: the
+7.7 and CHANGES 56; plugin guide and OpenAPI regenerated; new lints default to `return`. No change to scope. Open: the
 assistant has no op to put an action on hold or drop an item, so a "Change this" note asking for either gets an answer
 that says so (6.13's missing-op list); whether to add them is for the technical PM.
 
@@ -1109,7 +1145,7 @@ in phase L.
 **What:**
 1. **When learning runs.** A correction where the person wrote something (a send-back note, an answer to the assistant, a
    rule stated in Ask) is learned from at once, and the Learned line appears on that card. Silent corrections are batched.
-2. **Which tier writes it.** Lessons, lesson updates and rules come from `learn.correction` on the stronger tier, and so does
+2. **Which tier writes it.** Lessons, lesson updates and rules come from `learn-correction` on the stronger tier, and so does
    anything after a repeat correction. Terms, routing and facts proposed from inputs use the input's own tier.
 3. **Checking on a switch.** A switch of a tier's account or model offers the learning fixture pairs with their cost
    ("Switch and check"), as part of probation. A failed check shows on Today with Switch back.
@@ -3256,27 +3292,3 @@ where pasted material belongs (it stays untrusted there).
 **Impact:** Design 6.5, 6.6, 6.9, 4.6 and CHANGES section 43. New setting `language.bare_confirmation_words` (live) with demo
 values in both workspaces. API: optional `note` on the action status, They finished it, Followed up and pick-owner
 routes; `request` on their responses. No change to scope.
-
-## 2026-10-14: The rules for proposals, built (phase L3p)
-
-**Decision:** The original designer's rules for proposals are built as designed (6.22, 7.18, 12.8): a rule is a proposal like the
-other kinds, duplicates merge, a close discard is not shown, "just this time" is a signal and a repeat is marked, one Today line
-holds everything learned, proposals from inputs expire in a daily sweep, and the corrections recorded before are chosen once
-into a catch-up list. Four choices the builder made, for review: (1) a `rule` record gains the status `expired`, the origin
-`input`, `trust`, `discard_reason` and `more_evidence`, the same as the four kinds, and every knowledge record gains
-`more_evidence` (the evidence of the proposals merged into it); (2) Keep also makes an entry's `trust` trusted, because the person
-kept its restatement and target as their own words (before, a kept entry from content stayed data in packets for good); (3) the
-catch-up list's state (when it was made, the chosen kinds, how many were left out, the rules moved) is a small file in the
-workspace's private folder, so it is made once per computer, because a record kind for it would be a design change; (4) a
-proposal "came from a correction" when it cites a signal or was written by a learning run on a correction, else from an input.
-
-**Decided by:** the technical PM's brief, from the original designer's answers; choices (1) to (4) are the builder's.
-
-**Why:** The brief needs somewhere to link merged evidence, to expire and discard rules, and to remember the one-time list; and
-Keep's promise (12.8) is that the person's own words become guidance.
-
-**Impact:** Design 6.22, 6.20, 7.18, 12.8 and CHANGES section 55. New settings `knowledge.discards_hold_days` (90),
-`knowledge.discard_similarity` (0.8), `knowledge.proposals_expire_days` (14) and `knowledge.catch_up_max` (20), with demo values in
-both workspaces. API: `GET /api/knowledge/proposals`, `GET /api/knowledge/catch-up`, `POST /api/knowledge/{id}/just-this-time`; the
-Today queue gains the kinds `learned` and `catch_up`; keep and discard take a rule id. The plugin guide is regenerated (core
-records changed). No change to scope.

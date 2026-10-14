@@ -24,7 +24,7 @@ from engine.ops import ChangesetIn
 from engine.records import REGISTRY, RunKnowledge
 from engine.storage import WriteContext
 
-TASK = "learn.correction"
+TASK = "learn-correction"
 LEARNING_TASKS = (TASK,)
 #: Corrections the person wrote something for: looked at when they happen, while the person is still looking.
 AT_ONCE = ("sent_back", "routed")

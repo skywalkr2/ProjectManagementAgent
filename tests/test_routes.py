@@ -124,7 +124,7 @@ def test_send_back_queues_a_new_request(api):
     # Two requests wait: the work again, and the assistant's learning from the note.
     assert client.get(f"{base}/status").json()["requests"]["queued"] == 2
     queued = [r for r in client.app.state.store.read().list("request") if r.data["state"] == "queued"]
-    assert {r.data["task"] for r in queued} == {"notes", "learn.correction"} and new in {r.id for r in queued}
+    assert {r.data["task"] for r in queued} == {"notes", "learn-correction"} and new in {r.id for r in queued}
 
 
 def test_followups_put_the_pm_first_and_mark_sent_clears_a_person(api):

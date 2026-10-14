@@ -1283,6 +1283,17 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerSuggestionView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For owner questions: who the routing entries suggest and the nearest open action."
           }
         },
         "required": [
@@ -1745,6 +1756,21 @@
         "title": "CatchUpView",
         "type": "object"
       },
+      "ChangeIn": {
+        "properties": {
+          "note": {
+            "description": "What to change about it, in the person's own words; the assistant reads it. Required: a change with no words is never sent.",
+            "minLength": 1,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "ChangeIn",
+        "type": "object"
+      },
       "ChangeItem": {
         "properties": {
           "approval": {
@@ -1947,6 +1973,38 @@
           "changeset"
         ],
         "title": "ChangeItem",
+        "type": "object"
+      },
+      "ChangeRequested": {
+        "properties": {
+          "ok": {
+            "description": "The id of the item the change was asked for.",
+            "title": "Ok",
+            "type": "string"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The work queued for the assistant from the note.",
+            "title": "Request"
+          },
+          "signal": {
+            "description": "The id of the correction recorded for it.",
+            "title": "Signal",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "signal"
+        ],
+        "title": "ChangeRequested",
         "type": "object"
       },
       "ChangesetView": {
@@ -2665,6 +2723,84 @@
           "section"
         ],
         "title": "DomainOffer",
+        "type": "object"
+      },
+      "DroppedQuestionView": {
+        "description": "A question that is closed as dropped, kept on record.",
+        "properties": {
+          "dropped_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it was dropped.",
+            "title": "Dropped At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the question came from, for its link."
+          },
+          "projects": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the person dropped it; none when the app closed it itself.",
+            "title": "Reason"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "to": {
+            "description": "The id of the person it was for.",
+            "title": "To",
+            "type": "string"
+          },
+          "to_name": {
+            "title": "To Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "text",
+          "to",
+          "to_name"
+        ],
+        "title": "DroppedQuestionView",
         "type": "object"
       },
       "EndpointView": {
@@ -4558,6 +4694,29 @@
         "title": "Link",
         "type": "object"
       },
+      "ListMergeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "into": {
+            "description": "The value that takes its place; it must be offered on the list.",
+            "minLength": 1,
+            "title": "Into",
+            "type": "string"
+          },
+          "value": {
+            "description": "The value that goes away.",
+            "minLength": 1,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value",
+          "into"
+        ],
+        "title": "ListMergeIn",
+        "type": "object"
+      },
       "ListRenameIn": {
         "additionalProperties": false,
         "properties": {
@@ -5377,6 +5536,85 @@
           }
         },
         "title": "OwnerPick",
+        "type": "object"
+      },
+      "OwnerSuggestionView": {
+        "description": "What the workspace's own records suggest for an action that has no owner. The person still picks.",
+        "properties": {
+          "entry": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the routing entry that says so.",
+            "title": "Entry"
+          },
+          "fold_into": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the open action this one most nearly repeats, to fold it into.",
+            "title": "Fold Into"
+          },
+          "fold_into_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "That action's text.",
+            "title": "Fold Into Text"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The id of the person a routing entry says does this kind of work.",
+            "title": "Person"
+          },
+          "person_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "That person's full name.",
+            "title": "Person Name"
+          },
+          "why": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The routing entry's own words, for \"because you told me ...\".",
+            "title": "Why"
+          }
+        },
+        "title": "OwnerSuggestionView",
         "type": "object"
       },
       "PackAdds": {
@@ -7238,6 +7476,87 @@
         "title": "ProposedOp",
         "type": "object"
       },
+      "QuestionDropIn": {
+        "properties": {
+          "reason": {
+            "description": "Why the question isn't needed, in plain words.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "QuestionDropIn",
+        "type": "object"
+      },
+      "QuestionRerouteIn": {
+        "properties": {
+          "to": {
+            "description": "The person to ask instead, by id or name.",
+            "minLength": 1,
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "to"
+        ],
+        "title": "QuestionRerouteIn",
+        "type": "object"
+      },
+      "QuestionRewordIn": {
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The new text, in the person's own words; left out, it stays as it is.",
+            "title": "Text"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The new title; left out, it stays as it is.",
+            "title": "Title"
+          }
+        },
+        "title": "QuestionRewordIn",
+        "type": "object"
+      },
+      "QuestionSentIn": {
+        "properties": {
+          "on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day the person sent it themselves; today when left out.",
+            "title": "On"
+          }
+        },
+        "title": "QuestionSentIn",
+        "type": "object"
+      },
       "QueueLineView": {
         "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back.",
         "properties": {
@@ -7538,6 +7857,17 @@
             ],
             "description": "For a handover line: diverged (this computer and the synced folder each changed; the person chooses which copy to keep), chosen (the choice waits for the restart) or elsewhere (another computer opened the workspace, so this copy stopped writing to the folder). `text` is the other computer's name.",
             "title": "State"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OwnerSuggestionView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an owner line: who the routing entries suggest owns the action and why, and the nearest open action to fold it into; none when nothing applies."
           },
           "text": {
             "anyOf": [
@@ -13033,6 +13363,65 @@
         "summary": "Health"
       }
     },
+    "/api/items/{kind}/{id}/change": {
+      "post": {
+        "description": "\"Change this\" on a row the assistant made: an action, question, decision, calendar entry (kind `event`)\nor fact. Records a correction and queues the assistant's work on the note; the packet carries the item as it\nis now.",
+        "operationId": "change_this_api_items__kind___id__change_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangeRequested"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change This"
+      }
+    },
     "/api/jobs": {
       "get": {
         "description": "Plugins' scheduled work: whether it runs, how often, and how its last run went.",
@@ -13603,6 +13992,56 @@
           }
         },
         "summary": "List Add"
+      }
+    },
+    "/api/lists/{name}/merge": {
+      "post": {
+        "description": "Merge one value of a list into another: records that hold the first hold the second, and the first leaves\nthe list. With Undo.",
+        "operationId": "list_merge_api_lists__name__merge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListMergeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Merge"
       }
     },
     "/api/lists/{name}/rename": {
@@ -14971,6 +15410,29 @@
         "summary": "Restore Project"
       }
     },
+    "/api/questions/dropped": {
+      "get": {
+        "description": "The questions closed as dropped, newest first, with the reason the person gave.",
+        "operationId": "dropped_api_questions_dropped_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DroppedQuestionView"
+                  },
+                  "title": "Response Dropped Api Questions Dropped Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Dropped"
+      }
+    },
     "/api/questions/{qid}/answer": {
       "post": {
         "description": "Answer a question to the PM. A question asking who (who a name is, who owns an action) takes a person and\nlets the item it holds go ahead; any other question takes a written answer.",
@@ -15019,6 +15481,56 @@
           }
         },
         "summary": "Answer"
+      }
+    },
+    "/api/questions/{qid}/drop": {
+      "post": {
+        "description": "Drop a question with a reason, with Undo. It stays on record, listed at GET /api/questions/dropped.",
+        "operationId": "drop_api_questions__qid__drop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "qid",
+            "required": true,
+            "schema": {
+              "title": "Qid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionDropIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Drop"
       }
     },
     "/api/questions/{qid}/pick-owner": {
@@ -15118,6 +15630,156 @@
           }
         },
         "summary": "Reply"
+      }
+    },
+    "/api/questions/{qid}/reroute": {
+      "post": {
+        "description": "Ask someone else instead, with Undo. Records a routed correction; a decision moved off the person becomes an\nordinary question.",
+        "operationId": "reroute_api_questions__qid__reroute_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "qid",
+            "required": true,
+            "schema": {
+              "title": "Qid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionRerouteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reroute"
+      }
+    },
+    "/api/questions/{qid}/reword": {
+      "post": {
+        "description": "Reword a question, with Undo. Records a reworded correction.",
+        "operationId": "reword_api_questions__qid__reword_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "qid",
+            "required": true,
+            "schema": {
+              "title": "Qid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionRewordIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reword"
+      }
+    },
+    "/api/questions/{qid}/sent": {
+      "post": {
+        "description": "Record that the person already sent this question themselves, with Undo.",
+        "operationId": "sent_api_questions__qid__sent_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "qid",
+            "required": true,
+            "schema": {
+              "title": "Qid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuestionSentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sent"
       }
     },
     "/api/record": {

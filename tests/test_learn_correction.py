@@ -318,7 +318,7 @@ def test_more_than_one_proposal_refuses_the_whole_answer_and_asks_for_one(env):
     assert store.read().list("lesson") == []
 
 
-def test_a_rule_or_a_lesson_change_from_learning_is_held_for_the_person(env):
+def test_a_lesson_change_from_learning_is_held_and_a_rule_from_learning_is_a_proposal(env):
     ws, cfg, store = env
     with store.transaction() as tx:
         active = tx.create(
@@ -358,8 +358,10 @@ def test_a_rule_or_a_lesson_change_from_learning_is_held_for_the_person(env):
     (_, second) = learning(store)
     scripted({"summary": "A rule.", "ops": [{"op": "rule.add", "text": "Interior files go to the editor first."}]})
     run_learning(env, second.id)
-    (held_rule,) = ops_of(store, second.id)
-    assert held_rule["status"] == "held" and len(store.read().list("rule")) == rules
+    (proposed_rule,) = ops_of(store, second.id)
+    made = [r for r in store.read().list("rule") if r.data["text"] == "Interior files go to the editor first."]
+    assert proposed_rule["status"] == "applied" and len(store.read().list("rule")) == rules + 1
+    assert [r.data["status"] for r in made] == ["proposed"], "a rule from learning waits for Keep"
 
 
 # ---- the packet ------------------------------------------------------------------------------------------------------
