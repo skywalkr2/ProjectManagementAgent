@@ -194,8 +194,7 @@ def lift_pauses(ws: Workspace, results: list[SmokeResult]) -> None:
 
     pauses = Pauses(ws.private_dir / "ai-pauses.json")
     for account in {r.provider for r in results if r.answered and r.provider}:
-        if pauses.until(account) is not None:
-            pauses.clear(account)
+        pauses.clear(account)
 
 
 def untested_since_change(ws: Workspace) -> bool:

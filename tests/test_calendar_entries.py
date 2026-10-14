@@ -156,7 +156,9 @@ def test_own_entries_follow_the_connected_events_and_a_removed_entry_is_gone(env
 
 def test_the_agenda_route_marks_an_own_entry(env, tmp_path):
     ws, cfg, store = env
-    today = datetime.now(UTC).date()
+    from engine.today import zone
+
+    today = datetime.now(zone(cfg)).date()
     seed(store, title="Delivery window", start=today.isoformat(), end=(today + timedelta(days=1)).isoformat())
     store.close()
     client = TestClient(create_app(ws, cfg, "t", start_worker=False))
