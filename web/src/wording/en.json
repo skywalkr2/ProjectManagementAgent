@@ -267,6 +267,8 @@
   "op.routing.add": "Added a routing entry",
   "op.style.add": "Added a style note",
   "op.knowledge.retire": "Retired something learned",
+  "op.rule.add": "Added a standing rule",
+  "op.rule.retire": "Retired a standing rule",
   "op.status.held": "Waiting for you",
   "op.status.owner": "Needs an owner",
   "op.status.refused": "Not done",

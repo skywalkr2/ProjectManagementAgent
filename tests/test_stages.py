@@ -2,6 +2,7 @@ import pytest
 import yaml
 
 from engine.config import ConfigError, load_config
+from engine.config.schema import STAGE_WORDING
 from engine.config.yaml_edit import set_key
 
 
@@ -109,6 +110,7 @@ def test_plugin_checks_and_default_stages(stage_workspace):
 
 def test_rule_entry_checks_never_interpret_prose(stage_workspace):
     from engine.config.schema import RulesFile
+    from engine.rules import seed_rules
     from engine.stages import entry_check
 
     store, cfg, record = stage_workspace
@@ -118,9 +120,27 @@ def test_rule_entry_checks_never_interpret_prose(stage_workspace):
             {"id": "R-2", "text": "Decide whether this is good"},
         ]
     )
+    seed_rules(store)
     assert entry_check(store, "R-1", record).reason == "Be ready: not ready"
     assert not entry_check(store, "R-2", record).passed
     assert "deterministic" in entry_check(store, "R-2", record).reason
+
+
+def test_a_rule_added_by_op_is_used_by_the_stage_check_until_it_is_retired(stage_workspace):
+    from engine.applier import apply_as_person
+    from engine.rules import active_rules
+    from engine.stages import entry_check
+
+    store, cfg, record = stage_workspace
+    assert not entry_check(store, "be-ready", record).passed  # no such rule yet
+    ops = [{"op": "rule.add", "text": "Be ready", "name": "be-ready", "check": "stage-test/ready"}]
+    cs_id = apply_as_person(store, cfg, ops, "Add a rule")
+    (added,) = store.read().get("changeset", cs_id).data["ops"][0]["records"]
+    assert [r.id for r in active_rules(store)] == ["be-ready"]
+    assert entry_check(store, "be-ready", record).reason == "Be ready: not ready"
+    apply_as_person(store, cfg, [{"op": "rule.retire", "id": added["id"]}], "Retire a rule")
+    stopped = entry_check(store, "be-ready", record)
+    assert not stopped.passed and stopped.reason == STAGE_WORDING["rule_inactive"]
 
 
 def test_workspace_replaces_or_removes_plugin_stages(stage_workspace):

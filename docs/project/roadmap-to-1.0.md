@@ -799,8 +799,8 @@ L1. **Knowledge as records.** Settled before L1 starts (the original designer's 
   `test_discard_keeps_the_proposal_with_its_reason_and_undo_brings_it_back`,
   `test_retire_ends_an_active_entry_and_undo_makes_it_active_again`). No run reads them yet (L2) and no task kind
   proposes them (L3).
-- [ ] Rules become records, with `rules.yaml` as the starting set; stage checks read them.
-- [ ] Facts gain `key`, `as_of` and `supersedes`.
+- [x] Rules become records, with `rules.yaml` as the starting set; stage checks read them. Built: `tests/test_rules_facts_signals.py::test_seeding_makes_each_starting_rule_an_active_seed_record_once`, `tests/test_rules_facts_signals.py::test_a_retired_seed_rule_is_not_made_again`, `tests/test_rules_facts_signals.py::test_starting_the_app_seeds_the_rules_before_anything_reads_them`, `tests/test_rules_facts_signals.py::test_rules_and_their_history_survive_export_and_import`, `tests/test_stages.py::test_rule_entry_checks_never_interpret_prose`, `tests/test_stages.py::test_a_rule_added_by_op_is_used_by_the_stage_check_until_it_is_retired`. The ops are `rule.add` and `rule.retire`; `knowledge.retire` is for the four other kinds; the origin values are seed, person, assistant, pack and import.
+- [x] Facts gain `key`, `as_of` and `supersedes`. Built: `tests/test_rules_facts_signals.py::test_a_fact_takes_the_day_its_input_arrived_unless_it_says_another_day`, `tests/test_rules_facts_signals.py::test_a_fact_from_a_typed_note_takes_the_day_the_request_was_made`, `tests/test_rules_facts_signals.py::test_a_newer_fact_marks_the_older_one_as_replaced_and_undo_takes_the_mark_away`, `tests/test_rules_facts_signals.py::test_a_fact_cannot_replace_nothing_or_something_already_replaced`, `tests/test_rules_facts_signals.py::test_fact_fields_survive_export_and_import`. Nothing reads them yet: packets and ranking are L2.
 - [x] Knowledge records have:
   - `origin`;
   - their own `text` (the restatement), kept apart from the evidence quote;
@@ -810,7 +810,7 @@ L1. **Knowledge as records.** Settled before L1 starts (the original designer's 
     `tests/test_knowledge_records.py::test_the_evidence_is_kept_apart_from_the_wording_and_names_where_it_came_from`,
     `tests/test_knowledge_records.py::test_only_a_proposal_can_be_kept_and_where_an_entry_came_from_cannot_be_edited`. The
     `expired` state exists; the sweep that sets it is L3's (proposals from inputs expiring after 14 days).
-- [ ] Signals name the `run` and `changeset` they correct.
+- [x] Signals name the `run` and `changeset` they correct. Built: `tests/test_rules_facts_signals.py::test_sending_back_and_undoing_name_the_changeset_and_its_run`, `tests/test_rules_facts_signals.py::test_saying_who_a_name_is_names_the_changeset_and_its_run`, `tests/test_rules_facts_signals.py::test_a_correction_of_something_no_run_made_leaves_run_and_changeset_empty`, `tests/test_rules_facts_signals.py::test_a_signal_given_a_changeset_takes_its_run_and_one_given_both_keeps_them`. A hold, a set-aside by hand, a pulled-back automatic close and an edited follow-up message have no run, so both stay empty. The `dropped`, `reworded` and `held_declined` kinds have no recording path yet (L3); the helper takes both when they do.
 
 L2. **Every run reads what applies.**
 - [ ] **The stable prefix has a budget** (the original designer's L0 sign-off, 2026-10-13): rules arrive in bursts, so the stable section has a size budget (a setting)

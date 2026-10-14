@@ -40,6 +40,7 @@ from engine.plugin_api import (
 )
 from engine.plugin_manifest import MANIFEST_PARTS, NOT_YET, Manifest, installed_manifest, plain_error, read_manifest
 from engine.records import REFERENCES, REGISTRY, ref_fields, values_at
+from engine.rules import rule_names
 from engine.storage import StoreError, WriteContext
 from engine.tasks import TASKS
 from engine.yaml_load import load_yaml
@@ -193,7 +194,7 @@ class PluginHost:
             validate_stages(
                 self.stages,
                 self.records,
-                set(self.stage_checks) | {r.id for r in cfg.rules.rules},
+                set(self.stage_checks) | {r.id for r in cfg.rules.rules} | rule_names(self.store),
                 self.tasks,
                 running,
             )

@@ -1021,17 +1021,32 @@ def looks_good(store: Store, changeset_id: str) -> None:
             tx.update("request", req.id, {"state": "done", "waiting": None}, _PM, read_version=req.version)
 
 
-def signal(store: Store, kind: str, refs: list[str], note: str | None = None, now: datetime | None = None) -> str:
+def signal(
+    store: Store,
+    kind: str,
+    refs: list[str],
+    note: str | None = None,
+    now: datetime | None = None,
+    *,
+    changeset: str | None = None,
+    run: str | None = None,
+) -> str:
+    """Record a correction. `changeset` is the changeset it corrects, and `run` the AI run whose work that was; given
+    a changeset, the run is the one that produced it. Both stay empty for a correction of something no run made."""
     now = now or datetime.now(UTC)
     with store.transaction() as tx:
-        return tx.create("signal", {"kind": kind, "refs": refs, "note": note, "at": now.isoformat()}, _PM).id
+        if changeset is not None and run is None:
+            made = tx.get("changeset", changeset)
+            run = made.data.get("run") if made is not None else None
+        data = {"kind": kind, "refs": refs, "changeset": changeset, "run": run, "note": note, "at": now.isoformat()}
+        return tx.create("signal", data, _PM).id
 
 
 def undo_changeset(store: Store, changeset_id: str, indices: list[int] | None = None):
     report = undo(store, changeset_id, indices)
     corrected = [i for i in report.restored if _written_by_assistant(store, changeset_id, i)]
     if corrected:
-        signal(store, "undone", [changeset_id], note=f"ops {corrected}")
+        signal(store, "undone", [changeset_id], note=f"ops {corrected}", changeset=changeset_id)
     return report
 
 
@@ -1061,7 +1076,7 @@ def send_back(
         with store.transaction() as tx:
             current = tx.get("changeset", changeset_id)
             tx.update("changeset", changeset_id, {"reviewed": True}, _PM, read_version=current.version)
-    signal(store, "sent_back", [changeset_id], note=note, now=now)
+    signal(store, "sent_back", [changeset_id], note=note, now=now, changeset=changeset_id)
     old = store.read().get("request", cs.data["request"])
     with store.transaction() as tx:
         r = tx.get("request", old.id)

@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from engine.config import FILES, Config, load_config, render_default_file
+from engine.rules import seed_rules
 from engine.state_file import changing, write_whole
 from engine.storage import Store
 from engine.storage.export import commit_export, export_data, import_data
@@ -114,8 +115,10 @@ def init_workspace(
 
     store = Store(ws.db_path)
     try:
-        if any(ws.data_dir.glob("*.json")):
+        imported = any(ws.data_dir.glob("*.json"))
+        if imported:
             import_data(store, ws.data_dir)
+        if seed_rules(store) or imported:
             export_data(store, ws.data_dir)
         if template is None and (you or name or assistant):
             _set_identity(ws, store, you, name, assistant)

@@ -13,6 +13,7 @@ from typing import Annotated, Any, ClassVar, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 
+
 class Record(BaseModel):
     """Base for every stored record. A plugin's record type subclasses it and sets `record_kind` ("<plugin>/<name>")
     and `prefix` (the id prefix, capital letters). Fields are pydantic fields; unknown fields are refused. Every record
@@ -951,6 +952,101 @@ class Fact(Record):
     trust: Literal["trusted", "untrusted"] = Field(
         "trusted", description="untrusted when it came from outside content."
     )
+    key: bool = Field(False, description="True for the facts that matter most, which are always shown first.")
+    as_of: date | None = Field(
+        None,
+        description="The day the fact was true as of: the day the input it came from was received, unless a later "
+        "input says otherwise.",
+    )
+    supersedes: str | None = Field(
+        None,
+        description="The id of the fact this one replaces. The older fact stays on record and is shown as replaced "
+        "by this one.",
+    )
+    fixed_fields: ClassVar[tuple[str, ...]] = ("supersedes",)
+
+
+class Scope(BaseModel):
+    """What a rule or a piece of knowledge applies to: one shape for both. Empty lists mean no narrowing. `scope` is
+    "workspace" (everywhere, less the projects in `except`) or "projects" (only those in `projects`)."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    task_kinds: list[str] = Field(default_factory=list, description="Task kinds it applies to; empty means all.")
+    records: list[str] = Field(
+        default_factory=list, description="Record types or type.field targets it applies to; empty means all."
+    )
+    filter: dict[str, Any] = Field(default_factory=dict, description="Exact field values narrowing the record targets.")
+    projects: list[Annotated[str, RefTo("project")]] = Field(
+        default_factory=list, description="With scope projects, the projects it is for."
+    )
+    people: list[Annotated[str, RefTo("person")]] = Field(
+        default_factory=list, description="The people it is about; empty means anyone."
+    )
+    scope: Literal["workspace", "projects"] = Field(
+        "workspace",
+        description="workspace: everywhere, except the projects in `except`. projects: only the projects listed in "
+        "`projects`.",
+    )
+    except_: list[Annotated[str, RefTo("project")]] = Field(
+        default_factory=list,
+        alias="except",
+        description="With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`.",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _projects_mean_projects(cls, data: Any) -> Any:
+        """Naming projects without a scope means the scope is those projects."""
+        if isinstance(data, dict) and "scope" not in data and data.get("projects"):
+            return {**data, "scope": "projects"}
+        return data
+
+    @model_validator(mode="after")
+    def _coherent(self) -> Scope:
+        if self.scope == "projects" and not self.projects:
+            raise ValueError("a scope of projects names the projects it is for")
+        if self.scope == "projects" and self.except_:
+            raise ValueError("projects it doesn't apply to can be left out only from the whole workspace")
+        if self.scope == "workspace" and self.projects:
+            raise ValueError("name the projects only when the scope is those projects")
+        return self
+
+
+class Rule(Record):
+    """A standing instruction the assistant follows, kept as a record so changing one has history and Undo. The
+    starting set comes from the workspace's rules file; after that the records are the truth. Added by `rule.add`
+    and ended by `rule.retire`."""
+
+    record_kind: ClassVar[str] = "rule"
+    prefix: ClassVar[str] = "RULE"
+    layout: ClassVar[str | None] = "rules/{id}"
+    unique: ClassVar[tuple[tuple[str, ...], ...]] = (("name",),)
+
+    name: str = Field(
+        min_length=1,
+        description="The rule's own name, which stage entry checks and the rules file refer to; never reused.",
+    )
+    text: str = Field("", description="The rule in the person's wording; it is also its explanation.")
+    applies_to: Scope = Field(default_factory=Scope, description="What the rule applies to.")
+    check: str | None = Field(
+        None,
+        description="A deterministic check that implements the rule; a rule with none is prose, and prose alone never "
+        "lets a stage move.",
+    )
+    origin: Literal["seed", "person", "assistant", "pack", "import"] = Field(
+        description="Where it came from: seed (the starting set), person, assistant, pack or import."
+    )
+    status: Literal["proposed", "active", "discarded", "retired"] = Field(
+        "active",
+        description="proposed: waiting for the person. active: in use. discarded: the person said no. retired: it "
+        "was active and no longer is.",
+    )
+    source: str | None = Field(None, description="Where it came from, in words.")
+    evidence: Evidence | None = Field(None, description="The words that justify it, when it came from an input.")
+    learned_at: datetime | None = Field(None, description="When the rule was learned or added.")
+    kept_by: str | None = Field(None, description="The id of the person who made it active.")
+    kept_at: datetime | None = Field(None, description="When it was made active.")
 
 
 class CalendarEntry(Record):
@@ -1056,53 +1152,6 @@ class KnowledgeEvidence(BaseModel):
     def _says_something(self) -> KnowledgeEvidence:
         if not any((self.quote, self.source, self.request, self.signal, self.changeset)):
             raise ValueError("evidence names the words or the record they came from")
-        return self
-
-
-class Scope(BaseModel):
-    """What a rule or a piece of knowledge applies to: one shape for both. Empty lists mean no narrowing. `scope` is
-    "workspace" (everywhere, less the projects in `except`) or "projects" (only those in `projects`)."""
-
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
-
-    task_kinds: list[str] = Field(default_factory=list, description="Task kinds it applies to; empty means all.")
-    records: list[str] = Field(
-        default_factory=list, description="Record types or type.field targets it applies to; empty means all."
-    )
-    filter: dict[str, Any] = Field(default_factory=dict, description="Exact field values narrowing the record targets.")
-    projects: list[Annotated[str, RefTo("project")]] = Field(
-        default_factory=list, description="With scope projects, the projects it is for."
-    )
-    people: list[Annotated[str, RefTo("person")]] = Field(
-        default_factory=list, description="The people it is about; empty means anyone."
-    )
-    scope: Literal["workspace", "projects"] = Field(
-        "workspace",
-        description="workspace: everywhere, except the projects in `except`. projects: only the projects listed in "
-        "`projects`.",
-    )
-    except_: list[Annotated[str, RefTo("project")]] = Field(
-        default_factory=list,
-        alias="except",
-        description="With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`.",
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def _projects_mean_projects(cls, data: Any) -> Any:
-        """Naming projects without a scope means the scope is those projects."""
-        if isinstance(data, dict) and "scope" not in data and data.get("projects"):
-            return {**data, "scope": "projects"}
-        return data
-
-    @model_validator(mode="after")
-    def _coherent(self) -> Scope:
-        if self.scope == "projects" and not self.projects:
-            raise ValueError("a scope of projects names the projects it is for")
-        if self.scope == "projects" and self.except_:
-            raise ValueError("projects it doesn't apply to can be left out only from the whole workspace")
-        if self.scope == "workspace" and self.projects:
-            raise ValueError("name the projects only when the scope is those projects")
         return self
 
 
@@ -1281,6 +1330,10 @@ class Signal(Record):
         "a piece of what the assistant learned (a lesson, glossary entry, routing entry or style note)."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
+    run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")
+    changeset: str | None = Field(
+        None, description="The id of the changeset the correction is about, when there is one."
+    )
     note: str | None = Field(None, description="What the person said or changed, if anything.")
     at: datetime = Field(description="When the correction was made.")
 
@@ -1328,6 +1381,7 @@ REGISTRY: dict[str, type[Record]] = {
         Request,
         Changeset,
         Fact,
+        Rule,
         CalendarEntry,
         Note,
         Lesson,
@@ -1389,7 +1443,9 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("project", "project"),
     ],
     "changeset": [("request", "request"), ("run", "run")],
-    "fact": [("project", "project"), ("source", "source")],
+    "fact": [("project", "project"), ("source", "source"), ("supersedes", "fact")],
+    "rule": [("kept_by", "person")],
+    "signal": [("run", "run"), ("changeset", "changeset")],
     "event": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("source", "source")],
     "lesson": [*KNOWLEDGE_REFERENCES, ("signal", "signal")],

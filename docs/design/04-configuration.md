@@ -385,15 +385,23 @@ channel and target the PM configures) (6.13). Today a drafted report is shown fo
 
 ## 4.10 `config/rules.yaml` and rule records
 
-**Rules become records** (*designed, phase L*; decisions, 2026-10-12 "The learning slice"). Like value lists (4.23), rules
-move into the database as `rule` records (5.1), beside the other knowledge (6.22). A rule then has:
+**Rules are records** (*built, L1*; decisions, 2026-10-12 "The learning slice"). Like value lists (4.23), rules live in the
+database as `rule` records (5.1), beside the other knowledge (6.22). A rule then has:
 - history and Undo, like any change;
 - no restart when one is added;
 - a place in the workspace's data, so it travels with it;
-- the same `applies_to` target and status (proposed, active, retired, promoted) as lessons.
+- the same `applies_to` target as lessons, and an origin (seed, person, assistant, pack or import) and a status (proposed,
+  active, discarded, retired).
 
-`config/rules.yaml` stays as the starting set: its entries are loaded once as rule records, and the workspace's file is then
-left as it was. Until phase L, rules live in the file as below.
+`config/rules.yaml` is the starting set. When a workspace starts (and when `cockpit init` makes one), each rule in the file
+that has no record yet is made an active record with the origin `seed`; running it again adds nothing, and a rule the person
+retired is not made again. A rule the file itself marks retired or promoted is made as a retired record, kept as history.
+The file is then left as it was and never written back. From then on the records are the truth:
+stage entry checks and every other reader take the active rules from the records (`engine/rules.py::active_rules`), while
+the file is still checked when the configuration loads. A rule's id in the file becomes the record's `name`, which stage
+checks refer to; the record's own id is `RULE-n`. A rule is added by `rule.add` (system tier) and ended by `rule.retire`;
+a retired rule's name stays taken. **Built:** `tests/test_rules_facts_signals.py::test_a_retired_seed_rule_is_not_made_again`,
+`tests/test_stages.py::test_a_rule_added_by_op_is_used_by_the_stage_check_until_it_is_retired`.
 
 Plain-language standing rules the PM states while working ("record who raised each risk"), each one an entry rather than a
 line in a growing file:
@@ -413,10 +421,9 @@ rules:
     check: <id of a deterministic check>          # optional; prose alone never lets a stage move
 ```
 
-Built: the file, its schema and its use by stages (the stage check reads rule records once they exist): a rule that names a deterministic `check` can be an entry check or an
+Built: the file, its schema and its use by stages (the stage check reads the rule records): a rule that names a deterministic `check` can be an entry check or an
 applies-if for a stage (4.21, 6.26); a prose rule never allows a move. Designed, not yet built: rules reaching the AI tasks they
-apply to (6.6), adding one as a system op (6.7), so a rule is never added from an input without the PM confirming it, and the
-rules review (6.21), which keeps the list short and moves rules that are really settings into config.
+apply to (6.6) and the rules review (6.21), which keeps the list short and moves rules that are really settings into config.
 
 ## 4.11 `config/ui.yaml`, `config/status.yaml`, `config/calendar.yaml`
 

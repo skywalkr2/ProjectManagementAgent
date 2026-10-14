@@ -4,6 +4,7 @@ import logging
 
 from engine.config.schema import STAGE_WORDING
 from engine.plugin_api import StageCheckResult
+from engine.rules import active_rules, rule_names
 
 log = logging.getLogger(__name__)
 
@@ -14,12 +15,12 @@ def wording(cfg, key):
 
 def entry_check(store, check_id, record, view=None):
     cfg = store.plugins.cfg
-    rules = {rule.id: rule for rule in cfg.rules.rules}
-    rule = rules.get(check_id)
+    source = view if view is not None else store.read()
+    rule = next((r for r in active_rules(source) if r.id == check_id), None)
     if rule is None:
+        if check_id in rule_names(source):
+            return StageCheckResult(False, wording(cfg, "rule_inactive"))
         return store.plugins.stage_check(check_id, record, view)
-    if rule.status != "active":
-        return StageCheckResult(False, wording(cfg, "rule_inactive"))
     scope = rule.applies_to
     if (
         scope.records

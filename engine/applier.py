@@ -48,6 +48,8 @@ from engine.ops import (
     RecordLogOp,
     RecordSetOp,
     ReportDraftOp,
+    RuleAddOp,
+    RuleRetireOp,
     SettingProposeOp,
     StageMoveOp,
     TextAcceptOp,
@@ -886,6 +888,28 @@ def _apply_op(
         from engine import lists
 
         return lists.apply(tx, op, w), None
+    if isinstance(op, RuleAddOp):
+        from engine.rules import add_rule
+
+        ev = (
+            {"source": w.evidence["source"] or ctx.inputs.source or "note", "quote": op.evidence.quote}
+            if op.evidence is not None and w.evidence is not None
+            else None
+        )
+        rid = add_rule(
+            tx,
+            ctx.store,
+            op,
+            w,
+            origin="assistant" if ctx.inputs.request and tx.find("run", {"request": ctx.inputs.request}) else "person",
+            kept_by=ctx.people.pm,
+            evidence=ev,
+        )
+        return [{"kind": "rule", "id": rid}], None
+    if isinstance(op, RuleRetireOp):
+        from engine.rules import retire_rule
+
+        return [{"kind": "rule", "id": retire_rule(tx, op, w)}], None
     if isinstance(op, RecordEditOp):
         edit_record(ctx.store, tx, op, w)
         return [{"kind": op.record.kind, "id": op.record.id}], None
@@ -1013,13 +1037,22 @@ def _apply_op(
             "note", tx.create("note", {"text": op.text, "project": op.project, "source": source, "trust": trust}, w).id
         )
     elif isinstance(op, FactOp):
+        from engine.facts import check_replaces, received_on
+
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
-        made(
-            "fact",
-            tx.create(
-                "fact", {"text": op.text, "project": op.project, "source": source, "evidence": ev, "trust": trust}, w
-            ).id,
-        )
+        check_replaces(tx, op.supersedes)
+        as_of = op.as_of or received_on(tx, ctx.inputs.request, source)
+        data = {
+            "text": op.text,
+            "project": op.project,
+            "source": source,
+            "evidence": ev,
+            "trust": trust,
+            "key": op.key,
+            "as_of": as_of.isoformat() if as_of else None,
+            "supersedes": op.supersedes,
+        }
+        made("fact", tx.create("fact", data, w).id)
     elif isinstance(op, EventAddOp):
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
         data = {
@@ -1101,6 +1134,9 @@ def _apply_op(
         made("question", op.id)
         projects = cur.data.get("projects") or [None]
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
+        from engine.facts import received_on
+
+        as_of = received_on(tx, ctx.inputs.request, source)
         fact = tx.create(
             "fact",
             {
@@ -1109,6 +1145,7 @@ def _apply_op(
                 "source": source,
                 "evidence": ev,
                 "trust": trust,
+                "as_of": as_of.isoformat() if as_of else None,
             },
             w,
         )
@@ -1333,7 +1370,16 @@ def _record_routed(
     """Record that the person said who a name or an owner is."""
     refs = [r for r in (changeset_id, question_id, person) if r]
     w = WriteContext(actor="pm", trust="trusted", op="routed")
-    tx.create("signal", {"kind": "routed", "refs": refs, "note": name, "at": now.isoformat()}, w)
+    made = tx.get("changeset", changeset_id) if changeset_id else None
+    data = {
+        "kind": "routed",
+        "refs": refs,
+        "changeset": changeset_id,
+        "run": made.data.get("run") if made is not None else None,
+        "note": name,
+        "at": now.isoformat(),
+    }
+    tx.create("signal", data, w)
 
 
 def _question_name(store: Store, qid: str) -> str | None:

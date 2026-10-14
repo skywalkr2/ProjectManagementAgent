@@ -113,9 +113,11 @@ def create_app(
         move_identity(ws, store, cfg)
     from engine.lists import ensure as ensure_lists
     from engine.organizations import move_names
+    from engine.rules import seed_rules
 
     move_names(store)
     ensure_lists(store)
+    seed_rules(store)
     worker = Worker(ws, store, cfg, events, router_factory, on_restart)
     if sync_held:
         worker.hold_sync()

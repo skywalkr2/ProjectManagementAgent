@@ -83,6 +83,17 @@ class FactOp(OpModel):
     text: str = Field(min_length=1, description="The fact, as a statement.")
     project: str | None = Field(None, description="Project id, if the fact is about one.")
     evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
+    key: bool = Field(False, description="True only for a fact that matters most to the project; it is shown first.")
+    as_of: date | None = Field(
+        None,
+        description="The day the fact was true as of, written YYYY-MM-DD, when the input says it; left out, it is "
+        "the day the input was received.",
+    )
+    supersedes: str | None = Field(
+        None,
+        description="The id of an existing fact this one replaces (the same thing, newer). The older fact stays on "
+        "record.",
+    )
 
 
 class EventAddOp(OpModel):
@@ -423,6 +434,38 @@ class ListRetireOp(OpModel):
         return f"Stop offering {self.value!r} on the list {self.list}"
 
 
+class RuleAddOp(OpModel):
+    """Add a standing rule: an instruction the assistant follows from now on. A system op: from the assistant it
+    waits for the person. A rule that names a deterministic `check` can gate a stage; a rule with none is prose."""
+
+    op: Literal["rule.add"] = "rule.add"
+    text: str = Field(min_length=1, max_length=500, description="The rule, in the person's wording.")
+    name: str | None = Field(
+        None,
+        max_length=80,
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._/-]*$",
+        description="A short name other settings can refer to; made from the rule's id when left out.",
+    )
+    applies_to: Scope = Field(default_factory=Scope, description="What the rule applies to; empty means all.")
+    check: str | None = Field(
+        None, description="The id of a deterministic check that implements the rule, when one exists."
+    )
+    evidence: EvidenceIn | None = Field(None, description="The words from the input that justify the rule, if any.")
+
+    def describe(self) -> str | None:
+        return f"Add the rule: {' '.join(self.text.split())}"
+
+
+class RuleRetireOp(OpModel):
+    """Stop following an active rule; the record stays, marked retired. A system op."""
+
+    op: Literal["rule.retire"] = "rule.retire"
+    id: str = Field(description="The id of the rule, such as RULE-3.")
+
+    def describe(self) -> str | None:
+        return f"Retire the rule {self.id}"
+
+
 class ReportDraftOp(OpModel):
     """Draft a report to the product's maintainers when the PM asks for something the product can't do: what was
     wanted, what happens now, and why it would help. The PM reviews and sends it."""
@@ -609,7 +652,9 @@ Op = Annotated[
     | GlossaryUpdateOp
     | RoutingAddOp
     | StyleAddOp
-    | KnowledgeRetireOp,
+    | KnowledgeRetireOp
+    | RuleAddOp
+    | RuleRetireOp,
     Field(discriminator="op"),
 ]
 
@@ -639,6 +684,8 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "list.add": ListAddOp,
     "list.rename": ListRenameOp,
     "list.retire": ListRetireOp,
+    "rule.add": RuleAddOp,
+    "rule.retire": RuleRetireOp,
     "report.draft": ReportDraftOp,
     "lesson.add": LessonAddOp,
     "lesson.update": LessonUpdateOp,
@@ -674,6 +721,8 @@ TIERS: dict[str, Tier] = (
         "list.add": "system",
         "list.rename": "system",
         "list.retire": "system",
+        "rule.add": "system",
+        "rule.retire": "system",
     }
     | {name: "system" for name in KNOWLEDGE_OPS}
 )

@@ -1269,7 +1269,13 @@ looked up.
 
 The PM's corrections are the best measure of whether the assistant is doing well, and the best source of test cases. Each one
 is recorded as a `signal` record (5.1) at the moment it happens (the recording is built; the quality panel, private evaluation
-cases from signals and rule suggestions are *designed, not yet built*):
+cases from signals and rule suggestions are *designed, not yet built*). Each signal names the **changeset** it corrects and the
+**run** that made it, when there was one (L1: a send back, an undo and a routed answer set both; the run is the changeset's own).
+A correction of something no run made leaves both empty: putting an action on hold or taking it off, a mail item set aside by
+hand, an automatic close pulled back, and an edited follow-up message (a draft the rules build). **Built:**
+`tests/test_rules_facts_signals.py::test_sending_back_and_undoing_name_the_changeset_and_its_run`,
+`tests/test_rules_facts_signals.py::test_saying_who_a_name_is_names_the_changeset_and_its_run`,
+`tests/test_rules_facts_signals.py::test_a_correction_of_something_no_run_made_leaves_run_and_changeset_empty`:
 
 | Signal | Recorded when |
 |---|---|
@@ -1333,8 +1339,9 @@ The write side is built: sources with provenance, facts with evidence, ids inste
 signals (6.20). This section is the read side.
 
 **Knowledge records.** Six kinds:
-- **Fact** (built), plus `key` (the facts that matter most, always shown first) and `as_of`.
-- **Rule** (4.10), now a record.
+- **Fact** (built), plus `key` (the facts that matter most, always shown first), `as_of` and `supersedes` (L1, built; below).
+- **Rule** (4.10), now a record (L1, built): `rule.add` and `rule.retire`, system ops with Undo, and the rules file as the
+  starting set.
 - **Lesson:** what went wrong, why, and the guard. Created from a correction and linked to the signal it came from.
 - **Glossary entry:** a term or acronym, its meaning, project or global, and a confidence (confirmed, assumed or unknown). It
   may also carry patterns for splitting compound ids.
@@ -1432,7 +1439,10 @@ is said ("42 more facts on this project; search for them").
 
 **A newer fact replaces an older one.** Ranking alone would still put "ships in release A" beside "moved to release B", and
 the run can pick the wrong one. A scope or a date that moves twice in a week is the most common churn. So:
-- a `fact` has an optional `supersedes` (the id of the fact it replaces);
+- a `fact` has an optional `supersedes` (the id of the fact it replaces; built in L1, and fixed once the fact is made). The
+  older fact is never edited. What replaced it is computed from the newer fact (`engine/facts.py::superseded_by`), so undoing
+  the newer fact brings the older one back with no second write to undo, and the two can never disagree. A fact can be replaced
+  once: a replacement that names a fact already replaced, or one that doesn't exist, is refused with the reason;
 - the input's run proposes it when a new fact covers the same subject as an existing one (same project and field, or a high
   overlap of words);
 - a superseded fact leaves the packet but stays findable by search, with what replaced it.

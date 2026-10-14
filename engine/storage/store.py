@@ -154,8 +154,10 @@ class Store:
             conn.execute("ROLLBACK")
 
     def read(self) -> Tx:
-        """A read-only view outside a transaction, for simple lookups."""
-        return Tx(self._conn, self.clock, self.plugins.records)
+        """A read-only view outside a transaction, for simple lookups. While the plugins are still loading it sees
+        only the core's record kinds."""
+        plugins = getattr(self, "plugins", None)
+        return Tx(self._conn, self.clock, plugins.records if plugins is not None else None)
 
 
 class Tx:
