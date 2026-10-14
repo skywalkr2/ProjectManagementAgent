@@ -5,6 +5,24 @@
 Build PM Cockpit: a generic, AI-assisted cockpit that watches a person's sources, drafts updates, questions and action items,
 and gives them one screen to review and send. The design is in `docs/design/`.
 
+## End state, beyond 1.0 (owner, 2026-10-14)
+
+1. The core handles everyday project support, as designed.
+2. Packs extend it, each useful on its own.
+3. A full set of packs, bought together, carries a business requirement to delivery:
+   - **Business analysis** turns the requirement into functional requirements, reviewed with the person back and forth
+     until validated.
+   - Then two packs work from them: **project management** plans the delivery (schedule, plan and the outputs a project
+     is tracked with), and **technical design** drafts the technical requirements, user stories and designs.
+   - Business analysis and project management check the technical design against the original requirements and their
+     exit criteria; once approved it goes to **development**, which plans delivery as a scrum team would, with testing
+     built into each sprint and a demo to the end users at each step.
+   - This repeats until delivery is confirmed by validated internal test cases and user acceptance testing, and then the
+     packs facilitate the **deployment**.
+
+Every hand-off between packs goes through the core (interfaces, requests for another pack's task kinds, stages with
+entry checks), and every step's output is the person's to approve, as for everything else.
+
 ## Background
 
 A personal project on the owner's own account. It generalizes ideas from a tool the owner built and runs privately for their

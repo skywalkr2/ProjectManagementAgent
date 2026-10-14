@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: The end state beyond 1.0: a delivery chain of packs
+
+**Decided by:** the owner. **What:** the core stays everyday project support; packs extend it; a full set of packs
+carries a business requirement through business analysis, project management and technical design, development in
+sprints with built-in testing and demos, test cases and user acceptance, to a facilitated deployment (charter, "End
+state"). *Kind:* product direction; packs, not core. **Why:** the owner's statement of where the product goes.
+**Impact:** the charter and the roadmap's "Not in 1.0"; no change to 1.0's scope. Open with the owner: whether the
+development and deployment packs only plan and track the work done in the team's own tools (consistent with the core's
+rule that the assistant never writes files or runs anything outside its sandbox), or also drive coding and deployment,
+which would need its own design.
+
 ## 2026-10-14: L2's second wave: choices made while building
 
 **Decided by:** the technical PM, reviewing the builders' work. **What:** (1) a scope that names a project covers its

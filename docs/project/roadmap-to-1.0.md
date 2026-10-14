@@ -1536,6 +1536,12 @@ Order by what protects real data first, then by what the packs ask for:
   workspace and its parent, names the task kinds or groups that may run, or none; the core refuses to queue the rest from
   anywhere, says why once, and hides actions and lines that lead only to disallowed work.
 - Licensed (paid) packs: the design is accepted, but whether to charge is the owner's call, after launch.
+- The delivery chain of the end state (charter, owner 2026-10-14): a requirement carried from business analysis through
+  project management and technical design to development, testing, acceptance and deployment, with a development pack
+  (sprints, built-in testing, demos), a testing and acceptance pack (internal test cases, UAT) and a deployment pack.
+  Business analysis, technical design (the systems architect pack) and project management are already planned (C2,
+  C3c). What the chain needs from the core is listed there when it is designed: links that trace a requirement to its
+  stories, test cases and defects across packs, and sign-offs by role (design 11.8).
 - An adapter for the Copilot SDK (owner, 2026-10-14), once it is out of technical preview: it drives the same
   command-line agent through a structured channel instead of reading its printed output. It must pass the same
   lock-down test as the command-line adapter (no tools, no files), and the command-line adapter stays.
