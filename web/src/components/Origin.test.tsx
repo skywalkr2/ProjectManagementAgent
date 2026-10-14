@@ -30,6 +30,7 @@ const question = (over: Partial<S["FollowupQuestion"]> = {}): S["FollowupQuestio
   waiting_days: null,
   about: null,
   options: [],
+  chase_due: false,
   ...over,
 });
 
