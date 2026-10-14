@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: GitHub Models becomes an API option before 1.0; a Copilot SDK adapter waits for its stable release
+
+**Decided by:** the owner, after reviewing outside advice on how the app reaches AI accounts. **What:** GitHub's model
+service, which is OpenAI-compatible with a free rate-limited tier, is offered as an account choice before 1.0, through
+the existing OpenAI-compatible adapter (settings, no new adapter), once its limits are checked against real packets. An
+adapter for the Copilot SDK is a future enhancement, after it leaves technical preview; the command-line adapter stays
+the default for people whose only account is Copilot. Agent SDKs and tool protocols that give the model files and tools
+are not used: the assistant only proposes changesets. *Kind:* extension (config for an existing adapter), and a future
+adapter. **Why:** most people have one account; a free second one makes the one-account wait rarer without spending.
+**Impact:** a Ready-for-real-use item and a "Not in 1.0" line in the roadmap; no change to scope or design.
+
 ## 2026-10-14: One AI account is the usual case; borrowing another tier's account asks first
 
 **Decided by:** the owner, answering the original designer's L1 check-in. **What:** most people will have one AI account,

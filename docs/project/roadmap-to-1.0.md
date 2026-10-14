@@ -296,6 +296,13 @@ real use starts. The rest (L-more) comes after the packs.
     the work waiting. The setting `ai.borrow_other_tier` (ask, never; default ask) keeps the choice the person's. Its test
     is the person's path: a paused routine account, the question on Today, the work done on the other account after yes,
     and back on the routine account after the reset.
+  - [ ] **GitHub Models as another API option** (owner, 2026-10-14): GitHub's model service is OpenAI-compatible and has a
+    free, rate-limited tier used with a GitHub token, so it can be a free second account beside a command-line agent.
+    It is settings, not code: an account choice in setup that fills in the service's address, asks for the token as an
+    `env:` or `file:` reference, lists its models from the adapter, and smoke-tests every tier. Before it is offered for
+    routine work, check against the service's own documentation (third-party listings are not enough) its daily and
+    per-request limits, and test a busy workspace's packet against the per-request size; if packets don't fit, setup says
+    which tasks it can take. Its test is the person's path: choose it in setup, test it, and a routine run answered by it.
 
 **Then the owner's real use starts** (owner, 2026-10-12), running through phases B and C beside the build. Building stays
 one stream; the owner uses it daily on their own mail, calendar and notes. For the first month, two numbers are reviewed
@@ -1455,6 +1462,9 @@ Order by what protects real data first, then by what the packs ask for:
   workspace and its parent, names the task kinds or groups that may run, or none; the core refuses to queue the rest from
   anywhere, says why once, and hides actions and lines that lead only to disallowed work.
 - Licensed (paid) packs: the design is accepted, but whether to charge is the owner's call, after launch.
+- An adapter for the Copilot SDK (owner, 2026-10-14), once it is out of technical preview: it drives the same
+  command-line agent through a structured channel instead of reading its printed output. It must pass the same
+  lock-down test as the command-line adapter (no tools, no files), and the command-line adapter stays.
 
 ## Done before this plan
 
