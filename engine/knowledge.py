@@ -131,6 +131,9 @@ class Standing:
     source: str | None
     request: str | None
     now: str
+    #: How long a discard keeps a close proposal from being shown, and how alike its words must be to count.
+    hold_days: int = 90
+    alike: float = 0.8
 
 
 def _evidence(tx: Any, op: Any, w: WriteContext, st: Standing) -> dict[str, Any] | None:
@@ -176,7 +179,48 @@ def apply(tx: Any, op: Any, w: WriteContext, st: Standing) -> list[dict[str, Any
         "applies_to": op.applies_to.model_dump(mode="json", by_alias=True),
         **{name: getattr(op, name) for name in OWN_FIELDS[kind]},
     }
+    if not kept:
+        held = proposal_rules(tx, kind, data, w, st)
+        if held is not None:
+            return held
+        if (close := close_to_discard(tx, kind, data, st)) is not None:
+            data.update(status="discarded", discard_reason=close)
     return [{"kind": kind, "id": tx.create(kind, data, w).id}]
+
+
+def merge_into(tx: Any, kind: str, existing: Any, evidence: dict[str, Any] | None, w: WriteContext) -> None:
+    """Link a proposal's evidence to the entry it duplicates, when it adds any."""
+    known = [existing.data.get("evidence"), *(existing.data.get("more_evidence") or [])]
+    if evidence is not None and evidence not in known:
+        more = [*(existing.data.get("more_evidence") or []), evidence]
+        tx.update(kind, existing.id, {"more_evidence": more}, w, read_version=existing.version)
+
+
+def proposal_rules(
+    tx: Any, kind: str, data: dict[str, Any], w: WriteContext, st: Standing
+) -> list[dict[str, Any]] | None:
+    """A proposal that says what an active or proposed entry of its kind already says merges into it: one stays, with
+    the evidence linked. Returns the entry it merged into, or None when it is not a duplicate."""
+    from engine import proposals
+
+    existing = proposals.duplicate_of(tx, kind, data)
+    if existing is None:
+        return None
+    merge_into(tx, kind, existing, data.get("evidence"), w)
+    return [{"kind": kind, "id": existing.id}]
+
+
+def close_to_discard(tx: Any, kind: str, data: dict[str, Any], st: Standing) -> str | None:
+    """The reason a proposal is kept as discarded and not shown, when it is close to one the person discarded
+    recently; None when it is shown."""
+    from datetime import datetime
+
+    from engine import proposals
+
+    now = datetime.fromisoformat(st.now)
+    if proposals.near_discard(tx, kind, data, now, st.hold_days, st.alike) is None:
+        return None
+    return proposals.NEAR_DISCARD_REASON
 
 
 # ---- the person's own acts -------------------------------------------------------------------------------------------
@@ -191,6 +235,10 @@ def keep_fields(
     if found.data["status"] != "proposed":
         raise StoreError(f"{found.id} isn't waiting to be kept")
     fields: dict[str, Any] = {"status": "active", "kept_by": person, "kept_at": now}
+    if found.data.get("trust") == "untrusted":
+        # The person has read the restatement and its target and kept them as their own words; the source stays
+        # beside it as evidence from outside.
+        fields["trust"] = "trusted"
     if text is not None:
         fields["text"] = text
     if applies_to is not None:
@@ -204,3 +252,23 @@ def discard_fields(found: Any, reason: str | None) -> dict[str, Any]:
     if found.data["status"] != "proposed":
         raise StoreError(f"{found.id} isn't waiting to be kept")
     return {"status": "discarded", "discard_reason": (reason or "").strip() or None}
+
+
+def just_this_time_fields(found: Any) -> dict[str, Any]:
+    """The fields that set a proposed entry aside as right for this case but not a pattern: discarded, with that as
+    its reason. Raises StoreError for an entry that isn't proposed."""
+    from engine.proposals import JUST_THIS_TIME_REASON
+
+    return discard_fields(found, JUST_THIS_TIME_REASON)
+
+
+def is_keep(kind: str, current: dict[str, Any], fields: dict[str, Any]) -> bool:
+    """Whether a change is Keep: a proposal of a kind of knowledge or a rule becoming active, which may also make its
+    content trusted, because the person is the author of what they kept."""
+    return (
+        (kind in KINDS or kind == "rule")
+        and current.get("status") == "proposed"
+        and fields.get("status") == "active"
+        and set(fields) <= {"status", "kept_by", "kept_at", "trust", "text", "applies_to"}
+        and fields.get("trust", "trusted") == "trusted"
+    )

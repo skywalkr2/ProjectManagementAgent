@@ -83,9 +83,38 @@ def seed_rules(store: Any) -> list[str]:
     return [rule.id for rule in missing]
 
 
-def add_rule(tx: Any, store: Any, op: Any, w: WriteContext, *, origin: str, kept_by: str | None, evidence: Any) -> str:
-    """Apply `rule.add`: check the name and the code check it names, then create the active rule. Returns its id."""
+def add_rule(tx: Any, store: Any, op: Any, w: WriteContext, st: Any, *, evidence: Any) -> list[dict[str, Any]]:
+    """Apply `rule.add`: check the name and the code check it names, then create the rule. From the person's own
+    words it is active at once; from anyone else it is a proposal, which merges into an active or proposed rule that
+    says the same, and is kept as discarded when it is close to a rule the person discarded recently. Returns the
+    records touched."""
     stage_checks = store.plugins.stage_checks
+    if op.check is not None and op.check not in stage_checks:
+        raise StoreError(f"there is no check called {op.check}")
+    kept = st.person  # the person's own words apply at once, even before the workspace knows who they are
+    data: dict[str, Any] = {
+        "text": " ".join(op.text.split()),
+        "applies_to": op.applies_to.model_dump(mode="json", by_alias=True),
+        "check": op.check,
+        "constrains": list(dict.fromkeys(op.constrains)),
+        "origin": st.origin,
+        "trust": st.trust,
+        "status": "active" if kept else "proposed",
+        "evidence": evidence,
+        "learned_at": st.now,
+        "kept_by": st.pm if kept else None,
+        "kept_at": st.now if kept else None,
+    }
+    if not kept:
+        from engine.knowledge import close_to_discard, merge_into
+        from engine.proposals import duplicate_of
+
+        existing = duplicate_of(tx, "rule", data)
+        if existing is not None:
+            merge_into(tx, "rule", existing, _as_knowledge_evidence(tx, evidence, st), w)
+            return [{"kind": "rule", "id": existing.id}]
+        if (close := close_to_discard(tx, "rule", data, st)) is not None:
+            data.update(status="discarded", discard_reason=close)
     taken = {r.data["name"] for r in tx.list("rule", include_deleted=True)}
     name = op.name
     if name is not None:
@@ -93,24 +122,25 @@ def add_rule(tx: Any, store: Any, op: Any, w: WriteContext, *, origin: str, kept
             raise StoreError(f"there is already a rule named {name}")
         if name in stage_checks:
             raise StoreError(f"{name} is the name of a built-in check; give the rule another name")
-    if op.check is not None and op.check not in stage_checks:
-        raise StoreError(f"there is no check called {op.check}")
-    now = store.clock()
     record_id = tx.new_id("rule")
-    data = {
-        "name": name or _free_name(f"rule-{record_id.split('-', 1)[1]}", taken | set(stage_checks)),
-        "text": " ".join(op.text.split()),
-        "applies_to": op.applies_to.model_dump(mode="json", by_alias=True),
-        "check": op.check,
-        "constrains": list(dict.fromkeys(op.constrains)),
-        "origin": origin,
-        "status": "active",
-        "evidence": evidence,
-        "learned_at": now,
-        "kept_by": kept_by,
-        "kept_at": now,
+    data["name"] = name or _free_name(f"rule-{record_id.split('-', 1)[1]}", taken | set(stage_checks))
+    return [{"kind": "rule", "id": tx.create("rule", data, w, record_id=record_id).id}]
+
+
+def _as_knowledge_evidence(tx: Any, evidence: Any, st: Any) -> dict[str, Any] | None:
+    """A rule's evidence (the source and the words) in the shape evidence is merged in: the source only when it is a
+    saved input, and the request that made the proposal."""
+    if not evidence:
+        return None
+    source = evidence.get("source")
+    found = {
+        "quote": evidence.get("quote"),
+        "source": source if source and tx.get("source", source) is not None else None,
+        "request": st.request if st.request and tx.get("request", st.request) is not None else None,
+        "signal": None,
+        "changeset": None,
     }
-    return tx.create("rule", data, w, record_id=record_id).id
+    return found if found["quote"] or found["source"] else None
 
 
 def _free_name(wanted: str, taken: set[str]) -> str:

@@ -713,6 +713,34 @@ class KnowledgeSettings(ConfigModel):
         description="How many days must pass after you act on the review of standing rules before Today offers it "
         "again.",
     )
+    discards_hold_days: int = Field(
+        90,
+        ge=0,
+        le=3650,
+        description="For how many days after you discard something the assistant learned, a new suggestion close to "
+        "it is not shown again.",
+    )
+    discard_similarity: float = Field(
+        0.8,
+        ge=0,
+        le=1,
+        description="How alike a new suggestion's words must be to something you discarded for it to count as close "
+        "to it: 0 counts any shared word, 1 only the same words.",
+    )
+    proposals_expire_days: int = Field(
+        14,
+        ge=1,
+        le=730,
+        description="How many days a suggestion from an input waits for your review before it expires. Suggestions "
+        "from your own corrections never expire.",
+    )
+    catch_up_max: int = Field(
+        20,
+        ge=0,
+        le=500,
+        description="The most things from corrections made before the assistant could learn from them that are "
+        "offered in one catch-up list, most repeated first. The rest expire with their number shown.",
+    )
 
 
 class DispatchFile(FileModel):

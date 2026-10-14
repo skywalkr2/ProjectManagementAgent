@@ -1697,6 +1697,54 @@
         "title": "BackupStatus",
         "type": "object"
       },
+      "CatchUpView": {
+        "description": "The one list of what the assistant learned from corrections made before it could learn from them (design\n6.22): at most the configured number of kinds of correction, the most repeated first.",
+        "properties": {
+          "left_out": {
+            "description": "Kinds of correction too many for the list; they expired unread.",
+            "title": "Left Out",
+            "type": "integer"
+          },
+          "made_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the list was made; none before it has been.",
+            "title": "Made At"
+          },
+          "most": {
+            "description": "The most kinds of correction one list holds.",
+            "title": "Most",
+            "type": "integer"
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalView"
+            },
+            "title": "Proposals",
+            "type": "array"
+          },
+          "waiting": {
+            "description": "Kinds of correction chosen that the assistant hasn't learned from yet.",
+            "title": "Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "proposals",
+          "waiting",
+          "left_out",
+          "most"
+        ],
+        "title": "CatchUpView",
+        "type": "object"
+      },
       "ChangeItem": {
         "properties": {
           "approval": {
@@ -6750,6 +6798,400 @@
         "title": "ProposalApply",
         "type": "object"
       },
+      "ProposalView": {
+        "description": "One proposal waiting for the person: a piece of what the assistant learned, or a standing rule, to keep, set\naside \"just this time\" or discard. `came_from` says where it came from (an input, or one of the person's\ncorrections); proposals from inputs expire at `expires_at`, those from corrections never do.",
+        "properties": {
+          "applies_to": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "audience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audience"
+          },
+          "batch": {
+            "description": "daily: reviewed on Today's one line for what was learned. catch_up: part of the one list made from corrections recorded before the assistant could learn from them.",
+            "enum": [
+              "daily",
+              "catch_up"
+            ],
+            "title": "Batch",
+            "type": "string"
+          },
+          "came_from": {
+            "enum": [
+              "input",
+              "correction"
+            ],
+            "title": "Came From",
+            "type": "string"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "confirmed",
+                  "assumed",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "discard_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discard Reason"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The words and records it was learned from."
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When it expires unreviewed; none for one that never does.",
+            "title": "Expires At"
+          },
+          "guard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guard"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "id_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Id Patterns",
+            "type": "array"
+          },
+          "just_this_time_before": {
+            "default": 0,
+            "description": "How many times the person said \"just this time\" to the same correction before.",
+            "title": "Just This Time Before",
+            "type": "integer"
+          },
+          "kept_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kept At"
+          },
+          "kept_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person who kept it, and so the author of its wording.",
+            "title": "Kept By"
+          },
+          "kind": {
+            "enum": [
+              "lesson",
+              "glossary_entry",
+              "routing_entry",
+              "style_note",
+              "rule"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "learned_at": {
+            "format": "date-time",
+            "title": "Learned At",
+            "type": "string"
+          },
+          "learned_from": {
+            "enum": [
+              "person",
+              "input",
+              "assistant",
+              "pack",
+              "seed",
+              "import"
+            ],
+            "title": "Learned From",
+            "type": "string"
+          },
+          "look_up": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Look Up"
+          },
+          "meaning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meaning"
+          },
+          "more_evidence": {
+            "description": "What other proposals of the same thing were learned from, merged into it.",
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeEvidence"
+            },
+            "title": "More Evidence",
+            "type": "array"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A rule's own name.",
+            "title": "Name"
+          },
+          "negative": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Negative"
+          },
+          "observation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where it came from, for its link."
+          },
+          "pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "signal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal"
+          },
+          "status": {
+            "enum": [
+              "proposed",
+              "active",
+              "discarded",
+              "expired",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "text": {
+            "description": "The entry in plain words.",
+            "title": "Text",
+            "type": "string"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          },
+          "trust": {
+            "enum": [
+              "trusted",
+              "untrusted"
+            ],
+            "title": "Trust",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "version",
+          "text",
+          "status",
+          "learned_from",
+          "trust",
+          "learned_at",
+          "applies_to",
+          "came_from",
+          "batch"
+        ],
+        "title": "ProposalView",
+        "type": "object"
+      },
+      "ProposalsView": {
+        "description": "Everything the assistant learned that waits for the person, oldest first, apart from the catch-up list.",
+        "properties": {
+          "expired": {
+            "description": "How many from inputs expired unreviewed since the person last looked.",
+            "title": "Expired",
+            "type": "integer"
+          },
+          "origins": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "How many came from an input and how many from a correction.",
+            "title": "Origins",
+            "type": "object"
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalView"
+            },
+            "title": "Proposals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "proposals",
+          "origins",
+          "expired"
+        ],
+        "title": "ProposalsView",
+        "type": "object"
+      },
       "ProposedFile": {
         "properties": {
           "file_kind": {
@@ -6869,6 +7311,18 @@
             "description": "The estimated cost of everything the line starts (first_go), when any has a price.",
             "title": "Estimate Usd"
           },
+          "expired": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a learned line: how many proposals from inputs expired unreviewed since the person last looked at what was learned.",
+            "title": "Expired"
+          },
           "group": {
             "enum": [
               "decide",
@@ -6902,11 +7356,25 @@
               "overdue",
               "review",
               "rule_review",
+              "learned",
+              "catch_up",
               "send",
               "nudge"
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "left_out": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a catch_up line: how many kinds of earlier correction were too many for the list and expired unread.",
+            "title": "Left Out"
           },
           "moved": {
             "anyOf": [
@@ -6931,6 +7399,14 @@
             ],
             "description": "The held item's index in its changeset.",
             "title": "Op"
+          },
+          "origins": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "description": "For a learned line: how many of the proposals came from an input (`input`) and how many from one of the person's corrections (`correction`).",
+            "title": "Origins",
+            "type": "object"
           },
           "outcome": {
             "additionalProperties": {
@@ -12699,6 +13175,44 @@
         "summary": "Entries"
       }
     },
+    "/api/knowledge/catch-up": {
+      "get": {
+        "description": "What the assistant learned from corrections made before it could learn from them: one list, the most\nrepeated kinds of correction first, cut at the configured number.",
+        "operationId": "catch_up_list_api_knowledge_catch_up_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatchUpView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Catch Up List"
+      }
+    },
+    "/api/knowledge/proposals": {
+      "get": {
+        "description": "What the assistant learned that waits for the person, oldest first, each tagged by where it came from\n(an input or one of the person's corrections) with its evidence and what it applies to. The catch-up list is\nseparate.",
+        "operationId": "waiting_proposals_api_knowledge_proposals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Waiting Proposals"
+      }
+    },
     "/api/knowledge/rules/review": {
       "get": {
         "description": "The standing rules to look over: active rules given to runs over the review window and never shown to apply,\nmost present first, with the size of what every run is sent and how many rules the latest run had moved out of\nit. A rule a code check enforces is never in the list.",
@@ -12766,6 +13280,56 @@
           }
         },
         "summary": "Discard"
+      }
+    },
+    "/api/knowledge/{entry_id}/just-this-time": {
+      "post": {
+        "description": "Set a proposal aside as right for this case but not a pattern: it is discarded with that as its reason,\na `just_this_time` signal is recorded, and the same correction proposed again is shown with how many times\nthis was said before. Undo puts it back to proposed.",
+        "operationId": "just_this_time_api_knowledge__entry_id__just_this_time_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Just This Time"
       }
     },
     "/api/knowledge/{entry_id}/keep": {

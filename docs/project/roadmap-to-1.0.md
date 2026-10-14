@@ -983,7 +983,9 @@ From the original designer's lessons of 2026-10-14:
 - [ ] **"Just this time" beside Keep on the Learned line** (the original designer's mockup review, 2026-10-14, design 7.18):
   the signal is recorded, nothing is proposed, and a repeat of the same correction counts toward a later proposal. A lesson
   is about what was corrected (an action's owner teaches who does the work, not where questions go). One Today line for
-  everything learned, each entry tagged by where it came from.
+  everything learned, each entry tagged by where it came from. *Built in L3p (engine and API):* the route, the
+  `just_this_time` signal, the mark on a repeat and the one Today line. Built: `tests/test_proposals.py::test_just_this_time_records_its_signal_discards_and_the_repeat_is_marked`, `tests/test_proposals.py::test_the_line_counts_both_origins_and_how_many_expired_since_the_person_last_looked`.
+  *Left:* the button beside Keep on the Learned line, and the line's screen.
 - [ ] **One question per id** (afternoon lesson 2): the lint `several-questions` (default `return`) on a question or
   decision whose text holds two or more numbered questions, so each has its own answer and follow-through. A question
   about a gap in the person's own notes is asked only when a record depends on it (the `matters_for` item below), and
@@ -1003,7 +1005,10 @@ From the original designer's lessons of 2026-10-14:
   or discard. Two guards: the person's own words (a rule stated in their note or answer) still apply at once with Undo,
   and only rules from the assistant, inputs or reported content become proposals, whose Keep shows the restatement the
   person agrees to; the held rule decisions already on Today move to the catch-up list once, when L3 starts, so nothing
-  is lost and nothing is decided twice.
+  is lost and nothing is decided twice. *Built in L3p (engine and API):* `rule.add` from anyone but the person applies as a
+  `proposed` rule, and the held decisions move once at startup. Built: `tests/test_proposals.py::test_a_rule_from_an_input_is_a_proposal_and_from_the_persons_note_is_active_with_undo`, `tests/test_proposals.py::test_held_rule_decisions_move_once_to_the_catch_up_list_and_running_twice_moves_them_once`,
+  `tests/test_proposals.py::test_keeping_a_rule_proposal_makes_the_restatement_theirs_and_the_source_stays_outside_evidence`.
+  *Left:* the screen that shows the restatement and Keep (the Learned line and the review list).
 - [ ] **A correction that will apply again is knowledge, never a code request** (the original designer's lessons from running, 2026-10-13): feedback on a question (Respond to
   the assistant) proposes a rule or a lesson whenever the correction generalizes, stated as the general case ("rows
   scoped to another team get no impact question unless they name our work"), not just this instance. A report to the
@@ -1027,19 +1032,24 @@ From the original designer's lessons of 2026-10-14:
   unless the edit contradicts the evidence the run had.
 - [ ] Learning from inputs (`learn.input`), with a rules-only scan for terms missing from the glossary: new terms, "not me,
   ask X", rerouted questions, facts that supersede.
-- [ ] Proposal rules:
+- [x] Proposal rules:
   - the person's own words apply at once with Undo, and the rest wait for Keep;
   - a pasted reply is content;
   - duplicates merge;
-  - near-matches of recent discards are not shown again.
-- [ ] Proposals from inputs gathered on one card a day, expiring after 14 days with the count shown.
+  - near-matches of recent discards are not shown again. Built: `tests/test_proposals.py::test_a_rule_from_an_input_is_a_proposal_and_from_the_persons_note_is_active_with_undo`, `tests/test_proposals.py::test_a_duplicate_merges_into_the_entry_it_repeats_and_links_the_evidence`, `tests/test_proposals.py::test_a_proposal_close_to_a_recent_discard_is_not_shown_and_an_old_discard_is_forgotten` (a pasted reply: `tests/test_knowledge_records.py::test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input_it_is_proposed`).
+- [ ] Proposals from inputs gathered on one card a day, expiring after 14 days with the count shown. *Built in L3p (engine and
+  API):* the sweep, the Today line with the expired count and the proposals route. Built: `tests/test_proposals.py::test_the_sweep_expires_input_proposals_after_the_days_and_never_correction_ones`, `tests/test_proposals.py::test_the_line_counts_both_origins_and_how_many_expired_since_the_person_last_looked`. *Left:* the card.
 - [ ] Keep makes the person the author of the restatement shown; raw source text enters packets only as evidence marked
-  "from outside". Bulk Keep only for glossary terms and facts with evidence (design 12.8).
+  "from outside". Bulk Keep only for glossary terms and facts with evidence (design 12.8). *Built in L3p:* Keep makes the
+  kept content trusted and the source stays evidence; the packet never carries the source's words. Built: `tests/test_proposals.py::test_keeping_a_rule_proposal_makes_the_restatement_theirs_and_the_source_stays_outside_evidence`. *Left:* bulk Keep, which is a screen.
 - [ ] The repeat-correction signal and the knowledge-used rate (`applied` on each changeset, checked against the knowledge
   log).
 - [ ] The corrections recorded before this phase are learned from once, into one catch-up list, capped for one sitting
   (the original designer's L0 sign-off, 2026-10-13): at most 20 (a setting), ranked by how often the same kind of correction repeated; the rest expire with their
-  count shown, as daily proposals do.
+  count shown, as daily proposals do. *Built in L3p:* the selection, the ranking, the cap and the one-time start, the
+  Today line and its route. Built: `tests/test_proposals.py::test_the_catch_up_list_caps_and_ranks_the_corrections_from_before_and_is_made_once`.
+  *Left:* queueing the learning runs for the chosen kinds (`learn.correction`, which doesn't exist yet: `catch_up.waiting`
+  is what it reads), and the list's screen.
 - [ ] **A correction fixes the class, not the instance** (the original designer's L0 sign-off, 2026-10-13): the learner's one proposal states the general case and its
   test (with evidence such as dates), and its learning pair checks the negative: a row that does name our work still
   gets its question.

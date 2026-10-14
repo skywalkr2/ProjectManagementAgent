@@ -1315,6 +1315,7 @@ hand, an automatic close pulled back, and an edited follow-up message (a draft t
 | held op declined | the PM declines a held system op or a routing guess |
 | routed | the person said who a name or an owner is, answering "Who is X?" or "Pick an owner" (refs: the changeset, the question, the person chosen; the note is the name as written). Undoing the person's own release of a held op records no signal: it is their decision, not the assistant's work. **Built**: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal`, `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |
 | put on hold / taken off hold | the person puts an action on hold or takes it off (refs: the action; the note is what it waits for). Undoing either records no signal. **Built**: `tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`, `tests/test_on_hold_and_follow_ups.py::test_a_hold_needs_words_and_an_open_action_and_undoing_it_records_no_signal` |
+| just this time | the person says a proposed piece of learning is right for this case but is not a pattern (7.18). Refs: the entry; no note. The entry is discarded with that as its reason and nothing replaces it; a repeat of the same correction is shown with how many times this was said. Undoing records no signal. **Built**: `tests/test_proposals.py::test_just_this_time_records_its_signal_discards_and_the_repeat_is_marked` |
 | kept / discarded / retired | the person keeps or discards a proposed piece of what the assistant learned, or retires an active one (6.22). Refs: the entry; no note (a discard's reason stays on the entry). Undoing records no signal. **Built**: `tests/test_knowledge_records.py::test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`, `tests/test_knowledge_records.py::test_discard_keeps_the_proposal_with_its_reason_and_undo_brings_it_back`, `tests/test_knowledge_records.py::test_retire_ends_an_active_entry_and_undo_makes_it_active_again` |
 | edited | the person changes a field the assistant set (a fact, an owner, a due date, an item's project, a question's wording before it is sent). The ledger shows who set each field, so this needs no AI. A silent correction, learned from in the batch (*designed, phase L*) |
 | repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item (*designed, phase L*) |
@@ -1353,7 +1354,7 @@ the run never saw. The review keeps the active list short enough for that.
 
 ## 6.22 Knowledge and the learning loop
 
-*Partly built: the records, their ops and Keep, Discard and Retire (phase L1) are built; packets that read them (L2) and learning from corrections (L3) are designed, not yet built* (roadmap: the loop in phase L-core, next after phase A, after which real use starts; Ask's
+*Partly built: the records, their ops and Keep, Discard and Retire (phase L1) are built; packets that read them (L2) are built; the rules for proposals (L3p: rules as proposals, duplicates, near-discards, "just this time", expiry, the one Today line and the catch-up list) are built; learning from corrections (the `learn` task kinds) and the screens are designed, not yet built* (roadmap: the loop in phase L-core, next after phase A, after which real use starts; Ask's
 knowledge, Take my lessons, agent versions, early probation, the unused list and single-record restore in phase L-more,
 after the packs; decisions, 2026-10-12 "The learning slice" and "The plan review"). This is what
 makes the assistant better at each project the more it sees. It has four parts:
@@ -1372,6 +1373,11 @@ signals (6.20). This section is the read side.
   designer, 2026-10-14), a rule from the assistant, an input or reported content is a proposal kept or discarded on the
   Learned line like the other kinds, and Keep shows the restatement the person agrees to; a rule in the person's own
   words still applies at once with Undo. The held rule decisions on Today move to the catch-up list once, when L3 starts.
+  **Built in L3p:** `rule.add` is one of the ops that add as a proposal (`KNOWLEDGE_ADD_OPS`), a `rule` record has the
+  statuses `proposed`, `active`, `discarded`, `expired` and `retired`, the origin `input`, `trust`, `discard_reason` and
+  `more_evidence` like the other kinds, and `engine/catch_up.py` moves the held decisions once. Built:
+  `tests/test_proposals.py::test_a_rule_from_an_input_is_a_proposal_and_from_the_persons_note_is_active_with_undo`,
+  `tests/test_proposals.py::test_held_rule_decisions_move_once_to_the_catch_up_list_and_running_twice_moves_them_once`.
 - **Lesson:** what went wrong, why, and the guard. Created from a correction and linked to the signal it came from.
 - **Glossary entry:** a term or acronym, its meaning, project or global, and a confidence (confirmed, assumed or unknown). It
   may also carry patterns for splitting compound ids.
@@ -1446,9 +1452,9 @@ rules as records are separate L1 items, not built here.
   `test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_and_its_request`.
 - **Export and import.** Every kind is written and loaded back like any record (5.0). Built:
   `test_every_kind_of_knowledge_is_in_the_export_and_loads_back`.
-- **Not built, left for later phases:** the Learned line and the review screens (L3, 7.18), duplicate merging and the
-  discard hold (L3), the `expired` sweep (L3), the knowledge section of packets and its log (L2), `promoted` for a lesson,
-  and a pack's or a seed's entries (L-more).
+- **Not built, left for later phases:** the Learned line and the review screens (L3, 7.18), `promoted` for a lesson, and a
+  pack's or a seed's entries (L-more). Duplicate merging, the discard hold and the `expired` sweep are built in L3p (below);
+  the knowledge section of packets and its log are built in L2.
 
 **The knowledge section of every packet** is split so the cached prefix stays the same from input to input (6.6):
 - **In the stable part,** after the playbook and before the open items:
@@ -1585,6 +1591,40 @@ instead of piling up. This is the same overlap check as rules (6.7), shown as "O
 **What the person discarded is remembered.** A discarded proposal is kept, with the reason if the person gave one. A new
 proposal that nearly matches a discard from the last `knowledge.discards_hold_days` (default 90) is not shown again. Otherwise
 the same glossary guess or routing entry comes back from every input that mentions it, and the daily card repeats itself.
+
+**Proposal rules, as built in L3p** (`engine/proposals.py`, `engine/knowledge.py`, `engine/rules.py`). They apply to the four
+kinds and to standing rules, and to a proposal only: what the person says in their own words is active at once.
+- **A duplicate merges.** A proposal with the same kind, the same normalized wording (a glossary entry's term, a routing
+  entry's topic and who it names, a style note's audience and observation, a lesson's or rule's text) and a target that
+  overlaps an active or proposed entry's (task kinds, people and projects each share something) is not made again: it links
+  its evidence to that entry (`more_evidence`) and the op's outcome names the entry. An active entry is kept before a proposed one.
+- **A near-discard is not shown.** A proposal whose words are alike enough (`knowledge.discard_similarity`, default 0.8, the
+  share of words in common) to an entry the person discarded in the last `knowledge.discards_hold_days`, over an overlapping
+  target, is made as `discarded` with the reason "Close to one you discarded", so nothing shows. The hold counts only
+  the person's own discards (the `discarded` signal), never one made this way, and not one set aside with "just this time".
+- **A pasted reply is content.** A note typed on a button that relays someone else is content the person reports, so its
+  proposals are proposals (the same test as for any op from a note).
+- **Just this time.** `POST /api/knowledge/{id}/just-this-time` on a proposal records a `just_this_time` signal (no `discarded`
+  signal), discards it with the reason "Just this time", and acts at once with Undo. Nothing is proposed in its place. The
+  key it remembers is the entry's kind and normalized subject (the same wording the duplicate test uses), so the next
+  proposal about the same thing is made and shown, and `just_this_time_before` on its view says how many times it was set
+  aside before. Undoing puts the proposal back and it stops counting.
+- **Where a proposal came from.** `came_from` is `correction` when the entry cites a correction (its evidence `signal`, a
+  lesson's `signal`) or was written by a learning run on a correction, else `input`.
+- **Expiry.** A daily sweep in the worker (`sweep_proposals_if_due`) sets proposals from inputs to `expired` once they have
+  waited more than `knowledge.proposals_expire_days` (default 14). Proposals from corrections never expire.
+- **One line for everything learned.** `GET /api/knowledge/proposals` lists the proposals waiting, oldest first, with
+  `came_from`, evidence, target and `expires_at`. Today has one Review line, `learned`, counting them by origin, with `expired`:
+  how many expired since the person last kept, discarded or set one aside. It leaves out the catch-up list.
+- **The catch-up list.** `engine/catch_up.py::start`, run at startup, makes the list once: the corrections recorded so far
+  that no entry cites, grouped by kind (the signal's kind, the task kind that made the change and the record kinds it
+  touched), ranked by how often the kind repeated and then by recency, cut at `knowledge.catch_up_max` (default 20); the rest
+  are counted as left out. It also moves the held rule decisions into proposals. The list's state is a small file in the
+  workspace's private folder (`.cockpit/catch-up.json`), so it is made once per computer. `catch_up.waiting` gives the learning
+  step the kinds still to learn from, and each leaves it once an entry cites one of its corrections.
+  `GET /api/knowledge/catch-up` returns the proposals on the list with `waiting` and `left_out`, and Today has the Review line
+  `catch_up`. *Until the `learn` task kinds exist, only the moved rules reach the list; the corrections wait.*
+Built: `tests/test_proposals.py` (every test named in CHANGES.md section 55).
 
 **When it runs.**
 - **At once, when the person wrote something.** That covers a send-back note, an answer to the assistant's question, or a

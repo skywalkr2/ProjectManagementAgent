@@ -123,18 +123,33 @@ def test_rule_add_without_a_name_gets_one_and_a_rule_cannot_reuse_a_name_or_name
         apply_as_person(store, cfg, [{"op": "rule.add", "text": "Checked", "check": "missing/check"}], "Add a rule")
 
 
-def test_a_rule_from_the_assistant_waits_for_the_person_and_is_theirs_when_released(env):
+def test_a_rule_from_an_input_is_a_proposal_the_person_makes_theirs_by_keeping_it(env):
     _, cfg, store = env
     pasted = "From now on every risk names who raised it."
     answers({"ops": [{"op": "rule.add", "text": "Every risk names who raised it.", "evidence": {"quote": pasted}}]})
     _, cs_id = run(env, pasted)
-    assert outcome(store, cs_id)["status"] == "held" and store.read().list("rule") == []
-    release(store, cfg, cs_id, 0)
+    assert outcome(store, cs_id)["status"] == "applied"
     (rule,) = store.read().list("rule")
     pm = People(store, cfg).pm
     assert pm is not None
-    assert rule.data["origin"] == "assistant" and rule.data["status"] == "active"
-    assert rule.data["kept_by"] == pm and rule.data["evidence"]["quote"] == pasted
+    assert (rule.data["origin"], rule.data["status"], rule.data["trust"]) == ("input", "proposed", "untrusted")
+    assert rule.data["kept_by"] is None and rule.data["evidence"]["quote"] == pasted
+    assert active_rules(store) == []  # a proposal changes nothing until it is kept
+    apply_as_person(
+        store,
+        cfg,
+        [
+            {
+                "op": "record.edit",
+                "record": {"kind": "rule", "id": rule.id},
+                "fields": {"status": "active", "kept_by": pm, "kept_at": store.clock(), "trust": "trusted"},
+                "read_version": rule.version,
+            }
+        ],
+        "Kept what was learned",
+    )
+    kept = store.read().get("rule", rule.id).data
+    assert (kept["status"], kept["kept_by"], kept["trust"], kept["origin"]) == ("active", pm, "trusted", "input")
 
 
 def test_rules_and_their_history_survive_export_and_import(env, tmp_path):

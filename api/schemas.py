@@ -1090,6 +1090,8 @@ class QueueLineView(BaseModel):
         "overdue",
         "review",
         "rule_review",
+        "learned",
+        "catch_up",
         "send",
         "nudge",
     ]
@@ -1153,6 +1155,21 @@ class QueueLineView(BaseModel):
     )
     days: int | None = Field(
         None, description="For a rule_review line: how many days the flagged rules have been given and never applied."
+    )
+    origins: dict[str, int] = Field(
+        default_factory=dict,
+        description="For a learned line: how many of the proposals came from an input (`input`) and how many from one "
+        "of the person's corrections (`correction`).",
+    )
+    expired: int | None = Field(
+        None,
+        description="For a learned line: how many proposals from inputs expired unreviewed since the person last "
+        "looked at what was learned.",
+    )
+    left_out: int | None = Field(
+        None,
+        description="For a catch_up line: how many kinds of earlier correction were too many for the list and expired "
+        "unread.",
     )
 
 
@@ -2251,3 +2268,43 @@ class KnowledgeDiscard(BaseModel):
 
     read_version: int = Field(ge=1, description="The entry's version that was read.")
     reason: str | None = Field(None, description="Why, if the person says.")
+
+
+class ProposalView(KnowledgeView):
+    """One proposal waiting for the person: a piece of what the assistant learned, or a standing rule, to keep, set
+    aside "just this time" or discard. `came_from` says where it came from (an input, or one of the person's
+    corrections); proposals from inputs expire at `expires_at`, those from corrections never do."""
+
+    kind: Literal["lesson", "glossary_entry", "routing_entry", "style_note", "rule"]
+    name: str | None = Field(None, description="A rule's own name.")
+    came_from: Literal["input", "correction"]
+    batch: Literal["daily", "catch_up"] = Field(
+        description="daily: reviewed on Today's one line for what was learned. catch_up: part of the one list made "
+        "from corrections recorded before the assistant could learn from them."
+    )
+    more_evidence: list[KnowledgeEvidence] = Field(
+        default_factory=list, description="What other proposals of the same thing were learned from, merged into it."
+    )
+    just_this_time_before: int = Field(
+        0, description='How many times the person said "just this time" to the same correction before.'
+    )
+    expires_at: datetime | None = Field(None, description="When it expires unreviewed; none for one that never does.")
+
+
+class ProposalsView(BaseModel):
+    """Everything the assistant learned that waits for the person, oldest first, apart from the catch-up list."""
+
+    proposals: list[ProposalView]
+    origins: dict[str, int] = Field(description="How many came from an input and how many from a correction.")
+    expired: int = Field(description="How many from inputs expired unreviewed since the person last looked.")
+
+
+class CatchUpView(BaseModel):
+    """The one list of what the assistant learned from corrections made before it could learn from them (design
+    6.22): at most the configured number of kinds of correction, the most repeated first."""
+
+    proposals: list[ProposalView]
+    made_at: datetime | None = Field(None, description="When the list was made; none before it has been.")
+    waiting: int = Field(description="Kinds of correction chosen that the assistant hasn't learned from yet.")
+    left_out: int = Field(description="Kinds of correction too many for the list; they expired unread.")
+    most: int = Field(description="The most kinds of correction one list holds.")

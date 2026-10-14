@@ -9,7 +9,7 @@ import os
 import threading
 import time
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -181,6 +181,7 @@ class Worker:
         self._backups: threading.Thread | None = None
         self._sync: threading.Thread | None = None
         self._jobs: threading.Thread | None = None
+        self._swept_on: date | None = None
         self._synced_at: int | None = -1
         self._said_no_git = False
         self._beat = 0.0
@@ -383,6 +384,20 @@ class Worker:
             return False
         return export_schedule.run(self.ws, self.store, self.cfg, now)
 
+    def sweep_proposals_if_due(self) -> list[str]:
+        """Once a day, expire the proposals from inputs that waited longer than the configured days for the person.
+        Proposals from the person's own corrections never expire. Returns the ids expired."""
+        from engine.proposals import expire_due
+
+        now = self.now()
+        if self._swept_on == now.date():
+            return []
+        expired = expire_due(self.store, now, self.cfg.dispatch.knowledge.proposals_expire_days)
+        self._swept_on = now.date()
+        if expired:
+            self.events.changed()
+        return expired
+
     def first_backup_soon(self) -> threading.Thread | None:
         """A backup folder was just chosen: when no backup has ever succeeded, make one now on its own thread, so the
         person isn't asked to back up right after choosing where. Uses the settings as the files hold them now, and
@@ -555,6 +570,10 @@ class Worker:
                 self.export_if_due()
             except Exception:  # a failed export is logged by the export; nothing here may stop the thread
                 log.exception("the scheduled export failed")
+            try:
+                self.sweep_proposals_if_due()
+            except Exception:  # the sweep runs again the next time round; nothing here may stop the thread
+                log.exception("expiring old proposals failed")
             self._read_now.wait(timeout=60)
             self._read_now.clear()
 

@@ -52,9 +52,13 @@ class Line:
     oldest began), overdue,
     review, rule_review (standing rules to look over: `count` flagged as never applying in `days`, their ids in `rules`,
     the always-sent section's `stable_size` against its `stable_budget`, and `moved` rules sent only with the runs they
-    cover), send or nudge. `count` is how many things the line covers; `text` the
-    decision, question or held item in one line; `title` the input the line is about; `outcome` what the assistant
-    did, counted by kind; `waiting` why the work stopped, as the engine said it."""
+    cover), learned (proposals of what the assistant learned from inputs and from the person's corrections, to look
+    over: `count` of them, `origins` counted by where they came from and `expired` how many from inputs expired since
+    the person last looked), catch_up (what the assistant learned from corrections made before it could: `count`
+    waiting and `left_out`, how many kinds of correction were too many for one list), send or nudge. `count` is how
+    many things the line covers; `text` the decision, question or held item in one line; `title` the input the line
+    is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as the engine said
+    it."""
 
     key: str
     group: str
@@ -86,6 +90,9 @@ class Line:
     stable_budget: int | None = None
     moved: int | None = None
     days: int | None = None
+    origins: dict[str, int] = field(default_factory=dict)
+    expired: int | None = None
+    left_out: int | None = None
     since: str = ""
 
 
@@ -377,6 +384,43 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
             )
         )
 
+    # Review: what the assistant learned, as one line for the proposals from inputs and from corrections, and one for
+    # the catch-up list of corrections made before it could learn from them.
+    from engine import catch_up
+    from engine.proposals import expired_since, last_reviewed, proposals
+
+    state = catch_up.load(store)
+    listed = catch_up.proposal_ids(reader, state)
+    waiting = proposals(reader)
+    daily = [p for p in waiting if p.stored.id not in listed]
+    if daily:
+        origins: dict[str, int] = {}
+        for p in daily:
+            origins[p.came_from] = origins.get(p.came_from, 0) + 1
+        lines.append(
+            Line(
+                key="learned",
+                group="review",
+                kind="learned",
+                count=len(daily),
+                origins=origins,
+                expired=expired_since(reader, last_reviewed(reader)),
+                since=str(daily[0].stored.data.get("learned_at") or ""),
+            )
+        )
+    on_list = [p for p in waiting if p.stored.id in listed]
+    if on_list:
+        lines.append(
+            Line(
+                key="catch_up",
+                group="review",
+                kind="catch_up",
+                count=len(on_list),
+                left_out=state.left_out if state is not None else 0,
+                since=str(on_list[0].stored.data.get("learned_at") or ""),
+            )
+        )
+
     # Send and follow up: who has something to send, then who hasn't answered for a while.
     for s in sections(store, cfg, today):
         if s.is_pm:
@@ -432,6 +476,8 @@ _KIND_ORDER = {
     "overdue": 2,
     "review": 0,
     "rule_review": 1,
+    "learned": 2,
+    "catch_up": 3,
     "send": 0,
     "nudge": 1,
 }

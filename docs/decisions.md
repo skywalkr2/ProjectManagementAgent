@@ -3236,3 +3236,27 @@ where pasted material belongs (it stays untrusted there).
 **Impact:** Design 6.5, 6.6, 6.9, 4.6 and CHANGES section 43. New setting `language.bare_confirmation_words` (live) with demo
 values in both workspaces. API: optional `note` on the action status, They finished it, Followed up and pick-owner
 routes; `request` on their responses. No change to scope.
+
+## 2026-10-14: The rules for proposals, built (phase L3p)
+
+**Decision:** The original designer's rules for proposals are built as designed (6.22, 7.18, 12.8): a rule is a proposal like the
+other kinds, duplicates merge, a close discard is not shown, "just this time" is a signal and a repeat is marked, one Today line
+holds everything learned, proposals from inputs expire in a daily sweep, and the corrections recorded before are chosen once
+into a catch-up list. Four choices the builder made, for review: (1) a `rule` record gains the status `expired`, the origin
+`input`, `trust`, `discard_reason` and `more_evidence`, the same as the four kinds, and every knowledge record gains
+`more_evidence` (the evidence of the proposals merged into it); (2) Keep also makes an entry's `trust` trusted, because the person
+kept its restatement and target as their own words (before, a kept entry from content stayed data in packets for good); (3) the
+catch-up list's state (when it was made, the chosen kinds, how many were left out, the rules moved) is a small file in the
+workspace's private folder, so it is made once per computer, because a record kind for it would be a design change; (4) a
+proposal "came from a correction" when it cites a signal or was written by a learning run on a correction, else from an input.
+
+**Decided by:** the technical PM's brief, from the original designer's answers; choices (1) to (4) are the builder's.
+
+**Why:** The brief needs somewhere to link merged evidence, to expire and discard rules, and to remember the one-time list; and
+Keep's promise (12.8) is that the person's own words become guidance.
+
+**Impact:** Design 6.22, 6.20, 7.18, 12.8 and CHANGES section 55. New settings `knowledge.discards_hold_days` (90),
+`knowledge.discard_similarity` (0.8), `knowledge.proposals_expire_days` (14) and `knowledge.catch_up_max` (20), with demo values in
+both workspaces. API: `GET /api/knowledge/proposals`, `GET /api/knowledge/catch-up`, `POST /api/knowledge/{id}/just-this-time`; the
+Today queue gains the kinds `learned` and `catch_up`; keep and discard take a rule id. The plugin guide is regenerated (core
+records changed). No change to scope.

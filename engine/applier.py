@@ -614,6 +614,8 @@ def edit_problem(store: Store, view: Any, op: Any) -> str | None:
     if not op.fields:
         return "nothing to change"
     closed = {"id", "stage", "ext"} | set(long_text_fields(model)) | set(getattr(model, "fixed_fields", ()))
+    if knowledge.is_keep(op.record.kind, current.data, dict(op.fields)):
+        closed -= {"trust"}  # keeping a proposal makes the person its author, so its content is theirs
     for name in op.fields:
         if name not in model.model_fields:
             return f"{op.record.kind} has no field {name}"
@@ -956,16 +958,7 @@ def _apply_op(
             if op.evidence is not None and w.evidence is not None
             else None
         )
-        rid = add_rule(
-            tx,
-            ctx.store,
-            op,
-            w,
-            origin="assistant" if ctx.inputs.request and tx.find("run", {"request": ctx.inputs.request}) else "person",
-            kept_by=ctx.people.pm,
-            evidence=ev,
-        )
-        return [{"kind": "rule", "id": rid}], None
+        return add_rule(tx, ctx.store, op, w, _standing(tx, ctx), evidence=ev), None
     if isinstance(op, RuleRetireOp):
         from engine.rules import retire_rule
 
@@ -1241,6 +1234,8 @@ def _standing(tx: Tx, ctx: Context) -> knowledge.Standing:
         source=ctx.inputs.source,
         request=ctx.inputs.request or None,
         now=ctx.store.clock(),
+        hold_days=ctx.cfg.dispatch.knowledge.discards_hold_days,
+        alike=ctx.cfg.dispatch.knowledge.discard_similarity,
     )
 
 

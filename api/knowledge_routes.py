@@ -4,22 +4,25 @@ at once, with Undo through the change it makes, and records a signal (6.20)."""
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     Applied,
+    CatchUpView,
     KnowledgeDiscard,
     KnowledgeKeep,
     KnowledgeNarrow,
     KnowledgeView,
+    ProposalsView,
+    ProposalView,
     ReadVersion,
     RuleReviewRule,
     RuleReviewView,
 )
-from engine import knowledge
+from engine import catch_up, knowledge, proposals
 from engine.applier import apply_as_person
 from engine.config import Config
 from engine.dispatcher import SAY_WHO_FIRST, signal
@@ -60,10 +63,52 @@ def _view(stored: Any, origin: dict[str, Any] | None) -> KnowledgeView:
     )
 
 
+def _proposal(
+    view: Any,
+    found: proposals.Proposal,
+    origin: dict[str, Any] | None,
+    batch: str,
+    settings: Any,
+) -> ProposalView:
+    stored = found.stored
+    data = dict(stored.data)
+    own = {name: data.get(name) for name in knowledge.OWN_FIELDS.get(found.kind, ())}
+    learned = data.get("learned_at")
+    expires = (
+        proposals.at_of(learned) + timedelta(days=settings.proposals_expire_days)
+        if found.came_from == proposals.FROM_INPUT and learned
+        else None
+    )
+    return ProposalView(
+        id=stored.id,
+        kind=found.kind,
+        version=stored.version,
+        text=data["text"],
+        name=data.get("name") if found.kind == "rule" else None,
+        status=data["status"],
+        learned_from=data["origin"],
+        pack=data.get("pack"),
+        trust=data.get("trust", "trusted"),
+        learned_at=learned,
+        kept_by=data.get("kept_by"),
+        kept_at=data.get("kept_at"),
+        discard_reason=data.get("discard_reason"),
+        applies_to=data["applies_to"],
+        evidence=data.get("evidence"),
+        more_evidence=data.get("more_evidence") or [],
+        origin=origin,
+        came_from=found.came_from,
+        batch=batch,
+        just_this_time_before=proposals.just_this_time_before(view, found.kind, data, own_id=stored.id),
+        expires_at=expires,
+        **{name: value for name, value in own.items() if value is not None or name == "negative"},
+    )
+
+
 def build_knowledge_router(cfg: Config, store: Store, events: Events) -> APIRouter:
     r = APIRouter(prefix="/api")
 
-    def entry(entry_id: str, read_version: int, *, rules: bool = False) -> Any:
+    def entry(entry_id: str, read_version: int, *, rules: bool = True) -> Any:
         kind = knowledge.kind_of(entry_id) or ("rule" if rules and entry_id.startswith(f"{Rule.prefix}-") else None)
         found = store.read().get(kind, entry_id) if kind else None
         if found is None:
@@ -139,6 +184,55 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events) -> APIRout
         found = entry(entry_id, body.read_version, rules=True)
         op = "rule.retire" if found.kind == "rule" else "knowledge.retire"
         return act(found, {"op": op, "id": found.id}, "Retired what was learned", "retired")
+
+    def views(view: Any, found: list[proposals.Proposal], batch: str) -> list[ProposalView]:
+        links = {kind: origins(view, kind, [p.stored.id for p in found if p.kind == kind]) for kind in proposals.KINDS}
+        return [_proposal(view, p, links[p.kind].get(p.stored.id), batch, cfg.dispatch.knowledge) for p in found]
+
+    @r.get("/knowledge/proposals")
+    def waiting_proposals() -> ProposalsView:
+        """What the assistant learned that waits for the person, oldest first, each tagged by where it came from
+        (an input or one of the person's corrections) with its evidence and what it applies to. The catch-up list is
+        separate."""
+        view = store.read()
+        listed = catch_up.proposal_ids(view, catch_up.load(store))
+        found = [p for p in proposals.proposals(view) if p.stored.id not in listed]
+        origins_count: dict[str, int] = {}
+        for p in found:
+            origins_count[p.came_from] = origins_count.get(p.came_from, 0) + 1
+        return ProposalsView(
+            proposals=views(view, found, "daily"),
+            origins=origins_count,
+            expired=proposals.expired_since(view, proposals.last_reviewed(view)),
+        )
+
+    @r.get("/knowledge/catch-up")
+    def catch_up_list() -> CatchUpView:
+        """What the assistant learned from corrections made before it could learn from them: one list, the most
+        repeated kinds of correction first, cut at the configured number."""
+        view = store.read()
+        state = catch_up.load(store)
+        listed = catch_up.proposal_ids(view, state)
+        found = [p for p in proposals.proposals(view) if p.stored.id in listed]
+        return CatchUpView(
+            proposals=views(view, found, "catch_up"),
+            made_at=state.made_at if state is not None else None,
+            waiting=len(catch_up.waiting(view, state)),
+            left_out=state.left_out if state is not None else 0,
+            most=cfg.dispatch.knowledge.catch_up_max,
+        )
+
+    @r.post("/knowledge/{entry_id}/just-this-time")
+    def just_this_time(entry_id: str, body: ReadVersion) -> Applied:
+        """Set a proposal aside as right for this case but not a pattern: it is discarded with that as its reason,
+        a `just_this_time` signal is recorded, and the same correction proposed again is shown with how many times
+        this was said before. Undo puts it back to proposed."""
+        found = entry(entry_id, body.read_version)
+        try:
+            fields = knowledge.just_this_time_fields(found)
+        except StoreError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        return act(found, edit(found, fields), "Set aside what was learned, just this time", "just_this_time")
 
     @r.get("/knowledge/rules/review")
     def rule_review() -> RuleReviewView:

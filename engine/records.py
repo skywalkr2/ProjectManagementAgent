@@ -1032,6 +1032,8 @@ class Rule(Record):
     prefix: ClassVar[str] = "RULE"
     layout: ClassVar[str | None] = "rules/{id}"
     unique: ClassVar[tuple[tuple[str, ...], ...]] = (("name",),)
+    #: Where a rule came from and when never change after it is made.
+    fixed_fields: ClassVar[tuple[str, ...]] = ("origin", "trust", "learned_at", "evidence", "more_evidence")
 
     name: str = Field(
         min_length=1,
@@ -1044,13 +1046,24 @@ class Rule(Record):
         description="A deterministic check that implements the rule; a rule with none is prose, and prose alone never "
         "lets a stage move.",
     )
-    origin: Literal["seed", "person", "assistant", "pack", "import"] = Field(
-        description="Where it came from: seed (the starting set), person, assistant, pack or import."
+    origin: Literal["seed", "person", "input", "assistant", "pack", "import"] = Field(
+        description="Where it came from: seed (the starting set), person (the person's own words), input (content), "
+        "assistant (its own generalization), pack or import."
     )
-    status: Literal["proposed", "active", "discarded", "retired"] = Field(
+    trust: Literal["trusted", "untrusted"] = Field(
+        "trusted", description="untrusted when it was proposed from outside content, until the person keeps it."
+    )
+    status: Literal["proposed", "active", "discarded", "expired", "retired"] = Field(
         "active",
-        description="proposed: waiting for the person. active: in use. discarded: the person said no. retired: it "
-        "was active and no longer is.",
+        description="proposed: waiting for the person. active: in use. discarded: the person said no. expired: a "
+        "proposal nobody reviewed in time. retired: it was active and no longer is.",
+    )
+    discard_reason: str | None = Field(
+        None, description="Why it was discarded: what the person said, or that it was close to one they discarded."
+    )
+    more_evidence: list[KnowledgeEvidence] = Field(
+        default_factory=list,
+        description="What other proposals of the same rule were learned from, merged into this one.",
     )
     source: str | None = Field(None, description="Where it came from, in words.")
     evidence: Evidence | None = Field(None, description="The words that justify it, when it came from an input.")
@@ -1175,17 +1188,24 @@ class KnowledgeEvidence(BaseModel):
         return self
 
 
+Rule.model_rebuild()
+
+
 class KnowledgeRecord(Record):
     """What the four kinds of knowledge share (design 6.22). Not a record type itself. The assistant proposes an entry
     or the person states it; it guides runs only once active. `text` is the entry's own wording, in plain words;
     the evidence is kept beside it, never mixed in."""
 
     #: Where an entry came from and when never change after it is made.
-    fixed_fields: ClassVar[tuple[str, ...]] = ("origin", "pack", "trust", "learned_at", "evidence")
+    fixed_fields: ClassVar[tuple[str, ...]] = ("origin", "pack", "trust", "learned_at", "evidence", "more_evidence")
 
     text: str = Field(min_length=1, description="The entry in plain words: what is kept, and what is shown.")
     evidence: KnowledgeEvidence | None = Field(
         None, description="What it was learned from: the exact words and the records they came from."
+    )
+    more_evidence: list[KnowledgeEvidence] = Field(
+        default_factory=list,
+        description="What other proposals of the same entry were learned from, merged into this one.",
     )
     origin: Literal["person", "input", "assistant", "pack", "seed", "import"] = Field(
         description="person: the person's own words. input: proposed from content. assistant: the assistant's own "
@@ -1389,13 +1409,15 @@ class Signal(Record):
         "discarded",
         "retired",
         "narrowed",
+        "just_this_time",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
         "routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; "
         "put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired "
         "a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); "
-        "narrowed, limited what a rule applies to."
+        "narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for "
+        "this case but is not a pattern."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")
@@ -1474,12 +1496,21 @@ REGISTRY: dict[str, type[Record]] = {
     )
 }
 
+#: The references in the evidence merged into an entry from other proposals of it.
+MORE_EVIDENCE_REFERENCES: list[tuple[str, str]] = [
+    ("more_evidence[].source", "source"),
+    ("more_evidence[].request", "request"),
+    ("more_evidence[].signal", "signal"),
+    ("more_evidence[].changeset", "changeset"),
+]
+
 #: The references every kind of knowledge has: what it was learned from, who kept it, what it applies to.
 KNOWLEDGE_REFERENCES: list[tuple[str, str]] = [
     ("evidence.source", "source"),
     ("evidence.request", "request"),
     ("evidence.signal", "signal"),
     ("evidence.changeset", "changeset"),
+    *MORE_EVIDENCE_REFERENCES,
     ("kept_by", "person"),
     ("applies_to.projects[]", "project"),
     ("applies_to.people[]", "person"),
@@ -1513,6 +1544,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "changeset": [("request", "request"), ("run", "run")],
     "fact": [("project", "project"), ("source", "source"), ("supersedes", "fact")],
     "rule": [
+        *MORE_EVIDENCE_REFERENCES,
         ("kept_by", "person"),
         ("applies_to.projects[]", "project"),
         ("applies_to.people[]", "person"),

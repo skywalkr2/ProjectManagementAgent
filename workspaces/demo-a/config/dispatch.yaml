@@ -21,3 +21,7 @@ knowledge:
     min_runs: 10
   rule_review_days: 30
   rule_review_every_days: 7
+  discards_hold_days: 90
+  discard_similarity: 0.8
+  proposals_expire_days: 14
+  catch_up_max: 20

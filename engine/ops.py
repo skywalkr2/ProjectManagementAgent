@@ -436,8 +436,9 @@ class ListRetireOp(OpModel):
 
 
 class RuleAddOp(OpModel):
-    """Add a standing rule: an instruction the assistant follows from now on. A system op: from the assistant it
-    waits for the person. A rule that names a deterministic `check` can gate a stage; a rule with none is prose."""
+    """Add a standing rule: an instruction the assistant follows from now on. A system op: from the person's own words
+    the rule is active at once; from anyone else it is added as a proposal that changes nothing until the person keeps
+    it. A rule that names a deterministic `check` can gate a stage; a rule with none is prose."""
 
     op: Literal["rule.add"] = "rule.add"
     text: str = Field(min_length=1, max_length=500, description="The rule, in the person's wording.")
@@ -711,9 +712,9 @@ KNOWLEDGE_OPS = {
     "style.add",
     "knowledge.retire",
 }
-#: The knowledge ops that add an entry. Whatever tier they have, one that doesn't come from the person's own words
-#: still applies, as a proposal: an entry changes nothing until the person keeps it.
-KNOWLEDGE_ADD_OPS = {"lesson.add", "glossary.add", "routing.add", "style.add"}
+#: The ops that add an entry, a standing rule included. Whatever tier they have, one that doesn't come from the
+#: person's own words still applies, as a proposal: an entry changes nothing until the person keeps it.
+KNOWLEDGE_ADD_OPS = {"lesson.add", "glossary.add", "routing.add", "style.add", "rule.add"}
 
 #: Ops only the person makes: from anyone else they are refused, never held.
 PERSON_ONLY_OPS = {"text.edit", "text.accept", "text.discard", "record.edit"}

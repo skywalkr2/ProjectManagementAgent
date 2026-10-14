@@ -118,6 +118,14 @@ def create_app(
     move_names(store)
     ensure_lists(store)
     seed_rules(store)
+    try:
+        # Corrections recorded before the assistant could learn from them, and rule decisions held for the person,
+        # are gathered once into the catch-up list.
+        from engine.catch_up import start as start_catch_up
+
+        start_catch_up(store, cfg)
+    except Exception as err:  # never stops the app from starting
+        log.warning("Couldn't make the catch-up list: %s", err)
     worker = Worker(ws, store, cfg, events, router_factory, on_restart)
     if sync_held:
         worker.hold_sync()

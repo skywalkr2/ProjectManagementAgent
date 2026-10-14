@@ -97,6 +97,11 @@ def added(store, cs_id) -> dict:
     return store.read().get(record["kind"], record["id"]).data
 
 
+def lesson_saying(text):
+    """A lesson op with its own words, so one proposal never merges into another."""
+    return {"op": "lesson.add", "text": text}
+
+
 def person_adds(store, cfg, op=None):
     """An entry added from the person's own words: active at once. Returns its id."""
     cs_id, _ = apply(store, cfg, [op or LESSON], origin="pm")
@@ -262,16 +267,16 @@ def test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input
     own = store.read().get("lesson", person_adds(store, cfg)).data
     assert (own["status"], own["origin"], own["trust"], own["kept_by"]) == ("active", "person", "trusted", PM)
     assert own["kept_at"] and own["learned_at"]
-    from_input = store.read().get("lesson", proposal(store, cfg)).data
+    from_input = store.read().get("lesson", proposal(store, cfg, lesson_saying("From an input."))).data
     assert (from_input["status"], from_input["origin"], from_input["trust"]) == ("proposed", "input", "untrusted")
     assert from_input["kept_by"] is None and from_input["kept_at"] is None
     # The assistant's own generalization, with nothing outside behind it, is a proposal too.
-    cs_id, statuses = apply(store, cfg, [LESSON], origin="schedule")
+    cs_id, statuses = apply(store, cfg, [lesson_saying("From the assistant.")], origin="schedule")
     assert statuses == ["applied"]
     assert added(store, cs_id)["status"] == "proposed" and added(store, cs_id)["origin"] == "assistant"
     # So is content the person reports on a button that relays someone else: that note is not their rule.
     reported = source(store, kind="note:they_finished", trust="trusted")
-    cs_id, statuses = apply(store, cfg, [LESSON], origin="pm", source_id=reported)
+    cs_id, statuses = apply(store, cfg, [lesson_saying("Reported.")], origin="pm", source_id=reported)
     assert (
         statuses == ["applied"]
         and added(store, cs_id)["status"] == "proposed"
@@ -279,7 +284,7 @@ def test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input
     )
     # A note typed on the person's own button is their own words.
     own_note = source(store, kind="note:action", trust="trusted")
-    cs_id, statuses = apply(store, cfg, [LESSON], origin="pm", source_id=own_note)
+    cs_id, statuses = apply(store, cfg, [lesson_saying("Typed by the person.")], origin="pm", source_id=own_note)
     assert statuses == ["applied"] and added(store, cs_id)["status"] == "active"
     assert added(store, cs_id)["origin"] == "person"
 
@@ -405,7 +410,8 @@ def test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author(app)
     assert done.status_code == 200, done.text
     row = entry_of(client, entry_id)
     assert (row["status"], row["kept_by"], row["text"]) == ("active", PM, "My own wording of the lesson.")
-    assert row["kept_at"] and row["learned_from"] == "input" and row["trust"] == "untrusted"
+    # The person read the restatement and kept it as their own words, so it guides runs as theirs.
+    assert row["kept_at"] and row["learned_from"] == "input" and row["trust"] == "trusted"
     assert (
         row["applies_to"]["scope"] == "workspace" and row["applies_to"]["except"] == kept_body["applies_to"]["except"]
     )
@@ -414,6 +420,7 @@ def test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author(app)
     assert undone.status_code == 200 and undone.json()["restored"]
     row = entry_of(client, entry_id)
     assert row["status"] == "proposed" and row["kept_by"] is None and row["text"] == LESSON["text"]
+    assert row["trust"] == "untrusted"
     assert row["applies_to"]["except"] == [] and len(signals(store, "kept")) == 1  # undoing records no signal
     stale = client.post(f"/api/knowledge/{entry_id}/keep", json={"read_version": row["version"] - 1})
     assert stale.status_code == 409 and "changed since" in stale.json()["detail"]
@@ -480,7 +487,7 @@ def test_retire_ends_an_active_entry_and_undo_makes_it_active_again(app):
     assert client.post(f"/api/knowledge/{entry_id}/retire", json={"read_version": row["version"]}).status_code == 409
     assert client.post(f"/api/changesets/{done.json()['changeset']}/undo", json={}).status_code == 200
     assert entry_of(client, entry_id)["status"] == "active"
-    proposed = proposal(store, cfg)
+    proposed = proposal(store, cfg, lesson_saying("Not kept yet."))
     refused = client.post(
         f"/api/knowledge/{proposed}/retire", json={"read_version": entry_of(client, proposed)["version"]}
     )
@@ -531,9 +538,9 @@ def test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_
     def added_id(cs_id):
         return store.read().get("changeset", cs_id).data["ops"][0]["records"][0]["id"]
 
-    def propose(**src):
+    def propose(text, **src):
         source_id = source(store, **src)
-        op = {**LESSON, "evidence": {"quote": "an exact quote"}}
+        op = {**lesson_saying(text), "evidence": {"quote": "an exact quote"}}
         cs_id, statuses = apply(
             store, cfg, [op], origin="input", trust="untrusted", source_id=source_id, raw="an exact quote"
         )
@@ -541,7 +548,7 @@ def test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_
         return added_id(cs_id), source_id
 
     # An input with a page: the link. The address is read from the source the evidence names.
-    with_page, with_page_source = propose(url=PAGE)
+    with_page, with_page_source = propose("From a page.", url=PAGE)
     assert entry_of(client, with_page)["origin"] == {
         "kind": "link",
         "url": PAGE,
@@ -550,11 +557,11 @@ def test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_
         "request": None,
     }
     # An input saved with no page of its own: its saved text.
-    saved, saved_source = propose()
+    saved, saved_source = propose("From saved text.")
     assert entry_of(client, saved)["origin"]["kind"] == "source"
     assert entry_of(client, saved)["origin"]["source"] == saved_source
     # No input behind it: the change that made it and the request behind that change.
-    cs_id, _ = apply(store, cfg, [LESSON], origin="pm")
+    cs_id, _ = apply(store, cfg, [lesson_saying("From a note.")], origin="pm")
     own = added_id(cs_id)
     request_id = store.read().get("changeset", cs_id).data["request"]
     assert entry_of(client, own)["origin"] == {

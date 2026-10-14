@@ -1292,8 +1292,16 @@ A standing instruction the assistant follows, kept as a record so changing one h
 | `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
 | `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
 | `check` | str \| None | `None` | A deterministic check that implements the rule; a rule with none is prose, and prose alone never lets a stage move. |
-| `origin` | Literal['seed', 'person', 'assistant', 'pack', 'import'] | required | Where it came from: seed (the starting set), person, assistant, pack or import. |
-| `status` | Literal['proposed', 'active', 'discarded', 'retired'] | `'active'` | proposed: waiting for the person. active: in use. discarded: the person said no. retired: it was active and no longer is. |
+| `origin` | Literal['seed', 'person', 'input', 'assistant', 'pack', 'import'] | required | Where it came from: seed (the starting set), person (the person's own words), input (content), assistant (its own generalization), pack or import. |
+| `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it was proposed from outside content, until the person keeps it. |
+| `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'active'` | proposed: waiting for the person. active: in use. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: it was active and no longer is. |
+| `discard_reason` | str \| None | `None` | Why it was discarded: what the person said, or that it was close to one they discarded. |
+| `more_evidence` | list[KnowledgeEvidence] | `[]` | What other proposals of the same rule were learned from, merged into this one. |
+| `more_evidence[].quote` | str \| None | `None` | The exact words in the source that the entry rests on, as they appear there. |
+| `more_evidence[].source` | str \| None | `None` | The input the words come from, when it was saved as one. |
+| `more_evidence[].request` | str \| None | `None` | The request whose work produced the entry. |
+| `more_evidence[].signal` | str \| None | `None` | The correction the entry was learned from. |
+| `more_evidence[].changeset` | str \| None | `None` | The change the correction was about. |
 | `source` | str \| None | `None` | Where it came from, in words. |
 | `evidence` | Evidence \| None | see below | The words that justify it, when it came from an input. |
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
@@ -1344,6 +1352,12 @@ What went wrong, why, and the guard that prevents a repeat. Added by `lesson.add
 | `evidence.request` | str \| None | `None` | The request whose work produced the entry. |
 | `evidence.signal` | str \| None | `None` | The correction the entry was learned from. |
 | `evidence.changeset` | str \| None | `None` | The change the correction was about. |
+| `more_evidence` | list[KnowledgeEvidence] | `[]` | What other proposals of the same entry were learned from, merged into this one. |
+| `more_evidence[].quote` | str \| None | `None` | The exact words in the source that the entry rests on, as they appear there. |
+| `more_evidence[].source` | str \| None | `None` | The input the words come from, when it was saved as one. |
+| `more_evidence[].request` | str \| None | `None` | The request whose work produced the entry. |
+| `more_evidence[].signal` | str \| None | `None` | The correction the entry was learned from. |
+| `more_evidence[].changeset` | str \| None | `None` | The change the correction was about. |
 | `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | person: the person's own words. input: proposed from content. assistant: the assistant's own generalization. pack: a pack's guidance (see `pack`). seed: shipped as a starting entry. import: loaded from a file. |
 | `pack` | str \| None | `None` | For a pack's guidance, the pack's name. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
@@ -1376,6 +1390,12 @@ A term or acronym and what it means here. Added by `glossary.add`, changed by `g
 | `evidence.request` | str \| None | `None` | The request whose work produced the entry. |
 | `evidence.signal` | str \| None | `None` | The correction the entry was learned from. |
 | `evidence.changeset` | str \| None | `None` | The change the correction was about. |
+| `more_evidence` | list[KnowledgeEvidence] | `[]` | What other proposals of the same entry were learned from, merged into this one. |
+| `more_evidence[].quote` | str \| None | `None` | The exact words in the source that the entry rests on, as they appear there. |
+| `more_evidence[].source` | str \| None | `None` | The input the words come from, when it was saved as one. |
+| `more_evidence[].request` | str \| None | `None` | The request whose work produced the entry. |
+| `more_evidence[].signal` | str \| None | `None` | The correction the entry was learned from. |
+| `more_evidence[].changeset` | str \| None | `None` | The change the correction was about. |
 | `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | person: the person's own words. input: proposed from content. assistant: the assistant's own generalization. pack: a pack's guidance (see `pack`). seed: shipped as a starting entry. import: loaded from a file. |
 | `pack` | str \| None | `None` | For a pack's guidance, the pack's name. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
@@ -1411,6 +1431,12 @@ Who answers a kind of question, or who doesn't. Added by `routing.add`.
 | `evidence.request` | str \| None | `None` | The request whose work produced the entry. |
 | `evidence.signal` | str \| None | `None` | The correction the entry was learned from. |
 | `evidence.changeset` | str \| None | `None` | The change the correction was about. |
+| `more_evidence` | list[KnowledgeEvidence] | `[]` | What other proposals of the same entry were learned from, merged into this one. |
+| `more_evidence[].quote` | str \| None | `None` | The exact words in the source that the entry rests on, as they appear there. |
+| `more_evidence[].source` | str \| None | `None` | The input the words come from, when it was saved as one. |
+| `more_evidence[].request` | str \| None | `None` | The request whose work produced the entry. |
+| `more_evidence[].signal` | str \| None | `None` | The correction the entry was learned from. |
+| `more_evidence[].changeset` | str \| None | `None` | The change the correction was about. |
 | `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | person: the person's own words. input: proposed from content. assistant: the assistant's own generalization. pack: a pack's guidance (see `pack`). seed: shipped as a starting entry. import: loaded from a file. |
 | `pack` | str \| None | `None` | For a pack's guidance, the pack's name. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
@@ -1446,6 +1472,12 @@ What a recipient or audience wants or avoids in what is written for them. Added 
 | `evidence.request` | str \| None | `None` | The request whose work produced the entry. |
 | `evidence.signal` | str \| None | `None` | The correction the entry was learned from. |
 | `evidence.changeset` | str \| None | `None` | The change the correction was about. |
+| `more_evidence` | list[KnowledgeEvidence] | `[]` | What other proposals of the same entry were learned from, merged into this one. |
+| `more_evidence[].quote` | str \| None | `None` | The exact words in the source that the entry rests on, as they appear there. |
+| `more_evidence[].source` | str \| None | `None` | The input the words come from, when it was saved as one. |
+| `more_evidence[].request` | str \| None | `None` | The request whose work produced the entry. |
+| `more_evidence[].signal` | str \| None | `None` | The correction the entry was learned from. |
+| `more_evidence[].changeset` | str \| None | `None` | The change the correction was about. |
 | `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | person: the person's own words. input: proposed from content. assistant: the assistant's own generalization. pack: a pack's guidance (see `pack`). seed: shipped as a starting entry. import: loaded from a file. |
 | `pack` | str \| None | `None` | For a pack's guidance, the pack's name. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
@@ -1508,7 +1540,7 @@ A correction by the PM, the measure of how well the assistant does. The engine r
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to. |
+| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed', 'just_this_time'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for this case but is not a pattern. |
 | `refs` | list[str] | `[]` | The ids of the records the correction is about. |
 | `run` | str \| None | `None` | The id of the AI run whose work was corrected, when there was one. |
 | `changeset` | str \| None | `None` | The id of the changeset the correction is about, when there is one. |
@@ -2093,7 +2125,7 @@ Keep a routing entry: who answers a kind of question, or who doesn't (`negative`
 
 ### `rule.add`
 
-Add a standing rule: an instruction the assistant follows from now on. A system op: from the assistant it waits for the person. A rule that names a deterministic `check` can gate a stage; a rule with none is prose.
+Add a standing rule: an instruction the assistant follows from now on. A system op: from the person's own words the rule is active at once; from anyone else it is added as a proposal that changes nothing until the person keeps it. A rule that names a deterministic `check` can gate a stage; a rule with none is prose.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|

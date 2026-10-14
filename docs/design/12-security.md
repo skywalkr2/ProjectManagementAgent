@@ -157,6 +157,9 @@ that becomes guidance in a packet is the most valuable thing to poison. These ar
   structured target, shown in full at Keep. Keep makes the person the author of that wording, so it becomes guidance; an
   edit at Keep is the person's wording too. The raw source text never enters a packet as guidance, only as linked evidence
   marked "from outside". So an injection can plant only what the person read and accepted, in words they saw.
+  *Built in L3p:* Keep sets the entry's `trust` to trusted (the person kept the restatement and its target as their own
+  words), so a kept entry reaches packets as guidance and its source's own words never do; Undo puts both back. Built:
+  `tests/test_proposals.py::test_keeping_a_rule_proposal_makes_the_restatement_theirs_and_the_source_stays_outside_evidence`.
 - **Bulk Keep only for low-risk kinds.** The daily card invites "Keep all". It is offered only for glossary terms and facts
   with evidence. Routing entries, rules, lessons and anything that changes who gets asked or what gets sent are kept one at
   a time, with the source beside them, because recipients are what an attacker most wants to change.
