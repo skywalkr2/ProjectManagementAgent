@@ -156,7 +156,7 @@ def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> li
 
     found = []
     for name, info in model.model_fields.items():
-        path = f"{_prefix}{name}"
+        path = f"{_prefix}{info.alias or name}"
         for meta in info.metadata:
             if isinstance(meta, RefTo):
                 found.append((path, meta.kind))
@@ -1030,6 +1030,189 @@ class Note(Record):
     )
 
 
+class KnowledgeEvidence(BaseModel):
+    """What a piece of knowledge was learned from, kept apart from its own wording: the exact words, and the records
+    that show where they came from."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    quote: str | None = Field(
+        None, min_length=1, description="The exact words in the source that the entry rests on, as they appear there."
+    )
+    source: Annotated[str | None, RefTo("source")] = Field(
+        None, description="The input the words come from, when it was saved as one."
+    )
+    request: Annotated[str | None, RefTo("request")] = Field(
+        None, description="The request whose work produced the entry."
+    )
+    signal: Annotated[str | None, RefTo("signal")] = Field(
+        None, description="The correction the entry was learned from."
+    )
+    changeset: Annotated[str | None, RefTo("changeset")] = Field(
+        None, description="The change the correction was about."
+    )
+
+    @model_validator(mode="after")
+    def _says_something(self) -> KnowledgeEvidence:
+        if not any((self.quote, self.source, self.request, self.signal, self.changeset)):
+            raise ValueError("evidence names the words or the record they came from")
+        return self
+
+
+class Scope(BaseModel):
+    """What a rule or a piece of knowledge applies to: one shape for both. Empty lists mean no narrowing. `scope` is
+    "workspace" (everywhere, less the projects in `except`) or "projects" (only those in `projects`)."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    task_kinds: list[str] = Field(default_factory=list, description="Task kinds it applies to; empty means all.")
+    records: list[str] = Field(
+        default_factory=list, description="Record types or type.field targets it applies to; empty means all."
+    )
+    filter: dict[str, Any] = Field(default_factory=dict, description="Exact field values narrowing the record targets.")
+    projects: list[Annotated[str, RefTo("project")]] = Field(
+        default_factory=list, description="With scope projects, the projects it is for."
+    )
+    people: list[Annotated[str, RefTo("person")]] = Field(
+        default_factory=list, description="The people it is about; empty means anyone."
+    )
+    scope: Literal["workspace", "projects"] = Field(
+        "workspace",
+        description="workspace: everywhere, except the projects in `except`. projects: only the projects listed in "
+        "`projects`.",
+    )
+    except_: list[Annotated[str, RefTo("project")]] = Field(
+        default_factory=list,
+        alias="except",
+        description="With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`.",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _projects_mean_projects(cls, data: Any) -> Any:
+        """Naming projects without a scope means the scope is those projects."""
+        if isinstance(data, dict) and "scope" not in data and data.get("projects"):
+            return {**data, "scope": "projects"}
+        return data
+
+    @model_validator(mode="after")
+    def _coherent(self) -> Scope:
+        if self.scope == "projects" and not self.projects:
+            raise ValueError("a scope of projects names the projects it is for")
+        if self.scope == "projects" and self.except_:
+            raise ValueError("projects it doesn't apply to can be left out only from the whole workspace")
+        if self.scope == "workspace" and self.projects:
+            raise ValueError("name the projects only when the scope is those projects")
+        return self
+
+
+class KnowledgeRecord(Record):
+    """What the four kinds of knowledge share (design 6.22). Not a record type itself. The assistant proposes an entry
+    or the person states it; it guides runs only once active. `text` is the entry's own wording, in plain words;
+    the evidence is kept beside it, never mixed in."""
+
+    #: Where an entry came from and when never change after it is made.
+    fixed_fields: ClassVar[tuple[str, ...]] = ("origin", "pack", "trust", "learned_at", "evidence")
+
+    text: str = Field(min_length=1, description="The entry in plain words: what is kept, and what is shown.")
+    evidence: KnowledgeEvidence | None = Field(
+        None, description="What it was learned from: the exact words and the records they came from."
+    )
+    origin: Literal["person", "input", "assistant", "pack", "seed", "import"] = Field(
+        description="person: the person's own words. input: proposed from content. assistant: the assistant's own "
+        "generalization. pack: a pack's guidance (see `pack`). seed: shipped as a starting entry. import: loaded "
+        "from a file."
+    )
+    pack: str | None = Field(None, description="For a pack's guidance, the pack's name.")
+    trust: Literal["trusted", "untrusted"] = Field(
+        "trusted", description="untrusted when it came from outside content."
+    )
+    learned_at: datetime = Field(description="When the entry was made.")
+    status: Literal["proposed", "active", "discarded", "expired", "retired"] = Field(
+        "proposed",
+        description="proposed: waits for the person's Keep. active: guides runs. discarded: the person said no. "
+        "expired: a proposal nobody reviewed in time. retired: was active, and no longer is.",
+    )
+    discard_reason: str | None = Field(None, description="Why the person discarded it, if they said.")
+    kept_by: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The person who made it active, and so the author of its wording."
+    )
+    kept_at: datetime | None = Field(None, description="When it was made active.")
+    applies_to: Scope = Field(default_factory=Scope, description="What it applies to.")
+
+    @model_validator(mode="after")
+    def _states_hold_together(self) -> KnowledgeRecord:
+        if self.status == "active" and (self.kept_by is None or self.kept_at is None):
+            raise ValueError("an active entry says who kept it and when")
+        if self.discard_reason is not None and self.status != "discarded":
+            raise ValueError("only a discarded entry has a reason for it")
+        if (self.origin == "pack") != (self.pack is not None):
+            raise ValueError("a pack's guidance names the pack, and nothing else does")
+        return self
+
+
+class Lesson(KnowledgeRecord):
+    """What went wrong, why, and the guard that prevents a repeat. Added by `lesson.add`, changed by `lesson.update`,
+    ended by `knowledge.retire`; the person keeps or discards a proposal."""
+
+    record_kind: ClassVar[str] = "lesson"
+    prefix: ClassVar[str] = "LES"
+
+    guard: str | None = Field(None, description="The check or behavior that prevents a repeat, in plain words.")
+    signal: Annotated[str | None, RefTo("signal")] = Field(None, description="The correction it came from.")
+
+
+class GlossaryEntry(KnowledgeRecord):
+    """A term or acronym and what it means here. Added by `glossary.add`, changed by `glossary.update`."""
+
+    record_kind: ClassVar[str] = "glossary_entry"
+    prefix: ClassVar[str] = "GLOSS"
+    record_label: ClassVar[str] = "glossary entry"
+
+    term: str = Field(min_length=1, description="The term, acronym or name as it is written.")
+    meaning: str = Field(min_length=1, description="What it means.")
+    confidence: Literal["confirmed", "assumed", "unknown"] = Field(
+        "assumed", description="confirmed: someone who knows said so. assumed: a reasonable reading. unknown: not yet."
+    )
+    project: Annotated[str | None, RefTo("project")] = Field(
+        None, description="The project it is about; none means it holds everywhere."
+    )
+    id_patterns: list[str] = Field(
+        default_factory=list, description="Patterns for splitting compound ids that use the term."
+    )
+
+
+class RoutingEntry(KnowledgeRecord):
+    """Who answers a kind of question, or who doesn't. Added by `routing.add`."""
+
+    record_kind: ClassVar[str] = "routing_entry"
+    prefix: ClassVar[str] = "ROUTE"
+    record_label: ClassVar[str] = "routing entry"
+
+    topic: str = Field(min_length=1, description="The topic, area or kind of question.")
+    person: Annotated[str | None, RefTo("person")] = Field(None, description="The person it is about.")
+    team: Annotated[str | None, RefTo("team")] = Field(None, description="The team it is about, instead of a person.")
+    negative: bool = Field(False, description="True when they don't answer this.")
+    look_up: str | None = Field(None, description="Where to look it up instead, in plain words.")
+
+    @model_validator(mode="after")
+    def _names_who(self) -> RoutingEntry:
+        if self.person is None and self.team is None:
+            raise ValueError("a routing entry names the person or the team")
+        return self
+
+
+class StyleNote(KnowledgeRecord):
+    """What a recipient or audience wants or avoids in what is written for them. Added by `style.add`."""
+
+    record_kind: ClassVar[str] = "style_note"
+    prefix: ClassVar[str] = "STYLE"
+    record_label: ClassVar[str] = "style note"
+
+    audience: str = Field(min_length=1, description="A person's id, or a kind of audience in words.")
+    observation: str = Field(min_length=1, description="What they want or avoid.")
+
+
 class Run(Record):
     """One call to an AI provider. The engine writes it after each call, for usage and cost reports; nothing changes
     it."""
@@ -1087,11 +1270,15 @@ class Signal(Record):
         "set_aside",
         "put_on_hold",
         "taken_off_hold",
+        "kept",
+        "discarded",
+        "retired",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
         "routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; "
-        "put_on_hold or taken_off_hold, changed whether an action waits for something."
+        "put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired "
+        "a piece of what the assistant learned (a lesson, glossary entry, routing entry or style note)."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     note: str | None = Field(None, description="What the person said or changed, if anything.")
@@ -1143,6 +1330,10 @@ REGISTRY: dict[str, type[Record]] = {
         Fact,
         CalendarEntry,
         Note,
+        Lesson,
+        GlossaryEntry,
+        RoutingEntry,
+        StyleNote,
         Run,
         Signal,
         File,
@@ -1160,6 +1351,18 @@ REGISTRY: dict[str, type[Record]] = {
         ValueList,
     )
 }
+
+#: The references every kind of knowledge has: what it was learned from, who kept it, what it applies to.
+KNOWLEDGE_REFERENCES: list[tuple[str, str]] = [
+    ("evidence.source", "source"),
+    ("evidence.request", "request"),
+    ("evidence.signal", "signal"),
+    ("evidence.changeset", "changeset"),
+    ("kept_by", "person"),
+    ("applies_to.projects[]", "project"),
+    ("applies_to.people[]", "person"),
+    ("applies_to.except[]", "project"),
+]
 
 #: Fields that hold ids of other records, per kind, as (field, kind it points to). Used to check references.
 REFERENCES: dict[str, list[tuple[str, str]]] = {
@@ -1189,6 +1392,10 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "fact": [("project", "project"), ("source", "source")],
     "event": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("source", "source")],
+    "lesson": [*KNOWLEDGE_REFERENCES, ("signal", "signal")],
+    "glossary_entry": [*KNOWLEDGE_REFERENCES, ("project", "project")],
+    "routing_entry": [*KNOWLEDGE_REFERENCES, ("person", "person"), ("team", "team")],
+    "style_note": list(KNOWLEDGE_REFERENCES),
     "run": [("request", "request")],
     "file": [("project", "project"), ("replaces", "file")],
     "working_copy": [("file", "file"), ("returned_file", "file"), ("proposal", "text_version")],

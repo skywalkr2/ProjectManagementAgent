@@ -15,6 +15,24 @@ an injection risk, but a pasted reply is someone else's words. **Impact:** desig
 record change (`source.author`, plugin guide regenerated). Left open: a person who pastes someone else's reply into a
 Mark done note is treated as the author of it.
 
+## 2026-10-14: Knowledge records (L1): a proposal applies as a record, and the person's own act makes it active
+
+**Decided by:** the technical PM's brief for L1; recorded with the build. **What:** lessons, glossary entries, routing
+entries and style notes are core records with one shared base and one `applies_to` shape (a rule's target plus
+`projects`, `people`, `scope` and `except`). Their `origin` is person, input, assistant, pack, seed or import (replacing
+the first design's "correction, input, ask, import, pack or seed": an ask or a correction is the person's own words or the
+assistant's generalization, and the record says which). The seven ops (`lesson.add`, `lesson.update`, `glossary.add`,
+`glossary.update`, `routing.add`, `style.add`, `knowledge.retire`) are system tier, but an add that is not from the
+person's own words applies as a **proposal** instead of being held, because a proposed entry changes nothing until the
+person keeps it; an update or a retire from anyone else is held as any system op is. Keep and Discard are the person's own
+`record.edit` of the entry's state fields, so they need no further op and undo like any edit; each records a `kept` or
+`discarded` signal, as Retire records `retired`. The ops are offered to neither reading notes nor a plugin's action until
+the work that learns (L3) offers them. **Why:** a held proposal would pile up on Today as system decisions, while a
+record the person keeps or discards is the same safety with one step fewer; and the status, never the op's tier, is what
+keeps untrusted content out of packets. **Impact:** design 5.1, 6.7, 6.20, 6.22, 7.5, 12.7 and CHANGES 49; the plugin
+guide is regenerated (four record types, seven core ops, three signal kinds; plugin API note to follow); the API gains
+`GET /api/knowledge` and three person routes.
+
 ## 2026-10-14: An action can be on hold (`on_hold`), and one rule decides follow-ups
 
 **Decided by:** the technical PM, on the original designer's lessons. **What:** an action gains an optional `on_hold`

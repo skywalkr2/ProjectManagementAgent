@@ -1282,6 +1282,140 @@ Something kept from an input that is not a fact, action or question. Added by `n
 | `source` | str \| None | `None` | The id of the source it came from, if any. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
 
+### `lesson` (LES-n)
+
+What went wrong, why, and the guard that prevents a repeat. Added by `lesson.add`, changed by `lesson.update`, ended by `knowledge.retire`; the person keeps or discards a proposal.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `text` | str | required | The entry in plain words: what is kept, and what is shown. |
+| `evidence` | KnowledgeEvidence \| None | see below | What it was learned from: the exact words and the records they came from. |
+| `evidence.quote` | str \| None | `None` | The exact words in the source that the entry rests on, as they appear there. |
+| `evidence.source` | str \| None | `None` | The input the words come from, when it was saved as one. |
+| `evidence.request` | str \| None | `None` | The request whose work produced the entry. |
+| `evidence.signal` | str \| None | `None` | The correction the entry was learned from. |
+| `evidence.changeset` | str \| None | `None` | The change the correction was about. |
+| `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | person: the person's own words. input: proposed from content. assistant: the assistant's own generalization. pack: a pack's guidance (see `pack`). seed: shipped as a starting entry. import: loaded from a file. |
+| `pack` | str \| None | `None` | For a pack's guidance, the pack's name. |
+| `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
+| `learned_at` | datetime | required | When the entry was made. |
+| `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'proposed'` | proposed: waits for the person's Keep. active: guides runs. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: was active, and no longer is. |
+| `discard_reason` | str \| None | `None` | Why the person discarded it, if they said. |
+| `kept_by` | str \| None | `None` | The person who made it active, and so the author of its wording. |
+| `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `applies_to` | Scope | see below | What it applies to. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `guard` | str \| None | `None` | The check or behavior that prevents a repeat, in plain words. |
+| `signal` | str \| None | `None` | The correction it came from. |
+
+### `glossary_entry` (GLOSS-n)
+
+A term or acronym and what it means here. Added by `glossary.add`, changed by `glossary.update`.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `text` | str | required | The entry in plain words: what is kept, and what is shown. |
+| `evidence` | KnowledgeEvidence \| None | see below | What it was learned from: the exact words and the records they came from. |
+| `evidence.quote` | str \| None | `None` | The exact words in the source that the entry rests on, as they appear there. |
+| `evidence.source` | str \| None | `None` | The input the words come from, when it was saved as one. |
+| `evidence.request` | str \| None | `None` | The request whose work produced the entry. |
+| `evidence.signal` | str \| None | `None` | The correction the entry was learned from. |
+| `evidence.changeset` | str \| None | `None` | The change the correction was about. |
+| `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | person: the person's own words. input: proposed from content. assistant: the assistant's own generalization. pack: a pack's guidance (see `pack`). seed: shipped as a starting entry. import: loaded from a file. |
+| `pack` | str \| None | `None` | For a pack's guidance, the pack's name. |
+| `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
+| `learned_at` | datetime | required | When the entry was made. |
+| `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'proposed'` | proposed: waits for the person's Keep. active: guides runs. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: was active, and no longer is. |
+| `discard_reason` | str \| None | `None` | Why the person discarded it, if they said. |
+| `kept_by` | str \| None | `None` | The person who made it active, and so the author of its wording. |
+| `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `applies_to` | Scope | see below | What it applies to. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `term` | str | required | The term, acronym or name as it is written. |
+| `meaning` | str | required | What it means. |
+| `confidence` | Literal['confirmed', 'assumed', 'unknown'] | `'assumed'` | confirmed: someone who knows said so. assumed: a reasonable reading. unknown: not yet. |
+| `project` | str \| None | `None` | The project it is about; none means it holds everywhere. |
+| `id_patterns` | list[str] | `[]` | Patterns for splitting compound ids that use the term. |
+
+### `routing_entry` (ROUTE-n)
+
+Who answers a kind of question, or who doesn't. Added by `routing.add`.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `text` | str | required | The entry in plain words: what is kept, and what is shown. |
+| `evidence` | KnowledgeEvidence \| None | see below | What it was learned from: the exact words and the records they came from. |
+| `evidence.quote` | str \| None | `None` | The exact words in the source that the entry rests on, as they appear there. |
+| `evidence.source` | str \| None | `None` | The input the words come from, when it was saved as one. |
+| `evidence.request` | str \| None | `None` | The request whose work produced the entry. |
+| `evidence.signal` | str \| None | `None` | The correction the entry was learned from. |
+| `evidence.changeset` | str \| None | `None` | The change the correction was about. |
+| `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | person: the person's own words. input: proposed from content. assistant: the assistant's own generalization. pack: a pack's guidance (see `pack`). seed: shipped as a starting entry. import: loaded from a file. |
+| `pack` | str \| None | `None` | For a pack's guidance, the pack's name. |
+| `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
+| `learned_at` | datetime | required | When the entry was made. |
+| `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'proposed'` | proposed: waits for the person's Keep. active: guides runs. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: was active, and no longer is. |
+| `discard_reason` | str \| None | `None` | Why the person discarded it, if they said. |
+| `kept_by` | str \| None | `None` | The person who made it active, and so the author of its wording. |
+| `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `applies_to` | Scope | see below | What it applies to. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `topic` | str | required | The topic, area or kind of question. |
+| `person` | str \| None | `None` | The person it is about. |
+| `team` | str \| None | `None` | The team it is about, instead of a person. |
+| `negative` | bool | `False` | True when they don't answer this. |
+| `look_up` | str \| None | `None` | Where to look it up instead, in plain words. |
+
+### `style_note` (STYLE-n)
+
+What a recipient or audience wants or avoids in what is written for them. Added by `style.add`.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `text` | str | required | The entry in plain words: what is kept, and what is shown. |
+| `evidence` | KnowledgeEvidence \| None | see below | What it was learned from: the exact words and the records they came from. |
+| `evidence.quote` | str \| None | `None` | The exact words in the source that the entry rests on, as they appear there. |
+| `evidence.source` | str \| None | `None` | The input the words come from, when it was saved as one. |
+| `evidence.request` | str \| None | `None` | The request whose work produced the entry. |
+| `evidence.signal` | str \| None | `None` | The correction the entry was learned from. |
+| `evidence.changeset` | str \| None | `None` | The change the correction was about. |
+| `origin` | Literal['person', 'input', 'assistant', 'pack', 'seed', 'import'] | required | person: the person's own words. input: proposed from content. assistant: the assistant's own generalization. pack: a pack's guidance (see `pack`). seed: shipped as a starting entry. import: loaded from a file. |
+| `pack` | str \| None | `None` | For a pack's guidance, the pack's name. |
+| `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
+| `learned_at` | datetime | required | When the entry was made. |
+| `status` | Literal['proposed', 'active', 'discarded', 'expired', 'retired'] | `'proposed'` | proposed: waits for the person's Keep. active: guides runs. discarded: the person said no. expired: a proposal nobody reviewed in time. retired: was active, and no longer is. |
+| `discard_reason` | str \| None | `None` | Why the person discarded it, if they said. |
+| `kept_by` | str \| None | `None` | The person who made it active, and so the author of its wording. |
+| `kept_at` | datetime.datetime \| None | `None` | When it was made active. |
+| `applies_to` | Scope | see below | What it applies to. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `audience` | str | required | A person's id, or a kind of audience in words. |
+| `observation` | str | required | What they want or avoid. |
+
 ### `run` (RUN-n)
 
 One call to an AI provider. The engine writes it after each call, for usage and cost reports; nothing changes it.
@@ -1312,7 +1446,7 @@ A correction by the PM, the measure of how well the assistant does. The engine r
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something. |
+| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry or style note). |
 | `refs` | list[str] | `[]` | The ids of the records the correction is about. |
 | `note` | str \| None | `None` | What the person said or changed, if anything. |
 | `at` | datetime | required | When the correction was made. |
@@ -1618,6 +1752,101 @@ Record a file whose bytes the host already stored under their hash, such as one 
 | `meta` | dict[str, Any] | `{}` | Details the file kind asks for, validated on add. |
 | `replaces` | str \| None | `None` | The earlier file this one is a new version of. |
 
+### `glossary.add`
+
+Keep a glossary entry: a term or acronym and what it means here. From the person's own words it is active at once; from anything else it is a proposal the person keeps or discards.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `text` | str | required | The entry in plain words, such as the term and what it stands for. |
+| `term` | str | required | The term, acronym or name as it is written. |
+| `meaning` | str | required | What it means. |
+| `confidence` | Literal['confirmed', 'assumed', 'unknown'] | `'assumed'` | confirmed: someone who knows said so. assumed: a reasonable reading. unknown: not yet. |
+| `project` | str \| None | `None` | Project id, if the term is about one project only. |
+| `id_patterns` | list[str] | `[]` | Patterns for splitting compound ids that use the term. |
+| `applies_to` | Scope | see below | What it applies to. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input it rests on, if any. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `glossary.update`
+
+Change a glossary entry that is proposed or active. A system op: from anyone but the person it waits for them. Name only what changes.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the glossary entry. |
+| `text` | str \| None | `None` | The new wording. |
+| `meaning` | str \| None | `None` | The new meaning. |
+| `confidence` | Optional[Literal['confirmed', 'assumed', 'unknown']] | `None` | The new confidence. |
+| `project` | str \| None | `None` | The project it is about. |
+| `id_patterns` | list[str] \| None | `None` | The new patterns for splitting compound ids. |
+| `applies_to` | Scope \| None | see below | What it now applies to, in full. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+
+### `knowledge.retire`
+
+Retire an active lesson, glossary entry, routing entry or style note, named by its id: it stops guiding runs and stays on record. A system op: from anyone but the person it waits for them.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the entry, such as a lesson's. |
+
+### `lesson.add`
+
+Keep a lesson: what went wrong, why, and the guard that stops it happening again, written as the general case in plain words. From the person's own words it is active at once; from anything else it is a proposal the person keeps or discards, and changes nothing until kept. `signal` is the correction it came from.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `text` | str | required | The lesson in plain words, as the general case. |
+| `guard` | str \| None | `None` | The check or behavior that prevents a repeat, in plain words. |
+| `signal` | str \| None | `None` | The id of the correction it came from, if there is one. |
+| `applies_to` | Scope | see below | What it applies to. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input it rests on, if any. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `lesson.update`
+
+Change a lesson that is proposed or active: its wording, its guard or what it applies to. A system op: it changes how the assistant behaves, so from anyone but the person it waits for them. Name only what changes.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the lesson. |
+| `text` | str \| None | `None` | The new wording. |
+| `guard` | str \| None | `None` | The new guard. |
+| `applies_to` | Scope \| None | see below | What it now applies to, in full. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+
 ### `list.add`
 
 Add a value to a value list, or offer a retired one again. A system op: from the assistant it waits for the person.
@@ -1771,6 +2000,30 @@ Draft a report to the product's maintainers when the PM asks for something the p
 | `title` | str | required | One line naming what is missing. |
 | `text` | str | required | The report, written for the maintainers. |
 
+### `routing.add`
+
+Keep a routing entry: who answers a kind of question, or who doesn't (`negative`), and where to look it up instead. Name the person or the team by id. From the person's own words it is active at once; from anything else it is a proposal the person keeps or discards.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `text` | str | required | The entry in plain words. |
+| `topic` | str | required | The topic, area or kind of question. |
+| `person` | str \| None | `None` | The person's id. |
+| `team` | str \| None | `None` | The team's id, instead of a person. |
+| `negative` | bool | `False` | True when they don't answer this. |
+| `look_up` | str \| None | `None` | Where to look it up instead, in plain words. |
+| `applies_to` | Scope | see below | What it applies to. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input it rests on, if any. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
 ### `setting.propose`
 
 Propose a change to one setting, when the answer is a setting the PM can change. Nothing changes until the PM applies it. The setting is named by its setting code from the settings list.
@@ -1794,6 +2047,27 @@ Propose entering a configured stage. Always waits for the person's confirmation.
 | `record.id` | str | required | The record's id. |
 | `to` | str | required | The id of the stage to enter. |
 | `read_version` | int | required | The version of the record that was read; the move fails if it changed. |
+
+### `style.add`
+
+Keep a style note: what a recipient or audience wants or avoids in what is written for them. `audience` is a person's id or a kind of audience in words. From the person's own words it is active at once; from anything else it is a proposal the person keeps or discards.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `text` | str | required | The note in plain words. |
+| `audience` | str | required | A person's id, or a kind of audience in words. |
+| `observation` | str | required | What they want or avoid. |
+| `applies_to` | Scope | see below | What it applies to. |
+| `applies_to.task_kinds` | list[str] | `[]` | Task kinds it applies to; empty means all. |
+| `applies_to.records` | list[str] | `[]` | Record types or type.field targets it applies to; empty means all. |
+| `applies_to.filter` | dict[str, Any] | `{}` | Exact field values narrowing the record targets. |
+| `applies_to.projects` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope projects, the projects it is for. |
+| `applies_to.people` | list[Annotated[str, RefTo(kind='person')]] | `[]` | The people it is about; empty means anyone. |
+| `applies_to.scope` | Literal['workspace', 'projects'] | `'workspace'` | workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`. |
+| `applies_to.except` | list[Annotated[str, RefTo(kind='project')]] | `[]` | With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input it rests on, if any. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `text.accept`
 

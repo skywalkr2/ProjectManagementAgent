@@ -194,7 +194,7 @@ that becomes guidance in a packet is the most valuable thing to poison. These ar
 | Retention, export a person, forget a person | 12.4 | Not built |
 | Outbound review with provenance and full links | 12.2 | Not built until the publisher exists |
 | The `lookup` op | 12.2 | Not built |
-| Lessons and the glossary (proposed, untrusted until accepted) | 12.2 | Not built |
+| Lessons and the glossary (proposed, untrusted until accepted) | 12.2 | The records, their ops and Keep are built: an entry not from the person's own words is only a proposal, and only the person's Keep (or their own words) makes one active (`tests/test_knowledge_records.py::test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input_it_is_proposed`, `tests/test_knowledge_records.py::test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`); no run reads them yet (L2) |
 | Hostile cases for requests to send and to watch new sources | 12.2 | Not built |
 | The Admin tab and its "not a sandbox" wording | 12.3 | Not built |
 | Dependency scanning in CI | 12.5 | Not built; dependencies are pinned |

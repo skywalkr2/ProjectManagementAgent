@@ -60,6 +60,13 @@ ROUTES: dict[str, Declared] = {
         "the message as sent, compared with the draft for a quality signal; not a note"
     ),
     "POST /api/texts/edit": _local("the person's own edit of a long text, kept as their version of it"),
+    "POST /api/knowledge/{entry_id}/keep": _local(
+        "the person's own wording of an entry they keep: it is guidance because they kept it, never an input for the "
+        "assistant to read as a note"
+    ),
+    "POST /api/knowledge/{entry_id}/discard": _local(
+        "the reason the person discarded a proposal, kept with it so the same one isn't shown again; not a note"
+    ),
     "POST /api/organizations": _local(_DETAILS),
     "POST /api/organizations/{oid}": _local(_DETAILS),
     "POST /api/projects": _local(_DETAILS),

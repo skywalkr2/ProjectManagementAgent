@@ -268,7 +268,7 @@ real use starts. The rest (L-more) comes after the packs.
     `tests/test_on_hold_and_follow_ups.py::test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_hold_leaves_both`,
     `tests/test_on_hold_and_follow_ups.py::test_the_old_nudge_setting_is_read_as_the_question_wait`, and the pill tests in
     `web/src/components/FollowUps.test.tsx`. Top priorities' lines read it when that list is built);
-  - [x] "where it came from" as a working link on actions, questions and decisions (the page, else the saved text, else the change and its request); knowledge records with L1, so Keep can be judged against the evidence. Built: `tests/test_origin.py` (the three cases, none, Today's to-do, record pages), `web/src/components/Origin.test.tsx` (a Follow-ups row), `web/src/components/RecordPage.test.tsx::an action's page shows where it came from as a link, in place of the input's id`. The knowledge-record link is built with L1 ("Knowledge keeps its provenance").
+  - [x] "where it came from" as a working link on actions, questions and decisions (the page, else the saved text, else the change and its request); knowledge records with L1, so Keep can be judged against the evidence. Built: `tests/test_origin.py` (the three cases, none, Today's to-do, record pages), `web/src/components/Origin.test.tsx` (a Follow-ups row), `web/src/components/RecordPage.test.tsx::an action's page shows where it came from as a link, in place of the input's id`. The knowledge-record link is built with L1: `tests/test_knowledge_records.py::test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_and_its_request` ("Knowledge keeps its provenance").
 
 **Then the owner's real use starts** (owner, 2026-10-12), running through phases B and C beside the build. Building stays
 one stream; the owner uses it daily on their own mail, calendar and notes. For the first month, two numbers are reviewed
@@ -778,19 +778,38 @@ L1. **Knowledge as records.** Settled before L1 starts (the original designer's 
   Decided (2026-10-14): the ops a task kind may use never depend on the account; the assistant never writes files, only
   changesets, so a locked-down agent proposes knowledge like any account. The switch check's knowledge round-trip is
   built with the `learn` task kinds (L3) and is tested there.
-- [ ] **Knowledge keeps its provenance.** Each knowledge record's evidence carries the same "where it came from" link as
-  an action: the input, or the change and request that taught it.
-- [ ] **Scopes have exclusions as well as targets.** `applies_to: workspace` with `except: [project, ...]`, shown on the
-  Learned line, so a rule that holds everywhere but one program isn't copied onto every other project.
-- [ ] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,
-  status and an `applies_to` target. Their ops, with Undo.
+- [x] **Knowledge keeps its provenance.** Each knowledge record's evidence carries the same "where it came from" link as
+  an action: the input, or the change and request that taught it. Built: `GET /api/knowledge` carries `origin` on every
+  entry; `tests/test_knowledge_records.py::test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_and_its_request`.
+  The screens that show it are L3's (7.18).
+- [x] **Scopes have exclusions as well as targets.** `applies_to: workspace` with `except: [project, ...]`, so a rule that
+  holds everywhere but one program isn't copied onto every other project. Built: one `Scope` shape for rules and
+  knowledge, with `projects`, `people`, `scope` and `except`;
+  `tests/test_knowledge_records.py::test_everywhere_except_a_project_round_trips_through_the_record_the_api_and_the_export`,
+  `tests/test_knowledge_records.py::test_naming_projects_makes_the_scope_those_projects_and_except_is_its_own_key`.
+- [ ] Shown on the Learned line (L3, with the Learned line itself): the exclusions of a scope, in words.
+- [x] Lesson, glossary entry, routing entry and style note records, each with an id, source and evidence, date, trust,
+  status and an `applies_to` target. Their ops, with Undo. Built:
+  `tests/test_knowledge_records.py::test_the_four_kinds_are_core_records_with_their_own_fields_and_one_shape`,
+  `tests/test_knowledge_records.py::test_each_add_and_update_op_makes_and_changes_its_record`,
+  `tests/test_knowledge_records.py::test_undo_of_each_op_takes_the_change_back`,
+  `tests/test_knowledge_records.py::test_every_kind_of_knowledge_is_in_the_export_and_loads_back`. An add from the
+  person's own words is active at once and any other is a proposal, not held; Keep, Discard and Retire are routes with
+  Undo and a signal (`test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`,
+  `test_discard_keeps_the_proposal_with_its_reason_and_undo_brings_it_back`,
+  `test_retire_ends_an_active_entry_and_undo_makes_it_active_again`). No run reads them yet (L2) and no task kind
+  proposes them (L3).
 - [ ] Rules become records, with `rules.yaml` as the starting set; stage checks read them.
 - [ ] Facts gain `key`, `as_of` and `supersedes`.
-- [ ] Knowledge records have:
+- [x] Knowledge records have:
   - `origin`;
   - their own `text` (the restatement), kept apart from the evidence quote;
   - `kept_by` and `kept_at`;
   - distinct `discarded` (with `discard_reason`), `expired` and `retired` states.
+  - Built: `tests/test_knowledge_records.py::test_a_record_that_contradicts_itself_does_not_validate`,
+    `tests/test_knowledge_records.py::test_the_evidence_is_kept_apart_from_the_wording_and_names_where_it_came_from`,
+    `tests/test_knowledge_records.py::test_only_a_proposal_can_be_kept_and_where_an_entry_came_from_cannot_be_edited`. The
+    `expired` state exists; the sweep that sets it is L3's (proposals from inputs expiring after 14 days).
 - [ ] Signals name the `run` and `changeset` they correct.
 
 L2. **Every run reads what applies.**

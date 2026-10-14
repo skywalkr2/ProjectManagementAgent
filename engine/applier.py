@@ -15,6 +15,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
+from engine import knowledge
 from engine.check_text import quoted_passages, without_links, words_of
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
@@ -23,6 +24,8 @@ from engine.intake import is_reported_note, source_text
 from engine.names import People
 from engine.ops import (
     EVIDENCE_FIELDS,
+    KNOWLEDGE_ADD_OPS,
+    KNOWLEDGE_OPS,
     NEEDS_EVIDENCE,
     PERSON_ONLY_OPS,
     SETTABLE,
@@ -200,6 +203,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             why = setting_problem(ctx.store, op.setting, op.value)
             if why:
                 refuse(i, "targets", why)
+        if name in KNOWLEDGE_OPS and (why := knowledge.problem(view, op)) is not None:
+            refuse(i, "targets", why)
         # targets
         for project in _projects_of(op):
             if view.get("project", project) is None:
@@ -305,15 +310,18 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "never-shown", "text people will see mentions the AI model or service")
                 break
         # tiers
-        request = view.get("request", ctx.inputs.request)
-        # A note typed on a button is the person's own words, except on a button that relays someone else (They
-        # finished it, Followed up, an answer given for the person a question went to): that is content the person
-        # reports, so a change to how the product behaves from it waits for the person like any input.
-        reported = request is not None and is_reported_note(_source_kind(view, request))
-        from_pm = (
-            request is not None and request.data["origin"] == "pm" and ctx.inputs.trust == "trusted" and not reported
-        )
-        if ctx.store.plugins.tiers.get(name) == "system" and not from_pm and not ctx.confirmed_by_pm:
+        # A note typed on a button that relays someone else (They finished it, Followed up, an answer given for the
+        # person a question went to) is content the person reports, so a change to how the product behaves from it
+        # waits for the person like any input. An entry added to what the assistant learned is a proposal until the
+        # person keeps it, so it needs no hold.
+        if (
+            ctx.store.plugins.tiers.get(name) == "system"
+            and name not in KNOWLEDGE_ADD_OPS
+            and not _from_pm(view, ctx)
+            and not ctx.confirmed_by_pm
+        ):
+            request = view.get("request", ctx.inputs.request)
+            reported = request is not None and is_reported_note(_source_kind(view, request))
             why = "comes from what someone else reported; needs your confirmation"
             problems.append(
                 Problem(
@@ -321,6 +329,18 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 )
             )
     return problems
+
+
+def _from_pm(view: Any, ctx: Context) -> bool:
+    """Whether the input is the person's own words. A note typed on an item's button is, unless the button relays what
+    someone else said or did: that note is content the person reports."""
+    request = view.get("request", ctx.inputs.request)
+    return (
+        request is not None
+        and request.data["origin"] == "pm"
+        and ctx.inputs.trust == "trusted"
+        and not is_reported_note(_source_kind(view, request))
+    )
 
 
 def _source_kind(view: Any, request: Any) -> str | None:
@@ -968,6 +988,8 @@ def _apply_op(
             "sensitivity": level_for(ctx.store.plugins.file_kinds().get(op.file_kind), None),
         }
         return [{"kind": "file", "id": tx.create("file", data, w, record_id=op.id).id}], None
+    if op.op in KNOWLEDGE_OPS:
+        return knowledge.apply(tx, op, w, _standing(tx, ctx)), None
     trust = ctx.inputs.trust
     source = ctx.inputs.source
     touched: list[dict[str, Any]] = []
@@ -1100,6 +1122,29 @@ def _apply_op(
             tx.create("person", {"full_name": op.full_name, "role": op.role, "org": org, "aliases": op.aliases}, w).id,
         )
     return touched, None
+
+
+def _standing(tx: Tx, ctx: Context) -> knowledge.Standing:
+    """Who a knowledge op comes from, as the entry it adds records it: the person's own words or act, content they
+    report or that came in, or the assistant's own generalization."""
+    person = ctx.actor == "pm" or ctx.confirmed_by_pm or _from_pm(tx, ctx)
+    request = tx.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    reported = request is not None and request.data["origin"] in ("input", "pm")
+    if person:
+        origin = "person"
+    elif reported or ctx.inputs.source or ctx.inputs.trust == "untrusted":
+        origin = "input"
+    else:
+        origin = "assistant"
+    return knowledge.Standing(
+        person=person,
+        pm=ctx.people.pm,
+        origin=origin,
+        trust=ctx.inputs.trust,
+        source=ctx.inputs.source,
+        request=ctx.inputs.request or None,
+        now=ctx.store.clock(),
+    )
 
 
 def _pm_question(

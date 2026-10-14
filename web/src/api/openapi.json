@@ -4028,6 +4028,448 @@
         "title": "KindView",
         "type": "object"
       },
+      "KnowledgeDiscard": {
+        "additionalProperties": false,
+        "description": "Discard a proposed entry; it is kept, with the reason if one is given.",
+        "properties": {
+          "read_version": {
+            "description": "The entry's version that was read.",
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why, if the person says.",
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "read_version"
+        ],
+        "title": "KnowledgeDiscard",
+        "type": "object"
+      },
+      "KnowledgeEvidence": {
+        "additionalProperties": false,
+        "description": "What a piece of knowledge was learned from, kept apart from its own wording: the exact words, and the records\nthat show where they came from.",
+        "properties": {
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change the correction was about.",
+            "title": "Changeset"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The exact words in the source that the entry rests on, as they appear there.",
+            "title": "Quote"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The request whose work produced the entry.",
+            "title": "Request"
+          },
+          "signal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The correction the entry was learned from.",
+            "title": "Signal"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The input the words come from, when it was saved as one.",
+            "title": "Source"
+          }
+        },
+        "title": "KnowledgeEvidence",
+        "type": "object"
+      },
+      "KnowledgeKeep": {
+        "additionalProperties": false,
+        "description": "Keep a proposed entry. A new wording or target made here is the person's own.",
+        "properties": {
+          "applies_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it applies to, when the person changed it."
+          },
+          "read_version": {
+            "description": "The entry's version that was read.",
+            "minimum": 1.0,
+            "title": "Read Version",
+            "type": "integer"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The entry's wording, when the person changed it.",
+            "title": "Text"
+          }
+        },
+        "required": [
+          "read_version"
+        ],
+        "title": "KnowledgeKeep",
+        "type": "object"
+      },
+      "KnowledgeView": {
+        "description": "One piece of what the assistant learned: a lesson, glossary entry, routing entry or style note. `learned_from`\nsays whose words it is (person, input, assistant, pack, seed or import); `origin` is the link to where it came from,\ndecided on the server like an action's. The fields after `applies_to` are those of its kind and are empty for\nthe others.",
+        "properties": {
+          "applies_to": {
+            "$ref": "#/components/schemas/Scope"
+          },
+          "audience": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audience"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "enum": [
+                  "confirmed",
+                  "assumed",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "discard_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discard Reason"
+          },
+          "evidence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KnowledgeEvidence"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The words and records it was learned from."
+          },
+          "guard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guard"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "id_patterns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Id Patterns",
+            "type": "array"
+          },
+          "kept_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kept At"
+          },
+          "kept_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person who kept it, and so the author of its wording.",
+            "title": "Kept By"
+          },
+          "kind": {
+            "enum": [
+              "lesson",
+              "glossary_entry",
+              "routing_entry",
+              "style_note"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "learned_at": {
+            "format": "date-time",
+            "title": "Learned At",
+            "type": "string"
+          },
+          "learned_from": {
+            "enum": [
+              "person",
+              "input",
+              "assistant",
+              "pack",
+              "seed",
+              "import"
+            ],
+            "title": "Learned From",
+            "type": "string"
+          },
+          "look_up": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Look Up"
+          },
+          "meaning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meaning"
+          },
+          "negative": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Negative"
+          },
+          "observation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observation"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where it came from, for its link."
+          },
+          "pack": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pack"
+          },
+          "person": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Person"
+          },
+          "project": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Project"
+          },
+          "signal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signal"
+          },
+          "status": {
+            "enum": [
+              "proposed",
+              "active",
+              "discarded",
+              "expired",
+              "retired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "team": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team"
+          },
+          "term": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Term"
+          },
+          "text": {
+            "description": "The entry in plain words.",
+            "title": "Text",
+            "type": "string"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          },
+          "trust": {
+            "enum": [
+              "trusted",
+              "untrusted"
+            ],
+            "title": "Trust",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "version",
+          "text",
+          "status",
+          "learned_from",
+          "trust",
+          "learned_at",
+          "applies_to"
+        ],
+        "title": "KnowledgeView",
+        "type": "object"
+      },
       "Link": {
         "properties": {
           "label": {
@@ -7171,6 +7613,70 @@
           "wording"
         ],
         "title": "RuntimeConfig",
+        "type": "object"
+      },
+      "Scope": {
+        "additionalProperties": false,
+        "description": "What a rule or a piece of knowledge applies to: one shape for both. Empty lists mean no narrowing. `scope` is\n\"workspace\" (everywhere, less the projects in `except`) or \"projects\" (only those in `projects`).",
+        "properties": {
+          "except": {
+            "description": "With scope workspace, the projects it does not apply to. Dumped by alias, so the key is `except`.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Except",
+            "type": "array"
+          },
+          "filter": {
+            "additionalProperties": true,
+            "description": "Exact field values narrowing the record targets.",
+            "title": "Filter",
+            "type": "object"
+          },
+          "people": {
+            "description": "The people it is about; empty means anyone.",
+            "items": {
+              "type": "string"
+            },
+            "title": "People",
+            "type": "array"
+          },
+          "projects": {
+            "description": "With scope projects, the projects it is for.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Projects",
+            "type": "array"
+          },
+          "records": {
+            "description": "Record types or type.field targets it applies to; empty means all.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Records",
+            "type": "array"
+          },
+          "scope": {
+            "default": "workspace",
+            "description": "workspace: everywhere, except the projects in `except`. projects: only the projects listed in `projects`.",
+            "enum": [
+              "workspace",
+              "projects"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "task_kinds": {
+            "description": "Task kinds it applies to; empty means all.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Task Kinds",
+            "type": "array"
+          }
+        },
+        "title": "Scope",
         "type": "object"
       },
       "SendBack": {
@@ -11938,6 +12444,236 @@
           }
         },
         "summary": "Kind View"
+      }
+    },
+    "/api/knowledge": {
+      "get": {
+        "description": "What the assistant learned, newest first, with where each piece came from; filter by kind and by status.",
+        "operationId": "entries_api_knowledge_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "lesson",
+                    "glossary_entry",
+                    "routing_entry",
+                    "style_note"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "proposed",
+                    "active",
+                    "discarded",
+                    "expired",
+                    "retired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KnowledgeView"
+                  },
+                  "title": "Response Entries Api Knowledge Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entries"
+      }
+    },
+    "/api/knowledge/{entry_id}/discard": {
+      "post": {
+        "description": "Discard a proposed entry. It is kept, with the reason if one is given. Undo puts it back to proposed.",
+        "operationId": "discard_api_knowledge__entry_id__discard_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeDiscard"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discard"
+      }
+    },
+    "/api/knowledge/{entry_id}/keep": {
+      "post": {
+        "description": "Keep a proposed entry: it becomes active, and the person is its author, with the wording or target they\nchanged here. Undo puts it back to proposed.",
+        "operationId": "keep_api_knowledge__entry_id__keep_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeKeep"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Keep"
+      }
+    },
+    "/api/knowledge/{entry_id}/retire": {
+      "post": {
+        "description": "Retire an active entry: it stops guiding runs and stays on record. Undo makes it active again.",
+        "operationId": "retire_api_knowledge__entry_id__retire_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReadVersion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Retire"
       }
     },
     "/api/lists": {

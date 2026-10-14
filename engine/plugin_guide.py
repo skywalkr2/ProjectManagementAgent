@@ -97,7 +97,7 @@ def _model_rows(model: type[BaseModel], prefix: str = "") -> list[list[str]]:
     """Every field of a pydantic model, nested models flattened into dotted paths."""
     rows = []
     for name, info in model.model_fields.items():
-        path = f"{prefix}{name}"
+        path = f"{prefix}{info.alias or name}"
         if info.default_factory is not None:
             try:
                 default = _default(info.default_factory())

@@ -1,7 +1,8 @@
 """Where an item came from (design 7.5): the one place that decides what a "where it came from" link opens.
 
 In order of what exists: the original page, when the input the item came from has an address a browser can open; else
-the saved text of that input; else the change that created the item, with the request behind it. An item none of those
+the saved text of that input; else the change that created the item, with the request behind it. An item is made from
+an input by its `source`; a piece of knowledge names it in its evidence. An item none of those
 reach (made by the engine itself, or imported without its history) has no origin, and the screen shows no link.
 """
 
@@ -10,6 +11,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 from urllib.parse import urlparse
+
+from engine.knowledge import KINDS as KNOWLEDGE_KINDS
 
 LINK, SOURCE, CHANGE = "link", "source", "change"
 
@@ -22,6 +25,13 @@ def _openable(url: object) -> bool:
     return parsed.scheme in ("http", "https") and bool(parsed.netloc)
 
 
+def _source_id(kind: str, data: dict[str, Any]) -> str | None:
+    """The input a record was made from: its own `source`; for a piece of knowledge, the one its evidence cites."""
+    if kind in KNOWLEDGE_KINDS:
+        return (data.get("evidence") or {}).get("source") or None
+    return data.get("source") or None
+
+
 def origins(view: Any, kind: str, ids: Iterable[str]) -> dict[str, dict[str, Any] | None]:
     """The origin of each record of `kind` named in `ids`, by id: a dict with `kind` (link, source or change) and the
     address, source, change and request it needs, or None. Reads only."""
@@ -32,7 +42,8 @@ def origins(view: Any, kind: str, ids: Iterable[str]) -> dict[str, dict[str, Any
     out: dict[str, dict[str, Any] | None] = {}
     for record_id in wanted:
         record = view.get(kind, record_id, include_deleted=True)
-        source = view.get("source", record.data["source"]) if record is not None and record.data.get("source") else None
+        source_id = _source_id(kind, record.data) if record is not None else None
+        source = view.get("source", source_id) if source_id else None
         if source is not None and _openable(source.data.get("url")):
             out[record_id] = {"kind": LINK, "url": source.data["url"].strip(), "source": source.id}
             continue

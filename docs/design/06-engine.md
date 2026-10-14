@@ -479,12 +479,16 @@ field):
   bytes), and the long-text ops `text.draft` (the assistant's text, always a pending draft), `text.propose` (the person's own
   work arriving from outside), `text.accept`, `text.discard` and `text.edit`.
 - Value lists: `list.add`, `list.rename`, `list.retire` (system tier, each with Undo, 5.4).
+- What the assistant learned (6.22): `lesson.add`, `lesson.update`, `glossary.add`, `glossary.update`, `routing.add`,
+  `style.add` and `knowledge.retire` (system tier, each with Undo). An add that is not from the person's own words is
+  a proposal and applies as a record; the rest wait for the person like any system op.
 - Project and stages: `project.add` (a system op: from the assistant it waits for the person) and `stage.move` (always waits
   for the person's confirmation).
 - Asking (6.25): `answer`, `setting.propose`, `report.draft` (a report to the product's maintainers, drafted for the PM to
   approve and send, never a code change, 6.13).
 Plugins register more, namespaced, each with its tier. Reading notes is offered every op except those that are the person's own
-or only for actions and asks (deleting, `file.add`, `project.add`, `record.edit`, the long-text ops, and the asking ops).
+or only for actions and asks (deleting, `file.add`, `project.add`, `record.edit`, the long-text ops, the asking ops and
+the knowledge ops, which belong to the work that learns).
 
 *Designed, phase L-core (L3b): the obvious next step* (owner, 2026-10-13). When an input names something new, the
 assistant offers the obvious way to record it, as one click the person confirms, and the answer is learned (6.22):
@@ -508,8 +512,7 @@ ISO day or date-time makes the answer unreadable and goes back for a fix. The en
 *Designed, not yet built* (the first design's list): data ops `record.add`, `record.del`, `record.rename`, `action.update`,
 `action.assign`, `decision.add`, `milestone.add`, `risk.add`, `question.update`, `question.move`, `question.drop`,
 `meeting.add`, `meeting.update`, `person.merge`, `dependency.add`, `dependency.update`, `issue.add`, `issue.update`,
-`issue.resolve`, `risk.realize`, `assumption.add`, `assumption.update`, `meeting.agenda`, `glossary.add`, `glossary.update`,
-`lesson.add`, `parked`, `inbox`, `lookup`, `watch.item` and `doc`; outbound ops `draft.request`, `dev.request` and `handoff`
+`issue.resolve`, `risk.realize`, `assumption.add`, `assumption.update`, `meeting.agenda`, `parked`, `inbox`, `lookup`, `watch.item` and `doc`; outbound ops `draft.request`, `dev.request` and `handoff`
 (4.18); and system ops `milestone.rebaseline`, `rule.add`, `rule.retire`, `watch.add`, `watch.remove`, `config.set`,
 `plugin.enable` and `plugin.disable`. The dependency, milestone, risk, issue, assumption and meeting ops move to the project
 management pack with 6.23 and 6.24. Today a rule, a watched source, a plugin or a setting is changed from a screen (4.22) or
@@ -1279,6 +1282,7 @@ cases from signals and rule suggestions are *designed, not yet built*):
 | held op declined | the PM declines a held system op or a routing guess |
 | routed | the person said who a name or an owner is, answering "Who is X?" or "Pick an owner" (refs: the changeset, the question, the person chosen; the note is the name as written). Undoing the person's own release of a held op records no signal: it is their decision, not the assistant's work. **Built**: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal`, `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |
 | put on hold / taken off hold | the person puts an action on hold or takes it off (refs: the action; the note is what it waits for). Undoing either records no signal. **Built**: `tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`, `tests/test_on_hold_and_follow_ups.py::test_a_hold_needs_words_and_an_open_action_and_undoing_it_records_no_signal` |
+| kept / discarded / retired | the person keeps or discards a proposed piece of what the assistant learned, or retires an active one (6.22). Refs: the entry; no note (a discard's reason stays on the entry). Undoing records no signal. **Built**: `tests/test_knowledge_records.py::test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`, `tests/test_knowledge_records.py::test_discard_keeps_the_proposal_with_its_reason_and_undo_brings_it_back`, `tests/test_knowledge_records.py::test_retire_ends_an_active_entry_and_undo_makes_it_active_again` |
 | edited | the person changes a field the assistant set (a fact, an owner, a due date, an item's project, a question's wording before it is sent). The ledger shows who set each field, so this needs no AI. A silent correction, learned from in the batch (*designed, phase L*) |
 | repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item (*designed, phase L*) |
 
@@ -1316,7 +1320,7 @@ the run never saw. The review keeps the active list short enough for that.
 
 ## 6.22 Knowledge and the learning loop
 
-*Designed, not yet built* (roadmap: the loop in phase L-core, next after phase A, after which real use starts; Ask's
+*Partly built: the records, their ops and Keep, Discard and Retire (phase L1) are built; packets that read them (L2) and learning from corrections (L3) are designed, not yet built* (roadmap: the loop in phase L-core, next after phase A, after which real use starts; Ask's
 knowledge, Take my lessons, agent versions, early probation, the unused list and single-record restore in phase L-more,
 after the packs; decisions, 2026-10-12 "The learning slice" and "The plan review"). This is what
 makes the assistant better at each project the more it sees. It has four parts:
@@ -1344,13 +1348,70 @@ Every entry has:
 - a source and its evidence (the request, signal or input it came from, and the words);
 - the date it was learned;
 - a trust level from its source;
-- a status: proposed, active or retired;
+- a status: proposed, active, discarded, expired or retired (distinct states, 5.1);
 - the same structured target that rules have (`applies_to`: task kinds, record types and fields, projects, people, and a
   filter).
 
 Ids matter: a fixture, a rule promotion and a later correction can each point at the exact lesson. Entries change only
 through ops (`lesson.add` and `lesson.update`, `glossary.add` and `glossary.update`, `routing.add`, `style.add`, `rule.add`,
 `fact`, and `retire` for any kind), so every change is in the ledger with Undo.
+
+**Built in L1** (`tests/test_knowledge_records.py`): the four kinds below as core records, their ops and the person's acts on them. Nothing reads
+them into a packet yet (L2), and no task kind proposes them yet (L3). The facts' `key`, `as_of` and `supersedes` and
+rules as records are separate L1 items, not built here.
+- **The records** `lesson` (LES), `glossary_entry` (GLOSS), `routing_entry` (ROUTE) and `style_note` (STYLE) share one
+  base (`KnowledgeRecord`, `engine/records.py`): `text` (the restatement, in plain words), `evidence` (`quote`, `source`,
+  `request`, `signal`, `changeset`, kept apart from the text), `origin` (`person`: the person's own words; `input`:
+  proposed from content; `assistant`: its own generalization; `pack`, with `pack` naming it; `seed`; `import`), `trust`,
+  `learned_at`, `status` (proposed, active, discarded, expired, retired), `discard_reason`, `kept_by`, `kept_at` and
+  `applies_to`. An active entry always says who kept it and when. Their level is internal, as a fact's, and `origin`,
+  `pack`, `trust`, `learned_at` and `evidence` never change after the entry is made, even by the person's own edit.
+  Own fields: a lesson's `guard` and `signal`; a glossary entry's `term`, `meaning`, `confidence`, `project` and
+  `id_patterns`; a routing entry's `topic`, `person` or `team`, `negative` and `look_up`; a style note's `audience` and
+  `observation`. Built: `test_the_four_kinds_are_core_records_with_their_own_fields_and_one_shape`,
+  `test_a_record_that_contradicts_itself_does_not_validate`.
+- **Scopes with exclusions.** `applies_to` is the shape rules use (`task_kinds`, `records`, `filter`) plus `projects`,
+  `people`, `scope` and `except`. `scope` is `workspace` (everywhere, less the projects in `except`: a rule that holds
+  everywhere but one program needs no copy on every other project) or `projects` (only those listed; naming projects
+  without a scope means this). It is stored and shown with the key `except`. Built:
+  `test_naming_projects_makes_the_scope_those_projects_and_except_is_its_own_key`,
+  `test_everywhere_except_a_project_round_trips_through_the_record_the_api_and_the_export`.
+- **The ops** `lesson.add`, `lesson.update`, `glossary.add`, `glossary.update`, `routing.add`, `style.add` and
+  `knowledge.retire` (any kind, named by its id), all system tier, each with Undo. What an add does follows who it
+  comes from: from the person's own words (the rule for system ops, above) the entry is **active at once**, with the
+  person as `kept_by` and `origin` `person`; from anything else it is added as a **proposal** (`proposed`, with
+  `origin` `input` for content, including a note typed on an item's button, or `assistant` for the assistant's own
+  initiative) and is *not held*: it is a record the person can Keep, and it changes nothing until kept. An update or a
+  retire is held like any system op unless it comes from the person. An update changes a proposed or an active entry, a
+  retire only an active one, and what an op names (projects, people, the signal) must exist. Built:
+  `test_each_add_and_update_op_makes_and_changes_its_record`,
+  `test_an_update_names_something_and_only_changes_what_is_proposed_or_active`,
+  `test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input_it_is_proposed`,
+  `test_changing_or_retiring_an_active_entry_from_anyone_but_the_person_waits_for_them`,
+  `test_the_evidence_is_kept_apart_from_the_wording_and_names_where_it_came_from`,
+  `test_what_an_op_names_must_exist_and_the_scope_must_hold_together`,
+  `test_undo_of_each_op_takes_the_change_back`. Reading notes and a plugin's actions are not offered these ops
+  (`test_the_learning_ops_are_neither_offered_when_reading_notes_nor_to_a_plugins_action`); the work that learns
+  will be (L3).
+- **Keep, Discard and Retire** (`POST /api/knowledge/{id}/keep`, `/discard` and `/retire`, each stating the version
+  read). Each acts at once with Undo (the change it makes), records a `kept`, `discarded` or `retired` signal (6.20; undoing
+  records none) and refuses an entry in the wrong state. Keep makes a proposal active with the person as `kept_by`; the
+  wording or target the person changed in the same call is their own wording (12.8). Discard keeps the proposal with the
+  reason if one is given. Keep and Discard are the person's own `record.edit` of the entry's fields, so they apply as
+  theirs and undo like any edit. Built: `test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`,
+  `test_only_a_proposal_can_be_kept_and_where_an_entry_came_from_cannot_be_edited`,
+  `test_discard_keeps_the_proposal_with_its_reason_and_undo_brings_it_back`,
+  `test_retire_ends_an_active_entry_and_undo_makes_it_active_again`, `test_keeping_needs_the_person_to_be_known`.
+- **Provenance.** `GET /api/knowledge` (filters `kind` and `status`) lists entries newest first with `origin`, the same
+  "where it came from" link as an action's (`engine/origin.py`: the page, else the saved text of the input the evidence
+  cites, else the change and request that made the entry). The record's own `origin` is the view's `learned_from`. No
+  screen shows it yet (7.18, L3). Built: `test_the_list_filters_by_kind_and_status_and_carries_each_entrys_own_fields`,
+  `test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_and_its_request`.
+- **Export and import.** Every kind is written and loaded back like any record (5.0). Built:
+  `test_every_kind_of_knowledge_is_in_the_export_and_loads_back`.
+- **Not built, left for later phases:** the Learned line and the review screens (L3, 7.18), duplicate merging and the
+  discard hold (L3), the `expired` sweep (L3), the knowledge section of packets and its log (L2), `promoted` for a lesson,
+  and a pack's or a seed's entries (L-more).
 
 **The knowledge section of every packet** is split so the cached prefix stays the same from input to input (6.6):
 - **In the stable part,** after the playbook and before the open items:

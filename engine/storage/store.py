@@ -586,7 +586,7 @@ def _text_accepted(version: Stored, view: Any) -> dict[str, Any]:
 def _validate(model: type, data: dict[str, Any]) -> dict[str, Any]:
     kind = model.record_kind
     try:
-        return model.model_validate(data).model_dump(mode="json", exclude_defaults=False)
+        return model.model_validate(data).model_dump(mode="json", exclude_defaults=False, by_alias=True)
     except ValidationError as err:
         from engine.text_shape import error_problem
 

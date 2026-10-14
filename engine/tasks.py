@@ -9,11 +9,12 @@ from dataclasses import field as _field
 from pathlib import Path
 from typing import Any
 
-from engine.ops import OP_MODELS
+from engine.ops import KNOWLEDGE_OPS, OP_MODELS
 
-#: Core ops reading notes never offers: deleting is the person's call, file.add is made only by person actions, and
-#: starting projects is for actions and plugin work.
-NOT_FROM_NOTES = {
+#: Core ops reading notes never offers: deleting is the person's call, file.add is made only by person actions,
+#: starting projects is for actions and plugin work, and the ops that keep what the assistant learned belong to the
+#: work that learns (design 6.22).
+NOT_FROM_NOTES = KNOWLEDGE_OPS | {
     "record.delete",
     "file.add",
     "project.add",

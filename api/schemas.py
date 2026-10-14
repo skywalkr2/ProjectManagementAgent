@@ -12,6 +12,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from api.screen_text import ScreenText
+from engine.records import KnowledgeEvidence, Scope
 
 # ---- requests --------------------------------------------------------------------------------------------------------
 
@@ -2142,3 +2143,59 @@ class PackInstalled(BaseModel):
     name: str = Field(description="The installed package's name.")
     version: str
     needs_restart: bool = Field(description="It is used after a restart the person chooses; turning it on is separate.")
+
+
+class KnowledgeView(BaseModel):
+    """One piece of what the assistant learned: a lesson, glossary entry, routing entry or style note. `learned_from`
+    says whose words it is (person, input, assistant, pack, seed or import); `origin` is the link to where it came from,
+    decided on the server like an action's. The fields after `applies_to` are those of its kind and are empty for
+    the others."""
+
+    id: str
+    kind: Literal["lesson", "glossary_entry", "routing_entry", "style_note"]
+    version: int
+    text: str = Field(description="The entry in plain words.")
+    status: Literal["proposed", "active", "discarded", "expired", "retired"]
+    learned_from: Literal["person", "input", "assistant", "pack", "seed", "import"]
+    pack: str | None = None
+    trust: Literal["trusted", "untrusted"]
+    learned_at: datetime
+    kept_by: str | None = Field(None, description="The person who kept it, and so the author of its wording.")
+    kept_at: datetime | None = None
+    discard_reason: str | None = None
+    applies_to: Scope
+    evidence: KnowledgeEvidence | None = Field(None, description="The words and records it was learned from.")
+    origin: Origin | None = Field(None, description="Where it came from, for its link.")
+    guard: str | None = None
+    signal: str | None = None
+    term: str | None = None
+    meaning: str | None = None
+    confidence: Literal["confirmed", "assumed", "unknown"] | None = None
+    project: str | None = None
+    id_patterns: list[str] = Field(default_factory=list)
+    topic: str | None = None
+    person: str | None = None
+    team: str | None = None
+    negative: bool | None = None
+    look_up: str | None = None
+    audience: str | None = None
+    observation: str | None = None
+
+
+class KnowledgeKeep(BaseModel):
+    """Keep a proposed entry. A new wording or target made here is the person's own."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    read_version: int = Field(ge=1, description="The entry's version that was read.")
+    text: str | None = Field(None, min_length=1, description="The entry's wording, when the person changed it.")
+    applies_to: Scope | None = Field(None, description="What it applies to, when the person changed it.")
+
+
+class KnowledgeDiscard(BaseModel):
+    """Discard a proposed entry; it is kept, with the reason if one is given."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    read_version: int = Field(ge=1, description="The entry's version that was read.")
+    reason: str | None = Field(None, description="Why, if the person says.")

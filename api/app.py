@@ -25,6 +25,7 @@ from starlette.types import ASGIApp
 
 from api.ask_routes import build_ask_router
 from api.data_form_routes import build_data_form_router
+from api.knowledge_routes import build_knowledge_router
 from api.pack_routes import build_pack_router
 from api.routes import build_router
 from api.schemas import RuntimeConfig
@@ -255,6 +256,7 @@ def create_app(
     inner.include_router(build_sign_in_router(ws, cfg, store, worker))
     inner.include_router(build_pack_router(ws, cfg, store, worker))
     inner.include_router(build_data_form_router(store))
+    inner.include_router(build_knowledge_router(cfg, store, events))
     inner.state.worker = worker
     inner.state.store = store
     inner.state.events = events

@@ -11,7 +11,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator, model_validator
 
-from engine.records import entry_problem
+from engine.records import Scope, entry_problem
 
 Tier = Literal["data", "outbound", "system"]
 
@@ -435,6 +435,147 @@ class ReportDraftOp(OpModel):
         return "Draft a report: " + " ".join(self.title.split())
 
 
+def _named_changes(op: OpModel) -> dict[str, Any]:
+    """What an update op changes: each field it gives a value, as plain data. A field left null stays as it is."""
+    data = op.model_dump(mode="json", exclude={"op", "group", "id"}, exclude_none=True, by_alias=True)
+    return dict(sorted(data.items()))
+
+
+class LessonAddOp(OpModel):
+    """Keep a lesson: what went wrong, why, and the guard that stops it happening again, written as the general case
+    in plain words. From the person's own words it is active at once; from anything else it is a proposal the person
+    keeps or discards, and changes nothing until kept. `signal` is the correction it came from."""
+
+    op: Literal["lesson.add"] = "lesson.add"
+    text: str = Field(min_length=1, description="The lesson in plain words, as the general case.")
+    guard: str | None = Field(None, description="The check or behavior that prevents a repeat, in plain words.")
+    signal: str | None = Field(None, description="The id of the correction it came from, if there is one.")
+    applies_to: Scope = Field(default_factory=Scope, description="What it applies to.")
+    evidence: EvidenceIn | None = Field(None, description="The exact words from the input it rests on, if any.")
+
+    def describe(self) -> str | None:
+        return "Lesson: " + " ".join(self.text.split())[:150]
+
+
+class LessonUpdateOp(OpModel):
+    """Change a lesson that is proposed or active: its wording, its guard or what it applies to. A system op: it
+    changes how the assistant behaves, so from anyone but the person it waits for them. Name only what changes."""
+
+    op: Literal["lesson.update"] = "lesson.update"
+    id: str = Field(description="The id of the lesson.")
+    text: str | None = Field(None, min_length=1, description="The new wording.")
+    guard: str | None = Field(None, description="The new guard.")
+    applies_to: Scope | None = Field(None, description="What it now applies to, in full.")
+
+    @model_validator(mode="after")
+    def _changes_something(self) -> LessonUpdateOp:
+        if not self.changes():
+            raise ValueError("name what to change")
+        return self
+
+    def changes(self) -> dict[str, Any]:
+        """The fields to change, by name, with their new values."""
+        return _named_changes(self)
+
+    def describe(self) -> str | None:
+        return f"Change lesson {self.id}"
+
+
+class GlossaryAddOp(OpModel):
+    """Keep a glossary entry: a term or acronym and what it means here. From the person's own words it is active at
+    once; from anything else it is a proposal the person keeps or discards."""
+
+    op: Literal["glossary.add"] = "glossary.add"
+    text: str = Field(min_length=1, description="The entry in plain words, such as the term and what it stands for.")
+    term: str = Field(min_length=1, description="The term, acronym or name as it is written.")
+    meaning: str = Field(min_length=1, description="What it means.")
+    confidence: Literal["confirmed", "assumed", "unknown"] = Field(
+        "assumed", description="confirmed: someone who knows said so. assumed: a reasonable reading. unknown: not yet."
+    )
+    project: str | None = Field(None, description="Project id, if the term is about one project only.")
+    id_patterns: list[str] = Field(
+        default_factory=list, description="Patterns for splitting compound ids that use the term."
+    )
+    applies_to: Scope = Field(default_factory=Scope, description="What it applies to.")
+    evidence: EvidenceIn | None = Field(None, description="The exact words from the input it rests on, if any.")
+
+    def describe(self) -> str | None:
+        return f"Glossary: {' '.join(self.term.split())[:60]}"
+
+
+class GlossaryUpdateOp(OpModel):
+    """Change a glossary entry that is proposed or active. A system op: from anyone but the person it waits for
+    them. Name only what changes."""
+
+    op: Literal["glossary.update"] = "glossary.update"
+    id: str = Field(description="The id of the glossary entry.")
+    text: str | None = Field(None, min_length=1, description="The new wording.")
+    meaning: str | None = Field(None, min_length=1, description="The new meaning.")
+    confidence: Literal["confirmed", "assumed", "unknown"] | None = Field(None, description="The new confidence.")
+    project: str | None = Field(None, description="The project it is about.")
+    id_patterns: list[str] | None = Field(None, description="The new patterns for splitting compound ids.")
+    applies_to: Scope | None = Field(None, description="What it now applies to, in full.")
+
+    @model_validator(mode="after")
+    def _changes_something(self) -> GlossaryUpdateOp:
+        if not self.changes():
+            raise ValueError("name what to change")
+        return self
+
+    def changes(self) -> dict[str, Any]:
+        """The fields to change, by name, with their new values."""
+        return _named_changes(self)
+
+    def describe(self) -> str | None:
+        return f"Change glossary entry {self.id}"
+
+
+class RoutingAddOp(OpModel):
+    """Keep a routing entry: who answers a kind of question, or who doesn't (`negative`), and where to look it up
+    instead. Name the person or the team by id. From the person's own words it is active at once; from anything
+    else it is a proposal the person keeps or discards."""
+
+    op: Literal["routing.add"] = "routing.add"
+    text: str = Field(min_length=1, description="The entry in plain words.")
+    topic: str = Field(min_length=1, description="The topic, area or kind of question.")
+    person: str | None = Field(None, description="The person's id.")
+    team: str | None = Field(None, description="The team's id, instead of a person.")
+    negative: bool = Field(False, description="True when they don't answer this.")
+    look_up: str | None = Field(None, description="Where to look it up instead, in plain words.")
+    applies_to: Scope = Field(default_factory=Scope, description="What it applies to.")
+    evidence: EvidenceIn | None = Field(None, description="The exact words from the input it rests on, if any.")
+
+    def describe(self) -> str | None:
+        return f"Routing: {' '.join(self.topic.split())[:60]}"
+
+
+class StyleAddOp(OpModel):
+    """Keep a style note: what a recipient or audience wants or avoids in what is written for them. `audience` is a
+    person's id or a kind of audience in words. From the person's own words it is active at once; from anything else
+    it is a proposal the person keeps or discards."""
+
+    op: Literal["style.add"] = "style.add"
+    text: str = Field(min_length=1, description="The note in plain words.")
+    audience: str = Field(min_length=1, description="A person's id, or a kind of audience in words.")
+    observation: str = Field(min_length=1, description="What they want or avoid.")
+    applies_to: Scope = Field(default_factory=Scope, description="What it applies to.")
+    evidence: EvidenceIn | None = Field(None, description="The exact words from the input it rests on, if any.")
+
+    def describe(self) -> str | None:
+        return f"Style note for {' '.join(self.audience.split())[:60]}"
+
+
+class KnowledgeRetireOp(OpModel):
+    """Retire an active lesson, glossary entry, routing entry or style note, named by its id: it stops guiding runs
+    and stays on record. A system op: from anyone but the person it waits for them."""
+
+    op: Literal["knowledge.retire"] = "knowledge.retire"
+    id: str = Field(description="The id of the entry, such as a lesson's.")
+
+    def describe(self) -> str | None:
+        return f"Retire {self.id}"
+
+
 Op = Annotated[
     NoteOp
     | FactOp
@@ -461,7 +602,14 @@ Op = Annotated[
     | ListAddOp
     | ListRenameOp
     | ListRetireOp
-    | ReportDraftOp,
+    | ReportDraftOp
+    | LessonAddOp
+    | LessonUpdateOp
+    | GlossaryAddOp
+    | GlossaryUpdateOp
+    | RoutingAddOp
+    | StyleAddOp
+    | KnowledgeRetireOp,
     Field(discriminator="op"),
 ]
 
@@ -492,18 +640,43 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "list.rename": ListRenameOp,
     "list.retire": ListRetireOp,
     "report.draft": ReportDraftOp,
+    "lesson.add": LessonAddOp,
+    "lesson.update": LessonUpdateOp,
+    "glossary.add": GlossaryAddOp,
+    "glossary.update": GlossaryUpdateOp,
+    "routing.add": RoutingAddOp,
+    "style.add": StyleAddOp,
+    "knowledge.retire": KnowledgeRetireOp,
 }
+
+#: The ops that keep what the assistant learned (design 6.22).
+KNOWLEDGE_OPS = {
+    "lesson.add",
+    "lesson.update",
+    "glossary.add",
+    "glossary.update",
+    "routing.add",
+    "style.add",
+    "knowledge.retire",
+}
+#: The knowledge ops that add an entry. Whatever tier they have, one that doesn't come from the person's own words
+#: still applies, as a proposal: an entry changes nothing until the person keeps it.
+KNOWLEDGE_ADD_OPS = {"lesson.add", "glossary.add", "routing.add", "style.add"}
 
 #: Ops only the person makes: from anyone else they are refused, never held.
 PERSON_ONLY_OPS = {"text.edit", "text.accept", "text.discard", "record.edit"}
 
-TIERS: dict[str, Tier] = {name: "data" for name in OP_MODELS} | {
-    "record.delete": "system",
-    "project.add": "system",
-    "list.add": "system",
-    "list.rename": "system",
-    "list.retire": "system",
-}
+TIERS: dict[str, Tier] = (
+    {name: "data" for name in OP_MODELS}
+    | {
+        "record.delete": "system",
+        "project.add": "system",
+        "list.add": "system",
+        "list.rename": "system",
+        "list.retire": "system",
+    }
+    | {name: "system" for name in KNOWLEDGE_OPS}
+)
 
 #: Ops whose evidence is required (record.set requires it for the fields in EVIDENCE_FIELDS).
 NEEDS_EVIDENCE = {"fact", "event.add", "action.add", "action.close", "question.done"}
