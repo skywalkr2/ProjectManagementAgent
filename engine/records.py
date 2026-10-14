@@ -16,7 +16,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_valid
 class Record(BaseModel):
     """Base for every stored record. A plugin's record type subclasses it and sets `record_kind` ("<plugin>/<name>")
     and `prefix` (the id prefix, capital letters). Fields are pydantic fields; unknown fields are refused. Every record
-    also carries the core's `ext` and `stage` fields, which a record type may not redefine."""
+    also carries the core's `ext` and `stage` fields, which a record type may not redefine. A field declared with an
+    `alias` takes the alias as input and is stored, read back and named in reference paths by its field name, in the
+    record and in any model nested in it; only a model whose config sets `serialize_by_alias` is stored by alias."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -161,7 +163,8 @@ def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> li
 
     found = []
     for name, info in model.model_fields.items():
-        path = f"{_prefix}{info.alias or name}"
+        # A reference path names the key the record is stored under: the alias only for a model stored by alias.
+        path = f"{_prefix}{info.alias if info.alias and model.model_config.get('serialize_by_alias') else name}"
         for meta in info.metadata:
             if isinstance(meta, RefTo):
                 found.append((path, meta.kind))
@@ -1003,7 +1006,8 @@ class Scope(BaseModel):
     """What a rule or a piece of knowledge applies to: one shape for both. Empty lists mean no narrowing. `scope` is
     "workspace" (everywhere, less the projects in `except`) or "projects" (only those in `projects`)."""
 
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+    #: Stored by alias, so the key is `except`; a model that doesn't ask for this is stored by its field names.
+    model_config = ConfigDict(extra="forbid", populate_by_name=True, serialize_by_alias=True)
 
     task_kinds: list[str] = Field(default_factory=list, description="Task kinds it applies to; empty means all.")
     records: list[str] = Field(

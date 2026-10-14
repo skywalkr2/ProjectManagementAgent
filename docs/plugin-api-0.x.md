@@ -10,6 +10,16 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.70 changes
+
+Manifests stay `'>=0.3,<0.4'`. **A fix of a silent change in 0.3.64:** from 0.3.64 to 0.3.69 the store saved every
+record by field alias, plugin records included, and reference paths named aliased fields by their alias. A field
+declared `Field(alias="with")` was stored as `with` instead of its field name, so code reading stored records by field
+name stopped seeing it, with no error. From 0.3.70 a plugin's records are stored, read back and named in reference
+paths by field name again, as before 0.3.64; the alias is accepted on input. Only a core model that asks for it (the
+scope's `except`, through `serialize_by_alias`) is stored by alias. A record written by 0.3.64–0.3.69 keeps its
+aliased keys until it is written again.
+
 ## What 0.3.69 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes; a plugin that reads these records sees more fields.

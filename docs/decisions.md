@@ -18,6 +18,16 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   work that needs a look live; the board's own Review line for what was learned is wave 3's other half.
 *Kind:* concepts (core). *Impact:* none on scope; design text updated in 6.16 and 7.18.
 
+## 2026-10-14: A plugin's records keep the stored shape they had; storing by alias is the core model's choice
+
+**Decided by:** the technical PM, on a plugin builder's report. **What:** knowledge records (0.3.64) made the store save
+every record by field alias, so a plugin field declared with an alias silently changed its stored key, and readers by
+field name lost it. The store now saves by field name, as before, and only a core model whose config sets
+`serialize_by_alias` (the scope's `except`, a Python keyword) is stored by alias; reference paths follow the same rule.
+A change to the stored shape of a plugin's records is a breaking change: it waits for the next minor version and is
+announced a round ahead, never made inside 0.3. **Impact:** plugin API 0.3.70; the plugin guide states how aliased fields
+are stored. No change to scope.
+
 ## 2026-10-14: L3, second wave: learning from inputs, the measures, and accounts a fallback may use
 
 **Decided by:** the technical PM, reviewing and merging L3's second wave. **What:**
