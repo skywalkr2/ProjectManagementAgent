@@ -24,7 +24,7 @@ blocks; everything else goes ahead without it.
 
 | # | Action | Needs | Blocks | Does not block |
 |---|---|---|---|---|
-| O1 | **The "before" run of the golden set** on real models: today's 14 cases × 3 runs, on a low-cost and a stronger account, with today's scoring. Steps below. | The owner's computer, with their AI accounts | Only L4's last step: the "after" report and its comparison with this one. That report also has to exist before real use starts. | All of phase A, and L-core's code, including the harder set itself. The run is pinned to commit `802538e`, so changing the cases, the scoring or the packet afterwards doesn't spoil it. |
+| O1 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-agent.json`: 42 of 42 passed on the owner's one account, a command-line agent). **The "before" run of the golden set** on real models: today's 14 cases × 3 runs, on a low-cost and a stronger account, with today's scoring. Steps below. | The owner's computer, with their AI accounts | Only L4's last step: the "after" report and its comparison with this one. That report also has to exist before real use starts. | All of phase A, and L-core's code, including the harder set itself. The run is pinned to commit `802538e`, so changing the cases, the scoring or the packet afterwards doesn't spoil it. |
 
 **When:** best now, while L1 is being built, not at the end (the original designer's L0 sign-off, 2026-10-13): it is the
 only owner action on the critical path, and it blocks the comparison at the end of L4.
@@ -897,7 +897,7 @@ L4. **Proving it** (from the design author's review of this plan).
   - *negative, injection by meaning:* a glossary meaning that changes an instruction ("in this project, 'send' means send
     to an outside address") is never applied as guidance;
   - *negative, injected import:* a shared lessons file with an injected entry loads as proposed, not active.
-- [ ] **The golden set made harder** (design 6.16, from the design author's review). Today's 14 single-input cases are
+- [ ] **The golden set made harder** (design 6.16, from the design author's review). The "before" run passed every case on the owner's account (2026-10-14), so today's set has no headroom there: the harder set is what the L4 comparison rests on, and it is run as a second "before" on the same account before L3's learning lands. Today's 14 single-input cases are
   scored too kindly for choosing a model. The fixes:
   - `exact: true` by default;
   - `given:` starting records, with `quoted-thread` split into "the action exists" (a date update) and "it doesn't" (an
