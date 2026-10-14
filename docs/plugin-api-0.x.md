@@ -10,6 +10,15 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.63 adds
+
+Manifests stay `'>=0.3,<0.4'`.
+
+- **An action can be on hold**: the core `action` record gains an optional `on_hold` (`waiting_for`, `since`), set and
+  cleared by the person. An action on hold is never due, overdue or chased. A plugin that reads actions sees one more
+  optional field, and should leave held actions out of anything it counts as due.
+- **Two signal kinds**: `put_on_hold` and `taken_off_hold`.
+
 ## What 0.3.62 adds
 
 Manifests stay `'>=0.3,<0.4'`.
