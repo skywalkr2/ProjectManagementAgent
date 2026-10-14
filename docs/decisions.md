@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: A slice of scope moves before real use
+
+**Decided by:** the original designer, agreed by the owner. **What:** the person's role on each project (run, design,
+watch) with its "I'm running X now" proposal; facts only on a watched project, enforced by the applier; and another
+team's item is a fact unless the input says the person owes them something. The rest of the scope resolver (6.18) stays
+in phase E. *Kind:* concept (core), with the role values as a list a pack can extend. **Why:** the running version needed
+scope on day two (115 changes closed as not the person's in two weeks; 9 of 100 lessons were scope mistakes), and
+week-one "that's not ours" corrections would swamp the repeat-correction numbers the first month is judged on.
+**Impact:** design 6.18; a "Ready for real use" item with its journey test; a core record change (a project's roles)
+when built; no change to scope.
+
 ## 2026-10-14: The original designer's lessons from running (nine), placed
 
 **Decided by:** the technical PM, placing the original designer's lessons of 2026-10-14; checked against the code first.

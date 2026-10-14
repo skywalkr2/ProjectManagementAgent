@@ -286,6 +286,19 @@ real use starts. The rest (L-more) comes after the packs.
     `web/src/components/FollowUps.test.tsx`. Top priorities' lines read it when that list is built);
   - [x] "where it came from" as a working link on actions, questions and decisions (the page, else the saved text, else the change and its request); knowledge records with L1, so Keep can be judged against the evidence. Built: `tests/test_origin.py` (the three cases, none, Today's to-do, record pages), `web/src/components/Origin.test.tsx` (a Follow-ups row), `web/src/components/RecordPage.test.tsx::an action's page shows where it came from as a link, in place of the input's id`. The knowledge-record link is built with L1: `tests/test_knowledge_records.py::test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_and_its_request` ("Knowledge keeps its provenance").
 
+- **A slice of scope, before real use** (the original designer, 2026-10-14; the rest of 6.18 stays in E). Their running
+  version needed scope on day two: 115 incoming changes closed as "not this person's" in two weeks, and 9 of 100 lessons
+  were scope mistakes; "that's not ours" corrections in week one would swamp the first month's repeat-correction numbers.
+  - [ ] The person's role on each project (run, design, watch; per person id), set on the project and proposed by "I'm
+    running X now" in any input or note as a system op the person confirms.
+  - [ ] On a project the person watches, the assistant records facts only: no actions and no questions to other people.
+    Enforced by the applier from the role, not left to the model: such an op is returned once with "record it as a fact",
+    then held, never applied.
+  - [ ] Another team's item, on any project, is a fact unless the input says the person owes them something: an action
+    whose owners are all outside the person's team is returned once to be recorded as a fact, unless its evidence shows
+    the person owes it.
+  - [ ] Its test is the person's path: a watched project's mail gives facts only; the role changed to run, the same mail
+    gives a risk and an action.
 - **From the original designer's lessons of 2026-10-14**, small and needed in the first week:
   - [ ] **A failed call never looks like an empty result** (lesson 7): wherever a list comes from a call (a connector, an
     account, a dry run), a failure shows its reason where the person is looking ("the service refused the sign-in: renew
@@ -1481,7 +1494,7 @@ Order by what protects real data first, then by what the packs ask for:
   forgotten value.
 - [ ] Scope resolver (6.18), the scheduled rules and lessons review with promotion (6.21), and read-backs (6.7).
   The resolver reads **the person's role on each project** (run, design, watch, a value list a pack can extend; per
-  person id), and "I'm running X now"
+  person id; the role itself and its two simplest rules are built before real use, "A slice of scope"), and "I'm running X now"
   in any input proposes the role change as a system op, effective that day (the original designer's lessons, 2026-10-14,
   lesson 1). Its learning pair is in L4.
   Dependencies, baselines and RAID moved to the project management pack (C2).

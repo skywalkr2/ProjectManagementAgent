@@ -1271,7 +1271,10 @@ check-up and the UI all ask it; no other part of the product decides scope on it
   **watch** it (per person id, so an organization install, 11.8, works the same). The resolver reads that role, not a
   global list: on a project the person runs, another team's blocking defect is a risk and an action, not a parked note. "I'm
   running X now" or "they want me to PM X" in any input or note proposes the role change as a system op the person
-  confirms, and it takes effect that day. A learning pair proves it (roadmap L4).
+  confirms, and it takes effect that day. A learning pair proves it (roadmap L4). **A slice comes before real use** (the
+  original designer, 2026-10-14; the rest stays in phase E): the role and its proposal; on a project the person only
+  watches, facts only (no actions, no questions to other people), enforced by the applier from the role; and another
+  team's item on any project is a fact unless the input says the person owes them something.
 
 ## 6.19 Facts and lookups
 
