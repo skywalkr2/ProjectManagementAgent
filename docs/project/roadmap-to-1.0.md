@@ -813,6 +813,18 @@ L1. **Knowledge as records.** Settled before L1 starts (the original designer's 
 - [x] Signals name the `run` and `changeset` they correct. Built: `tests/test_rules_facts_signals.py::test_sending_back_and_undoing_name_the_changeset_and_its_run`, `tests/test_rules_facts_signals.py::test_saying_who_a_name_is_names_the_changeset_and_its_run`, `tests/test_rules_facts_signals.py::test_a_correction_of_something_no_run_made_leaves_run_and_changeset_empty`, `tests/test_rules_facts_signals.py::test_a_signal_given_a_changeset_takes_its_run_and_one_given_both_keeps_them`. A hold, a set-aside by hand, a pulled-back automatic close and an edited follow-up message have no run, so both stay empty. The `dropped`, `reworded` and `held_declined` kinds have no recording path yet (L3); the helper takes both when they do.
 
 L2. **Every run reads what applies.**
+- [ ] **To check with the original designer before L2 is built** (2026-10-14). Each has a default the build follows
+  unless the designer says otherwise:
+  - *What "a rule applied" means for the 30-day review flag.* The model's own list of what it applied is its say-so,
+    so the default counts a rule as applied when a run it was given was about something its target covers (its task
+    kinds, record types or projects matched). A rule that is always in force but rarely triggered is then flagged only
+    if nothing it covers came in for 30 days, and the flag offers Keep (resets the clock) or Retire.
+  - *What happens when the stable section is over its budget.* A rule is never dropped silently. Default: rules
+    narrowed to some task kinds or projects move to the per-input part, where they still reach the runs they cover;
+    if the workspace-wide rules alone still pass the budget, Today shows "Review your standing rules" with the count.
+  - *Rules proposed from inputs or by the assistant.* Today they wait as a held decision on Today, while lessons,
+    glossary, routing and style notes become proposals on the Learned line. Default: from L3, rules become proposals
+    too, so everything the assistant learned is kept or discarded in one place. Nothing in L2 depends on it.
 - [ ] **The stable prefix has a budget** (the original designer's L0 sign-off, 2026-10-13): rules arrive in bursts, so the stable section has a size budget (a setting)
   and the knowledge log counts its rules; a rule that hasn't applied in 30 days (a setting) is flagged for review on
   the daily card instead of the prefix growing forever.
