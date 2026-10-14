@@ -54,6 +54,22 @@ def test_an_op_the_case_does_not_expect_fails_the_run_unless_the_case_says_exact
     assert relaxed.passed and relaxed.extra == []
 
 
+def test_an_op_kind_the_case_allows_is_never_counted_as_extra(monkeypatch):
+    case = case_of(DEMO_B, "close-action")
+    allowed = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=with_ops(case, fact_op(case)), allow=["fact"])
+    assert allowed.passed and allowed.extra == []
+    note = {"op": "note", "text": "Nothing else."}
+    other = run_edited(
+        monkeypatch, DEMO_B, case["id"], stub_answer=with_ops(case, fact_op(case), note), allow=["event.add"]
+    )
+    assert not other.passed and other.extra == ["fact() applied"]
+
+
+def test_the_harder_set_allows_the_calendar_entry_the_notes_prompt_asks_for_beside_a_dated_action():
+    for case_id in ("forwarded-under-note", "quoted-thread-action-exists", "quoted-thread-action-missing"):
+        assert "event.add" in case_of(DEMO_A, case_id).get("allow", []), case_id
+
+
 def test_a_note_is_never_counted_as_an_unexpected_op(monkeypatch):
     case = case_of(DEMO_B, "close-action")
     note = {"op": "note", "text": "The printer has the file."}

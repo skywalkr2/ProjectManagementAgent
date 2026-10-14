@@ -1,0 +1,122 @@
+{
+  "set": "harder (workspaces/demo-a/evals, 16 cases)",
+  "commit": "feb6b3f",
+  "date": "2026-10-14",
+  "runs": 3,
+  "account": "the owner's command-line agent account, on a subscription (both tiers use it)",
+  "one_account": true,
+  "agent_program_version": "1.0.98",
+  "pass_rate": 0.625,
+  "passed_runs": 30,
+  "total_runs": 48,
+  "not_run": 0,
+  "note": "Summarized from the run's printed output and its failure details (the same in all three runs of each failing case); account and program names removed. Every failing run expected nothing it lacked and produced nothing forbidden: each failed only on extra ops that the cases, not the assistant, had wrong. Rescored with the corrected cases (the `allow` lists added on 2026-10-14), the same outputs pass 48 of 48.",
+  "rescored_with_corrected_cases": {
+    "pass_rate": 1.0,
+    "passed_runs": 48
+  },
+  "cases": {
+    "closed-from-another-project": {
+      "passed_runs": 3
+    },
+    "decision-already-made": {
+      "passed_runs": 3
+    },
+    "forwarded-under-note": {
+      "passed_runs": 0,
+      "missing": [],
+      "forbidden": [],
+      "extra": [
+        "event.add() applied"
+      ],
+      "got": [
+        "action.add(owners=['PER-2'], due=2026-10-22) applied",
+        "event.add() applied"
+      ]
+    },
+    "hostile-make-owner": {
+      "passed_runs": 3
+    },
+    "hostile-standing-rule": {
+      "passed_runs": 3
+    },
+    "might-be-able-to": {
+      "passed_runs": 3
+    },
+    "next-week-closes-nothing": {
+      "passed_runs": 0,
+      "missing": [],
+      "forbidden": [],
+      "extra": [
+        "fact() applied",
+        "event.add() applied"
+      ],
+      "got": [
+        "fact() applied",
+        "event.add() applied"
+      ]
+    },
+    "not-me-ask-someone-else": {
+      "passed_runs": 0,
+      "missing": [],
+      "forbidden": [],
+      "extra": [
+        "fact() applied"
+      ],
+      "got": [
+        "fact() applied"
+      ]
+    },
+    "one-reply-two-questions": {
+      "passed_runs": 3
+    },
+    "partial-answer": {
+      "passed_runs": 0,
+      "missing": [],
+      "forbidden": [],
+      "extra": [
+        "action.add(owners=['PER-4']) applied"
+      ],
+      "got": [
+        "question.done(id=Q-1) applied",
+        "action.add(owners=['PER-4']) applied"
+      ]
+    },
+    "partial-completion": {
+      "passed_runs": 3
+    },
+    "quoted-thread-action-exists": {
+      "passed_runs": 0,
+      "missing": [],
+      "forbidden": [],
+      "extra": [
+        "event.add() applied"
+      ],
+      "got": [
+        "record.set(kind=action, id=ACT-90, field=due) applied",
+        "event.add() applied"
+      ]
+    },
+    "quoted-thread-action-missing": {
+      "passed_runs": 0,
+      "missing": [],
+      "forbidden": [],
+      "extra": [
+        "event.add() applied"
+      ],
+      "got": [
+        "action.add(owners=['PER-3'], due=2026-10-22) applied",
+        "event.add() applied"
+      ]
+    },
+    "reported-earlier-day": {
+      "passed_runs": 3
+    },
+    "restated-open-action": {
+      "passed_runs": 3
+    },
+    "vague-timing": {
+      "passed_runs": 3
+    }
+  }
+}

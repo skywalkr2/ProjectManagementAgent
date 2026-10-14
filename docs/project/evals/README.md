@@ -8,6 +8,7 @@ address.
 | Date | Set | Account | Pass rate | Notes |
 |---|---|---|---|---|
 | 2026-10-14 | before (14 cases, commit `802538e`) | The owner's command-line agent account, on a subscription (both tiers use it) | 1.0 (42 of 42) | `2026-10-14-before-agent.json`. Every case passed every run, 4 to 13 s each, no cost charged per call; `shared-first-name` held its one item each run, as designed. The set has no headroom on this account, so the L4 comparison rests on the harder set and the learning pairs. Run with the account file trimmed of one setting the pinned version predates (`budgets.first_go`), which doesn't touch the cases, the scoring or the packet. |
+| 2026-10-14 | harder (16 cases, commit `feb6b3f`) | The owner's command-line agent account, on a subscription (both tiers use it; agent program version 1.0.98) | 0.625 (30 of 48); 1.0 (48 of 48) rescored with the corrected cases | `2026-10-14-before-harder-agent.json`. Six cases failed every run, and every failure was an extra op the case hadn't allowed, never a missing or forbidden one: a calendar entry beside a dated action, which the notes prompt asks for (three cases), a fact worth keeping ("not me, ask X"; "next week"), and an owned commitment ("I will check ... and come back"). The cases were wrong, not the assistant: they now list those as `allow`. So on this account the extraction sets have no headroom; the before/after comparison of learning rests on L4's learning pairs and the repeat-correction rate. |
 
 ## The harder set
 

@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: The harder set's "before" run: the cases were wrong, not the assistant
+
+**Decided by:** the technical PM, reading the owner's O2 report. **What:** 30 of 48 runs passed at `feb6b3f`; all 18
+failures were extra ops in six cases, none missing or forbidden. Each extra was right: a calendar entry beside a dated
+action, which the notes prompt asks for; a fact worth keeping; an owned commitment. The harness gains `allow` (op kinds
+that are right but optional in a case, never counted as extra), the six cases list theirs, and the same outputs rescore
+48 of 48. **Why:** exact scoring is meant to catch over-production, not to penalize what the product asks for.
+**Impact:** on the owner's account the extraction sets have no headroom, so L4's comparison rests on the learning pairs
+and the repeat-correction rate, as planned; `engine/evaluate.py`, six case files, the evals README. No change to scope.
+Open for the owner and the original designer: whether every dated action should also get a calendar entry, as the
+notes prompt asks today (it duplicates the to-do list's due date).
+
 ## 2026-10-14: The original designer's afternoon lessons, placed after checking the code
 
 **Decided by:** the technical PM. **Checked against the code first:** (3) ids are never reused: each kind keeps a
