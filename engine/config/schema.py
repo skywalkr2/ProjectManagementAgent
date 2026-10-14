@@ -749,15 +749,16 @@ class NearDuplicateQuestionTuning(ConfigModel):
         0.8,
         ge=0,
         le=1,
-        description="How alike a new question's words must be to an open question, or one answered recently, to count "
-        "as a near-duplicate: 0 flags any question that shares a word, 1 only one with the same words.",
+        description="How alike a new question's words must be to an open question to the same person, or one answered "
+        "recently, to count as a near-duplicate: 0 flags any question that shares a word, 1 only one with the same "
+        "words.",
     )
     days: int = Field(
-        30,
+        14,
         ge=0,
         le=3650,
-        description="How many days back an answered question is still compared with a new one. Open questions are "
-        "always compared.",
+        description="How many days back a question answered by the same person is still compared with a new one. "
+        "Open questions are always compared.",
     )
 
 

@@ -205,6 +205,24 @@ def test_a_run_that_keeps_asking_must_answer_after_the_configured_rounds(env):
     assert store.read().get("changeset", cs_id).data["summary"] == "Answered at last."
 
 
+def test_a_search_that_would_push_the_next_call_over_the_run_limit_stops_the_run_with_the_usual_reason(
+    env, monkeypatch
+):
+    _, cfg, store = env
+    over = cfg.ai.budgets.per_run_usd + 1.0
+    # The first call is cheap; once the results are added, the call that would follow is over the per-run limit.
+    monkeypatch.setattr(
+        Router, "estimate", lambda self, task, **kw: over if "# Search results" in task.request else 0.0
+    )
+    add_fact(store, fact_text())
+    asked = scripted(SEARCH, an_answer())
+    handed, cs_id = run(env)
+    assert cs_id is None and len(asked) == 1  # no second call
+    request = store.read().get("request", handed.request).data
+    assert request["state"] == "needs_you"
+    assert f"Searching first would make this cost about ${over:.2f}" in request["waiting"]
+
+
 def test_a_run_that_ignores_the_order_to_answer_is_stopped_not_looped(env):
     _, cfg, store = env
     asked = scripted(SEARCH)
@@ -377,6 +395,14 @@ def test_near_duplicate_question_compares_with_questions_answered_within_the_day
     assert not near_duplicates(env, OPEN_QUESTION)
 
 
+def test_near_duplicate_question_ignores_a_similar_question_to_a_different_person(env):
+    _, cfg, store = env
+    add_question(store, OPEN_QUESTION)
+    elsewhere = question_op(cfg, OPEN_QUESTION, to=other_person(cfg)["id"])
+    assert not problems_for(env, elsewhere, "near-duplicate-question")
+    assert near_duplicates(env, OPEN_QUESTION)  # the same question to the same person still fires
+
+
 def test_near_duplicate_question_ignores_dropped_questions(env):
     _, _, store = env
     add_question(store, OPEN_QUESTION, status="dropped")
@@ -389,7 +415,7 @@ def test_the_lint_defaults_and_ranges():
     checks = ChecksFile()
     assert checks.lints["already-known"] == "return" and checks.lints["near-duplicate-question"] == "warn"
     tuning = NearDuplicateQuestionTuning()
-    assert (tuning.similarity, tuning.days) == (0.8, 30)
+    assert (tuning.similarity, tuning.days) == (0.8, 14)
     for value in (-0.1, 1.1):
         with pytest.raises(ValueError):
             NearDuplicateQuestionTuning(similarity=value)

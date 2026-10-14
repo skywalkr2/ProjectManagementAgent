@@ -309,7 +309,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                         refuse(i, "question-links", f"{link.url} isn't a link the recipient can open")
             _wording(i, op.title + " " + op.text, ctx, lint, _quotes_in(op, ctx))
             if lints.get("near-duplicate-question", "off") != "off":
-                match = _near_duplicate_question(ctx, view, op.title)
+                match = _near_duplicate_question(ctx, view, op.title, resolved.person)
                 if match is not None:
                     state = "answered question" if match.data["status"] == "answered" else "open question"
                     lint(i, "near-duplicate-question", f"looks like {state} {match.id}: {match.data['title']}")
@@ -514,13 +514,15 @@ def _shares_words(a: str, b: str) -> bool:
     return bool(set(_WORD.findall(normalize(without_links(a)))) & set(_WORD.findall(normalize(without_links(b)))))
 
 
-def _near_duplicate_question(ctx: Context, view: Any, title: str) -> Any | None:
-    """The open question, or the one answered within the configured days, whose title is as alike as the configured
-    similarity to `title`; None when there is none."""
+def _near_duplicate_question(ctx: Context, view: Any, title: str, to: str | None) -> Any | None:
+    """The open question, or the one answered within the configured days, to the same person, whose title is as alike
+    as the configured similarity to `title`; None when there is none."""
     tuning = ctx.cfg.checks.tuning.near_duplicate_question
     since = datetime.fromisoformat(ctx.store.clock()) - timedelta(days=tuning.days)
     answered: dict[str, datetime] | None = None
     for question in view.list("question"):
+        if question.data["to"] != to:
+            continue
         status = question.data["status"]
         if status in ("open", "sent"):
             pass
