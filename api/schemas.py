@@ -331,6 +331,19 @@ class OpView(BaseModel):
     ask: Ask | None = None
 
 
+class AppliedEntryView(BaseModel):
+    """A piece of what the assistant knew that a run said it applied (design 6.20, 7.18): a lesson, glossary entry,
+    routing entry, style note, standing rule or fact, with what is needed to narrow or retire it from the work's
+    card."""
+
+    id: str
+    kind: Literal["lesson", "glossary_entry", "routing_entry", "style_note", "rule", "fact"]
+    version: int = Field(description="The entry's version, to send back with Narrow or Retire.")
+    text: str = Field(description="The entry in plain words.")
+    status: str = Field(description="active, retired and so on; a fact is always active.")
+    applies_to: Scope | None = Field(None, description="What it applies to; a fact applies to its project only.")
+
+
 class ChangesetView(BaseModel):
     id: str
     summary: str
@@ -338,6 +351,16 @@ class ChangesetView(BaseModel):
     reviewed: bool
     trust: Literal["trusted", "untrusted"]
     ops: list[OpView]
+    applied: list[AppliedEntryView] = Field(
+        default_factory=list,
+        description="What the run was given from what was learned and showed it applied, for the line 'Because you "
+        "told me'.",
+    )
+    first_on_account: str | None = Field(
+        None,
+        description="The name of the AI account when this was the first run on an account that stands in a fallback "
+        "chain, so the card can say so.",
+    )
     second_opinion: Literal["other_account", "same_account"] | None = Field(
         None,
         description="For an independent check: run on an account other than the one that wrote the work, or on the "
@@ -400,6 +423,11 @@ class ChangeItem(BaseModel):
     cause: StopCauseView | None = Field(None, description="For a stopped request: the cause an action can clear.")
     follows: str | None = Field(None, description="The change (changeset id) this work followed from, if any.")
     follows_summary: str | None = Field(None, description="That change's one-line summary, for the row.")
+    redoes: str | None = Field(
+        None,
+        description="The change (changeset id) this work redoes after the person sent it back, so what was learned "
+        "from the send-back shows on this row too.",
+    )
     changeset: ChangesetView | None
     title: ItemTitle | None = Field(None, description="The item's title, by the title rule.")
     mail_item: str | None = Field(
@@ -2409,6 +2437,33 @@ class ProposalView(KnowledgeView):
         0, description='How many times the person said "just this time" to the same correction before.'
     )
     expires_at: datetime | None = Field(None, description="When it expires unreviewed; none for one that never does.")
+    from_changeset: str | None = Field(
+        None,
+        description="For one learned from a correction: the change the correction was about, so its card can show "
+        "the proposal.",
+    )
+
+
+class LearnedLine(BaseModel):
+    """What the assistant learned from one correction, for the line under that correction's card (design 7.18).
+    `learning`: the assistant is still working on it (`waiting` says why and until when). `proposed`: there is a
+    `proposal` to keep. `kept`: the person's own words were kept at once; `undo` is the change that makes Undo."""
+
+    signal: str = Field(description="The id of the correction.")
+    kind: str = Field(description="What the person did (sent_back, answered_assistant, change_requested and so on).")
+    changeset: str | None = Field(None, description="The change the correction was about, when it was about one.")
+    refs: list[str] = Field(default_factory=list, description="The records the correction was about.")
+    state: Literal["learning", "proposed", "kept"]
+    waiting: ScreenText | None = Field(None, description="While learning: why it waits, in plain words.")
+    proposal: ProposalView | None = Field(None, description="The entry, for a proposal or one kept at once.")
+    undo: str | None = Field(None, description="For one kept at once: the change to undo.")
+
+
+class LearnedView(BaseModel):
+    """The learning of the corrections that have something to show: still being learned, a proposal to keep, or the
+    person's own words kept at once. The catch-up list's proposals are not here."""
+
+    lines: list[LearnedLine]
 
 
 class ProposalsView(BaseModel):

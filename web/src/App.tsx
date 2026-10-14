@@ -22,6 +22,7 @@ import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Handover } from "./components/Handover";
 import { Knowledge } from "./components/Knowledge";
+import { LearnedToday } from "./components/LearnedToday";
 import { Panel } from "./components/Panel";
 import { restoreFocus } from "./components/ModalPanel";
 import { RecordPage } from "./components/RecordPage";
@@ -171,6 +172,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
               onOpenHandover={() => setView("handover")}
               onOpenRules={() => setView("records/rules-review")}
             />
+            <LearnedToday />
             <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} onOpenGuide={openGuide} />
           </div>
         );

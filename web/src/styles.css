@@ -84,6 +84,9 @@ main p { max-width: var(--measure); }
 .assistant-summary { border-left: 3px solid var(--border); padding-left: var(--space-3); }
 .assistant-summary p { white-space: pre-wrap; }
 .what { font-size: var(--text-sm); line-height: var(--lh-sm); color: var(--text-muted); font-weight: var(--weight-semibold); }
+.learned-inset { padding: 0 var(--space-4); }
+.learned-inset:empty { display: none; }
+.learned-inset:not(:empty) { padding-bottom: var(--space-3); }
 
 /* Items inside a row: divided by dashed hairlines, not boxed */
 .children { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }

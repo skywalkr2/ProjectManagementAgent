@@ -3,6 +3,32 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: L3, third wave B: learning on the card and on Today, the choices made while building
+
+**Decided by:** the technical PM, reviewing and merging the builder's choices. **What:**
+- **One route answers "what was learned from this card's correction":** `GET /api/knowledge/learned` gives a line for each
+  correction that has something to show (still being learned, a proposal to keep, or the person's own words kept at once,
+  with the change that undoes them). A card finds its lines by the change a correction was about, or by the records it
+  names. `ProposalView` also names that change (`from_changeset`), and `ChangeItem` names the change a send-back redid
+  (`redoes`) so the new card shows the line while the old one has left the list.
+- **The reach list is made from the proposal's own target:** the target as proposed (narrowest, the default), the same
+  kind of work on every project, any kind of work on the same projects, and everywhere; people and record targets stay.
+- **"This doesn't apply here" leaves one project out of an entry or retires it,** both at once with Undo; the project is
+  picked from a list. A fact and an entry already retired have no such menu.
+- **Today's Review list shows every proposal waiting,** including those from corrections the person was there for,
+  because the Today line counts them; a proposal acted on at its card leaves both.
+- **The items in a person's card stay without buttons** (design 7.5), so the question menu (reword, ask someone else, drop,
+  already sent) is on a question that has its own row (the decision and the waiting rows) and on its record page, where
+  its status is known and "Already sent" is offered only while it is open.
+- **Keep all** covers glossary terms that carry the words they came from; a fact is never a proposal.
+- **"Because you told me" links** a rule or fact to its own page, and any other learned entry to the Knowledge screen
+  (those kinds have no record page).
+
+**Why:** The screens needed the signal-to-proposal link answered on the server, and the person should never type a reach.
+
+**Impact:** design 7.18 and CHANGES section 59. API: one new route, new fields on the proposal, changeset and change views.
+No change to scope.
+
 ## 2026-10-14: L3, third wave, part A: choices made while building the Knowledge screen
 
 **Decided by:** the builder, for the technical PM to review. **What:**
@@ -27,7 +53,6 @@ field name lost it. The store now saves by field name, as before, and only a cor
 A change to the stored shape of a plugin's records is a breaking change: it waits for the next minor version and is
 announced a round ahead, never made inside 0.3. **Impact:** plugin API 0.3.70; the plugin guide states how aliased fields
 are stored. No change to scope.
-
 ## 2026-10-14: L3, second wave: learning from inputs, the measures, and accounts a fallback may use
 
 **Decided by:** the technical PM, reviewing and merging L3's second wave. **What:**

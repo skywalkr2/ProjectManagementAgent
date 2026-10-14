@@ -10,6 +10,8 @@ import { showRow, useReveal } from "../lib/reveal";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
+import { useChangeThis, useQuestionMenu } from "./ChangeThis";
+import { LearnedLines } from "./Learned";
 import { HoldPill, useHold } from "./OnHold";
 import { NoteBox, useNoted } from "./NoteBox";
 import { OriginLink } from "./Origin";
@@ -140,12 +142,15 @@ function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number })
   const ref = useRef<HTMLLIElement>(null);
   const [answer, setAnswer] = useState("");
   const who = q.about === "owner" || q.about === "held-op";
+  const back = () => ref.current?.focus();
+  const menu = useQuestionMenu(q, { canMarkSent: false, onClosed: back });
+  const change = useChangeThis({ kind: q.kind === "decision" ? "decision" : "question", id: q.id }, back);
   useEffect(() => {
     if (props.reveal) showRow(ref.current, true);
   }, [props.reveal]);
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
-      <div className="full">
+      <div>
         <div className="what">{t(who ? "followups.who_question" : q.kind === "decision" ? "followups.decision" : "followups.question")}</div>
         <div className="title">{q.title}</div>
         {q.text && <SafeText text={q.text} />}
@@ -156,6 +161,12 @@ function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number })
         ))}
         <OriginLink origin={q.origin} />
       </div>
+      <div className="acts">
+        <RowMenu label={q.title} actions={[...menu.entries, change.entry]} />
+      </div>
+      {menu.form}
+      {change.form}
+      <LearnedLines records={[q.id]} />
       <div className="full">
         {who ? (
           <AskChooser ask={{ id: q.id, about: q.about ?? "other", options: q.options, name: null }} />
@@ -194,6 +205,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
   const ref = useRef<HTMLLIElement>(null);
   const hold = useHold(a);
   const [noting, setNoting] = useState(false);
+  const change = useChangeThis({ kind: "action", id: a.id }, () => ref.current?.focus());
   const done = (note?: string) =>
     act(
       () => api.actionStatus(a.id, "done", note),
@@ -214,7 +226,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
         <button type="button" className="btn primary" onClick={() => void done()}>
           {t("followups.mark_done")}
         </button>
-        <RowMenu label={a.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry]} />
+        <RowMenu label={a.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry, change.entry]} />
       </div>
       {noting && (
         <NoteBox
@@ -226,6 +238,8 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
         />
       )}
       {hold.form}
+      {change.form}
+      <LearnedLines records={[a.id]} />
     </li>
   );
 }
@@ -419,6 +433,9 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
   const q = props.question;
   const [replying, setReplying] = useState(false);
   const [text, setText] = useState("");
+  const row = useRef<HTMLLIElement>(null);
+  const menu = useQuestionMenu(q, { canMarkSent: false, onClosed: () => row.current?.focus() });
+  const change = useChangeThis({ kind: "question", id: q.id }, () => row.current?.focus());
   const first = props.person.split(" ")[0];
   const submit = async () => {
     const handed = await act(
@@ -433,7 +450,7 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
   };
   const meta = sentLine(q.sent, q.waiting_days, "", tn, t);
   return (
-    <li className="child">
+    <li className="child" ref={row} tabIndex={-1}>
       <div>
         <div className="title">
           {q.title}
@@ -448,7 +465,11 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
             {t("followups.record_reply")}
           </button>
         )}
+        <RowMenu label={q.title} actions={[...menu.entries, change.entry]} />
       </div>
+      {menu.form}
+      {change.form}
+      <LearnedLines records={[q.id]} />
       {replying && (
         <form
           className="answer-form"
@@ -512,6 +533,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
     );
   const chase = a.chase_due;
   const hold = useHold(a);
+  const change = useChangeThis({ kind: "action", id: a.id }, () => ref.current?.focus());
   const meta = a.followed_up
     ? [a.project_name, t("followups.followed_up_on", { date: day(a.followed_up) })].filter(Boolean).join(" · ")
     : sentLine(a.told, a.told_days, a.project_name, tn, t);
@@ -537,7 +559,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
         <button type="button" className="btn primary" onClick={() => void (chase ? followedUp() : finished())}>
           {t(chase ? "followups.followed_up" : "followups.they_finished")}
         </button>
-        <RowMenu label={a.text} actions={[chase ? finish : chased, note, hold.entry]} />
+        <RowMenu label={a.text} actions={[chase ? finish : chased, note, hold.entry, change.entry]} />
       </div>
       {noting && (
         <NoteBox
@@ -549,6 +571,8 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
         />
       )}
       {hold.form}
+      {change.form}
+      <LearnedLines records={[a.id]} />
     </li>
   );
 }

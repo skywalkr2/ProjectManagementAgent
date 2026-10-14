@@ -10,7 +10,9 @@ import { useSetAside } from "../lib/set-aside";
 import { anyReading, latestRead } from "../lib/sources";
 import type { View } from "../lib/views";
 import { useWords } from "../lib/wording";
+import { useChangeThis } from "./ChangeThis";
 import { FollowUps } from "./FollowUps";
+import { LearnedLines } from "./Learned";
 import { HoldPill, useHold } from "./OnHold";
 import { NoteBox, useNoted } from "./NoteBox";
 import { OriginLink } from "./Origin";
@@ -245,9 +247,11 @@ function AgendaColumn(props: { onAddSource?: () => void }) {
 function AgendaRow(props: { event: Event; when: string; past: boolean; source: string }) {
   const { t } = useWords();
   const { event } = props;
+  const row = useRef<HTMLLIElement>(null);
+  const change = useChangeThis({ kind: "event", id: event.snapshot }, () => row.current?.focus());
   const meta = [event.where, event.own ? t("today.agenda.own") : props.source].filter(Boolean).join(" · ");
   return (
-    <li className={props.past ? "tb-row past" : "tb-row"}>
+    <li className={props.past ? "tb-row past" : "tb-row"} ref={row} tabIndex={event.own ? -1 : undefined}>
       <span className="tb-when">{props.when}</span>
       <div className="tb-what">
         <div className="tb-title">
@@ -258,6 +262,9 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
         </div>
         {meta && <div className="tb-meta">{meta}</div>}
       </div>
+      {event.own && <RowMenu label={event.title} actions={[change.entry]} />}
+      {event.own && change.form}
+      {event.own && <LearnedLines records={[event.snapshot]} />}
     </li>
   );
 }
@@ -322,6 +329,7 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
   const [noting, setNoting] = useState(false);
   const { item } = props;
   const hold = useHold({ id: item.action, on_hold: item.on_hold });
+  const change = useChangeThis({ kind: "action", id: item.action }, () => row.current?.focus());
   const meta = [props.project, props.showDue && item.due ? t("today.todo.due", { date: day(item.due) }) : ""]
     .filter(Boolean)
     .join(" · ");
@@ -352,7 +360,7 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
       >
         {t("followups.mark_done")}
       </button>
-      <RowMenu label={item.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry]} />
+      <RowMenu label={item.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry, change.entry]} />
       {noting && (
         <NoteBox
           sends={[{ label: t("followups.mark_done"), run: done }]}
@@ -363,6 +371,8 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
         />
       )}
       {hold.form}
+      {change.form}
+      <LearnedLines records={[item.action]} />
     </li>
   );
 }

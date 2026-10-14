@@ -430,3 +430,47 @@ test("Check now is offered only while a source is on", async () => {
   await within(await column("Came in")).findByText("2 messages");
   expect(screen.queryByRole("button", { name: "Check now" })).toBeNull();
 });
+
+// ---- Change this, and what was learned -------------------------------------------------------------------------------
+
+test("a to-do's menu has Change this, which posts the person's note about that action", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  const { calls } = open({ "POST items/action/ACT-2/change": () => ({ ok: "ACT-2", request: "REQ-7", signal: "SIG-1" }) });
+  const col = await column("To do");
+  await user.click(await within(col).findByRole("button", { name: "More actions for Approve the proof" }));
+  await user.click(screen.getByRole("menuitem", { name: "Change this" }));
+  await user.type(await screen.findByRole("textbox", { name: "Your note" }), "Due on Friday instead");
+  await user.click(screen.getByRole("button", { name: "Ask for the change" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST items/action/ACT-2/change")?.body).toEqual({ note: "Due on Friday instead" }));
+  expect(await screen.findByText("Helper will look at it.")).toBeInTheDocument();
+});
+
+test("an entry in the app's own calendar has Change this; an event read from a calendar does not", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  const { calls } = open({
+    "GET today/agenda": () => [
+      event({ title: "Standup", start: at(TODAY, 9), end: at(TODAY, 9, 30) }),
+      event({ title: "Delivery window", snapshot: "EVT-1", source: "", own: true, all_day: true, start: TODAY, days: [TODAY] }),
+    ],
+    "POST items/event/EVT-1/change": () => ({ ok: "EVT-1", request: null, signal: "SIG-2" }),
+  });
+  const col = await column("Agenda");
+  await within(col).findByText("Delivery window");
+  expect(within(col).queryByRole("button", { name: "More actions for Standup" })).toBeNull();
+  await user.click(within(col).getByRole("button", { name: "More actions for Delivery window" }));
+  await user.click(screen.getByRole("menuitem", { name: "Change this" }));
+  await user.type(await screen.findByRole("textbox", { name: "Your note" }), "It is a day later");
+  await user.click(screen.getByRole("button", { name: "Ask for the change" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST items/event/EVT-1/change")?.body).toEqual({ note: "It is a day later" }));
+});
+
+test("what is being learned from a change asked for on a to-do shows on that row", async () => {
+  open({
+    "GET knowledge/learned": () => ({
+      lines: [{ signal: "SIG-1", kind: "change_requested", changeset: null, refs: ["ACT-2"], state: "learning", waiting: "With the assistant, starting now" }],
+    }),
+  });
+  const col = await column("To do");
+  const row = (await within(col).findByText("Approve the proof")).closest("li")!;
+  expect(await within(row).findByRole("status")).toHaveTextContent("Learning from this…");
+});

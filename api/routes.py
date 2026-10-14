@@ -31,6 +31,7 @@ from api.schemas import (
     AiState,
     Answer,
     Applied,
+    AppliedEntryView,
     ArrivedView,
     Ask,
     AssistantAccountRuns,
@@ -142,6 +143,7 @@ from api.schemas import (
     WorkingCopyView,
 )
 from engine import actions as person_actions
+from engine import learned
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
@@ -178,7 +180,7 @@ from engine.owners import suggest_owner
 from engine.plugin_api import CORE_LINE_ACTIONS
 from engine.plugin_host import check_about
 from engine.prompts import render
-from engine.records import referrers
+from engine.records import Scope, referrers
 from engine.stages import approve_stage_request, record_status, stage_history
 from engine.storage import Store, StoreError, WriteContext
 from engine.texts import text_presence
@@ -284,6 +286,23 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def _summary_of(changeset_id: str | None) -> str | None:
         found = store.read().get("changeset", changeset_id) if changeset_id else None
         return found.data.get("summary") if found is not None else None
+
+    def _applied_views(ids: list[str]) -> list[AppliedEntryView]:
+        """The entries a run said it applied that still exist, in plain words."""
+        found = []
+        for kind, stored in learned.applied_entries(store.read(), ids):
+            scope = stored.data.get("applies_to")
+            found.append(
+                AppliedEntryView(
+                    id=stored.id,
+                    kind=kind,
+                    version=stored.version,
+                    text=stored.data.get("text", ""),
+                    status=stored.data.get("status", "active"),
+                    applies_to=Scope.model_validate(scope) if scope else None,
+                )
+            )
+        return found
 
     def _independence(cs: Any) -> str | None:
         run = store.read().get("run", cs.data["run"]) if cs.data.get("run") else None
@@ -1260,6 +1279,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     trust=cs.data["trust"],
                     ops=[_op_view(o, store, people, projects, cfg) for o in cs.data["ops"]],
                     second_opinion=_independence(cs),
+                    applied=_applied_views(cs.data.get("applied") or []),
+                    first_on_account=cs.data.get("first_on_account"),
                 )
             out.append(
                 ChangeItem(
@@ -1280,6 +1301,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     cause=_cause_view(d),
                     follows=d.get("follows"),
                     follows_summary=_summary_of(d.get("follows")),
+                    redoes=learned.request_changeset(store.read(), d.get("previous")),
                     changeset=view,
                     mail_item=mail.get((watched.get("source"), watched.get("key"))) if watched else None,
                     title=_title_view(

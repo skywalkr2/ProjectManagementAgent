@@ -6,7 +6,9 @@ import { EVENTS_PATH } from "./api";
 
 export type LiveState = "connecting" | "live" | "offline";
 
-const CHANGES = ["changes", "source", "auto-closed", "request-accounts", "asks", "plugin-today", "stages", "status", "jobs", "today", "text-review"];
+const CHANGES = ["changes", "source", "auto-closed", "request-accounts", "asks", "plugin-today", "stages", "status", "jobs", "today", "text-review", "learned"];
+/** What was learned: the card lines, the review lists and Today's lines for them. */
+const LEARNING = ["learned", "proposals", "catch-up", "changes", "today", "record"];
 const FOLLOWUPS = ["followups", "today", "status", "plugin-today", "changes"];
 const FILES = ["files", "text", "working-copies", "text-review", "file-kinds", "changes", "record", "plugin-today"];
 const PLUGIN = ["plugin-today", "panels", "panel-rows", "panel-document", "record", "kind", "stages", "plugin-actions", "text", "working-copies", "today", "changes"];
@@ -18,6 +20,11 @@ const AFFECTS: Record<string, string[]> = {
   run: CHANGES,
   source: CHANGES,
   signal: CHANGES,
+  lesson: LEARNING,
+  glossary_entry: LEARNING,
+  routing_entry: LEARNING,
+  style_note: LEARNING,
+  rule: LEARNING,
   question: FOLLOWUPS,
   action: FOLLOWUPS,
   fact: ["notes", "changes", "today", "record", "projects"],

@@ -15,6 +15,13 @@ test("each kind of record names the queries it affects", () => {
   expect(familiesFor(["demo/goal"])).toEqual(expect.arrayContaining(["panel-rows", "plugin-today"]));
 });
 
+test("a correction and what was learned from it refresh the lines under cards and the review lists", () => {
+  expect(familiesFor(["signal"])).toEqual(expect.arrayContaining(["learned"]));
+  for (const kind of ["lesson", "glossary_entry", "routing_entry", "style_note", "rule"]) {
+    expect(familiesFor([kind])).toEqual(expect.arrayContaining(["learned", "proposals", "catch-up", "today"]));
+  }
+});
+
 test("no kinds, or a kind nobody knows, means refresh everything", () => {
   expect(familiesFor([])).toBeNull();
   expect(familiesFor(["person", "something_new"])).toBeNull();

@@ -46,6 +46,7 @@ export function useReveal(type: Revealable, handle: (id: string) => boolean): vo
 export function showRow(row: HTMLElement | null, focusInside = false): void {
   if (!row) return;
   row.scrollIntoView?.({ block: "nearest" });
-  const inner = focusInside ? row.querySelector<HTMLElement>("textarea, input, select, button") : null;
+  // The cursor goes to the row's first field; a row with none gives it to its first button.
+  const inner = focusInside ? (row.querySelector<HTMLElement>("textarea, input, select") ?? row.querySelector<HTMLElement>("button")) : null;
   (inner ?? row).focus();
 }

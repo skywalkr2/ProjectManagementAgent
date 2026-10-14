@@ -12,6 +12,8 @@ import { useSetAside } from "../lib/set-aside";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
+import { Because } from "./Because";
+import { LearnedLines } from "./Learned";
 import { FirstGoRow } from "./FirstGoRow";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Highlighted } from "./SafeText";
@@ -318,6 +320,9 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?:
           <RowMenu label={title} actions={menu} />
         </div>
       </div>
+      <div className="learned-inset">
+        <LearnedLines changesets={[cs?.id, item.redoes]} />
+      </div>
       {open && (
         <div className="body" id={`b-${item.id}`}>
           {item.note && (
@@ -333,6 +338,7 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?:
               <p>{cs.summary}</p>
             </div>
           )}
+          {cs && <Because cs={cs} />}
           {cs && cs.ops.length === 0 && !cs.summary.trim() && <p className="hint">{t("changes.nothing_done")}</p>}
           {cs && cs.ops.length > 0 && (
             <ul className="children" aria-label={tn("changes.did", cs.ops.length)}>

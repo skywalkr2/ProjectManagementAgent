@@ -72,6 +72,7 @@ test("key families built at run time are complete", () => {
     ...["done", "failed", "refused", "expired"].map((x) => `sign_in.return.${x}`),
     "op.note.under",
     "op.note.none",
+    ...(s.ProposalView.properties.came_from.enum ?? []).map((x) => `learned.from.${x}`),
     ...(s.AiState.properties.state.enum ?? []).filter((x) => x !== "ok").flatMap((x) => ["title", "todo"].map((y) => `ai.${x}.${y}`)),
     ...["action.add", "action.close", "question.add", "question.done", "fact", "note", "record.set", "record.log", "person.add"].map((x) => `op.${x}`),
   ];

@@ -16,6 +16,8 @@ from api.schemas import (
     KnowledgeKeep,
     KnowledgeNarrow,
     KnowledgeView,
+    LearnedLine,
+    LearnedView,
     ProposalsView,
     ProposalView,
     ReadVersion,
@@ -24,6 +26,7 @@ from api.schemas import (
     RuleView,
 )
 from engine import catch_up, knowledge, knowledge_use, proposals
+from engine import learned as card_learning
 from engine.applier import apply_as_person
 from engine.config import Config
 from engine.dispatcher import SAY_WHO_FIRST, signal
@@ -131,6 +134,7 @@ def _proposal(
         batch=batch,
         just_this_time_before=proposals.just_this_time_before(view, found.kind, data, own_id=stored.id),
         expires_at=expires,
+        from_changeset=card_learning.changeset_of_entry(view, stored),
         **{name: value for name, value in own.items() if value is not None or name == "negative"},
     )
 
@@ -247,6 +251,35 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events) -> APIRout
             origins=origins_count,
             expired=proposals.expired_since(view, proposals.last_reviewed(view)),
         )
+
+    @r.get("/knowledge/learned")
+    def learned_lines() -> LearnedView:
+        """What the assistant is learning or has learned from each correction that has something to show, for the line
+        under that correction's card: still being learned (with why it waits), a proposal to keep, or the person's own
+        words already kept, with the change that undoes them. What the catch-up list holds is left out."""
+        view = store.read()
+        hidden = catch_up.proposal_ids(view, catch_up.load(store))
+        out: list[LearnedLine] = []
+        for line in card_learning.lines(view, hidden=hidden):
+            signal_data = view.get("signal", line.signal).data
+            proposal = None
+            if line.entry is not None:
+                kind = line.kind or ""
+                found = proposals.Proposal(kind, line.entry, proposals.tag_of(view, kind, line.entry))
+                proposal = views(view, [found], "daily")[0]
+            out.append(
+                LearnedLine(
+                    signal=line.signal,
+                    kind=signal_data["kind"],
+                    changeset=signal_data.get("changeset"),
+                    refs=list(signal_data.get("refs") or []),
+                    state=line.state,
+                    waiting=line.waiting,
+                    proposal=proposal,
+                    undo=line.undo,
+                )
+            )
+        return LearnedView(lines=out)
 
     @r.get("/knowledge/catch-up")
     def catch_up_list() -> CatchUpView:

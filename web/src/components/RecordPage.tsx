@@ -10,6 +10,8 @@ import { changedFields, editableFields, initialDraft, type Draft } from "../lib/
 import { readable, readableTail, useValueLines } from "../lib/records";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { useChangeThis, useQuestionMenu, type ChangeKind } from "./ChangeThis";
+import { LearnedLines } from "./Learned";
 import { OriginLink } from "./Origin";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu, type MenuAction } from "./RowMenu";
@@ -27,6 +29,15 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
   const lines = useValueLines();
   const { open, dialog } = useTextReview();
+  // "Change this" sits in a menu beside the record's own actions, for the kinds of record it can be asked for.
+  const change = useChangeThis({ kind: kind as ChangeKind, id });
+  // A question also has its own menu: reword it, ask someone else, drop it, or say it was already sent.
+  const questionFields = record.data?.fields;
+  const questionMenu = useQuestionMenu(
+    { id, title: String(questionFields?.title ?? ""), text: String(questionFields?.text ?? "") },
+    { canMarkSent: questionFields?.status === "open" },
+  );
+  const menu = [...(kind === "question" ? questionMenu.entries : []), change.entry];
   const [editing, setEditing] = useState(false);
   const editButton = useRef<HTMLButtonElement>(null);
   const stopEditing = () => {
@@ -66,8 +77,16 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
           <span className="kind k-review">{readableTail(kind)}</span>
           <h1 id="record-title">{heading}</h1>
         </div>
-        {data && <Offers kind={kind} id={id} />}
+        {data && (
+          <div className="acts">
+            <Offers kind={kind} id={id} />
+            {CHANGEABLE.has(kind) && <RowMenu label={heading} actions={menu} />}
+          </div>
+        )}
       </div>
+      {data && kind === "question" && questionMenu.form}
+      {data && CHANGEABLE.has(kind) && change.form}
+      {data && <LearnedLines records={[id]} />}
       {record.isPending && <Skeleton />}
       {record.isError && (
         <p className="empty">
@@ -132,6 +151,9 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
     </section>
   );
 }
+
+/** The kinds of record a change can be asked for. */
+const CHANGEABLE = new Set<string>(["action", "question", "event", "fact"]);
 
 /** What the plugins offer on this record: the first thing is the primary button and the rest are in its menu. */
 function Offers(props: { kind: string; id: string }) {

@@ -134,6 +134,27 @@ export const api = {
   theyFinished: (person: string, action: string, note?: string) =>
     call<S["Noted"]>("POST", `followups/${id(person)}/actions/${id(action)}/finished`, note ? { note } : undefined),
   backup: () => call<S["Status"]>("POST", "backup"),
+
+  /** What the assistant learned from each correction that has something to show, for the line under its card. */
+  learned: () => call<S["LearnedView"]>("GET", "knowledge/learned"),
+  proposals: () => call<S["ProposalsView"]>("GET", "knowledge/proposals"),
+  catchUp: () => call<S["CatchUpView"]>("GET", "knowledge/catch-up"),
+  keepKnowledge: (entry: string, body: S["KnowledgeKeep"]) => call<S["Applied"]>("POST", `knowledge/${id(entry)}/keep`, body),
+  discardKnowledge: (entry: string, readVersion: number, reason?: string) =>
+    call<S["Applied"]>("POST", `knowledge/${id(entry)}/discard`, { read_version: readVersion, reason: reason || null }),
+  justThisTime: (entry: string, readVersion: number) =>
+    call<S["Applied"]>("POST", `knowledge/${id(entry)}/just-this-time`, { read_version: readVersion }),
+  narrowKnowledge: (entry: string, body: S["KnowledgeNarrow"]) =>
+    call<S["Applied"]>("POST", `knowledge/${id(entry)}/narrow`, body),
+  retireKnowledge: (entry: string, readVersion: number) =>
+    call<S["Applied"]>("POST", `knowledge/${id(entry)}/retire`, { read_version: readVersion }),
+  /** "Change this" on a row the assistant made; the note is the person's own words and is required. */
+  changeThis: (kind: string, item: string, note: string) =>
+    call<S["ChangeRequested"]>("POST", `items/${id(kind)}/${id(item)}/change`, { note }),
+  rewordQuestion: (q: string, body: S["QuestionRewordIn"]) => call<S["Applied"]>("POST", `questions/${id(q)}/reword`, body),
+  rerouteQuestion: (q: string, to: string) => call<S["Applied"]>("POST", `questions/${id(q)}/reroute`, { to }),
+  dropQuestion: (q: string, reason: string) => call<S["Applied"]>("POST", `questions/${id(q)}/drop`, { reason }),
+  questionSent: (q: string) => call<S["Applied"]>("POST", `questions/${id(q)}/sent`, {}),
   projects: () => call<S["ProjectView"][]>("GET", "projects"),
   notes: () => call<S["NoteView"][]>("GET", "notes"),
   addPerson: (body: S["PersonIn"]) => call<S["Created"]>("POST", "people", body),

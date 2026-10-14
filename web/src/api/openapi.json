@@ -1182,6 +1182,62 @@
         "title": "Applied",
         "type": "object"
       },
+      "AppliedEntryView": {
+        "description": "A piece of what the assistant knew that a run said it applied (design 6.20, 7.18): a lesson, glossary entry,\nrouting entry, style note, standing rule or fact, with what is needed to narrow or retire it from the work's\ncard.",
+        "properties": {
+          "applies_to": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Scope"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it applies to; a fact applies to its project only."
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "lesson",
+              "glossary_entry",
+              "routing_entry",
+              "style_note",
+              "rule",
+              "fact"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "status": {
+            "description": "active, retired and so on; a fact is always active.",
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "description": "The entry in plain words.",
+            "title": "Text",
+            "type": "string"
+          },
+          "version": {
+            "description": "The entry's version, to send back with Narrow or Retire.",
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "version",
+          "text",
+          "status"
+        ],
+        "title": "AppliedEntryView",
+        "type": "object"
+      },
       "ArrivedView": {
         "description": "A message from a watched mailbox, received within the configured hours.",
         "properties": {
@@ -1887,6 +1943,18 @@
             ],
             "title": "Note"
           },
+          "redoes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change (changeset id) this work redoes after the person sent it back, so what was learned from the send-back shows on this row too.",
+            "title": "Redoes"
+          },
           "refused": {
             "default": false,
             "description": "The account declined it under its own policy; it can be sent to another account.",
@@ -2009,6 +2077,26 @@
       },
       "ChangesetView": {
         "properties": {
+          "applied": {
+            "description": "What the run was given from what was learned and showed it applied, for the line 'Because you told me'.",
+            "items": {
+              "$ref": "#/components/schemas/AppliedEntryView"
+            },
+            "title": "Applied",
+            "type": "array"
+          },
+          "first_on_account": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the AI account when this was the first run on an account that stands in a fallback chain, so the card can say so.",
+            "title": "First On Account"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -4701,6 +4789,109 @@
         "title": "KnowledgeView",
         "type": "object"
       },
+      "LearnedLine": {
+        "description": "What the assistant learned from one correction, for the line under that correction's card (design 7.18).\n`learning`: the assistant is still working on it (`waiting` says why and until when). `proposed`: there is a\n`proposal` to keep. `kept`: the person's own words were kept at once; `undo` is the change that makes Undo.",
+        "properties": {
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change the correction was about, when it was about one.",
+            "title": "Changeset"
+          },
+          "kind": {
+            "description": "What the person did (sent_back, answered_assistant, change_requested and so on).",
+            "title": "Kind",
+            "type": "string"
+          },
+          "proposal": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ProposalView"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The entry, for a proposal or one kept at once."
+          },
+          "refs": {
+            "description": "The records the correction was about.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "signal": {
+            "description": "The id of the correction.",
+            "title": "Signal",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "learning",
+              "proposed",
+              "kept"
+            ],
+            "title": "State",
+            "type": "string"
+          },
+          "undo": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For one kept at once: the change to undo.",
+            "title": "Undo"
+          },
+          "waiting": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "While learning: why it waits, in plain words.",
+            "title": "Waiting"
+          }
+        },
+        "required": [
+          "signal",
+          "kind",
+          "state"
+        ],
+        "title": "LearnedLine",
+        "type": "object"
+      },
+      "LearnedView": {
+        "description": "The learning of the corrections that have something to show: still being learned, a proposal to keep, or the\nperson's own words kept at once. The catch-up list's proposals are not here.",
+        "properties": {
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/LearnedLine"
+            },
+            "title": "Lines",
+            "type": "array"
+          }
+        },
+        "required": [
+          "lines"
+        ],
+        "title": "LearnedView",
+        "type": "object"
+      },
       "Link": {
         "properties": {
           "label": {
@@ -7145,6 +7336,18 @@
             ],
             "description": "When it expires unreviewed; none for one that never does.",
             "title": "Expires At"
+          },
+          "from_changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For one learned from a correction: the change the correction was about, so its card can show the proposal.",
+            "title": "From Changeset"
           },
           "given": {
             "default": 0,
@@ -14095,6 +14298,25 @@
           }
         },
         "summary": "Catch Up List"
+      }
+    },
+    "/api/knowledge/learned": {
+      "get": {
+        "description": "What the assistant is learning or has learned from each correction that has something to show, for the line\nunder that correction's card: still being learned (with why it waits), a proposal to keep, or the person's own\nwords already kept, with the change that undoes them. What the catch-up list holds is left out.",
+        "operationId": "learned_lines_api_knowledge_learned_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearnedView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Learned Lines"
       }
     },
     "/api/knowledge/proposals": {

@@ -1671,7 +1671,10 @@ It returns **at most one** proposal op, or "nothing to generalize":
   it beats adding a second one.
 
 The proposal shows on the correction's own card as one line: "Learned: … · Keep · Edit · Discard" (7.18). It stays there
-until the person decides, and never expires.
+until the person decides, and never expires. `GET /api/knowledge/learned` gives each correction's line: still being
+learned (with the waiting request's words), a proposal (which also names the change it was learned from, `from_changeset`),
+or the person's own words already kept, with the change to undo. A card finds its lines by the change the correction was
+about or by the records it names.
 
 How a proposal applies follows the tier rule (6.7, 12.2):
 - **From the person's own words** (their send-back note, their answer to the assistant's question): it applies at once,

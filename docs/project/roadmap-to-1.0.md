@@ -980,7 +980,7 @@ From the original designer's lessons of 2026-10-14:
   item, and the notes prompt's rules (`tests/test_corrections.py::test_change_this_records_a_signal_and_queues_a_notes_request_whose_packet_carries_the_item_as_it_is_now`,
   `tests/test_corrections.py::test_change_this_route_queues_the_request_and_names_the_signal`). Left: the note box on each
   row (the screens), and an op for the assistant to put an action on hold or drop an item (a note asking for either gets an
-  answer that says it can't). *Built in L3 (engine and API):* `POST /api/items/{kind}/{id}/change` for the five kinds, with its signal and request (`tests/test_corrections.py`). Left: the row's button (wave 3), and ops for putting an item on hold or dropping it, which the assistant has none of yet (the missing-op list).
+  answer that says it can't). *Built in L3 (engine and API):* `POST /api/items/{kind}/{id}/change` for the five kinds, with its signal and request (`tests/test_corrections.py`). *Built in L3 wave 3B (screens):* the note box in the menu of an action (Follow-ups, Today's to-do), a question or decision, a calendar entry of the app's own, and a fact's page, with the toast saying the assistant will look at it (`web/src/components/ChangeThis.test.tsx`, `web/src/components/TodayBoard.test.tsx`). Left: ops for putting an item on hold or dropping it, which the assistant has none of yet (the missing-op list).
 - [ ] **The missing-op list** (lesson 2, design 6.13): every "no op can do this" in a run's result and every hand fix of
   the assistant's work, listed weekly on Quality, each becoming an op with its check and Undo or a recorded "the person
   does this". Checked against the code (2026-10-14), of the designer's six hand fixes: adding a person and logging a
@@ -994,12 +994,12 @@ From the original designer's lessons of 2026-10-14:
   built as data (`missing` on each changeset, grouped by wording in `GET /api/quality`:
   `tests/test_quality.py::test_what_runs_lacked_is_grouped_by_wording_with_counts_week_by_week`). Left: a project's role
   (with the scope slice), the list's screen on Quality (phase B), and the "the person does this" decisions.
-- [ ] **"Just this time" beside Keep on the Learned line** (the original designer's mockup review, 2026-10-14, design 7.18):
+- [x] **"Just this time" beside Keep on the Learned line** (the original designer's mockup review, 2026-10-14, design 7.18):
   the signal is recorded, nothing is proposed, and a repeat of the same correction counts toward a later proposal. A lesson
   is about what was corrected (an action's owner teaches who does the work, not where questions go). One Today line for
   everything learned, each entry tagged by where it came from. *Built in L3p (engine and API):* the route, the
   `just_this_time` signal, the mark on a repeat and the one Today line. Built: `tests/test_proposals.py::test_just_this_time_records_its_signal_discards_and_the_repeat_is_marked`, `tests/test_proposals.py::test_the_line_counts_both_origins_and_how_many_expired_since_the_person_last_looked`.
-  *Left:* the button beside Keep on the Learned line, and the line's screen.
+  *Built in L3 wave 3B:* the button beside Keep on the Learned line and the Review list's menu (`web/src/components/Learned.test.tsx`, `web/src/components/LearnedToday.test.tsx`).
 - [x] **One question per id** (afternoon lesson 2): the lint `several-questions` (default `return`) on a question or
   decision whose text holds two or more numbered questions, so each has its own answer and follow-through. A question
   about a gap in the person's own notes is asked only when a record depends on it (the `matters_for` item below), and
@@ -1071,19 +1071,20 @@ From the original designer's lessons of 2026-10-14:
   - a pasted reply is content;
   - duplicates merge;
   - near-matches of recent discards are not shown again. Built: `tests/test_proposals.py::test_a_rule_from_an_input_is_a_proposal_and_from_the_persons_note_is_active_with_undo`, `tests/test_proposals.py::test_a_duplicate_merges_into_the_entry_it_repeats_and_links_the_evidence`, `tests/test_proposals.py::test_a_proposal_close_to_a_recent_discard_is_not_shown_and_an_old_discard_is_forgotten` (a pasted reply: `tests/test_knowledge_records.py::test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input_it_is_proposed`).
-- [ ] Proposals from inputs gathered on one card a day, expiring after 14 days with the count shown. *Built in L3p (engine and
-  API):* the sweep, the Today line with the expired count and the proposals route. Built: `tests/test_proposals.py::test_the_sweep_expires_input_proposals_after_the_days_and_never_correction_ones`, `tests/test_proposals.py::test_the_line_counts_both_origins_and_how_many_expired_since_the_person_last_looked`. *Left:* the card.
-- [ ] Keep makes the person the author of the restatement shown; raw source text enters packets only as evidence marked
+- [x] Proposals from inputs gathered on one card a day, expiring after 14 days with the count shown. *Built in L3p (engine and
+  API):* the sweep, the Today line with the expired count and the proposals route. Built: `tests/test_proposals.py::test_the_sweep_expires_input_proposals_after_the_days_and_never_correction_ones`, `tests/test_proposals.py::test_the_line_counts_both_origins_and_how_many_expired_since_the_person_last_looked`. *Built in L3 wave 3B:* the Review line and its list, each entry tagged by where it came from, with the expired count (`web/src/components/LearnedToday.test.tsx`).
+- [x] Keep makes the person the author of the restatement shown; raw source text enters packets only as evidence marked
   "from outside". Bulk Keep only for glossary terms and facts with evidence (design 12.8). *Built in L3p:* Keep makes the
-  kept content trusted and the source stays evidence; the packet never carries the source's words. Built: `tests/test_proposals.py::test_keeping_a_rule_proposal_makes_the_restatement_theirs_and_the_source_stays_outside_evidence`. *Left:* bulk Keep, which is a screen.
+  kept content trusted and the source stays evidence; the packet never carries the source's words. Built: `tests/test_proposals.py::test_keeping_a_rule_proposal_makes_the_restatement_theirs_and_the_source_stays_outside_evidence`. *Built in L3 wave 3B:* Keep all on the Review list for glossary terms that carry the words they came from, and the source beside Keep marked "From outside" (`web/src/components/LearnedToday.test.tsx`, `web/src/components/Learned.test.tsx`). A fact is never a proposal, so Keep all has no facts to cover.
 - [x] The repeat-correction signal and the knowledge-used rate (`applied` on each changeset, checked against the knowledge
   log). Built (engine and `GET /api/quality`; the Quality screen is phase B's): `tests/test_quality.py::test_applied_ids_are_kept_only_when_the_run_was_given_them_and_the_rest_are_counted_and_missing_is_kept`, `tests/test_quality.py::test_the_knowledge_used_rate_counts_runs_given_something_and_only_those_that_made_a_changeset`, `tests/test_quality.py::test_a_correction_repeats_only_when_the_run_was_given_knowledge_whose_target_matched_the_corrected_item`, `tests/test_quality.py::test_a_week_has_a_rate_only_with_the_configured_number_of_corrections`.
 - [ ] The corrections recorded before this phase are learned from once, into one catch-up list, capped for one sitting
   (the original designer's L0 sign-off, 2026-10-13): at most 20 (a setting), ranked by how often the same kind of correction repeated; the rest expire with their
   count shown, as daily proposals do. *Built in L3p:* the selection, the ranking, the cap and the one-time start, the
   Today line and its route. Built: `tests/test_proposals.py::test_the_catch_up_list_caps_and_ranks_the_corrections_from_before_and_is_made_once`.
+  *Built in L3 wave 3B:* the list's screen, with the count waiting and the kinds left out (`web/src/components/LearnedToday.test.tsx`).
   *Left:* queueing the learning runs for the chosen kinds (`learn-correction`, which doesn't exist yet: `catch_up.waiting`
-  is what it reads), and the list's screen.
+  is what it reads).
 - [ ] **A correction fixes the class, not the instance** (the original designer's L0 sign-off, 2026-10-13): the learner's one proposal states the general case and its
   test (with evidence such as dates), and its learning pair checks the negative: a row that does name our work still
   gets its question.
@@ -1095,7 +1096,8 @@ From the original designer's lessons of 2026-10-14:
   (`tests/test_knowledge_screen.py::test_an_unchecked_account_in_a_hand_edited_chain_has_a_line_until_its_check_passes`,
   `tests/test_knowledge_screen.py::test_a_failed_check_has_a_line_that_says_so_even_for_an_accepted_account_and_goes_when_it_passes`,
   `web/src/shell/HeldLines.test.tsx::Check now runs the account's test for that work, and the line is gone once the queue no longer has it`).
-  Left: the router still doesn't skip an unchecked account at run time, and the tag on the cards (the screens).
+  The tag on the cards, "First run on ..." (`web/src/components/WhatChangedLearning.test.tsx`, `tests/test_learned_lines.py::test_the_changes_view_carries_what_a_run_applied_and_the_account_it_first_ran_on`).
+  Left: the router still doesn't skip an unchecked account at run time.
 - [ ] On screen (7.18), the parts the loop can't be trusted without:
   - the Learned line on the correction's card, with **Keep for: this project ▾**, defaulting to the narrowest target;
   - the knowledge each output applied, on its evidence line, with **This doesn't apply here** (narrow or retire);
@@ -1103,6 +1105,14 @@ From the original designer's lessons of 2026-10-14:
   - the daily card, the catch-up list, and a failed switch check.
 
   Use counts are kept in the knowledge log; the rest of 7.18 is laid out in phase B.
+
+  *Built in L3 wave 3B:* the Learned line with Keep for, defaulting to the narrowest target, as a pick list
+  (`web/src/components/Learned.test.tsx`, `web/src/lib/reach.test.ts`); the knowledge each output applied, with This
+  doesn't apply here (`web/src/components/WhatChangedLearning.test.tsx`); the Review line, the daily list and the catch-up
+  list (`web/src/components/LearnedToday.test.tsx`); the server's side (`tests/test_learned_lines.py`). The Knowledge
+  screen with use counts and the rules review are part A's (`web/src/components/Knowledge.test.tsx`,
+  `web/src/components/RuleReview.test.tsx`). *Left:* a failed switch check on Today for a tier's own account (a backup
+  account's failed check has its line), with Switch back.
 
 L3b. **The obvious next step from what came in** (owner, 2026-10-13: "standard obvious things"). When the assistant
 meets something new, it offers the obvious way to record it, as one click, instead of a question the person has to work
