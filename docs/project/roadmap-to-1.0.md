@@ -1146,8 +1146,9 @@ from" link are built for real use at the end of L-core ("Ready for real use"); p
 The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
 
 From the original designer's lessons of 2026-10-14:
-- [ ] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.7): a project tag
-  before every row's title; "Change this" on each item of a review card; a card titled by what it holds ("3 things the
+- [ ] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.6 and 7.7): a project
+  tag before a row's title when the screen mixes projects, left out when it holds one; toasts at the bottom left from
+  1280px, never over a row's controls, with room left under the last row; "Change this" on each item of a review card; a card titled by what it holds ("3 things the
   assistant did"); Followed up and They finished it in an overdue follow-up's menu; a to-do says what it waits on, linked
   to the question it depends on; the heading's count and the menu's count agree, folded lines not counted; a line that
   offers another account names it.
