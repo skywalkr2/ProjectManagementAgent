@@ -1106,10 +1106,18 @@ plugin and an entry. Nothing else changes.
 **Routing by capability, not by name.** Each task kind declares what it needs (a screenshot needs vision; most need structured output and a context size). The router picks the tier's provider and model,
 checks that model's capabilities and the request's data level against `allowed_data`, and falls through the fallback chain if
 it can't serve the task. Fallbacks can cross accounts and vendors (a usage limit on one account moves the work to the next).
-A fallback is a switch nobody chose at that moment, so (*designed, phase L*, 6.22):
-- **Who may be in the chain:** only an account that passed the learning check, or that the person accepted unchecked.
-  Settings ask when an unchecked account is added to a chain.
-- **The first run on a fallback account** tags its cards "First run on <account label>", so its output gets a closer look.
+A fallback is a switch nobody chose at that moment, so (6.22):
+- **Who may be in the chain:** only an account that passed the check with that tier's exact parameters, its lockdown
+  probes and the learning round-trip, or that the person accepted unchecked (`accepted_unchecked` on the account). The
+  learning round-trip is one small call per account: a fixed correction, expecting one proposal the app's own checks
+  accept, and a failure says which part failed. A result is kept per account and model with a fingerprint of the
+  account's settings, so a changed account is checked again. *As built,* the settings save refuses an unchecked account
+  newly added to a chain, in plain words; a hand-edited file is not checked, and the router does not skip an unchecked
+  account at run time. **Built:** `tests/test_quality.py::test_an_unchecked_account_is_refused_from_a_chain_until_it_passes_for_that_tier_or_the_person_accepts_it`,
+  `tests/test_quality.py::test_the_learning_round_trip_fails_saying_which_part_failed`.
+- **The first run on a fallback account** is tagged on its changeset (`first_on_account`), and its cards will say "First
+  run on <account label>" so its output gets a closer look (the cards are phase B's). **Built:**
+  `tests/test_quality.py::test_the_first_run_on_a_fallback_account_is_tagged_on_its_changeset_and_a_later_one_is_not`.
 When the common format lacks structured output for a model, the adapter asks for JSON and the applier's checks still decide.
 
 **Escalate on failure, not on price.** Cheap models do most of the work; a tier can name `escalate_to` (another tier). When a
@@ -1392,14 +1400,18 @@ hand, an automatic close pulled back, and an edited follow-up message (a draft t
 | just this time | the person says a proposed piece of learning is right for this case but is not a pattern (7.18). Refs: the entry; no note. The entry is discarded with that as its reason and nothing replaces it; a repeat of the same correction is shown with how many times this was said. Undoing records no signal. **Built**: `tests/test_proposals.py::test_just_this_time_records_its_signal_discards_and_the_repeat_is_marked` |
 | kept / discarded / retired | the person keeps or discards a proposed piece of what the assistant learned, or retires an active one (6.22). Refs: the entry; no note (a discard's reason stays on the entry). Undoing records no signal. **Built**: `tests/test_knowledge_records.py::test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`, `tests/test_knowledge_records.py::test_discard_keeps_the_proposal_with_its_reason_and_undo_brings_it_back`, `tests/test_knowledge_records.py::test_retire_ends_an_active_entry_and_undo_makes_it_active_again` |
 | edited | the person changes a field the assistant set (a fact, an owner, a due date, an item's project, a question's wording before it is sent). The ledger shows who set each field, so this needs no AI. A silent correction, learned from in the batch (*designed, phase L*) |
-| repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item (*designed, phase L*) |
+| answered the assistant | the person writes an answer to a question the assistant asked them. Refs: the question; its changeset and run. Learned from at once. A bare confirmation, or an answer about someone else, records none. **Built**: `tests/test_learn_input.py::test_an_answer_to_the_assistants_question_records_a_signal_and_queues_learning_at_once` |
+| repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item: its task kind, record type, filter and project (with ancestors). Not a record: computed from the signals and the log. Corrections the person took back, corrections of something no run made, and Keep, Discard, Retire, Narrow and "Just this time" don't count; an entry with no target never counts as repeated. **Built**: `tests/test_quality.py::test_a_correction_repeats_only_when_the_run_was_given_knowledge_whose_target_matched_the_corrected_item` |
 
 The repeat-correction rate, not the raw correction rate, says whether the assistant is learning; the quality panel shows it
 next to the others, week by week. Refusals are counted per check too, and a check that refuses often brings its seed
 lesson into the packet (Part 8, guard kinds). Beside the repeat-correction rate, the **knowledge-used rate**: the share of runs whose changeset says which
 lessons, rules or facts it applied (`applied`, a list of knowledge ids). Each id is checked against the knowledge the run was
 given, so it is a checked citation, not the model's say-so. If the first rate doesn't fall, the loop isn't closing; if the
-second stays near zero, the knowledge isn't reaching the runs that need it. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
+second stays near zero, the knowledge isn't reaching the runs that need it. *As built,* `GET /api/quality` reports both
+per task kind over `knowledge.quality_window_days` (28), the repeat-correction rate per week only for weeks with at least
+`knowledge.min_corrections_per_week` (10) corrections, and the weekly missing-op list from each changeset's `missing`
+(6.13); only the run that produced a changeset counts. The screen is phase B's. **Built:** `tests/test_quality.py`. Each signal also starts the learning step (6.22): rates measure the assistant, and proposals teach it.
 
 - **Quality panel** (Admin tab): rates over time by task kind, provider and model (share of changesets sent back or undone,
   share of questions dropped, auto-close pull-back rate, draft edit size), with each figure linking to its examples.
@@ -1716,22 +1728,30 @@ or work was handed over. Learning from that gives wrong lessons ("the assistant 
 **Which tier writes it.** A bad lesson is worse than none, because it is in every later packet. So there are two task kinds:
 - **`learn-correction`:** lessons, `lesson.update` and rules from corrections, on the stronger tier. These are rare and
   high-value.
-- **`learn-input`:** glossary entries, routing and facts proposed from inputs. These come out of the input's own run, on its
-  tier, which is usually the low-cost one.
+- **Learning from inputs:** glossary entries, routing and facts proposed from inputs. These come out of the input's own
+  run (reading notes), on its tier, which is usually the low-cost one; there is no separate task kind (*as built*: the
+  notes prompt's learning rules say when to propose each, and `learn-input` is only a name for that part of the run).
 
 Anything proposed after a repeat correction (a guard that already failed once) always runs on the stronger tier. Both kinds
 follow cost control (6.16), each with its own budget. Corrections recorded before this was built are learned from once,
 when it arrives, into **one catch-up list** ("Learned from earlier corrections: 23 to review"), not into dozens of correction
 cards on day one.
 
-**Learning from inputs too.** Before the run, a rules-only step (no AI) lists the terms in the input that look like
-acronyms or project terms and are not in the glossary, and the packet names them. The run that processes an input may then
-propose:
+**Learning from inputs too.** A rules-only scan (no AI) finds the terms in an input that look like acronyms or project
+names (`language.new_term_patterns`, less `language.new_term_ignore`) and are not in the glossary or among the
+workspace's names. *As built,* it runs after the input's answer applies, and proposes each new term as an unknown
+glossary entry from the input, at most `knowledge.new_terms_per_input` (0 turns it off), never one the person discarded
+recently. Its entries have Discard, not Undo. The run that processes an input may also propose:
 - glossary entries for new acronyms or terms. An assumed or unknown one that blocks understanding can carry one short question
   to whoever routing says knows it.
-- routing entries when the input shows who answers what ("not me, ask X" in a reply). A question the person reroutes by hand
-  proposes one as well.
-- facts, as it already does.
+- routing entries when the input shows who answers what ("not me, ask X" in a reply: a routing proposal, and the question
+  stays open). A question the person reroutes by hand teaches through its `routed` signal (learned from at once), not a
+  routing proposal of its own.
+- facts, as it already does, replacing an older fact the input supersedes.
+- An answer the person writes to a question the assistant asked them records `answered_assistant` and is learned from at
+  once, like a send-back; a bare "yes" or an answer about someone else records none.
+Work that learns on its own (`learning: own`) gets none of this.
+**Built:** `tests/test_learn_input.py` (every test named in CHANGES.md section 57).
 
 Since these come from content, they wait for the person.
 

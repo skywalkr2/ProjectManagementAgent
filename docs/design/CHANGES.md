@@ -912,6 +912,16 @@ yet follow, that it is *designed*, with its phase.
 | Pick an owner (6.9) | The held item offered every person | It carries the owner a routing entry suggests, with its words as the reason, and the nearest open action to fold it into |
 | Notes (6.22) | Reading notes was offered no knowledge op | `glossary.add`, so an unknown term can be recorded as unknown (a proposal unless the words are the person's) |
 
+## 57. L3, second wave: learning from inputs, the measures and checked fallback accounts (2026-10-14)
+
+| Where | Before | Now |
+|---|---|---|
+| Learning from inputs (6.22) | Designed as a `learn-input` task kind, with the scan's terms named in the packet | Part of reading notes: `routing.add` and `glossary.add` are offered, the notes prompt says when to propose terms, routing and superseding facts; a rules-only scan after the answer applies proposes each new term as unknown (`language.new_term_patterns`, `new_term_ignore`, `knowledge.new_terms_per_input`). Built: `tests/test_learn_input.py` |
+| Signals (6.20) | An answer to the assistant was not a signal | `answered_assistant`, learned from at once; "Change this" is learned from at once too |
+| Measures (6.20) | Designed | `applied`, `applied_dropped` and `missing` on the changeset; the knowledge-used rate, the repeat-correction rate (weekly, gated by `knowledge.min_corrections_per_week`) and the missing-op list in `GET /api/quality`. Built: `tests/test_quality.py` |
+| Fallback chains (6.16) | Designed | The settings save refuses an unchecked account newly added to a chain unless `accepted_unchecked`; the account check adds a learning round-trip; the first run on a fallback account sets `first_on_account`. Built: `tests/test_quality.py` |
+| Restart (6.14) | A save landing while the worker checked could read as a restart | The worker judges from the files its take-in read. Built: `tests/test_provider_safety.py::test_a_live_change_saved_while_the_worker_checks_never_asks_for_a_restart` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

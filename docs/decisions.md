@@ -3,6 +3,29 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: L3, second wave: learning from inputs, the measures, and accounts a fallback may use
+
+**Decided by:** the technical PM, reviewing and merging L3's second wave. **What:**
+- **Learning from inputs is part of reading notes,** not its own task kind: one input per AI call, so the run that
+  reads an input proposes its terms, routing and superseding facts, guided by the notes prompt's learning rules.
+- **The new-term scan runs after the answer applies,** rules only, and proposes each new term as unknown. Its entries
+  have Discard, not Undo.
+- **A question rerouted by hand teaches through its `routed` signal,** learned from at once, not a routing proposal of
+  its own.
+- **Answering the assistant teaches at once** (`answered_assistant`), and so does "Change this" (`change_requested`);
+  a bare confirmation or an answer about someone else records nothing.
+- **What a run applied and what it lacked** are kept on its changeset (`applied`, `missing`), not as new records. An id
+  the run wasn't given is dropped and counted. The two rates and the weekly missing-op list are computed, not stored.
+- **A repeat needs a target:** an entry with no target applies to everything, so no correction can be said to repeat it.
+  Matching is by record type, not field.
+- **A fallback chain is guarded where the person adds to it** (the settings save), with a plain refusal that names no
+  internal key. A hand-edited chain is not yet flagged.
+- **The account check makes one learning call per account,** so a stand-in or locked-down agent must answer it too.
+- **A setting saved while the worker checks for changes** no longer reads as a restart: the worker judges a restart
+  from the files its take-in read.
+
+**Impact:** design 6.16, 6.20, 6.22, 4.25; roadmap L3; plugin API 0.3.69. No change to scope.
+
 ## 2026-10-14: Learning from corrections (L3a): choices made while building and merging
 
 **Decided by:** the technical PM, reviewing and merging L3's first wave. **What:** (1) the learning task kinds are named

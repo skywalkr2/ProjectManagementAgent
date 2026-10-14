@@ -10,6 +10,19 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.69 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes; a plugin that reads these records sees more fields.
+
+- **Core records:** a changeset gains `applied` (the knowledge ids the run said it applied, kept only when the run was
+  given them), `applied_dropped` (how many it named and wasn't given), `missing` (what the run needed and no op could
+  do) and `first_on_account` (the account, on the first run on one that stands in a fallback chain); the signal kind
+  `answered_assistant`.
+- **Answers:** a task kind's answer may carry `applied` and `missing` beside `summary`, `topic` and `ops`; both are
+  optional lists of short strings.
+- **Reading notes** is offered `routing.add` beside `glossary.add`, and an input's run is followed by a rules-only scan
+  that proposes new terms; work that learns on its own (`learning: own`) gets neither.
+
 ## What 0.3.68 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes; a plugin that reads these records sees more fields.

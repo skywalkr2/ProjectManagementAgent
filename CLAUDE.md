@@ -182,8 +182,6 @@ because one of them "handles it". Remove a line in the change that builds it.
 - The publisher and channels other than Copy (6.3, 6.12; phase C4).
 - `record.rename` (6.7): ids make most renames unnecessary, but there is no general rename op.
 - The governor: stale sweeps, outage handling, point-in-time restore (6.13; phase E).
-- Knowledge in packets, learning proposals and the search round (6.22; phase L-core). Today no run reads facts, rules,
-  lessons or a glossary.
 
 ## Product rules that shape every feature
 - The assistant drafts; the human approves everything outward. Nothing publishes, sends or posts without the PM approving
