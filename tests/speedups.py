@@ -5,6 +5,7 @@ conftest, before the product's modules are imported."""
 from __future__ import annotations
 
 import atexit
+import os
 import shutil
 import sys
 import tempfile
@@ -108,6 +109,17 @@ def _copy_prepared_workspaces() -> None:
     The template's files are part of the key, so a test that changes the template gets a new one."""
     import engine.workspace as module
 
+    # Git may run its upkeep in the background after a commit, changing files under .git while a prepared folder is
+    # copied; tests turn that upkeep off so a copy never races it.
+    os.environ.update(
+        {
+            "GIT_CONFIG_COUNT": "2",
+            "GIT_CONFIG_KEY_0": "maintenance.auto",
+            "GIT_CONFIG_VALUE_0": "false",
+            "GIT_CONFIG_KEY_1": "gc.auto",
+            "GIT_CONFIG_VALUE_1": "0",
+        }
+    )
     original = module.init_workspace
     scratch = tempfile.TemporaryDirectory(prefix="cockpit-prepared-")
     atexit.register(scratch.cleanup)
@@ -130,7 +142,7 @@ def _copy_prepared_workspaces() -> None:
         if key not in prepared:
             prepared[key] = original(Path(scratch.name) / f"ws{len(prepared)}", template=template, git=git).root
         root.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(prepared[key], root, dirs_exist_ok=True, symlinks=True)
+        shutil.copytree(prepared[key], root, dirs_exist_ok=True, symlinks=True, ignore=shutil.ignore_patterns("*.lock"))
         return module.Workspace(root)
 
     module.init_workspace = init_workspace
