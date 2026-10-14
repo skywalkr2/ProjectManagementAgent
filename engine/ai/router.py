@@ -514,6 +514,7 @@ class Router:
             "error_kind": error.kind if error else ("refused" if result and result.refused else None),
             "error_detail": error.detail if error else (result.refusal if result and result.refused else None),
             "started_at": started.isoformat(),
+            "knowledge": task.knowledge,
         }
         with self.store.transaction() as tx:
             return tx.create("run", data, _SYSTEM).id

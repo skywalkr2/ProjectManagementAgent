@@ -34,6 +34,7 @@ class AiTask:
     max_output: int = 4000
     output: Literal["json", "text"] = "json"  # text: the answer is prose (a draft), not a JSON object
     expected_output: int | None = None  # this run's likely answer size in tokens, when its packet knows better
+    knowledge: dict[str, Any] | None = None  # the run's knowledge log (what it was given), written onto its record
 
     @property
     def size(self) -> int:

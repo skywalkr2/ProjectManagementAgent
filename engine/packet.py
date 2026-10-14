@@ -8,7 +8,7 @@ projects. The request part comes last: the date, the PM's note (trusted) and the
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from html import escape
 
@@ -16,10 +16,12 @@ from engine.ai.task import AiTask
 from engine.cleaning import Cleaned, clean
 from engine.config import Config
 from engine.intake import source_text
+from engine.knowledge_section import per_input_section, stable_section
 from engine.names import People
 from engine.ops import reference_for, schema_for
 from engine.playbook import guidance
 from engine.prompts import render
+from engine.records import RunKnowledge
 from engine.storage import Store, Stored, StoreError
 from engine.tasks import TaskKind, settings
 from engine.texts import text_presence
@@ -57,6 +59,7 @@ class Packet:
     draft_base: int | None = None  # for a draft, the number of the field's version it is made from
     anchor_units: list | None = None  # for an anchored draft, the base text's units the ids number
     data_level: str | None = None  # the most sensitive level a part declares, when above the record's
+    knowledge: RunKnowledge | None = None  # what the packet gave the run from what was learned (design 6.22)
 
     @property
     def input_chars(self) -> int:
@@ -91,6 +94,18 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
 
     offered = ops_for_level(store, kind.ops, _data_level(store, req.data)) if kind.name == "notes" else kind.ops
     candidates = store.plugins.note_candidates(offered, req.data.get("project")) if kind.name == "notes" else ""
+    people = People(store, cfg)
+    about_project = store.read().get("project", req.data["project"]) if req.data.get("project") else None
+    learned = _learned(
+        store,
+        cfg,
+        kind,
+        people,
+        projects=[req.data["project"]] if about_project is not None else [],
+        source=saved,
+        text=f"{raw}\n{req.data.get('note') or ''}",
+        today=today,
+    )
     stable = "\n\n".join(
         part
         for part in (
@@ -98,8 +113,9 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
             "# Records you may name\n" + candidates if candidates else "",
             "# Practice\n" + _guidance(kind),
             _value_lists(store),
-            "# Open actions\n" + _open_actions(store, People(store, cfg)),
-            "# Open questions\n" + _open_questions(store, People(store, cfg)),
+            learned.stable,
+            "# Open actions\n" + _open_actions(store, people),
+            "# Open questions\n" + _open_questions(store, people),
             "# People\n" + _people(store, cfg),
             "# Projects\n" + _projects(store),
         )
@@ -108,10 +124,11 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     request_parts = [f"Today is {today.isoformat()} ({today.strftime('%A')})."]
     if raw or note:
         request_parts.append(_received_line(store, cfg, req))
-    about_project = store.read().get("project", req.data["project"]) if req.data.get("project") else None
     if about_project is not None:
         # The person said which project this is about; their choice, so it is trusted.
         request_parts.append(f"This is about the project {about_project.data['name']} ({about_project.id}).")
+    if learned.per_input:
+        request_parts.append(learned.per_input)
     if kind.name == "notes" and own_words and req.data.get("about"):
         request_parts.append(_item_block(ws, store, cfg, req, saved))
     if req.data.get("stage_start"):
@@ -136,8 +153,48 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         else:
             request_parts.append(f'<untrusted source="{src}">\n{cleaned.text}\n</untrusted>')
     request = "\n\n".join(request_parts)
-    task = _task(cfg, store, kind, instructions, stable, request)
-    return Packet(task, raw, cleaned, note, too_long=len(cleaned.text) > cfg.dispatch.max_input_chars)
+    task = replace(_task(cfg, store, kind, instructions, stable, request), knowledge=learned.log.model_dump())
+    return Packet(
+        task, raw, cleaned, note, too_long=len(cleaned.text) > cfg.dispatch.max_input_chars, knowledge=learned.log
+    )
+
+
+@dataclass(frozen=True)
+class _Learned:
+    stable: str  # the knowledge every run of the task kind is sent
+    per_input: str  # the knowledge that depends on the input
+    log: RunKnowledge
+
+
+def _learned(
+    store: Store,
+    cfg: Config,
+    kind: TaskKind,
+    people: People,
+    *,
+    projects: list[str],
+    source: Stored | None,
+    text: str,
+    today: date,
+) -> _Learned:
+    """What the workspace has learned that applies to this run (design 6.22), and the log of it for the run's record.
+    The input's projects are the one it was handed in for and the ones its source names; its people are those the text
+    mentions."""
+    settings = cfg.dispatch.knowledge
+    view = store.read()
+    named = [*projects, *(source.data.get("projects", []) if source is not None else [])]
+    in_input = [p for p in dict.fromkeys(named) if view.get("project", p) is not None]
+    stable = stable_section(view, kind.name, settings)
+    per_input = per_input_section(
+        view, kind.name, in_input, people.mentioned_in(text), text, today, settings, moved=stable.moved
+    )
+    log = RunKnowledge(
+        given=list(dict.fromkeys([*stable.ids, *per_input.ids])),
+        left_out_by_scope=per_input.left_out_by_scope,
+        facts_left_out=per_input.facts_left_out,
+        stable_chars=len(stable.text),
+    )
+    return _Learned(stable.text, per_input.text, log)
 
 
 def _note_attributes(store: Store, cfg: Config, source_id: str, source: Stored | None) -> str:
@@ -234,6 +291,17 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
 
     question = req.data.get("note") or ""
     people = People(store, cfg)
+    about_project = req.data.get("project")
+    learned = _learned(
+        store,
+        cfg,
+        kind,
+        people,
+        projects=[about_project] if about_project else [],
+        source=None,
+        text=question,
+        today=today,
+    )
     records = "\n\n".join(
         part
         for part in (
@@ -256,19 +324,23 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
             "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
             "# What this install can do\n" + install,
             "# Settings\n" + configured,
+            *((learned.stable,) if learned.stable else ()),
             records,
         )
     )
     request = "\n\n".join(
         (
             f"Today is {today.isoformat()} ({today.strftime('%A')}).",
+            *((learned.per_input,) if learned.per_input else ()),
             "# From the user guide\n" + sections,
             f"<question>\n{question}\n</question>",
         )
     )
     material = "\n\n".join((install, configured, records, sections))
-    task = _task(cfg, store, kind, instructions, stable, request)
-    return Packet(task, material, Cleaned("", 0, 0, False, 0), question, too_long=False, cites="help")
+    task = replace(_task(cfg, store, kind, instructions, stable, request), knowledge=learned.log.model_dump())
+    return Packet(
+        task, material, Cleaned("", 0, 0, False, 0), question, too_long=False, cites="help", knowledge=learned.log
+    )
 
 
 def _task(cfg: Config, store: Store, kind: TaskKind, instructions: str, stable: str, request: str) -> AiTask:
@@ -430,8 +502,6 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
 
 def _sized(cfg: Config, kind: TaskKind, task: AiTask, parts: object) -> AiTask:
     """The run's output size from its packet's hints, where the workspace hasn't set one for the task kind."""
-    from dataclasses import replace
-
     configured = cfg.ai.tasks.get(kind.name)
     chosen = configured.model_fields_set if configured is not None else set()
     hinted_max = getattr(parts, "max_output", None)

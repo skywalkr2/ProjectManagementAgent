@@ -29,6 +29,7 @@ class Resolved:
     candidates: tuple[str, ...] = ()
 
 
+_ID_WORDS = re.compile(r"[A-Z]+-\d+")
 _HEADER = re.compile(r"^([A-Za-z][A-Za-z-]*):[ \t]*(.*)$")
 _PEOPLE_HEADERS = ("from", "to", "cc")
 
@@ -201,6 +202,16 @@ class People:
                     found |= pids
                     break
         return found
+
+    def mentioned_in(self, text: str) -> frozenset[str]:
+        """The people a text mentions: by id, by a full name or alias that is one person's as a whole phrase, and the
+        people on its leading From, To and Cc lines. A bare first name, or a name two people share, matches no one."""
+        found = set(self.match_entries(header_entries(text)))
+        found |= set(_ID_WORDS.findall(text)) & set(self.records)
+        for name, pids in self._named.items():
+            if len(pids) == 1 and re.search(rf"(?<!\w){re.escape(name)}(?!\w)", text, re.IGNORECASE):
+                found |= pids
+        return frozenset(found)
 
     def _input_people(self, store: Store, request_id: str, text: str) -> frozenset[str]:
         view = store.read()
