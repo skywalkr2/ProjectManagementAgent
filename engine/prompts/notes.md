@@ -12,7 +12,8 @@ How to read the input:
 - A <note source="..." by="..."> block beside a record is a note the PM typed while acting on that record (marking it
   done, saying someone finished it, chasing it, picking its owner, answering it). "by" names whose words it is, and
   the record shows its state after that action. Without reported="yes" the note is the PM's own words. With
-  reported="yes" the PM is relaying what the person named in "by" did or said: record the facts and dates it gives, and
+  reported="yes" the PM is relaying what someone else did or said (the person named in "by", or the one the note
+  quotes): record the facts and dates it gives, and
   propose a standing rule, a list change or a recipient only if the note clearly states one; the PM confirms it first.
   Decide whether the note changes anything beyond that action: a fact it gives (with any link), a date it moves, an
   action it reopens or closes, a new action or question, a standing rule the PM states in their own words.

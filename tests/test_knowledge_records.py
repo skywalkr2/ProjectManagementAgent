@@ -622,3 +622,18 @@ def test_every_kind_of_knowledge_is_in_the_export_and_loads_back(app):
     assert report["differences"] == [], report
     exported = {p.stem for p in (tmp_path / "round-trip" / "export-1").glob("*.json")}
     assert set(knowledge.KINDS) <= exported
+
+
+def test_retiring_a_standing_rule_records_the_same_signal_as_any_other_knowledge(app):
+    """The weekly numbers count rules and lessons together, so a rule's retire uses the same route and signal."""
+    client, store, cfg, _ = app
+    assert apply(store, cfg, [{"op": "rule.add", "text": "Name teams, not individuals, on risks."}], origin="pm")[
+        1
+    ] == ["applied"]
+    (rule,) = [r for r in store.read().list("rule") if r.data["origin"] == "person"]
+    done = client.post(f"/api/knowledge/{rule.id}/retire", json={"read_version": rule.version})
+    assert done.status_code == 200, done.text
+    assert store.read().get("rule", rule.id).data["status"] == "retired"
+    assert [s.data["refs"] for s in signals(store, "retired")] == [[rule.id]]
+    assert client.post(f"/api/changesets/{done.json()['changeset']}/undo", json={}).status_code == 200
+    assert store.read().get("rule", rule.id).data["status"] == "active"

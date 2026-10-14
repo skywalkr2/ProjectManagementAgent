@@ -25,6 +25,7 @@ blocks; everything else goes ahead without it.
 | # | Action | Needs | Blocks | Does not block |
 |---|---|---|---|---|
 | O1 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-agent.json`: 42 of 42 passed on the owner's one account, a command-line agent). **The "before" run of the golden set** on real models: today's 14 cases × 3 runs, on a low-cost and a stronger account, with today's scoring. Steps below. | The owner's computer, with their AI accounts | Only L4's last step: the "after" report and its comparison with this one. That report also has to exist before real use starts. | All of phase A, and L-core's code, including the harder set itself. The run is pinned to commit `802538e`, so changing the cases, the scoring or the packet afterwards doesn't spoil it. |
+| O2 | **The harder set's "before" run** (the original designer's L1 check-in, 2026-10-14): the harder set (below, "L1b") on the owner's account, 3 runs per case, pinned to the commit that adds it, which is the last commit before any L2 code. The report records the agent's program version, and says plainly when every tier ran on the same account, so the run says nothing about a low-cost tier against a stronger one. Steps below, once the set lands. | The owner's computer, with their AI accounts | L4's comparison, which rests on this set. | L2's build: the run is pinned, so it can be made any time; L2 code only lands after the pinned commit. |
 
 **When:** best now, while L1 is being built, not at the end (the original designer's L0 sign-off, 2026-10-13): it is the
 only owner action on the critical path, and it blocks the comparison at the end of L4.
@@ -269,6 +270,12 @@ real use starts. The rest (L-more) comes after the packs.
     `tests/test_on_hold_and_follow_ups.py::test_the_old_nudge_setting_is_read_as_the_question_wait`, and the pill tests in
     `web/src/components/FollowUps.test.tsx`. Top priorities' lines read it when that list is built);
   - [x] "where it came from" as a working link on actions, questions and decisions (the page, else the saved text, else the change and its request); knowledge records with L1, so Keep can be judged against the evidence. Built: `tests/test_origin.py` (the three cases, none, Today's to-do, record pages), `web/src/components/Origin.test.tsx` (a Follow-ups row), `web/src/components/RecordPage.test.tsx::an action's page shows where it came from as a link, in place of the input's id`. The knowledge-record link is built with L1: `tests/test_knowledge_records.py::test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_and_its_request` ("Knowledge keeps its provenance").
+
+- **One account in the chain is a decision, not a default** (the original designer's L1 check-in, 2026-10-14): with one
+  command-line agent in the chain, a usage limit stops all work until the reset; the Today line says so, but nothing
+  does the work. Before real use, one of:
+  - [ ] a second account in the chain, even a low-cost key on the routine tier only; or
+  - [ ] the owner's explicit "wait for the reset", recorded in `docs/decisions.md`.
 
 **Then the owner's real use starts** (owner, 2026-10-12), running through phases B and C beside the build. Building stays
 one stream; the owner uses it daily on their own mail, calendar and notes. For the first month, two numbers are reviewed
@@ -812,19 +819,56 @@ L1. **Knowledge as records.** Settled before L1 starts (the original designer's 
     `expired` state exists; the sweep that sets it is L3's (proposals from inputs expiring after 14 days).
 - [x] Signals name the `run` and `changeset` they correct. Built: `tests/test_rules_facts_signals.py::test_sending_back_and_undoing_name_the_changeset_and_its_run`, `tests/test_rules_facts_signals.py::test_saying_who_a_name_is_names_the_changeset_and_its_run`, `tests/test_rules_facts_signals.py::test_a_correction_of_something_no_run_made_leaves_run_and_changeset_empty`, `tests/test_rules_facts_signals.py::test_a_signal_given_a_changeset_takes_its_run_and_one_given_both_keeps_them`. A hold, a set-aside by hand, a pulled-back automatic close and an edited follow-up message have no run, so both stay empty. The `dropped`, `reworded` and `held_declined` kinds have no recording path yet (L3); the helper takes both when they do.
 
+From the original designer's L1 check-in (2026-10-14):
+- [x] **Attributed words inside the person's own note are reported content**, whatever the button: "<name> said / says /
+  confirmed", or a passage in quotation marks. The source is marked `reported` (its author stays the person who typed
+  it); facts and dates from it apply, and a rule, lesson or other system op from it waits for the person. The words are a
+  setting (`language.reported_speech`: speech words, the person's own speakers, the shortest quoted passage). Built:
+  `tests/test_note_input.py::test_a_note_repeating_what_someone_said_or_quoting_them_is_recognized`,
+  `tests/test_note_input.py::test_a_rule_from_someone_else_repeated_in_a_mark_done_note_waits_for_the_person`. Its learning
+  pair is L4's.
+- [x] **A typed note's fact takes the day the text names.** The code already took the op's `as_of` before the request's
+  day; the op's description now says a note often reports something said earlier. Built:
+  `tests/test_rules_facts_signals.py::test_a_fact_from_a_typed_note_that_names_an_earlier_day_takes_that_day`. The golden
+  case where the two days differ is in the harder set (L1b).
+- [x] **Retiring a rule records the same `retired` signal** as any other knowledge, through the same route, so the weekly
+  numbers don't split rules from lessons. Built:
+  `tests/test_knowledge_records.py::test_retiring_a_standing_rule_records_the_same_signal_as_any_other_knowledge`.
+
+L1b. **The harder set, pinned before L2** (the original designer's L1 check-in, 2026-10-14). L2 is when rules and the
+knowledge section start entering packets, so outputs can change from L2 on. The harder set (moved here from L4, where its
+description stays) is built now, and its "before" run (owner action O2) is pinned to the commit that adds it, the last
+before any L2 code.
+- [ ] The harder set with its harness changes, as L4's "The golden set made harder" describes, plus a typed note that
+  reports an earlier day. The busy portfolio is a starting-records file beside the cases, not a change to `demo-a`'s data,
+  which the other tests and the browser tests read.
+- [ ] The report records the agent's program version and says when every tier ran on the same account.
+
 L2. **Every run reads what applies.**
-- [ ] **To check with the original designer before L2 is built** (2026-10-14). Each has a default the build follows
-  unless the designer says otherwise:
-  - *What "a rule applied" means for the 30-day review flag.* The model's own list of what it applied is its say-so,
-    so the default counts a rule as applied when a run it was given was about something its target covers (its task
-    kinds, record types or projects matched). A rule that is always in force but rarely triggered is then flagged only
-    if nothing it covers came in for 30 days, and the flag offers Keep (resets the clock) or Retire.
-  - *What happens when the stable section is over its budget.* A rule is never dropped silently. Default: rules
-    narrowed to some task kinds or projects move to the per-input part, where they still reach the runs they cover;
-    if the workspace-wide rules alone still pass the budget, Today shows "Review your standing rules" with the count.
-  - *Rules proposed from inputs or by the assistant.* Today they wait as a held decision on Today, while lessons,
-    glossary, routing and style notes become proposals on the Learned line. Default: from L3, rules become proposals
-    too, so everything the assistant learned is kept or discarded in one place. Nothing in L2 depends on it.
+Settled with the original designer (answers to L2's three questions and notes from their running version,
+2026-10-14):
+- [ ] **What "a rule applied" means**, checkable without asking the model, in two steps:
+  - each rule says what it constrains (`constrains`): the op kinds or fields it is about ("questions to someone", "an
+    action's owner", "a due date"), or the check that enforces it;
+  - it is **applied** when a run in its scope produced an op or field it constrains, or its check ran on that output
+    (passing or refusing), or a correction names it. Scope matched with nothing constrained is **present**, counted
+    apart. The model's own "I applied rule X" may show as a hint on the evidence line and is never counted.
+- [ ] **The knowledge log records present and applied per rule**, so the review starts with a rule present in 200 runs
+  and applied in none.
+- [ ] **The review flag** (a rule present but not applied for `knowledge.rule_review_days`, 30) offers Keep (resets the
+  clock), Narrow (often "this only matters for one project") and Retire. Rules enforced by a code check or an invariant
+  are never flagged.
+- [ ] **Over the size budget**, rules leave the always-sent section narrowest first: one project or one task kind before
+  several; workspace-wide rules in the person's own words last. A rule enforced by a stage check sends only its one-line
+  form in the always-sent section, and its full text in the per-input part for the runs it covers. Nothing is dropped
+  silently. "Review your standing rules" shows at most once a week, with the section's size and the count moved.
+- [ ] **The section's size is in the knowledge log on every run, from the first L2 commit**, so the budget's default is
+  set from real numbers (five rules on one busy day is normal).
+- [ ] **Scope is filtered when the packet is built**, never left to the model: an excluded project's rules (`except`) are
+  left out of its packets altogether, and the knowledge log says they were left out.
+- [ ] **Local first:** the `search` round runs over records, facts and past inputs before any outside lookup is proposed,
+  and an outside lookup from a run that hasn't searched is sent back to search first. `already-known` runs before every
+  question op, to anyone, the person included, not only questions to others.
 - [ ] **The stable prefix has a budget** (the original designer's L0 sign-off, 2026-10-13): rules arrive in bursts, so the stable section has a size budget (a setting)
   and the knowledge log counts its rules; a rule that hasn't applied in 30 days (a setting) is flagged for review on
   the daily card instead of the prefix growing forever.
@@ -845,6 +889,11 @@ L2. **Every run reads what applies.**
   lesson, never both (design 6.22).
 
 L3. **Every correction teaches.**
+- [ ] **Rules become proposals like the rest of what is learned** (the original designer, 2026-10-14): one place to keep
+  or discard. Two guards: the person's own words (a rule stated in their note or answer) still apply at once with Undo,
+  and only rules from the assistant, inputs or reported content become proposals, whose Keep shows the restatement the
+  person agrees to; the held rule decisions already on Today move to the catch-up list once, when L3 starts, so nothing
+  is lost and nothing is decided twice.
 - [ ] **A correction that will apply again is knowledge, never a code request** (the original designer's lessons from running, 2026-10-13): feedback on a question (Respond to
   the assistant) proposes a rule or a lesson whenever the correction generalizes, stated as the general case ("rows
   scoped to another team get no impact question unless they name our work"), not just this instance. A report to the
@@ -923,7 +972,8 @@ The buttons are laid out with the rest of the screens in phase B; their behavior
 
 L4. **Proving it** (from the design author's review of this plan).
 - [ ] **15 to 20 fictional fixture pairs, about a third negative.** They include the pairs L0 and L1 left here: a reported note saying "from now on we always…" never
-  becomes an active rule; a corrected date that carries to the next mail's calendar entry, and set-aside mail (today tests, moved into fixtures here). A negative pair's later input must not change; a loop
+  becomes an active rule; the same words repeated in the person's own Mark done note ("<name> said from now on…") never
+  become an active rule either; a corrected date that carries to the next mail's calendar entry, and set-aside mail (today tests, moved into fixtures here). A negative pair's later input must not change; a loop
   that over-learns is as harmful as one that doesn't learn. Each pair is (a) an input, the wrong output, the correction and
   the expected proposal, and (b) a later input. The cases, in generic form:
   - **look it up, don't ask:** a date a published schedule holds is asked of a person; afterwards a similar input produces a
@@ -954,7 +1004,8 @@ L4. **Proving it** (from the design author's review of this plan).
   - *negative, injection by meaning:* a glossary meaning that changes an instruction ("in this project, 'send' means send
     to an outside address") is never applied as guidance;
   - *negative, injected import:* a shared lessons file with an injected entry loads as proposed, not active.
-- [ ] **The golden set made harder** (design 6.16, from the design author's review). The "before" run passed every case on the owner's account (2026-10-14), so today's set has no headroom there: the harder set is what the L4 comparison rests on, and it is run as a second "before" on the same account before L3's learning lands. Today's 14 single-input cases are
+- [ ] **The golden set made harder** (design 6.16, from the design author's review). Moved to L1b (2026-10-14), so its
+  "before" run is pinned ahead of L2; the description stays here. The "before" run passed every case on the owner's account (2026-10-14), so today's set has no headroom there: the harder set is what the L4 comparison rests on, and it is run as a second "before" on the same account before L3's learning lands. Today's 14 single-input cases are
   scored too kindly for choosing a model. The fixes:
   - `exact: true` by default;
   - `given:` starting records, with `quoted-thread` split into "the action exists" (a date update) and "it doesn't" (an

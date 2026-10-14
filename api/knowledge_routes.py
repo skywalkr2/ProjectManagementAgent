@@ -14,6 +14,7 @@ from engine.applier import apply_as_person
 from engine.config import Config
 from engine.dispatcher import SAY_WHO_FIRST, signal
 from engine.origin import origins
+from engine.records import Rule
 from engine.storage import Store, StoreError
 from engine.worker import Events
 
@@ -51,8 +52,8 @@ def _view(stored: Any, origin: dict[str, Any] | None) -> KnowledgeView:
 def build_knowledge_router(cfg: Config, store: Store, events: Events) -> APIRouter:
     r = APIRouter(prefix="/api")
 
-    def entry(entry_id: str, read_version: int) -> Any:
-        kind = knowledge.kind_of(entry_id)
+    def entry(entry_id: str, read_version: int, *, rules: bool = False) -> Any:
+        kind = knowledge.kind_of(entry_id) or ("rule" if rules and entry_id.startswith(f"{Rule.prefix}-") else None)
         found = store.read().get(kind, entry_id) if kind else None
         if found is None:
             raise HTTPException(status_code=404, detail=f"{entry_id} doesn't exist")
@@ -122,8 +123,10 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events) -> APIRout
 
     @r.post("/knowledge/{entry_id}/retire")
     def retire(entry_id: str, body: ReadVersion) -> Applied:
-        """Retire an active entry: it stops guiding runs and stays on record. Undo makes it active again."""
-        found = entry(entry_id, body.read_version)
-        return act(found, {"op": "knowledge.retire", "id": found.id}, "Retired what was learned", "retired")
+        """Retire an active entry or standing rule: it stops guiding runs and stays on record, with the same `retired`
+        signal for both. Undo makes it active again."""
+        found = entry(entry_id, body.read_version, rules=True)
+        op = "rule.retire" if found.kind == "rule" else "knowledge.retire"
+        return act(found, {"op": op, "id": found.id}, "Retired what was learned", "retired")
 
     return r

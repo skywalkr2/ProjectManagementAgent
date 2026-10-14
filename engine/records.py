@@ -454,6 +454,12 @@ class Source(Record):
         description="The id of the person whose words it is, when that is known: the person running the app for a note "
         "they wrote, the person it is reported about for a note that relays what someone else did or said.",
     )
+    reported: bool = Field(
+        False,
+        description="A note that is content the person reports: typed on a button that relays someone else, or "
+        "repeating what someone else said. Facts from it apply; a change to how the product behaves from it waits for "
+        "the person.",
+    )
     watched: Watched | None = Field(None, description="For an input a watcher found: where and what changed.")
     excerpts: Literal["allowed", "never"] = Field(
         "allowed",

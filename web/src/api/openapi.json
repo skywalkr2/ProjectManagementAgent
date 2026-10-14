@@ -12628,7 +12628,7 @@
     },
     "/api/knowledge/{entry_id}/retire": {
       "post": {
-        "description": "Retire an active entry: it stops guiding runs and stays on record. Undo makes it active again.",
+        "description": "Retire an active entry or standing rule: it stops guiding runs and stays on record, with the same `retired`\nsignal for both. Undo makes it active again.",
         "operationId": "retire_api_knowledge__entry_id__retire_post",
         "parameters": [
           {

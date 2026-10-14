@@ -857,6 +857,19 @@ yet follow, that it is *designed*, with its phase.
 | The packet (6.6) | `<note source="...">` | `<note source="..." by="<name>">`, and `reported="yes"` on reported content; the notes prompt says what that means. Built: `tests/test_note_input.py::test_the_packet_names_whose_words_a_note_is_and_marks_reported_content` |
 | Answering a question (6.5) | One route, `note:answered` | A question asked of someone other than the person is recorded as `note:answered_for`, authored by whom it was asked. Built in the same tests |
 
+## 52. The original designer's L1 check-in and the answers for L2 (2026-10-14)
+
+| Where | Before | Now |
+|---|---|---|
+| Notes (6.5, 5.1) | A note's author follows the button; only the three relaying buttons are reported content | A note on any button that repeats someone else ("<name> said …", or a quoted passage; setting `language.reported_speech`) is reported content too: the source is marked `reported`, its author stays the person who typed it, and a system op from it is held. Built: `tests/test_note_input.py` (recognition, the held rule from a Mark done note) |
+| Facts (5.1) | A typed note's fact takes the request's day | The day the note's text names wins (the code already took the op's `as_of` first; the op's description now says so). Built: `tests/test_rules_facts_signals.py::test_a_fact_from_a_typed_note_that_names_an_earlier_day_takes_that_day` |
+| Rules (6.22) | `rule.retire` recorded no signal | Retiring a rule goes through the same route and records the same `retired` signal as any other knowledge. Built: `tests/test_knowledge_records.py::test_retiring_a_standing_rule_records_the_same_signal_as_any_other_knowledge` |
+| The packet (6.22) | Every active rule in the always-sent part | Only workspace-wide rules there; narrower ones per input, filtered by scope when the packet is built, with the left-out rules logged. A size budget, measured per run from L2's first commit, moves rules narrowest first, and a stage-checked rule sends its one-line form. *Designed, phase L2* |
+| Rule review (6.22) | A rule that hasn't applied in 30 days is flagged | A rule says what it `constrains`; the log counts applied (an op or field it constrains, its check ran, or a correction names it) apart from present; the weekly review offers Keep, Narrow and Retire, never for check-enforced rules. *Designed, phase L2* |
+| Search (6.22) | The instructions say to search before an outside lookup | Local first is enforced: an outside lookup from a run that hasn't searched is sent back; `already-known` runs before every question op. *Designed, phase L2* |
+| Rules from inputs (6.22) | Held as a decision on Today | From L3, proposals on the Learned line; the person's own words still apply at once. *Designed, phase L3* |
+| Plan | The harder golden set in L4 | Moved ahead as L1b, with its "before" run (O2) pinned ahead of L2; one account in the chain is a decision before real use |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

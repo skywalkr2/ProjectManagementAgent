@@ -429,3 +429,40 @@ def test_a_reported_note_needs_the_person_it_is_reported_about(api):
     item = ("action", fixture_records(DEMO_B, "action")[0]["id"])
     with pytest.raises(ValueError):
         note_as_input(worker.ws, client.app.state.store, worker.cfg, item=item, text=LONG, route="they_finished")
+
+
+# ---- a note that repeats someone else's words ------------------------------------------------------------------------
+
+
+def test_a_note_repeating_what_someone_said_or_quoting_them_is_recognized():
+    from engine.config.schema import ReportedSpeech
+    from engine.intake import repeats_someone
+
+    speech = ReportedSpeech()
+    first = fixture_records(DEMO_B, "person")[1]["full_name"].split()[0]
+    assert repeats_someone(f"{first} said from now on every layout change goes through them.", speech)
+    assert repeats_someone(f"Done. {first} confirms the venue on the 14th.", speech)
+    assert repeats_someone('Done; their reply was "always copy the client on approvals".', speech)
+    assert not repeats_someone("I said from now on every layout change goes through me.", speech)
+    assert not repeats_someone('Done, the "Ready" column is cleared.', speech)
+    assert not repeats_someone(LONG, speech)
+    assert not repeats_someone(f"{first} said so.", ReportedSpeech(verbs=[], quote_min_words=50))
+
+
+def test_a_rule_from_someone_else_repeated_in_a_mark_done_note_waits_for_the_person(api):
+    """Mark done is the person's own button, but a note repeating what someone else said is reported content: its
+    source says so and keeps the person as its author, and a change to how the product behaves from it is held."""
+    client, base, worker = api
+    store = client.app.state.store
+    action = fixture_records(DEMO_B, "action")[0]["id"]
+    first = fixture_records(DEMO_B, "person")[1]["full_name"].split()[0]
+    answer = {"summary": "A new status", "ops": [{"op": "list.add", "list": "project-status", "value": NEW_VALUE}]}
+    set_responder(lambda task: json.dumps(answer))
+    note = f"{first} said from now on every layout change goes through them first."
+    r = client.post(f"{base}/actions/{action}/status", json={"status": "done", "note": note})
+    source = note_source(client, r.json()["request"])
+    assert source["reported"] is True and source["author"] == the_person(client)
+    assert worker.run_pending() == 1
+    request = store.read().get("request", r.json()["request"]).data
+    (outcome,) = store.read().get("changeset", request["changeset"]).data["ops"]
+    assert outcome["status"] == "held" and "someone else reported" in outcome["reason"]

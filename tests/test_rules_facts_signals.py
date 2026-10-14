@@ -183,6 +183,17 @@ def test_a_fact_from_a_typed_note_takes_the_day_the_request_was_made(env):
     assert only_fact(store, cs_id).data["as_of"] == request.data["created_at"][:10]
 
 
+def test_a_fact_from_a_typed_note_that_names_an_earlier_day_takes_that_day(env):
+    """A note often reports something said earlier: the day the text names wins over the day the note was typed."""
+    ws, cfg, store = env
+    note = "The hall was confirmed as booked last Friday."
+    answers(fact_ops("The hall is booked.", note, as_of="2026-10-02"))
+    handed = hand_in(ws, store, note=note, pasted="", now=NOW)
+    cs_id = process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW)
+    typed = store.read().get("request", handed.request).data["created_at"][:10]
+    assert typed != "2026-10-02" and only_fact(store, cs_id).data["as_of"] == "2026-10-02"
+
+
 def test_a_newer_fact_marks_the_older_one_as_replaced_and_undo_takes_the_mark_away(env):
     _, _, store = env
     old = "The book ships in the spring."

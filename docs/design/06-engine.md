@@ -275,7 +275,11 @@ an answer recorded for a question asked of someone else (kind `note:answered_for
 author is the person it is about (the person the action waits on, or the one the question went to). The source is still
 trusted, so a fact or a moved date from it applies at once with Undo, as before, but it is **reported content**: the
 packet adds `reported="yes"`, and a system op from it, which today covers every rule, value list and recipient, is held
-for the person with the reason that someone else reported it. Knowledge proposals (lessons, glossary entries, routing
+for the person with the reason that someone else reported it. **Attributed words count whatever the button** (the
+original designer's L1 check-in, 2026-10-14; built): a note on the person's own button that repeats someone else ("<name>
+said / says / confirmed …", or a passage in quotation marks; the words are the setting `language.reported_speech`) is
+reported content too. Its source is marked `reported` and its author stays the person who typed it; facts and dates from it
+apply, and a system op from it is held. Built: `tests/test_note_input.py::test_a_rule_from_someone_else_repeated_in_a_mark_done_note_waits_for_the_person`. Knowledge proposals (lessons, glossary entries, routing
 entries, style notes, rules) are system-tier ops when they are added (L1), so they wait for Keep and are never active at
 once from reported content; the learning pair that proves it is added in L4. **Undo** of the button's change does not
 take the input back: the words stay saved and the queued work stays; what the assistant makes of it is a changeset the
@@ -1341,7 +1345,10 @@ signals (6.20). This section is the read side.
 **Knowledge records.** Six kinds:
 - **Fact** (built), plus `key` (the facts that matter most, always shown first), `as_of` and `supersedes` (L1, built; below).
 - **Rule** (4.10), now a record (L1, built): `rule.add` and `rule.retire`, system ops with Undo, and the rules file as the
-  starting set.
+  starting set. Retiring one records the same `retired` signal as any other knowledge (built). *From L3* (the original
+  designer, 2026-10-14), a rule from the assistant, an input or reported content is a proposal kept or discarded on the
+  Learned line like the other kinds, and Keep shows the restatement the person agrees to; a rule in the person's own
+  words still applies at once with Undo. The held rule decisions on Today move to the catch-up list once, when L3 starts.
 - **Lesson:** what went wrong, why, and the guard. Created from a correction and linked to the signal it came from.
 - **Glossary entry:** a term or acronym, its meaning, project or global, and a confidence (confirmed, assumed or unknown). It
   may also carry patterns for splitting compound ids.
@@ -1422,7 +1429,10 @@ rules as records are separate L1 items, not built here.
 
 **The knowledge section of every packet** is split so the cached prefix stays the same from input to input (6.6):
 - **In the stable part,** after the playbook and before the open items:
-  1. every active rule (they are few, and most failures were a rule the run never saw);
+  1. every active rule that applies to the whole workspace (they are few, and most failures were a rule the run never
+     saw); a rule narrowed to some projects or task kinds goes in the per-input part, so scope is filtered when the
+     packet is built and never left to the model: an excluded project's rules (`except`) are not in its packets at all,
+     and the knowledge log says which were left out (*designed, phase L2*; the original designer, 2026-10-14);
   2. active lessons targeted at the task kind;
   3. the whole glossary while it is small (under `knowledge.glossary_all_below`).
 - **In the per-input part,** because it depends on the input:
@@ -1469,18 +1479,38 @@ material that is not workspace knowledge. A novel's facts are fiction, and its i
 A pack's own task kinds get the same section through one plugin API call. So a writing pack's runs see the person's lessons and
 glossary, and a pack's own knowledge (a series bible) can be offered the same way later.
 
+**The always-sent section has a size budget** (*designed, phase L2*; the original designer, 2026-10-14). Its size is in
+the knowledge log on every run from the first L2 commit, so the budget's default comes from real numbers. Over the budget,
+rules leave it narrowest first: those scoped to one project or one task kind before those scoped to several, and
+workspace-wide rules in the person's own words last. A rule a stage check enforces sends only its one-line form there and
+its full text in the per-input part for the runs it covers, since the check does the enforcing. Nothing is dropped
+silently: "Review your standing rules" shows at most once a week, with the section's size and the count of rules moved.
+
+**What a rule constrains, and whether it applied** (*designed, phase L2*; the original designer, 2026-10-14). A rule
+says what it constrains (`constrains`): the op kinds or fields it is about ("questions to someone", "an action's owner",
+"a due date"), or the check that enforces it. For each run in its scope the knowledge log records it as **applied** when
+the run produced an op or field it constrains, or its check ran on that output (passing or refusing), or a correction
+names it; otherwise as **present**. Both are checked without asking the model; the model's own "I applied rule X" may show
+as a hint on the evidence line and is never counted. A rule present but not applied for `knowledge.rule_review_days` (30)
+is offered for review on the weekly card, most-present first, with Keep (resets the clock), Narrow and Retire. A rule
+enforced by a code check or an invariant is never flagged: the check holds it whether or not anything triggers.
+
 **Search before asking.** A run that needs more than its packet holds asks for it with a `search` request: words, ids, a
 project, which kinds (facts, past inputs, records, knowledge). It is not a live tool call, so it works on every kind of AI
 account, command-line agents included. The engine runs the search, deterministically and bounded (`knowledge.search_results`),
 and runs the task again with the results, at most `knowledge.search_rounds` times (default 2). The instructions say to search
 the workspace's own knowledge before an outside lookup (6.19), a question to a person, or a report to the maintainers.
+**Local first** (*designed, phase L2*; the original designer, 2026-10-14): the search round runs over records, facts and
+past inputs before any outside lookup is proposed, and an outside lookup from a run that hasn't searched is sent back to
+search first, so no run looks outside for items that never existed.
 
-It is also checked where it can be. A `question.add`, an outside lookup or a `report.draft` whose subject a plain search
+It is also checked where it can be. A `question.add` to anyone (the person included), an outside lookup or a `report.draft` whose subject a plain search
 already answers gets the lint `already-known` (4.17), which sends it back once with the match. It is a lint, not an invariant,
 because matching is fuzzy.
 
 **The knowledge log.** Each `Run` records:
-- which knowledge entries it was given, by id;
+- which knowledge entries it was given, by id, and for each rule whether it was applied or only present (above);
+- the size of the always-sent section, and the rules left out by scope;
 - how many facts were left out;
 - what it searched for and what came back.
 

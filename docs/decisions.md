@@ -3,6 +3,25 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: The original designer's L1 check-in and answers for L2
+
+**Decided by:** the original designer (check-in and answers), placed by the technical PM. **What**, each with its kind:
+- *Concept (core), with a setting:* a note on any button that repeats someone else's words is reported content; the words
+  are `language.reported_speech` (speech words, the person's own speakers, the shortest quoted passage).
+- *Concept:* a typed note's fact takes the day its text names (already so in the code; now tested and said in the op).
+- *Concept:* retiring a rule records the same `retired` signal as any other knowledge.
+- *Plan:* the harder golden set moves ahead of L2 (L1b), and its "before" run (O2) is pinned to the commit that adds it;
+  one account in the chain becomes an explicit owner decision before real use.
+- *Concepts for L2:* a rule's `constrains`; applied versus present, both checked without the model; the weekly review
+  with Narrow; the always-sent section's budget order and one-line form for stage-checked rules; scope filtered at
+  packet build; local-first search and `already-known` before every question op; the section's size in every run's log.
+- *Concept for L3:* rules from anyone but the person become proposals; held rule decisions move to the catch-up list once.
+
+**Why:** a rule the person types on someone else's behalf is still someone else's rule; L2 changes packets, so the
+"before" has to be pinned first; a broad rule can never be flagged if relevance alone counts as applied. **Impact:**
+design 5.1, 6.5 and 6.22, CHANGES 52; a core record change (`source.reported`, plugin API 0.3.65); a new setting with demo
+values in both workspaces; no change to scope.
+
 ## 2026-10-14: Rules are records with the knowledge scope; facts and signals gain what L2 and L3 read
 
 **Decided by:** the technical PM, merging L1's three parts. **What:** a standing rule is a `rule` record seeded once

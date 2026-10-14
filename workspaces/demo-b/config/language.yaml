@@ -8,6 +8,10 @@ self_words: [me, myself, I]
 title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to|cc|sent|date|subject)\s*:', '(thanks|best|regards|cheers)\b[ ,!.]*$', '-{2,}|>']
 # Notes under this many words with no link are bare confirmations and stay with the change.
 bare_confirmation_words: 4
+reported_speech:
+  verbs: [said, says, confirmed, confirms, told, wrote, writes, asked, wants]
+  own_speakers: [I, we]
+  quote_min_words: 3
 messages:
   greeting: "Hi {first_name},"
   actions_heading: "Action items with you:"

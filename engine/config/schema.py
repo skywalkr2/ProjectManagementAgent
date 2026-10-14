@@ -737,6 +737,24 @@ class MessageSettings(ConfigModel):
 DEFAULT_SELF_WORDS = ("me", "myself", "I")
 
 
+class ReportedSpeech(ConfigModel):
+    verbs: list[str] = Field(
+        default_factory=lambda: ["said", "says", "confirmed", "confirms", "told", "wrote", "writes", "asked", "wants"],
+        description="Words that, after a name or other speaker, mark a note as repeating someone else's words: "
+        '"<name> said ...". Matched as whole words, ignoring case.',
+    )
+    own_speakers: list[str] = Field(
+        default_factory=lambda: ["I", "we"],
+        description='Speakers that are the person themselves, so "I said" stays the person\'s own words.',
+    )
+    quote_min_words: int = Field(
+        3,
+        ge=1,
+        le=50,
+        description="Text in quotation marks with at least this many words is someone else's words.",
+    )
+
+
 class LanguageFile(FileModel):
     messages: MessageSettings = Field(default_factory=MessageSettings, description="Wording of copied messages.")
     self_words: list[str] = Field(
@@ -759,6 +777,12 @@ class LanguageFile(FileModel):
         default_factory=lambda: list(DEFAULT_TITLE_SKIP),
         description="Lines an item's title never comes from: greetings, quoted mail headers, sign-offs (regular "
         "expressions, matched at the start of a line, ignoring case). A title is taken from the first line left.",
+    )
+    reported_speech: ReportedSpeech = Field(
+        default_factory=ReportedSpeech,
+        description="How a typed note that repeats someone else's words is recognized. Such a note is content the "
+        "person reports, whatever button it was typed on: facts and dates from it apply, but a rule or lesson from it "
+        "waits for the person.",
     )
     bare_confirmation_words: int = Field(
         4,

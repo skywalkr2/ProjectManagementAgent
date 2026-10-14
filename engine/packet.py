@@ -143,13 +143,13 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
 def _note_attributes(store: Store, cfg: Config, source_id: str, source: Stored | None) -> str:
     """The attributes of a note block: the source, whose words they are when that is known, and, for content the
     person reports about someone else, that it is reported."""
-    from engine.intake import is_reported_note
+    from engine.intake import is_reported
 
     attributes = f'source="{source_id}"'
     author = source.data.get("author") if source is not None else None
     if author:
         attributes += f' by="{escape(People(store, cfg).name(author))}"'
-    if source is not None and is_reported_note(source.data.get("kind")):
+    if source is not None and is_reported(source.data):
         attributes += ' reported="yes"'
     return attributes
 

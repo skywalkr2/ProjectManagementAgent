@@ -12,10 +12,13 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from engine.config import Config
+from engine.config.schema import ReportedSpeech
 from engine.names import People
 from engine.storage import Store, WriteContext
 from engine.workspace import Workspace
@@ -123,6 +126,26 @@ def is_reported_note(source_kind: str | None) -> bool:
     return kind.startswith(NOTE_KIND) and kind.removeprefix(NOTE_KIND) in REPORTED_ROUTES
 
 
+def is_reported(source: Mapping[str, Any] | None) -> bool:
+    """Whether a source is content the person reports: marked so when it was saved, or typed on a relaying button."""
+    return source is not None and (bool(source.get("reported")) or is_reported_note(source.get("kind")))
+
+
+def repeats_someone(text: str, speech: ReportedSpeech) -> bool:
+    """Whether a note repeats someone else's words: a speaker other than the person followed by a word of speech, or
+    a passage in quotation marks of at least the configured length."""
+    if speech.verbs:
+        verbs = "|".join(re.escape(v) for v in speech.verbs)
+        own = {w.casefold() for w in speech.own_speakers}
+        for found in re.finditer(rf"(?i)\b([^\W\d_][\w'’.-]*)\s+(?:{verbs})\b", text):
+            if found.group(1).casefold() not in own:
+                return True
+    for quoted in re.finditer(r'"([^"]+)"|“([^”]+)”', text):
+        if len((quoted.group(1) or quoted.group(2)).split()) >= speech.quote_min_words:
+            return True
+    return False
+
+
 _LINK = re.compile(r"(?i)(?:[a-z][a-z0-9+.-]*://|www\.)\S+|\b[\w-]+(?:\.[\w-]+)+/\S*")
 
 
@@ -151,7 +174,8 @@ def note_as_input(
 
     Whose words it is follows the button. Most buttons record the person's own words, authored by the person running
     the app. A button that relays someone else (`REPORTED_ROUTES`) records that other person as `author`, which the
-    caller names, and the source counts as reported content."""
+    caller names, and the source counts as reported content. So does a note on any button that repeats what someone
+    else said (`repeats_someone`); its author stays the person who typed it."""
     if route not in NOTE_ROUTES:
         raise ValueError(f"unknown route {route}")
     if route in REPORTED_ROUTES and not author:
@@ -167,6 +191,7 @@ def note_as_input(
         project = None
     now = now or datetime.now(UTC)
     author = author if route in REPORTED_ROUTES else People(store, cfg).pm
+    reported = route in REPORTED_ROUTES or repeats_someone(note, cfg.language.reported_speech)
     digest = hashlib.sha256(note.encode("utf-8")).hexdigest()
     ws.sources_dir.mkdir(parents=True, exist_ok=True)
     path = ws.sources_dir / f"{digest}.txt"
@@ -184,6 +209,7 @@ def note_as_input(
                 "trust": "trusted",
                 "projects": [project] if project else [],
                 **({"author": author} if author else {}),
+                **({"reported": True} if reported else {}),
             },
             ctx,
         )

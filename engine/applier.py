@@ -20,7 +20,7 @@ from engine.check_text import quoted_passages, without_links, words_of
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
 from engine.config.yaml_edit import set_key
-from engine.intake import is_reported_note, source_text
+from engine.intake import is_reported, source_text
 from engine.names import People
 from engine.ops import (
     EVIDENCE_FIELDS,
@@ -323,7 +323,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             and not ctx.confirmed_by_pm
         ):
             request = view.get("request", ctx.inputs.request)
-            reported = request is not None and is_reported_note(_source_kind(view, request))
+            reported = request is not None and is_reported(_source_data(view, request))
             why = "comes from what someone else reported; needs your confirmation"
             problems.append(
                 Problem(
@@ -341,14 +341,14 @@ def _from_pm(view: Any, ctx: Context) -> bool:
         request is not None
         and request.data["origin"] == "pm"
         and ctx.inputs.trust == "trusted"
-        and not is_reported_note(_source_kind(view, request))
+        and not is_reported(_source_data(view, request))
     )
 
 
-def _source_kind(view: Any, request: Any) -> str | None:
-    """The kind of the source a request was made from, if it has one."""
+def _source_data(view: Any, request: Any) -> dict[str, Any] | None:
+    """The source a request was made from, if it has one."""
     source = view.get("source", request.data["source"]) if request.data.get("source") else None
-    return source.data.get("kind") if source is not None else None
+    return source.data if source is not None else None
 
 
 def _quotes_in(op: OpModel, ctx: Context) -> list[str]:

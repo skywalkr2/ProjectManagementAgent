@@ -86,8 +86,9 @@ class FactOp(OpModel):
     key: bool = Field(False, description="True only for a fact that matters most to the project; it is shown first.")
     as_of: date | None = Field(
         None,
-        description="The day the fact was true as of, written YYYY-MM-DD, when the input says it; left out, it is "
-        "the day the input was received.",
+        description="The day the fact was true as of, written YYYY-MM-DD, when the input or the person's note names "
+        "one (a note often reports something said earlier); left out, it is the day the input was received or the "
+        "note was typed.",
     )
     supersedes: str | None = Field(
         None,
