@@ -1539,6 +1539,8 @@ Order by what protects real data first, then by what the packs ask for:
 - The delivery chain of the end state (charter, owner 2026-10-14): a requirement carried from business analysis through
   project management and technical design to development, testing, acceptance and deployment, with a development pack
   (sprints, built-in testing, demos), a testing and acceptance pack (internal test cases, UAT) and a deployment pack.
+  Building is staged (charter): a build pack exported for a coding agent first; then read-only connectors that bring the
+  development process back to the PM; driving the building from the cockpit last, with its own safety design.
   Business analysis, technical design (the systems architect pack) and project management are already planned (C2,
   C3c). What the chain needs from the core is listed there when it is designed: links that trace a requirement to its
   stories, test cases and defects across packs, and sign-offs by role (design 11.8).

@@ -21,7 +21,18 @@ and gives them one screen to review and send. The design is in `docs/design/`.
      packs facilitate the **deployment**.
 
 Every hand-off between packs goes through the core (interfaces, requests for another pack's task kinds, stages with
-entry checks), and every step's output is the person's to approve, as for everything else.
+entry checks), and every step's output is the person's to approve, as for everything else. That replaces today's copying
+and pasting of outputs between functions by hand.
+
+**How the work itself gets done** (owner, 2026-10-14). Planning and tracking delivery is the project management pack's.
+Building is staged:
+1. **A build pack to take away:** the approved design (requirements, stories with acceptance criteria, technical design,
+   test cases) exported as one bundle a coding agent can be told to build from, in the team's own tools.
+2. **The PM sees the whole development process in one place:** read-only connectors to where the work happens (the code
+   host, its checks, the issue tracker) bring progress, test results and demos back as inputs, traced to the
+   requirements they serve, so the plan, the risks and acceptance update without copying anything.
+3. **In the end, everything in one place:** the cockpit drives the building too, which needs its own safety design
+   (separate sandboxes, permissions, review of every change, rollback) before it is built.
 
 ## Background
 
