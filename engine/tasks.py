@@ -30,6 +30,9 @@ NOT_FROM_NOTES = KNOWLEDGE_OPS | {
 }
 #: What an ask may do besides what reading notes does: answer, suggest a setting, draft a report to the maintainers.
 ASK_OPS = ("answer", "setting.propose", "report.draft")
+#: What learning from a correction may propose (design 6.22): one entry to keep, or a change to a lesson that should
+#: have caught the mistake. None of these depends on the account that runs it.
+LEARN_OPS = ("lesson.add", "lesson.update", "glossary.add", "routing.add", "style.add", "rule.add")
 
 
 @dataclass(frozen=True)
@@ -54,6 +57,7 @@ class TaskKind:
     all_or_nothing: bool = False  # the answer's ops apply together or not at all
     requires_ops: tuple[str, ...] = ()  # an answer must include at least one of these ops
     learning: str = "core"  # "own": the core's own learning steps don't run on this work (engine/learning.py)
+    max_ops: int | None = None  # an answer may hold at most this many ops; more is refused as a whole
 
     def offered_on(self, record: Any, texts: Callable[[str], bool | None] | None = None) -> bool:
         """Whether this work applies to a record (of kind `on`): every `where` field holds one of its values."""
@@ -106,6 +110,17 @@ TASKS: dict[str, TaskKind] = {
         playbook="sort-mail",
         label="Sort mail",
         defaults={"max_output": 2000, "expected_output": 400},
+    ),
+    # Learning from one correction (design 6.22): at most one proposal, or none. A bad lesson is in every later packet,
+    # so this is the stronger tier's work (engine/learn.py).
+    "learn.correction": TaskKind(
+        name="learn.correction",
+        ops=LEARN_OPS,
+        prompt="learn-correction",
+        playbook="learn-correction",
+        label="Learning from a correction",
+        defaults={"tier": "deep", "max_output": 2000, "expected_output": 400},
+        max_ops=1,
     ),
 }
 

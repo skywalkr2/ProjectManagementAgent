@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
 
+from engine import learn
 from engine import search as workspace_search
 from engine.ai.pauses import when_text
 from engine.ai.router import (
@@ -125,6 +126,9 @@ def process(
         raise KeyError(request_id)
     if req.data.get("superseded_by") or req.data["state"] in ("done", "review"):
         return None  # a try is only run while its request is open: not applied, finished or replaced
+    if learn.is_learning(req.data["task"]) and (why := learn.skip_reason(store, cfg, req.data)) is not None:
+        learn.close(store, request_id, why)  # nothing to learn from any more: no packet, no estimate, no call
+        return None
     if req.data.get("approval") == "required":
         from engine.stages import wording
 
@@ -341,12 +345,16 @@ def process(
         _set(store, request_id, task="ask", state="queued", waiting="With the assistant, starting now")
         return None
     changeset = changeset.model_copy(update={"ops": localize_ops(changeset.ops, cfg)})
+    if learn.is_learning(kind.name):
+        changeset = learn.link_signal(changeset, learn.signal_of(req.data) or "")
     cs_id = apply_changeset(
         changeset, problems, ctx, run=run_id, now=now, all_or_nothing=getattr(kind, "all_or_nothing", False)
     )
     if run_id is not None:
         record_applied(store, run_id, cs_id)
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
+    if learn.is_learning(kind.name):
+        learn.finish(store, request_id, cs_id)
     if _applied_something(store, cs_id):
         retire_earlier_attempts(store, request_id)
     return cs_id
@@ -1178,6 +1186,7 @@ def signal(
         data = {"kind": kind, "refs": refs, "changeset": changeset, "run": run, "note": note, "at": now.isoformat()}
         signal_id = tx.create("signal", data, _PM).id
         record_named(tx, run, refs)  # a correction that names a rule counts it as applied on the run it corrects
+        learn.on_signal(tx, store.plugins.cfg, signal_id, now)  # and each one that teaches queues its learning
         return signal_id
 
 

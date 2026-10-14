@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from typing import Any
 
+from engine import learn
 from engine.cleaning import normalize
 from engine.config import Config
 from engine.dispatcher import signal
@@ -221,7 +222,14 @@ def mark_sent(
 
 
 def unmark_sent(store: Store, person: str, question_ids: list[str], action_ids: list[str]) -> None:
-    """Undo a Mark sent: the questions are open again and the person is no longer marked as told."""
+    """Undo a Mark sent: the questions are open again and the person is no longer marked as told. If the message was
+    edited before it was marked sent, what the assistant would have learned from the edit is dropped with it."""
+    view = store.read()
+    stamps = [
+        found.data["sent_at"]
+        for qid in question_ids
+        if (found := view.get("question", qid)) is not None and found.data.get("sent_at")
+    ]
     with store.transaction() as tx:
         for qid in question_ids:
             rec = tx.get("question", qid)
@@ -232,6 +240,8 @@ def unmark_sent(store: Store, person: str, question_ids: list[str], action_ids: 
             if rec is not None and person in rec.data.get("told", {}):
                 told = {k: v for k, v in rec.data["told"].items() if k != person}
                 tx.update("action", aid, {"told": told}, _PM, read_version=rec.version)
+    if stamps:
+        learn.net_out(store, "draft_edited", [person], at=stamps)
 
 
 class FollowUpError(ValueError):

@@ -33,7 +33,8 @@ ADD_ONS = "add-ons"
 #: Settings the running app takes in at once, without a restart: everything that reads them reads the shared config
 #: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
 #: each request; where and how often backups go, for each backup; how often the readable export is written; the watched
-#: sources, for each read). Any other change waits for a restart the person chooses.
+#: sources, for each read; whether and how corrections are learned from, for each correction and each learning run).
+#: Any other change waits for a restart the person chooses.
 LIVE_KEYS = (
     "ai.",
     "ui.",
@@ -46,6 +47,11 @@ LIVE_KEYS = (
     "storage.sync.shared",
     "watch.",
     "language.bare_confirmation_words",
+    "language.rule_report_phrases",
+    "dispatch.knowledge.learn",
+    "dispatch.knowledge.learn_every_minutes",
+    "dispatch.knowledge.learn_input_chars",
+    "dispatch.knowledge.learn_later_inputs",
 )
 
 

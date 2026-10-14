@@ -94,3 +94,15 @@ invariants:
     seed: >-
       This kind of work must always answer with at least one of the ops it requires, even when there is little to
       report. An answer without one is refused as a whole. When nothing was found, use the required op to say so.
+  max-ops:
+    ops: []
+    line: The answer may hold at most as many ops as this kind of work allows; more is refused as a whole.
+    seed: >-
+      This kind of work allows only a few ops in one answer, and more than that refuses the whole answer. Keep the one
+      that matters most and leave the rest out.
+  rule-not-report:
+    ops: [report.draft]
+    line: A report to the maintainers that is really a standing rule for the assistant is refused; propose it as a rule.
+    seed: >-
+      A report to the maintainers asks for a change to the product. An instruction about how the assistant should
+      behave from now on is not that: propose it as a rule, which waits for the person, and leave the report out.

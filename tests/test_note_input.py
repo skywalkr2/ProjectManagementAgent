@@ -49,7 +49,7 @@ def person_with_role(role: str) -> str:
 
 def noted(store) -> list:
     """The notes work queued about an action or a question."""
-    return [r for r in store.read().list("request") if r.data.get("about")]
+    return [r for r in store.read().list("request") if r.data.get("about") and r.data["task"] == "notes"]
 
 
 LINK = fixture_records(DEMO_B, "project")[0]["links"][0]["url"]

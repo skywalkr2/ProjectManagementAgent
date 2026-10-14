@@ -214,6 +214,22 @@ def stable_section(view: Any, task_kind: str, settings: KnowledgeSettings) -> St
     return Stable(text, ids, sorted(moved, key=_id_key))
 
 
+def all_guidance(view: Any) -> tuple[str, list[str], list[str]]:
+    """Every active rule and lesson, whatever it applies to, for work that judges the guidance itself: the text (rules
+    first, then lessons, by id, with no dates or counts), the ids it holds, and the ids of the rules among them."""
+    rules = _active(view, "rule")
+    lessons = _active(view, "lesson")
+    text = "\n\n".join(
+        part
+        for part in (
+            _section(view, HEADINGS["rules"], [(r, _rule_line(r)) for r in rules]),
+            _section(view, HEADINGS["lessons"], [(s, _entry_line(s)) for s in lessons]),
+        )
+        if part
+    )
+    return text, [r.id for r in rules] + [s.id for s in lessons], [r.id for r in rules]
+
+
 # ---- the per-input part ----------------------------------------------------------------------------------------------
 
 

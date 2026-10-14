@@ -17,6 +17,7 @@ from engine.cleaning import Cleaned, clean
 from engine.config import Config
 from engine.intake import source_text
 from engine.knowledge_section import per_input_section, stable_section, with_ancestors
+from engine.learn import is_learning
 from engine.learning import request_learns
 from engine.names import People
 from engine.ops import reference_for, schema_for
@@ -81,6 +82,10 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         return _plugin_packet(ws, store, cfg, req, kind, today)
     if kind.name == "ask":
         return _ask_packet(ws, store, cfg, req, kind, today)
+    if is_learning(kind.name):
+        from engine.learn import build as learning_packet
+
+        return learning_packet(ws, store, cfg, req, kind, today)
     raw = source_text(ws, store, req.data.get("source"))
     saved = store.read().get("source", req.data["source"]) if req.data.get("source") else None
     own_words = saved is not None and saved.data["trust"] == "trusted"

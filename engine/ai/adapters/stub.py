@@ -42,6 +42,8 @@ class StubAdapter:
             body = stand_in.read(task.request)
         elif task.kind == "sort-mail":
             body = stand_in.sort_mail(task.request)
+        elif task.kind == "learn.correction":
+            body = {"summary": "Nothing to generalize.", "topic": "", "ops": []}
         else:
             body = {"summary": "Filed the input as a note.", "ops": [{"op": "note", "text": first or "(empty input)"}]}
         return AiResult(text=json.dumps(body), model_served="stub", seconds=0.0)

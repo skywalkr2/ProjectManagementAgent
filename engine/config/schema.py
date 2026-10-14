@@ -741,6 +741,32 @@ class KnowledgeSettings(ConfigModel):
         description="The most things from corrections made before the assistant could learn from them that are "
         "offered in one catch-up list, most repeated first. The rest expire with their number shown.",
     )
+    learn: bool = Field(
+        True,
+        description="Whether the assistant looks at each correction you make (a send back, an undo, an edited "
+        "message) and proposes one lesson from it. Off: corrections are still recorded, and nothing is proposed.",
+    )
+    learn_every_minutes: int = Field(
+        30,
+        ge=1,
+        le=1440,
+        description="How often the assistant learns from corrections you made without writing anything (an undo, an "
+        "edited message, a change you pulled back). What you wrote with a correction is looked at at once.",
+    )
+    learn_input_chars: int = Field(
+        6000,
+        ge=500,
+        le=100000,
+        description="The most characters of an earlier input that the assistant is shown when it learns from a "
+        "correction. Longer inputs are cut and say so.",
+    )
+    learn_later_inputs: int = Field(
+        5,
+        ge=0,
+        le=50,
+        description="How many inputs that arrived after the corrected work, about the same items, the assistant is "
+        "shown when it learns from a correction, so a change in the world isn't taken for a mistake.",
+    )
 
 
 class DispatchFile(FileModel):
@@ -916,6 +942,21 @@ class LanguageFile(FileModel):
     run_on_separators: list[str] = Field(
         default_factory=lambda: [" / ", "; "],
         description="Separators that mean several items were crammed in one line.",
+    )
+    rule_report_phrases: list[str] = Field(
+        default_factory=lambda: [
+            "from now on",
+            "going forward",
+            "from here on",
+            "in future",
+            "should never",
+            "should always",
+            "don't ask",
+            "do not ask",
+        ],
+        description="Phrases that mark a draft report to the product's maintainers as a standing rule for the "
+        "assistant rather than a request for a change to the product. Such a report is sent back to be proposed as "
+        "a rule, which waits for you.",
     )
     never_shown: list[str] = Field(
         default_factory=list, description="Words that must never appear in anything people see (model names are added)."

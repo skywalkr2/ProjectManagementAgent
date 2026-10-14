@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 
 from engine.config import load_config
 from engine.connectors.mailbox import message_item
+from engine.learn import is_learning
 from tests.conftest import DEMO_B
 
 NOW = datetime.now(UTC).replace(microsecond=0)
@@ -55,7 +56,8 @@ def make(tmp_path, items, first_run="all", **watch):
 
 
 def requests_in(store, state):
-    return [r for r in store.read().list("request") if r.data["state"] == state]
+    """The requests for mail items in this state; the assistant's learning from a correction isn't one."""
+    return [r for r in store.read().list("request") if r.data["state"] == state and not is_learning(r.data["task"])]
 
 
 # ---- the matchers --------------------------------------------------------------------------------------------------

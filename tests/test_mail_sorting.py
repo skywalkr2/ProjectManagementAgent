@@ -414,8 +414,7 @@ def test_learning_pair_a_sender_the_assistant_got_wrong_is_kept_next_time(app, a
     later = next(s for s in store.read().list("snapshot") if s.data["title"] == "Later")
     assert later.data["set_aside"] is None
     assert any(
-        r.data["state"] == "queued" and store.read().get("source", r.data["source"]).data["title"] == "Later"
-        for r in store.read().list("request")
+        store.read().get("source", r.data["source"]).data["title"] == "Later" for r in requests_in(store, "queued")
     )
 
 

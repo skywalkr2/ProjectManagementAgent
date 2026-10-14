@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine import knowledge
+from engine import knowledge, learn
 from engine import search as workspace_search
 from engine.check_text import quoted_passages, without_links, words_of
 from engine.cleaning import normalize
@@ -128,6 +128,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         Problem("plugin-validator", "refuse", i, message) for i, message in _validate_in_order(cs, ctx)
     ]
     problems += _required_ops(cs, ctx)
+    problems += _too_many_ops(cs, ctx)
     view = ctx.store.read()
     lints = ctx.cfg.checks.lints
     known_actions = view.list("action")
@@ -213,6 +214,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", why)
         if name in KNOWLEDGE_OPS and (why := knowledge.problem(view, op)) is not None:
             refuse(i, "targets", why)
+        if isinstance(op, ReportDraftOp) and learn.rule_in_report(ctx.cfg, op.title, op.text) is not None:
+            refuse(
+                i,
+                "rule-not-report",
+                "This reads as a standing rule for the assistant, not a request for a change to the product. Don't "
+                "report it to the maintainers: propose it as a rule, which waits for the person.",
+            )
         # targets
         for project in _projects_of(op):
             if view.get("project", project) is None:
@@ -826,6 +834,27 @@ def _required_ops(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     return [Problem("required-ops", "refuse", None, f"the answer must include at least one of these ops: {names}")]
 
 
+def _too_many_ops(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """An answer to a task kind with `max_ops` that holds more ops than that is refused as a whole, so it gets a fix
+    round like any invariant and nothing from it applies."""
+    task = origin_of(ctx).get("task")
+    try:
+        kind = ctx.store.plugins.task_kind(task) if task else None
+    except Exception:
+        kind = None
+    most = getattr(kind, "max_ops", None)
+    if most is None or len(cs.ops) <= most:
+        return []
+    return [
+        Problem(
+            "max-ops",
+            "refuse",
+            None,
+            f"the answer has {len(cs.ops)} ops and this work allows at most {most}: keep the one that matters most",
+        )
+    ]
+
+
 def origin_of(ctx: Context) -> dict[str, Any]:
     """Who asked for a change, as plugin validators see it, with the run's `task` kind, the record it is `about`
     ({kind, id} or None), the `request` id and the `part` of the record the request names (or None)."""
@@ -1220,6 +1249,10 @@ def _standing(tx: Tx, ctx: Context) -> knowledge.Standing:
     person = ctx.actor == "pm" or ctx.confirmed_by_pm or _from_pm(tx, ctx)
     request = tx.get("request", ctx.inputs.request) if ctx.inputs.request else None
     reported = request is not None and request.data["origin"] in ("input", "pm")
+    if not person and request is not None and learn.is_learning(request.data["task"]):
+        # Learning from a correction restates it in the assistant's own words: a proposal the person reads, and
+        # whose wording is theirs once they keep it.
+        return knowledge.Standing(False, ctx.people.pm, "assistant", "trusted", None, request.id, ctx.store.clock())
     if person:
         origin = "person"
     elif reported or ctx.inputs.source or ctx.inputs.trust == "untrusted":
@@ -1367,7 +1400,7 @@ def _release_one(
                     read_version=q.version,
                 )
         if routed is not None:
-            _record_routed(tx, now, changeset_id, routed["question"], routed["person"], routed["name"])
+            _record_routed(tx, cfg, now, changeset_id, routed["question"], routed["person"], routed["name"])
         still = _needs_person_choice(op, ctx)
         if still is not None and still.startswith("who-is"):
             outcome["op"] = op.model_dump(mode="json", exclude_none=True)
@@ -1418,13 +1451,15 @@ def pick_owner(store: Store, question_id: str, person: str) -> None:
         a = tx.get("action", action_id)
         tx.update("action", action_id, {"owners": [{"person": person}], "status": "open"}, w, read_version=a.version)
         tx.update("question", question_id, {"status": "answered", "answer": person}, w, read_version=q.version)
-        _record_routed(tx, datetime.now(UTC), q.data["resolves"].get("changeset"), question_id, person, None)
+        _record_routed(
+            tx, store.plugins.cfg, datetime.now(UTC), q.data["resolves"].get("changeset"), question_id, person, None
+        )
 
 
 def _record_routed(
-    tx: Tx, now: datetime, changeset_id: str | None, question_id: str, person: str, name: str | None
+    tx: Tx, cfg: Config, now: datetime, changeset_id: str | None, question_id: str, person: str, name: str | None
 ) -> None:
-    """Record that the person said who a name or an owner is."""
+    """Record that the person said who a name or an owner is, and queue what the assistant learns from it."""
     refs = [r for r in (changeset_id, question_id, person) if r]
     w = WriteContext(actor="pm", trust="trusted", op="routed")
     made = tx.get("changeset", changeset_id) if changeset_id else None
@@ -1436,7 +1471,7 @@ def _record_routed(
         "note": name,
         "at": now.isoformat(),
     }
-    tx.create("signal", data, w)
+    learn.on_signal(tx, cfg, tx.create("signal", data, w).id, now)
 
 
 def _question_name(store: Store, qid: str) -> str | None:

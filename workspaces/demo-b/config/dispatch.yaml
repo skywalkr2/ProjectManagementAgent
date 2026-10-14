@@ -25,3 +25,7 @@ knowledge:
   discard_similarity: 0.8
   proposals_expire_days: 14
   catch_up_max: 20
+  learn: true
+  learn_every_minutes: 30
+  learn_input_chars: 6000
+  learn_later_inputs: 5
