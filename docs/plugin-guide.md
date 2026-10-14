@@ -1495,6 +1495,7 @@ One call to an AI provider. The engine writes it after each call, for usage and 
 | `knowledge.searches[].words` | str | `''` | The words searched for. |
 | `knowledge.searches[].kinds` | list[str] | `[]` | The kinds searched: facts, inputs, records, knowledge. |
 | `knowledge.searches[].results` | int | `0` | How many results came back. |
+| `knowledge.refused_checks` | list[str] | `[]` | The names of the checks that refused this call's answer, each once, including refusals the answer was sent back to fix. |
 
 ### `signal` (SIG-n)
 

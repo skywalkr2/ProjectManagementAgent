@@ -542,6 +542,21 @@ def _record_search(store: Store, run_id: str | None, query: workspace_search.Que
         tx.update("run", run_id, {"knowledge": {**log_, "searches": searches}}, _ENGINE, read_version=run.version)
 
 
+def _record_refusals(store: Store, run_id: str | None, problems: list) -> None:
+    """Add the checks that refused an answer to the knowledge log of the run that gave it, whether or not a fix round
+    later repairs it."""
+    names = {p.check for p in problems if p.severity == "refuse"}
+    if run_id is None or not names:
+        return
+    with store.transaction() as tx:
+        run = tx.get("run", run_id)
+        if run is None:
+            return
+        log_ = dict(run.data.get("knowledge") or {})
+        seen = sorted({*log_.get("refused_checks", []), *names})
+        tx.update("run", run_id, {"knowledge": {**log_, "refused_checks": seen}}, _ENGINE, read_version=run.version)
+
+
 def _rounds(
     store: Store,
     cfg: Config,
@@ -661,6 +676,7 @@ def _rounds(
                 )
             changeset = _draft_changeset(draft, text, out.run_id, mapping, asked)
             problems = check(changeset, ctx)
+            _record_refusals(store, out.run_id, problems)
             out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id, searched=searches > 0)
             if needs_another_round(problems):
                 if not last:
@@ -700,6 +716,7 @@ def _rounds(
             stop = "The assistant gave the same answer again after your note. Look at it with them."
             return _Outcome(run_id=out.run_id, stop=stop)
         problems = check(changeset, ctx)
+        _record_refusals(store, out.run_id, problems)
         out = _Outcome(changeset=changeset, problems=problems, run_id=out.run_id, searched=searches > 0)
         if needs_another_round(problems):
             if not last:

@@ -44,8 +44,8 @@ def env(tmp_path):
     set_responder(None)
 
 
-def limits(share: float, of_last: int) -> KnowledgeSettings:
-    return KnowledgeSettings(refusals_to_packet={"share": share, "of_last": of_last})
+def limits(share: float, of_last: int, min_runs: int = 1) -> KnowledgeSettings:
+    return KnowledgeSettings(refusals_to_packet={"share": share, "of_last": of_last, "min_runs": min_runs})
 
 
 def a_run(store, task: str, refused_by: list[str], *, whole: list[str] = ()) -> str:
@@ -146,6 +146,18 @@ def test_a_seed_lesson_enters_at_the_share_and_not_below_it(env):
     assert seed_section(view, OTHER_TASK, limits(0.0, 4)).ids == []  # a share of none still needs a refusal
 
 
+def test_no_seed_lesson_enters_below_the_minimum_number_of_runs(env):
+    _, _, store = env
+    for _ in range(3):
+        a_run(store, TASK, ["evidence"])  # every run refused, but few runs
+    view = store.read()
+
+    assert seed_section(view, TASK, limits(0.05, 50, min_runs=4)).ids == []
+    assert seed_section(view, TASK, limits(0.05, 50, min_runs=3)).ids == ["SEED-evidence"]
+    a_run(store, TASK, [])
+    assert seed_section(store.read(), TASK, limits(0.05, 50, min_runs=4)).ids == ["SEED-evidence"]
+
+
 def test_seed_lessons_come_in_the_files_order_and_only_for_checks_that_have_one(env):
     _, _, store = env
     a_run(store, TASK, ["targets", "evidence", "blocked-wording", "question-links"])
@@ -162,6 +174,7 @@ def test_a_packet_carries_the_seed_lesson_in_its_stable_part_and_logs_it(env):
     ws, cfg, store = env
     cfg.dispatch.knowledge.refusals_to_packet.of_last = 2
     cfg.dispatch.knowledge.refusals_to_packet.share = 0.5
+    cfg.dispatch.knowledge.refusals_to_packet.min_runs = 2
     a_run(store, TASK, ["evidence"])
     a_run(store, TASK, [])
     handed = hand_in(ws, store, pasted="Subject: One\n\nThe proof is late.", now=NOW)
@@ -186,6 +199,7 @@ def test_a_refusal_the_applier_records_is_counted_and_brings_its_lesson_next_tim
     bad = {"ops": [{"op": "fact", "text": "Proof ships Nov 5", "evidence": {"quote": "words nobody wrote"}}]}
     set_responder(lambda task: json.dumps(bad))
     cfg.dispatch.knowledge.refusals_to_packet.of_last = 1
+    cfg.dispatch.knowledge.refusals_to_packet.min_runs = 1
     handed = hand_in(ws, store, pasted="Subject: Proof\n\nThe proof ships soon.", now=NOW)
     process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW)
 
@@ -195,14 +209,32 @@ def test_a_refusal_the_applier_records_is_counted_and_brings_its_lesson_next_tim
     assert SEEDED["evidence"].seed in packet.task.stable and packet.knowledge.given == ["SEED-evidence"]
 
 
+def test_a_refusal_a_fix_round_repaired_is_counted_from_the_runs_knowledge_log(env):
+    ws, cfg, store = env
+    bad = {"ops": [{"op": "fact", "text": "Proof ships Nov 5", "evidence": {"quote": "words nobody wrote"}}]}
+    good = {"ops": [{"op": "fact", "text": "The proof is late", "evidence": {"quote": "The proof is late"}}]}
+    answers = [json.dumps(bad), json.dumps(good)]
+    set_responder(lambda task: answers.pop(0) if len(answers) > 1 else answers[0])
+    handed = hand_in(ws, store, pasted="Subject: Proof\n\nThe proof is late.", now=NOW)
+
+    process(ws, store, cfg, Router(cfg, store, env={}), handed.request, now=NOW)
+
+    calls = store.read().find("run", {"request": handed.request})
+    assert len(calls) == 2
+    assert [c.data["knowledge"]["refused_checks"] for c in calls] == [["evidence"], []]
+    (changeset,) = store.read().list("changeset")
+    assert changeset.data["status"] == "applied"  # nothing was refused in the end
+    assert refusal_shares(store.read(), TASK, 50) == {"evidence": 1.0}
+
+
 def test_the_refusals_setting_has_its_defaults_and_both_demo_workspaces_set_it():
     from engine.config import load_config
 
     default = KnowledgeSettings().refusals_to_packet
-    assert (default.share, default.of_last) == (0.05, 50)
+    assert (default.share, default.of_last, default.min_runs) == (0.05, 50, 10)
     for root in (DEMO_B, DEMO_B.parent / "demo-a"):
         loaded = load_config(root / "config", env={}).dispatch.knowledge.refusals_to_packet
-        assert (loaded.share, loaded.of_last) == (0.05, 50)
+        assert (loaded.share, loaded.of_last, loaded.min_runs) == (0.05, 50, 10)
         assert "refusals_to_packet" in (root / "config" / "dispatch.yaml").read_text(encoding="utf-8")
 
 

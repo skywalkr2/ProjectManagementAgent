@@ -18,3 +18,4 @@ knowledge:
   refusals_to_packet:
     share: 0.05
     of_last: 50
+    min_runs: 10

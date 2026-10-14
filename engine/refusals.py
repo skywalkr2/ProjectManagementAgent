@@ -2,9 +2,10 @@
 
 The applier records, on each changeset, the checks that refused each of its ops. A run of a task kind is a request that
 the assistant answered with a changeset. The share of a check is how many of the task kind's last `of_last` runs it
-refused at least once, over the runs counted. A check whose share reaches `knowledge.refusals_to_packet.share` has its
-seed lesson (`engine/defaults/invariants.yaml`) added to that task kind's stable section, marked as the product's own
-guidance, in the order the file lists the checks.
+refused at least once, over the runs counted. Refusals a fix round repaired count too: each call's knowledge log names
+the checks that refused its answer. Below `min_runs` runs counted, no seed lesson is given. A check whose share reaches
+the configured share has its seed lesson (`engine/defaults/invariants.yaml`) added to that task kind's stable section,
+marked as the product's own guidance, in the order the file lists the checks.
 """
 
 from __future__ import annotations
@@ -27,29 +28,46 @@ def seed_id(check: str) -> str:
     return f"SEED-{check}"
 
 
-def recent_runs(view: Any, task_kind: str, of_last: int) -> list[Any]:
-    """The task kind's last `of_last` assistant runs that produced a changeset, oldest first."""
-    requests = [r for r in view.find("request", {"task": task_kind}) if r.data.get("changeset")]
-    runs = [c for r in requests if (c := view.get("changeset", r.data["changeset"])) is not None and c.data.get("run")]
-    return runs[-of_last:] if of_last > 0 else []
+def recent_runs(view: Any, task_kind: str, of_last: int) -> list[tuple[Any, Any]]:
+    """The task kind's last `of_last` assistant runs that produced a changeset, oldest first, each as its request and
+    changeset."""
+    pairs = [
+        (r, c)
+        for r in view.find("request", {"task": task_kind})
+        if r.data.get("changeset")
+        and (c := view.get("changeset", r.data["changeset"])) is not None
+        and c.data.get("run")
+    ]
+    return pairs[-of_last:] if of_last > 0 else []
 
 
-def _refused_by(changeset: Any) -> set[str]:
-    """The names of the checks that refused something in a changeset."""
+def _refused_by(view: Any, request: Any, changeset: Any) -> set[str]:
+    """The names of the checks that refused something in one run: those on the changeset it ended with, and those
+    every call made for the request recorded in its knowledge log, which includes refusals a fix round repaired."""
     problems = [*changeset.data.get("problems", [])]
     for outcome in changeset.data.get("ops", []):
         problems += outcome.get("problems", [])
-    return {p["check"] for p in problems if p.get("severity") == "refuse" and p.get("check")}
+    names = {p["check"] for p in problems if p.get("severity") == "refuse" and p.get("check")}
+    for call in view.find("run", {"request": request.id}):
+        names.update((call.data.get("knowledge") or {}).get("refused_checks", []))
+    return names
+
+
+def counted(view: Any, task_kind: str, of_last: int) -> tuple[dict[str, int], int]:
+    """For each check that refused any of the task kind's last `of_last` runs, how many it refused, and how many runs
+    were counted."""
+    runs = recent_runs(view, task_kind, of_last)
+    counts: dict[str, int] = {}
+    for request, changeset in runs:
+        for name in _refused_by(view, request, changeset):
+            counts[name] = counts.get(name, 0) + 1
+    return dict(sorted(counts.items())), len(runs)
 
 
 def refusal_shares(view: Any, task_kind: str, of_last: int) -> dict[str, float]:
     """For each check that refused any of the task kind's last `of_last` runs, the share of those runs it refused."""
-    runs = recent_runs(view, task_kind, of_last)
-    counts: dict[str, int] = {}
-    for run in runs:
-        for name in _refused_by(run):
-            counts[name] = counts.get(name, 0) + 1
-    return {name: count / len(runs) for name, count in sorted(counts.items())}
+    counts, runs = counted(view, task_kind, of_last)
+    return {name: count / runs for name, count in counts.items()}
 
 
 def seed_section(
@@ -59,9 +77,12 @@ def seed_section(
     known: dict[str, invariants.Invariant] | None = None,
 ) -> Seeded:
     """The seed lessons of the checks that refuse the task kind's runs at or above the configured share. Nothing for a
-    check with no seed lesson, or that refused no run."""
+    check with no seed lesson, or that refused no run, and nothing until `min_runs` runs are counted."""
     limits = settings.refusals_to_packet
-    shares = refusal_shares(view, task_kind, limits.of_last)
+    counts, runs = counted(view, task_kind, limits.of_last)
+    if runs < limits.min_runs:
+        return Seeded("", [])
+    shares = {name: count / runs for name, count in counts.items()}
     lessons = [
         i
         for i in (known if known is not None else invariants.load()).values()

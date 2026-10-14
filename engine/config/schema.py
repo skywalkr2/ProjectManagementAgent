@@ -659,6 +659,13 @@ class RefusalsToPacketSettings(ConfigModel):
         description="How many of a kind of work's most recent runs are counted when working out which checks refuse "
         "it often.",
     )
+    min_runs: int = Field(
+        10,
+        ge=1,
+        le=1000,
+        description="How many recent runs of a kind of work must be counted before any check's guidance is added to "
+        "its packets, so a few early refusals don't decide it.",
+    )
 
 
 class KnowledgeSettings(ConfigModel):

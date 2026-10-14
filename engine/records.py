@@ -1298,6 +1298,11 @@ class RunKnowledge(BaseModel):
     facts_left_out: int = Field(0, description="How many facts of the input's projects didn't fit the facts budget.")
     stable_chars: int = Field(0, description="The size of the knowledge sent with every run, in characters.")
     searches: list[RunSearch] = Field(default_factory=list, description="The searches it asked for.")
+    refused_checks: list[str] = Field(
+        default_factory=list,
+        description="The names of the checks that refused this call's answer, each once, including refusals the answer "
+        "was sent back to fix.",
+    )
 
 
 class Run(Record):
