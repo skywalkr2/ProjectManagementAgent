@@ -9,10 +9,24 @@ and gives them one screen to review and send. The design is in `docs/design/`.
 
 **The intent:** to do with this tool what used to take many people and a large budget, and to finish real delivery, not
 just produce documents about it. The measure is delivered work that passed its own acceptance, not the volume of output.
+The goal is to make business consulting teams unnecessary (owner, 2026-10-14). To do that, the packs must deliver what
+clients pay consultants for beyond documents:
+1. **Knowing what good looks like:** deep playbooks per field (design 3.8), built on by the workspace's own lessons.
+2. **Evidence behind every recommendation:** interviews, data and documents cited, as facts are today.
+3. **Alignment:** interview guides, workshop plans, a synthesis of what each person said, and open disagreements put to
+   the owner as decisions; the client's own manager runs the room.
+4. **Accountability:** every decision, approval and requirement traced to delivery and acceptance.
+5. **Results shown:** delivered and accepted work, with the trail behind it.
+
+**The rollout:** first in the real world with one person and one idea; then for full-time teams through the hosted
+organization install (design 11.8, owner 2026-10-13).
 
 1. The core handles everyday project support, as designed.
 2. Packs extend it, each useful on its own.
 3. A full set of packs, bought together, carries a business requirement to delivery:
+   - **Idea validation** comes first, when the starting point is an idea: who it is for, the problem it solves, what must
+     be true for it to work, the cheapest test of each assumption, the evidence that came back, and a go or no-go before
+     money goes into building (owner, 2026-10-14).
    - **Business analysis** turns the requirement into functional requirements, reviewed with the person back and forth
      until validated.
    - Then two packs work from them: **project management** plans the delivery (schedule, plan and the outputs a project

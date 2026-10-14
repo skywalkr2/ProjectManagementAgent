@@ -3,6 +3,14 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: The end-state goal: replace consulting teams; idea validation first; one person, then teams
+
+**Decided by:** the owner. **What:** the end state aims to make business consulting teams unnecessary, so the packs
+must cover what clients pay consultants for (playbooks, evidence, alignment, accountability, results shown); an idea
+validation step comes before business analysis; the rollout is one person with one idea in the real world first, then
+full-time teams through the hosted organization install (11.8). *Kind:* product direction, packs; no core change now.
+**Impact:** the charter's "End state"; no change to 1.0's scope.
+
 ## 2026-10-14: The end state beyond 1.0: a delivery chain of packs
 
 **Decided by:** the owner. **What:** the core stays everyday project support; packs extend it; a full set of packs
