@@ -209,6 +209,23 @@ test("marking a to-do done uses the action path and offers Undo", async () => {
   expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
 });
 
+test("a to-do's menu adds a note to Mark done, with the cursor in the box", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  const { calls } = open({
+    "POST actions/ACT-1/status": () => ({ ok: "ACT-1", request: "REQ-4" }),
+  });
+  await user.click(await screen.findByRole("button", { name: "More actions for Send the index" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Add a note" }));
+  const box = await screen.findByRole("textbox", { name: "Your note" });
+  expect(box).toHaveFocus();
+  await user.type(box, "The printer has it now.");
+  await user.keyboard("{Enter}");
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST actions/ACT-1/status")!.body).toEqual({ status: "done", note: "The printer has it now." }),
+  );
+  expect(await screen.findByText("Marked done. Helper will read your note.")).toBeInTheDocument();
+});
+
 test("came in: unread shows a New label, today's mail its time and older mail its weekday, with the closed-by-rules line", async () => {
   const user = userEvent.setup({ advanceTimers: () => {} });
   const { onView } = open();

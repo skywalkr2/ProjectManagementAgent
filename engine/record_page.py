@@ -8,6 +8,7 @@ from datetime import date, datetime
 from typing import Any, Literal, get_args, get_origin
 
 from engine.names import render_owner
+from engine.origin import origins
 from engine.records import ref_fields, values_at
 from engine.texts import long_text_fields
 
@@ -89,6 +90,8 @@ def page(
         details.append({"field": field, "value": value, "type": _type_of(info.annotation), "refs": found})
 
     actions, questions = _open_with(view, kind, record_id)
+    action_origin = origins(view, "action", [a.id for a in actions])
+    question_origin = origins(view, "question", [q.id for q in questions])
     return {
         "kind": kind,
         "id": record.id,
@@ -103,6 +106,7 @@ def page(
                 "owners": [owner_of(o) for o in a.data.get("owners") or []],
                 "project": a.data.get("project"),
                 "project_name": name_of("project", a.data["project"]) if a.data.get("project") else None,
+                "origin": action_origin[a.id],
             }
             for a in actions
         ],
@@ -114,6 +118,7 @@ def page(
                 "to_name": name_of("person", q.data["to"]) if q.data.get("to") else None,
                 "status": q.data.get("status"),
                 "kind": q.data.get("kind"),
+                "origin": question_origin[q.id],
             }
             for q in questions
         ],

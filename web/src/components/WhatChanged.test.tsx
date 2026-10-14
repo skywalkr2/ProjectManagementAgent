@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
+import { revealOrKeep } from "../lib/reveal";
 import { fakeApi, renderApp } from "../test-utils";
 import { WhatChanged } from "./WhatChanged";
 
@@ -353,4 +354,15 @@ test("a request waiting for the person to be named offers Say who you are, which
   await user.click(within(row).getByRole("button", { name: "Say who you are" }));
   expect(open).toHaveBeenCalledWith("workspace");
   expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
+});
+
+test("a change asked for before this screen opened is opened once its list has loaded", async () => {
+  const done = change("REQ-2", { state: "done" });
+  done.changeset!.summary = "Added the action about the proofs.";
+  fakeApi({ "GET changes": () => [change("REQ-1", { state: "done" }), done] });
+  // The person chose "Where it came from" on another screen, which then opened this one.
+  expect(revealOrKeep("changeset", "CS-REQ-2")).toBe(false);
+  renderApp(<WhatChanged />);
+  expect(await screen.findByText("Added the action about the proofs.")).toBeInTheDocument();
+  expect(screen.queryByText("One fact.")).toBeNull();
 });

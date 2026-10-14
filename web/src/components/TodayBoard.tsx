@@ -12,6 +12,8 @@ import type { View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { FollowUps } from "./FollowUps";
 import { HoldPill, useHold } from "./OnHold";
+import { NoteBox, useNoted } from "./NoteBox";
+import { OriginLink } from "./Origin";
 import { PluginToday } from "./PluginToday";
 import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
@@ -315,35 +317,51 @@ function TodoColumn() {
 function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
   const { t } = useWords();
   const act = useAct();
+  const noted = useNoted();
+  const row = useRef<HTMLLIElement>(null);
+  const [noting, setNoting] = useState(false);
   const { item } = props;
   const hold = useHold({ id: item.action, on_hold: item.on_hold });
   const meta = [props.project, props.showDue && item.due ? t("today.todo.due", { date: day(item.due) }) : ""]
     .filter(Boolean)
     .join(" · ");
-  const done = () =>
-    void act(
-      () => api.actionStatus(item.action, "done"),
-      () => ({ message: t("toast.action_done"), undo: () => api.actionStatus(item.action, "open") }),
+  const done = (note?: string) =>
+    act(
+      () => api.actionStatus(item.action, "done", note),
+      (result) => ({
+        message: noted(t("toast.action_done"), result.request),
+        undo: () => api.actionStatus(item.action, "open"),
+      }),
     );
   return (
-    <li className="tb-row" data-row tabIndex={-1}>
+    <li className={noting ? "tb-row noting" : "tb-row"} data-row tabIndex={-1} ref={row}>
       <div className="tb-what">
         <div className="tb-title">
           {item.text}
           {item.on_hold && <HoldPill what={item.on_hold} due={item.due} />}
         </div>
         {meta && <div className="tb-meta">{meta}</div>}
+        <OriginLink origin={item.origin} />
       </div>
       <button
         type="button"
         className="btn small"
         data-key="primary"
         aria-label={t("today.todo.done_named", { text: item.text })}
-        onClick={done}
+        onClick={() => void done()}
       >
         {t("followups.mark_done")}
       </button>
-      <RowMenu label={item.text} actions={[hold.entry]} />
+      <RowMenu label={item.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry]} />
+      {noting && (
+        <NoteBox
+          sends={[{ label: t("followups.mark_done"), run: done }]}
+          onClose={() => {
+            setNoting(false);
+            row.current?.focus();
+          }}
+        />
+      )}
       {hold.form}
     </li>
   );

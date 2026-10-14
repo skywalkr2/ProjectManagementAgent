@@ -278,6 +278,7 @@
   "ask.owner": "Who owns this?",
   "ask.use_person": "Use this person",
   "ask.add_owner": "Add the action",
+  "ask.note_needs_person": "Choose a person first.",
 
   "person.choose": "Choose a person…",
   "person.suggested": "Likely",
@@ -291,6 +292,15 @@
   "source.quote_end": "Quoted passage ends.",
 
   "link.domain": "({domain})",
+
+  "note.add": "Add a note",
+  "note.label": "Your note",
+  "note.hint": "{assistant} reads it along with what you just did. Enter sends it; Escape closes this box.",
+  "toast.with_note": "{message} {assistant} will read your note.",
+
+  "origin.link": "Where it came from",
+  "origin.title": "Where it came from",
+  "origin.close": "Close",
 
   "followups.title": "Follow-ups",
   "followups.empty": "Nobody is waiting on anything from you. Questions and actions collect here once you hand something in.",

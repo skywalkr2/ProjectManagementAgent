@@ -43,7 +43,10 @@ class SentText(BaseModel):
 
 
 class Answer(BaseModel):
-    text: str | None = Field(None, description="A written answer.")
+    text: str | None = Field(
+        None,
+        description="A written answer; with a person chosen, a note that goes with the choice (it is read).",
+    )
     person: str | None = Field(None, description="The person chosen, for questions that ask who.")
 
 
@@ -364,6 +367,19 @@ class Link(BaseModel):
     url: str
 
 
+class Origin(BaseModel):
+    """Where an action, a question or a decision came from, for its "Where it came from" link. `link`: the original
+    page (`url`, shown with its real domain). `source`: the saved text of the input (`source`, read from
+    GET /api/sources/{id}). `change`: the change that made the item (`changeset`) and the request behind it
+    (`request`), shown in What changed. An item with none of these has no origin (null)."""
+
+    kind: Literal["link", "source", "change"]
+    url: str | None = Field(None, description="The page's address, for a link.")
+    source: str | None = Field(None, description="The input's id, for a link or a source.")
+    changeset: str | None = Field(None, description="The change that made the item, for a change.")
+    request: str | None = Field(None, description="The request behind that change, for a change.")
+
+
 class SourceView(BaseModel):
     id: str
     title: str
@@ -388,6 +404,7 @@ class FollowupQuestion(BaseModel):
     )
     about: str | None
     options: list[Option]
+    origin: Origin | None = Field(None, description="Where the question came from, for its link.")
 
 
 class FollowupAction(BaseModel):
@@ -406,6 +423,7 @@ class FollowupAction(BaseModel):
         description="Whether the follow-up rule says chasing is the next step: its due date is near or past, "
         "or it has waited long enough with no word, and it is not on hold.",
     )
+    origin: Origin | None = Field(None, description="Where the action came from, for its link.")
 
 
 class FollowupSection(BaseModel):
@@ -656,6 +674,7 @@ class OpenAction(BaseModel):
     owners: list[str] = Field(default_factory=list, description="The owners, written in the workspace's owner format.")
     project: str | None = None
     project_name: str | None = None
+    origin: Origin | None = Field(None, description="Where the action came from, for its link.")
 
 
 class OpenQuestion(BaseModel):
@@ -665,6 +684,7 @@ class OpenQuestion(BaseModel):
     to_name: str | None = None
     status: str | None = None
     kind: str | None = None
+    origin: Origin | None = Field(None, description="Where the question came from, for its link.")
 
 
 class ActivityEntry(BaseModel):
@@ -935,6 +955,9 @@ class GenericRecordView(BaseModel):
     version: int
     fields: dict[str, Any]
     long_text: list[str]
+    origin: Origin | None = Field(
+        None, description="For an action or a question: where it came from, for its link. Null for any other record."
+    )
 
 
 class OutsideEditView(BaseModel):
@@ -1035,6 +1058,7 @@ class TodoView(BaseModel):
     due: date | None = None
     overdue: bool = Field(description="Whether it is past its due date; never true while it is on hold.")
     on_hold: str | None = Field(None, description="What it waits for while it is on hold; its due date is kept.")
+    origin: Origin | None = Field(None, description="Where the action came from, for its link.")
 
 
 class QueueLineView(BaseModel):

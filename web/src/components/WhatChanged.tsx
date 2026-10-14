@@ -41,14 +41,31 @@ export function WhatChanged(props: { compact?: boolean; onOpenGuide?: (step: str
   const [revealed, setRevealed] = useState<{ id: string; n: number } | null>(null);
   const latest = useRef(changes.data);
   latest.current = changes.data;
-  useReveal("changeset", (changeset) => {
-    const item = latest.current?.find((c) => c.changeset?.id === changeset);
-    if (!item) return false;
+  const [wanted, setWanted] = useState<string | null>(null);
+  const openChangeset = (changeset: string): boolean => {
+    const all = latest.current;
+    const item = all?.find((c) => c.changeset?.id === changeset);
+    if (!all || !item) return false;
     setFilter("all");
-    setShown((prev) => new Set([...(prev ?? []), item.id]));
+    setShown((prev) => new Set([...(prev ?? all.map((c) => c.id)), item.id]));
     setRevealed({ id: item.id, n: Date.now() });
     return true;
+  };
+  useReveal("changeset", (changeset) => {
+    // Opened from another screen before the list has loaded: it opens the row once it has.
+    if (!latest.current) {
+      setWanted(changeset);
+      return true;
+    }
+    return openChangeset(changeset);
   });
+  useEffect(() => {
+    if (wanted && changes.data) {
+      openChangeset(wanted);
+      setWanted(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wanted, changes.data]);
 
   // Rows that arrive while the PM is reading wait behind "N new · Show" instead of moving the list,
   // except the PM's own hand-ins, which they expect to see.

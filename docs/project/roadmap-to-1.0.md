@@ -246,7 +246,7 @@ real use starts. The rest (L-more) comes after the packs.
   - The day-30 scenario meets its written expectations.
 - **Ready for real use** (the original designer's L0 sign-off, 2026-10-13): five things the first week of real use needs, each a small screen change built here
   with its test; phase B keeps only their final layout:
-  - [ ] the note box on the action buttons (the intake is built; the screens send no note yet);
+  - [x] the note box on the action buttons: the row's menu on Mark done (Follow-ups and Today's to-do list), They finished it, Followed up and the pick of an owner has Add a note, sent with the act on the same route. Built: `web/src/components/NoteBox.test.tsx` (every button: the note is sent with the act, no note sends none, the cursor starts in the box), `web/src/components/TodayBoard.test.tsx::a to-do's menu adds a note to Mark done, with the cursor in the box`;
   - [x] the header's "alive" line (the assistant's last run and what is queued, amber or red when something is wrong): built
     with `web/src/shell/AssistantLine.test.tsx` (fine, amber, red, the popover's contents), `web/src/shell/status.test.ts`
     (`aliveState`), `web/src/shell/Header.test.tsx` and `tests/test_assistant_status.py` (the status view). The header is
@@ -268,8 +268,7 @@ real use starts. The rest (L-more) comes after the packs.
     `tests/test_on_hold_and_follow_ups.py::test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_hold_leaves_both`,
     `tests/test_on_hold_and_follow_ups.py::test_the_old_nudge_setting_is_read_as_the_question_wait`, and the pill tests in
     `web/src/components/FollowUps.test.tsx`. Top priorities' lines read it when that list is built);
-  - [ ] "where it came from" as a working link on actions, questions, decisions and knowledge records, so Keep can be
-    judged against the evidence.
+  - [x] "where it came from" as a working link on actions, questions and decisions (the page, else the saved text, else the change and its request); knowledge records with L1, so Keep can be judged against the evidence. Built: `tests/test_origin.py` (the three cases, none, Today's to-do, record pages), `web/src/components/Origin.test.tsx` (a Follow-ups row), `web/src/components/RecordPage.test.tsx::an action's page shows where it came from as a link, in place of the input's id`. The knowledge-record link is built with L1 ("Knowledge keeps its provenance").
 
 **Then the owner's real use starts** (owner, 2026-10-12), running through phases B and C beside the build. Building stays
 one stream; the owner uses it daily on their own mail, calendar and notes. For the first month, two numbers are reviewed

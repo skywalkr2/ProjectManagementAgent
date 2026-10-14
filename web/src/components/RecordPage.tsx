@@ -10,6 +10,7 @@ import { changedFields, editableFields, initialDraft, type Draft } from "../lib/
 import { readable, readableTail, useValueLines } from "../lib/records";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
+import { OriginLink } from "./Origin";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { TextSection } from "./TextSection";
@@ -46,7 +47,8 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
   const offered = editableFields(fields.data?.fields ?? []);
   const rows = data
     ? Object.entries(data.fields)
-        .filter(([name]) => name !== "id")
+        // The id of the input an item came from is shown as its "Where it came from" link instead.
+        .filter(([name]) => name !== "id" && !(name === "source" && data.origin))
         .map(([name, value]) => ({ name, lines: shown(name, value) }))
         .filter((row) => row.lines.length > 0)
     : [];
@@ -77,6 +79,7 @@ export function RecordPage(props: { kind: string; id: string; onBack: () => void
       )}
       {data && (
         <>
+          <OriginLink origin={data.origin} />
           <section aria-labelledby="record-details">
             <div className="heading">
               <h3 id="record-details">{t("record.details")}</h3>

@@ -171,6 +171,7 @@ from engine.followups import (
 from engine.intake import IntakeError, hand_in, note_as_input, source_text
 from engine.names import People
 from engine.ops import StageMoveOp
+from engine.origin import origins
 from engine.plugin_api import CORE_LINE_ACTIONS
 from engine.plugin_host import check_about
 from engine.prompts import render
@@ -345,6 +346,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             version=record.version,
             fields={k: v for k, v in record.data.items() if k not in texts and k != "ext"},
             long_text=list(texts),
+            origin=origins(store.read(), kind, [id]).get(id) if kind in ("action", "question") else None,
         )
 
     @r.get("/lists")
@@ -513,7 +515,9 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         """The person's own open actions: overdue, due today, then the rest."""
         from engine import today
 
-        return [TodoView(**vars(t)) for t in today.todo(store, cfg, datetime.now(UTC))]
+        found = today.todo(store, cfg, datetime.now(UTC))
+        origin = origins(store.read(), "action", [t.action for t in found])
+        return [TodoView(**vars(t), origin=origin[t.action]) for t in found]
 
     @r.get("/today/arrived")
     def today_arrived() -> InboxView:
@@ -1522,7 +1526,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.get("/followups")
     def followups() -> list[FollowupSection]:
         people = People(store, cfg)
-        return [_section(s, people) for s in sections(store, cfg, date.today())]
+        found = sections(store, cfg, date.today())
+        view = store.read()
+        action_origin = origins(view, "action", [a["id"] for s in found for a in s.actions])
+        question_origin = origins(view, "question", [q["id"] for s in found for q in s.questions])
+        return [_section(s, people, action_origin, question_origin) for s in found]
 
     @r.post("/followups/{person}/mark-sent")
     def sent(person: str, body: SentText) -> SentCounts:
@@ -1924,7 +1932,7 @@ def _op_view(o: dict[str, Any], store: Store, people: People, projects: dict[str
     )
 
 
-def _section(s: Any, people: People) -> FollowupSection:
+def _section(s: Any, people: People, action_origin: dict[str, Any], question_origin: dict[str, Any]) -> FollowupSection:
     questions = []
     for q in s.questions:
         resolves = q.get("resolves") or {}
@@ -1941,6 +1949,7 @@ def _section(s: Any, people: People) -> FollowupSection:
                 chase_due=q["chase_due"],
                 about=resolves.get("kind"),
                 options=[Option(id=pid, name=people.name(pid)) for pid in q["options"]],
+                origin=question_origin.get(q["id"]),
             )
         )
     actions = [
@@ -1954,6 +1963,7 @@ def _section(s: Any, people: People) -> FollowupSection:
             followed_up=a["followed_up"],
             on_hold=a["on_hold"],
             chase_due=a["chase_due"],
+            origin=action_origin.get(a["id"]),
         )
         for a in s.actions
     ]

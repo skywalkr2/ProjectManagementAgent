@@ -1141,7 +1141,7 @@
                 "type": "null"
               }
             ],
-            "description": "A written answer.",
+            "description": "A written answer; with a person chosen, a note that goes with the choice (it is read).",
             "title": "Text"
           }
         },
@@ -3182,6 +3182,17 @@
             "description": "What the action waits for while it is on hold; an action on hold is never chased.",
             "title": "On Hold"
           },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the action came from, for its link."
+          },
           "project_name": {
             "title": "Project Name",
             "type": "string"
@@ -3264,6 +3275,17 @@
             },
             "title": "Options",
             "type": "array"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the question came from, for its link."
           },
           "sent": {
             "anyOf": [
@@ -3390,6 +3412,17 @@
             },
             "title": "Long Text",
             "type": "array"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For an action or a question: where it came from, for its link. Null for any other record."
           },
           "version": {
             "title": "Version",
@@ -4429,6 +4462,17 @@
             "title": "Id",
             "type": "string"
           },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the action came from, for its link."
+          },
           "owners": {
             "description": "The owners, written in the workspace's owner format.",
             "items": {
@@ -4487,6 +4531,17 @@
               }
             ],
             "title": "Kind"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the question came from, for its link."
           },
           "status": {
             "anyOf": [
@@ -4670,6 +4725,73 @@
           "name"
         ],
         "title": "OrganizationView",
+        "type": "object"
+      },
+      "Origin": {
+        "description": "Where an action, a question or a decision came from, for its \"Where it came from\" link. `link`: the original\npage (`url`, shown with its real domain). `source`: the saved text of the input (`source`, read from\nGET /api/sources/{id}). `change`: the change that made the item (`changeset`) and the request behind it\n(`request`), shown in What changed. An item with none of these has no origin (null).",
+        "properties": {
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change that made the item, for a change.",
+            "title": "Changeset"
+          },
+          "kind": {
+            "enum": [
+              "link",
+              "source",
+              "change"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The request behind that change, for a change.",
+            "title": "Request"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The input's id, for a link or a source.",
+            "title": "Source"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The page's address, for a link.",
+            "title": "Url"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "Origin",
         "type": "object"
       },
       "OutsideEditView": {
@@ -9179,6 +9301,17 @@
             ],
             "description": "What it waits for while it is on hold; its due date is kept.",
             "title": "On Hold"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the action came from, for its link."
           },
           "overdue": {
             "description": "Whether it is past its due date; never true while it is on hold.",

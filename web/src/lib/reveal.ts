@@ -13,6 +13,16 @@ export function reveal(type: Revealable, id: string): boolean {
   return event.defaultPrevented;
 }
 
+let waiting: { type: Revealable; id: string } | null = null;
+
+/** Like `reveal`, for a caller that can take the person to the screen that holds the item: when no list on this screen
+ * does, the request is kept for the list that mounts next, which opens the row. True when one did at once. */
+export function revealOrKeep(type: Revealable, id: string): boolean {
+  if (reveal(type, id)) return true;
+  waiting = { type, id };
+  return false;
+}
+
 /** Answer requests for one kind of item: `handle` opens the row and returns true, or returns false when it has no such row. */
 export function useReveal(type: Revealable, handle: (id: string) => boolean): void {
   const latest = useRef(handle);
@@ -23,6 +33,11 @@ export function useReveal(type: Revealable, handle: (id: string) => boolean): vo
       if (detail?.type === type && !event.defaultPrevented && latest.current(detail.id)) event.preventDefault();
     };
     window.addEventListener(EVENT, onReveal);
+    if (waiting?.type === type) {
+      const kept = waiting;
+      waiting = null;
+      latest.current(kept.id);
+    }
     return () => window.removeEventListener(EVENT, onReveal);
   }, [type]);
 }

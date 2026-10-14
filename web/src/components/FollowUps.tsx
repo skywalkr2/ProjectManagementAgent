@@ -11,6 +11,8 @@ import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
 import { HoldPill, useHold } from "./OnHold";
+import { NoteBox, useNoted } from "./NoteBox";
+import { OriginLink } from "./Origin";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { useAddOwnRequest } from "./HandIn";
 import { SafeLink, SafeText } from "./SafeText";
@@ -133,6 +135,7 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean; r
 function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number }) {
   const { t } = useWords();
   const act = useAct();
+  const noted = useNoted();
   const q = props.question;
   const ref = useRef<HTMLLIElement>(null);
   const [answer, setAnswer] = useState("");
@@ -151,6 +154,7 @@ function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number })
             <SafeLink label={l.label} url={l.url} />
           </div>
         ))}
+        <OriginLink origin={q.origin} />
       </div>
       <div className="full">
         {who ? (
@@ -162,7 +166,7 @@ function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number })
               e.preventDefault();
               void act(
                 () => api.answer(q.id, { text: answer }),
-                () => ({ message: t("toast.answered") }),
+                (done) => ({ message: noted(t("toast.answered"), done.request) }),
               );
             }}
           >
@@ -185,13 +189,15 @@ function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number })
 function OwnActionRow(props: { action: S["FollowupAction"] }) {
   const { t } = useWords();
   const act = useAct();
+  const noted = useNoted();
   const a = props.action;
   const ref = useRef<HTMLLIElement>(null);
   const hold = useHold(a);
-  const done = () =>
+  const [noting, setNoting] = useState(false);
+  const done = (note?: string) =>
     act(
-      () => api.actionStatus(a.id, "done"),
-      () => ({ message: t("toast.action_done"), undo: () => api.actionStatus(a.id, "open") }),
+      () => api.actionStatus(a.id, "done", note),
+      (result) => ({ message: noted(t("toast.action_done"), result.request), undo: () => api.actionStatus(a.id, "open") }),
     );
   useRowKeys(ref, { primary: () => void done() });
   return (
@@ -202,13 +208,23 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
           {a.on_hold && <HoldPill what={a.on_hold} due={a.due} />}
         </div>
         <div className="meta">{actionMeta(a, t)}</div>
+        <OriginLink origin={a.origin} />
       </div>
       <div className="acts">
         <button type="button" className="btn primary" onClick={() => void done()}>
           {t("followups.mark_done")}
         </button>
-        <RowMenu label={a.text} actions={[hold.entry]} />
+        <RowMenu label={a.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry]} />
       </div>
+      {noting && (
+        <NoteBox
+          sends={[{ label: t("followups.mark_done"), run: done }]}
+          onClose={() => {
+            setNoting(false);
+            ref.current?.focus();
+          }}
+        />
+      )}
       {hold.form}
     </li>
   );
@@ -424,6 +440,7 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
           <WaitingPill days={q.waiting_days} chase={!!q.chase_due} />
         </div>
         {meta && <div className="meta">{meta}</div>}
+        <OriginLink origin={q.origin} />
       </div>
       <div className="acts">
         {!replying && (
@@ -472,18 +489,24 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
 function WaitingAction(props: { action: S["FollowupAction"]; person: string; name: string }) {
   const { t, tn } = useWords();
   const act = useAct();
+  const noted = useNoted();
   const a = props.action;
   const first = props.name.split(" ")[0];
-  const finished = () =>
+  const ref = useRef<HTMLLIElement>(null);
+  const [noting, setNoting] = useState(false);
+  const finished = (note?: string) =>
     act(
-      () => api.theyFinished(props.person, a.id),
-      () => ({ message: t("toast.they_finished", { name: first }), undo: () => api.actionStatus(a.id, "open") }),
+      () => api.theyFinished(props.person, a.id, note),
+      (result) => ({
+        message: noted(t("toast.they_finished", { name: first }), result.request),
+        undo: () => api.actionStatus(a.id, "open"),
+      }),
     );
-  const followedUp = () =>
+  const followedUp = (note?: string) =>
     act(
-      () => api.followedUp(props.person, a.id),
+      () => api.followedUp(props.person, a.id, note),
       (done) => ({
-        message: t("toast.followed_up", { name: first }),
+        message: noted(t("toast.followed_up", { name: first }), done.request),
         undo: () => api.unfollow(props.person, a.id, { on: done.on, previous_told: done.previous_told }),
       }),
     );
@@ -494,21 +517,37 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
     : sentLine(a.told, a.told_days, a.project_name, tn, t);
   const finish: MenuAction = { id: "finished", label: t("followups.they_finished"), run: () => void finished() };
   const chased: MenuAction = { id: "followed-up", label: t("followups.followed_up"), run: () => void followedUp() };
+  const note: MenuAction = { id: "note", label: t("note.add"), run: () => setNoting(true) };
+  // A note can go with either act; the row's main one comes first, so Enter sends that one.
+  const sends = [
+    { label: t("followups.they_finished"), run: finished },
+    { label: t("followups.followed_up"), run: followedUp },
+  ];
   return (
-    <li className="child">
+    <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
         <div className="title">
           {a.text}
           {a.on_hold ? <HoldPill what={a.on_hold} due={a.due} /> : <WaitingPill days={a.told_days} chase={chase} />}
         </div>
         {meta && <div className="meta">{meta}</div>}
+        <OriginLink origin={a.origin} />
       </div>
       <div className="acts">
         <button type="button" className="btn primary" onClick={() => void (chase ? followedUp() : finished())}>
           {t(chase ? "followups.followed_up" : "followups.they_finished")}
         </button>
-        <RowMenu label={a.text} actions={[chase ? finish : chased, hold.entry]} />
+        <RowMenu label={a.text} actions={[chase ? finish : chased, note, hold.entry]} />
       </div>
+      {noting && (
+        <NoteBox
+          sends={chase ? [sends[1], sends[0]] : sends}
+          onClose={() => {
+            setNoting(false);
+            ref.current?.focus();
+          }}
+        />
+      )}
       {hold.form}
     </li>
   );

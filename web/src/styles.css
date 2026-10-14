@@ -93,6 +93,7 @@ main p { max-width: var(--measure); }
 .child .meta { color: var(--text-muted); font-size: var(--text-sm); }
 .child .reason { color: var(--warn); font-size: var(--text-sm); }
 .child.single { grid-template-columns: minmax(0, 1fr); }
+.origin { font-size: var(--text-sm); }
 .name { font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
 .name p { margin: 0; }
 .problem-note { border-left: 3px solid var(--danger); padding-left: var(--space-3); color: var(--danger); font-size: var(--text-sm); }
@@ -379,6 +380,8 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--text-muted); font-weight: var(--weight-medium); }
 .tb-row.unread .tb-title { font-weight: var(--weight-semibold); }
 .tb-row .btn.small { flex: none; }
+.tb-row.noting { flex-wrap: wrap; }
+.tb-row .note-box { flex: 1 1 100%; }
 .now-line { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1); color: var(--danger); font-size: var(--text-xs); font-weight: var(--weight-semibold); }
 .now-line::before, .now-line::after { content: ""; height: 2px; background: var(--danger); flex: 1; }
 .now-line::before { flex: 0 0 var(--space-3); }

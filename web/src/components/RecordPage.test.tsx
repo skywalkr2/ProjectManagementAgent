@@ -5,6 +5,7 @@ import { Refuse, fakeApi, renderApp, type Routes } from "../test-utils";
 import { RecordPage } from "./RecordPage";
 
 const KIND = "demo/chapter";
+const PAGE = "https" + "://pages.example.com/notes/42";
 const ID = "CH-1";
 const on = `kind=${encodeURIComponent(KIND)}&id=${ID}`;
 const field = "body_text";
@@ -386,4 +387,37 @@ test("a field bound to a value list is a list choice, with the record's dropped 
   await user.click(within(form).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST records/edit")).toBe(true));
   expect(calls.find((c) => c.route === "POST records/edit")?.body).toMatchObject({ fields: { stage_label: "Done" } });
+});
+
+test("an action's page shows where it came from as a link, in place of the input's id", async () => {
+  fakeApi(
+    routes({
+      [`GET record?${on}`]: () => ({
+        kind: KIND,
+        id: ID,
+        version: 4,
+        fields: { id: ID, title: "The harbor", source: "SRC-3" },
+        long_text: [],
+        origin: { kind: "link", url: PAGE, source: "SRC-3" },
+      }),
+    }),
+  );
+  renderApp(<RecordPage kind={KIND} id={ID} onBack={() => {}} />);
+  const link = await screen.findByRole("link", { name: "Where it came from" });
+  expect(link).toHaveAttribute("href", PAGE);
+  expect(screen.getByText("(pages.example.com)")).toBeInTheDocument();
+  const details = screen.getByRole("region", { name: "Details" });
+  expect(within(details).queryByText("SRC-3")).toBeNull();
+});
+
+test("a page with no origin shows no link and keeps every field", async () => {
+  fakeApi(
+    routes({
+      [`GET record?${on}`]: () => ({ kind: KIND, id: ID, version: 4, fields: { id: ID, title: "The harbor", source: "SRC-3" }, long_text: [] }),
+    }),
+  );
+  renderApp(<RecordPage kind={KIND} id={ID} onBack={() => {}} />);
+  const details = await screen.findByRole("region", { name: "Details" });
+  expect(within(details).getByText("SRC-3")).toBeInTheDocument();
+  expect(screen.queryByText("Where it came from")).toBeNull();
 });

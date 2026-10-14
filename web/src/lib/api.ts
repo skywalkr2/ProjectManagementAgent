@@ -107,9 +107,10 @@ export const api = {
   sendBack: (cs: string, note: string) => call<S["Requeued"]>("POST", `changesets/${id(cs)}/send-back`, { note }),
   release: (cs: string, index: number, person?: string) =>
     call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/release`, { person: person ?? null }),
-  answer: (q: string, body: S["Answer"]) => call<S["Ok"]>("POST", `questions/${id(q)}/answer`, body),
-  actionStatus: (a: string, status: S["ActionState"]["status"]) =>
-    call<S["Ok"]>("POST", `actions/${id(a)}/status`, { status }),
+  answer: (q: string, body: S["Answer"]) => call<S["Noted"]>("POST", `questions/${id(q)}/answer`, body),
+  /** A note goes with the change only when there is one: with none, the request is the same as it always was. */
+  actionStatus: (a: string, status: S["ActionState"]["status"], note?: string) =>
+    call<S["Noted"]>("POST", `actions/${id(a)}/status`, note ? { status, note } : { status }),
   putOnHold: (a: string, waiting_for: string) => call<S["HoldChanged"]>("POST", `actions/${id(a)}/hold`, { waiting_for }),
   takeOffHold: (a: string) => call<S["HoldChanged"]>("POST", `actions/${id(a)}/unhold`),
   restoreHold: (a: string, hold: S["HoldState"] | null) => call<S["Ok"]>("POST", `actions/${id(a)}/hold/restore`, { hold }),
@@ -126,12 +127,12 @@ export const api = {
     call<S["SentCounts"]>("POST", `followups/${id(person)}/mark-sent`, { text }),
   unmarkSent: (person: string, body: S["Unmark"]) =>
     call<S["Ok"]>("POST", `followups/${id(person)}/unmark-sent`, body),
-  followedUp: (person: string, action: string) =>
-    call<S["FollowedUp"]>("POST", `followups/${id(person)}/actions/${id(action)}/followed-up`),
+  followedUp: (person: string, action: string, note?: string) =>
+    call<S["FollowedUp"]>("POST", `followups/${id(person)}/actions/${id(action)}/followed-up`, note ? { note } : undefined),
   unfollow: (person: string, action: string, body: S["Unfollow"]) =>
     call<S["Ok"]>("POST", `followups/${id(person)}/actions/${id(action)}/unfollow`, body),
-  theyFinished: (person: string, action: string) =>
-    call<S["Ok"]>("POST", `followups/${id(person)}/actions/${id(action)}/finished`),
+  theyFinished: (person: string, action: string, note?: string) =>
+    call<S["Noted"]>("POST", `followups/${id(person)}/actions/${id(action)}/finished`, note ? { note } : undefined),
   backup: () => call<S["Status"]>("POST", "backup"),
   projects: () => call<S["ProjectView"][]>("GET", "projects"),
   notes: () => call<S["NoteView"][]>("GET", "notes"),

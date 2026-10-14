@@ -283,6 +283,16 @@ class Tx:
         rows = self._c.execute(sql + " ORDER BY seq", args).fetchall()
         return [_ledger_row(r) for r in rows]
 
+    def creations(self, kind: str) -> dict[str, tuple[str | None, str | None]]:
+        """For every record of a kind, the change and the request named on the first ledger entry it ever got (the one
+        that created it), keyed by record id. Either is None when the entry names none."""
+        rows = self._c.execute(
+            "SELECT record_id, changeset, request FROM ledger WHERE kind=? AND seq IN "
+            "(SELECT MIN(seq) FROM ledger WHERE kind=? GROUP BY record_id)",
+            (kind, kind),
+        ).fetchall()
+        return {r["record_id"]: (r["changeset"], r["request"]) for r in rows}
+
     def field_changes(self, kind: str, fields: Iterable[str]) -> dict[str, list[dict[str, Any]]]:
         """The ledger's changes to these fields of every record of a kind, oldest first, keyed by record id. Each is
         the record's version, the field, and its value before and after."""
