@@ -766,6 +766,9 @@ L1. **Knowledge as records.** Settled before L1 starts (the original designer's 
 - [ ] **Knowledge proposals are writable on every account a chain can hold.** `learn.*` proposals and `lesson.update`
   are allowed for every account a fallback chain can hold, locked-down agents included, and the switch check tests it;
   a loop that learns only on the main account stops learning silently on a fallback day.
+  Decided (2026-10-14): the ops a task kind may use never depend on the account; the assistant never writes files, only
+  changesets, so a locked-down agent proposes knowledge like any account. The switch check's knowledge round-trip is
+  built with the `learn` task kinds (L3) and is tested there.
 - [ ] **Knowledge keeps its provenance.** Each knowledge record's evidence carries the same "where it came from" link as
   an action: the input, or the change and request that taught it.
 - [ ] **Scopes have exclusions as well as targets.** `applies_to: workspace` with `except: [project, ...]`, shown on the
