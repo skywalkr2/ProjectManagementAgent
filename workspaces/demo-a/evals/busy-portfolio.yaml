@@ -1,0 +1,90 @@
+# A busy portfolio on top of this workspace's own records: 17 more projects, 7 more people, 45 more open actions and 5
+# more open questions, so choosing the right id is part of every case that starts from it. Cases name it with
+# `given_file: busy-portfolio.yaml`. Near-namesakes are on purpose: two people share a first name, and several projects,
+# actions and questions differ by one word. The ids PRJ-4 to PRJ-20, PER-7 to PER-13, ACT-7 to ACT-51 and Q-3 to Q-7 are
+# used here; a case's own `given:` records start at ACT-90 and Q-90.
+#
+# People come in three roles: delivery leads, engineers, and executive sponsors. One sponsor only reads the status
+# dashboard and owns nothing.
+
+# ---- people ------------------------------------------------------------------------------------------------
+- {kind: person, id: PER-7, fields: {full_name: Tobias Okafor, role: Engineer, team: TEAM-1, org: ORG-1}}
+- {kind: person, id: PER-8, fields: {full_name: Marguerite Osei, role: Delivery lead, team: TEAM-4, org: ORG-1}}
+- {kind: person, id: PER-9, fields: {full_name: Dmitri Salazar, role: Engineer, team: TEAM-2, org: ORG-1}}
+- {kind: person, id: PER-10, fields: {full_name: Priya Nandakumar, role: Engineer, team: TEAM-1, org: ORG-1}}
+- {kind: person, id: PER-11, fields: {full_name: Hollis Baptiste, role: Executive sponsor, org: ORG-1, why_they_matter: Reads the status dashboard every Monday and owns no actions.}}
+- {kind: person, id: PER-12, fields: {full_name: Wilhelmina Ashby, role: Executive sponsor, org: ORG-1}}
+- {kind: person, id: PER-13, fields: {full_name: Joaquin Tamm, role: Delivery lead, team: TEAM-4, org: ORG-1}}
+
+# ---- projects ----------------------------------------------------------------------------------------------
+- {kind: project, id: PRJ-4, fields: {name: Route Optimizer Pilot, group: Freight Platform, owner: PER-3, status: On track, target: '2027-01-29'}}
+- {kind: project, id: PRJ-5, fields: {name: Route Optimizer Training, group: Freight Platform, owner: PER-5, status: Not started, target: '2027-02-26'}}
+- {kind: project, id: PRJ-6, fields: {name: Invoice Engine Monitoring, group: Customer Billing, owner: PER-4, status: On track, target: '2027-03-12'}}
+- {kind: project, id: PRJ-7, fields: {name: Carrier Portal Search, group: Freight Platform, owner: PER-6, status: Not started}}
+- {kind: project, id: PRJ-8, fields: {name: Depot Scanner Upgrade, group: Freight Platform, owner: PER-10, status: On track, target: '2026-12-18'}}
+- {kind: project, id: PRJ-9, fields: {name: Fuel Surcharge Calculator, group: Customer Billing, owner: PER-4, status: At risk, target: '2026-11-30'}}
+- {kind: project, id: PRJ-10, fields: {name: Driver App Offline Mode, group: Freight Platform, owner: PER-13, status: On track, target: '2027-01-15'}}
+- {kind: project, id: PRJ-11, fields: {name: Warehouse Slotting Review, group: Freight Platform, owner: PER-8, status: Not started}}
+- {kind: project, id: PRJ-12, fields: {name: Customs Document Archive, group: Customer Billing, owner: PER-9, status: On track, target: '2027-04-02'}}
+- {kind: project, id: PRJ-13, fields: {name: Dispatch Console Redesign, group: Freight Platform, owner: PER-13, status: At risk, target: '2027-02-12'}}
+- {kind: project, id: PRJ-14, fields: {name: Telematics Data Lake, group: Freight Platform, owner: PER-5, status: On track, target: '2027-05-07'}}
+- {kind: project, id: PRJ-15, fields: {name: Claims Intake Automation, group: Customer Billing, owner: PER-8, status: Not started}}
+- {kind: project, id: PRJ-16, fields: {name: Rate Card Import Tool, group: Customer Billing, owner: PER-9, status: On track, target: '2026-12-04'}}
+- {kind: project, id: PRJ-17, fields: {name: On-call Rotation Refresh, group: Freight Platform, owner: PER-7, status: On track, target: '2026-11-20'}}
+- {kind: project, id: PRJ-18, fields: {name: Vendor Contract Renewal Tracker, group: Customer Billing, owner: PER-2, status: Not started}}
+- {kind: project, id: PRJ-19, fields: {name: Load Test Harness, group: Freight Platform, owner: PER-10, status: On track, target: '2026-12-11'}}
+- {kind: project, id: PRJ-20, fields: {name: Cut-over Rehearsal Planning, group: Freight Platform, owner: PER-1, status: At risk, target: '2026-11-13'}}
+
+# ---- open actions ------------------------------------------------------------------------------------------
+- {kind: action, id: ACT-7, fields: {project: PRJ-1, text: Publish the cut-over rollback runbook, due: '2026-10-27', owners: [{person: PER-3, team: TEAM-1}]}}
+- {kind: action, id: ACT-8, fields: {project: PRJ-1, text: Review the load-test results, due: '2026-10-22', owners: [{person: PER-5, team: TEAM-1}]}}
+- {kind: action, id: ACT-9, fields: {project: PRJ-19, text: Review the load-test harness design, due: '2026-10-21', owners: [{person: PER-10, team: TEAM-1}]}}
+- {kind: action, id: ACT-10, fields: {project: PRJ-19, text: Share the load-test harness results, due: '2026-11-05', owners: [{person: PER-10, team: TEAM-1}]}}
+- {kind: action, id: ACT-11, fields: {project: PRJ-2, text: Share the reconciliation test plan, due: '2026-10-19', owners: [{person: PER-4, team: TEAM-2}]}}
+- {kind: action, id: ACT-12, fields: {project: PRJ-2, text: Share the reconciliation test schedule, due: '2026-10-23', owners: [{person: PER-9, team: TEAM-2}]}}
+- {kind: action, id: ACT-13, fields: {project: PRJ-6, text: Share the invoice alert test results, due: '2026-10-30', owners: [{person: PER-9, team: TEAM-2}]}}
+- {kind: action, id: ACT-14, fields: {project: PRJ-6, text: Configure the invoice alert thresholds, due: '2026-11-04', owners: [{person: PER-9, team: TEAM-2}]}}
+- {kind: action, id: ACT-15, fields: {project: PRJ-4, text: Select the pilot depots, due: '2026-10-28', owners: [{person: PER-3, team: TEAM-1}]}}
+- {kind: action, id: ACT-16, fields: {project: PRJ-4, text: Brief the pilot depot managers, due: '2026-11-06', owners: [{person: PER-7, team: TEAM-1}]}}
+- {kind: action, id: ACT-17, fields: {project: PRJ-1, text: Send the rollback checklist to the steering group, due: '2026-10-21', owners: [{person: PER-3, team: TEAM-1}]}}
+- {kind: action, id: ACT-18, fields: {project: PRJ-1, text: Send the rollback options to the carrier group, due: '2026-10-23', owners: [{person: PER-7, team: TEAM-1}]}}
+- {kind: action, id: ACT-19, fields: {project: PRJ-5, text: Draft the dispatcher training outline, due: '2026-11-12', owners: [{person: PER-5, team: TEAM-1}]}}
+- {kind: action, id: ACT-20, fields: {project: PRJ-5, text: Draft the driver training outline, due: '2026-11-19', owners: [{person: PER-10, team: TEAM-1}]}}
+- {kind: action, id: ACT-21, fields: {project: PRJ-3, text: Draft the carrier portal refresh brief, due: '2026-10-29', owners: [{person: PER-6, team: TEAM-4}]}}
+- {kind: action, id: ACT-22, fields: {project: PRJ-7, text: Draft the carrier portal search brief, due: '2026-11-10', owners: [{person: PER-6, team: TEAM-4}]}}
+- {kind: action, id: ACT-23, fields: {project: PRJ-20, text: Send the carrier cut-over notice, due: '2026-10-21', owners: [{person: PER-13, team: TEAM-4}]}}
+- {kind: action, id: ACT-24, fields: {project: PRJ-20, text: Send the carrier cut-over survey, due: '2026-10-28', owners: [{person: PER-13, team: TEAM-4}]}}
+- {kind: action, id: ACT-25, fields: {project: PRJ-20, text: Send the customer cut-over notice, due: '2026-10-22', owners: [{person: PER-8, team: TEAM-4}]}}
+- {kind: action, id: ACT-26, fields: {project: PRJ-20, text: Book the cut-over rehearsal room, due: '2026-10-26', owners: [{person: PER-8, team: TEAM-4}]}}
+- {kind: action, id: ACT-27, fields: {project: PRJ-8, text: Test the scanner firmware on the north depot units, due: '2026-10-20', owners: [{person: PER-10, team: TEAM-1}]}}
+- {kind: action, id: ACT-28, fields: {project: PRJ-8, text: Test the scanner firmware on the east depot units, due: '2026-10-27', owners: [{person: PER-10, team: TEAM-1}]}}
+- {kind: action, id: ACT-29, fields: {project: PRJ-8, text: Order the replacement scanner batteries, due: '2026-11-03', owners: [{person: PER-7, team: TEAM-1}]}}
+- {kind: action, id: ACT-30, fields: {project: PRJ-9, text: Confirm the fuel surcharge table with finance, due: '2026-10-23', owners: [{person: PER-4, team: TEAM-2}]}}
+- {kind: action, id: ACT-31, fields: {project: PRJ-16, text: Load the carrier rate cards into the staging import, due: '2026-10-19', owners: [{person: PER-9, team: TEAM-2}]}}
+- {kind: action, id: ACT-32, fields: {project: PRJ-16, text: Load the customer rate cards into the staging import, due: '2026-10-26', owners: [{person: PER-9, team: TEAM-2}]}}
+- {kind: action, id: ACT-33, fields: {project: PRJ-16, text: Validate the carrier rate cards after import, due: '2026-10-30', owners: [{person: PER-10, team: TEAM-1}]}}
+- {kind: action, id: ACT-34, fields: {project: PRJ-10, text: Test the driver app offline sync, due: '2026-11-09', owners: [{person: PER-7, team: TEAM-1}]}}
+- {kind: action, id: ACT-35, fields: {project: PRJ-10, text: Write the driver app offline sync guide, due: '2026-11-16', owners: [{person: PER-13, team: TEAM-4}]}}
+- {kind: action, id: ACT-36, fields: {project: PRJ-13, text: Review the dispatch console mockups, due: '2026-10-29', owners: [{person: PER-13, team: TEAM-4}, {person: PER-2, team: TEAM-3}]}}
+- {kind: action, id: ACT-37, fields: {project: PRJ-13, text: Review the dispatch console prototype, due: '2026-11-12', owners: [{person: PER-13, team: TEAM-4}]}}
+- {kind: action, id: ACT-38, fields: {project: PRJ-14, text: Size the telematics data lake storage, due: '2026-11-02', owners: [{person: PER-5, team: TEAM-1}]}}
+- {kind: action, id: ACT-39, fields: {project: PRJ-14, text: Size the telematics ingest queue, due: '2026-11-09', owners: [{person: PER-7, team: TEAM-1}]}}
+- {kind: action, id: ACT-40, fields: {project: PRJ-12, text: Index the customs document archive, due: '2026-11-18', owners: [{person: PER-9, team: TEAM-2}]}}
+- {kind: action, id: ACT-41, fields: {project: PRJ-15, text: Map the claims intake fields, due: '2026-11-11', owners: [{person: PER-8, team: TEAM-4}]}}
+- {kind: action, id: ACT-42, fields: {project: PRJ-11, text: Collect the warehouse slotting counts, due: '2026-11-04', owners: [{person: PER-8, team: TEAM-4}]}}
+- {kind: action, id: ACT-43, fields: {project: PRJ-17, text: Publish the on-call rotation for November, due: '2026-10-30', owners: [{person: PER-7, team: TEAM-1}]}}
+- {kind: action, id: ACT-44, fields: {project: PRJ-17, text: Publish the on-call escalation contacts, due: '2026-11-06', owners: [{person: PER-5, team: TEAM-1}]}}
+- {kind: action, id: ACT-45, fields: {project: PRJ-18, text: List the vendor contracts that renew this year, due: '2026-11-13', owners: [{person: PER-2, team: TEAM-3}]}}
+- {kind: action, id: ACT-46, fields: {project: PRJ-2, text: Agree the invoice cut-over date with billing, due: '2026-10-28', owners: [{person: PER-4, team: TEAM-2}]}}
+- {kind: action, id: ACT-47, fields: {project: PRJ-1, text: Agree the cut-over date with the carriers, due: '2026-10-28', owners: [{person: PER-3, team: TEAM-1}]}}
+- {kind: action, id: ACT-48, fields: {project: PRJ-20, text: Collect the rehearsal findings, due: '2026-11-13', owners: [{person: PER-1, team: TEAM-3}]}}
+- {kind: action, id: ACT-49, fields: {project: PRJ-19, text: Choose the load-test tooling, due: '2026-10-22', owners: [{person: PER-5, team: TEAM-1}]}}
+- {kind: action, id: ACT-50, fields: {project: PRJ-4, text: Approve the pilot success measures, due: '2026-11-02', owners: [{person: PER-1, team: TEAM-3}]}}
+- {kind: action, id: ACT-51, fields: {project: PRJ-6, text: Approve the invoice monitoring dashboard layout, due: '2026-11-11', owners: [{person: PER-2, team: TEAM-3}]}}
+
+# ---- open questions ----------------------------------------------------------------------------------------
+- {kind: question, id: Q-3, fields: {to: PER-9, projects: [PRJ-6], title: 'Invoice Engine Monitoring: is the September alert run complete?'}}
+- {kind: question, id: Q-4, fields: {to: PER-4, projects: [PRJ-2], title: 'Invoice Engine Migration: is the October reconciliation run scheduled?'}}
+- {kind: question, id: Q-5, fields: {to: PER-3, projects: [PRJ-4], title: 'Route Optimizer Pilot: which depots are in the pilot?'}}
+- {kind: question, id: Q-6, fields: {to: PER-3, projects: [PRJ-4], title: 'Route Optimizer Pilot: when does the pilot start?'}}
+- {kind: question, id: Q-7, fields: {to: PER-1, projects: [PRJ-4], title: 'Route Optimizer Pilot: extend the pilot into the January window?', kind: decision}}

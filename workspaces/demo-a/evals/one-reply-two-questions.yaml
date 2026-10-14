@@ -1,0 +1,26 @@
+id: one-reply-two-questions
+title: One reply that settles two open questions closes both
+received: '2026-10-14'
+given_file: busy-portfolio.yaml
+pasted: |-
+  From: Tobias Wren
+
+  The pilot covers the north and east depots, and it starts once the firmware test is finished.
+expect:
+- op: question.done
+  id: Q-5
+- op: question.done
+  id: Q-6
+stub_answer:
+  summary: Tobias answered both pilot questions.
+  ops:
+  - op: question.done
+    id: Q-5
+    answer: The north and east depots.
+    evidence:
+      quote: The pilot covers the north and east depots
+  - op: question.done
+    id: Q-6
+    answer: Once the firmware test is finished.
+    evidence:
+      quote: it starts once the firmware test is finished

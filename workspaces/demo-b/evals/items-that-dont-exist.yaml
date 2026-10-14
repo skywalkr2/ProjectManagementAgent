@@ -4,6 +4,7 @@ received: '2026-10-09'
 note: 'Close the actions for the bookmarks order and the poster proofs, they are both done.'
 # Saying so in the summary with no ops, or asking the PM which items were meant, are both right; closing anything or
 # claiming in a note that it can't be done is not.
+exact: false  # one question to the PM is as right as no ops, so extra ops aren't counted
 forbid:
 - op: action.close
 - op: note

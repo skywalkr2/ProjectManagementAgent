@@ -1,0 +1,37 @@
+id: quoted-thread-action-exists
+title: Act on the new message, and move the date of the action that already exists
+received: '2026-10-14'
+given_file: busy-portfolio.yaml
+given:
+- kind: action
+  id: ACT-90
+  fields:
+    text: Send the rollback options to the steering group
+    owners: [{person: PER-3, team: TEAM-1}]
+    due: '2026-10-16'
+    project: PRJ-1
+pasted: |-
+  From: Tobias Wren
+
+  Sounds good, I'll have the rollback options to the steering group by Thursday Oct 22 instead.
+
+  On Wed, Oct 14, 2026 Rafael Quist wrote:
+  > Tobias will send the rollback options to the steering group by Friday Oct 16.
+  > Ines to draft the carrier notice by Oct 23.
+expect:
+- op: record.set
+  id: ACT-90
+  field: due
+  value: '2026-10-22'
+forbid:
+- op: action.add
+stub_answer:
+  summary: Tobias moved the rollback options to Oct 22.
+  ops:
+  - op: record.set
+    kind: action
+    id: ACT-90
+    field: due
+    value: '2026-10-22'
+    evidence:
+      quote: I'll have the rollback options to the steering group by Thursday Oct 22

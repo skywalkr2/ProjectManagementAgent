@@ -1,0 +1,22 @@
+id: partial-completion
+title: Half of an action done keeps the action open
+received: '2026-10-14'
+pasted: |-
+  From: Tobias Wren
+
+  The cut-over runbook is published for the routing steps. The rollback steps are still being written.
+# Keeping the progress as a note, or in the action's notes, is as right as no ops; closing the action, adding a second
+# one for the rest or moving its date is wrong.
+exact: false  # a note about the progress is right, so other ops that change nothing about the action aren't counted
+forbid:
+- op: action.close
+- op: action.add
+- op: record.set
+  text_has:
+  - due
+stub_answer:
+  summary: The runbook is half published; the action stays open.
+  ops:
+  - op: note
+    text: The cut-over runbook is published for the routing steps; the rollback steps are still being written.
+    project: PRJ-1

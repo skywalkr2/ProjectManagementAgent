@@ -1,0 +1,20 @@
+id: decision-already-made
+title: A decision the PM has already made is recorded, not asked again
+received: '2026-10-14'
+given_file: busy-portfolio.yaml
+note: 'Decided: the Route Optimizer Rollout cut-over moves to the January window.'
+expect:
+- op: question.done
+  id: Q-2
+forbid:
+- op: question.add
+- op: question.done
+  id: Q-7
+stub_answer:
+  summary: Recorded your decision on the cut-over window.
+  ops:
+  - op: question.done
+    id: Q-2
+    answer: Yes, move the cut-over to the January window.
+    evidence:
+      quote: the Route Optimizer Rollout cut-over moves to the January window

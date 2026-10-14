@@ -1,0 +1,13 @@
+id: next-week-closes-nothing
+title: A promise to get to it next week closes nothing and moves no date
+received: '2026-10-14'
+pasted: |-
+  From: Kofi Mensah-Hale
+
+  I'll get to the load-test plan review next week.
+forbid:
+- op: action.close
+- op: record.set
+stub_answer:
+  summary: Kofi will get to the review next week; no date was given, so nothing changes.
+  ops: []

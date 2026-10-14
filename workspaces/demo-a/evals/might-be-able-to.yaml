@@ -1,0 +1,12 @@
+id: might-be-able-to
+title: '"Might be able to" is not an action for anyone'
+received: '2026-10-14'
+pasted: |-
+  From: Tobias Wren
+
+  Odile might be able to join the dry run if her calendar clears. I wouldn't count on it.
+forbid:
+- op: action.add
+stub_answer:
+  summary: Nobody committed to anything; nothing to record.
+  ops: []

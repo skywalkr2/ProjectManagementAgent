@@ -1,0 +1,13 @@
+id: restated-open-action
+title: Someone restates an action that is already open
+received: '2026-10-14'
+given_file: busy-portfolio.yaml
+pasted: |-
+  From: Joaquin Tamm
+
+  Just to confirm: I am still sending the carrier cut-over notice by Oct 21.
+forbid:
+- op: action.add
+stub_answer:
+  summary: That is the open action for the carrier cut-over notice; nothing to add.
+  ops: []

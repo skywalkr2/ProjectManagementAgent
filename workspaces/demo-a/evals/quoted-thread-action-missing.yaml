@@ -1,0 +1,33 @@
+id: quoted-thread-action-missing
+title: Act on the new message, and add the action that was only in the quoted history
+received: '2026-10-14'
+pasted: |-
+  From: Tobias Wren
+
+  Sounds good, I'll have the rollback options to the steering group by Thursday Oct 22 instead.
+
+  On Wed, Oct 14, 2026 Rafael Quist wrote:
+  > Tobias will send the rollback options to the steering group by Friday Oct 16.
+  > Ines to draft the carrier notice by Oct 23.
+expect:
+- op: action.add
+  owners:
+  - PER-3
+  text_has:
+  - rollback
+  due: '2026-10-22'
+forbid:
+- op: action.add
+  text_has:
+  - notice
+stub_answer:
+  summary: Tobias's new date for the rollback options.
+  ops:
+  - op: action.add
+    text: Send the rollback options to the steering group
+    owners:
+    - Tobias Wren
+    due: '2026-10-22'
+    project: PRJ-1
+    evidence:
+      quote: I'll have the rollback options to the steering group by Thursday Oct 22

@@ -1,0 +1,24 @@
+id: vague-timing
+title: Vague timing stays to be decided; no date is made up
+received: '2026-10-14'
+pasted: |-
+  From: Kofi Mensah-Hale
+
+  I'll send the hardware sizing numbers once the vendor quote lands, probably in a few weeks.
+expect:
+- op: action.add
+  owners:
+  - PER-5
+  text_has:
+  - sizing
+  due: null
+stub_answer:
+  summary: Kofi will send the sizing numbers; no date was given.
+  ops:
+  - op: action.add
+    text: Send the hardware sizing numbers
+    owners:
+    - Kofi Mensah-Hale
+    project: PRJ-1
+    evidence:
+      quote: I'll send the hardware sizing numbers once the vendor quote lands

@@ -1,0 +1,13 @@
+id: not-me-ask-someone-else
+title: A reply that passes the question on does not answer it
+received: '2026-10-14'
+given_file: busy-portfolio.yaml
+pasted: |-
+  From: Ines Albescu
+
+  Not me, ask Dmitri Salazar. He ran the September reconciliation and I only saw the summary.
+forbid:
+- op: question.done
+stub_answer:
+  summary: Ines passed the question on to Dmitri; it stays open.
+  ops: []

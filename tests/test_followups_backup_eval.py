@@ -7,7 +7,7 @@ from engine.evaluate import evaluate, load_cases
 from engine.followups import FollowUpError, follow_up, mark_sent, sections, they_finished, undo_follow_up, unmark_sent
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
-from tests.conftest import DEMO_B, fixture_records
+from tests.conftest import DEMO_A, DEMO_B, fixture_records
 
 NOW = datetime(2026, 10, 9, 14, 0, tzinfo=UTC)
 
@@ -268,11 +268,12 @@ def test_old_backups_are_pruned(env, tmp_path):
 # ---- evaluation ------------------------------------------------------------------------------------------------------
 
 
-def test_every_case_passes_with_its_ideal_answer():
-    report = evaluate(DEMO_B, stub=True, runs=1, env={})
-    failing = {r.case: r.missing + r.forbidden + [r.error or ""] for r in report.results if not r.passed}
+@pytest.mark.parametrize("template", [DEMO_A, DEMO_B], ids=lambda p: p.name)
+def test_every_case_passes_with_its_ideal_answer(template):
+    report = evaluate(template, stub=True, runs=1, env={})
+    failing = {r.case: r.missing + r.forbidden + r.extra + [r.error or ""] for r in report.results if not r.passed}
     assert failing == {}
-    assert len(report.cases()) == len(load_cases(DEMO_B)) >= 10
+    assert len(report.cases()) == len(load_cases(template)) >= 10
 
 
 def test_a_wrong_answer_fails_the_case(monkeypatch):

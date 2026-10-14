@@ -2,6 +2,7 @@
 outbox, its errors read from its exit code and error stream only, and a lockdown test in the smoke test."""
 
 import json
+import subprocess
 import sys
 from types import SimpleNamespace
 
@@ -251,3 +252,36 @@ def test_an_agent_preset_shows_why_a_signed_out_test_failed_in_plain_words(agent
         assert not first.ok, preset["id"]
         assert "Not logged in" in first.detail and agent["sign_in_hint"].rstrip(".") in first.detail, first.detail
         assert not first.detail.startswith(("auth", "other")) and "exit code" not in first.detail
+
+
+# ---- the program's version -------------------------------------------------------------------------------------------
+
+
+def test_the_program_version_is_the_first_line_the_version_check_prints(agent_script):
+    one = settings(
+        agent_script, "stdout", version_command=[sys.executable, "-c", "print('agent 1.2.3'); print('more')"]
+    )
+    assert CliAgentAdapter(one).program_version() == "agent 1.2.3"
+    assert CliAgentAdapter(settings(agent_script, "stdout")).program_version().startswith("Python "), (
+        "with no version check set up, the program is asked for --version"
+    )
+
+
+def test_a_version_that_cannot_be_read_is_none_never_a_guess(agent_script):
+    failing = settings(agent_script, "stdout", version_command=[sys.executable, "-c", "raise SystemExit(3)"])
+    silent = settings(agent_script, "stdout", version_command=[sys.executable, "-c", "pass"])
+    missing = settings(agent_script, "stdout", version_command=["no-such-agent-program-here"])
+    assert [CliAgentAdapter(s).program_version() for s in (failing, silent, missing)] == [None, None, None]
+
+    def too_slow(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], kwargs["timeout"])
+
+    slow = CliAgentAdapter(settings(agent_script, "stdout", version_timeout_seconds=2), runner=too_slow)
+    assert slow.program_version() is None
+
+
+def test_the_version_check_runs_with_the_agents_small_environment(agent_script, monkeypatch):
+    monkeypatch.setenv("COCKPIT_SECRET_THING", "x")
+    show = [sys.executable, "-c", "import os; print(','.join(sorted(os.environ)))"]
+    seen = CliAgentAdapter(settings(agent_script, "stdout", version_command=show)).program_version()
+    assert "PATH" in seen and "COCKPIT_SECRET_THING" not in seen

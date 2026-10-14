@@ -1,0 +1,22 @@
+id: closed-from-another-project
+title: An update about one project reports an action of another project done
+received: '2026-10-14'
+given_file: busy-portfolio.yaml
+pasted: |-
+  From: Dmitri Salazar
+  Subject: Depot Scanner Upgrade standup
+
+  Scanner standup: nothing new on the scanners this week. The carrier rate cards are loaded into the staging import.
+expect:
+- op: action.close
+  id: ACT-31
+forbid:
+- op: action.close
+  id: ACT-32
+stub_answer:
+  summary: Dmitri loaded the carrier rate cards.
+  ops:
+  - op: action.close
+    id: ACT-31
+    evidence:
+      quote: The carrier rate cards are loaded into the staging import

@@ -390,6 +390,14 @@ class AgentSettings(ConfigModel):
         description="With a fresh home: the files or folders, relative to this user's home, the agent needs to stay "
         "signed in (its credentials), copied into each run's home.",
     )
+    version_command: list[str] = Field(
+        default_factory=list,
+        description="The program and arguments that print the agent's version, so a report can say which version "
+        "ran. Empty: the agent's program with --version.",
+    )
+    version_timeout_seconds: float = Field(
+        10, gt=0, description="How long the agent's version check may take before the version is left unknown."
+    )
 
 
 class ProviderSettings(ConfigModel):

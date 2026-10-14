@@ -45,6 +45,7 @@ BASE_ENV = (
     "LC_CTYPE",
 )
 ERROR_TAIL = 4000
+VERSION_CHARS = 200
 
 Runner = Callable[..., subprocess.CompletedProcess]
 
@@ -221,6 +222,33 @@ class CliAgentAdapter:
 
     def sign_in_hint(self) -> str:
         return self.agent.sign_in_hint
+
+    def program_version(self) -> str | None:
+        """The agent program's own version line, or None when it can't be read (not installed, no answer, an error or
+        too slow). It runs with the same allowlisted environment as a run, and never reads the version from a run."""
+        args = self.agent.version_command or [self.agent.command[0], "--version"]
+        with _scratch() as scratch:
+            try:
+                done = self._runner(  # noqa: S603 - the account's own program, arguments as a list, no shell
+                    args,
+                    input="",
+                    cwd=scratch,
+                    env=self._env(),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=self.agent.version_timeout_seconds,
+                )
+            except (subprocess.TimeoutExpired, OSError):
+                return None
+        if done.returncode != 0:
+            return None
+        for stream in (done.stdout, done.stderr):
+            for line in (stream or "").splitlines():
+                if line.strip():
+                    return line.strip()[:VERSION_CHARS]
+        return None
 
     def catalog(self) -> dict[str, ModelInfo]:
         """An agent publishes no catalog; its models and prices come from the account's settings."""
