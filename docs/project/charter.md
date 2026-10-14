@@ -27,7 +27,12 @@ and pasting of outputs between functions by hand.
 **How the work itself gets done** (owner, 2026-10-14). Planning and tracking delivery is the project management pack's.
 Building is staged:
 1. **A build pack to take away:** the approved design (requirements, stories with acceptance criteria, technical design,
-   test cases) exported as one bundle a coding agent can be told to build from, in the team's own tools.
+   test cases) exported as one bundle a coding agent can be told to build from, in the team's own tools. The bundle
+   carries the ids that let the work report back the same way every time (owner, 2026-10-14): every requirement, story
+   and test case keeps its id; the bundle's instructions tell the builder to name those ids in branches, commits, pull
+   requests and test names, and to keep a progress file in the repository (each story's state and its tests' results,
+   by id) in a fixed format. Stage 2's connectors read exactly those, so the view back in the project tool is
+   consistent whoever does the building.
 2. **The PM sees the whole development process in one place:** read-only connectors to where the work happens (the code
    host, its checks, the issue tracker) bring progress, test results and demos back as inputs, traced to the
    requirements they serve, so the plan, the risks and acceptance update without copying anything.
