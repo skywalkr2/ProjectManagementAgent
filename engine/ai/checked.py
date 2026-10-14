@@ -92,7 +92,7 @@ def chain_problems(ws: Workspace, before: Config, after: Config) -> list[str]:
             if provider is None or provider.accepted_unchecked or is_checked(ws, after, ref, tier):
                 continue
             found.append(
-                f"{name} can't stand in for the {tier!r} tier yet: it hasn't passed the connection check for that "
-                "work. Test it for that tier first, or accept it without a check in its settings."
+                f"{name} can't be a backup account for this work yet: it hasn't passed the connection check with the "
+                "settings this work uses. Test it first, or accept it without a check in its settings."
             )
     return found

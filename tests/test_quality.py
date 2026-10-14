@@ -328,8 +328,8 @@ def test_an_unchecked_account_is_refused_from_a_chain_until_it_passes_for_that_t
     with pytest.raises(SettingsError) as refused:
         add_to_chain(ws, cfg, store, "second")
     reason = str(refused.value)
-    assert "second" in reason and "connection check" in reason and "routine" in reason
-    assert not any(word in reason for word in ("ai.yaml", "accepted_unchecked", "ai.tiers"))
+    assert "second" in reason and "connection check" in reason
+    assert not any(word in reason for word in ("ai.yaml", "accepted_unchecked", "ai.tiers", "routine", "tier"))
     assert ws.config(env={}).ai.tiers["routine"].fallback == [], "nothing was written"
     # A test without a tier uses no kind of work's parameters, so it doesn't count; one for this tier's exact
     # parameters does, and stops counting when a kind of work's parameters change.
