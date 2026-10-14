@@ -247,16 +247,19 @@ real use starts. The rest (L-more) comes after the packs.
 - **Ready for real use** (the original designer's L0 sign-off, 2026-10-13): five things the first week of real use needs, each a small screen change built here
   with its test; phase B keeps only their final layout:
   - [ ] the note box on the action buttons (the intake is built; the screens send no note yet);
-  - [ ] the header's "alive" line (the assistant's last run and what is queued, amber or red when something is wrong);
+  - [x] the header's "alive" line (the assistant's last run and what is queued, amber or red when something is wrong): built
+    with `web/src/shell/AssistantLine.test.tsx` (fine, amber, red, the popover's contents), `web/src/shell/status.test.ts`
+    (`aliveState`), `web/src/shell/Header.test.tsx` and `tests/test_assistant_status.py` (the status view). The header is
+    two rows below 1280px; the final layout stays with phase B;
   - [x] on hold isn't due: an action carries `on_hold` (what it waits for), set and cleared from the row's menu with Undo
     and a signal; it leaves Today's overdue line and the to-do list's Overdue group and is never chased (done:
     `tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`,
     `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_overdue_on_the_to_do_list_or_in_todays_queue`,
     `tests/test_on_hold_and_follow_ups.py::test_the_to_do_list_view_says_what_a_held_action_waits_for`, the component tests in
     `web/src/components/FollowUps.test.tsx` ("Put on hold asks what it waits for", "Take off hold acts at once") and
-    `web/src/components/TodayBoard.test.tsx` ("an action on hold leaves Overdue"). Left, with their own items: the
-    counts on person cards, Top priorities and the weekly review don't exist yet and will read the same field, and taking
-    it off hold when an input ends the wait is L3b);
+    `web/src/components/TodayBoard.test.tsx` ("an action on hold leaves Overdue"). The counts on person cards, Top
+    priorities and the weekly review aren't built yet and read the same field when they are; taking it off hold when an
+    input ends the wait is L3b's);
   - [x] the follow-up rule: one function, `follow_up_due`, read by Today's lines and the Follow-ups pills; a told action
     is chased only when its own due date is within `ui.followups.action_due_within_days` (7) or past, never on hold; an
     undated one after `undated_after_days` (14); a plain question after `question_after_days` (4); the old
@@ -264,7 +267,7 @@ real use starts. The rest (L-more) comes after the packs.
     `test_a_told_action_due_far_ahead_is_not_chased` to `test_the_rule_reads_every_threshold_from_the_settings`,
     `tests/test_on_hold_and_follow_ups.py::test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_hold_leaves_both`,
     `tests/test_on_hold_and_follow_ups.py::test_the_old_nudge_setting_is_read_as_the_question_wait`, and the pill tests in
-    `web/src/components/FollowUps.test.tsx`. Left: Top priorities' lines, when that list is built);
+    `web/src/components/FollowUps.test.tsx`. Top priorities' lines read it when that list is built);
   - [ ] "where it came from" as a working link on actions, questions, decisions and knowledge records, so Keep can be
     judged against the evidence.
 
@@ -980,7 +983,8 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
   tooltip; amber or red when something is wrong. The held-work and paused lines cover the bad case; this covers "is it
   alive?". The header is two rows when it needs them (title, views and primary buttons on top; status and the person's
-  links small below), tested at about 1,000 px wide.
+  links small below), tested at about 1,000 px wide. (The line and the two-row header below 1280px are built under "Ready
+  for real use"; what is left here is the final layout and a browser check of the header at about 1,000 px wide.)
 - [ ] **The rest:** the Stages board, the phone review mode, the hand-in drawer, Ask as a side pane on wide screens.
 - [ ] **Learning on screen** (7.18): what the assistant knows and what is still unknown, on each project's page; the
   Knowledge screen under Records; each entry's use ("Used 12 times · last 2 days ago").

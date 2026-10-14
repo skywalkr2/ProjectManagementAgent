@@ -2,7 +2,7 @@
 // widths with accessibility checks, how much of the screen the content uses, a header that never wraps, views that are links,
 // the offline state, and the phone's bottom bar. Screenshots go to the folder named by E2E_SHOTS, when it is set.
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 async function signIn(page: Page, hash = "") {
   await page.goto("?token=e2e-token");
@@ -311,12 +311,24 @@ test.describe("screen use and the shell", () => {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page);
       const header = page.getByRole("banner");
-      expect((await header.boundingBox())!.height).toBe(56);
-      // Everything in it sits on one row, inside the window.
-      const tops = await header.locator("a, button").evaluateAll((els) =>
-        els.filter((e) => (e as HTMLElement).getClientRects().length > 0).map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)),
-      );
+      // From 1280px everything sits on one row of 56px. Below that the status chip and the assistant's line take a second
+      // small row under the rest, so the first row keeps its room and nothing squeezes.
+      const wide = width >= 1280;
+      expect((await header.boundingBox())!.height).toBe(wide ? 56 : 88);
+      const statusRow = header.getByRole("button", { name: /^Status: / });
+      const assistant = header.getByRole("button", { name: /^Assistant/ });
+      const rowOf = async (selector: Locator) => {
+        const box = (await selector.boundingBox())!;
+        return Math.round(box.y + box.height / 2);
+      };
+      expect(Math.abs((await rowOf(statusRow)) - (await rowOf(assistant)))).toBeLessThan(6);
+      const tops = await header.locator("a, button").evaluateAll((els, includeStatus) =>
+        els
+          .filter((e) => (e as HTMLElement).getClientRects().length > 0 && (includeStatus || !/^(Status: |Assistant)/.test(e.getAttribute("aria-label") ?? e.textContent ?? "")))
+          .map((e) => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2)),
+      wide);
       expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(12);
+      if (!wide) expect(await rowOf(statusRow)).toBeGreaterThan(56);
       const menu = (await header.getByRole("button", { name: /^Appearance, / }).boundingBox())!;
       expect(menu.x + menu.width).toBeLessThanOrEqual(width);
       // The plugin panels are in the sidebar, under Work and Records, and scroll there if they don't fit.

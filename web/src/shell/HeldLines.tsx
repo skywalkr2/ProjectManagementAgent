@@ -4,7 +4,7 @@
 // line is gone once its cause is, and only the person's own click ever restarts the app.
 import { useQuery } from "@tanstack/react-query";
 import { api, type S } from "../lib/api";
-import { day, localDate, wallTime } from "../lib/dates";
+import { wallWhen } from "../lib/dates";
 import { useRestart, useRestartText } from "../lib/restart";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -12,12 +12,6 @@ import { Pill } from "../ui/Pill";
 import styles from "./HeldLines.module.css";
 
 type Line = S["QueueLineView"];
-
-/** A reset time as the server wrote it, on the person's own clock: the time alone today, otherwise the day and the time. */
-function resetText(iso: string): string {
-  const clock = wallTime(iso);
-  return iso.slice(0, 10) === localDate(new Date()) ? clock : `${day(iso)}, ${clock}`;
-}
 
 export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void }) {
   const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
@@ -71,7 +65,7 @@ function RestartLine(props: { line: Line }) {
 function PausedLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   const { t, tn } = useWords();
   const { line } = props;
-  const label = tn("queue.paused", line.count, { account: line.account ?? "", time: line.until ? resetText(line.until) : "" });
+  const label = tn("queue.paused", line.count, { account: line.account ?? "", time: line.until ? wallWhen(line.until) : "" });
   return (
     <section className={styles.line} aria-label={t("queue.paused.label")} data-queue-line="paused">
       <Pill tone="warn">{t("queue.paused.label")}</Pill>
@@ -91,7 +85,7 @@ function PausedLine(props: { line: Line; onOpenAiAccounts: () => void }) {
 function OfflineLine(props: { line: Line }) {
   const { t, tn } = useWords();
   const { line } = props;
-  const label = tn("queue.offline", line.count, { time: line.waiting_since ? resetText(line.waiting_since) : "" });
+  const label = tn("queue.offline", line.count, { time: line.waiting_since ? wallWhen(line.waiting_since) : "" });
   return (
     <section className={styles.line} aria-label={t("queue.offline.label")} data-queue-line="offline">
       <Pill tone="warn">{t("queue.offline.label")}</Pill>

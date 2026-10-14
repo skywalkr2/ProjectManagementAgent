@@ -175,9 +175,42 @@ class SpendStatus(BaseModel):
     warn_month: bool = Field(description="This month's total has reached that share of the monthly limit.")
 
 
+class AssistantAccountRuns(BaseModel):
+    account: str = Field(description="The account's name in the settings.")
+    count: int = Field(description="Calls made to it today that reached it.")
+    failed: int = Field(description="Of those, the ones that didn't end in an answer that was used.")
+
+
+class AssistantChain(BaseModel):
+    tier: str
+    accounts: list[str] = Field(description="The accounts the tier tries, in order, by their names in the settings.")
+
+
+class AssistantPaused(BaseModel):
+    account: str
+    until: datetime = Field(description="When its usage limit resets, on the person's own clock (their time zone).")
+
+
+class AssistantStatus(BaseModel):
+    """Whether the assistant is alive, for the header's status line. Times are on the person's own clock."""
+
+    last_run_at: datetime | None = Field(
+        None, description="When the assistant last called an account; none before the first."
+    )
+    last_run_failed: bool = Field(description="That last call ended in an error and its account isn't paused.")
+    runs_today: list[AssistantAccountRuns] = Field(description="Today's calls by account, in the person's day.")
+    queued: int = Field(
+        description="Requests waiting for the assistant now, not counting ones that wait for the person."
+    )
+    oldest_queued_since: datetime | None = Field(None, description="When the oldest of them was made.")
+    chains: list[AssistantChain] = Field(description="For each tier with an account, the order its accounts are tried.")
+    paused: list[AssistantPaused] = Field(description="Accounts waiting for a usage limit to reset.")
+
+
 class Status(BaseModel):
     backup: BackupStatus
     ai: AiState
+    assistant: AssistantStatus
     spend: SpendStatus
     requests: RequestCounts
     network_wait: NetworkWait | None = Field(

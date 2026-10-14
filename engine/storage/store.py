@@ -242,6 +242,33 @@ class Tx:
         rows = self._c.execute(sql, args).fetchall()
         return sorted((_stored(r) for r in rows), key=lambda s: (id_number(s.id) or 0, s.id))
 
+    def since(self, kind: str, field: str, date: str) -> list[Stored]:
+        """Live records of a kind whose time field starts on or after a yyyy-mm-dd date (as written, so a time with an
+        offset can be a day off at the edge: the caller checks the exact moment), found in the database."""
+        self._timestamp_field(kind, field)
+        rows = self._c.execute(
+            f"SELECT * FROM records WHERE kind=? AND deleted=0 AND substr(json_extract(data, '$.{field}'), 1, 10) >= ?",
+            (kind, date),
+        ).fetchall()
+        return sorted((_stored(r) for r in rows), key=lambda s: (id_number(s.id) or 0, s.id))
+
+    def latest(self, kind: str, field: str, limit: int) -> list[Stored]:
+        """The newest live records of a kind by a time field, newest first, at most `limit`."""
+        self._timestamp_field(kind, field)
+        rows = self._c.execute(
+            f"SELECT * FROM records WHERE kind=? AND deleted=0 ORDER BY json_extract(data, '$.{field}') DESC, id DESC "
+            "LIMIT ?",
+            (kind, limit),
+        ).fetchall()
+        return [_stored(r) for r in rows]
+
+    def _timestamp_field(self, kind: str, field: str) -> None:
+        model = self.models.get(kind)
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", field) or (
+            model is not None and field not in model.model_fields
+        ):
+            raise StoreError(f"{kind} has no field {field!r} to look up by")
+
     def kinds(self) -> list[str]:
         return [r[0] for r in self._c.execute("SELECT DISTINCT kind FROM records ORDER BY kind")]
 

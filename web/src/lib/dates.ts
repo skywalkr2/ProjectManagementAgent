@@ -51,6 +51,12 @@ export function wallTime(iso: string): string {
   return found ? timeFormat.format(new Date(2000, 0, 1, Number(found[1]), Number(found[2]))) : "";
 }
 
+/** A time as the server wrote it, on the person's own clock: the time alone today, otherwise the day and the time. */
+export function wallWhen(iso: string): string {
+  const clock = wallTime(iso);
+  return iso.slice(0, 10) === localDate(new Date()) ? clock : `${day(iso)}, ${clock}`;
+}
+
 /** The weekday of a yyyy-mm-dd date, short, in the reader's language. */
 export function weekday(iso: string): string {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);

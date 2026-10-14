@@ -55,7 +55,9 @@
 
   /* Layout: the app fills the window at every width. Panes are added as width grows; nothing is centered in a
      fixed column with empty margins. Only running prose is limited, by --measure, inside its pane. */
-  --header-h: 56px;
+  --header-row-h: 56px;        /* the header's main row */
+  --header-status-h: 32px;     /* its second row, for the status chip and the assistant's line, below 1280px */
+  --header-h: var(--header-row-h);
   --sidebar-w: 232px;          /* left navigation, expanded (>= 1280px) */
   --sidebar-w-collapsed: 64px; /* icons only (below 1280px, or collapsed by the person) */
   --bottombar-h: 64px;         /* phone bottom bar */
@@ -171,7 +173,8 @@
   --input-h: 34px;
 }
 @media (max-width: 1023px) { :root { --gutter: var(--space-4); } }
-:root[data-narrow] { --header-h: 48px; --page-pad: var(--space-4); --gutter: var(--space-4); }
+@media (max-width: 1279px) { :root:not([data-narrow]) { --header-h: calc(var(--header-row-h) + var(--header-status-h)); } }
+:root[data-narrow] { --header-row-h: 48px; --header-h: 48px; --page-pad: var(--space-4); --gutter: var(--space-4); }
 
 /* ---------- Global rules ---------- */
 /* Touch targets are at least 44px whatever the density: this comes after, and is as specific as, the compact block. */

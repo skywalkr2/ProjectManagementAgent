@@ -812,6 +812,14 @@ yet follow, that it is *designed*, with its phase.
 | When something sent is chased | One setting, `ui.today.nudge_after_days` (3), for questions and actions alike | One function, `follow_up_due`, used by Today's lines and the Follow-ups pills: a question after 4 days; a told action only when its own due date is within 7 days or past; an undated one after 14 days; never on hold. Settings `ui.followups.question_after_days`, `action_due_within_days` and `undated_after_days`; the old key is read as the first (4.11, 6.9; `tests/test_on_hold_and_follow_ups.py::test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_hold_leaves_both`) |
 | Follow-ups pill | "sent <date> (N days)" in the line | "waiting Nd", and "waiting Nd · follow up" in the warning color once the rule says it is time |
 
+## 47. Ready for real use: the header shows the assistant is alive (2026-10-14)
+
+| Item | Before | Now |
+|---|---|---|
+| The assistant's line in the header (7.1) | The status chip said the worst state in a word; whether the assistant was running at all, when it last ran and what waited for it were not in the header | A line beside the chip, always there: "Assistant ✓ last run 9:42" in the person's zone and time format, "no runs yet" before the first run. Amber with a warning icon for waiting for the network, a restart to finish, a paused account or no AI account yet; red with a cross icon when the account can't be used or the last run failed. Words and icon say it, never color alone. Its popover lists today's runs per account (count, failed), the requests waiting (count, oldest since) and each tier's fallback order by the accounts' own names. Built: `web/src/shell/AssistantLine.test.tsx`, `web/src/shell/status.test.ts`, `web/src/shell/Header.test.tsx` |
+| `GET /api/status` (6.15, 7.1) | Backup, AI state, spend, request counts, network wait, restart | Adds `assistant`: `last_run_at`, `last_run_failed`, `runs_today` (account, count, failed), `queued`, `oldest_queued_since`, `chains` (tier, accounts) and `paused` (account, until). Times are on the person's own clock. Only today's runs and the newest twenty are read (new store lookups `since` and `latest`); a call that found no network is in no count and is never the last run; a failed run on an account that is now paused is a pause, not a failure. Built: `tests/test_assistant_status.py` |
+| Header layout (7.1) | One 56px row at every width | One row from 1280px up; below it (not on a phone) the status chip and the assistant's line take a second 32px row, so the header is 88px and the first row keeps its room. The shell's `--header-h` follows it. Phone stays 48px |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

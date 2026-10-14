@@ -1393,6 +1393,148 @@
         "title": "AskView",
         "type": "object"
       },
+      "AssistantAccountRuns": {
+        "properties": {
+          "account": {
+            "description": "The account's name in the settings.",
+            "title": "Account",
+            "type": "string"
+          },
+          "count": {
+            "description": "Calls made to it today that reached it.",
+            "title": "Count",
+            "type": "integer"
+          },
+          "failed": {
+            "description": "Of those, the ones that didn't end in an answer that was used.",
+            "title": "Failed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "account",
+          "count",
+          "failed"
+        ],
+        "title": "AssistantAccountRuns",
+        "type": "object"
+      },
+      "AssistantChain": {
+        "properties": {
+          "accounts": {
+            "description": "The accounts the tier tries, in order, by their names in the settings.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "tier": {
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier",
+          "accounts"
+        ],
+        "title": "AssistantChain",
+        "type": "object"
+      },
+      "AssistantPaused": {
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "until": {
+            "description": "When its usage limit resets, on the person's own clock (their time zone).",
+            "format": "date-time",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account",
+          "until"
+        ],
+        "title": "AssistantPaused",
+        "type": "object"
+      },
+      "AssistantStatus": {
+        "description": "Whether the assistant is alive, for the header's status line. Times are on the person's own clock.",
+        "properties": {
+          "chains": {
+            "description": "For each tier with an account, the order its accounts are tried.",
+            "items": {
+              "$ref": "#/components/schemas/AssistantChain"
+            },
+            "title": "Chains",
+            "type": "array"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the assistant last called an account; none before the first.",
+            "title": "Last Run At"
+          },
+          "last_run_failed": {
+            "description": "That last call ended in an error and its account isn't paused.",
+            "title": "Last Run Failed",
+            "type": "boolean"
+          },
+          "oldest_queued_since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the oldest of them was made.",
+            "title": "Oldest Queued Since"
+          },
+          "paused": {
+            "description": "Accounts waiting for a usage limit to reset.",
+            "items": {
+              "$ref": "#/components/schemas/AssistantPaused"
+            },
+            "title": "Paused",
+            "type": "array"
+          },
+          "queued": {
+            "description": "Requests waiting for the assistant now, not counting ones that wait for the person.",
+            "title": "Queued",
+            "type": "integer"
+          },
+          "runs_today": {
+            "description": "Today's calls by account, in the person's day.",
+            "items": {
+              "$ref": "#/components/schemas/AssistantAccountRuns"
+            },
+            "title": "Runs Today",
+            "type": "array"
+          }
+        },
+        "required": [
+          "last_run_failed",
+          "runs_today",
+          "queued",
+          "chains",
+          "paused"
+        ],
+        "title": "AssistantStatus",
+        "type": "object"
+      },
       "AuthorSpan": {
         "properties": {
           "end": {
@@ -8249,6 +8391,9 @@
           "ai": {
             "$ref": "#/components/schemas/AiState"
           },
+          "assistant": {
+            "$ref": "#/components/schemas/AssistantStatus"
+          },
           "backup": {
             "$ref": "#/components/schemas/BackupStatus"
           },
@@ -8303,6 +8448,7 @@
         "required": [
           "backup",
           "ai",
+          "assistant",
           "spend",
           "requests",
           "version"

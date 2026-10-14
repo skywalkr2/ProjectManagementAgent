@@ -1,6 +1,8 @@
-// The header (design 7.1): one row, 56px, never wrapping. Left to right: the brand (a link to Today), a Demo chip, Ask as a
-// search-style field, the status chip, Hand something in, Help and the person's initials, which open the user menu.
-// Below 1024px the Ask field becomes an icon; on a phone only the brand, the status chip and the user menu remain.
+// The header (design 7.1): one row, 56px, from 1280px up. Left to right: the brand (a link to Today), a Demo chip, Ask as a
+// search-style field, the status chip with the assistant's alive line beside it, Hand something in, Help and the person's
+// initials, which open the user menu. Below 1280px the status chip and the alive line move to a second small row under
+// the rest; below 1024px the Ask field becomes an icon; on a phone one row remains, with the brand, the status chip, the
+// alive line's icon and the user menu.
 import { useQuery } from "@tanstack/react-query";
 import { Button as AriaButton } from "react-aria-components";
 import { api, type S } from "../lib/api";
@@ -14,6 +16,7 @@ import { Icon } from "../ui/Icon";
 import { IconButton } from "../ui/IconButton";
 import { MenuButton, type MenuGroup } from "../ui/MenuButton";
 import { Pill } from "../ui/Pill";
+import { AssistantLine } from "./AssistantLine";
 import { StatusMenu } from "./StatusMenu";
 import { initials } from "./status";
 import styles from "./Header.module.css";
@@ -110,7 +113,10 @@ export function Header(props: {
         </>
       )}
       <span className={styles.spacer} />
-      <StatusMenu live={props.live} demo={rc.demo} onOpenGuide={props.onOpenGuide} />
+      <div className={styles.status}>
+        <StatusMenu live={props.live} demo={rc.demo} onOpenGuide={props.onOpenGuide} />
+        <AssistantLine onOpenGuide={props.onOpenGuide} />
+      </div>
       {!props.narrow && (
         <div className={styles.end}>
           <Button variant="primary" icon="plus" onClick={props.onHandIn}>

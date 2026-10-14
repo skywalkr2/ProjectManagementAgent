@@ -33,6 +33,10 @@ from api.schemas import (
     Applied,
     ArrivedView,
     Ask,
+    AssistantAccountRuns,
+    AssistantChain,
+    AssistantPaused,
+    AssistantStatus,
     AuthorSpan,
     BackupStatus,
     ChangeItem,
@@ -139,6 +143,7 @@ from api.schemas import (
 from engine import actions as person_actions
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
+from engine.assistant_status import assistant_state
 from engine.backup import run_backup, state
 from engine.config import Config
 from engine.dispatcher import (
@@ -1147,8 +1152,18 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         ai, detail = ai_state(ws, cfg, store)
         spent = spend(store, cfg)
         waiting = [x["cause"]["since"] for x in reqs if is_waiting_for_network(x)]
+        alive = assistant_state(store, cfg)
         return Status(
             ai=AiState(state=ai, detail=detail),
+            assistant=AssistantStatus(
+                last_run_at=alive.last_run_at,
+                last_run_failed=alive.last_run_failed,
+                runs_today=[AssistantAccountRuns(**vars(x)) for x in alive.runs_today],
+                queued=alive.queued,
+                oldest_queued_since=alive.oldest_queued_since,
+                chains=[AssistantChain(**vars(x)) for x in alive.chains],
+                paused=[AssistantPaused(**vars(x)) for x in alive.paused],
+            ),
             spend=SpendStatus(
                 today_usd=spent.today_usd,
                 month_usd=spent.month_usd,

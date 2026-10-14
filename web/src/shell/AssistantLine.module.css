@@ -1,0 +1,34 @@
+/* The assistant's line beside the status chip: its name, an icon and a few words, in the muted text color when all is
+   well, amber when work is held up and red when it can't work. The icon and the words always say it. */
+.line {
+  display: inline-flex; align-items: center; gap: var(--space-2); flex: 0 1 auto; min-width: 0;
+  height: var(--btn-h-sm); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-full); background: transparent;
+  color: var(--text-muted); font-family: var(--font-ui); font-size: var(--text-sm); line-height: var(--lh-sm);
+  white-space: nowrap; cursor: pointer;
+}
+.line:hover { background: var(--surface-sunk); }
+.name { font-weight: var(--weight-semibold); color: var(--text); }
+.say { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.line[data-tone="warn"] .name, .line[data-tone="warn"] .say, .line[data-tone="warn"] svg { color: var(--warn); }
+.line[data-tone="bad"] .name, .line[data-tone="bad"] .say, .line[data-tone="bad"] svg { color: var(--danger); }
+.line[data-tone="warn"] .say, .line[data-tone="bad"] .say { font-weight: var(--weight-semibold); }
+/* On a phone the words after the icon go while all is well; a problem keeps its words. The popover says the rest. */
+:global([data-narrow]) .line[data-tone="ok"] .say { display: none; }
+
+.popover { width: min(420px, calc(100vw - var(--space-4))); }
+.popover[data-entering] { animation: pop var(--dur-fast) var(--ease-out); }
+@keyframes pop { from { opacity: 0; transform: scale(0.98); } }
+.dialog {
+  outline: none; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  box-shadow: var(--elev-2); padding: var(--space-2) var(--space-4);
+}
+.sections { list-style: none; margin: 0; padding: 0; display: grid; }
+.section { display: grid; gap: var(--space-1); justify-items: start; padding: var(--space-3) 0; border-bottom: 1px solid var(--border); }
+.section:last-child { border-bottom: 0; }
+.heading { margin: 0; color: var(--text-subtle); font-size: var(--text-xs); line-height: var(--lh-xs); font-weight: var(--weight-semibold); }
+.text { margin: 0; font-size: var(--text-sm); line-height: var(--lh-sm); overflow-wrap: anywhere; }
+.rows { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1); }
+.note { margin: 0; color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs); overflow-wrap: anywhere; }
+.problem[data-tone="warn"] .text { color: var(--warn); font-weight: var(--weight-semibold); }
+.problem[data-tone="bad"] .text { color: var(--danger); font-weight: var(--weight-semibold); }
+.problem svg { vertical-align: text-bottom; }

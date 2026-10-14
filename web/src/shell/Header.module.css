@@ -1,5 +1,7 @@
-/* One row, 56px (48px on a phone), and it never wraps: the Ask field becomes an icon below 1024px, and on a phone only the
-   brand, the status chip and the user menu remain. */
+/* One row, 56px (48px on a phone), from 1280px up: the status chip and the assistant's alive line sit between Ask and the
+   buttons. Below 1280px they take a second small row of their own, so the first row keeps its room (the row heights add up
+   to --header-h). The Ask field becomes an icon below 1024px, and on a phone one row remains with the brand, the status
+   chip, the alive line's icon and the user menu. */
 .header {
   grid-column: 1 / -1; position: sticky; top: 0; z-index: 20;
   display: flex; align-items: center; flex-wrap: nowrap; gap: var(--space-3);
@@ -27,6 +29,7 @@
 .askText { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .askIcon { display: none; }
 .spacer { flex: 1 1 0; min-width: 0; }
+.status { display: flex; align-items: center; gap: var(--space-1); flex: 0 1 auto; min-width: 0; }
 .end { display: flex; align-items: center; gap: var(--space-2); flex: none; }
 .avatar {
   display: grid; place-items: center; width: 32px; height: 32px; flex: none; border: 0; border-radius: var(--radius-full); cursor: pointer;
@@ -41,3 +44,9 @@
 }
 :global([data-narrow]) .header { gap: var(--space-2); padding: 0 var(--space-3); }
 :global([data-narrow]) .brand { font-size: var(--text-md); line-height: var(--lh-md); }
+
+@media (max-width: 1279px) {
+  :global(:root:not([data-narrow])) .header { flex-wrap: wrap; align-content: flex-start; gap: 0 var(--space-3); }
+  :global(:root:not([data-narrow])) .brand { min-height: var(--header-row-h); }
+  :global(:root:not([data-narrow])) .status { order: 9; flex: 1 0 100%; height: var(--header-status-h); padding-bottom: var(--space-1); }
+}
