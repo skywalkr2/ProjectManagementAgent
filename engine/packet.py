@@ -204,9 +204,7 @@ def _learned(
         facts=learns,
         scope_projects=with_ancestors(view, in_input),
     )
-    stable_text = "
-
-".join(part for part in (stable.text, seeds.text) if part)
+    stable_text = "\n\n".join(part for part in (stable.text, seeds.text) if part)
     stable_log = RunKnowledge(given=list(dict.fromkeys([*stable.ids, *seeds.ids])), stable_chars=len(stable_text))
     per_input_log = RunKnowledge(
         given=list(dict.fromkeys(per_input.ids)),
