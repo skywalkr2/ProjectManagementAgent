@@ -905,22 +905,22 @@ L2. **Every run reads what applies.**
 **Hold lifted (owner, 2026-10-14):** the second wave goes ahead before the O2 report; O2 stays pinned to `feb6b3f`.
 Settled with the original designer (answers to L2's three questions and notes from their running version,
 2026-10-14):
-- [ ] **What "a rule applied" means**, checkable without asking the model, in two steps:
+- [x] **What "a rule applied" means**, checkable without asking the model, in two steps:
   - each rule says what it constrains (`constrains`): the op kinds or fields it is about ("questions to someone", "an
     action's owner", "a due date"), or the check that enforces it;
   - it is **applied** when a run in its scope produced an op or field it constrains, or its check ran on that output
     (passing or refusing), or a correction names it. Scope matched with nothing constrained is **present**, counted
-    apart. The model's own "I applied rule X" may show as a hint on the evidence line and is never counted.
-- [ ] **The knowledge log records present and applied per rule**, so the review starts with a rule present in 200 runs
-  and applied in none.
-- [ ] **The review flag** (a rule present but not applied for `knowledge.rule_review_days`, 30) offers Keep (resets the
+    apart. The model's own "I applied rule X" may show as a hint on the evidence line and is never counted. Built: `tests/test_rule_review.py::test_an_op_of_a_constrained_kind_or_a_constrained_field_that_is_set_counts`, `tests/test_rule_review.py::test_a_later_correction_that_names_a_rule_counts_it_on_the_run_it_corrects_and_only_then`, `tests/test_rule_review.py::test_a_seeded_rule_and_a_rule_added_by_an_op_carry_what_they_constrain`. No check runs on a run's output yet (stage checks run on moves), so "its check ran" is wired and tested with a supplied check and counts once such a check exists (`tests/test_rule_review.py::test_a_check_that_ran_on_the_output_applies_a_rule_that_names_it_and_one_that_didnt_run_does_not`).
+- [x] **The knowledge log records present and applied per rule**, so the review starts with a rule present in 200 runs
+  and applied in none. Built: `tests/test_rule_review.py::test_a_processed_run_carries_the_rules_applied_present_and_moved`, `tests/test_rule_review.py::test_a_run_marks_the_rules_its_changeset_shows_applied_and_the_rest_stay_present`.
+- [x] **The review flag** (a rule present but not applied for `knowledge.rule_review_days`, 30) offers Keep (resets the
   clock), Narrow (often "this only matters for one project") and Retire. Rules enforced by a code check or an invariant
-  are never flagged.
-- [ ] **Over the size budget**, rules leave the always-sent section narrowest first: one project or one task kind before
+  are never flagged. Built: `tests/test_rule_review.py::test_the_review_flags_a_rule_present_but_never_applied_most_present_first`, `tests/test_rule_review.py::test_the_review_orders_by_present_count_and_never_flags_a_rule_a_check_enforces`, `tests/test_rule_review.py::test_keeping_a_rule_starts_its_count_again`, `tests/test_rule_review.py::test_keep_resets_the_clock_with_a_signal_and_undo_puts_the_old_clock_back`, `tests/test_rule_review.py::test_narrow_changes_the_scope_as_the_persons_own_edit_with_a_new_signal_and_undo` (engine, Today line and routes). A rule is flagged only after a whole review period since it was learned or kept, so Keep resets it. The screen that shows the line and its buttons is moved to L3, with the Knowledge screen (7.18).
+- [x] **Over the size budget**, rules leave the always-sent section narrowest first: one project or one task kind before
   several; workspace-wide rules in the person's own words last. A rule enforced by a stage check sends only its one-line
   form in the always-sent section, and its full text in the per-input part for the runs it covers. Nothing is dropped
   silently. "Review your standing rules" shows at most once a week, with the section's size and the count moved.
-  Built so far: the order and the one-line form (`tests/test_knowledge_section.py::test_over_the_budget_rules_leave_narrowest_first_and_nothing_is_dropped`, `tests/test_knowledge_section.py::test_a_rule_a_stage_check_enforces_is_one_line_in_the_stable_part_and_whole_in_the_per_input_part`); the weekly "Review your standing rules" line is still to build.
+  Built so far: the order and the one-line form (`tests/test_knowledge_section.py::test_over_the_budget_rules_leave_narrowest_first_and_nothing_is_dropped`, `tests/test_knowledge_section.py::test_a_rule_a_stage_check_enforces_is_one_line_in_the_stable_part_and_whole_in_the_per_input_part`); the weekly line in the queue, with the size and the count moved: `tests/test_rule_review.py::test_the_line_appears_only_when_a_rule_is_flagged_or_rules_were_moved`, `tests/test_rule_review.py::test_the_line_returns_at_most_once_a_period_after_the_person_acts_on_it`, `tests/test_rule_review.py::test_the_review_reports_the_latest_size_against_the_budget_and_the_rules_moved`; its screen is moved to L3 with the Knowledge screen.
 - [x] **The section's size is in the knowledge log on every run, from the first L2 commit**, so the budget's default is
   set from real numbers (five rules on one busy day is normal). Built: `tests/test_knowledge_section.py::test_a_processed_requests_run_records_the_knowledge_it_was_given` (`stable_chars`).
 - [x] **Scope is filtered when the packet is built**, never left to the model: an excluded project's rules (`except`) are
@@ -928,26 +928,29 @@ Settled with the original designer (answers to L2's three questions and notes fr
 - [x] **Local first:** the `search` round runs over records, facts and past inputs before any outside lookup is proposed,
   and an outside lookup from a run that hasn't searched is sent back to search first. `already-known` runs before every
   question op, to anyone, the person included, not only questions to others. Built: `tests/test_search.py::test_a_question_the_workspace_answers_is_sent_back_once_with_the_match`, `tests/test_search.py::test_already_known_checks_a_question_to_someone_else_and_a_report_too`, `tests/test_search.py::test_a_question_from_a_run_that_searched_is_not_sent_back`. There is no outside lookup op yet (C4); when it comes, it joins `ASKING_OPS` in `engine/search.py` and the same lint covers it.
-- [ ] **The stable prefix has a budget** (the original designer's L0 sign-off, 2026-10-13): rules arrive in bursts, so the stable section has a size budget (a setting)
+- [x] **The stable prefix has a budget** (the original designer's L0 sign-off, 2026-10-13): rules arrive in bursts, so the stable section has a size budget (a setting)
   and the knowledge log counts its rules; a rule that hasn't applied in 30 days (a setting) is flagged for review on
-  the daily card instead of the prefix growing forever.
+  the daily card instead of the prefix growing forever. Built: `tests/test_knowledge_section.py::test_over_the_budget_rules_leave_narrowest_first_and_nothing_is_dropped`, `tests/test_rule_review.py::test_the_review_reports_the_latest_size_against_the_budget_and_the_rules_moved` (`knowledge.stable_budget`, its size logged per run, the review in the items above).
 - [x] The knowledge section, split so the cached prefix holds:
   - stable: all rules, task-kind lessons and a small glossary;
   - per input: the rest. Built: `tests/test_knowledge_section.py::test_the_stable_part_holds_only_workspace_wide_rules_task_kind_lessons_and_a_small_glossary`, `tests/test_knowledge_section.py::test_two_inputs_of_a_batch_share_the_same_stable_knowledge_in_their_packets`, `tests/test_knowledge_section.py::test_lessons_and_routing_reach_the_runs_for_their_projects_and_people`, `tests/test_knowledge_section.py::test_untrusted_entries_are_shown_as_data_with_their_source_and_never_as_guidance`, `tests/test_knowledge_section.py::test_proposed_discarded_expired_and_retired_entries_never_go_in`. Style notes come with the drafting tasks.
-- [ ] The batch prefix is not frozen, so each input sees what the inputs before it in the batch did.
+- [x] The batch prefix is not frozen, so each input sees what the inputs before it in the batch did. Built: `tests/test_refusals.py::test_the_second_input_of_a_batch_sees_the_action_the_first_one_created` (the code already built each packet when its request ran).
 - [x] Facts of the input's projects, with their date and source, ranked and cut at a budget, with what was left out said. Built: `tests/test_knowledge_section.py::test_facts_are_dated_sourced_and_ranked_key_first_then_overlap_then_newest`, `tests/test_knowledge_section.py::test_facts_are_cut_at_the_budget_and_the_count_left_out_is_said`.
 - [x] Superseded facts leave the packet. Built: `tests/test_knowledge_section.py::test_a_fact_a_newer_one_replaces_is_left_out_until_the_newer_one_goes`.
 - [x] The `search` round, at most two per run, over facts, past inputs, records and knowledge. Built: `tests/test_search.py::test_a_run_that_asks_to_search_gets_the_results_and_then_answers`, `tests/test_search.py::test_a_run_that_keeps_asking_must_answer_after_the_configured_rounds`, `tests/test_search.py::test_a_search_uses_up_no_fix_round_and_no_try`, `tests/test_search.py::test_a_search_that_would_push_the_next_call_over_the_run_limit_stops_the_run_with_the_usual_reason`, `tests/test_search.py::test_results_from_an_outside_input_make_the_work_untrusted`.
 - [x] The `already-known` and `near-duplicate-question` lints. Built: `tests/test_search.py::test_already_known_returns_a_question_a_fact_answers`, `tests/test_search.py::test_near_duplicate_question_fires_at_and_above_the_similarity_and_not_below`, `tests/test_search.py::test_near_duplicate_question_ignores_a_similar_question_to_a_different_person`. The plain check behind `already-known` reads facts and active knowledge; the run's own search also reaches past inputs and records.
 - [x] The knowledge log on each run. Built: `tests/test_knowledge_section.py::test_a_processed_requests_run_records_the_knowledge_it_was_given` and `tests/test_search.py::test_a_run_that_asks_to_search_gets_the_results_and_then_answers` (what it was given, left out by scope, facts left out, the section's size, its searches). Present and applied per rule is the item above.
-- [ ] Every invariant has a one-line constraint in the reference of the ops it constrains, checked by the self-check.
-- [ ] Refusals counted per check; a check that refuses often brings its seed lesson into the packet.
-- [ ] One plugin API call that gives a pack's packets the same section (phase C's exit test depends on it).
-- [ ] `learning: own` for a record type or task kind: the core's input learning, new-term scan, first-name resolution and
+- [x] Every invariant has a one-line constraint in the reference of the ops it constrains, checked by the self-check. Built: `tests/test_invariants.py::test_the_reference_shows_an_invariants_line_under_each_op_it_constrains`, `tests/test_invariants.py::test_the_shipped_lines_cover_every_check_the_applier_refuses_by`, `tests/test_invariants.py::test_the_self_check_fails_for_an_invariant_without_a_line` (the self-check "invariant lines"; data in `engine/defaults/invariants.yaml`).
+- [x] Refusals counted per check; a check that refuses often brings its seed lesson into the packet. Built: `tests/test_refusals.py::test_the_share_of_each_check_is_the_runs_it_refused_over_the_runs_counted`, `tests/test_refusals.py::test_a_refusal_a_fix_round_repaired_is_counted_from_the_runs_knowledge_log`, `tests/test_refusals.py::test_a_seed_lesson_enters_at_the_share_and_not_below_it`, `tests/test_refusals.py::test_no_seed_lesson_enters_below_the_minimum_number_of_runs`, `tests/test_refusals.py::test_a_packet_carries_the_seed_lesson_in_its_stable_part_and_logs_it`.
+- [x] One plugin API call that gives a pack's packets the same section (phase C's exit test depends on it). Built: `tests/test_plugin_learning.py::test_a_packet_that_asks_gets_the_stable_and_per_input_knowledge_and_its_run_logs_it`, `tests/test_plugin_learning.py::test_a_packet_that_doesnt_ask_is_unchanged`, `tests/test_plugin_learning.py::test_a_lesson_aimed_at_a_plugin_task_kind_reaches_it_and_not_a_core_run` (`view.knowledge`, plugin API 0.3.67).
+- [x] `learning: own` for a record type or task kind: the core's input learning, new-term scan, first-name resolution and
   fact ranking stay off it (fiction is not workspace knowledge). A correction yields either a pack record or a core
-  lesson, never both (design 6.22).
+  lesson, never both (design 6.22). Built: `tests/test_plugin_learning.py::test_learning_own_work_gets_no_facts_and_no_people_matched`, `tests/test_plugin_learning.py::test_first_names_resolve_only_for_work_the_core_learns_on`, `tests/test_plugin_learning.py::test_learns_on_says_which_work_the_cores_learning_runs_on`. Input learning and the new-term scan don't exist yet; they call `engine/learning.py::learns_on` when built (L3).
 
 L3. **Every correction teaches.**
+From L2:
+- [ ] The screen for the weekly "Review your standing rules" line: the flagged rules with their counts, the section's size
+  and the rules moved, and Keep, Narrow and Retire on each (the routes are built), with the Knowledge screen (7.18).
 From L1:
 - [ ] **Knowledge proposals are writable on every account a chain can hold.** `learn.*` proposals and `lesson.update`
   are allowed for every account a fallback chain can hold, locked-down agents included, and the switch check tests it;

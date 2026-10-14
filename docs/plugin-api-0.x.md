@@ -10,6 +10,19 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.67 adds
+
+Manifests stay `'>=0.3,<0.4'`. A plugin that changes nothing keeps working unchanged.
+
+- **`view.knowledge(text="", *, projects=())`** in a task kind's `packet` function returns `KnowledgeParts(stable,
+  per_input)`: what the workspace learned that applies to this task kind, its projects and the text the plugin names.
+  Put `stable` in `PacketParts.stable` and `per_input` in `PacketParts.request`; the core logs it on the run. Lessons and
+  rules aimed at `<plugin>/<name>` task kinds reach it. A scope naming a project also covers its child projects.
+- **`learning: own`**: a record type's class attribute `learning = "own"`, or `registrar.task_kind(..., learning="own")`.
+  The core's own learning steps (first-name resolution, fact ranking, and later input learning) don't run on that work.
+- **Core records:** a rule gains `constrains` and `reviewed_at`; a run's knowledge log gains `rules_applied`,
+  `rules_present`, `rules_moved` and `refused_checks`; a signal kind `narrowed`.
+
 ## What 0.3.66 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.

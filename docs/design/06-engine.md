@@ -1500,7 +1500,11 @@ material that is not workspace knowledge. A novel's facts are fiction, and its i
 - when a person corrects a pack's work, the core proposes a lesson targeted at that pack's task kinds, unless the pack
   claims the correction with its own record. One correction never yields both a pack record and a core lesson.
 
-A pack's own task kinds get the same section through one plugin API call. So a writing pack's runs see the person's lessons and
+A pack's own task kinds get the same section through one plugin API call (built in L2: `view.knowledge(text,
+projects=...)` returns `KnowledgeParts(stable, per_input)`, placed by the pack and logged on its run like a core packet's;
+`learning: own` is declared on a record type or a task kind, and `engine/learning.py::learns_on` tells each learning step
+whether to run). **A scope that names a project covers its child projects** at any depth, for `projects` and `except`
+alike (built in L2); facts stay per exact project. So a writing pack's runs see the person's lessons and
 glossary, and a pack's own knowledge (a series bible) can be offered the same way later.
 
 **The always-sent section has a size budget** (built in L2 except the weekly line; the original designer, 2026-10-14). Its size is in
@@ -1510,7 +1514,10 @@ workspace-wide rules in the person's own words last. A rule a stage check enforc
 its full text in the per-input part for the runs it covers, since the check does the enforcing. Nothing is dropped
 silently: "Review your standing rules" shows at most once a week, with the section's size and the count of rules moved.
 
-**What a rule constrains, and whether it applied** (*designed, phase L2*; the original designer, 2026-10-14). A rule
+**What a rule constrains, and whether it applied** (built in L2, `engine/rule_use.py`, `engine/rule_review.py`; the
+screen for the review is L3's; the original designer, 2026-10-14). A rule is flagged only after a whole review period
+since it was learned or last kept, so Keep starts the count again; the line's weekly clock is the last time the person
+kept, narrowed or retired a rule. A rule
 says what it constrains (`constrains`): the op kinds or fields it is about ("questions to someone", "an action's owner",
 "a due date"), or the check that enforces it. For each run in its scope the knowledge log records it as **applied** when
 the run produced an op or field it constrains, or its check ran on that output (passing or refusing), or a correction
@@ -1534,6 +1541,12 @@ because matching is fuzzy. The plain check reads facts and active knowledge; the
 inputs and records. A search answer is its own shape (`search`: words, ids, project, kinds); a search uses no fix round
 and no try, is estimated and recorded like any call, and results from an outside input make the work untrusted (built:
 `tests/test_search.py`).
+
+**Seed lessons and refusals** (built in L2). Each invariant has a one-line constraint printed under the ops it
+constrains in the op reference, and a seed lesson (`engine/defaults/invariants.yaml`); the self-check fails for an
+invariant without a line. Refusals are counted per check over a task kind's last runs, including those a fix round
+repaired (logged on the run as `refused_checks`); a check whose share reaches `knowledge.refusals_to_packet.share`, once at
+least `min_runs` runs are counted, brings its seed lesson into the stable part, marked as the product's own guidance.
 
 **The knowledge log.** Each `Run` records:
 - which knowledge entries it was given, by id, and for each rule whether it was applied or only present (above);

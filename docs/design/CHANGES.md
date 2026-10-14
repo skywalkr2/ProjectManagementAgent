@@ -879,6 +879,16 @@ yet follow, that it is *designed*, with its phase.
 | Search (6.22) | Designed | A run may answer with a search; the engine searches facts, past inputs, records and knowledge, at most `knowledge.search_rounds` times. Built: `tests/test_search.py` |
 | Lints (4.17) | Designed | `already-known` (return) on asking ops from a run that didn't search; `near-duplicate-question` (warn) against the same person's questions within 14 days. Built: `tests/test_search.py` |
 
+## 54. L2, second wave: rule counts and review, invariant lines, refusals, the plugin call and learning: own (2026-10-14)
+
+| Where | Before | Now |
+|---|---|---|
+| Rules (5.1, 6.22) | No record of what a rule governs | `constrains` (op kinds or fields), `reviewed_at`; each run logs `rules_applied`, `rules_present`, `rules_moved`; a weekly review in the queue and its routes (Keep, Narrow with a `narrowed` signal, Retire). Built: `tests/test_rule_review.py` |
+| Invariants (6.7) | Only in code | A one-line constraint per invariant in the op reference, and a self-check that each has one. Built: `tests/test_invariants.py` |
+| Refusals (6.22) | Not counted | Counted per check (fix rounds included); a frequent one brings its seed lesson, after `min_runs`. Built: `tests/test_refusals.py` |
+| Plugins (3.x, 6.22) | A pack's packet got no knowledge | `view.knowledge(...)` and `learning: own`. Built: `tests/test_plugin_learning.py` |
+| Scope (6.22) | Exact projects | A scope naming a project covers its children. Built: `tests/test_plugin_learning.py::test_a_scope_naming_a_parent_project_covers_its_children_at_any_depth_for_projects_and_except` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

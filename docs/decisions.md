@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: L2's second wave: choices made while building
+
+**Decided by:** the technical PM, reviewing the builders' work. **What:** (1) a scope that names a project covers its
+child projects at any depth, for `projects` and `except`; facts stay per exact project. (2) Refusals are counted
+including those a fix round repaired, and no seed lesson enters before `knowledge.refusals_to_packet.min_runs` (10) runs
+are counted. (3) A rule is flagged for review only after a whole review period since it was learned or kept, so Keep
+starts the count again; the weekly line's clock is the person's last Keep, Narrow or Retire. (4) "Its check ran on the
+output" is wired but waits for a check that runs on a run's output; today stage checks run on moves. (5) The review's
+screen comes with L3's Knowledge screen; the engine, line and routes are built now. *Kind:* concepts (core) and two
+settings. **Why:** a series' rules must reach its books; fix-round refusals are the case seed lessons exist for; without
+the period, Keep would reset nothing. **Impact:** design 6.22, CHANGES 54, plugin API 0.3.67; no change to scope.
+
 ## 2026-10-14: The Today mockup's review: "Just this time", one learned line, and row rules
 
 **Decided by:** the original designer's review of the Today mockup, placed by the technical PM. **What:** the Learned
