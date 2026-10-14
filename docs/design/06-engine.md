@@ -827,6 +827,12 @@ for it, that nothing goes out without the PM approving that exact content, alrea
 
 ## 6.13 Governor, automation problems and reports
 
+**The missing-op list** (*designed, phase L3*; the original designer's lessons from running, 2026-10-14). A run that
+says no op can do what it needed ("no op writes the people list"), and every edit the person makes by hand to fix the
+assistant's work where an op would have done, go on one weekly list on Quality. Each entry becomes an op with its check and
+Undo, or an explicit "the person does this" decision recorded in `docs/decisions.md`. The product never adds the op
+itself (the report to the maintainers below).
+
 - **Built (roadmap A2): runs a stop left unfinished.** When the worker starts, every request left running goes back in the
   queue with the note "The app closed while this ran; it runs again now." and raises `request.queued`. One found running
   after it was already put back once goes to needs you instead ("Stopped twice when the app closed during it"), its
@@ -1260,6 +1266,12 @@ check-up and the UI all ask it; no other part of the product decides scope on it
   tracked item it affects. When that item closes or leaves scope, its cross-domain question is dropped.
 - **Moving the line:** when the PM says an item or team is ours (or isn't), the "Respond to the assistant" flow proposes the
   scope config change; the applier and the sweep take it from there.
+- **The person's role on each project decides what is tracked** (*designed, phase E*; the original designer's lessons from
+  running, 2026-10-14). A project carries each person's role on it: they **run** it, they **design** for it, or they only
+  **watch** it (per person id, so an organization install, 11.8, works the same). The resolver reads that role, not a
+  global list: on a project the person runs, another team's blocking defect is a risk and an action, not a parked note. "I'm
+  running X now" or "they want me to PM X" in any input or note proposes the role change as a system op the person
+  confirms, and it takes effect that day. A learning pair proves it (roadmap L4).
 
 ## 6.19 Facts and lookups
 

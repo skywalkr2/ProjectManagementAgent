@@ -286,6 +286,16 @@ real use starts. The rest (L-more) comes after the packs.
     `web/src/components/FollowUps.test.tsx`. Top priorities' lines read it when that list is built);
   - [x] "where it came from" as a working link on actions, questions and decisions (the page, else the saved text, else the change and its request); knowledge records with L1, so Keep can be judged against the evidence. Built: `tests/test_origin.py` (the three cases, none, Today's to-do, record pages), `web/src/components/Origin.test.tsx` (a Follow-ups row), `web/src/components/RecordPage.test.tsx::an action's page shows where it came from as a link, in place of the input's id`. The knowledge-record link is built with L1: `tests/test_knowledge_records.py::test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_and_its_request` ("Knowledge keeps its provenance").
 
+- **From the original designer's lessons of 2026-10-14**, small and needed in the first week:
+  - [ ] **A failed call never looks like an empty result** (lesson 7): wherever a list comes from a call (a connector, an
+    account, a dry run), a failure shows its reason where the person is looking ("the service refused the sign-in: renew
+    it in Settings"), never "0 items".
+  - [ ] **Credentials with a known lifetime carry their expiry date**, and a Today line lands a week before (a setting),
+    listing every place the same credential is stored (lesson 7).
+  - [ ] **No tool version numbers in messages to people** (lesson 9): a lint (default `return`) on questions and drafts
+    that go to someone else, with the version patterns in settings: name the page, link it, say what changed or when. A
+    version that is part of a product's own name passes. The lint is the core's; a connector pack ships the patterns for
+    its own pages.
 - **One account is the usual case; a second is offered, never assumed** (the original designer's L1 check-in and the
   owner's answer, 2026-10-14). Most people have one AI account, so a usage limit means the work waits for the reset:
   that is built and says so on Today with the time
@@ -929,6 +939,21 @@ Settled with the original designer (answers to L2's three questions and notes fr
   lesson, never both (design 6.22).
 
 L3. **Every correction teaches.**
+From the original designer's lessons of 2026-10-14:
+- [ ] **"Change this" on every row the assistant made** (lesson 4): action, question, decision, calendar entry and fact
+  each have a note on their row. The assistant rewords, re-dates, puts on hold, turns it into another kind (an action
+  that is really a decision), splits or drops it as the note says, never marks it done unless the note says so, and each
+  records a correction signal. Today only questions have "Respond to the assistant".
+- [ ] **The missing-op list** (lesson 2, design 6.13): every "no op can do this" in a run's result and every hand fix of
+  the assistant's work, listed weekly on Quality, each becoming an op with its check and Undo or a recorded "the person
+  does this". Checked against the code (2026-10-14), of the designer's six hand fixes: adding a person and logging a
+  lesson have ops (`person.add`, `lesson.add`); a project's role, bringing back something set aside as an op the
+  assistant can propose, merging a list row that was never a real project, and marking a question as already sent by the
+  person have none yet.
+- [ ] **A question to someone else says why it matters** (lesson 3): its text names which of the person's decisions,
+  designs or dated items depends on the answer (a `matters_for` field); one that can't name one is recorded as a fact and
+  said in the change's note, not asked. The question row's "where it came from" link is built (Ready for real use);
+  its project tag on the row is phase B's.
 - [ ] **Rules become proposals like the rest of what is learned** (the original designer, 2026-10-14): one place to keep
   or discard. Two guards: the person's own words (a rule stated in their note or answer) still apply at once with Undo,
   and only rules from the assistant, inputs or reported content become proposals, whose Keep shows the restatement the
@@ -1012,7 +1037,9 @@ The buttons are laid out with the rest of the screens in phase B; their behavior
 
 L4. **Proving it** (from the design author's review of this plan).
 - [ ] **15 to 20 fictional fixture pairs, about a third negative.** They include the pairs L0 and L1 left here: a reported note saying "from now on we always…" never
-  becomes an active rule; the same words repeated in the person's own Mark done note ("<name> said from now on…") never
+  becomes an active rule; after a project's role changes to "run", an email about another team's defect blocking its
+  launch gives a risk and an action, not a parked note (lessons of 2026-10-14, lesson 1); the same words repeated in the
+  person's own Mark done note ("<name> said from now on…") never
   become an active rule either; a corrected date that carries to the next mail's calendar entry, and set-aside mail (today tests, moved into fixtures here). A negative pair's later input must not change; a loop
   that over-learns is as harmful as one that doesn't learn. Each pair is (a) an input, the wrong output, the correction and
   the expected proposal, and (b) a later input. The cases, in generic form:
@@ -1084,6 +1111,9 @@ L5. **Reading what arrives, and protecting what is learned.**
 - [ ] Text extractors in the core: documents, spreadsheets, presentations and PDFs, so mail attachments are read. The
   extractor extension point for plugins, and a connector item that carries files, so mail add-ons hand attachments to the
   core instead of reading only their names.
+- [ ] **Each extractor tests itself at startup** on a small fixture file, and a failing one is a Today line (lessons of
+  2026-10-14, lesson 8). A watched file with no text is an issue about the extractor, never a question asking the person
+  for the text. Prefer readers that need nothing installed.
 - [ ] Encryption for backups that leave the person's control (`backups.encrypt`).
 
 L6. **The rules that bite in the first week of real use** (design 8.8).
@@ -1097,6 +1127,15 @@ The note box on action buttons, the header's "alive" line, on hold isn't due, th
 from" link are built for real use at the end of L-core ("Ready for real use"); phase B gives them their final layout.
 
 The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
+
+From the original designer's lessons of 2026-10-14:
+- [ ] **Completed is a place, not a deletion** (lesson 6): a project whose status means done shows in a Completed group at
+  the bottom of the project list, with its original program kept as a label. "Remove from the list" stays a separate act.
+  The same grouping on a published portfolio page is the project management pack's (C2), through the publisher.
+- [ ] **A date move isn't news** (lesson 5): the history shown to readers (a record's activity, a published page) leaves
+  out changes that only move a date on an existing item (same text, new date); new, closed and blocked items, status,
+  scope, risks and decisions stay. The ledger keeps everything. The core provides this reader filter; a pack's published
+  status page uses it (C2, C4).
 
 **Exit test:** the owner reviews every screen on a laptop and a phone. Checklist items C1–C46 of
 `reviews/ui-ux-2026-10/` are marked Done or explained, with screenshots in `reviews/ui-ux-2026-10/after/`.
@@ -1441,6 +1480,10 @@ Order by what protects real data first, then by what the packs ask for:
   comparison treats redacted entries as matching, and the loading computer replays the forget. Undo never restores a
   forgotten value.
 - [ ] Scope resolver (6.18), the scheduled rules and lessons review with promotion (6.21), and read-backs (6.7).
+  The resolver reads **the person's role on each project** (run, design, watch, a value list a pack can extend; per
+  person id), and "I'm running X now"
+  in any input proposes the role change as a system op, effective that day (the original designer's lessons, 2026-10-14,
+  lesson 1). Its learning pair is in L4.
   Dependencies, baselines and RAID moved to the project management pack (C2).
 - [ ] **The Monday briefing sent to the person** (owner, 2026-10-13), and a morning summary if they want one: to a
   notification target, with content only where the target is allowed for the data level (7.19), counts otherwise.

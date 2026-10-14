@@ -3,6 +3,23 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: The original designer's lessons from running (nine), placed
+
+**Decided by:** the technical PM, placing the original designer's lessons of 2026-10-14; checked against the code first.
+**Where each goes:** (1) the person's role on each project decides scope: a concept, with the scope resolver (6.18,
+phase E) and a learning pair in L4; (2) the missing-op list: a concept (6.13, L3), with the code check of the six hand
+fixes in the roadmap; (3) a question says why it matters: a concept (`matters_for`, L3), the row's source link already
+built; (4) "Change this" on every assistant-made row: L3, with its signal; (5) date moves left out of reader history and
+(6) a Completed group: phase B and the publisher (C4); (7) a failed call never shown as empty, and credential expiry
+reminders: concept plus a setting, before real use; (8) extractor self-test at startup: L5; (9) no tool version numbers
+in messages: a lint with its patterns as a setting, before real use. **Core or pack (owner's question):** all nine are
+everyday project support, so the mechanisms are core; the parts that belong to one kind of work go to packs: the
+published portfolio page's Completed group and reader history (the project management pack, through the publisher), the
+role values beyond run, design and watch (a pack extends the list), and a wiki's page-version patterns (that connector's
+pack). **Why:** most failures were something the assistant
+had no op for or something the person couldn't see. **Impact:** design 6.13 and 6.18; roadmap items in L3, L4, L5, E, B
+and "Ready for real use"; no change to scope.
+
 ## 2026-10-14: GitHub Models becomes an API option before 1.0; a Copilot SDK adapter waits for its stable release
 
 **Decided by:** the owner, after reviewing outside advice on how the app reaches AI accounts. **What:** GitHub's model
