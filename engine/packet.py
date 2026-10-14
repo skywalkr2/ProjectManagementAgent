@@ -16,7 +16,7 @@ from engine.ai.task import AiTask
 from engine.cleaning import Cleaned, clean
 from engine.config import Config
 from engine.intake import source_text
-from engine.knowledge_section import per_input_section, stable_section
+from engine.knowledge_section import per_input_section, stable_section, with_ancestors
 from engine.learning import request_learns
 from engine.names import People
 from engine.ops import reference_for, schema_for
@@ -200,6 +200,7 @@ def _learned(
         settings,
         moved=stable.moved,
         facts=learns,
+        scope_projects=with_ancestors(view, in_input),
     )
     stable_log = RunKnowledge(given=list(dict.fromkeys(stable.ids)), stable_chars=len(stable.text))
     per_input_log = RunKnowledge(

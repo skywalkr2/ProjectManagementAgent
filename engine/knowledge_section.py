@@ -86,6 +86,18 @@ def _in_scope_of_projects(scope: Scope, projects: set[str], also: str | None = N
     return not (set(scope.except_) & projects)
 
 
+def with_ancestors(view: Any, projects: Iterable[str]) -> list[str]:
+    """The projects and then every project above them (`Project.parent`, any depth), each once. A scope that names a
+    project covers the projects below it, so scopes are matched against this list."""
+    found: list[str] = []
+    for project_id in projects:
+        while project_id and project_id not in found:
+            found.append(project_id)
+            project = view.get("project", project_id)
+            project_id = project.data.get("parent") if project is not None else None
+    return found
+
+
 def _about_these_people(scope: Scope, people: set[str]) -> bool:
     return not scope.people or bool(set(scope.people) & people)
 
@@ -224,14 +236,17 @@ def per_input_section(
     settings: KnowledgeSettings,
     moved: Iterable[str] = (),
     facts: bool = True,
+    scope_projects: Iterable[str] | None = None,
 ) -> PerInput:
     """The knowledge that depends on the input: rules narrowed to some projects or task kinds that cover it, rules a
     stage check enforces (in full) and rules that moved out of the stable part; lessons for its projects or people;
     routing for its people and projects; the glossary terms it uses once the glossary is too large to send whole;
     then the facts of its projects, ranked and cut at `facts_budget`. `text` is the input's words, which decide the
     terms and rank the facts. Returns the text, the ids given, the ids left out by scope, and how many facts didn't
-    fit. With `facts` False (work the core's learning doesn't run on) the facts are left out."""
+    fit. With `facts` False (work the core's learning doesn't run on) the facts are left out. Scopes are matched against
+    `scope_projects` (the projects and their ancestors; the projects alone when None); facts stay per exact project."""
     project_set, people_set, moved_set = set(projects), set(people), set(moved)
+    scoped = set(scope_projects) if scope_projects is not None else project_set
     ids: list[str] = []
     left_out: set[str] = set()
     sections: list[str] = []
@@ -239,7 +254,7 @@ def per_input_section(
     def passes(stored: Any, scope: Scope, also: str | None = None) -> bool:
         if not _covers_task(scope, task_kind):
             return False
-        if not _in_scope_of_projects(scope, project_set, also):
+        if (also is not None and also not in project_set) or not _in_scope_of_projects(scope, scoped):
             left_out.add(stored.id)
             return False
         return _about_these_people(scope, people_set)
@@ -277,7 +292,7 @@ def per_input_section(
         about_input = (
             entry.data.get("person") in people_set
             or (entry.data.get("team") is not None and entry.data["team"] in teams)
-            or (scope.scope == "projects" and bool(set(scope.projects) & project_set))
+            or (scope.scope == "projects" and bool(set(scope.projects) & scoped))
         )
         if about_input:
             routing.append((entry, _entry_line(entry)))

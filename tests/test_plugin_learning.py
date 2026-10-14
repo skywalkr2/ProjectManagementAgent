@@ -300,6 +300,25 @@ def test_a_core_run_about_a_learning_own_record_gets_no_facts_either(env):
     assert fact not in own.knowledge.given and fact in plain.knowledge.given
 
 
+def test_a_scope_naming_a_parent_project_covers_its_children_at_any_depth_for_projects_and_except(env):
+    ws, cfg, store = env
+    series = make(store, "project", {"name": "A series"})
+    book = make(store, "project", {"name": "A book", "parent": series})
+    draft = make(store, "project", {"name": "A draft", "parent": book})
+    reaches = rule(store, "series-rule", "Keep to the series style.", scope="projects", projects=[series])
+    excluded = rule(store, "not-the-series", "Chase on Fridays.", **{"except": [series]})
+    series_fact = make(
+        store, "fact", {"text": "The series is set in autumn.", "project": series, "as_of": "2026-09-01"}
+    )
+    packet = packet_for(env, "p52/review", chapter(store, project=draft))
+    assert "Keep to the series style." in packet.task.request and reaches in packet.knowledge.given
+    assert "Chase on Fridays." not in packet.task.stable + packet.task.request
+    assert excluded in packet.knowledge.left_out_by_scope and excluded not in packet.knowledge.given
+    assert series_fact not in packet.knowledge.given  # facts stay per exact project
+    core = build(ws, store, cfg, start(store, "notes", chapter(store, project=book), project=book), TODAY)
+    assert reaches in core.knowledge.given and excluded in core.knowledge.left_out_by_scope
+
+
 @pytest.mark.parametrize("which", ["record_learning", "kind_learning"])
 def test_a_learning_other_than_core_or_own_is_refused(tmp_path, which):
     _, _, store = make_env(tmp_path, **{which: "sometimes"})
