@@ -307,6 +307,16 @@ real use starts. The rest (L-more) comes after the packs.
     it in Settings"), never "0 items".
   - [ ] **Credentials with a known lifetime carry their expiry date**, and a Today line lands a week before (a setting),
     listing every place the same credential is stored (lesson 7).
+  - [ ] **What a change made is linked where the person looks** (lessons of 2026-10-14 afternoon, lesson 1): every draft,
+    write-up or file a change makes for the person shows as a "Made:" link on the change's card without opening its
+    details, with what it is for ("internal minutes, not ready to send"); the request's result links the first one. A
+    result that names something made without a link gets the lint `unlinked-made` (default `return`).
+  - [ ] **A project's summary is status, not findings** (afternoon lesson 5): a line budget (a setting) and a lint on the
+    summary field; findings go to facts. Placing a sentence by audience on published pages is the publisher's and the
+    project management pack's (C2, C4), using the data levels the core already has.
+  - [ ] **A watched source can name its author** (afternoon lesson 7): the person, a named colleague or a team, set on the
+    source in the watch settings. The person's own edits are their own work: never news credited to others, never
+    questions back to them. Closing the action an edit fulfills is L3b's.
   - [ ] **No tool version numbers in messages to people** (lesson 9): a lint (default `return`) on questions and drafts
     that go to someone else, with the version patterns in settings: name the page, link it, say what changed or when. A
     version that is part of a product's own name passes. The lint is the core's; a connector pack ships the patterns for
@@ -974,6 +984,17 @@ From the original designer's lessons of 2026-10-14:
   the signal is recorded, nothing is proposed, and a repeat of the same correction counts toward a later proposal. A lesson
   is about what was corrected (an action's owner teaches who does the work, not where questions go). One Today line for
   everything learned, each entry tagged by where it came from.
+- [ ] **One question per id** (afternoon lesson 2): the lint `several-questions` (default `return`) on a question or
+  decision whose text holds two or more numbered questions, so each has its own answer and follow-through. A question
+  about a gap in the person's own notes is asked only when a record depends on it (the `matters_for` item below), and
+  questions that another tool wrote about an input are notes about the input, never passed on (the notes playbook).
+- [ ] **An action with no owner is held with a suggestion** (afternoon lesson 4): the held "Pick an owner" proposes an
+  owner and says why, from the workspace's routing entries, offers the nearest existing action to fold it into, and the
+  unowned action stays visible until the owner is named, then is created at once. Before adding, the run looks for an
+  existing record of the same case (the search round and `near-duplicate-action` already do this for actions).
+- [ ] **Glossary ops offered to reading notes** (afternoon audit): `glossary.add` exists (L1) with `confidence: unknown`,
+  but notes runs aren't offered it yet; they are with the learning task kinds here, so an unknown system name can be
+  recorded or marked unknown.
 - [ ] **A question to someone else says why it matters** (lesson 3): its text names which of the person's decisions,
   designs or dated items depends on the answer (a `matters_for` field); one that can't name one is recorded as a fact and
   said in the change's note, not asked. The question row's "where it came from" link is built (Ready for real use);
@@ -1035,6 +1056,8 @@ From the original designer's lessons of 2026-10-14:
 L3b. **The obvious next step from what came in** (owner, 2026-10-13: "standard obvious things"). When the assistant
 meets something new, it offers the obvious way to record it, as one click, instead of a question the person has to work
 around. Each is the person's choice, with Undo, and each answer is learned (L3). What the code does today is noted.
+- [ ] **The person's own edit closes what it fulfills** (afternoon lesson 7): when an edit by the person, in a watched
+  source they author, adds what one of their open actions asks for, the action closes with a log row and Undo.
 - [ ] **"Who is this?" offers "Add a new person"** beside picking someone, filled in from the input (the name as
   written, and the organization, role or address the input gives), saved as the person's own. Today the chooser only
   picks an existing person.

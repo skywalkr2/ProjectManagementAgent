@@ -3,6 +3,19 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: The original designer's afternoon lessons, placed after checking the code
+
+**Decided by:** the technical PM. **Checked against the code first:** (3) ids are never reused: each kind keeps a
+high-water sequence saved with the data and carried through export and import (`engine/storage/store.py`,
+`engine/storage/export.py`), proven by `tests/test_store.py::test_deleted_ids_are_never_reused` and
+`test_explicit_ids_reserve_the_sequence`; nothing to change. (6) one shape per field: core records and ops are typed
+models validated on every write and on import, so a field has one declared shape; a plugin's own data files are the
+plugin's to validate. (7) watched changes already carry their author and `by_us` from `workspace.our_accounts`, but a
+local file has no author, so a source needs one in its settings. **Placed:** (1) "Made:" links and the `unlinked-made`
+lint, (5) summary as status, (7) a source's author: before real use; (2) one question per id, (4) the unowned action held
+with a suggestion, and offering glossary ops to notes runs: L3; closing an action the person's own edit fulfills: L3b.
+*Kinds:* concepts and lints with settings. **Impact:** roadmap; design text when each is built; no change to scope.
+
 ## 2026-10-14: The end-state goal: replace consulting teams; idea validation first; one person, then teams
 
 **Decided by:** the owner. **What:** the end state aims to make business consulting teams unnecessary, so the packs
