@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: Rules are records with the knowledge scope; facts and signals gain what L2 and L3 read
+
+**Decided by:** the technical PM, merging L1's three parts. **What:** a standing rule is a `rule` record seeded once
+from the rules file and changed only by `rule.add` and `rule.retire` (system tier, with Undo); stage checks read the active
+records. Its `applies_to` is the same `Scope` as the four kinds of knowledge (with `projects`, `people`, `scope` and
+`except`), so one shape covers everything that guides a run. `rule.retire` stays its own op beside `knowledge.retire`: a
+rule has a name other settings refer to and a check, and its retire is never a proposal. Facts gain `key`, `as_of` and
+`supersedes` (what replaced a fact is computed from the newer one, so Undo needs no second write); signals gain `run` and
+`changeset`. A knowledge add from a note on the person's own button is the person's words and is active at once; from a
+button that relays someone else it is a proposal. **Why:** two scope shapes would have to be reconciled by every reader
+in L2. **Impact:** design 4.10, 5.1, 6.20, 6.22 and CHANGES 50; plugin API 0.3.64; no change to scope.
+
 ## 2026-10-14: How L1 reads whose words a typed note is
 
 **Decided by:** the technical PM, on the original designer's sign-off of 2026-10-13; details placed by the builder.
@@ -10,7 +22,7 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
 to a question asked of the person and text added to an action's notes are the person's own words; a system op from them
 applies at once with Undo (a loosening for these buttons only). They finished it, Followed up and an answer recorded for a
 question asked of someone else are content the person reports, authored by the person they are about; a system op from
-them is held, and knowledge proposals will be system-tier so they wait for Keep. **Why:** the person's own typing is not
+them is held, and a knowledge add from them is a proposal that waits for Keep. **Why:** the person's own typing is not
 an injection risk, but a pasted reply is someone else's words. **Impact:** design 6.5, 6.7, 5.1 and CHANGES 51; a core
 record change (`source.author`, plugin guide regenerated). Left open: a person who pastes someone else's reply into a
 Mark done note is treated as the author of it.
@@ -30,7 +42,7 @@ person keeps it; an update or a retire from anyone else is held as any system op
 the work that learns (L3) offers them. **Why:** a held proposal would pile up on Today as system decisions, while a
 record the person keeps or discards is the same safety with one step fewer; and the status, never the op's tier, is what
 keeps untrusted content out of packets. **Impact:** design 5.1, 6.7, 6.20, 6.22, 7.5, 12.7 and CHANGES 49; the plugin
-guide is regenerated (four record types, seven core ops, three signal kinds; plugin API note to follow); the API gains
+guide is regenerated (four record types, seven core ops, three signal kinds; plugin API 0.3.64); the API gains
 `GET /api/knowledge` and three person routes.
 
 ## 2026-10-14: An action can be on hold (`on_hold`), and one rule decides follow-ups

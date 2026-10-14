@@ -269,14 +269,19 @@ def test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input
     cs_id, statuses = apply(store, cfg, [LESSON], origin="schedule")
     assert statuses == ["applied"]
     assert added(store, cs_id)["status"] == "proposed" and added(store, cs_id)["origin"] == "assistant"
-    # So is content the person reports on an item's button: a note typed there is not their rule.
-    reported = source(store, kind="note:action", trust="trusted")
+    # So is content the person reports on a button that relays someone else: that note is not their rule.
+    reported = source(store, kind="note:they_finished", trust="trusted")
     cs_id, statuses = apply(store, cfg, [LESSON], origin="pm", source_id=reported)
     assert (
         statuses == ["applied"]
         and added(store, cs_id)["status"] == "proposed"
         and added(store, cs_id)["origin"] == "input"
     )
+    # A note typed on the person's own button is their own words.
+    own_note = source(store, kind="note:action", trust="trusted")
+    cs_id, statuses = apply(store, cfg, [LESSON], origin="pm", source_id=own_note)
+    assert statuses == ["applied"] and added(store, cs_id)["status"] == "active"
+    assert added(store, cs_id)["origin"] == "person"
 
 
 def test_changing_or_retiring_an_active_entry_from_anyone_but_the_person_waits_for_them(app):

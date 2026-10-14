@@ -10,6 +10,25 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.64 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes; the core gains records and ops a plugin can read.
+
+- **What the assistant learned is core records**: `lesson`, `glossary_entry`, `routing_entry` and `style_note`, each with
+  its own `text`, `evidence`, `origin` (person, input, assistant, pack, seed, import), `status` (proposed, active,
+  discarded, expired, retired) and an `applies_to` scope. Their ops are `lesson.add`, `lesson.update`, `glossary.add`,
+  `glossary.update`, `routing.add`, `style.add` and `knowledge.retire`, all system-tier with Undo. An add from anyone but
+  the person makes a proposal, not a held change; it guides nothing until the person keeps it.
+- **Standing rules are `rule` records**, seeded once from the workspace's rules file, added by `rule.add` and ended by
+  `rule.retire` (system-tier, with Undo). Stage checks read the active records.
+- **One scope shape** for rules and knowledge: `task_kinds`, `records`, `filter`, `projects`, `people`, `scope`
+  (`workspace` or `projects`) and `except`.
+- **Facts** gain `key`, `as_of` and `supersedes`.
+- **Signals** gain `run` and `changeset`, and the kinds `kept`, `discarded` and `retired`.
+- **A source names its `author`**: the person whose words it is. A note typed on a button that relays someone else
+  (They finished it, Followed up, an answer recorded for someone) is that person's content; a change to how the
+  product behaves from it waits for the person running the app.
+
 ## What 0.3.63 adds
 
 Manifests stay `'>=0.3,<0.4'`.

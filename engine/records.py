@@ -13,7 +13,6 @@ from typing import Annotated, Any, ClassVar, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 
-
 class Record(BaseModel):
     """Base for every stored record. A plugin's record type subclasses it and sets `record_kind` ("<plugin>/<name>")
     and `prefix` (the id prefix, capital letters). Fields are pydantic fields; unknown fields are refused. Every record
@@ -1444,7 +1443,12 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     ],
     "changeset": [("request", "request"), ("run", "run")],
     "fact": [("project", "project"), ("source", "source"), ("supersedes", "fact")],
-    "rule": [("kept_by", "person")],
+    "rule": [
+        ("kept_by", "person"),
+        ("applies_to.projects[]", "project"),
+        ("applies_to.people[]", "person"),
+        ("applies_to.except[]", "project"),
+    ],
     "signal": [("run", "run"), ("changeset", "changeset")],
     "event": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("source", "source")],

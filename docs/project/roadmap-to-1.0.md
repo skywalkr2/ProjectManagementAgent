@@ -768,10 +768,10 @@ L1. **Knowledge as records.** Settled before L1 starts (the original designer's 
   `::test_the_packet_names_whose_words_a_note_is_and_marks_reported_content`,
   `::test_a_mark_done_notes_system_op_applies_at_once_with_undo`,
   `::test_a_change_to_how_the_product_behaves_from_a_reported_note_waits_for_the_person`.
-  - *Left, in L4:* the learning pair proper ("from now on we always…" in a pasted reply never becomes an active rule) as
+  - Moved to L4: the learning pair proper ("from now on we always…" in a pasted reply never becomes an active rule) as
     a fixture. Its seed is `::test_a_they_finished_it_note_saying_from_now_on_we_always_copy_the_client_on_approvals_is_never_active`.
-    No knowledge ops exist yet; when L1's records are built, their ops must be system-tier so reported content only
-    proposes them.
+    The knowledge ops are system-tier; from reported content an add makes a proposal and a change waits for the person:
+    `tests/test_knowledge_records.py::test_a_lesson_from_the_persons_own_words_is_active_at_once_and_from_an_input_it_is_proposed`.
 - [ ] **Knowledge proposals are writable on every account a chain can hold.** `learn.*` proposals and `lesson.update`
   are allowed for every account a fallback chain can hold, locked-down agents included, and the switch check tests it;
   a loop that learns only on the main account stops learning silently on a fallback day.
@@ -910,8 +910,8 @@ around. Each is the person's choice, with Undo, and each answer is learned (L3).
 The buttons are laid out with the rest of the screens in phase B; their behavior and tests are here.
 
 L4. **Proving it** (from the design author's review of this plan).
-- [ ] **15 to 20 fictional fixture pairs, about a third negative.** They include the pairs L0 left here: a corrected
-  date that carries to the next mail's calendar entry, and set-aside mail (today tests, moved into fixtures here). A negative pair's later input must not change; a loop
+- [ ] **15 to 20 fictional fixture pairs, about a third negative.** They include the pairs L0 and L1 left here: a reported note saying "from now on we always…" never
+  becomes an active rule; a corrected date that carries to the next mail's calendar entry, and set-aside mail (today tests, moved into fixtures here). A negative pair's later input must not change; a loop
   that over-learns is as harmful as one that doesn't learn. Each pair is (a) an input, the wrong output, the correction and
   the expected proposal, and (b) a later input. The cases, in generic form:
   - **look it up, don't ask:** a date a published schedule holds is asked of a person; afterwards a similar input produces a
