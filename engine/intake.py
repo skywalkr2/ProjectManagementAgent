@@ -4,8 +4,8 @@ Pasted content is saved as a file by content hash and marked untrusted. The PM's
 trusted.
 
 A note typed on a button of an action or a question (Mark done, They finished it, Followed up, an answer) is an input
-too: `note_as_input` saves it as a trusted source with the item as its context and queues the usual notes work, unless
-it is a bare confirmation.
+too: `note_as_input` saves it as a trusted source with the item as its context and its author, and queues the usual
+notes work, unless it is a bare confirmation.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from engine.config import Config
+from engine.names import People
 from engine.storage import Store, WriteContext
 from engine.workspace import Workspace
 
@@ -106,7 +107,21 @@ NOTE_ROUTES = {
     "owner_picked": "picked the owner of the action",
     "notes_edited": "added to the notes of the record",
     "answered": "answered the question",
+    "answered_for": "recorded the answer of the person the question was asked of",
 }
+
+#: The buttons whose note is content the person reports, not their own words: what someone else did or said, as the
+#: person tells it. Such a note is authored by that other person, and nothing it says changes how the product behaves
+#: until the person confirms it.
+REPORTED_ROUTES = frozenset({"they_finished", "followed_up", "answered_for"})
+NOTE_KIND = "note:"
+
+
+def is_reported_note(source_kind: str | None) -> bool:
+    """Whether a source's kind is a note typed on a button that relays someone else's words."""
+    kind = source_kind or ""
+    return kind.startswith(NOTE_KIND) and kind.removeprefix(NOTE_KIND) in REPORTED_ROUTES
+
 
 _LINK = re.compile(r"(?i)(?:[a-z][a-z0-9+.-]*://|www\.)\S+|\b[\w-]+(?:\.[\w-]+)+/\S*")
 
@@ -125,16 +140,22 @@ def note_as_input(
     item: tuple[str, str],
     text: str,
     route: str,
+    author: str | None = None,
     now: datetime | None = None,
 ) -> str | None:
-    """Hand in the note typed on a button of `item` (a kind and an id) as the person's own words, once the button's
-    own change is saved. A bare confirmation is kept with the change and makes no request. Otherwise the note is saved
-    as a trusted source whose context is the item and its project, and the usual notes work is queued about the item,
-    under the usual cost rules. Returns the request's id, or None for a bare confirmation. Undoing the button's change
-    never takes the note back: it is the person's words, and what the assistant makes of it is reviewed and undone on
-    its own."""
+    """Hand in the note typed on a button of `item` (a kind and an id), once the button's own change is saved. A bare
+    confirmation is kept with the change and makes no request. Otherwise the note is saved as a trusted source whose
+    context is the item and its project, and the usual notes work is queued about the item, under the usual cost rules.
+    Returns the request's id, or None for a bare confirmation. Undoing the button's change never takes the note back:
+    it is kept, and what the assistant makes of it is reviewed and undone on its own.
+
+    Whose words it is follows the button. Most buttons record the person's own words, authored by the person running
+    the app. A button that relays someone else (`REPORTED_ROUTES`) records that other person as `author`, which the
+    caller names, and the source counts as reported content."""
     if route not in NOTE_ROUTES:
         raise ValueError(f"unknown route {route}")
+    if route in REPORTED_ROUTES and not author:
+        raise ValueError(f"a note on {route} names the person it is reported about")
     note = text.strip()
     if not note or is_bare_confirmation(note, cfg.language.bare_confirmation_words):
         return None
@@ -145,6 +166,7 @@ def note_as_input(
     if not isinstance(project, str) or store.read().get("project", project) is None:
         project = None
     now = now or datetime.now(UTC)
+    author = author if route in REPORTED_ROUTES else People(store, cfg).pm
     digest = hashlib.sha256(note.encode("utf-8")).hexdigest()
     ws.sources_dir.mkdir(parents=True, exist_ok=True)
     path = ws.sources_dir / f"{digest}.txt"
@@ -161,6 +183,7 @@ def note_as_input(
                 "content_hash": digest,
                 "trust": "trusted",
                 "projects": [project] if project else [],
+                **({"author": author} if author else {}),
             },
             ctx,
         )

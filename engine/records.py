@@ -427,7 +427,15 @@ class Source(Record):
 
     record_kind: ClassVar[str] = "source"
     prefix: ClassVar[str] = "SRC"
-    fixed_fields: ClassVar[tuple[str, ...]] = ("received_at", "kind", "content_hash", "trust", "url", "watched")
+    fixed_fields: ClassVar[tuple[str, ...]] = (
+        "received_at",
+        "kind",
+        "content_hash",
+        "trust",
+        "url",
+        "watched",
+        "author",
+    )
     person_only: ClassVar[dict[str, tuple[Any, ...]]] = {"sensitivity": ()}
 
     received_at: datetime = Field(
@@ -441,6 +449,11 @@ class Source(Record):
     )
     projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")
     url: str | None = Field(None, description="Where it came from, when it has an address.")
+    author: str | None = Field(
+        None,
+        description="The id of the person whose words it is, when that is known: the person running the app for a note "
+        "they wrote, the person it is reported about for a note that relays what someone else did or said.",
+    )
     watched: Watched | None = Field(None, description="For an input a watcher found: where and what changed.")
     excerpts: Literal["allowed", "never"] = Field(
         "allowed",
@@ -1162,7 +1175,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("source", "source"),
     ],
     "question": [("to", "person"), ("projects[]", "project"), ("source", "source")],
-    "source": [("projects[]", "project")],
+    "source": [("projects[]", "project"), ("author", "person")],
     "request": [
         ("source", "source"),
         ("changeset", "changeset"),

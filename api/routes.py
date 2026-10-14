@@ -239,9 +239,10 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         except (StoreError, IntakeError, ValueError, KeyError) as err:
             raise HTTPException(status_code=409, detail=str(err)) from None
 
-    def hand_note(item: tuple[str, str], text: str | None, route: str) -> str | None:
-        """Hand the note typed with a change to the assistant as the person's own words, once the change is saved."""
-        request = guard(lambda: note_as_input(ws, store, cfg, item=item, text=text or "", route=route))
+    def hand_note(item: tuple[str, str], text: str | None, route: str, author: str | None = None) -> str | None:
+        """Hand the note typed with a change to the assistant once the change is saved: the person's own words, or,
+        on a button that relays someone else, content reported about `author`."""
+        request = guard(lambda: note_as_input(ws, store, cfg, item=item, text=text or "", route=route, author=author))
         if request is not None:
             worker.poke()
         return request
@@ -1376,7 +1377,14 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     )
 
             guard(do)
-        request = hand_note(("question", qid), body.text, "answered")
+        asked = q.data.get("to")
+        for_someone_else = bool(asked) and asked != People(store, cfg).pm
+        request = hand_note(
+            ("question", qid),
+            body.text,
+            "answered_for" if for_someone_else else "answered",
+            author=asked if for_someone_else else None,
+        )
         changed()
         return Noted(ok=qid, request=request)
 
@@ -1448,7 +1456,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         need("person", person)
         need("action", action_id)
         done = guard(lambda: follow_up(store, action_id, person))
-        request = hand_note(("action", action_id), body.note if body else "", "followed_up")
+        request = hand_note(("action", action_id), body.note if body else "", "followed_up", person)
         changed()
         return FollowedUp(**done, request=request)
 
@@ -1467,7 +1475,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         need("person", person)
         need("action", action_id)
         guard(lambda: they_finished(store, cfg, action_id, person))
-        request = hand_note(("action", action_id), body.note if body else "", "they_finished")
+        request = hand_note(("action", action_id), body.note if body else "", "they_finished", person)
         changed()
         return Noted(ok=action_id, request=request)
 

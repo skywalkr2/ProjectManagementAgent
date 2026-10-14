@@ -260,20 +260,29 @@ aside") that opens the folder and counts what the folder lists, so a confirmed m
 assistant. A note typed with Mark done, They finished it, Followed up, the choice of an owner, an answer to a question, or
 added to an action's notes is handed in by one helper (`engine.intake.note_as_input`) once the button's own change is
 saved. Unless it is a bare confirmation (fewer than `language.bare_confirmation_words` words, default 4, and no link; it
-stays with the change), the note is saved as a **source marked trusted** (kind `note:<button>`; the person's own words, not
-pasted outside content, so it is never wrapped as outside material) whose projects are the item's project, and a request of
+stays with the change), the note is saved as a **source marked trusted** (kind `note:<button>`, never wrapped as outside
+material) whose projects are the item's project and whose **author** follows the button (below), and a request of
 the usual notes work is queued **about the item**, under the usual cost rules (the first go, estimates, budgets). The run's
 packet puts the person's note in a `<note>` block and the item beside it as data (its text, owners, due date, project,
 status, notes, who did it, the days it was chased; for a question, who it went to and its answer), so the assistant
 decides whether anything changes beyond the button's own change: a fact with its link, a moved date, a reopened or closed
-action, a rule proposal. Its facts and dates are the person's own words and apply at once with Undo; a **change to how the product
-behaves** (a system op: a rule, a value list, a recipient) from a typed note **waits for the person**, as from any input,
-because the note may carry someone else's reply (6.7, 12.2). **Undo** of the button's change does not
+action, a rule proposal. **Whose words a note is follows the button** (phase L1, **built**): the source's `author` is a person
+id, and the packet shows the note as `<note source="..." by="<name>">`, so the assistant knows whose words it reads. Mark
+done, Reopen, the choice of an owner, an answer to a question asked of the person, and text added to an action's notes
+are the **person's own words**: the author is the person running the app (`workspace.user.person`), and a system op from
+the note follows the person's-own-words path of 6.7, so it applies at once, with Undo. They finished it, Followed up, and
+an answer recorded for a question asked of someone else (kind `note:answered_for`) are **content the person reports**: the
+author is the person it is about (the person the action waits on, or the one the question went to). The source is still
+trusted, so a fact or a moved date from it applies at once with Undo, as before, but it is **reported content**: the
+packet adds `reported="yes"`, and a system op from it, which today covers every rule, value list and recipient, is held
+for the person with the reason that someone else reported it. Knowledge proposals (lessons, glossary entries, routing
+entries, style notes, rules) are system-tier ops when they are added (L1), so they wait for Keep and are never active at
+once from reported content; the learning pair that proves it is added in L4. **Undo** of the button's change does not
 take the input back: the words stay saved and the queued work stays; what the assistant makes of it is a changeset the
 person reviews and undoes on its own. An edit of an action's notes hands in only what was added after the old text. A
 refused or conflicting change hands in nothing. Every other route that takes free text is declared in one place
 (`api/free_text.py`) as `to_assistant` or `local_only` with a reason, and the self-check (`engine.selfcheck.free_text`)
-fails for a route whose request has free text and no declaration. **Built:** `tests/test_note_input.py::test_a_note_under_four_words_with_no_link_makes_no_request`, `tests/test_note_input.py::test_a_short_note_with_a_link_makes_a_request`, `tests/test_note_input.py::test_mark_done_with_a_note_makes_one_request_about_the_action`, `tests/test_note_input.py::test_they_finished_it_with_a_note_makes_one_request_and_the_note_survives_the_undo`, `tests/test_note_input.py::test_followed_up_with_a_note_makes_one_request_and_without_a_body_none`, `tests/test_note_input.py::test_picking_an_owner_with_a_note_makes_one_request_about_the_action`, `tests/test_note_input.py::test_adding_to_an_actions_notes_hands_in_only_what_was_added`, `tests/test_note_input.py::test_answering_a_question_in_words_makes_one_request_about_the_question`, `tests/test_note_input.py::test_the_packet_carries_the_item_and_the_note_as_the_persons_own_words`, `tests/test_note_input.py::test_a_note_with_a_link_and_a_new_date_comes_back_as_a_fact_and_a_moved_date_the_person_can_trust`, `tests/test_free_text_check.py::test_a_route_with_free_text_that_is_neither_wired_nor_declared_fails_the_check`, `tests/test_free_text_check.py::test_the_apis_routes_with_free_text_are_all_declared`, and the golden case `workspaces/demo-b/evals/they-finished-note.yaml` (run by `tests/test_followups_backup_eval.py::test_every_case_passes_with_its_ideal_answer`). *Not built:* the note box on the screens' buttons (phase B); today the API takes the note and the screens send none.
+fails for a route whose request has free text and no declaration. **Built:** `tests/test_note_input.py::test_a_note_under_four_words_with_no_link_makes_no_request`, `tests/test_note_input.py::test_a_short_note_with_a_link_makes_a_request`, `tests/test_note_input.py::test_mark_done_with_a_note_makes_one_request_about_the_action`, `tests/test_note_input.py::test_they_finished_it_with_a_note_makes_one_request_and_the_note_survives_the_undo`, `tests/test_note_input.py::test_followed_up_with_a_note_makes_one_request_and_without_a_body_none`, `tests/test_note_input.py::test_picking_an_owner_with_a_note_makes_one_request_about_the_action`, `tests/test_note_input.py::test_adding_to_an_actions_notes_hands_in_only_what_was_added`, `tests/test_note_input.py::test_answering_a_question_in_words_makes_one_request_about_the_question`, `tests/test_note_input.py::test_a_notes_source_is_authored_and_trusted_by_the_button` (every button), `tests/test_note_input.py::test_the_packet_names_whose_words_a_note_is_and_marks_reported_content`, `tests/test_note_input.py::test_a_they_finished_it_note_saying_from_now_on_we_always_copy_the_client_on_approvals_is_never_active`, `tests/test_note_input.py::test_a_mark_done_notes_system_op_applies_at_once_with_undo`, `tests/test_note_input.py::test_a_change_to_how_the_product_behaves_from_a_reported_note_waits_for_the_person`, `tests/test_note_input.py::test_the_packet_carries_the_item_and_the_note_as_the_persons_own_words`, `tests/test_note_input.py::test_a_note_with_a_link_and_a_new_date_comes_back_as_a_fact_and_a_moved_date_the_person_can_trust`, `tests/test_free_text_check.py::test_a_route_with_free_text_that_is_neither_wired_nor_declared_fails_the_check`, `tests/test_free_text_check.py::test_the_apis_routes_with_free_text_are_all_declared`, and the golden case `workspaces/demo-b/evals/they-finished-note.yaml` (run by `tests/test_followups_backup_eval.py::test_every_case_passes_with_its_ideal_answer`). *Not built:* the note box on the screens' buttons (phase B); today the API takes the note and the screens send none.
 
 ## 6.6 Dispatcher
 
@@ -435,7 +444,10 @@ A system op in a changeset whose request came from an input (an email, a page, a
 that prompted it. This is what keeps a hostile or careless input from rewriting the rules (12.2).
 
 A system op that comes from the PM's own note applies at once, because asking for a click on a rule the PM just typed is daily
-friction and the injection risk isn't there. (Built: the tier decides, and a system op from anyone but the PM is held. The
+friction and the injection risk isn't there. (Built: the tier decides, and a system op from anyone but the PM is held. A
+note typed on a button is the PM's own words on Mark done, Reopen, the choice of an owner, an answer to a question asked
+of the PM and an addition to an action's notes; it is content the PM reports, so a system op from it is held, on They
+finished it, Followed up and an answer recorded for a question asked of someone else (6.5). The
 read-back below, the contradiction pause and the `applies_to` targets are *designed, not yet built*: review of 2026-10-12.) The real risk with PM-stated rules is misreading, and misreadings came from a new
 rule colliding with an existing one ("name teams, not individuals" meant for risks, applied to action owners, which another
 rule says must be people) or from a correction aimed at the wrong place. So the review card carries a **read-back** that shows

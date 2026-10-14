@@ -758,11 +758,20 @@ them are needed before the owner's daily use, which starts when L-core passes.
     outage handling.
 
 L1. **Knowledge as records.** Settled before L1 starts (the original designer's L0 sign-off, 2026-10-13):
-- [ ] **A note's author follows the button.** Mark done and the person's own notes edits are the person's words. They
+- [x] **A note's author follows the button.** Mark done and the person's own notes edits are the person's words. They
   finished it, Followed up, and an answer recorded for someone else are content the person reports, authored by the
   action's owner (or the named sender): facts from it apply as usual, but rules and lessons from it wait for Keep.
-  Today every typed note is a trusted source of the person's own words, with system ops held (L0); this narrows it.
-  A learning pair: a pasted reply containing "from now on we always…" never becomes an active rule.
+  Built (2026-10-14): the source records its `author`; Mark done, Reopen, the choice of an owner, an answer to the person
+  and notes added are the person's own words (a system op from them applies with Undo: a loosening for those buttons
+  only); the other three are reported content, whose system ops are held. Tests:
+  `tests/test_note_input.py::test_a_notes_source_is_authored_and_trusted_by_the_button`,
+  `::test_the_packet_names_whose_words_a_note_is_and_marks_reported_content`,
+  `::test_a_mark_done_notes_system_op_applies_at_once_with_undo`,
+  `::test_a_change_to_how_the_product_behaves_from_a_reported_note_waits_for_the_person`.
+  - *Left, in L4:* the learning pair proper ("from now on we always…" in a pasted reply never becomes an active rule) as
+    a fixture. Its seed is `::test_a_they_finished_it_note_saying_from_now_on_we_always_copy_the_client_on_approvals_is_never_active`.
+    No knowledge ops exist yet; when L1's records are built, their ops must be system-tier so reported content only
+    proposes them.
 - [ ] **Knowledge proposals are writable on every account a chain can hold.** `learn.*` proposals and `lesson.update`
   are allowed for every account a fallback chain can hold, locked-down agents included, and the switch check tests it;
   a loop that learns only on the main account stops learning silently on a fallback day.

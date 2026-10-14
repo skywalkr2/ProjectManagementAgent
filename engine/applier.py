@@ -19,7 +19,7 @@ from engine.check_text import quoted_passages, without_links, words_of
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
 from engine.config.yaml_edit import set_key
-from engine.intake import source_text
+from engine.intake import is_reported_note, source_text
 from engine.names import People
 from engine.ops import (
     EVIDENCE_FIELDS,
@@ -306,16 +306,20 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 break
         # tiers
         request = view.get("request", ctx.inputs.request)
-        # A note typed on an item's button is the person's own words for facts and dates, but it may carry someone
-        # else's reply, so a change to how the product behaves from it waits for the person like any input.
+        # A note typed on a button is the person's own words, except on a button that relays someone else (They
+        # finished it, Followed up, an answer given for the person a question went to): that is content the person
+        # reports, so a change to how the product behaves from it waits for the person like any input.
+        reported = request is not None and is_reported_note(_source_kind(view, request))
         from_pm = (
-            request is not None
-            and request.data["origin"] == "pm"
-            and ctx.inputs.trust == "trusted"
-            and not str(_source_kind(view, request) or "").startswith("note:")
+            request is not None and request.data["origin"] == "pm" and ctx.inputs.trust == "trusted" and not reported
         )
         if ctx.store.plugins.tiers.get(name) == "system" and not from_pm and not ctx.confirmed_by_pm:
-            problems.append(Problem("tier", "hold", i, "changes how the product behaves; needs your confirmation"))
+            why = "comes from what someone else reported; needs your confirmation"
+            problems.append(
+                Problem(
+                    "tier", "hold", i, why if reported else "changes how the product behaves; needs your confirmation"
+                )
+            )
     return problems
 
 

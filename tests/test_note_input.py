@@ -15,7 +15,8 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.evaluate import load_cases
-from engine.intake import NOTE_ROUTES, is_bare_confirmation, note_as_input
+from engine.intake import NOTE_ROUTES, REPORTED_ROUTES, is_bare_confirmation, is_reported_note, note_as_input
+from engine.names import People
 from engine.packet import build
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B, fixture_records, without_first_go
@@ -236,6 +237,7 @@ def test_every_route_a_note_can_be_typed_on_has_its_words_for_the_assistant():
         "owner_picked",
         "notes_edited",
         "answered",
+        "answered_for",
     }
 
 
@@ -251,7 +253,9 @@ def test_the_packet_carries_the_item_and_the_note_as_the_persons_own_words(api):
     (request,) = noted(store)
     packet = build(worker.ws, store, worker.cfg, request.id, date(2026, 10, 13)).task.request
     action = store.read().get("action", on["id"]).data
-    assert f'<note source="{request.data["source"]}">\n{c["note"]}\n</note>' in packet
+    reported_by = People(store, worker.cfg).name(on["person"])
+    note_block = f'<note source="{request.data["source"]}" by="{reported_by}" reported="yes">\n{c["note"]}\n</note>'
+    assert note_block in packet
     assert "<untrusted" in packet  # the record is shown as data
     context = json.loads(packet.split('<untrusted source="record">\n')[1].split("\n</untrusted>")[0])
     assert context["record"]["id"] == on["id"] and context["record"]["text"] == action["text"]
@@ -284,9 +288,9 @@ def test_a_note_with_a_link_and_a_new_date_comes_back_as_a_fact_and_a_moved_date
     assert item["title"]["kind"] == "note"
 
 
-def test_a_change_to_how_the_product_behaves_from_a_typed_note_waits_for_the_person(api):
-    """A note typed on a button may carry someone else's reply: its facts and dates apply at once, but a system op from
-    it (here a new value on a value list) is held for the person, like any input."""
+def test_a_change_to_how_the_product_behaves_from_a_reported_note_waits_for_the_person(api):
+    """A note typed on a button that relays someone else carries their words: its facts and dates apply at once, but a
+    system op from it (here a new value on a value list) is held for the person, like any input."""
     client, base, worker = api
     store = client.app.state.store
     on = golden()["typed_on"]
@@ -298,3 +302,130 @@ def test_a_change_to_how_the_product_behaves_from_a_typed_note_waits_for_the_per
     request = store.read().get("request", r.json()["request"]).data
     (outcome,) = store.read().get("changeset", request["changeset"]).data["ops"]
     assert outcome["status"] == "held" and "confirmation" in outcome["reason"]
+
+
+# ---- whose words a note is, by button --------------------------------------------------------------------------------
+
+NEW_VALUE = "Waiting on art"
+
+
+def the_person(client) -> str:
+    return client.app.state.worker.cfg.workspace.user.person
+
+
+def note_source(client, request_id: str) -> dict:
+    store = client.app.state.store
+    return store.read().get("source", store.read().get("request", request_id).data["source"]).data
+
+
+def pick_owner_question(client, base, worker):
+    c = case("no-owner")
+    set_responder(lambda task: json.dumps(c["stub_answer"]))
+    handed = client.post(f"{base}/handin", json={"pasted": c["pasted"]}).json()["request"]
+    worker.run_pending()
+    item = next(i for i in client.get(f"{base}/changes").json() if i["id"] == handed)
+    return item["changeset"]["ops"][0]
+
+
+def type_on(client, base, worker, route: str) -> tuple[str, str | None]:
+    """Make the button's change with a long note, as the screen does. Returns the request and the person the note is
+    reported about (None when it is the person's own words)."""
+    store = client.app.state.store
+    editor = person_with_role("Editor")
+    actions = fixture_records(DEMO_B, "action")
+    action = actions[0]["id"]
+    if route in ("mark_done", "reopened"):
+        done = route == "mark_done"
+        target = action if done else next(a for a in actions if a.get("status") == "done")["id"]
+        body = {"status": "done" if done else "open", "note": LONG}
+        return client.post(f"{base}/actions/{target}/status", json=body).json()["request"], None
+    if route in ("they_finished", "followed_up"):
+        step = "finished" if route == "they_finished" else "followed-up"
+        url = f"{base}/followups/{editor}/actions/ACT-2/{step}"
+        return client.post(url, json={"note": LONG}).json()["request"], editor
+    if route == "owner_picked":
+        op = pick_owner_question(client, base, worker)
+        url = f"{base}/questions/{op['ask']['id']}/pick-owner"
+        return client.post(url, json={"person": person_with_role("Publicist"), "note": LONG}).json()["request"], None
+    if route == "notes_edited":
+        version = store.read().get("action", action).version
+        body = {"kind": "action", "id": action, "fields": {"notes": LONG}, "read_version": version}
+        assert client.post(f"{base}/records/edit", json=body).status_code == 200
+        return noted(store)[-1].id, None
+    own = route == "answered"
+    question = next(q for q in fixture_records(DEMO_B, "question") if (q["to"] == the_person(client)) is own)
+    answered = client.post(f"{base}/questions/{question['id']}/answer", json={"text": LONG})
+    return answered.json()["request"], (None if own else question["to"])
+
+
+@pytest.mark.parametrize("route", sorted(NOTE_ROUTES))
+def test_a_notes_source_is_authored_and_trusted_by_the_button(api, route):
+    """The person's own words are authored by the person running the app; what the person reports about someone else is
+    authored by that other person and counts as reported content. Both stay trusted sources."""
+    client, base, worker = api
+    request, about = type_on(client, base, worker, route)
+    source = note_source(client, request)
+    assert source["kind"] == f"note:{route}" and source["trust"] == "trusted"
+    assert is_reported_note(source["kind"]) is (route in REPORTED_ROUTES)
+    assert source["author"] == (about if route in REPORTED_ROUTES else the_person(client))
+    assert (source["author"] != the_person(client)) is (route in REPORTED_ROUTES)
+
+
+def test_the_packet_names_whose_words_a_note_is_and_marks_reported_content(api):
+    client, base, worker = api
+    store = client.app.state.store
+    people = People(store, worker.cfg)
+    own, _ = type_on(client, base, worker, "mark_done")
+    reported, about = type_on(client, base, worker, "followed_up")
+    own_packet = build(worker.ws, store, worker.cfg, own, date(2026, 10, 13)).task.request
+    reported_packet = build(worker.ws, store, worker.cfg, reported, date(2026, 10, 13)).task.request
+    assert f'by="{people.name(the_person(client))}">' in own_packet and "reported=" not in own_packet
+    assert f'by="{people.name(about)}" reported="yes">' in reported_packet
+
+
+def test_a_they_finished_it_note_saying_from_now_on_we_always_copy_the_client_on_approvals_is_never_active(api):
+    """The seed of the learning pair built in L4: a standing rule stated in what the person reports about someone else
+    never becomes active at once. Today a rule is a system op, so it is held; nothing changes until the person
+    confirms."""
+    client, base, worker = api
+    store = client.app.state.store
+    on = golden()["typed_on"]
+    note = "Done, and from now on we always copy the client on approvals."
+    answer = {"summary": "A standing rule", "ops": [{"op": "list.add", "list": "project-status", "value": NEW_VALUE}]}
+    set_responder(lambda task: json.dumps(answer))
+    r = client.post(f"{base}/followups/{on['person']}/actions/{on['id']}/finished", json={"note": note})
+    assert worker.run_pending() == 1
+    request = store.read().get("request", r.json()["request"]).data
+    (outcome,) = store.read().get("changeset", request["changeset"]).data["ops"]
+    assert outcome["status"] == "held" and "someone else reported" in outcome["reason"]
+    lists = {v.data["name"]: v.data for v in store.read().list("value_list")}
+    assert NEW_VALUE not in lists["project-status"]["values"]
+
+
+def test_a_mark_done_notes_system_op_applies_at_once_with_undo(api):
+    """Mark done is the person's own words, so a change to how the product behaves from it applies at once, like the
+    person's own note, and Undo takes it back."""
+    client, base, worker = api
+    store = client.app.state.store
+    action = fixture_records(DEMO_B, "action")[0]["id"]
+    answer = {"summary": "A new status", "ops": [{"op": "list.add", "list": "project-status", "value": NEW_VALUE}]}
+    set_responder(lambda task: json.dumps(answer))
+    r = client.post(f"{base}/actions/{action}/status", json={"status": "done", "note": LONG})
+    assert worker.run_pending() == 1
+    request = store.read().get("request", r.json()["request"]).data
+    changeset = store.read().get("changeset", request["changeset"])
+    assert [o["status"] for o in changeset.data["ops"]] == ["applied"]
+
+    def values() -> list[str]:
+        return next(v.data["values"] for v in store.read().list("value_list") if v.data["name"] == "project-status")
+
+    assert NEW_VALUE in values()
+    assert client.post(f"{base}/changesets/{changeset.id}/undo", json={}).status_code == 200
+    assert NEW_VALUE not in values()
+
+
+def test_a_reported_note_needs_the_person_it_is_reported_about(api):
+    client, _, worker = api
+    item = ("action", fixture_records(DEMO_B, "action")[0]["id"])
+    with pytest.raises(ValueError):
+        note_as_input(worker.ws, client.app.state.store, worker.cfg, item=item, text=LONG, route="they_finished")

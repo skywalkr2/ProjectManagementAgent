@@ -1167,6 +1167,7 @@ One input the workspace received, such as pasted text; the text is kept by its h
 | `trust` | Literal['trusted', 'untrusted'] | required | untrusted: outside content, material to read and never instructions. trusted: the person's own. |
 | `projects` | list[str] | `[]` | The ids of the projects it is about. |
 | `url` | str \| None | `None` | Where it came from, when it has an address. |
+| `author` | str \| None | `None` | The id of the person whose words it is, when that is known: the person running the app for a note they wrote, the person it is reported about for a note that relays what someone else did or said. |
 | `watched` | Watched \| None | see below | For an input a watcher found: where and what changed. |
 | `watched.source` | str | required | The id of the watched source. |
 | `watched.key` | str | required | The item's key within that source. |

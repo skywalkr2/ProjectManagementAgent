@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: How L1 reads whose words a typed note is
+
+**Decided by:** the technical PM, on the original designer's sign-off of 2026-10-13; details placed by the builder.
+**What:** the source of a note typed on a button records its author. Mark done, Reopen, the choice of an owner, an answer
+to a question asked of the person and text added to an action's notes are the person's own words; a system op from them
+applies at once with Undo (a loosening for these buttons only). They finished it, Followed up and an answer recorded for a
+question asked of someone else are content the person reports, authored by the person they are about; a system op from
+them is held, and knowledge proposals will be system-tier so they wait for Keep. **Why:** the person's own typing is not
+an injection risk, but a pasted reply is someone else's words. **Impact:** design 6.5, 6.7, 5.1 and CHANGES 51; a core
+record change (`source.author`, plugin guide regenerated). Left open: a person who pastes someone else's reply into a
+Mark done note is treated as the author of it.
+
 ## 2026-10-14: An action can be on hold (`on_hold`), and one rule decides follow-ups
 
 **Decided by:** the technical PM, on the original designer's lessons. **What:** an action gains an optional `on_hold`

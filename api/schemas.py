@@ -63,7 +63,9 @@ class ActionState(BaseModel):
 
 class NoteIn(BaseModel):
     note: str = Field(
-        "", description="Anything the person wrote with the change, in their own words; the assistant reads it."
+        "",
+        description="Anything the person wrote with the change; the assistant reads it. On a button that relays "
+        "another person it is what they report about that person.",
     )
 
 

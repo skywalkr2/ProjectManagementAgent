@@ -230,7 +230,9 @@ def _hand_in_case(ws: Workspace, store: Store, cfg: Config, case: dict[str, Any]
     if on["route"] == "they_finished":
         they_finished(store, cfg, on["id"], on["person"])
     item = (on["kind"], on["id"])
-    request = note_as_input(ws, store, cfg, item=item, text=case["note"], route=on["route"], now=now)
+    request = note_as_input(
+        ws, store, cfg, item=item, text=case["note"], route=on["route"], author=on.get("person"), now=now
+    )
     if request is None:
         raise ValueError(f"case {case['id']}: its note is a bare confirmation, so nothing reaches the assistant")
     return request

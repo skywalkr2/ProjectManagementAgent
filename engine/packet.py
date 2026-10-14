@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import date
+from html import escape
 
 from engine.ai.task import AiTask
 from engine.cleaning import Cleaned, clean
@@ -131,12 +132,26 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     if cleaned.text:
         src = req.data.get("source") or ""
         if own_words:
-            request_parts.append(f'<note source="{src}">\n{cleaned.text}\n</note>')
+            request_parts.append(f"<note {_note_attributes(store, cfg, src, saved)}>\n{cleaned.text}\n</note>")
         else:
             request_parts.append(f'<untrusted source="{src}">\n{cleaned.text}\n</untrusted>')
     request = "\n\n".join(request_parts)
     task = _task(cfg, store, kind, instructions, stable, request)
     return Packet(task, raw, cleaned, note, too_long=len(cleaned.text) > cfg.dispatch.max_input_chars)
+
+
+def _note_attributes(store: Store, cfg: Config, source_id: str, source: Stored | None) -> str:
+    """The attributes of a note block: the source, whose words they are when that is known, and, for content the
+    person reports about someone else, that it is reported."""
+    from engine.intake import is_reported_note
+
+    attributes = f'source="{source_id}"'
+    author = source.data.get("author") if source is not None else None
+    if author:
+        attributes += f' by="{escape(People(store, cfg).name(author))}"'
+    if source is not None and is_reported_note(source.data.get("kind")):
+        attributes += ' reported="yes"'
+    return attributes
 
 
 def _item_block(ws: Workspace, store: Store, cfg: Config, req: Stored, source: Stored) -> str:
