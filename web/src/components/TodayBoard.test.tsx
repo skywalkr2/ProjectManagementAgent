@@ -184,6 +184,19 @@ test("to do: Overdue first with its label and count, then Today, Later and No da
   expect(due).not.toHaveTextContent("Due");
 });
 
+test("to do: an action on hold leaves Overdue and sits last under On hold, saying what it waits for", async () => {
+  const held: S["TodoView"] = { action: "ACT-5", text: "Sign the contract", project: null, due: "2026-10-01", overdue: false, on_hold: "legal review" };
+  open({ "GET today/todo": () => [...todo, held] });
+  const col = await column("To do");
+  const heads = await within(col).findAllByRole("heading", { level: 3 });
+  expect(heads.map((h) => h.textContent)).toEqual(["Overdue 1", "Today 1", "Later 1", "No date 1", "On hold 1"]);
+  const group = within(col).getByRole("heading", { name: "On hold 1" }).closest("[data-group]") as HTMLElement;
+  expect(within(group).getByText("On hold: legal review")).toHaveAttribute("title", expect.stringMatching(/^Was due .*1/));
+  expect(group).not.toHaveTextContent(/Due /);
+  const overdue = within(col).getByRole("heading", { name: "Overdue 1" }).closest("[data-group]") as HTMLElement;
+  expect(overdue).not.toHaveTextContent("Sign the contract");
+});
+
 test("marking a to-do done uses the action path and offers Undo", async () => {
   const user = userEvent.setup({ advanceTimers: () => {} });
   const { calls } = open({

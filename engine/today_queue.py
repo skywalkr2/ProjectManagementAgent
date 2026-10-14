@@ -295,7 +295,7 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
     overdue = []
     for action in reader.list("action"):
         d = action.data
-        if d.get("status") != "open" or not d.get("due") or people.pm is None:
+        if d.get("status") != "open" or not d.get("due") or d.get("on_hold") or people.pm is None:
             continue
         if not any(o.get("person") == people.pm for o in d.get("owners") or []):
             continue
@@ -350,7 +350,6 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
         )
 
     # Send and follow up: who has something to send, then who hasn't answered for a while.
-    nudge_after = cfg.ui.today.nudge_after_days
     for s in sections(store, cfg, today):
         if s.is_pm:
             continue
@@ -367,8 +366,8 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     since=s.name.lower(),
                 )
             )
-        waiting = [q for q in s.questions if q["status"] == "sent" and (q["waiting_days"] or 0) >= nudge_after]
-        told = [a for a in s.actions if a["told"] is not None and (a["told_days"] or 0) >= nudge_after]
+        waiting = [q for q in s.questions if q["chase_due"]]
+        told = [a for a in s.actions if a["chase_due"]]
         if waiting or told:
             longest = max([q["waiting_days"] or 0 for q in waiting] + [a["told_days"] or 0 for a in told])
             lines.append(

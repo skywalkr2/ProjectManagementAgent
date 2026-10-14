@@ -164,6 +164,8 @@ def _item_block(ws: Workspace, store: Store, cfg: Config, req: Stored, source: S
                 "done_by": [people.name(p) for p in d.get("done_by", [])],
                 "chased_on": sorted({str(day) for days in (d.get("followed_up") or {}).values() for day in days}),
             }
+            if d.get("on_hold"):
+                out["on_hold"] = d["on_hold"]["waiting_for"]
         elif kind == "question":
             out |= {
                 "title": d["title"],
@@ -468,8 +470,9 @@ def _open_actions(store: Store, people: People) -> str:
             continue
         owners = ", ".join(people.name(o["person"]) for o in d.get("owners", [])) or "no owner yet"
         due = f"; due {d['due']}" if d.get("due") else ""
+        hold = f"; on hold, waiting for {d['on_hold']['waiting_for']}" if d.get("on_hold") else ""
         project = f"[{d['project']}] " if d.get("project") else ""
-        lines.append(f"- {a.id} {project}{d['text']} (owners: {owners}{due})")
+        lines.append(f"- {a.id} {project}{d['text']} (owners: {owners}{due}{hold})")
     return "\n".join(lines) or "(none)"
 
 

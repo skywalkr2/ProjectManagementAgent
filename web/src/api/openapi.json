@@ -2997,7 +2997,7 @@
         "properties": {
           "chase_due": {
             "default": false,
-            "description": "Whether it has waited as long as the nudge setting says, so chasing is the next step.",
+            "description": "Whether the follow-up rule says chasing is the next step: its due date is near or past, or it has waited long enough with no word, and it is not on hold.",
             "title": "Chase Due",
             "type": "boolean"
           },
@@ -3027,6 +3027,18 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "on_hold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the action waits for while it is on hold; an action on hold is never chased.",
+            "title": "On Hold"
           },
           "project_name": {
             "title": "Project Name",
@@ -3082,6 +3094,12 @@
               }
             ],
             "title": "About"
+          },
+          "chase_due": {
+            "default": false,
+            "description": "Whether it has gone unanswered as long as the follow-up rule says, so chasing is next.",
+            "title": "Chase Due",
+            "type": "boolean"
           },
           "id": {
             "title": "Id",
@@ -3462,6 +3480,82 @@
           "state"
         ],
         "title": "HandoverView",
+        "type": "object"
+      },
+      "HoldChanged": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "string"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoldState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the action's hold was before the change, for undoing it (none: it was not on hold)."
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "HoldChanged",
+        "type": "object"
+      },
+      "HoldIn": {
+        "properties": {
+          "waiting_for": {
+            "description": "What the action waits for, in plain words.",
+            "minLength": 1,
+            "title": "Waiting For",
+            "type": "string"
+          }
+        },
+        "required": [
+          "waiting_for"
+        ],
+        "title": "HoldIn",
+        "type": "object"
+      },
+      "HoldRestore": {
+        "properties": {
+          "hold": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HoldState"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the action's hold was before the change that is being undone; none for off hold."
+          }
+        },
+        "title": "HoldRestore",
+        "type": "object"
+      },
+      "HoldState": {
+        "properties": {
+          "since": {
+            "description": "The day it was put on hold (a date).",
+            "title": "Since",
+            "type": "string"
+          },
+          "waiting_for": {
+            "description": "What the action waits for.",
+            "title": "Waiting For",
+            "type": "string"
+          }
+        },
+        "required": [
+          "waiting_for",
+          "since"
+        ],
+        "title": "HoldState",
         "type": "object"
       },
       "InboxCheckView": {
@@ -8928,7 +9022,20 @@
             ],
             "title": "Due"
           },
+          "on_hold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What it waits for while it is on hold; its due date is kept.",
+            "title": "On Hold"
+          },
           "overdue": {
+            "description": "Whether it is past its due date; never true while it is on hold.",
             "title": "Overdue",
             "type": "boolean"
           },
@@ -9720,6 +9827,106 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/actions/{action_id}/hold": {
+      "post": {
+        "description": "Put an open action on hold, waiting for something. It is never due, overdue or chased while it is.",
+        "operationId": "action_put_on_hold_api_actions__action_id__hold_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Action Put On Hold"
+      }
+    },
+    "/api/actions/{action_id}/hold/restore": {
+      "post": {
+        "description": "Undo a put on hold or a take off hold: the hold goes back to what it was, and no signal is recorded.",
+        "operationId": "action_hold_restored_api_actions__action_id__hold_restore_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoldRestore"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Action Hold Restored"
+      }
+    },
     "/api/actions/{action_id}/status": {
       "post": {
         "operationId": "action_status_api_actions__action_id__status_post",
@@ -9767,6 +9974,46 @@
           }
         },
         "summary": "Action Status"
+      }
+    },
+    "/api/actions/{action_id}/unhold": {
+      "post": {
+        "description": "Take an action off hold; it is due again by its own due date.",
+        "operationId": "action_taken_off_hold_api_actions__action_id__unhold_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HoldChanged"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Action Taken Off Hold"
       }
     },
     "/api/ai/accounts": {

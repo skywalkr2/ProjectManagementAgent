@@ -248,11 +248,23 @@ real use starts. The rest (L-more) comes after the packs.
   with its test; phase B keeps only their final layout:
   - [ ] the note box on the action buttons (the intake is built; the screens send no note yet);
   - [ ] the header's "alive" line (the assistant's last run and what is queued, amber or red when something is wrong);
-  - [ ] on hold isn't due: held actions leave Today's ranking, due and overdue counts, and the numbers the weekly review
-    reads;
-  - [ ] the follow-up rule (an action notice chased only when its action is due within 7 days or overdue, never on hold;
-    an undated one after 14 days; a plain question after 4 days; each a setting), in Today, Top priorities' lines and
-    the Follow-ups pills;
+  - [x] on hold isn't due: an action carries `on_hold` (what it waits for), set and cleared from the row's menu with Undo
+    and a signal; it leaves Today's overdue line and the to-do list's Overdue group and is never chased (done:
+    `tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`,
+    `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_overdue_on_the_to_do_list_or_in_todays_queue`,
+    `tests/test_on_hold_and_follow_ups.py::test_the_to_do_list_view_says_what_a_held_action_waits_for`, the component tests in
+    `web/src/components/FollowUps.test.tsx` ("Put on hold asks what it waits for", "Take off hold acts at once") and
+    `web/src/components/TodayBoard.test.tsx` ("an action on hold leaves Overdue"). Left, with their own items: the
+    counts on person cards, Top priorities and the weekly review don't exist yet and will read the same field, and taking
+    it off hold when an input ends the wait is L3b);
+  - [x] the follow-up rule: one function, `follow_up_due`, read by Today's lines and the Follow-ups pills; a told action
+    is chased only when its own due date is within `ui.followups.action_due_within_days` (7) or past, never on hold; an
+    undated one after `undated_after_days` (14); a plain question after `question_after_days` (4); the old
+    `ui.today.nudge_after_days` is replaced and still read (done: the branch tests in `tests/test_on_hold_and_follow_ups.py` from
+    `test_a_told_action_due_far_ahead_is_not_chased` to `test_the_rule_reads_every_threshold_from_the_settings`,
+    `tests/test_on_hold_and_follow_ups.py::test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_hold_leaves_both`,
+    `tests/test_on_hold_and_follow_ups.py::test_the_old_nudge_setting_is_read_as_the_question_wait`, and the pill tests in
+    `web/src/components/FollowUps.test.tsx`. Left: Top priorities' lines, when that list is built);
   - [ ] "where it came from" as a working link on actions, questions, decisions and knowledge records, so Keep can be
     judged against the evidence.
 
@@ -992,13 +1004,13 @@ The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
   owner surfaced on Today. From the original designer's review (2026-10-13): "where it came from" is a link that opens
   the source, not a label (the original page if the source has one, else the input's saved text or its registered
   summary, else the change that made the item with the request behind it; provenance is already in the ledger);
-  **on hold isn't due** (the original designer's lessons from running, 2026-10-13): a held action is out of due and overdue everywhere (Today, counts, reports, the weekly
+  **on hold isn't due** (built for real use, L-core; B gives the layout; the original designer's lessons from running, 2026-10-13): a held action is out of due and overdue everywhere (Today, counts, reports, the weekly
   review), shows "on hold" with its old date in a tooltip and names what it waits for, and when the input that ends the
   hold arrives the assistant takes it off hold and gives it a new date in the same change (a status value's `meaning`,
   with `held` ranked below open and never due); a note box on every action button (the helper and the routes are built, L0: the screens send no note yet), so a note typed on any action button reaches the assistant; each row carries its project (and
   parent project) tag, with its notes on hover; actions are worded to stand on their own (a playbook rule and a lint
-  on the assistant's wording); and the follow-up rule above. Exit check: the owner works through their own open items on a laptop and a phone.
-- [ ] **When something is due a follow-up** (the original designer's review, 2026-10-13: counting from when a notice
+  on the assistant's wording); and the follow-up rule above (built for real use; B gives the layout). Exit check: the owner works through their own open items on a laptop and a phone.
+- [ ] **When something is due a follow-up** (built for real use at the end of L-core; B gives the layout and Top priorities' lines; the original designer's review, 2026-10-13: counting from when a notice
   was sent made an action due in a month come up three days later). One rule, used by Top priorities, Today's lines
   and the Follow-ups pills ("red past the follow-up time"), so all three agree: a notice of an action for someone is
   chased only when its action is due within 7 days or overdue, never while it is on hold, and an undated one after 14

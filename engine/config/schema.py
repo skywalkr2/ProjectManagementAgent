@@ -806,12 +806,29 @@ class TodaySettings(ConfigModel):
     agenda_days_ahead: int = Field(
         1, ge=0, le=14, description="How many days after today the agenda also shows (0: today only)."
     )
-    nudge_after_days: int = Field(
-        3,
+
+
+class FollowupsSettings(ConfigModel):
+    action_due_within_days: int = Field(
+        7,
+        ge=0,
+        le=365,
+        description="Something sent to a person about an action is chased only when the action's own due date is this "
+        "many days away or less, or already past. An action on hold is never chased.",
+    )
+    undated_after_days: int = Field(
+        14,
         ge=1,
-        le=60,
-        description="After this many days with no reply, something sent to a person becomes a line on Today to "
-        "follow up.",
+        le=365,
+        description="An action with no due date is chased once this many days have passed since the person was told "
+        "with no word back.",
+    )
+    question_after_days: int = Field(
+        4,
+        ge=1,
+        le=365,
+        description="A question sent to a person is chased once this many days have passed with no reply. A dated "
+        "action is also chased only after this many days with no word.",
     )
 
 
@@ -864,6 +881,10 @@ class UiFile(FileModel):
     )
     today: TodaySettings = Field(
         default_factory=TodaySettings, description="What Today's agenda and its list of what came in cover."
+    )
+    followups: FollowupsSettings = Field(
+        default_factory=FollowupsSettings,
+        description="When something sent to a person is due a follow-up, which Today and Follow-ups both use.",
     )
     brand: BrandSettings = Field(default_factory=BrandSettings, description="The accent color and logo.")
     theme: Literal["system", "light", "dark"] = Field(

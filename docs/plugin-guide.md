@@ -1108,7 +1108,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 
 ### `action` (ACT-n)
 
-Something a person will do. Added by `action.add`, closed by `action.close`; `record.set` changes text, due and notes, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and who said it was done.
+Something a person will do. Added by `action.add`, closed by `action.close`; `record.set` changes text, due and notes, the person puts it on hold or takes it off, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and who said it was done.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1120,6 +1120,9 @@ Something a person will do. Added by `action.add`, closed by `action.close`; `re
 | `due` | datetime.date \| None | `None` | The day it is due. |
 | `status` | Literal['held', 'open', 'done'] | `'open'` | held: waiting for an owner to be picked. open: to be done. done: finished. |
 | `notes` | str \| None | `None` | Extra detail about the action. |
+| `on_hold` | OnHold \| None | see below | Set while the action waits for something outside the person's control; the person sets and clears it. An action on hold is never counted as due, overdue or in need of a follow-up, and keeps its due date for when it comes off hold. |
+| `on_hold.waiting_for` | str | required | What it waits for, in plain words. |
+| `on_hold.since` | date | required | The day it was put on hold. |
 | `told` | dict[str, datetime.date] | `{}` | Who has been told about it: a person id mapped to the day they were told. |
 | `followed_up` | dict[str, list[datetime.date]] | `{}` | Who has been chased about it: a person id mapped to the days they were chased, oldest first. A chase is not a notice (`told`) and never closes the action. |
 | `done_by` | list[str] | `[]` | The ids of the people who did the work, set when the action is closed. |
@@ -1308,7 +1311,7 @@ A correction by the PM, the measure of how well the assistant does. The engine r
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand. |
+| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something. |
 | `refs` | list[str] | `[]` | The ids of the records the correction is about. |
 | `note` | str \| None | `None` | What the person said or changed, if anything. |
 | `at` | datetime | required | When the correction was made. |

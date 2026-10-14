@@ -804,6 +804,14 @@ yet follow, that it is *designed*, with its phase.
 |---|---|---|
 | Who uses a hosted install | One person, signing in to their own workspace (Part 11) | The end state is an organization install: members from the People list, roles per person and per project, views per role, packs declaring which roles their parts are for, approvals by role, the person behind each change in the ledger (11.8). Not built in 1.0; new core code never assumes one person (checked by reading: design 11.8, CLAUDE.md) |
 
+## 48. Ready for real use: on hold isn't due, and one follow-up rule (2026-10-14)
+
+| Item | Before | Now |
+|---|---|---|
+| An action waiting on something | No way to say so: it kept its due date, showed as overdue and was chased | An action carries `on_hold` (what it waits for, since when), set and cleared by the person from the row's menu with Undo, each recording a signal; it is never due, overdue or chased, and shows "On hold: ..." with its old due date in the tooltip (5.1, 6.9, 6.20; `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_overdue_on_the_to_do_list_or_in_todays_queue`) |
+| When something sent is chased | One setting, `ui.today.nudge_after_days` (3), for questions and actions alike | One function, `follow_up_due`, used by Today's lines and the Follow-ups pills: a question after 4 days; a told action only when its own due date is within 7 days or past; an undated one after 14 days; never on hold. Settings `ui.followups.question_after_days`, `action_due_within_days` and `undated_after_days`; the old key is read as the first (4.11, 6.9; `tests/test_on_hold_and_follow_ups.py::test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_hold_leaves_both`) |
+| Follow-ups pill | "sent <date> (N days)" in the line | "waiting Nd", and "waiting Nd · follow up" in the warning color once the rule says it is time |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

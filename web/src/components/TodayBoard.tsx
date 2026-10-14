@@ -11,6 +11,7 @@ import { anyReading, latestRead } from "../lib/sources";
 import type { View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { FollowUps } from "./FollowUps";
+import { HoldPill, useHold } from "./OnHold";
 import { PluginToday } from "./PluginToday";
 import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
@@ -270,12 +271,14 @@ function TodoColumn() {
   const today = localDate(useNow());
   const items = todo.data ?? [];
   const names = new Map((projects.data ?? []).map((p) => [p.id, p.name]));
+  const live = items.filter((x) => !x.on_hold);
   const isToday = (x: Todo) => !x.overdue && !!x.due && x.due <= today;
   const groups = [
-    { id: "overdue", label: t("today.todo.overdue"), rows: items.filter((x) => x.overdue) },
-    { id: "today", label: t("today.todo.today"), rows: items.filter(isToday) },
-    { id: "later", label: t("today.todo.later"), rows: items.filter((x) => !x.overdue && !isToday(x) && !!x.due) },
-    { id: "none", label: t("today.todo.no_date"), rows: items.filter((x) => !x.overdue && !x.due) },
+    { id: "overdue", label: t("today.todo.overdue"), rows: live.filter((x) => x.overdue) },
+    { id: "today", label: t("today.todo.today"), rows: live.filter(isToday) },
+    { id: "later", label: t("today.todo.later"), rows: live.filter((x) => !x.overdue && !isToday(x) && !!x.due) },
+    { id: "none", label: t("today.todo.no_date"), rows: live.filter((x) => !x.overdue && !x.due) },
+    { id: "on_hold", label: t("today.todo.on_hold"), rows: items.filter((x) => !!x.on_hold) },
   ].filter((g) => g.rows.length > 0);
 
   return (
@@ -298,7 +301,7 @@ function TodoColumn() {
                   key={item.action}
                   item={item}
                   project={item.project ? (names.get(item.project) ?? "") : ""}
-                  showDue={group.id !== "today"}
+                  showDue={group.id !== "today" && group.id !== "on_hold"}
                 />
               ))}
             </ul>
@@ -313,6 +316,7 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
   const { t } = useWords();
   const act = useAct();
   const { item } = props;
+  const hold = useHold({ id: item.action, on_hold: item.on_hold });
   const meta = [props.project, props.showDue && item.due ? t("today.todo.due", { date: day(item.due) }) : ""]
     .filter(Boolean)
     .join(" · ");
@@ -324,7 +328,10 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
   return (
     <li className="tb-row" data-row tabIndex={-1}>
       <div className="tb-what">
-        <div className="tb-title">{item.text}</div>
+        <div className="tb-title">
+          {item.text}
+          {item.on_hold && <HoldPill what={item.on_hold} due={item.due} />}
+        </div>
         {meta && <div className="tb-meta">{meta}</div>}
       </div>
       <button
@@ -336,6 +343,8 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
       >
         {t("followups.mark_done")}
       </button>
+      <RowMenu label={item.text} actions={[hold.entry]} />
+      {hold.form}
     </li>
   );
 }

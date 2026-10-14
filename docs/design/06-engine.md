@@ -662,8 +662,7 @@ is marked *designed*, with the phase.
   When the data doesn't match the correction, the answer is a question to the PM with what was found, not a change and never a
   report. *Designed, phase L3.* Today Send back runs the reading task again with the old note and the PM's words added, and
   nothing in the packet states the named item's current state.
-- Aging: "waiting Nd" after Mark sent (built); chase suggestions after a configured number of days (built, as the Today
-  nudge threshold); one escalation suggestion when `routing.escalation` says so (4.3, 6.24; *designed, phase C2*, with the
+- Aging: "waiting Nd" after Mark sent (built); chase suggestions by the one follow-up rule (6.9, built); one escalation suggestion when `routing.escalation` says so (4.3, 6.24; *designed, phase C2*, with the
   project management pack: no `routing` setting exists today).
 
 ## 6.9 Actions service
@@ -689,6 +688,34 @@ is marked *designed*, with the phase.
   Waiting on them and joins their next message. Putting the value back to what they were told reverts it, and Mark sent
   settles it, even on the same day (`tests/test_followups_backup_eval.py::test_a_changed_due_date_or_text_after_telling_puts_the_action_back_to_send_for_that_person`,
   `tests/test_followups_backup_eval.py::test_a_change_before_telling_or_one_put_back_to_what_was_told_does_not_reopen_the_action`).
+- **On hold** (built). An action the person is waiting on something for carries `on_hold`: what it waits for, in plain
+  words, and the day it was put on hold. The person sets it with **Put on hold** (which asks what it waits for) and clears
+  it with **Take off hold**, both in the action row's menu; each acts at once with Undo and records a `put_on_hold` or
+  `taken_off_hold` signal (6.20), and undoing records none. An action on hold is never due or overdue anywhere: it leaves
+  Today's overdue line and the to-do list's Overdue group (it sits last, under On hold), it is never chased, and the
+  Follow-ups row says "On hold: what it waits for", with its old due date in the tooltip. The due date is kept for when it
+  comes off hold, and the assistant's packets say it is on hold. A hold is not `held` (the status for an action waiting for
+  its first owner). Taking it off hold when an input says the wait is over is *designed, phase L3b, not built*
+  (`tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`,
+  `tests/test_on_hold_and_follow_ups.py::test_a_hold_needs_words_and_an_open_action_and_undoing_it_records_no_signal`,
+  `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_overdue_on_the_to_do_list_or_in_todays_queue`,
+  `tests/test_on_hold_and_follow_ups.py::test_the_to_do_list_view_says_what_a_held_action_waits_for`).
+- **The follow-up rule** (built). One function, `follow_up_due` in `engine/followups.py`, decides whether something sent to a
+  person is due a follow-up; Today's `nudge` lines and the Follow-ups pills both read it, so they agree
+  (`tests/test_on_hold_and_follow_ups.py::test_today_and_the_follow_ups_view_agree_on_what_is_due_a_follow_up_and_on_hold_leaves_both`). A question that went
+  out is chased after `ui.followups.question_after_days` days with no reply (default 4). A told action is chased only when
+  its own due date is within `ui.followups.action_due_within_days` days (default 7) or past, and only after it has waited as
+  long as a question; an action due later is left alone, so a deadline weeks away is not nagged about. An action with no
+  due date is chased after `ui.followups.undated_after_days` days with no word (default 14). An action on hold is never
+  chased. A chase starts the wait again (it counts as told again, above). The Follow-ups pill reads "waiting Nd" and, once
+  the rule says it is time, "waiting Nd · follow up" in the warning color, so status is never color alone. `ui.today.nudge_after_days`
+  is replaced by `question_after_days`: a workspace file that still has the old key is read as the new one
+  (`tests/test_on_hold_and_follow_ups.py::test_the_old_nudge_setting_is_read_as_the_question_wait`). Each branch has a test
+  (`tests/test_on_hold_and_follow_ups.py::test_a_told_action_due_far_ahead_is_not_chased`, `tests/test_on_hold_and_follow_ups.py::test_a_told_action_due_soon_is_chased_once_it_has_waited`,
+  `tests/test_on_hold_and_follow_ups.py::test_a_told_action_just_sent_is_not_chased_even_when_due_soon`, `tests/test_on_hold_and_follow_ups.py::test_an_overdue_told_action_is_chased`,
+  `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_chased`, `tests/test_on_hold_and_follow_ups.py::test_an_undated_told_action_is_chased_after_the_undated_wait_and_not_before`,
+  `tests/test_on_hold_and_follow_ups.py::test_a_sent_question_is_chased_after_the_question_wait_and_not_before`,
+  `tests/test_on_hold_and_follow_ups.py::test_the_rule_reads_every_threshold_from_the_settings`).
 - **Reassign:** swap one person in the owners list, keeping their team ("Product (Jane Doe)" to "Product (Sam Lee)"); the
   other owners stay. Told dates, Followed up and They finished it are per person. *Designed, not yet built, phase B* (edit,
   close and reassign from the row). Told dates are per person today; the only way to change an owner is to edit the whole list
@@ -867,9 +894,9 @@ order, each line with a kind:
 | Group | Lines (kind) |
 |---|---|
 | **Decide** | work held until a restart (`restart`, "Restart to run 7 waiting requests", always first; built, `tests/test_silent_stops.py::test_the_restart_line_comes_before_the_first_go_and_before_decisions`); a decision or a question put to the PM (`decision`, `question`); a name the assistant couldn't place (`who_is`, "Pick who 'Maya' is"); an action with no owner (`owner`, "Pick an owner"); an item the applier held for the PM's yes (`held`); a run waiting for the PM's go because of its cost (`go`); a run the provider refused, waiting for the PM to choose what happens next (`refused`) |
-| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, built, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`); work that has waited for the network longer than `dispatch.offline_line_after_minutes`, one line with the count and since when (`offline`, built, `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line (`overdue`) |
+| **Risk** | work that failed (`failed`); an AI account paused until its limit resets, with the time and the count waiting (`paused`, built, `tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`); work that has waited for the network longer than `dispatch.offline_line_after_minutes`, one line with the count and since when (`offline`, built, `tests/test_silent_stops.py::test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_when_it_is_back`); a learning check that failed after a switch, with Switch back (`switch_failed`, *phase L*); the PM's own overdue to-dos, as one line, leaving out any on hold (`overdue`) |
 | **Review** | the assistant's work waiting for a look (`review`), with what it did counted by kind (actions added or closed, questions, notes, recorded, people, projects, drafts, held, refused); learning proposals from corrections waiting for Keep (`learned`), the daily card of learning from inputs (`learned_daily`) and the catch-up list (`learned_backlog`), all *phase L*; a new or probation account's work, marked as such (*phase L*) |
-| **Send** | messages to send, one line per person (`send`); a person who hasn't answered in `ui.today.nudge_after_days` days (`nudge`: questions sent and actions told, 4.11) |
+| **Send** | messages to send, one line per person (`send`); something sent to a person that is due a follow-up by the rule in 6.9 (`nudge`: questions sent and actions told, 4.11) |
 
 Within a group, a kind has a fixed place (decisions first, then who-is, owner, held, go, refused, questions), then the line that
 has waited longest, or is due first, comes first; a nudge goes by its longest wait. **Held items and decisions are always
@@ -1239,6 +1266,7 @@ cases from signals and rule suggestions are *designed, not yet built*):
 | draft edited | the approved content differs from the assistant's draft (the difference is kept) |
 | held op declined | the PM declines a held system op or a routing guess |
 | routed | the person said who a name or an owner is, answering "Who is X?" or "Pick an owner" (refs: the changeset, the question, the person chosen; the note is the name as written). Undoing the person's own release of a held op records no signal: it is their decision, not the assistant's work. **Built**: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal`, `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |
+| put on hold / taken off hold | the person puts an action on hold or takes it off (refs: the action; the note is what it waits for). Undoing either records no signal. **Built**: `tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`, `tests/test_on_hold_and_follow_ups.py::test_a_hold_needs_words_and_an_open_action_and_undoing_it_records_no_signal` |
 | edited | the person changes a field the assistant set (a fact, an owner, a due date, an item's project, a question's wording before it is sent). The ledger shows who set each field, so this needs no AI. A silent correction, learned from in the batch (*designed, phase L*) |
 | repeat correction | any of the above, on a run whose knowledge log (6.22) shows it was given an active lesson or rule whose target matched the corrected item (*designed, phase L*) |
 

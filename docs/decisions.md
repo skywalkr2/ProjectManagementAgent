@@ -3,6 +3,21 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: An action can be on hold (`on_hold`), and one rule decides follow-ups
+
+**Decided by:** the technical PM, on the original designer's lessons. **What:** an action gains an optional `on_hold`
+(`waiting_for`, plain text, and `since`), set and cleared only by the person ("Put on hold", "Take off hold" in the row's
+menu, each acting at once with Undo and recording a `put_on_hold` or `taken_off_hold` signal). It is a field, not a new
+status: `held` already means waiting for an owner, and the action keeps its due date for when it comes off hold. An action
+on hold is never due, overdue or chased, in Today, Follow-ups and the packets. One function decides whether something sent
+is due a follow-up: a question after 4 days; a told action only when its own due date is within 7 days or past (and it
+has waited as long as a question); an undated one after 14 days; never on hold. The three thresholds are settings
+(`ui.followups`) and replace `ui.today.nudge_after_days`, which is read as the question wait in an old file. Taking an
+action off hold when an input says the wait is over stays with L3b. **Why:** a day of real use showed held actions
+nagging, and deadlines weeks away being chased as if due. **Impact:** a core record change (the plugin guide is
+regenerated; plugin API note to follow), two new signal kinds, three settings in both demo workspaces, designs 5.1, 4.11,
+6.9, 6.20 and CHANGES 48.
+
 ## 2026-10-13: L0 signed off; what the original designer settled for L-core
 
 **Decided by:** the original designer (L0 review, relayed by the owner); placed by the technical PM. **What:** L0 is

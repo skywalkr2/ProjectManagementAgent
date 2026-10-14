@@ -76,6 +76,21 @@ class Unfollow(BaseModel):
     previous_told: str | None = Field(None, description="The day they were told before the chase, if any.")
 
 
+class HoldIn(BaseModel):
+    waiting_for: str = Field(min_length=1, description="What the action waits for, in plain words.")
+
+
+class HoldState(BaseModel):
+    waiting_for: str = Field(description="What the action waits for.")
+    since: str = Field(description="The day it was put on hold (a date).")
+
+
+class HoldRestore(BaseModel):
+    hold: HoldState | None = Field(
+        None, description="What the action's hold was before the change that is being undone; none for off hold."
+    )
+
+
 # ---- responses -------------------------------------------------------------------------------------------------------
 
 
@@ -95,6 +110,13 @@ class FollowedUp(BaseModel):
     previous_told: str | None = Field(None, description="The day they were told before it, for undoing the chase.")
     request: str | None = Field(
         None, description="The work queued for the assistant from the note that came with the chase, if there was one."
+    )
+
+
+class HoldChanged(BaseModel):
+    ok: str
+    previous: HoldState | None = Field(
+        None, description="What the action's hold was before the change, for undoing it (none: it was not on hold)."
     )
 
 
@@ -328,6 +350,9 @@ class FollowupQuestion(BaseModel):
     status: Literal["open", "sent"]
     sent: str | None
     waiting_days: int | None
+    chase_due: bool = Field(
+        False, description="Whether it has gone unanswered as long as the follow-up rule says, so chasing is next."
+    )
     about: str | None
     options: list[Option]
 
@@ -340,8 +365,13 @@ class FollowupAction(BaseModel):
     told: str | None
     told_days: int | None
     followed_up: str | None = Field(None, description="The day the person was last chased about it (a date).")
+    on_hold: str | None = Field(
+        None, description="What the action waits for while it is on hold; an action on hold is never chased."
+    )
     chase_due: bool = Field(
-        False, description="Whether it has waited as long as the nudge setting says, so chasing is the next step."
+        False,
+        description="Whether the follow-up rule says chasing is the next step: its due date is near or past, "
+        "or it has waited long enough with no word, and it is not on hold.",
     )
 
 
@@ -970,7 +1000,8 @@ class TodoView(BaseModel):
     text: str
     project: str | None = None
     due: date | None = None
-    overdue: bool
+    overdue: bool = Field(description="Whether it is past its due date; never true while it is on hold.")
+    on_hold: str | None = Field(None, description="What it waits for while it is on hold; its due date is kept.")
 
 
 class QueueLineView(BaseModel):

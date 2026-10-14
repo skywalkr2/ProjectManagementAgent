@@ -73,6 +73,29 @@ class Config:
 #: Keys whose data now lives on a record (one source of truth): the PM's name and aliases are on their person record.
 MOVED_TO_RECORDS = ("workspace.user.full_name", "workspace.user.aliases")
 
+#: Settings that moved to a new name: an old file keeps working, and the value is read under the new name unless the
+#: file also sets that.
+RENAMED_KEYS = {"ui.today.nudge_after_days": "ui.followups.question_after_days"}
+
+
+def _rename_keys(name: str, data: dict[str, Any]) -> None:
+    """Move any key in `data` (the contents of file `name`) that has a new name to it, unless the new name is set."""
+    for old, new in RENAMED_KEYS.items():
+        old_file, *old_path = old.split(".")
+        new_file, *new_path = new.split(".")
+        if old_file != name or new_file != name:
+            continue
+        holder: Any = data
+        for part in old_path[:-1]:
+            holder = holder.get(part) if isinstance(holder, dict) else None
+        if not isinstance(holder, dict) or old_path[-1] not in holder:
+            continue
+        value = holder.pop(old_path[-1])
+        target = data
+        for part in new_path[:-1]:
+            target = target.setdefault(part, {})
+        target.setdefault(new_path[-1], value)
+
 
 def load_config(
     config_dir: Path | None,
@@ -93,6 +116,7 @@ def load_config(
             if path.exists():
                 data = _read_yaml(path)
                 _check_version(name, data, path)
+                _rename_keys(name, data)
                 for key in MOVED_TO_RECORDS:
                     file, *rest = key.split(".")
                     holder = data if file == name else None

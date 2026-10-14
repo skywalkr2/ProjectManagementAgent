@@ -90,17 +90,19 @@ def test_an_unedited_message_records_no_signal(env):
     assert store.read().list("signal") == []
 
 
-def _waiting_action(env, days_ago: int):
-    """An open action with a told date `days_ago` days before NOW, and the person it waits on."""
+def _waiting_action(env, days_ago: int, due_in_days: int = 1):
+    """An open action with a told date `days_ago` days before NOW and a due date `due_in_days` days after it, and the
+    person it waits on."""
     _, cfg, store = env
     action = next(a for a in store.read().list("action") if a.data["status"] == "open")
     owner = action.data["owners"][0]["person"]
     told = (NOW - timedelta(days=days_ago)).date().isoformat()
+    due = (NOW + timedelta(days=due_in_days)).date().isoformat()
     with store.transaction() as tx:
         tx.update(
             "action",
             action.id,
-            {"told": {owner: told}},
+            {"told": {owner: told}, "due": due},
             WriteContext(actor="pm", trust="trusted", op="test"),
             read_version=action.version,
         )
@@ -178,7 +180,7 @@ def test_a_change_to_an_action_leaves_other_owners_told_before_it_alone_only_whe
 
 def test_followed_up_records_a_chase_keeps_the_action_open_and_counts_as_told(env):
     _, cfg, store = env
-    action_id, owner, told = _waiting_action(env, cfg.ui.today.nudge_after_days + 2)
+    action_id, owner, told = _waiting_action(env, cfg.ui.followups.question_after_days + 2)
     assert _action_row(env, action_id, owner)["chase_due"]
     done = follow_up(store, action_id, owner, now=NOW)
     assert done == {"on": NOW.date().isoformat(), "previous_told": told}
@@ -192,7 +194,7 @@ def test_followed_up_records_a_chase_keeps_the_action_open_and_counts_as_told(en
 
 def test_undoing_a_chase_restores_the_told_day_and_removes_the_chase(env):
     _, cfg, store = env
-    action_id, owner, told = _waiting_action(env, cfg.ui.today.nudge_after_days + 2)
+    action_id, owner, told = _waiting_action(env, cfg.ui.followups.question_after_days + 2)
     done = follow_up(store, action_id, owner, now=NOW)
     undo_follow_up(store, action_id, owner, done["on"], done["previous_told"])
     data = store.read().get("action", action_id).data

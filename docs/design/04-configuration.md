@@ -430,9 +430,12 @@ rules review (6.21), which keeps the list short and moves rules that are really 
 - `narrow_below_px` (640): below this width the screen uses the phone layout, one pane and a bottom bar (7.13).
 - `toast_seconds` (7; 0 keeps toasts until dismissed) and `feedback_to` (the address the feedback button writes to; empty uses
   the address the app was packaged with, else feedback is drafted to copy).
-- `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (1; 0 is today only), and
-  `nudge_after_days` (3): after this many days with no reply, something sent to a person becomes a line on Today to follow up
-  (6.15).
+- `today`: `mail_hours` (24) and `mail_max` (50) for the list of what came in, `agenda_days_ahead` (1; 0 is today only).
+- `followups`: when something sent to a person is due a follow-up, one rule that Today and Follow-ups both read (6.9).
+  `question_after_days` (4): a question with no reply after this many days; `action_due_within_days` (7): a told action
+  whose own due date is this near or past (an action on hold is never chased); `undated_after_days` (14): a told action with
+  no due date and no word after this many days. They replace the old `today.nudge_after_days`, which an existing file may still
+  carry and is read as `question_after_days`.
 - `brand`: `color` (`#rrggbb`; the app works out shades from it and Settings warns when its contrast would fail; empty uses the
   app's indigo) and `logo` (a PNG, JPEG, WebP or SVG file name in the config folder; empty shows the workspace's initials).
 - `theme` (`system`, `light` or `dark`) and `density` (`comfortable` or `compact`): the workspace's defaults. Each person can

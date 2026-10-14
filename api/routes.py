@@ -56,6 +56,9 @@ from api.schemas import (
     HandoverChoice,
     HandoverSideView,
     HandoverView,
+    HoldChanged,
+    HoldIn,
+    HoldRestore,
     InboxCheckView,
     InboxView,
     ItemTitle,
@@ -149,7 +152,17 @@ from engine.dispatcher import (
     undo_changeset,
     waits_on_first_go,
 )
-from engine.followups import follow_up, mark_sent, sections, they_finished, undo_follow_up, unmark_sent
+from engine.followups import (
+    follow_up,
+    mark_sent,
+    put_on_hold,
+    restore_hold,
+    sections,
+    take_off_hold,
+    they_finished,
+    undo_follow_up,
+    unmark_sent,
+)
 from engine.intake import IntakeError, hand_in, note_as_input, source_text
 from engine.names import People
 from engine.ops import StageMoveOp
@@ -1385,6 +1398,30 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         changed()
         return Noted(ok=action_id, request=request)
 
+    @r.post("/actions/{action_id}/hold")
+    def action_put_on_hold(action_id: str, body: HoldIn) -> HoldChanged:
+        """Put an open action on hold, waiting for something. It is never due, overdue or chased while it is."""
+        need("action", action_id)
+        previous = guard(lambda: put_on_hold(store, action_id, body.waiting_for))
+        changed()
+        return HoldChanged(ok=action_id, previous=previous)
+
+    @r.post("/actions/{action_id}/unhold")
+    def action_taken_off_hold(action_id: str) -> HoldChanged:
+        """Take an action off hold; it is due again by its own due date."""
+        need("action", action_id)
+        previous = guard(lambda: take_off_hold(store, action_id))
+        changed()
+        return HoldChanged(ok=action_id, previous=previous)
+
+    @r.post("/actions/{action_id}/hold/restore")
+    def action_hold_restored(action_id: str, body: HoldRestore) -> Ok:
+        """Undo a put on hold or a take off hold: the hold goes back to what it was, and no signal is recorded."""
+        need("action", action_id)
+        guard(lambda: restore_hold(store, action_id, body.hold.model_dump() if body.hold else None))
+        changed()
+        return Ok(ok=action_id)
+
     @r.post("/followups/{person}/actions/{action_id}/followed-up")
     def action_followed_up(person: str, action_id: str, body: NoteIn | None = None) -> FollowedUp:
         """Record that the PM chased a person about an open action: it stays open and counts as told again. A note
@@ -1886,6 +1923,7 @@ def _section(s: Any, people: People) -> FollowupSection:
                 status=q["status"],
                 sent=q["sent"],
                 waiting_days=q["waiting_days"],
+                chase_due=q["chase_due"],
                 about=resolves.get("kind"),
                 options=[Option(id=pid, name=people.name(pid)) for pid in q["options"]],
             )
@@ -1899,6 +1937,7 @@ def _section(s: Any, people: People) -> FollowupSection:
             told=a["told"],
             told_days=a["told_days"],
             followed_up=a["followed_up"],
+            on_hold=a["on_hold"],
             chase_due=a["chase_due"],
         )
         for a in s.actions

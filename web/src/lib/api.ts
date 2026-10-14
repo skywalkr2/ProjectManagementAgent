@@ -110,6 +110,9 @@ export const api = {
   answer: (q: string, body: S["Answer"]) => call<S["Ok"]>("POST", `questions/${id(q)}/answer`, body),
   actionStatus: (a: string, status: S["ActionState"]["status"]) =>
     call<S["Ok"]>("POST", `actions/${id(a)}/status`, { status }),
+  putOnHold: (a: string, waiting_for: string) => call<S["HoldChanged"]>("POST", `actions/${id(a)}/hold`, { waiting_for }),
+  takeOffHold: (a: string) => call<S["HoldChanged"]>("POST", `actions/${id(a)}/unhold`),
+  restoreHold: (a: string, hold: S["HoldState"] | null) => call<S["Ok"]>("POST", `actions/${id(a)}/hold/restore`, { hold }),
   reply: (q: string, text: string) => call<S["Handed"]>("POST", `questions/${id(q)}/reply`, { text }),
   retry: (req: string, use?: string) =>
     call<S["Ok"]>("POST", `requests/${id(req)}/retry`, use ? { use } : undefined),

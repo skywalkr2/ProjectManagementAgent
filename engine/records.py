@@ -206,6 +206,16 @@ class Owner(BaseModel):
     team: str | None = Field(None, description="The id of the team the person acts for here, if any.")
 
 
+class OnHold(BaseModel):
+    """What an action waits for before it can go on. Set and cleared by the person; an action on hold is never due,
+    overdue or chased."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    waiting_for: str = Field(min_length=1, description="What it waits for, in plain words.")
+    since: date = Field(description="The day it was put on hold.")
+
+
 class Person(Record):
     """Someone the workspace works with or tracks. Added by `person.add`; role, org and why_they_matter change through
     `record.set`; the person edits the rest in the app."""
@@ -318,8 +328,8 @@ class Project(Record):
 
 class Action(Record):
     """Something a person will do. Added by `action.add`, closed by `action.close`; `record.set` changes text, due and
-    notes, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the
-    work and who said it was done."""
+    notes, the person puts it on hold or takes it off, and sending a notice marks who was told. A chase adds a day to
+    `followed_up`; closing records who did the work and who said it was done."""
 
     record_kind: ClassVar[str] = "action"
     prefix: ClassVar[str] = "ACT"
@@ -335,6 +345,12 @@ class Action(Record):
         "open", description="held: waiting for an owner to be picked. open: to be done. done: finished."
     )
     notes: str | None = Field(None, description="Extra detail about the action.")
+    on_hold: OnHold | None = Field(
+        None,
+        description="Set while the action waits for something outside the person's control; the person sets and "
+        "clears it. An action on hold is never counted as due, overdue or in need of a follow-up, and keeps its due "
+        "date for when it comes off hold.",
+    )
     told: dict[str, date] = Field(
         default_factory=dict, description="Who has been told about it: a person id mapped to the day they were told."
     )
@@ -1056,10 +1072,13 @@ class Signal(Record):
         "held_declined",
         "routed",
         "set_aside",
+        "put_on_hold",
+        "taken_off_hold",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
-        "routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand."
+        "routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; "
+        "put_on_hold or taken_off_hold, changed whether an action waits for something."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     note: str | None = Field(None, description="What the person said or changed, if anything.")

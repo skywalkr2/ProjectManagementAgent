@@ -245,7 +245,7 @@ test("answer opens the question where the questions list shows it", async () => 
       name: "Pat Example",
       is_pm: true,
       questions: [
-        { id: "Q-5", title: "Which cover?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, about: null, options: [] },
+        { id: "Q-5", title: "Which cover?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, about: null, options: [] },
       ],
       actions: [],
       message: "",

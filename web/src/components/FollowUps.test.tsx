@@ -19,7 +19,7 @@ const sections: S["FollowupSection"][] = [
     name: "Robin Sample",
     is_pm: false,
     questions: [
-      { id: "Q-1", title: "Is the index final?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, about: null, options: [] },
+      { id: "Q-1", title: "Is the index final?", text: "", links: [], kind: "question", status: "open", sent: null, waiting_days: null, chase_due: false, about: null, options: [] },
     ],
     actions: [{ id: "ACT-1", text: "Send the index", due: "2026-10-16", project_name: "Book", told: null, told_days: null, followed_up: null, chase_due: false }],
     message: "Hi Robin,\n\nIs the index final?\n\nAction items with you:\n- Send the index\n\nThanks!",
@@ -119,7 +119,7 @@ test("a card lists only what is still to send, with no buttons or pills on the i
   const user = userEvent.setup();
   const mixed = structuredClone(sections);
   mixed[1].questions.push({
-    id: "Q-2", title: "Did the cover ship?", text: "", links: [], kind: "question", status: "sent", sent: "2026-10-08", waiting_days: 2, about: null, options: [],
+    id: "Q-2", title: "Did the cover ship?", text: "", links: [], kind: "question", status: "sent", sent: "2026-10-08", waiting_days: 2, chase_due: false, about: null, options: [],
   });
   mixed[1].actions.push({ id: "ACT-2", text: "Return the proof", due: null, project_name: "Book", told: "2026-10-08", told_days: 2, followed_up: null, chase_due: false });
   mixed[1].to_send = 2;
@@ -230,7 +230,7 @@ test("They finished it closes the action as the person's work and offers Undo", 
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/status")?.body).toEqual({ status: "open" }));
 });
 
-test("past the nudge threshold, Followed up is the primary and They finished it moves to the row's menu", async () => {
+test("once the follow-up rule says it is time, Followed up is the primary and They finished it moves to the row's menu", async () => {
   const user = userEvent.setup();
   fakeApi({ "GET followups": () => chaseSections(), "GET people": () => [], ...finishRoutes });
   renderApp(<FollowUps />);
@@ -287,6 +287,7 @@ test("a question to the PM shows as a decision or as a question by its stored ki
     status: "open",
     sent: null,
     waiting_days: null,
+    chase_due: false,
     about: null,
     options: [],
   });
@@ -299,4 +300,81 @@ test("a question to the PM shows as a decision or as a question by its stored ki
   expect(within(question).getByText("Question")).toBeInTheDocument();
   expect(within(question).queryByText("Decision")).toBeNull();
   expect(screen.getByText(/1 decision · 1 question/)).toBeInTheDocument();
+});
+
+test("a waiting pill says how long, and says follow up in words as well as color once it is time", async () => {
+  const user = userEvent.setup();
+  const waiting = waitingSections();
+  waiting[0].actions[0].told_days = 3;
+  waiting[0].questions[0].waiting_days = 6;
+  waiting[0].questions[0].chase_due = true;
+  fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const calm = screen.getByText("waiting 3d");
+  expect(calm).toHaveClass("k-wait");
+  const late = screen.getByText("waiting 6d · follow up");
+  expect(late).toHaveClass("k-risk");
+});
+
+test("an action on hold shows what it waits for with its old due date in the tooltip, and is not chased", async () => {
+  const user = userEvent.setup();
+  const waiting = waitingSections();
+  waiting[0].actions[0].told_days = 30;
+  waiting[0].actions[0].on_hold = "the printer's quote";
+  fakeApi({ "GET followups": () => waiting, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  const pill = within(row).getByText("On hold: the printer's quote");
+  expect(pill).toHaveAttribute("title", expect.stringMatching(/^Was due .*16/));
+  expect(within(row).queryByText(/waiting 30d/)).toBeNull();
+  expect(within(row).queryByRole("button", { name: "Followed up" })).toBeNull();
+  await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
+  expect(await screen.findByRole("menuitem", { name: "Take off hold" })).toBeInTheDocument();
+});
+
+test("Put on hold asks what it waits for with the cursor in the field, acts at once and can be undone", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET followups": () => waitingSections(),
+    "GET people": () => [],
+    "POST actions/ACT-1/hold": () => ({ ok: "ACT-1", previous: null }),
+    "POST actions/ACT-1/hold/restore": () => ({ ok: "ACT-1" }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Put on hold" }));
+  const field = within(row).getByRole("textbox", { name: "What is it waiting for?" });
+  expect(field).toHaveFocus();
+  expect(within(row).getByRole("button", { name: "Put on hold" })).toBeDisabled();
+  await user.type(field, "the printer's quote");
+  await user.click(within(row).getByRole("button", { name: "Put on hold" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold")?.body).toEqual({ waiting_for: "the printer's quote" }));
+  expect(await screen.findByText("Put on hold, waiting for the printer's quote.")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold/restore")?.body).toEqual({ hold: null }));
+});
+
+test("Take off hold acts at once and Undo puts the old hold back", async () => {
+  const user = userEvent.setup();
+  const held = waitingSections();
+  held[0].actions[0].on_hold = "the printer's quote";
+  const previous = { waiting_for: "the printer's quote", since: "2026-10-10" };
+  const calls = fakeApi({
+    "GET followups": () => held,
+    "GET people": () => [],
+    "POST actions/ACT-1/unhold": () => ({ ok: "ACT-1", previous }),
+    "POST actions/ACT-1/hold/restore": () => ({ ok: "ACT-1" }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Take off hold" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST actions/ACT-1/unhold")).toBe(true));
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold/restore")?.body).toEqual({ hold: previous }));
 });

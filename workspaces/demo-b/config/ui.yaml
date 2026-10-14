@@ -5,7 +5,8 @@ shortcuts: {next: j, previous: k, primary: a, send_back: s, copy: c, edit: e, un
 narrow_below_px: 640   # below this width: the phone layout, with a bottom bar
 toast_seconds: 7
 feedback_to: feedback@example.com   # where the feedback button writes
-today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1, nudge_after_days: 3}   # what Today's agenda and what came in cover
+today: {mail_hours: 24, mail_max: 50, agenda_days_ahead: 1}   # what Today's agenda and what came in cover
+followups: {action_due_within_days: 5, undated_after_days: 10, question_after_days: 3}   # when a sent item is due a follow-up
 brand: {color: "#8a3b5c", logo: null}   # the accent color; a logo is an image file in this config folder
 theme: system   # system, light or dark; each person can change it on their own device
 density: comfortable   # comfortable or compact

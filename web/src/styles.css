@@ -373,6 +373,8 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 .tb-when { flex: none; color: var(--text-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tb-row > .tb-when:first-child { flex-basis: 8.75rem; }
 .tb-row .pill { margin: 0 var(--space-2) 0 0; }
+.tb-row .tb-title .pill { margin: 0 0 0 var(--space-2); }
+.tb-row .answer-form { flex: 1 0 100%; }
 .tb-row .struck { text-decoration: line-through; }
 .tb-row.past .tb-title, .tb-row.past .tb-when { color: var(--text-muted); font-weight: var(--weight-medium); }
 .tb-row.unread .tb-title { font-weight: var(--weight-semibold); }

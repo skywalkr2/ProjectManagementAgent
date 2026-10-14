@@ -207,11 +207,13 @@ class Todo:
     project: str | None
     due: date | None
     overdue: bool
+    on_hold: str | None = None
 
 
 def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
     """The person's own open actions: overdue first, then due today, then the rest with no date or a later one,
-    earliest first. Empty when the workspace doesn't say which person record is theirs."""
+    earliest first. An action on hold is never overdue; it says what it waits for and keeps its due date.
+    Empty when the workspace doesn't say which person record is theirs."""
     me = cfg.workspace.user.person
     if not me:
         return []
@@ -222,13 +224,15 @@ def todo(store: Any, cfg: Any, now: datetime) -> list[Todo]:
         if data.get("status") != "open" or not any(o.get("person") == me for o in data.get("owners") or []):
             continue
         due = date.fromisoformat(str(data["due"])) if data.get("due") else None
+        hold = data.get("on_hold")
         found.append(
             Todo(
                 action=action.id,
                 text=data["text"],
                 project=data.get("project"),
                 due=due,
-                overdue=due is not None and due < today_here,
+                overdue=due is not None and due < today_here and not hold,
+                on_hold=hold["waiting_for"] if hold else None,
             )
         )
     return sorted(found, key=lambda t: (t.due is None, t.due or today_here, t.text))

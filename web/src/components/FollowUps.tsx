@@ -10,6 +10,7 @@ import { showRow, useReveal } from "../lib/reveal";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
+import { HoldPill, useHold } from "./OnHold";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { useAddOwnRequest } from "./HandIn";
 import { SafeLink, SafeText } from "./SafeText";
@@ -186,6 +187,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
   const act = useAct();
   const a = props.action;
   const ref = useRef<HTMLLIElement>(null);
+  const hold = useHold(a);
   const done = () =>
     act(
       () => api.actionStatus(a.id, "done"),
@@ -195,14 +197,19 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
   return (
     <li className="child" data-row tabIndex={-1} ref={ref}>
       <div>
-        <div className="title">{a.text}</div>
+        <div className="title">
+          {a.text}
+          {a.on_hold && <HoldPill what={a.on_hold} due={a.due} />}
+        </div>
         <div className="meta">{actionMeta(a, t)}</div>
       </div>
       <div className="acts">
         <button type="button" className="btn primary" onClick={() => void done()}>
           {t("followups.mark_done")}
         </button>
+        <RowMenu label={a.text} actions={[hold.entry]} />
       </div>
+      {hold.form}
     </li>
   );
 }
@@ -378,6 +385,17 @@ function sentLine(date: string | null, days: number | null, project: string, tn:
   return [project, when].filter(Boolean).join(" · ");
 }
 
+/** "waiting 5d", in the warning color and with "follow up" added once the follow-up rule says it is time. */
+function WaitingPill(props: { days: number | null; chase: boolean }) {
+  const { t } = useWords();
+  if (props.days === null) return null;
+  return (
+    <span className={props.chase ? "pill k-risk" : "pill k-wait"}>
+      {t(props.chase ? "followups.waiting_pill.chase" : "followups.waiting_pill", { n: props.days })}
+    </span>
+  );
+}
+
 function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: string }) {
   const { t, tn } = useWords();
   const act = useAct();
@@ -401,7 +419,10 @@ function WaitingQuestion(props: { question: S["FollowupQuestion"]; person: strin
   return (
     <li className="child">
       <div>
-        <div className="title">{q.title}</div>
+        <div className="title">
+          {q.title}
+          <WaitingPill days={q.waiting_days} chase={!!q.chase_due} />
+        </div>
         {meta && <div className="meta">{meta}</div>}
       </div>
       <div className="acts">
@@ -467,6 +488,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
       }),
     );
   const chase = a.chase_due;
+  const hold = useHold(a);
   const meta = a.followed_up
     ? [a.project_name, t("followups.followed_up_on", { date: day(a.followed_up) })].filter(Boolean).join(" · ")
     : sentLine(a.told, a.told_days, a.project_name, tn, t);
@@ -475,15 +497,19 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
   return (
     <li className="child">
       <div>
-        <div className="title">{a.text}</div>
+        <div className="title">
+          {a.text}
+          {a.on_hold ? <HoldPill what={a.on_hold} due={a.due} /> : <WaitingPill days={a.told_days} chase={chase} />}
+        </div>
         {meta && <div className="meta">{meta}</div>}
       </div>
       <div className="acts">
         <button type="button" className="btn primary" onClick={() => void (chase ? followedUp() : finished())}>
           {t(chase ? "followups.followed_up" : "followups.they_finished")}
         </button>
-        <RowMenu label={a.text} actions={[chase ? finish : chased]} />
+        <RowMenu label={a.text} actions={[chase ? finish : chased, hold.entry]} />
       </div>
+      {hold.form}
     </li>
   );
 }

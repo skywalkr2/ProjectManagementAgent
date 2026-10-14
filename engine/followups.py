@@ -27,6 +27,30 @@ TOLD_FIELDS = ("text", "due", "told")
 ROUTING = ("held-op", "owner")
 
 
+def follow_up_due(
+    cfg: Config,
+    today: date,
+    *,
+    waiting_days: int | None,
+    action: bool = False,
+    due: date | None = None,
+    on_hold: bool = False,
+) -> bool:
+    """Whether something sent to a person is due a follow-up. This is the one rule Today's lines and the Follow-ups
+    screen both use. `waiting_days` is the days since it went out with no word back (none when it hasn't gone out).
+    A question is chased after `question_after_days`. An action is never chased while it is on hold; one with a due
+    date is chased only when that date is within `action_due_within_days` or past, and after it has waited as long as a
+    question; one with no due date is chased after `undated_after_days`."""
+    if waiting_days is None or on_hold:
+        return False
+    rule = cfg.ui.followups
+    if not action:
+        return waiting_days >= rule.question_after_days
+    if due is None:
+        return waiting_days >= rule.undated_after_days
+    return (due - today).days <= rule.action_due_within_days and waiting_days >= rule.question_after_days
+
+
 @dataclass
 class Section:
     person: str
@@ -66,6 +90,7 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                 "status": d["status"],
                 "sent": sent.isoformat() if sent else None,
                 "waiting_days": waiting,
+                "chase_due": d["status"] == "sent" and follow_up_due(cfg, today, waiting_days=waiting),
                 "options": d.get("options", []),
                 "resolves": d.get("resolves"),
             }
@@ -81,6 +106,7 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
             chases = (d.get("followed_up") or {}).get(owner["person"]) or []
             last_chase = str(max(chases)) if chases else None
             told_days = (today - date.fromisoformat(told)).days if told else None
+            hold = d.get("on_hold")
             section(owner["person"]).actions.append(
                 {
                     "id": a.id,
@@ -91,7 +117,15 @@ def sections(store: Store, cfg: Config, today: date) -> list[Section]:
                     "told": told,
                     "told_days": told_days,
                     "followed_up": last_chase,
-                    "chase_due": told_days is not None and told_days >= cfg.ui.today.nudge_after_days,
+                    "on_hold": hold["waiting_for"] if hold else None,
+                    "chase_due": follow_up_due(
+                        cfg,
+                        today,
+                        waiting_days=told_days,
+                        action=True,
+                        due=date.fromisoformat(str(d["due"])) if d.get("due") else None,
+                        on_hold=bool(hold),
+                    ),
                 }
             )
     for s in by_person.values():
@@ -258,3 +292,52 @@ def they_finished(store: Store, cfg: Config, action_id: str, person: str) -> Non
         rec = _owned_open_action(tx, action_id, person)
         credit = {"status": "done", "done_by": [person], "reported_by": People(store, cfg).pm}
         tx.update("action", action_id, credit, _PM, read_version=rec.version)
+
+
+def _open_action(tx: Any, action_id: str) -> Any:
+    rec = tx.get("action", action_id)
+    if rec is None or rec.data["status"] != "open":
+        raise FollowUpError("that action isn't open")
+    return rec
+
+
+def put_on_hold(
+    store: Store, action_id: str, waiting_for: str, *, now: datetime | None = None
+) -> dict[str, Any] | None:
+    """Put an open action on hold, waiting for `waiting_for` (plain words), starting today. A signal records it as the
+    person's own change. Returns what the action was waiting for before (or None), which `restore_hold` takes."""
+    waiting_for = " ".join(waiting_for.split())
+    if not waiting_for:
+        raise FollowUpError("say what it is waiting for")
+    now = now or datetime.now(UTC)
+    with store.transaction() as tx:
+        rec = _open_action(tx, action_id)
+        previous = rec.data.get("on_hold")
+        hold = {"waiting_for": waiting_for, "since": now.date().isoformat()}
+        tx.update("action", action_id, {"on_hold": hold}, _PM, read_version=rec.version)
+    signal(store, "put_on_hold", [action_id], note=waiting_for, now=now)
+    return previous
+
+
+def take_off_hold(store: Store, action_id: str, *, now: datetime | None = None) -> dict[str, Any] | None:
+    """Take an open action off hold; it keeps its own due date. A signal records it as the person's own change.
+    Returns what it was waiting for, which `restore_hold` takes."""
+    now = now or datetime.now(UTC)
+    with store.transaction() as tx:
+        rec = _open_action(tx, action_id)
+        previous = rec.data.get("on_hold")
+        if previous is None:
+            raise FollowUpError("that action isn't on hold")
+        tx.update("action", action_id, {"on_hold": None}, _PM, read_version=rec.version)
+    signal(store, "taken_off_hold", [action_id], note=previous["waiting_for"], now=now)
+    return previous
+
+
+def restore_hold(store: Store, action_id: str, hold: dict[str, Any] | None) -> None:
+    """Put an action's hold back to exactly `hold` (what it was, or None for off hold). It is how undoing a hold or a
+    release works, and it records no signal: taking back the person's own change is not a correction."""
+    with store.transaction() as tx:
+        rec = tx.get("action", action_id)
+        if rec is None:
+            return
+        tx.update("action", action_id, {"on_hold": hold}, _PM, read_version=rec.version)
