@@ -414,6 +414,12 @@ class Question(Record):
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     options: list[str] = Field(default_factory=list, description="Choices offered, for routing and decisions.")
     resolves: dict[str, Any] | None = Field(None, description="What answering it releases, e.g. a held op.")
+    matters_for: str | None = Field(
+        None,
+        description="Which of the person's decisions, designs or dated items depends on the answer, by id or in "
+        "words. A question to anyone but the person says it.",
+    )
+    dropped_reason: str | None = Field(None, description="Why the person dropped it, when they did.")
 
 
 class Watched(BaseModel):
@@ -1410,6 +1416,7 @@ class Signal(Record):
         "retired",
         "narrowed",
         "just_this_time",
+        "change_requested",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
@@ -1417,7 +1424,8 @@ class Signal(Record):
         "put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired "
         "a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); "
         "narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for "
-        "this case but is not a pattern."
+        "this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a "
+        "note on its row."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")

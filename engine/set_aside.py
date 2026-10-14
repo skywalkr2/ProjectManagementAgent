@@ -152,33 +152,69 @@ def put_back(
     handed in is handed in now when `hand_in` is set. Returns the request that is waiting, or None."""
     from engine.watch import hand_in_snapshot
 
-    waiting = None
     with store.transaction() as tx:
-        snap = _mail_snapshot(tx, snapshot_id)
-        if (snap.data.get("set_aside") or {}).get("confirmed_at"):
-            raise StoreError("That was confirmed and is being deleted.")
-        tx.update("snapshot", snap.id, {"set_aside": None, "closed_by": None}, _PM, read_version=snap.version)
-        asides = [r for r in requests_of(tx, snap) if r.data.get("set_aside")]
-        any_request = bool(requests_of(tx, snap))
-        for req in asides:
-            mark = req.data["set_aside"]
-            if req is asides[-1] and mark.get("from_state"):
-                changes: dict[str, Any] = {
-                    "state": mark["from_state"],
-                    "waiting": mark.get("from_waiting"),
-                    "set_aside": None,
-                }
-                waiting = req.id
-            elif req is asides[-1]:
-                changes = {"state": "queued", "waiting": "With the assistant, starting now", "set_aside": None}
-                waiting = req.id
-            else:
-                changes = {"set_aside": None}
-            tx.update("request", req.id, changes, _PM, read_version=req.version)
+        waiting, any_request = _take_out(tx, snapshot_id, _PM)
     if waiting is None and hand_in and not any_request:
         made = hand_in_snapshot(ws, store, cfg, snapshot_id, now)
         waiting = made
     return waiting
+
+
+def _take_out(tx: Any, snapshot_id: str, w: WriteContext) -> tuple[str | None, bool]:
+    """Take a mail item out of the folder inside a transaction: its mark goes, and its request goes back to where it
+    was or is queued for the assistant. Returns the request that is waiting (or None) and whether the item has any
+    request at all."""
+    waiting = None
+    snap = _mail_snapshot(tx, snapshot_id)
+    if (snap.data.get("set_aside") or {}).get("confirmed_at"):
+        raise StoreError("That was confirmed and is being deleted.")
+    tx.update("snapshot", snap.id, {"set_aside": None, "closed_by": None}, w, read_version=snap.version)
+    asides = [r for r in requests_of(tx, snap) if r.data.get("set_aside")]
+    any_request = bool(requests_of(tx, snap))
+    for req in asides:
+        mark = req.data["set_aside"]
+        if req is asides[-1] and mark.get("from_state"):
+            changes: dict[str, Any] = {
+                "state": mark["from_state"],
+                "waiting": mark.get("from_waiting"),
+                "set_aside": None,
+            }
+            waiting = req.id
+        elif req is asides[-1]:
+            changes = {"state": "queued", "waiting": "With the assistant, starting now", "set_aside": None}
+            waiting = req.id
+        else:
+            changes = {"set_aside": None}
+        tx.update("request", req.id, changes, w, read_version=req.version)
+    return waiting, any_request
+
+
+def restore_in(
+    tx: Any, store: Any, ws: Any, cfg: Any, snapshot_id: str, w: WriteContext, now: datetime | None = None
+) -> list[dict[str, Any]]:
+    """Bring a set-aside item back as part of a change the caller holds open: it leaves the folder and the assistant
+    reads it (a request that was waiting goes back, an item never handed in is handed in). Returns the records
+    touched. Undo reverts the writes with the rest of the change."""
+    from engine.watch import hand_in_snapshot_in
+
+    waiting, any_request = _take_out(tx, snapshot_id, w)
+    if waiting is None and not any_request and hand_in_snapshot_in(ws, store, tx, cfg, snapshot_id, now, w) is None:
+        raise StoreError("The source this message came from isn't set up any more, so it can't be read again.")
+    return [{"kind": "snapshot", "id": snapshot_id}]
+
+
+def restore_problem(view: Any, snapshot_id: str) -> str | None:
+    """Why a mail item can't be brought back, or None: it is a message the app holds, in the Set aside folder, and not
+    yet confirmed as rightly set aside."""
+    snap = view.get("snapshot", snapshot_id)
+    if snap is None or not snap.data.get("message") or snap.data.get("deleted"):
+        return f"{snapshot_id} isn't a message the app is holding"
+    mark = snap.data.get("set_aside")
+    if not mark:
+        return f"{snapshot_id} isn't set aside"
+    if mark.get("confirmed_at"):
+        return f"{snapshot_id} was confirmed as rightly set aside and is being deleted"
+    return None
 
 
 def confirm_items(store: Any, snapshot_ids: list[str], now: datetime | None = None) -> list[Any]:

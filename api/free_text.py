@@ -49,6 +49,10 @@ ROUTES: dict[str, Declared] = {
     "POST /api/questions/{qid}/pick-owner": _to("the note typed with the owner's pick, through the note helper"),
     "POST /api/questions/{qid}/answer": _to("a written answer or a note with a pick, through the note helper"),
     "POST /api/records/edit": _to("text added to an action's notes goes through the note helper"),
+    "POST /api/items/{kind}/{id}/change": _to(
+        "the note asking for a change to an action, question, decision, calendar entry or fact is queued as an input "
+        "about that item, through the note helper"
+    ),
     # Routes that queue the assistant's work with the person's text.
     "POST /api/handin": _to("the person's note and pasted material become an input"),
     "POST /api/ask": _to("a question to the assistant is queued as an ask"),
@@ -58,6 +62,13 @@ ROUTES: dict[str, Declared] = {
     # Local: the text is the person's own record or setting.
     "POST /api/followups/{person}/mark-sent": _local(
         "the message as sent, compared with the draft for a quality signal; not a note"
+    ),
+    "POST /api/questions/{qid}/reword": _local(
+        "the person's own new wording of a question, kept as the question's text and recorded as a correction; not a "
+        "note"
+    ),
+    "POST /api/questions/{qid}/drop": _local(
+        "the reason the person dropped a question, kept with it and with the correction; not a note"
     ),
     "POST /api/texts/edit": _local("the person's own edit of a long text, kept as their version of it"),
     "POST /api/knowledge/{entry_id}/keep": _local(

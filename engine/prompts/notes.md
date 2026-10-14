@@ -18,6 +18,14 @@ How to read the input:
   Decide whether the note changes anything beyond that action: a fact it gives (with any link), a date it moves, an
   action it reopens or closes, a new action or question, a standing rule the PM states in their own words.
   Do not repeat what the action already did, and answer with an empty "ops" list when the note changes nothing.
+- A note whose record block says the person "asked for this record to be changed" is an instruction to change that one
+  record (an action, a question, a decision, a calendar entry or a fact), which the block shows as it is now. Do what
+  the note says and nothing else: reword it, move its date, put it on hold, turn it into another kind of record (an
+  action that is really a decision becomes a question to the PM with "kind": "decision"), split it into several
+  records, or drop it. Never mark an action done unless the note says it is done. Read the record as it is now, not as
+  you remember it; when the note doesn't match it (a date or a name the record doesn't have), answer with a question to
+  the PM saying what you found, not with a change. When no op can do what the note asks, say so in the summary instead
+  of doing something near it.
 
 How to answer:
 - Use only the ops in the op reference. Each op is an object with an "op" field naming it.
@@ -26,6 +34,12 @@ How to answer:
 - Refer to projects, actions and questions by id from the lists you are given.
 - When the input asks the PM to choose or decide something only the PM can decide, add a question to the PM with
   "kind": "decision". Every other question has "kind": "question".
+- One question per "question.add": never number several questions in one text. A question to anyone but the PM also
+  says in "matters_for" which of the PM's decisions, designs or dated items depends on the answer. When none does,
+  don't ask: record what is known as a fact and say in the summary why you didn't ask.
+- When the input uses a term, acronym or system name that the glossary doesn't have and the input doesn't say what it
+  means, add a "glossary.add" with "confidence": "unknown" and "meaning": "not known yet" instead of guessing; with a
+  meaning the input gives, "assumed" or "confirmed" as the input supports. The PM keeps or discards it.
 - Every op whose entry in the op reference has an "evidence" field needs it: {"quote": "<exact words copied from the
   input>"}. Copy the words exactly, at least a few words long. If you can't quote it, don't claim it. Ops without an
   "evidence" field take none, and no op takes fields its entry doesn't list.

@@ -379,13 +379,13 @@ def test_undo_of_each_op_takes_the_change_back(app):
     assert store.read().get("lesson", entry_id).data["status"] == "active"
 
 
-def test_the_learning_ops_are_neither_offered_when_reading_notes_nor_to_a_plugins_action(app):
+def test_the_learning_ops_are_not_offered_to_a_plugins_action_and_reading_notes_is_offered_only_glossary_add(app):
     _, store, _, _ = app
     from engine.actions import ACTION_CORE_OPS
     from engine.tasks import TASKS
 
     assert set(store.plugins.ops) >= KNOWLEDGE_OPS and not KNOWLEDGE_OPS & ACTION_CORE_OPS
-    assert not KNOWLEDGE_OPS & set(TASKS["notes"].ops) and not KNOWLEDGE_OPS & set(TASKS["ask"].ops)
+    assert KNOWLEDGE_OPS & set(TASKS["notes"].ops) == {"glossary.add"} and not KNOWLEDGE_OPS & set(TASKS["ask"].ops)
     assert {store.plugins.tiers[name] for name in KNOWLEDGE_OPS} == {"system"}
 
 

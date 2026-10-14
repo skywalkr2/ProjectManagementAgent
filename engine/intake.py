@@ -5,7 +5,7 @@ trusted.
 
 A note typed on a button of an action or a question (Mark done, They finished it, Followed up, an answer) is an input
 too: `note_as_input` saves it as a trusted source with the item as its context and its author, and queues the usual
-notes work, unless it is a bare confirmation.
+notes work, unless it is a bare confirmation. A note asking for a change to the record it is on is always read.
 """
 
 from __future__ import annotations
@@ -111,7 +111,11 @@ NOTE_ROUTES = {
     "notes_edited": "added to the notes of the record",
     "answered": "answered the question",
     "answered_for": "recorded the answer of the person the question was asked of",
+    "change_requested": "asked for this record to be changed",
 }
+
+#: The buttons whose note is the whole point of pressing them, so it is read however short it is.
+ALWAYS_READ_ROUTES = frozenset({"change_requested"})
 
 #: The buttons whose note is content the person reports, not their own words: what someone else did or said, as the
 #: person tells it. Such a note is authored by that other person, and nothing it says changes how the product behaves
@@ -181,7 +185,9 @@ def note_as_input(
     if route in REPORTED_ROUTES and not author:
         raise ValueError(f"a note on {route} names the person it is reported about")
     note = text.strip()
-    if not note or is_bare_confirmation(note, cfg.language.bare_confirmation_words):
+    if not note or (
+        route not in ALWAYS_READ_ROUTES and is_bare_confirmation(note, cfg.language.bare_confirmation_words)
+    ):
         return None
     record = store.read().get(*item)
     if record is None:

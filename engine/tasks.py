@@ -9,25 +9,29 @@ from dataclasses import field as _field
 from pathlib import Path
 from typing import Any
 
-from engine.ops import KNOWLEDGE_OPS, OP_MODELS
+from engine.ops import KNOWLEDGE_OPS, OP_MODELS, PERSON_ONLY_OPS
+
+#: The knowledge op reading notes offers: a term or name the note uses that isn't in the glossary can be recorded, or
+#: marked unknown. It still applies as a proposal unless the words are the person's own (design 6.22).
+OFFERED_TO_NOTES = frozenset({"glossary.add"})
 
 #: Core ops reading notes never offers: deleting is the person's call, file.add is made only by person actions,
-#: starting projects is for actions and plugin work, and the ops that keep what the assistant learned belong to the
-#: work that learns (design 6.22).
-NOT_FROM_NOTES = KNOWLEDGE_OPS | {
-    "record.delete",
-    "file.add",
-    "project.add",
-    "record.edit",
-    "text.edit",
-    "text.propose",
-    "text.accept",
-    "text.discard",
-    "text.draft",
-    "answer",
-    "setting.propose",
-    "report.draft",
-}
+#: starting projects is for actions and plugin work, the ops only the person makes are theirs alone, and the ops that
+#: keep what the assistant learned belong to the work that learns (design 6.22), except the one in `OFFERED_TO_NOTES`.
+NOT_FROM_NOTES = (
+    (KNOWLEDGE_OPS - OFFERED_TO_NOTES)
+    | PERSON_ONLY_OPS
+    | {
+        "record.delete",
+        "file.add",
+        "project.add",
+        "text.propose",
+        "text.draft",
+        "answer",
+        "setting.propose",
+        "report.draft",
+    }
+)
 #: What an ask may do besides what reading notes does: answer, suggest a setting, draft a report to the maintainers.
 ASK_OPS = ("answer", "setting.propose", "report.draft")
 #: What learning from a correction may propose (design 6.22): one entry to keep, or a change to a lesson that should
@@ -96,7 +100,7 @@ TASKS: dict[str, TaskKind] = {
     # A question from the PM about the app or the workspace (design 6.25), answered from the material it is given.
     "ask": TaskKind(
         name="ask",
-        ops=(*ASK_OPS, *(n for n in OP_MODELS if n not in NOT_FROM_NOTES)),
+        ops=(*ASK_OPS, *(n for n in OP_MODELS if n not in NOT_FROM_NOTES | OFFERED_TO_NOTES)),
         prompt="ask",
         playbook="notes",
         label="Ask",

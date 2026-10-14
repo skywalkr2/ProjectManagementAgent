@@ -818,6 +818,8 @@ def _default_lints() -> dict[str, Severity]:
         "evidence-fit": "return",
         "already-known": "return",
         "near-duplicate-question": "warn",
+        "several-questions": "return",
+        "question-without-stake": "return",
     }
 
 
@@ -859,6 +861,26 @@ class NearDuplicateQuestionTuning(ConfigModel):
     )
 
 
+class SeveralQuestionsTuning(ConfigModel):
+    minimum: int = Field(
+        2,
+        ge=2,
+        le=20,
+        description="How many numbered questions in one question's or decision's text make it several questions: "
+        "each is asked on its own, so each has its own answer.",
+    )
+
+
+class OwnerSuggestionTuning(ConfigModel):
+    match: float = Field(
+        0.5,
+        gt=0,
+        le=1,
+        description="How much of a routing entry's topic an action's words must hold for the entry to suggest who "
+        "owns it: 0 counts any shared word, 1 only an action that holds every word of the topic.",
+    )
+
+
 class LintTuning(ConfigModel):
     """Settings of the core lints that have more than a severity: one entry per lint, named as the lint is in `lints`
     with underscores for hyphens, so each setting has a plain dotted key and environment variable."""
@@ -872,6 +894,14 @@ class LintTuning(ConfigModel):
     already_known: AlreadyKnownTuning = Field(
         default_factory=AlreadyKnownTuning,
         description="Settings of the check that a question or report isn't about something already recorded.",
+    )
+    several_questions: SeveralQuestionsTuning = Field(
+        default_factory=SeveralQuestionsTuning,
+        description="Settings of the check that a question or decision holds one question.",
+    )
+    owner_suggestion: OwnerSuggestionTuning = Field(
+        default_factory=OwnerSuggestionTuning,
+        description="Settings of the suggestion made for an action that has no owner.",
     )
 
 

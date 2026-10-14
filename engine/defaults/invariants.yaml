@@ -11,7 +11,15 @@ invariants:
       Use only the ops in the op reference for this kind of work. An op that isn't listed there is refused, even when
       it exists for other kinds of work. When no listed op fits, record the point in a note instead.
   person-only:
-    ops: [text.edit, text.accept, text.discard, record.edit]
+    ops:
+      - text.edit
+      - text.accept
+      - text.discard
+      - record.edit
+      - question.update
+      - question.move
+      - question.drop
+      - question.mark_sent
     line: Only the person can make this change; from the assistant it is refused.
     seed: >-
       Some changes are the person's alone: editing text, accepting or discarding a proposed version, editing a
@@ -27,6 +35,12 @@ invariants:
       - action.close
       - question.add
       - question.done
+      - question.update
+      - question.move
+      - question.drop
+      - question.mark_sent
+      - list.merge
+      - mail.restore
       - project.add
       - record.edit
       - text.edit

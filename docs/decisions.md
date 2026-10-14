@@ -3,6 +3,26 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: L3, correcting what the assistant made: the choices made while building
+
+**Decided by:** the builder, for the technical PM's review. **What:** (1) The corrections of a question are ops
+(`question.update`, `question.move`, `question.drop`, `question.mark_sent`), person-only, applied as the person's with
+Undo like `record.edit`, never offered to the assistant. The signal is written in the same transaction but apart from
+the change, so Undo leaves it in place and records no `undone`; learning nets it out later (L3). (2) Moving a question
+does not require a link the new person can open: the person chose to ask them, and the invariant is about what the
+assistant files. (3) Reword and drop take the person's words as their own record, so those two routes are declared
+local-only in `api/free_text.py`; "Change this" is the one that goes to the assistant. (4) "Change this" accepts the kinds
+`action`, `question`, `decision`, `event` (a calendar entry) and `fact`; `decision` and `question` are the same record
+kind. Its note is always read, however short. (5) `mail.restore` writes its hand-in as the op, so Undo takes the handed-in
+request back. (6) The owner suggestion is read from routing entries and open actions at the moment the screen is built,
+by the same word-overlap matcher as the near-duplicate lint, and only offers; two settings (`several_questions.minimum`,
+`owner_suggestion.match`). (7) `matters_for` and `dropped_reason` are kept on the question record. *Kind:* concepts
+(core), settings and a record field. **Why:** the designer's lessons from running named these hand fixes; each choice
+above was the narrowest one that keeps Undo and the signals truthful. **Impact:** design 4.17, 6.7, 6.8, 6.9, 6.13, 6.20,
+7.7 and CHANGES 55; plugin guide and OpenAPI regenerated; new lints default to `return`. No change to scope. Open: the
+assistant has no op to put an action on hold or drop an item, so a "Change this" note asking for either gets an answer
+that says so (6.13's missing-op list); whether to add them is for the technical PM.
+
 ## 2026-10-14: The harder set's "before" run: the cases were wrong, not the assistant
 
 **Decided by:** the technical PM, reading the owner's O2 report. **What:** 30 of 48 runs passed at `feb6b3f`; all 18

@@ -537,10 +537,11 @@ def _hand_in(
     text: str,
     now: datetime,
     closed: dict[str, Any] | None,
+    ctx: WriteContext = _WATCHER,
 ) -> str:
     """Save the input's text and queue it for the assistant, as outside content: closed at once when a triage rule
     matches, and with any older change to the same item that is still waiting folded in, so they are read once, in
-    order."""
+    order. The records are written as `ctx`."""
     folded = [] if closed else _waiting_for(tx, source.id, item.key)
     if folded:
         earlier = [_read_text(ws, tx.get("source", r.data["source"]).data["content_hash"]) for r in folded]
@@ -567,7 +568,7 @@ def _hand_in(
                 "by_us": by_us,
             },
         },
-        _WATCHER,
+        ctx,
     )
     data: dict[str, Any] = {
         "task": "notes",
@@ -585,13 +586,13 @@ def _hand_in(
         )
     elif closed:
         data.update(state="done", waiting=f"Closed by {closed['rule']}: {closed['reason']}", auto_closed=closed)
-    request = tx.create("request", data, _WATCHER)
+    request = tx.create("request", data, ctx)
     for older in folded:
         tx.update(
             "request",
             older.id,
             {"state": "done", "waiting": "Folded into a newer change to the same item", "folded_into": request.id},
-            _WATCHER,
+            ctx,
             read_version=older.version,
         )
     return request.id
@@ -712,6 +713,26 @@ def hand_in_snapshot(ws: Any, store: Any, cfg: Any, snapshot_id: str, now: datet
     source = next((s for s in cfg.watch.sources if snap is not None and s.id == snap.data["source"]), None)
     if snap is None or source is None or snap.data.get("deleted"):
         return None
+    with _read_lock(ws, source.id), store.transaction() as tx:
+        return hand_in_snapshot_in(ws, store, tx, cfg, snapshot_id, now)
+
+
+def hand_in_snapshot_in(
+    ws: Any,
+    store: Any,
+    tx: Any,
+    cfg: Any,
+    snapshot_id: str,
+    now: datetime | None = None,
+    ctx: WriteContext = _WATCHER,
+) -> str | None:
+    """`hand_in_snapshot` inside a transaction the caller holds, so it commits or rolls back with the caller's other
+    changes, and its records are written as `ctx` (so a change that holds them can undo them). The caller takes the
+    source's read lock first when it can, as `hand_in_snapshot` does."""
+    snap = tx.get("snapshot", snapshot_id)
+    source = next((s for s in cfg.watch.sources if snap is not None and s.id == snap.data["source"]), None)
+    if snap is None or source is None or snap.data.get("deleted"):
+        return None
     data = snap.data
     from engine.connectors import EventDetails
 
@@ -725,19 +746,19 @@ def hand_in_snapshot(ws: Any, store: Any, cfg: Any, snapshot_id: str, now: datet
         event=EventDetails(**data["event"]) if data.get("event") else None,
         message=_message_of(data.get("message")),
     )
-    with _read_lock(ws, source.id), store.transaction() as tx:
-        return _hand_in(
-            ws,
-            store,
-            tx,
-            cfg,
-            source,
-            item,
-            "new",
-            _input_text(source, item, "new", None),
-            now or datetime.now(UTC),
-            None,
-        )
+    return _hand_in(
+        ws,
+        store,
+        tx,
+        cfg,
+        source,
+        item,
+        "new",
+        _input_text(source, item, "new", None),
+        now or datetime.now(UTC),
+        None,
+        ctx,
+    )
 
 
 def _message_of(details: dict[str, Any] | None) -> Any:

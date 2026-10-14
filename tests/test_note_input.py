@@ -238,6 +238,7 @@ def test_every_route_a_note_can_be_typed_on_has_its_words_for_the_assistant():
         "notes_edited",
         "answered",
         "answered_for",
+        "change_requested",
     }
 
 
@@ -352,6 +353,9 @@ def type_on(client, base, worker, route: str) -> tuple[str, str | None]:
         body = {"kind": "action", "id": action, "fields": {"notes": LONG}, "read_version": version}
         assert client.post(f"{base}/records/edit", json=body).status_code == 200
         return noted(store)[-1].id, None
+    if route == "change_requested":
+        url = f"{base}/items/action/{action}/change"
+        return client.post(url, json={"note": LONG}).json()["request"], None
     own = route == "answered"
     question = next(q for q in fixture_records(DEMO_B, "question") if (q["to"] == the_person(client)) is own)
     answered = client.post(f"{base}/questions/{question['id']}/answer", json={"text": LONG})

@@ -82,6 +82,7 @@ from api.schemas import (
     OrganizationView,
     OutsideEditView,
     OwnerPick,
+    OwnerSuggestionView,
     PanelRow,
     PanelView,
     PersonActionView,
@@ -172,6 +173,7 @@ from engine.intake import IntakeError, hand_in, note_as_input, source_text
 from engine.names import People
 from engine.ops import StageMoveOp
 from engine.origin import origins
+from engine.owners import suggest_owner
 from engine.plugin_api import CORE_LINE_ACTIONS
 from engine.plugin_host import check_about
 from engine.prompts import render
@@ -1255,7 +1257,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     status=cs.data["status"],
                     reviewed=cs.data["reviewed"],
                     trust=cs.data["trust"],
-                    ops=[_op_view(o, store, people, projects) for o in cs.data["ops"]],
+                    ops=[_op_view(o, store, people, projects, cfg) for o in cs.data["ops"]],
                     second_opinion=_independence(cs),
                 )
             out.append(
@@ -1875,22 +1877,29 @@ def _title_view(title: Any, people: People) -> ItemTitle | None:
     )
 
 
-def _ask(store: Store, people: People, qid: str | None) -> Ask | None:
+def _ask(store: Store, people: People, qid: str | None, cfg: Config | None = None) -> Ask | None:
     q = store.read().get("question", qid) if qid else None
     if q is None:
         return None
     resolves = q.data.get("resolves") or {}
     about = resolves.get("kind") if resolves.get("kind") in ("held-op", "owner") else "other"
+    suggestion = None
+    if about == "owner" and cfg is not None:
+        found = suggest_owner(store.read(), cfg, resolves.get("action", ""))
+        suggestion = OwnerSuggestionView(**found.shown(people)) if found is not None else None
     return Ask(
         id=q.id,
         status=q.data["status"],
         about=about,
         name=resolves.get("name"),
         options=[Option(id=pid, name=people.name(pid)) for pid in q.data.get("options", [])],
+        suggestion=suggestion,
     )
 
 
-def _op_view(o: dict[str, Any], store: Store, people: People, projects: dict[str, str]) -> OpView:
+def _op_view(
+    o: dict[str, Any], store: Store, people: People, projects: dict[str, str], cfg: Config | None = None
+) -> OpView:
     op = o["op"]
     record = None
     for ref in o.get("records", []):
@@ -1936,7 +1945,7 @@ def _op_view(o: dict[str, Any], store: Store, people: People, projects: dict[str
         meta=meta,
         evidence={"quote": evidence["quote"]} if evidence else None,
         record={"kind": record[0], "id": record[1].id} if record else None,
-        ask=_ask(store, people, o.get("question")),
+        ask=_ask(store, people, o.get("question"), cfg),
     )
 
 

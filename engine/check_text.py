@@ -90,3 +90,22 @@ def quoted_passages(text: str) -> list[str]:
 def words_of(text: str, quotes: Iterable[str] = ()) -> str:
     """What a check on wording reads: the text without its links and without the exact quotes given."""
     return without_links(without_quotes(text, quotes))
+
+
+_NUMBER_MARK = re.compile(r"(?:^|\s)\(?(\d{1,2})[.)]\s+(?=\S)")
+
+
+def numbered_questions(text: str) -> int:
+    """How many items of a numbered list in the text are questions. The list is the markers ("1.", "2)", "(3)") that
+    count up from 1 in order, so a date or a figure inside a sentence isn't one; an item is a question when it holds a
+    question mark."""
+    chain: list[re.Match[str]] = []
+    for mark in _NUMBER_MARK.finditer(text):
+        if int(mark.group(1)) == len(chain) + 1:
+            chain.append(mark)
+    asked = 0
+    for index, mark in enumerate(chain):
+        end = chain[index + 1].start() if index + 1 < len(chain) else len(text)
+        if "?" in text[mark.end() : end]:
+            asked += 1
+    return asked

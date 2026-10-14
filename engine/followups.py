@@ -217,8 +217,29 @@ def mark_sent(
                 counts["actions"] += 1
                 counts["action_ids"].append(a["id"])
     if sent_text is not None and normalize(sent_text) != normalize(current.message):
-        signal(store, "draft_edited", [person], note=sent_text, now=now)
+        changeset, run = _written_by(store, counts["question_ids"])
+        signal(
+            store,
+            "draft_edited",
+            [person, *counts["question_ids"]],
+            note=sent_text,
+            now=now,
+            changeset=changeset,
+            run=run,
+        )
     return counts
+
+
+def _written_by(store: Store, question_ids: list[str]) -> tuple[str | None, str | None]:
+    """The changeset and the AI run that wrote these questions, when they all came from the same one; None for what
+    they don't share (questions from different runs, or made by no run)."""
+    view = store.read()
+    made = [next((e["changeset"] for e in view.ledger(kind="question", record_id=qid)), None) for qid in question_ids]
+    runs = []
+    for changeset in made:
+        record = view.get("changeset", changeset) if changeset else None
+        runs.append(record.data.get("run") if record is not None else None)
+    return (made[0] if len(set(made)) == 1 else None), (runs[0] if len(set(runs)) == 1 else None)
 
 
 def unmark_sent(store: Store, person: str, question_ids: list[str], action_ids: list[str]) -> None:

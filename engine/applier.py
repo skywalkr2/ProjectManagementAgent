@@ -17,7 +17,7 @@ from pydantic import ValidationError
 
 from engine import knowledge, learn
 from engine import search as workspace_search
-from engine.check_text import quoted_passages, without_links, words_of
+from engine.check_text import numbered_questions, quoted_passages, without_links, words_of
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
 from engine.config.yaml_edit import set_key
@@ -39,12 +39,18 @@ from engine.ops import (
     EvidenceIn,
     FactOp,
     FileAddOp,
+    ListMergeOp,
+    MailRestoreOp,
     NoteOp,
     OpModel,
     PersonAddOp,
     ProjectAddOp,
     QuestionAddOp,
     QuestionDoneOp,
+    QuestionDropOp,
+    QuestionMarkSentOp,
+    QuestionMoveOp,
+    QuestionUpdateOp,
     RecordDeleteOp,
     RecordEditOp,
     RecordLogOp,
@@ -243,6 +249,22 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"question {op.id} is already closed")
             elif evidence is not None and not _shares_words(evidence.quote, target.data["title"] + " " + op.answer):
                 lint(i, "evidence-fit", f"the quote doesn't seem to answer question {op.id}")
+        if isinstance(op, (QuestionUpdateOp, QuestionMoveOp, QuestionDropOp, QuestionMarkSentOp)):
+            why = question_correction_problem(ctx, view, op)
+            if why:
+                refuse(i, "targets", why)
+        if isinstance(op, ListMergeOp):
+            from engine import lists
+
+            why = lists.merge_problem(view, op)
+            if why:
+                refuse(i, "targets", why)
+        if isinstance(op, MailRestoreOp):
+            from engine import set_aside
+
+            why = set_aside.restore_problem(view, op.snapshot)
+            if why:
+                refuse(i, "targets", why)
         if isinstance(op, RecordEditOp):
             why = edit_problem(ctx.store, view, op)
             if why:
@@ -317,6 +339,21 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     if not _openable(link.url):
                         refuse(i, "question-links", f"{link.url} isn't a link the recipient can open")
             _wording(i, op.title + " " + op.text, ctx, lint, _quotes_in(op, ctx))
+            minimum = ctx.cfg.checks.tuning.several_questions.minimum
+            if numbered_questions(op.text) >= minimum:
+                lint(
+                    i,
+                    "several-questions",
+                    f"the text holds {minimum} or more numbered questions; ask each as its own question, so each has "
+                    "its own answer and follow-through",
+                )
+            if not to_pm and not (op.matters_for or "").strip():
+                lint(
+                    i,
+                    "question-without-stake",
+                    "a question to someone else names which of the PM's decisions, designs or dated items depends on "
+                    "the answer (matters_for); without one, record it as a fact and say so in the change's note",
+                )
             if lints.get("near-duplicate-question", "off") != "off":
                 match = _near_duplicate_question(ctx, view, op.title, resolved.person)
                 if match is not None:
@@ -521,6 +558,33 @@ _WORD = re.compile(r"[a-z0-9]{4,}")
 
 def _shares_words(a: str, b: str) -> bool:
     return bool(set(_WORD.findall(normalize(without_links(a)))) & set(_WORD.findall(normalize(without_links(b)))))
+
+
+def question_correction_problem(ctx: Context, view: Any, op: OpModel) -> str | None:
+    """Why the person's correction of a question can't apply, or None. The question must exist and still be open or
+    sent; one that holds something until it is answered (who a name is, who owns an action) is answered where the item
+    waits, so it isn't reworded, moved or dropped here. A reroute goes to one known person other than the one it is
+    for, and a question can only be marked sent while it is open, on a day that isn't in the future."""
+    qid = op.id  # type: ignore[attr-defined]
+    found = view.get("question", qid)
+    if found is None:
+        return f"there is no question {qid}"
+    if found.data["status"] not in ("open", "sent"):
+        return f"question {qid} is already closed"
+    if found.data.get("resolves"):
+        return f"question {qid} holds something that waits for the answer; answer it where that item waits"
+    if isinstance(op, QuestionMoveOp):
+        resolved = ctx.people.resolve(op.to)
+        if resolved.status != "ok":
+            return f"{op.to!r} isn't one known person"
+        if resolved.person == found.data["to"]:
+            return f"question {qid} is already for that person"
+    if isinstance(op, QuestionMarkSentOp):
+        if found.data["status"] != "open":
+            return f"question {qid} is already marked as sent"
+        if op.on is not None and op.on > datetime.fromisoformat(ctx.store.clock()).date():
+            return "a question can't have been sent on a day that hasn't come"
+    return None
 
 
 def _near_duplicate_question(ctx: Context, view: Any, title: str, to: str | None) -> Any | None:
@@ -975,10 +1039,17 @@ def _apply_op(
         return apply_move(ctx.store, tx, op, w), None
     if "/" in op.op:
         return ctx.store.plugins.apply(tx, op, w), None
-    if op.op in ("list.add", "list.rename", "list.retire"):
+    if op.op in ("list.add", "list.rename", "list.merge", "list.retire"):
         from engine import lists
 
         return lists.apply(tx, op, w), None
+    if isinstance(op, MailRestoreOp):
+        from engine import set_aside
+
+        # The workspace is the folder that holds the store's database.
+        return set_aside.restore_in(tx, ctx.store, Workspace(ctx.store.path.parent), ctx.cfg, op.snapshot, w), None
+    if isinstance(op, (QuestionUpdateOp, QuestionMoveOp, QuestionDropOp, QuestionMarkSentOp)):
+        return _correct_question(tx, op, ctx, w), None
     if isinstance(op, RuleAddOp):
         from engine.rules import add_rule
 
@@ -1208,6 +1279,7 @@ def _apply_op(
             "projects": [op.project] if op.project else [],
             "kind": op.kind,
             "source": source,
+            "matters_for": " ".join(op.matters_for.split()) if op.matters_for else None,
         }
         made("question", tx.create("question", data, w).id)
     elif isinstance(op, QuestionDoneOp):
@@ -1241,6 +1313,68 @@ def _apply_op(
             tx.create("person", {"full_name": op.full_name, "role": op.role, "org": org, "aliases": op.aliases}, w).id,
         )
     return touched, None
+
+
+def _made_by(tx: Tx, kind: str, record_id: str) -> tuple[str | None, str | None]:
+    """The changeset that made a record, and the AI run that wrote that changeset; each None when there isn't one."""
+    first = next(iter(tx.ledger(kind=kind, record_id=record_id)), None)
+    changeset = first["changeset"] if first is not None else None
+    made = tx.get("changeset", changeset) if changeset else None
+    return changeset, (made.data.get("run") if made is not None else None)
+
+
+def _correct_question(tx: Tx, op: OpModel, ctx: Context, w: WriteContext) -> list[dict[str, Any]]:
+    """The person's correction of a question: reword it, ask someone else, drop it with a reason, or mark it as sent.
+    Reword, reroute and drop each record a signal naming the question and the changeset and run that made it. The
+    signal is written apart from the change, so Undo puts the question back and leaves the signal as it was."""
+    cur = tx.get("question", op.id)  # type: ignore[attr-defined]
+    qid = cur.id
+    changeset, run = _made_by(tx, "question", qid)
+    people = ctx.people
+    kind: str | None = None
+    refs = [qid]
+    note: str | None = None
+    if isinstance(op, QuestionUpdateOp):
+        changes = {k: v for k, v in (("title", op.title), ("text", op.text)) if v is not None}
+        kind = "reworded"
+        note = "\n".join(f"{k}: was {cur.data.get(k) or ''!r}, now {v!r}" for k, v in changes.items())
+    elif isinstance(op, QuestionMoveOp):
+        person = people.resolve(op.to).person
+        changes = {"to": person}
+        if cur.data["kind"] == "decision" and person != people.pm:
+            changes["kind"] = "question"
+        if cur.data["status"] == "sent":
+            changes |= {"status": "open", "sent_at": None}  # it hasn't gone to the new person yet
+        kind = "routed"
+        refs = [*([changeset] if changeset else []), qid, person]
+        note = f"asked of {people.name(cur.data['to'])}, now of {people.name(person)}"
+    elif isinstance(op, QuestionDropOp):
+        changes = {"status": "dropped", "dropped_reason": " ".join(op.reason.split())}
+        kind = "dropped"
+        note = changes["dropped_reason"]
+    else:
+        assert isinstance(op, QuestionMarkSentOp)
+        when = (
+            datetime(op.on.year, op.on.month, op.on.day, 12, tzinfo=UTC)
+            if op.on is not None
+            else datetime.fromisoformat(ctx.store.clock())
+        )
+        changes = {"status": "sent", "sent_at": when.isoformat()}
+    tx.update("question", qid, changes, w, read_version=cur.version)
+    if kind is not None:
+        tx.create(
+            "signal",
+            {
+                "kind": kind,
+                "refs": refs,
+                "changeset": changeset,
+                "run": run,
+                "note": note,
+                "at": ctx.store.clock(),
+            },
+            WriteContext(actor="pm", trust="trusted", op=kind),
+        )
+    return [{"kind": "question", "id": qid}]
 
 
 def _standing(tx: Tx, ctx: Context) -> knowledge.Standing:

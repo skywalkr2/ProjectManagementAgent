@@ -188,6 +188,66 @@ class QuestionAddOp(OpModel):
     kind: Literal["question", "decision"] = Field(
         "question", description="question: an ordinary question. decision: a choice for the PM to make."
     )
+    matters_for: str | None = Field(
+        None,
+        description="For a question to anyone but the PM: which of the PM's decisions, designs or dated items depends "
+        "on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead and say "
+        "so in the change's note.",
+    )
+
+
+class QuestionUpdateOp(OpModel):
+    """Reword a question: its title, its text or both. Only the person uses it; Undo puts the old wording back."""
+
+    op: Literal["question.update"] = "question.update"
+    id: str = Field(description="The id of the question.")
+    title: str | None = Field(None, min_length=1, description="The new title.")
+    text: str | None = Field(None, description="The new text.")
+
+    @model_validator(mode="after")
+    def _changes_something(self) -> QuestionUpdateOp:
+        if self.title is None and self.text is None:
+            raise ValueError("name what to change")
+        return self
+
+    def describe(self) -> str | None:
+        return f"Reword question {self.id}"
+
+
+class QuestionMoveOp(OpModel):
+    """Ask someone else instead: the question goes to another person, by name or id. A decision moved off the PM
+    becomes an ordinary question. Only the person uses it; Undo sends it back to the one it was for."""
+
+    op: Literal["question.move"] = "question.move"
+    id: str = Field(description="The id of the question.")
+    to: str = Field(min_length=1, description="The person it goes to now, by name or id.")
+
+    def describe(self) -> str | None:
+        return f"Ask someone else instead: question {self.id}"
+
+
+class QuestionDropOp(OpModel):
+    """Drop a question that isn't needed, with the reason. It stays on record as dropped. Only the person uses it;
+    Undo opens it again."""
+
+    op: Literal["question.drop"] = "question.drop"
+    id: str = Field(description="The id of the question.")
+    reason: str = Field(min_length=1, max_length=500, description="Why it is dropped, in plain words.")
+
+    def describe(self) -> str | None:
+        return f"Drop question {self.id}"
+
+
+class QuestionMarkSentOp(OpModel):
+    """Record that the person already sent an open question themselves, the day they did (today when left out). Only
+    the person uses it; Undo makes it open again."""
+
+    op: Literal["question.mark_sent"] = "question.mark_sent"
+    id: str = Field(description="The id of the open question.")
+    on: date | None = Field(None, description="The day it was sent, written YYYY-MM-DD; today when left out.")
+
+    def describe(self) -> str | None:
+        return f"Mark question {self.id} as sent"
 
 
 class QuestionDoneOp(OpModel):
@@ -424,6 +484,30 @@ class ListRenameOp(OpModel):
         return f"Rename {self.value!r} to {' '.join(self.to.split())!r} on the list {self.list}"
 
 
+class ListMergeOp(OpModel):
+    """Merge one value of a value list into another: every record that holds the first now holds the second, and the
+    first leaves the list. A system op: from the assistant it waits for the person."""
+
+    op: Literal["list.merge"] = "list.merge"
+    list: str = Field(min_length=1, description="The list's name.")
+    value: str = Field(min_length=1, description="The value that goes away.")
+    into: str = Field(min_length=1, description="The value that stays and takes its place.")
+
+    def describe(self) -> str | None:
+        return f"Merge {self.value!r} into {self.into!r} on the list {self.list}"
+
+
+class MailRestoreOp(OpModel):
+    """Bring back a mail item that was set aside as not work: it leaves the Set aside folder and the assistant reads
+    it. A system op: from the assistant it waits for the person."""
+
+    op: Literal["mail.restore"] = "mail.restore"
+    snapshot: str = Field(description="The id of the set-aside mail item.")
+
+    def describe(self) -> str | None:
+        return f"Bring back {self.snapshot} from the Set aside folder"
+
+
 class ListRetireOp(OpModel):
     """Stop offering a value; records that hold it keep it."""
 
@@ -635,6 +719,10 @@ Op = Annotated[
     | ActionCloseOp
     | QuestionAddOp
     | QuestionDoneOp
+    | QuestionUpdateOp
+    | QuestionMoveOp
+    | QuestionDropOp
+    | QuestionMarkSentOp
     | PersonAddOp
     | StageMoveOp
     | RecordDeleteOp
@@ -650,7 +738,9 @@ Op = Annotated[
     | SettingProposeOp
     | ListAddOp
     | ListRenameOp
+    | ListMergeOp
     | ListRetireOp
+    | MailRestoreOp
     | ReportDraftOp
     | LessonAddOp
     | LessonUpdateOp
@@ -674,6 +764,10 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "action.close": ActionCloseOp,
     "question.add": QuestionAddOp,
     "question.done": QuestionDoneOp,
+    "question.update": QuestionUpdateOp,
+    "question.move": QuestionMoveOp,
+    "question.drop": QuestionDropOp,
+    "question.mark_sent": QuestionMarkSentOp,
     "person.add": PersonAddOp,
     "stage.move": StageMoveOp,
     "record.delete": RecordDeleteOp,
@@ -689,7 +783,9 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "setting.propose": SettingProposeOp,
     "list.add": ListAddOp,
     "list.rename": ListRenameOp,
+    "list.merge": ListMergeOp,
     "list.retire": ListRetireOp,
+    "mail.restore": MailRestoreOp,
     "rule.add": RuleAddOp,
     "rule.retire": RuleRetireOp,
     "report.draft": ReportDraftOp,
@@ -717,7 +813,16 @@ KNOWLEDGE_OPS = {
 KNOWLEDGE_ADD_OPS = {"lesson.add", "glossary.add", "routing.add", "style.add", "rule.add"}
 
 #: Ops only the person makes: from anyone else they are refused, never held.
-PERSON_ONLY_OPS = {"text.edit", "text.accept", "text.discard", "record.edit"}
+PERSON_ONLY_OPS = {
+    "text.edit",
+    "text.accept",
+    "text.discard",
+    "record.edit",
+    "question.update",
+    "question.move",
+    "question.drop",
+    "question.mark_sent",
+}
 
 TIERS: dict[str, Tier] = (
     {name: "data" for name in OP_MODELS}
@@ -726,7 +831,9 @@ TIERS: dict[str, Tier] = (
         "project.add": "system",
         "list.add": "system",
         "list.rename": "system",
+        "list.merge": "system",
         "list.retire": "system",
+        "mail.restore": "system",
         "rule.add": "system",
         "rule.retire": "system",
     }

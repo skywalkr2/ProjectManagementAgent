@@ -900,6 +900,18 @@ yet follow, that it is *designed*, with its phase.
 | Today (7.18) | A line for the weekly rule review only | One Review line for everything learned (`learned`: proposals from inputs and from corrections, tagged by origin, with how many from inputs expired since the person last looked), and the catch-up line (`catch_up`). Proposals from inputs expire after `knowledge.proposals_expire_days` (default 14) in a daily sweep; those from corrections never do. Built: `tests/test_proposals.py::test_the_line_counts_both_origins_and_how_many_expired_since_the_person_last_looked`, `tests/test_proposals.py::test_the_sweep_expires_input_proposals_after_the_days_and_never_correction_ones` |
 | Catch-up (6.22) | Designed only | Once, at startup, the corrections recorded before this phase that no entry was learned from are grouped by kind and the most repeated `knowledge.catch_up_max` (default 20) kept; the rest expire with their number shown. The learning runs for the chosen kinds are the learning step's. Built: `tests/test_proposals.py::test_the_catch_up_list_caps_and_ranks_the_corrections_from_before_and_is_made_once` |
 
+## 56. L3, correcting what the assistant made: questions, "Change this" and the missing ops (2026-10-14)
+
+| Where | Before | Now |
+|---|---|---|
+| Questions (6.8) | A question could only be sent back with its whole changeset | `question.update`, `question.move`, `question.drop` and `question.mark_sent`: the person's own ops with Undo; the first three record `reworded`, `routed` and `dropped` naming the question, its changeset and run; dropped questions are kept with their reason (`GET /api/questions/dropped`). Built: `tests/test_corrections.py` |
+| Signals (6.20) | `draft_edited` named only the person; no signal for a note on a row | `draft_edited` names the question ids and the run that wrote them; new kind `change_requested` |
+| "Change this" (6.8, 7.7) | Only questions had a way to answer the assistant | `POST /api/items/{kind}/{id}/change` for an action, question, decision, calendar entry or fact: a signal, and the notes work with the item as it is now; the notes prompt says what a change may be |
+| Missing ops (6.13) | Hand fixes with no op | `mail.restore`, `list.merge` (system tier) and `question.mark_sent`, each with a check and Undo |
+| Lints (4.17, 6.8) | Several questions in one text, and a question to someone else with no stake, went through | `several-questions` and `question-without-stake` (default `return`); `matters_for` on `question.add` and on the question; settings `several_questions.minimum` and `owner_suggestion.match` |
+| Pick an owner (6.9) | The held item offered every person | It carries the owner a routing entry suggests, with its words as the reason, and the nearest open action to fold it into |
+| Notes (6.22) | Reading notes was offered no knowledge op | `glossary.add`, so an unknown term can be recorded as unknown (a proposal unless the words are the person's) |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

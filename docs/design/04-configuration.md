@@ -622,6 +622,14 @@ that similarity, and a message says which kind it matched. **Built:** `tests/tes
 values, and not below), `tests/test_near_duplicate.py::test_the_check_compares_with_done_actions_too` and `tests/test_near_duplicate.py::test_the_similarity_is_between_zero_and_one` (the range and the default). `near-duplicate-question` (designed, phase L) gets its
 entry beside it, with `similarity` and `days` (default 14).
 
+**Built (L3):** `several-questions` (default `return`), a question or decision whose text holds `several_questions.minimum`
+(default 2, from 2 to 20) or more items of a numbered list that ask; and `question-without-stake` (default `return`), a
+`question.add` to anyone but the person with no `matters_for` (6.8). `owner_suggestion.match` (default 0.5, above 0 and at
+most 1) is how much of a routing entry's topic an unowned action must hold for the entry to suggest its owner (6.9). Both
+workspaces show all three. `tests/test_corrections.py::test_several_questions_returns_a_question_or_decision_at_the_configured_number_and_not_below`,
+`tests/test_corrections.py::test_a_question_to_someone_else_without_a_stake_is_returned_and_then_held_so_it_is_never_sent`,
+`tests/test_corrections.py::test_the_suggestion_follows_the_configured_share_of_the_topic_and_skips_what_does_not_apply`.
+
 Lints in the first design that are *designed, not yet built*: `locale-spelling`, `fact-terms-without-asks-for` and
 `unreachable-link`. With the learning slice (phase L): `already-known` (default `return`), a question, outside lookup or report
 whose subject a plain search of the workspace's own knowledge already answers (6.22); and `near-duplicate-question` (default

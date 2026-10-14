@@ -97,6 +97,37 @@ class HoldRestore(BaseModel):
     )
 
 
+class QuestionRewordIn(BaseModel):
+    title: str | None = Field(None, min_length=1, description="The new title; left out, it stays as it is.")
+    text: str | None = Field(None, description="The new text, in the person's own words; left out, it stays as it is.")
+
+
+class QuestionRerouteIn(BaseModel):
+    to: str = Field(min_length=1, description="The person to ask instead, by id or name.")
+
+
+class QuestionDropIn(BaseModel):
+    reason: str = Field(min_length=1, max_length=500, description="Why the question isn't needed, in plain words.")
+
+
+class QuestionSentIn(BaseModel):
+    on: date | None = Field(None, description="The day the person sent it themselves; today when left out.")
+
+
+class ChangeIn(BaseModel):
+    note: str = Field(
+        min_length=1,
+        description="What to change about it, in the person's own words; the assistant reads it. Required: a change "
+        "with no words is never sent.",
+    )
+
+
+class ChangeRequested(BaseModel):
+    ok: str = Field(description="The id of the item the change was asked for.")
+    request: str | None = Field(None, description="The work queued for the assistant from the note.")
+    signal: str = Field(description="The id of the correction recorded for it.")
+
+
 # ---- responses -------------------------------------------------------------------------------------------------------
 
 
@@ -242,6 +273,19 @@ class Option(BaseModel):
     name: str
 
 
+class OwnerSuggestionView(BaseModel):
+    """What the workspace's own records suggest for an action that has no owner. The person still picks."""
+
+    person: str | None = Field(None, description="The id of the person a routing entry says does this kind of work.")
+    person_name: str | None = Field(None, description="That person's full name.")
+    entry: str | None = Field(None, description="The id of the routing entry that says so.")
+    why: str | None = Field(None, description='The routing entry\'s own words, for "because you told me ...".')
+    fold_into: str | None = Field(
+        None, description="The id of the open action this one most nearly repeats, to fold it into."
+    )
+    fold_into_text: str | None = Field(None, description="That action's text.")
+
+
 class Ask(BaseModel):
     """A question to the PM that an item waits on: who a name is, or who owns an action."""
 
@@ -250,6 +294,9 @@ class Ask(BaseModel):
     about: Literal["held-op", "owner", "other"]
     name: str | None = Field(None, description="The name the assistant couldn't place, for who-is questions.")
     options: list[Option]
+    suggestion: OwnerSuggestionView | None = Field(
+        None, description="For owner questions: who the routing entries suggest and the nearest open action."
+    )
 
 
 class RecordRef(BaseModel):
@@ -933,6 +980,26 @@ class ListRenameIn(BaseModel):
     to: str = Field(min_length=1, max_length=80)
 
 
+class ListMergeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    value: str = Field(min_length=1, description="The value that goes away.")
+    into: str = Field(min_length=1, description="The value that takes its place; it must be offered on the list.")
+
+
+class DroppedQuestionView(BaseModel):
+    """A question that is closed as dropped, kept on record."""
+
+    id: str
+    title: str
+    text: str
+    to: str = Field(description="The id of the person it was for.")
+    to_name: str
+    reason: str | None = Field(None, description="Why the person dropped it; none when the app closed it itself.")
+    dropped_at: datetime | None = Field(None, description="When it was dropped.")
+    projects: list[str] = Field(default_factory=list)
+    origin: Origin | None = Field(None, description="Where the question came from, for its link.")
+
+
 class KindView(BaseModel):
     """What a kind of record holds, for screens that show any record."""
 
@@ -1170,6 +1237,11 @@ class QueueLineView(BaseModel):
         None,
         description="For a catch_up line: how many kinds of earlier correction were too many for the list and expired "
         "unread.",
+    )
+    suggestion: OwnerSuggestionView | None = Field(
+        None,
+        description="For an owner line: who the routing entries suggest owns the action and why, and the nearest open "
+        "action to fold it into; none when nothing applies.",
     )
 
 

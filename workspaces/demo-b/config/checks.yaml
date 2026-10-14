@@ -1,7 +1,9 @@
 version: 1
-lints: {blocked-wording: return, run-on-list: warn, near-duplicate-action: warn, evidence-fit: return, already-known: return, near-duplicate-question: warn}
+lints: {blocked-wording: return, run-on-list: warn, near-duplicate-action: warn, evidence-fit: return, already-known: return, near-duplicate-question: warn, several-questions: return, question-without-stake: return}
 projects: {}   # per project, e.g. {PRJ-2: {plugin/lint-name: off}}: a check switched off for one piece of work
 tuning:
   near_duplicate_action: {similarity: 0.8}   # how alike a new action must be to an open or done one to be flagged (0 to 1)
   near_duplicate_question: {similarity: 0.8, days: 14}   # how alike a new question must be to an open or recently answered one to the same person (0 to 1), and how many days back
   already_known: {similarity: 0.7}   # how much of a question's subject a recorded fact must hold to count as answering it (0 to 1)
+  several_questions: {minimum: 2}   # how many numbered questions in one question's text make it several
+  owner_suggestion: {match: 0.5}   # how much of a routing entry's topic an unowned action must hold for the entry to suggest its owner (0 to 1)

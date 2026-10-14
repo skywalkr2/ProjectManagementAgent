@@ -3,7 +3,8 @@
 The core ships its lists in `engine/defaults/value_lists.yaml`; plugins declare theirs. `ensure` creates any list a
 workspace doesn't have yet, with its first values plus the values its records already use, so nothing that was valid
 becomes invalid. After that a list belongs to the person: `list.add`, `list.rename` (which changes every record that
-holds the value, in one op) and `list.retire`.
+holds the value, in one op), `list.merge` (which moves every record from one value to another and removes the first)
+and `list.retire`.
 """
 
 from __future__ import annotations
@@ -75,9 +76,61 @@ def find(tx: Any, name: str) -> Any:
     return found
 
 
+def merge_problem(view: Any, op: Any) -> str | None:
+    """Why a list.merge can't apply, or None: the list exists, the value is on it (offered or retired), the value it
+    merges into is offered, and the two are different."""
+    found = next((r for r in view.list("value_list") if r.data["name"] == op.list), None)
+    if found is None:
+        return f"there is no list called {op.list}"
+    values, retired = found.data["values"], found.data["retired"]
+    if op.value not in values and op.value not in retired:
+        return f"{op.value!r} isn't on the list"
+    if op.into not in values:
+        return f"{op.into!r} isn't offered on the list, so nothing can be merged into it"
+    if op.value == op.into:
+        return "a value can't be merged into itself"
+    return None
+
+
+def _merge(tx: Any, op: Any, w: WriteContext, value_list: Any) -> list[dict[str, Any]]:
+    """The value leaves the list, and every record that holds it in a field bound to the list holds `op.into` instead
+    (once, in a field that holds many). The list is written first, so Undo puts the value back on the list before any
+    record holds it again."""
+    if (why := merge_problem(tx, op)) is not None:
+        raise StoreError(why)
+    touched = [{"kind": "value_list", "id": value_list.id}]
+    tx.update(
+        "value_list",
+        value_list.id,
+        {
+            "values": [v for v in value_list.data["values"] if v != op.value],
+            "retired": [v for v in value_list.data["retired"] if v != op.value],
+        },
+        w,
+        read_version=value_list.version,
+    )
+    for kind, model in tx.models.items():
+        for field, bound, many in list_fields(model):
+            if bound != op.list:
+                continue
+            for record in tx.list(kind):
+                held = record.data.get(field)
+                if many and op.value in (held or []):
+                    new = list(dict.fromkeys(op.into if v == op.value else v for v in held))
+                elif not many and held == op.value:
+                    new = op.into
+                else:
+                    continue
+                tx.update(kind, record.id, {field: new}, w, read_version=record.version)
+                touched.append({"kind": kind, "id": record.id})
+    return touched
+
+
 def apply(tx: Any, op: Any, w: WriteContext) -> list[dict[str, Any]]:
-    """Apply list.add, list.rename or list.retire. Returns the records touched."""
+    """Apply list.add, list.rename, list.merge or list.retire. Returns the records touched."""
     value_list = find(tx, op.list)
+    if op.op == "list.merge":
+        return _merge(tx, op, w, value_list)
     values, retired = list(value_list.data["values"]), list(value_list.data["retired"])
     every = {v.casefold(): v for v in (*values, *retired)}
     touched = [{"kind": "value_list", "id": value_list.id}]

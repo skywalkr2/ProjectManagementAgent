@@ -482,10 +482,20 @@ field):
   for the person's review there), `record.delete` (with Undo), `file.add` (made only by plugin actions, with the file's
   bytes), and the long-text ops `text.draft` (the assistant's text, always a pending draft), `text.propose` (the person's own
   work arriving from outside), `text.accept`, `text.discard` and `text.edit`.
-- Value lists: `list.add`, `list.rename`, `list.retire` (system tier, each with Undo, 5.4).
+- The person's corrections of a question (6.8), each person-only with Undo and each, but `question.mark_sent`, recording a
+  signal (6.20): `question.update` (reword), `question.move` (ask someone else), `question.drop` (with a reason) and
+  `question.mark_sent` (the person sent it themselves).
+- Value lists: `list.add`, `list.rename`, `list.merge` (every record moves from one value to another and the first leaves
+  the list), `list.retire` (system tier, each with Undo, 5.4).
+- Mail: `mail.restore` (a set-aside message leaves the folder and is read; system tier, so the assistant may propose it and
+  the person confirms; Undo sets it aside again, 6.5).
 - What the assistant learned (6.22): `lesson.add`, `lesson.update`, `glossary.add`, `glossary.update`, `routing.add`,
   `style.add` and `knowledge.retire` (system tier, each with Undo). An add that is not from the person's own words is
-  a proposal and applies as a record; the rest wait for the person like any system op.
+  a proposal and applies as a record; the rest wait for the person like any system op. Reading notes is offered
+  `glossary.add` only, so a term or system name an input uses that the glossary lacks is recorded with `confidence:
+  unknown` (or assumed or confirmed, as the input supports) as a proposal, or active when the words are the person's own.
+  **Built:** `tests/test_corrections.py::test_glossary_add_is_offered_to_reading_notes_and_no_other_knowledge_op_is`,
+  `tests/test_corrections.py::test_an_unknown_term_from_an_input_is_added_as_a_proposal_and_from_the_persons_own_note_as_active`.
 - Project and stages: `project.add` (a system op: from the assistant it waits for the person) and `stage.move` (always waits
   for the person's confirmation).
 - Asking (6.25): `answer`, `setting.propose`, `report.draft` (a report to the product's maintainers, drafted for the PM to
@@ -655,7 +665,7 @@ is marked *designed*, with the phase.
   routing, impact and notice kinds), and the screen follows the stored kind: a question to the PM of kind `decision` shows as a
   decision, and one of kind `question` shows as a question to answer. Keeping the kind makes the assistant's call checkable
   and lets a mistaken one be corrected. Moving a question from the PM to someone else makes it an ordinary question
-  (*designed, phase L3*; `question.move` is not built, 6.7). **Built:** `web/src/components/FollowUps.test.tsx` ("a question to the PM shows as a decision or as a question by its stored kind").
+  (`question.move`, below). **Built:** `web/src/components/FollowUps.test.tsx` ("a question to the PM shows as a decision or as a question by its stored kind"), `tests/test_corrections.py::test_moving_a_decision_to_someone_else_makes_it_a_question_records_routed_and_undo_sends_it_back`.
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.
@@ -673,9 +683,53 @@ is marked *designed*, with the phase.
 - **Same question twice:** `near-duplicate-question` (a lint, 4.17) compares a new question with open questions and ones
   answered in the last `checks` window, since the assistant doesn't know the `key` that deduplicates (*designed, phase L2*).
 - Feedback flow (send back, or the question's own menu): reword, reroute, drop (kept in a dropped-questions register with the
-  reason) or close; every op that settles a pending request clears that question's pending flag. *Designed, phase L3* (each
-  records its signal, 6.20); the pending flag is *designed, not yet built, not scheduled*. Today a person can send back a
-  whole changeset, and cannot reword, reroute or drop a question: the engine alone closes its own questions as dropped.
+  reason) or close; every op that settles a pending request clears that question's pending flag (the pending flag is
+  *designed, not yet built, not scheduled*). The person's own ops (L3), each applied as theirs with Undo
+  (`POST /api/changesets/{id}/undo`), with the tests below:
+  - `question.update` (reword the title, the text or both; `POST /api/questions/{id}/reword`) records `reworded`;
+  - `question.move` (ask someone else, by id or name; `.../reroute`) records `routed`, turns a decision into an ordinary
+    question when it leaves the person, and makes a sent question open again for the new person;
+  - `question.drop` (with a reason; `.../drop`) records `dropped`; the question stays, status `dropped`, with
+    `dropped_reason`, and `GET /api/questions/dropped` lists it (a question that holds an item until it is answered is
+    never in the list);
+  - `question.mark_sent` (the person sent it themselves, on a day or today; `.../sent`), a bookkeeping change that records
+    no signal.
+
+  A question that holds something until it is answered (who a name is, who owns an action) is answered where that item
+  waits, so none of the four applies to it, and none applies to a closed one. Each signal names the question, the
+  changeset that made it and that changeset's run, and is written apart from the change, so Undo puts the question back and
+  records no `undone`. Moving a question to someone else does not check for a link they can open (the person chose to ask
+  them); reword and drop take their words as the person's own record, not as a note for the assistant. **Built:**
+  `tests/test_corrections.py::test_reword_changes_the_question_records_a_reworded_signal_naming_its_run_and_undo_restores_it`,
+  `tests/test_corrections.py::test_moving_a_sent_question_makes_it_open_for_the_new_person_and_a_name_works_as_well_as_an_id`,
+  `tests/test_corrections.py::test_drop_keeps_the_question_with_its_reason_records_dropped_and_undo_opens_it_again`,
+  `tests/test_corrections.py::test_mark_sent_records_the_day_undo_makes_it_open_and_it_is_not_a_correction`,
+  `tests/test_corrections.py::test_a_question_that_holds_something_or_is_closed_is_not_reworded_moved_or_dropped`,
+  `tests/test_corrections.py::test_the_question_routes_apply_as_the_person_with_undo_and_the_dropped_view_lists_the_reason`.
+  The `draft_edited` signal of an edited message names the question ids it covered (after the person) and, when they all
+  came from one run, that run and its changeset: `tests/test_corrections.py::test_an_edited_message_names_the_question_ids_and_the_run_that_wrote_them`.
+  Not built: the screens, the feedback task that runs on a send-back or correction, and the routing proposal from "not
+  me, ask X" in a reply (the learning builders').
+- **"Change this" on a row the assistant made** (action, question, decision, calendar entry as kind `event`, fact):
+  `POST /api/items/{kind}/{id}/change` with a required note records one `change_requested` signal (refs: the item; the
+  changeset and run that made it, when there was one) and queues the notes work about the item under the route name
+  `change_requested`, so the packet carries the item as it is when the run starts. The note is read however short. The
+  notes prompt tells the run to reword, re-date, put on hold, turn into another kind, split or drop as the note says, never
+  to mark an action done unless the note says so, and to ask the PM when the record doesn't match the note. **Built:**
+  `tests/test_corrections.py::test_change_this_records_a_signal_and_queues_a_notes_request_whose_packet_carries_the_item_as_it_is_now`,
+  `tests/test_corrections.py::test_change_this_route_queues_the_request_and_names_the_signal`,
+  `tests/test_corrections.py::test_change_this_on_something_a_run_made_names_its_changeset_and_run`. Not built: the row's
+  note box (a screen), and an op for the assistant to put an action on hold or drop an item (listed for the missing-op
+  review, 6.13).
+- **One question per id, and a stake for anyone else's.** The lint `several-questions` (default `return`, and for a
+  question or decision to the person too) fires on a text that holds `tuning.several_questions.minimum` (2) or more items of
+  a numbered list that ask. `question-without-stake` (default `return`) fires on a `question.add` to anyone but the person
+  with no `matters_for`: which of the person's decisions, designs or dated items depends on the answer, by id or in words.
+  Returned once, it is then held, since it reaches someone else; the prompt tells the assistant to record the point as a fact
+  and say why in the change's note instead. `matters_for` is kept on the question. **Built:**
+  `tests/test_corrections.py::test_several_questions_returns_a_question_or_decision_at_the_configured_number_and_not_below`,
+  `tests/test_corrections.py::test_a_question_to_someone_else_without_a_stake_is_returned_and_then_held_so_it_is_never_sent`,
+  `tests/test_corrections.py::test_the_stake_is_kept_on_the_question_and_both_lints_default_to_return_in_both_workspaces`.
 - **Check a correction against the data first.** A correction ("this shouldn't be in X's list") is a claim about the data. The
   feedback task's packet carries the current state of what it names, and the run starts by stating where the item actually is.
   When the data doesn't match the correction, the answer is a question to the PM with what was found, not a change and never a
@@ -739,7 +793,17 @@ is marked *designed*, with the phase.
   other owners stay. Told dates, Followed up and They finished it are per person. *Designed, not yet built, phase B* (edit,
   close and reassign from the row). Told dates are per person today; the only way to change an owner is to edit the whole list
   on the record page.
-- **Assign:** give a held action (one waiting for "Pick an owner") its first owner, which adds it (built).
+- **Assign:** give a held action (one waiting for "Pick an owner") its first owner, which adds it (built). The held item
+  carries a **suggestion** from the workspace's own records, never from AI: the person an active routing entry names (one
+  that isn't "doesn't answer this", whose scope covers the action's project and whose topic the action's text holds at
+  least `tuning.owner_suggestion.match` of), with the entry's own words as the reason, and the nearest other open action,
+  by the near-duplicate action matcher and its setting, to fold it into. It is in the owner line on Today
+  (`suggestion` on the queue line) and on the held item's question (`suggestion` on `ask`); the person still picks.
+  **Built:** `tests/test_corrections.py::test_an_unowned_action_is_held_with_the_owner_a_routing_entry_suggests_and_why`,
+  `tests/test_corrections.py::test_the_suggestion_follows_the_configured_share_of_the_topic_and_skips_what_does_not_apply`,
+  `tests/test_corrections.py::test_the_nearest_open_action_is_offered_to_fold_it_into_at_the_near_duplicate_setting`,
+  `tests/test_corrections.py::test_the_owner_suggestion_is_in_todays_line_and_the_held_items_ask`. Not built: folding the
+  held action into the nearest one in one step.
 - Any change in who does something or when updates the action (built for the action) and any matching meeting in the same
   step (*designed, not yet built, phase C2*: the core has no meeting record; meetings come with the project management pack
   and the app's calendar, 6.7).
@@ -831,7 +895,16 @@ for it, that nothing goes out without the PM approving that exact content, alrea
 says no op can do what it needed ("no op writes the people list"), and every edit the person makes by hand to fix the
 assistant's work where an op would have done, go on one weekly list on Quality. Each entry becomes an op with its check and
 Undo, or an explicit "the person does this" decision recorded in `docs/decisions.md`. The product never adds the op
-itself (the report to the maintainers below).
+itself (the report to the maintainers below). **Built (L3):** three of the first audit's hand fixes are ops now:
+`mail.restore` (bring back a set-aside message; system tier), `list.merge` (merge one value of a list into another;
+system tier) and `question.mark_sent` (the person sent it themselves; person-only), each with its check and Undo.
+`tests/test_corrections.py::test_mail_restore_proposed_by_the_assistant_waits_then_brings_the_message_back_and_undo_sets_it_aside`,
+`tests/test_corrections.py::test_mail_restore_hands_in_a_message_that_was_never_handed_in_and_undo_takes_that_back`,
+`tests/test_corrections.py::test_list_merge_moves_every_record_to_the_other_value_and_undo_puts_both_back`,
+`tests/test_corrections.py::test_list_merge_has_a_check_and_waits_for_the_person_when_the_assistant_proposes_it`,
+`tests/test_corrections.py::test_mark_sent_records_the_day_undo_makes_it_open_and_it_is_not_a_correction`. Not built: a
+project's role, putting an action on hold or dropping any item as an op the assistant may use, and the weekly list on
+Quality.
 
 - **Built (roadmap A2): runs a stop left unfinished.** When the worker starts, every request left running goes back in the
   queue with the note "The app closed while this ran; it runs again now." and raises `request.queued`. One found running
@@ -1308,12 +1381,13 @@ hand, an automatic close pulled back, and an edited follow-up message (a draft t
 |---|---|
 | sent back | the PM sends a changeset back, with the note |
 | undone | the PM undoes a changeset or part of one |
-| dropped / reworded | the PM drops or rewords a question the assistant filed |
+| dropped / reworded | the PM drops (the note is the reason) or rewords (the note is the old and new wording) a question the assistant filed. Refs: the question; the changeset and run that made it. Undoing the correction leaves the signal and records none. **Built**: `tests/test_corrections.py::test_reword_changes_the_question_records_a_reworded_signal_naming_its_run_and_undo_restores_it`, `tests/test_corrections.py::test_drop_keeps_the_question_with_its_reason_records_dropped_and_undo_opens_it_again` |
+| change requested | the person asks for a change to something the assistant made, with a note on its row ("Change this": an action, question, decision, calendar entry or fact). Refs: the item; the changeset and run that made it, when there was one; the note is the person's words. The note also goes to the assistant as the person's own input about the item. **Built**: `tests/test_corrections.py::test_change_this_records_a_signal_and_queues_a_notes_request_whose_packet_carries_the_item_as_it_is_now` |
 | pulled back | the PM pulls an auto-closed change back ("This is ours") |
 | set aside | the person sets a mail item aside by hand ("Set aside: personal" or "Set aside: sales", 6.5). Refs: the requests closed by it, or the snapshot when none was waiting; the note is the section, and says when a sorting rule was offered for the sender. Undoing it records no signal, and learning never reads anything marked set aside (6.5). **Built**: `tests/test_set_aside.py::test_set_aside_by_hand_records_a_set_aside_signal_and_putting_it_back_records_none` |
-| draft edited | the approved content differs from the assistant's draft (the difference is kept) |
+| draft edited | the approved content differs from the assistant's draft (the difference is kept). Refs: the person the message was for, then the ids of the questions it covered; when those all came from one run, that run and its changeset (otherwise both are empty). **Built**: `tests/test_corrections.py::test_an_edited_message_names_the_question_ids_and_the_run_that_wrote_them`, `tests/test_corrections.py::test_an_edited_message_over_questions_from_different_runs_or_none_leaves_the_run_empty` |
 | held op declined | the PM declines a held system op or a routing guess |
-| routed | the person said who a name or an owner is, answering "Who is X?" or "Pick an owner" (refs: the changeset, the question, the person chosen; the note is the name as written). Undoing the person's own release of a held op records no signal: it is their decision, not the assistant's work. **Built**: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal`, `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |
+| routed | the person said who a name or an owner is, answering "Who is X?" or "Pick an owner" (refs: the changeset, the question, the person chosen; the note is the name as written), or asked someone else about a question (`question.move`; refs as above; the note says from whom to whom; undoing it leaves the signal). Undoing the person's own release of a held op records no signal: it is their decision, not the assistant's work. **Built**: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal`, `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |
 | put on hold / taken off hold | the person puts an action on hold or takes it off (refs: the action; the note is what it waits for). Undoing either records no signal. **Built**: `tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`, `tests/test_on_hold_and_follow_ups.py::test_a_hold_needs_words_and_an_open_action_and_undoing_it_records_no_signal` |
 | just this time | the person says a proposed piece of learning is right for this case but is not a pattern (7.18). Refs: the entry; no note. The entry is discarded with that as its reason and nothing replaces it; a repeat of the same correction is shown with how many times this was said. Undoing records no signal. **Built**: `tests/test_proposals.py::test_just_this_time_records_its_signal_discards_and_the_repeat_is_marked` |
 | kept / discarded / retired | the person keeps or discards a proposed piece of what the assistant learned, or retires an active one (6.22). Refs: the entry; no note (a discard's reason stays on the entry). Undoing records no signal. **Built**: `tests/test_knowledge_records.py::test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`, `tests/test_knowledge_records.py::test_discard_keeps_the_proposal_with_its_reason_and_undo_brings_it_back`, `tests/test_knowledge_records.py::test_retire_ends_an_active_entry_and_undo_makes_it_active_again` |

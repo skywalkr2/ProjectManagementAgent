@@ -974,12 +974,22 @@ From the original designer's lessons of 2026-10-14:
   each have a note on their row. The assistant rewords, re-dates, puts on hold, turns it into another kind (an action
   that is really a decision), splits or drops it as the note says, never marks it done unless the note says so, and each
   records a correction signal. Today only questions have "Respond to the assistant".
+  Built (engine and API): `POST /api/items/{kind}/{id}/change`, the `change_requested` signal and the notes work about the
+  item, and the notes prompt's rules (`tests/test_corrections.py::test_change_this_records_a_signal_and_queues_a_notes_request_whose_packet_carries_the_item_as_it_is_now`,
+  `tests/test_corrections.py::test_change_this_route_queues_the_request_and_names_the_signal`). Left: the note box on each
+  row (the screens), and an op for the assistant to put an action on hold or drop an item (a note asking for either gets an
+  answer that says it can't).
 - [ ] **The missing-op list** (lesson 2, design 6.13): every "no op can do this" in a run's result and every hand fix of
   the assistant's work, listed weekly on Quality, each becoming an op with its check and Undo or a recorded "the person
   does this". Checked against the code (2026-10-14), of the designer's six hand fixes: adding a person and logging a
   lesson have ops (`person.add`, `lesson.add`); a project's role, bringing back something set aside as an op the
   assistant can propose, merging a list row that was never a real project, and marking a question as already sent by the
   person have none yet.
+  Built: `mail.restore`, `list.merge` and `question.mark_sent`, each with its check and Undo
+  (`tests/test_corrections.py::test_mail_restore_proposed_by_the_assistant_waits_then_brings_the_message_back_and_undo_sets_it_aside`,
+  `tests/test_corrections.py::test_list_merge_moves_every_record_to_the_other_value_and_undo_puts_both_back`,
+  `tests/test_corrections.py::test_mark_sent_records_the_day_undo_makes_it_open_and_it_is_not_a_correction`). Left: a
+  project's role, the weekly list on Quality, and the "the person does this" decisions.
 - [ ] **"Just this time" beside Keep on the Learned line** (the original designer's mockup review, 2026-10-14, design 7.18):
   the signal is recorded, nothing is proposed, and a repeat of the same correction counts toward a later proposal. A lesson
   is about what was corrected (an action's owner teaches who does the work, not where questions go). One Today line for
@@ -990,17 +1000,28 @@ From the original designer's lessons of 2026-10-14:
   decision whose text holds two or more numbered questions, so each has its own answer and follow-through. A question
   about a gap in the person's own notes is asked only when a record depends on it (the `matters_for` item below), and
   questions that another tool wrote about an input are notes about the input, never passed on (the notes playbook).
+  Built: the lint and its setting (`tests/test_corrections.py::test_several_questions_returns_a_question_or_decision_at_the_configured_number_and_not_below`),
+  and the notes prompt's one-question rule. Left: the playbook entry about questions another tool wrote.
 - [ ] **An action with no owner is held with a suggestion** (afternoon lesson 4): the held "Pick an owner" proposes an
   owner and says why, from the workspace's routing entries, offers the nearest existing action to fold it into, and the
   unowned action stays visible until the owner is named, then is created at once. Before adding, the run looks for an
   existing record of the same case (the search round and `near-duplicate-action` already do this for actions).
-- [ ] **Glossary ops offered to reading notes** (afternoon audit): `glossary.add` exists (L1) with `confidence: unknown`,
+  Built: the held item carries the suggested owner, why and the nearest open action
+  (`tests/test_corrections.py::test_an_unowned_action_is_held_with_the_owner_a_routing_entry_suggests_and_why`,
+  `tests/test_corrections.py::test_the_nearest_open_action_is_offered_to_fold_it_into_at_the_near_duplicate_setting`,
+  `tests/test_corrections.py::test_the_owner_suggestion_is_in_todays_line_and_the_held_items_ask`). Left: folding the
+  held action into the nearest one in one step, and the screen's use of the fields.
+- [x] **Glossary ops offered to reading notes** (afternoon audit): `glossary.add` exists (L1) with `confidence: unknown`,
   but notes runs aren't offered it yet; they are with the learning task kinds here, so an unknown system name can be
-  recorded or marked unknown.
-- [ ] **A question to someone else says why it matters** (lesson 3): its text names which of the person's decisions,
+  recorded or marked unknown. Built: reading notes is offered `glossary.add` and no other knowledge op, and it applies as a
+  proposal unless the words are the person's (`tests/test_corrections.py::test_glossary_add_is_offered_to_reading_notes_and_no_other_knowledge_op_is`,
+  `tests/test_corrections.py::test_an_unknown_term_from_an_input_is_added_as_a_proposal_and_from_the_persons_own_note_as_active`).
+- [x] **A question to someone else says why it matters** (lesson 3): its text names which of the person's decisions,
   designs or dated items depends on the answer (a `matters_for` field); one that can't name one is recorded as a fact and
   said in the change's note, not asked. The question row's "where it came from" link is built (Ready for real use);
-  its project tag on the row is phase B's.
+  its project tag on the row is phase B's. Built: the field on `question.add` and the question, and the lint
+  `question-without-stake` (`tests/test_corrections.py::test_a_question_to_someone_else_without_a_stake_is_returned_and_then_held_so_it_is_never_sent`,
+  `tests/test_corrections.py::test_the_stake_is_kept_on_the_question_and_both_lints_default_to_return_in_both_workspaces`).
 - [ ] **Rules become proposals like the rest of what is learned** (the original designer, 2026-10-14): one place to keep
   or discard. Two guards: the person's own words (a rule stated in their note or answer) still apply at once with Undo,
   and only rules from the assistant, inputs or reported content become proposals, whose Keep shows the restatement the
@@ -1028,6 +1049,13 @@ From the original designer's lessons of 2026-10-14:
   proposal that waits for the person. The `draft_edited` signal is tied to the run that wrote the questions (the signal
   names the question ids and their run), because today it refs only the person. Today none of these exists: a person can
   send back a whole changeset and cannot reword, reroute or drop a question.
+  Built: the four ops with Undo and their signals, their routes, the dropped-questions list and the `draft_edited` tie
+  (`tests/test_corrections.py::test_reword_changes_the_question_records_a_reworded_signal_naming_its_run_and_undo_restores_it`,
+  `tests/test_corrections.py::test_moving_a_decision_to_someone_else_makes_it_a_question_records_routed_and_undo_sends_it_back`,
+  `tests/test_corrections.py::test_drop_keeps_the_question_with_its_reason_records_dropped_and_undo_opens_it_again`,
+  `tests/test_corrections.py::test_an_edited_message_names_the_question_ids_and_the_run_that_wrote_them`). Left: the
+  feedback task and its packet that states the item's current state, the "not me, ask X" routing proposal, and the menu
+  on the question's row (the screens').
 - [ ] Learning from a direct edit sees the inputs that came after the original run, and says "nothing to generalize"
   unless the edit contradicts the evidence the run had.
 - [ ] Learning from inputs (`learn.input`), with a rules-only scan for terms missing from the glossary: new terms, "not me,

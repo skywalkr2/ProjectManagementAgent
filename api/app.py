@@ -24,6 +24,7 @@ from starlette.routing import Mount
 from starlette.types import ASGIApp
 
 from api.ask_routes import build_ask_router
+from api.correction_routes import build_correction_router
 from api.data_form_routes import build_data_form_router
 from api.knowledge_routes import build_knowledge_router
 from api.pack_routes import build_pack_router
@@ -262,6 +263,7 @@ def create_app(
     inner.include_router(build_router(ws, cfg, store, events, worker))
     inner.include_router(build_setup_router(ws, cfg, store, events, worker))
     inner.include_router(build_ask_router(ws, cfg, store, events, worker))
+    inner.include_router(build_correction_router(ws, cfg, store, events, worker))
     inner.include_router(build_watch_router(ws, cfg, store, events, worker))
     inner.include_router(build_sign_in_router(ws, cfg, store, worker))
     inner.include_router(build_pack_router(ws, cfg, store, worker))

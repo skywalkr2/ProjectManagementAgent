@@ -288,6 +288,7 @@ def _item_block(ws: Workspace, store: Store, cfg: Config, req: Stored, source: S
             out |= {
                 "title": d["title"],
                 "text": d.get("text") or None,
+                "asked_as": d["kind"],
                 "to": people.name(d["to"]),
                 "status": d["status"],
                 "answer": d.get("answer"),

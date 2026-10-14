@@ -15,6 +15,7 @@ from typing import Any
 
 from engine.followups import ROUTING, sections
 from engine.names import People
+from engine.owners import suggest_owner
 from engine.titles import Title, head_of, title_for
 from engine.today import zone
 
@@ -93,6 +94,7 @@ class Line:
     origins: dict[str, int] = field(default_factory=dict)
     expired: int | None = None
     left_out: int | None = None
+    suggestion: dict[str, Any] | None = None
     since: str = ""
 
 
@@ -155,6 +157,8 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 line.text = action.data["text"]
                 line.due = str(action.data["due"]) if action.data.get("due") else None
                 line.project = action.data.get("project")
+                found = suggest_owner(reader, cfg, action.id)
+                line.suggestion = found.shown(people) if found is not None else None
         elif about in ROUTING:
             continue
         else:
