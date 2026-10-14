@@ -201,7 +201,8 @@ test.describe.serial("journey: new start", () => {
     const agenda = page.getByRole("region", { name: "Agenda" });
     await expect(came.getByText(mail[0])).toBeVisible({ timeout: 10_000 });
     for (const title of mail) await expect(came.getByText(title, { exact: true })).toBeVisible();
-    for (const title of events) await expect(agenda.getByText(title, { exact: true })).toBeVisible();
+    // A meeting that runs past midnight is listed under both days, so the first is enough.
+    for (const title of events) await expect(agenda.getByText(title, { exact: true }).first()).toBeVisible();
     for (const title of noted) await expect(page.getByRole("main").getByText(title, { exact: true })).toHaveCount(0);
 
     // 9. The first-go line shows the count and an estimate. Nothing has been asked of the assistant yet.

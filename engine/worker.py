@@ -203,6 +203,8 @@ class Worker:
         self.sync_problem: str | None = None
         self._started_with = (config_fingerprint(ws), code_fingerprint())
         self._config_seen = self._started_with[0]
+        #: The config files as the last `apply_live` read them; a save landing after that read is judged next time.
+        self._config_judged = self._config_seen
         self.restart_needed: str | None = None
         self.restart_requested = False
         #: The settings keys whose change waits for the restart, and "code" when the program itself changed.
@@ -212,7 +214,7 @@ class Worker:
         """Take in changed settings now when every changed key is live (an AI account, the person's name); returns
         whether anything was taken in. A change to any other key leaves the settings in use as they were, for the
         restart the person chooses. A file that doesn't load changes nothing."""
-        seen = config_fingerprint(self.ws)
+        seen = self._config_judged = config_fingerprint(self.ws)
         if seen == self._config_seen:
             return False
         from engine.config import ConfigError, load_config
@@ -249,10 +251,7 @@ class Worker:
         this process. Live settings are taken in first and don't count."""
         self.apply_live()
         code = code_fingerprint()
-        if self.restart_needed is None and (self._config_seen, code) != (
-            config_fingerprint(self.ws),
-            self._started_with[1],
-        ):
+        if self.restart_needed is None and (self._config_seen, code) != (self._config_judged, self._started_with[1]):
             self.restart_needed = RESTART_NEEDED
             if code != self._started_with[1] and "code" not in self.restart_for:
                 self.restart_for.append("code")

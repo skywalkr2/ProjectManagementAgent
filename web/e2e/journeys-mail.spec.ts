@@ -134,7 +134,8 @@ test.describe.serial("journey: mail", () => {
 
     // Today lists the recent mail on Came in and today's meetings on the agenda; what is older or further off is not.
     for (const title of mail) await expect(came.getByText(title, { exact: true })).toBeVisible();
-    for (const title of events) await expect(agenda.getByText(title, { exact: true })).toBeVisible();
+    // A meeting that runs past midnight is listed under both days, so the first is enough.
+    for (const title of events) await expect(agenda.getByText(title, { exact: true }).first()).toBeVisible();
     // Came in shows only the work mail, and says how many were set aside.
     for (const title of aside) await expect(came.getByText(title, { exact: true })).toHaveCount(0);
     await expect(came.getByRole("button", { name: "2 set aside" })).toBeVisible();

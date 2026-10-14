@@ -115,6 +115,24 @@ def test_changed_settings_stop_new_work_until_restart(env):
     assert stored["state"] == "queued" and stored["waiting"] == RESTART_NEEDED
 
 
+def test_a_live_change_saved_while_the_worker_checks_never_asks_for_a_restart(env):
+    ws, store = env
+    cfg = ws.config(env={})
+    worker = Worker(ws, store, cfg, Events(), lambda: Router(cfg, store, env={}))
+    path = ws.config_dir / "ai.yaml"
+    taken_in = worker.apply_live
+
+    def then_another_save() -> bool:
+        result = taken_in()
+        path.write_text(path.read_text() + "\n# saved by a screen at the same moment\n")
+        return result
+
+    worker.apply_live = then_another_save
+    assert not worker.needs_restart() and worker.restart_needed is None
+    worker.apply_live = taken_in
+    assert not worker.needs_restart() and worker.restart_needed is None
+
+
 def test_the_same_answer_after_a_send_back_is_refused(env):
     ws, store = env
     cfg = ws.config(env={})
