@@ -3,6 +3,15 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-14: One AI account is the usual case; borrowing another tier's account asks first
+
+**Decided by:** the owner, answering the original designer's L1 check-in. **What:** most people will have one AI account,
+so the product plans for it: a usage limit means the work waits for the reset, said on Today with the time (built). With
+two accounts, when the low-cost routine account runs out, the person is asked whether to use the higher-cost one until
+the routine one is restored; never switched silently. *Concept (core) with a setting:* `ai.borrow_other_tier` (ask,
+never; default ask). **Why:** spending more is the person's choice (design 6.16), and a one-account setup must not look
+broken. **Impact:** design 6.16; a Ready-for-real-use item with its journey test; no change to scope.
+
 ## 2026-10-14: The original designer's L1 check-in and answers for L2
 
 **Decided by:** the original designer (check-in and answers), placed by the technical PM. **What**, each with its kind:

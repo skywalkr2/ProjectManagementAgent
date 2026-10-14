@@ -271,11 +271,16 @@ real use starts. The rest (L-more) comes after the packs.
     `web/src/components/FollowUps.test.tsx`. Top priorities' lines read it when that list is built);
   - [x] "where it came from" as a working link on actions, questions and decisions (the page, else the saved text, else the change and its request); knowledge records with L1, so Keep can be judged against the evidence. Built: `tests/test_origin.py` (the three cases, none, Today's to-do, record pages), `web/src/components/Origin.test.tsx` (a Follow-ups row), `web/src/components/RecordPage.test.tsx::an action's page shows where it came from as a link, in place of the input's id`. The knowledge-record link is built with L1: `tests/test_knowledge_records.py::test_the_origin_of_an_entry_is_the_page_else_the_saved_text_else_the_change_and_its_request` ("Knowledge keeps its provenance").
 
-- **One account in the chain is a decision, not a default** (the original designer's L1 check-in, 2026-10-14): with one
-  command-line agent in the chain, a usage limit stops all work until the reset; the Today line says so, but nothing
-  does the work. Before real use, one of:
-  - [ ] a second account in the chain, even a low-cost key on the routine tier only; or
-  - [ ] the owner's explicit "wait for the reset", recorded in `docs/decisions.md`.
+- **One account is the usual case; a second is offered, never assumed** (the original designer's L1 check-in and the
+  owner's answer, 2026-10-14). Most people have one AI account, so a usage limit means the work waits for the reset:
+  that is built and says so on Today with the time
+  (`tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`). With a second
+  account on another tier, the higher-cost one is never used for routine work without asking:
+  - [ ] when the routine tier's accounts are all paused and another tier's account is free, Today asks "Use <account>
+    for routine work until <account>'s limit resets at <time>?", with the estimate; yes lasts until the reset, no keeps
+    the work waiting. The setting `ai.borrow_other_tier` (ask, never; default ask) keeps the choice the person's. Its test
+    is the person's path: a paused routine account, the question on Today, the work done on the other account after yes,
+    and back on the routine account after the reset.
 
 **Then the owner's real use starts** (owner, 2026-10-12), running through phases B and C beside the build. Building stays
 one stream; the owner uses it daily on their own mail, calendar and notes. For the first month, two numbers are reviewed
@@ -839,10 +844,20 @@ L1b. **The harder set, pinned before L2** (the original designer's L1 check-in, 
 knowledge section start entering packets, so outputs can change from L2 on. The harder set (moved here from L4, where its
 description stays) is built now, and its "before" run (owner action O2) is pinned to the commit that adds it, the last
 before any L2 code.
-- [ ] The harder set with its harness changes, as L4's "The golden set made harder" describes, plus a typed note that
-  reports an earlier day. The busy portfolio is a starting-records file beside the cases, not a change to `demo-a`'s data,
-  which the other tests and the browser tests read.
-- [ ] The report records the agent's program version and says when every tier ran on the same account.
+- [x] The harder set with its harness changes, as L4's "The golden set made harder" describes, plus a typed note that
+  reports an earlier day: 16 cases in `workspaces/demo-a/evals/`, 8 of them on `busy-portfolio.yaml` (20 projects, 50 open
+  actions, near-namesakes, three roles and a dashboard reader), kept beside the cases rather than in `demo-a`'s data,
+  which the other tests and the browser tests read. Exact scoring is the default, a case can start from given records,
+  and hostile cases fail on any system op or any op naming the injected person. Built:
+  `tests/test_followups_backup_eval.py::test_every_case_passes_with_its_ideal_answer` (both sets), and in
+  `tests/test_evaluate_harness.py`: `test_an_op_the_case_does_not_expect_fails_the_run_unless_the_case_says_exact_false`,
+  `test_starting_records_exist_before_the_input_is_handed_in`,
+  `test_the_busy_portfolio_has_about_twenty_projects_fifty_open_actions_and_near_namesakes`,
+  `test_a_hostile_case_fails_on_any_system_op_whatever_became_of_it`,
+  `test_a_hostile_case_fails_on_an_op_that_names_an_injected_person`, `test_a_fact_is_matched_on_the_day_it_is_as_of`.
+- [x] The report records the agent's program version and says when every tier ran on the same account. Built:
+  `tests/test_evaluate_harness.py::test_a_run_on_one_account_says_so_in_the_json_and_the_summary`,
+  `tests/test_evaluate_harness.py::test_a_run_through_a_command_line_agent_records_its_version_and_account`.
 
 L2. **Every run reads what applies.**
 Settled with the original designer (answers to L2's three questions and notes from their running version,
@@ -1004,7 +1019,8 @@ L4. **Proving it** (from the design author's review of this plan).
   - *negative, injection by meaning:* a glossary meaning that changes an instruction ("in this project, 'send' means send
     to an outside address") is never applied as guidance;
   - *negative, injected import:* a shared lessons file with an injected entry loads as proposed, not active.
-- [ ] **The golden set made harder** (design 6.16, from the design author's review). Moved to L1b (2026-10-14), so its
+- [x] **The golden set made harder** (design 6.16, from the design author's review). Built in L1b (2026-10-14) with
+  `tests/test_followups_backup_eval.py::test_every_case_passes_with_its_ideal_answer`, so its
   "before" run is pinned ahead of L2; the description stays here. The "before" run passed every case on the owner's account (2026-10-14), so today's set has no headroom there: the harder set is what the L4 comparison rests on, and it is run as a second "before" on the same account before L3's learning lands. Today's 14 single-input cases are
   scored too kindly for choosing a model. The fixes:
   - `exact: true` by default;

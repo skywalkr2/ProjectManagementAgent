@@ -307,6 +307,7 @@ providers:                       # every AI account the workspace may use; names
       key_env: <variable>        # the variable it reads its key from, when the account uses a key
       errors: {auth: ["<its not-signed-in message>"], rate_limited: [], quota: ["<its usage-limit message>"], reset: ["<its reset time: the first group is seconds or an ISO date and time>"], exit_codes: {}}
       sign_in_hint: <its login command>
+      version_command: []        # how to print its version; empty: the program with --version (6.16)
       home: shared               # fresh: each run gets an empty home with only home_files copied in
       home_files: []
 tiers:                           # what the work needs, mapped to provider/model; any mix of accounts

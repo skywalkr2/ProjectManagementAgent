@@ -1082,7 +1082,10 @@ empty one), never "done": it is retried, then counts toward the empty-run rule (
 **Probation for a new account** (*designed, not yet built*; the learning check with a switch is phase L, 6.22). A switch of a
 tier's account or model offers to run the learning fixture pairs first, with their cost estimate. **A command-line agent's
 program version is part of the account** (*phase L-more*): agents update themselves, and a new version can change flags, defaults or error
-output under a passing smoke test. So each `Run` records the agent's version; a version change is treated like an account
+output under a passing smoke test. Built so far (L1b): the adapter reads the version (`agent.version_command`, default
+the program with `--version`, within `agent.version_timeout_seconds`) and the evaluation report records it
+(`tests/test_cli_agent.py`, `tests/test_evaluate_harness.py::test_a_run_through_a_command_line_agent_records_its_version_and_account`).
+Still *phase L-more*: each `Run` records the agent's version; a version change is treated like an account
 change (smoke test, then "first run on <account>"); and the adapter turns off the program's own auto-update where the
 program allows it, by settings in the agents catalog (data, not code). **The person can end probation early** (*phase L-more*) from the
 quality panel once the account's send-back rate is below `ai.probation.end_below` over at least `ai.probation.min_runs`
@@ -1146,7 +1149,12 @@ until its reset (and the fallback takes over); it is not retried in a loop. **Th
 time, a request to slow down that asks for longer than `ai.rate_limits.max_wait_seconds`, or one that keeps coming after the
 tries (then for `pause_seconds`), pauses that account until the reset. The pause is kept in the workspace's private folder, so it
 holds across a restart. A paused account is not called; the router uses the next account in the tier's chain when one is allowed;
-when none is, the request stays queued, says "Waiting for <account>'s limit to reset at <local time>" (the account's name, never
+**Borrowing another tier's account asks first** (*designed, before real use*; the owner, 2026-10-14): most people have one
+account and simply wait for the reset, but when the routine tier's accounts are all paused and another tier's account is
+free, Today asks "Use <account> for routine work until <account>'s limit resets at <time>?" with the estimate. Yes lasts
+until the reset and no keeps the work waiting; `ai.borrow_other_tier` (ask, never; default ask) can turn the question off.
+A fallback the person put in the tier's own chain is their choice already and is not asked about. When none is, the
+request stays queued, says "Waiting for <account>'s limit to reset at <local time>" (the account's name, never
 a model), and the worker leaves it alone until then and runs it again by itself at the reset, with nobody pressing anything. A
 limit with no reset time is not a pause: the request waits for the person ("out of credit"). Changing the accounts or tiers lifts
 the pauses, since another account may take the work
