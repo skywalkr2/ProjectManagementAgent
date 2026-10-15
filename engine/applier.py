@@ -35,6 +35,7 @@ from engine.ops import (
     ActionCloseOp,
     ActionDropOp,
     ActionHoldOp,
+    ActionUnholdOp,
     AnswerOp,
     ChangesetIn,
     EventAddOp,
@@ -251,6 +252,14 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", why)
             elif evidence is not None and not _shares_words(evidence.quote, view.get("action", op.id).data["text"]):
                 lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
+        if isinstance(op, ActionUnholdOp):
+            why = action_unhold_problem(view, op)
+            if why:
+                refuse(i, "targets", why)
+            elif evidence is not None:
+                held = view.get("action", op.id).data
+                if not _shares_words(evidence.quote, f"{held['text']} {held['on_hold']['waiting_for']}"):
+                    lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
         if isinstance(op, QuestionDoneOp):
             target = view.get("question", op.id)
             if target is None:
@@ -382,6 +391,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     )
                     lint(i, "near-duplicate-action", f"looks like {state} {existing.id}: {existing.data['text']}")
                     break
+        if isinstance(op, (QuestionAddOp, ActionAddOp)) and ctx.actor != "pm" and _guessed_recipient(ctx, view, op):
+            lint(
+                i,
+                "unnamed-recipient",
+                "the input says it was already sent but not to whom, so this names a recipient it doesn't give; "
+                "don't pick the nearest name. Ask the person who it went to, as a decision.",
+            )
         # plugins' lints: soft checks on the assistant's proposals (never the person's own changes), with the
         # severity the workspace sets, or sets for this project's work (never a refusal by default)
         if ctx.actor != "pm":
@@ -583,6 +599,54 @@ def action_hold_problem(view: Any, op: ActionHoldOp | ActionDropOp) -> str | Non
         return f"action {op.id} is waiting for an owner; pick one or add it to another action first"
     if status != "open":
         return f"action {op.id} is already {status}"
+    return None
+
+
+def _input_project(tx: Any, request_id: str | None, source_id: str | None) -> str | None:
+    """The project an input is about when the person (or the watched source) settled it: the request's project, else
+    the source's only one. None when the input isn't about exactly one project."""
+    request = tx.get("request", request_id) if request_id else None
+    if request is not None and request.data.get("project"):
+        return request.data["project"]
+    source = tx.get("source", source_id) if source_id else None
+    projects = source.data.get("projects") if source is not None else None
+    return projects[0] if projects and len(projects) == 1 else None
+
+
+def _guessed_recipient(ctx: Context, view: Any, op: QuestionAddOp | ActionAddOp) -> bool:
+    """Whether a question or action names someone as the recipient of something the input says was already sent, with
+    nobody in the input's words to say it went to them. The person themselves is never a guessed recipient."""
+    from engine.unnamed_recipient import guessed_recipient
+
+    if isinstance(op, QuestionAddOp):
+        names, text = [op.to], f"{op.title} {op.text}"
+    else:
+        names, text = list(op.owners), op.text
+    recipients = []
+    for name in names:
+        resolved = ctx.people.resolve(name)
+        if resolved.status != "ok" or resolved.person == ctx.people.pm:
+            continue
+        person = view.get("person", resolved.person)
+        if person is not None:
+            recipients.append([person.data["full_name"], *person.data.get("aliases", [])])
+    return guessed_recipient(
+        f"{ctx.inputs.raw_input}\n{ctx.inputs.note}", text, recipients, ctx.cfg.language.already_sent_phrases
+    )
+
+
+def action_unhold_problem(view: Any, op: ActionUnholdOp) -> str | None:
+    """Why an action can't be taken off hold, or None. It must exist, be open and be on hold."""
+    found = view.get("action", op.id)
+    if found is None:
+        return f"there is no action {op.id}"
+    status = found.data["status"]
+    if status == "held":
+        return f"action {op.id} is waiting for an owner, not on hold"
+    if status != "open":
+        return f"action {op.id} is already {status}"
+    if not found.data.get("on_hold"):
+        return f"action {op.id} isn't on hold"
     return None
 
 
@@ -1238,7 +1302,7 @@ def _apply_op(
             "title": op.title,
             "start": op.start,
             "end": op.end,
-            "project": op.project,
+            "project": op.project or _input_project(tx, ctx.inputs.request, source),
             "source": source,
             "evidence": ev,
             "trust": trust,
@@ -1299,6 +1363,10 @@ def _apply_op(
         cur = tx.get("action", op.id)
         hold = {"waiting_for": " ".join(op.waiting_for.split()), "since": today.isoformat()}
         tx.update("action", op.id, {"on_hold": hold}, w, read_version=cur.version)
+        made("action", op.id)
+    elif isinstance(op, ActionUnholdOp):
+        cur = tx.get("action", op.id)
+        tx.update("action", op.id, {"on_hold": None}, w, read_version=cur.version)
         made("action", op.id)
     elif isinstance(op, ActionDropOp):
         cur = tx.get("action", op.id)

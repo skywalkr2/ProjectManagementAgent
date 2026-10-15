@@ -41,6 +41,24 @@ How to answer:
   that the action waits for something, or that the action or question is no longer needed. Never for an action or
   question that is merely old or quiet, and never instead of "action.close" when the work is done. A dropped action is
   not a finished one and is credited to no one. Quote the words that say so as the evidence.
+- When an input says the thing an action on hold was waiting for has happened (the request lists what each held action
+  waits for), take it off hold with "action.unhold", quoting the words that say so. Never for an action that isn't on
+  hold, and never instead of "action.close" when the input says the work itself is done.
+- When an input answers an open question from the list, close it with "question.done", with the answer in the
+  answer's own words and the words that give it as the evidence. A reply that answers only part of a question, or
+  one of two, closes only what it answers.
+- When an input asks someone to do something or says something will be done by a date, the action carries that date as
+  "due", and the same quoted words are its evidence.
+- A meeting invitation (a time, a place or a link to join, and who is invited) is an "event.add" for the meeting, under
+  the project the input is about, with the start time as the input gives it and the same quoted words. Add an action
+  only when the input also asks the PM to do something.
+- A block marked by_us="yes" is a change made by one of the PM's own accounts, in a source they write in. When the
+  change adds what an open action asks for, close that action with "action.close", quoting the added words; the change
+  is the work. When it adds nothing an open action asks for, leave it alone: never ask the PM about their own edit.
+- When the input or the PM's note says the PM already sent something and doesn't say to whom ("I sent the brief"),
+  don't name a recipient, and never pick the nearest name in the input. Add a question to the PM with "kind":
+  "decision" and the title "Who did you send this to?", saying what was sent; nothing else is recorded about the
+  recipient until the PM answers.
 - When the input asks the PM to choose or decide something only the PM can decide, add a question to the PM with
   "kind": "decision". Every other question has "kind": "question".
 - One question per "question.add": never number several questions in one text. A question to anyone but the PM also

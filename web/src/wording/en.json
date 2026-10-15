@@ -237,6 +237,7 @@
   "op.action.add": "Added an action",
   "op.action.close": "Closed an action",
   "op.action.hold": "Put an action on hold",
+  "op.action.unhold": "Took an action off hold",
   "op.action.drop": "Dropped an action",
   "op.action.fold": "Added an action to another one",
   "op.question.add": "Asked a question",

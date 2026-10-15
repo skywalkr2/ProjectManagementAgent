@@ -171,7 +171,9 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
         if own_words:
             request_parts.append(f"<note {_note_attributes(store, cfg, src, saved)}>\n{cleaned.text}\n</note>")
         else:
-            request_parts.append(f'<untrusted source="{src}">\n{cleaned.text}\n</untrusted>')
+            watched = (saved.data.get("watched") or {}) if saved is not None else {}
+            by_us = ' by_us="yes"' if watched.get("by_us") else ""
+            request_parts.append(f'<untrusted source="{src}"{by_us}>\n{cleaned.text}\n</untrusted>')
     request = "\n\n".join(request_parts)
     task = replace(_task(cfg, store, kind, instructions, stable, request), knowledge=learned.log.model_dump())
     return Packet(

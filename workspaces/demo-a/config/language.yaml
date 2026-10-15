@@ -14,6 +14,8 @@ self_words: [me, myself, I]
 title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to|cc|sent|date|subject)\s*:', '(thanks|best|regards|cheers)\b[ ,!.]*$', '-{2,}|>']
 # Notes under this many words with no link are bare confirmations and stay with the change.
 bare_confirmation_words: 4
+# Phrases that say the person already sent something (see the unnamed-recipient check).
+already_sent_phrases: [I sent, I've sent, I have sent, I just sent, I emailed, I've emailed, I forwarded, I've forwarded, we sent, we've sent]
 reported_speech:
   verbs: [said, says, confirmed, confirms, told, wrote, writes, asked, wants]
   own_speakers: [I, we]

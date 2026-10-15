@@ -635,7 +635,7 @@ Something to look at on the review (an image the plugin rendered, or plain text)
 
 Previews may be: `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
-Core ops an action may propose: `action.drop`, `action.hold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
+Core ops an action may propose: `action.drop`, `action.hold`, `action.unhold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
 
 ## AI task kinds
 
@@ -1822,6 +1822,17 @@ Put an open action on hold: it waits for something outside the person's control 
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the open action to put on hold. |
 | `waiting_for` | str | required | What it waits for, in plain words. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `action.unhold`
+
+Take an action off hold when the input says the thing it was waiting for has happened: it is due, chased and shown again by its own due date. Refused if the action doesn't exist, isn't open or isn't on hold; evidence is required (the input's words, or the person's note).
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the action that is on hold and no longer waits. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 

@@ -191,6 +191,21 @@ class ActionHoldOp(OpModel):
         return f"Put action {self.id} on hold"
 
 
+class ActionUnholdOp(OpModel):
+    """Take an action off hold when the input says the thing it was waiting for has happened: it is due, chased and
+    shown again by its own due date. Refused if the action doesn't exist, isn't open or isn't on hold; evidence is
+    required (the input's words, or the person's note)."""
+
+    op: Literal["action.unhold"] = "action.unhold"
+    id: str = Field(description="The id of the action that is on hold and no longer waits.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that justify this op; required unless the person makes it."
+    )
+
+    def describe(self) -> str | None:
+        return f"Take action {self.id} off hold"
+
+
 class ActionDropOp(OpModel):
     """Drop an action that is no longer needed, with the reason. It stays on record as dropped: never done, never
     credited to its owners, never chased, and gone from to-do lists. Refused if the action doesn't exist or is already
@@ -753,6 +768,7 @@ Op = Annotated[
     | ActionAddOp
     | ActionCloseOp
     | ActionHoldOp
+    | ActionUnholdOp
     | ActionDropOp
     | QuestionAddOp
     | QuestionDoneOp
@@ -800,6 +816,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "action.add": ActionAddOp,
     "action.close": ActionCloseOp,
     "action.hold": ActionHoldOp,
+    "action.unhold": ActionUnholdOp,
     "action.drop": ActionDropOp,
     "question.add": QuestionAddOp,
     "question.done": QuestionDoneOp,
@@ -885,13 +902,14 @@ NEEDS_EVIDENCE = {
     "action.add",
     "action.close",
     "action.hold",
+    "action.unhold",
     "action.drop",
     "question.drop",
     "question.done",
 }
 #: Ops that need evidence from the assistant but not when the person makes them: their own act is not a claim from an
 #: input, so a person's action or screen may use them without a quote.
-EVIDENCE_UNLESS_PERSON = {"action.hold", "action.drop", "question.drop"}
+EVIDENCE_UNLESS_PERSON = {"action.hold", "action.unhold", "action.drop", "question.drop"}
 EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner"}
 
 #: Fields record.set may change, per kind.

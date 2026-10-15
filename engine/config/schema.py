@@ -847,6 +847,7 @@ def _default_lints() -> dict[str, Severity]:
         "near-duplicate-question": "warn",
         "several-questions": "return",
         "question-without-stake": "return",
+        "unnamed-recipient": "return",
     }
 
 
@@ -1056,6 +1057,15 @@ class LanguageFile(FileModel):
         description="How a typed note that repeats someone else's words is recognized. Such a note is content the "
         "person reports, whatever button it was typed on: facts and dates from it apply, but a rule or lesson from it "
         "waits for the person.",
+    )
+    already_sent_phrases: list[str] = Field(
+        default_factory=lambda: [
+            *("I sent", "I've sent", "I have sent", "I just sent", "I emailed", "I've emailed"),
+            *("I forwarded", "I've forwarded", "we sent", "we've sent"),
+        ],
+        description="Phrases that say the person already sent something. When an input says so and names no one it "
+        "went to, a question or action that names a recipient for it is returned: the assistant asks the person "
+        "who it went to instead of guessing.",
     )
     bare_confirmation_words: int = Field(
         4,

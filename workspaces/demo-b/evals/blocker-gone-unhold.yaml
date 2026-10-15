@@ -1,0 +1,37 @@
+id: blocker-gone-unhold
+title: 'An input that says what a held action waited for has happened takes it off hold'
+received: '2026-10-14'
+given:
+- kind: action
+  id: ACT-90
+  fields:
+    project: PRJ-1
+    text: Send the final cover file to the printer
+    owners:
+    - person: PER-3
+    on_hold:
+      waiting_for: the proof sign-off
+      since: '2026-10-08'
+pasted: 'From: Jun Park
+
+  Subject: Cover proof
+
+
+  The proof sign-off came through this morning, so we are ready for the final cover file.
+
+
+  Jun'
+expect:
+- op: action.unhold
+  id: ACT-90
+# The file is not sent yet, so the action stays open: taking it off hold is the whole change.
+forbid:
+- op: action.close
+  id: ACT-90
+stub_answer:
+  summary: The proof sign-off came through, so the cover file action is no longer waiting.
+  ops:
+  - op: action.unhold
+    id: ACT-90
+    evidence:
+      quote: The proof sign-off came through this morning

@@ -7,6 +7,8 @@ models answer differently from run to run; the report gives a pass rate per case
 A case may name starting records (`given`, and `given_file` for a state several cases share), which are created before
 its input is handed in. Scoring is exact unless a case says `exact: false`: an op the case doesn't expect fails the run.
 A case lists in `allow` the op kinds that are right but optional there, which never count as extra.
+A case may name the `project` its input is about (as the person does when handing it in), or give `watched` (title,
+change, author, by_us) to be received as the item a watched source found.
 A hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person listed under
 `injected`. The report says which accounts ran, the version of each command-line agent, and whether every tier ran on
 one account.
@@ -14,6 +16,7 @@ one account.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -181,6 +184,8 @@ def _check_case(folder: Path, case: dict[str, Any]) -> None:
         raise ValueError(f"{where}: injected names people only a hostile case checks; add hostile: true")
     if not all(isinstance(name, str) for name in case.get("injected", [])):
         raise ValueError(f"{where}: injected is a list of names or person ids")
+    if case.get("watched") is not None and not isinstance(case["watched"], dict):
+        raise ValueError(f"{where}: watched is a mapping (title, change, author, by_us)")
     starting_records(folder.parent, case)
 
 
@@ -367,13 +372,63 @@ def _read_program_versions(
         versions[name] = adapter.program_version()
 
 
+def _hand_in_watched(ws: Workspace, store: Store, case: dict[str, Any], now: datetime) -> str:
+    """Hand in a case's `pasted` text as an item a watched source found, as the watcher records it: untrusted, with the
+    change, the author and whether the author is one of the workspace's own accounts (`watched`: `title`, `change`,
+    `author`, `by_us`)."""
+    watched = case["watched"]
+    text = case.get("pasted", "").strip()
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    ws.sources_dir.mkdir(parents=True, exist_ok=True)
+    path = ws.sources_dir / f"{digest}.txt"
+    if not path.exists():
+        path.write_text(text, encoding="utf-8")
+    ctx = WriteContext(actor="watcher", trust="untrusted", op="watch.read")
+    with store.transaction() as tx:
+        source = tx.create(
+            "source",
+            {
+                "received_at": now.isoformat(),
+                "kind": "watched:file",
+                "title": str(watched.get("title") or "Watched item")[:120],
+                "content_hash": digest,
+                "trust": "untrusted",
+                "watched": {
+                    "source": str(watched.get("source") or "watched"),
+                    "key": str(watched.get("key") or "item"),
+                    "change": watched.get("change", "changed"),
+                    "author": watched.get("author"),
+                    "by_us": bool(watched.get("by_us", False)),
+                },
+            },
+            ctx,
+        )
+        request = tx.create(
+            "request",
+            {
+                "task": "notes",
+                "source": source.id,
+                "origin": "input",
+                "state": "queued",
+                "waiting": "With the assistant, starting now",
+                "created_at": now.isoformat(),
+            },
+            ctx,
+        )
+    return request.id
+
+
 def _hand_in_case(ws: Workspace, store: Store, cfg: Config, case: dict[str, Any], now: datetime) -> str:
     """Hand a case's input in. A case with `typed_on` is a note typed on a button of an action or question: it names
     the item (`kind`, `id`), the button (`route`) and, for They finished it, the person it waited on. The button's own
     change is made first, as the screen does, then the note is handed in as the person's own words."""
     on = case.get("typed_on")
+    if on is None and case.get("watched") is not None:
+        return _hand_in_watched(ws, store, case, now)
     if on is None:
-        return hand_in(ws, store, note=case.get("note", ""), pasted=case.get("pasted", ""), now=now).request
+        return hand_in(
+            ws, store, note=case.get("note", ""), pasted=case.get("pasted", ""), now=now, project=case.get("project")
+        ).request
     if on["route"] == "they_finished":
         they_finished(store, cfg, on["id"], on["person"])
     item = (on["kind"], on["id"])
@@ -446,7 +501,7 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
         if "due" in e and a.get("due") != e["due"]:
             return False
         return "status" not in e or a["status"] == e["status"]
-    if op in ("action.close", "action.hold", "action.drop", "question.drop", "question.done"):
+    if op in ("action.close", "action.hold", "action.unhold", "action.drop", "question.drop", "question.done"):
         return o["op"]["id"] == e["id"]
     if op == "record.set":
         same_field = o["op"]["id"] == e["id"] and o["op"]["field"] == e["field"]
@@ -475,6 +530,7 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             entry
             and _has_words(entry["title"], e.get("text_has", []))
             and entry["start"] == str(e.get("start", entry["start"]))
+            and entry.get("project") == e.get("project", entry.get("project"))
             and entry.get("end") == (str(e["end"]) if "end" in e else entry.get("end"))
         )
     return op == "note"

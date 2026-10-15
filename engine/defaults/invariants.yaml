@@ -33,6 +33,7 @@ invariants:
       - action.add
       - action.close
       - action.hold
+      - action.unhold
       - action.drop
       - question.add
       - question.done
@@ -83,6 +84,7 @@ invariants:
       - action.add
       - action.close
       - action.hold
+      - action.unhold
       - action.drop
       - question.drop
       - question.done

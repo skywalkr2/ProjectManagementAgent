@@ -1,0 +1,35 @@
+id: own-edit-closes-action
+title: 'The PM''s own edit in a watched source closes the open action it fulfills'
+received: '2026-10-14'
+watched:
+  title: Salt Orchard launch checklist
+  change: changed
+  author: Cockpit assistant
+  by_us: true
+pasted: 'Changed in the launch checklist: Salt Orchard launch checklist
+
+
+  What changed:
+
+  + Back-cover copy: approved
+
+
+  It now reads:
+
+  Interior file: with the printer
+
+  Back-cover copy: approved
+
+  Launch reading: date to be set'
+expect:
+- op: action.close
+  id: ACT-5
+forbid:
+- op: question.add
+stub_answer:
+  summary: Your edit approves the back-cover copy, so that action is closed.
+  ops:
+  - op: action.close
+    id: ACT-5
+    evidence:
+      quote: 'Back-cover copy: approved'

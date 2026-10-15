@@ -1,0 +1,28 @@
+id: sent-without-recipient
+title: '"I sent the brief" with no recipient asks the PM who, and names no one'
+received: '2026-10-14'
+note: I sent the brief this morning.
+pasted: 'From: Sam Rivera
+
+  Subject: Cover brief
+
+
+  Hi Avery, could you send me the cover brief when you get a chance?
+
+
+  Sam'
+expect:
+- op: question.add
+  to: PER-1
+  kind: decision
+# Sam asked for the brief, but the note doesn't say it went to Sam: the nearest name is a guess, so the only question
+# is the one to the PM, and an exact case fails on any other op.
+stub_answer:
+  summary: You sent the brief, but not to whom.
+  ops:
+  - op: question.add
+    to: me
+    kind: decision
+    title: Who did you send this to?
+    text: You said you sent the brief this morning but not who received it.
+    project: PRJ-1
