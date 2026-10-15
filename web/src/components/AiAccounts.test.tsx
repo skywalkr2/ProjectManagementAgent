@@ -384,3 +384,73 @@ test("changing the model of an account that does the work is a switch: the cost 
   );
   expect(await screen.findByText("Checking main now. Today says if anything needs a look.")).toBeInTheDocument();
 });
+
+test("Use as backup checks the account for each kind of work first, then adds it as the backup with Undo", async () => {
+  const user = userEvent.setup();
+  const answered = (name: string) => () => [{ tier: "account", account: name, main: false, ok: true, detail: "answered" }];
+  const calls = api({
+    "GET ai/accounts": () => [account("main", { used_for: ["routine", "deep"] }), account("second", { models: { everyday: "model-b", harder: "model-c" } })],
+    "POST ai/accounts/second/switch-estimate": () => ({ offered: false }),
+    "POST ai/accounts/second/test?tier=routine&model=everyday": answered("second"),
+    "POST ai/accounts/second/test?tier=deep&model=harder": answered("second"),
+    "POST ai/accounts/second": () => ({
+      changes: [{ key: "ai.tiers.routine.fallback", before: [], after: ["second/everyday"], was_default: true, is_default: false }],
+      fingerprint: "fp-2",
+      needs_restart: false,
+    }),
+  });
+  open();
+  await menu(user, "second", "Use as backup");
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST ai/accounts/second")?.body).toEqual({ fingerprint: "fp-1", backup: { routine: "everyday", deep: "harder" } }),
+  );
+  const tests = calls.filter((c) => c.route.startsWith("POST ai/accounts/second/test")).map((c) => c.route);
+  expect(tests).toEqual(["POST ai/accounts/second/test?tier=routine&model=everyday", "POST ai/accounts/second/test?tier=deep&model=harder"]);
+  expect(await screen.findByText("second now stands in when the main account can't answer")).toBeInTheDocument();
+  expect(await screen.findByRole("button", { name: "Undo" })).toBeInTheDocument();
+});
+
+test("a failed check adds nothing and shows why; a backup says what it backs up and isn't offered again", async () => {
+  const user = userEvent.setup();
+  const calls = api({
+    "GET ai/accounts": () => [account("main", { used_for: ["routine", "deep"] }), account("second")],
+    "POST ai/accounts/second/switch-estimate": () => ({ offered: false }),
+    "POST ai/accounts/second/test?tier=routine&model=everyday": () => [{ tier: "account", account: "second", main: false, ok: false, detail: "The key was refused." }],
+  });
+  open();
+  await menu(user, "second", "Use as backup");
+  expect(await within(await row("second")).findByText(/Didn't answer: The key was refused\./)).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST ai/accounts/second")).toBe(false);
+});
+
+test("an account already standing in says so and is offered nothing more; with no account doing the work there is no backup to be", async () => {
+  const user = userEvent.setup();
+  api({
+    "GET ai/accounts": () => [account("main", { used_for: ["routine", "deep"] }), account("second", { backup_for: ["routine", "deep"] }), account("third")],
+    "POST ai/accounts/second/switch-estimate": () => ({ offered: false }),
+    "POST ai/accounts/third/switch-estimate": () => ({ offered: false }),
+  });
+  open();
+  expect(await row("second")).toHaveTextContent("Backup for: Everyday work, Harder work");
+  await user.click(within(await row("second")).getByRole("button", { name: "More actions for second" }));
+  expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).not.toContain("Use as backup");
+  await user.keyboard("{Escape}");
+  await user.click(within(await row("third")).getByRole("button", { name: "More actions for third" }));
+  expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toContain("Use as backup");
+});
+
+test("Add an account shows only where the screen gives a way to add one", async () => {
+  const user = userEvent.setup();
+  api();
+  const onAdd = vi.fn();
+  renderApp(<AiAccounts local onAdd={onAdd} />);
+  await user.click(await screen.findByRole("button", { name: "Add an account" }));
+  expect(onAdd).toHaveBeenCalledTimes(1);
+});
+
+test("without a way to add, as inside the setup guide, there is no Add button", async () => {
+  api();
+  open();
+  await screen.findByRole("heading", { name: "Your AI accounts" });
+  expect(screen.queryByRole("button", { name: "Add an account" })).toBeNull();
+});

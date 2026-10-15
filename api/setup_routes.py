@@ -598,6 +598,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     base_url=p.base_url,
                     models=dict(p.models),
                     used_for=[t for t, tier in ai.tiers.items() if (tier.use or "").split("/", 1)[0] == name],
+                    backup_for=[
+                        t for t, tier in ai.tiers.items() if any(f.split("/", 1)[0] == name for f in tier.fallback)
+                    ],
                     has_key=bool(p.auth),
                     key_state=state,
                     key_where=where,
@@ -663,6 +666,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             if short not in models:
                 raise HTTPException(status_code=400, detail=f"{short} isn't one of this account's models.")
             changes[f"ai.tiers.{tier}.use"] = f"{name}/{short}"
+        tiers = current().ai.tiers
+        for tier, short in body.backup.items():
+            if short not in models:
+                raise HTTPException(status_code=400, detail=f"{short} isn't one of this account's models.")
+            ref, settings = f"{name}/{short}", tiers.get(tier)
+            if settings is None:
+                raise HTTPException(status_code=400, detail=f"There is no kind of work called {tier}.")
+            if settings.use == ref or ref in settings.fallback:
+                raise HTTPException(status_code=400, detail=f"{name} already does that work or stands in for it.")
+            changes[f"ai.tiers.{tier}.fallback"] = [*settings.fallback, ref]
         if not changes and not reset:
             raise HTTPException(status_code=400, detail="Nothing to change.")
         return changes, reset

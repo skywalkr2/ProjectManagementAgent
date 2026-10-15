@@ -17,7 +17,8 @@ import { Skeleton } from "../ui/Skeleton";
 type Edits = Record<string, Draft>;
 
 export function Settings(props: {
-  onOpenGuide: () => void;
+  /** Opens the setup guide, at the step named when one is. */
+  onOpenGuide: (step?: string) => void;
   onOpenAddons: () => void;
   onChooseSource: (plugin: string | null) => void;
   /** Opens the Knowledge screen, where the standing rules are kept and reviewed. */
@@ -93,7 +94,7 @@ export function Settings(props: {
           <button type="button" className="btn" onClick={props.onOpenAddons}>
             {t("settings.open_addons")}
           </button>
-          <button type="button" className="btn" onClick={props.onOpenGuide}>
+          <button type="button" className="btn" onClick={() => props.onOpenGuide()}>
             {t("settings.open_guide")}
           </button>
         </div>
@@ -175,7 +176,7 @@ export function Settings(props: {
         )}
       </div>
       <DataForms />
-      <AiAccounts />
+      <AiAccounts onAdd={() => props.onOpenGuide("ai")} />
       <ValueLists />
     </section>
   );

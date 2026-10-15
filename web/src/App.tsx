@@ -215,7 +215,7 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
       case "settings":
         return (
           <Settings
-            onOpenGuide={() => openGuide()}
+            onOpenGuide={openGuide}
             onOpenAddons={() => setView("addons")}
             onChooseSource={openAddSource}
             onOpenKnowledge={() => setView("records/knowledge")}

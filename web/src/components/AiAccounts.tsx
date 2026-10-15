@@ -2,8 +2,11 @@
 // the assistant. The row's one primary action tests it; replacing the key, changing the models and removing it are in its
 // menu. Removing acts at once and offers Undo. Making an account do the work, or changing the model of one that does,
 // is a switch: when checks on a switch are on, its primary action is "Switch and check" with the cost shown first, and
-// "Switch without checking" is the other way. Used in the AI step of the setup guide and in Settings. The service's
-// name comes from the catalog entry the account was made from; a key is never shown, only whether one is kept.
+// "Switch without checking" is the other way. An account that does no work while another does can stand in as its
+// backup: "Use as backup" checks it for each kind of work with the exact settings first, and adds it only when every
+// check passes. Used in the AI step of the setup guide and in Settings, where "Add an account" opens the guide's AI step.
+// The service's name comes from the catalog entry the account was made from; a key is never shown, only whether one is
+// kept.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
@@ -46,6 +49,8 @@ export function AiAccounts(props: {
   local?: boolean;
   /** The level of the section's heading: 3 in Settings, 4 inside a step of the setup guide. */
   level?: 3 | 4;
+  /** Opens where a new account is added; the button shows only when given. */
+  onAdd?: () => void;
 }) {
   const { t } = useWords();
   const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
@@ -59,6 +64,13 @@ export function AiAccounts(props: {
     <section className="ai-accounts" aria-labelledby="ai-accounts-title">
       <div className="heading">
         {props.level === 4 ? <h4 id="ai-accounts-title">{t("ai_accounts.title")}</h4> : <h3 id="ai-accounts-title">{t("ai_accounts.title")}</h3>}
+        {props.onAdd && (
+          <div className="acts">
+            <button type="button" className="btn" onClick={props.onAdd}>
+              {t("ai_accounts.add")}
+            </button>
+          </div>
+        )}
       </div>
       {accounts.data.length === 0 ? (
         <p className="hint">{t("ai_accounts.none")}</p>
@@ -72,6 +84,7 @@ export function AiAccounts(props: {
                 account={account}
                 kind={endpoints.data?.find((e) => e.id === account.kind)}
                 local={local}
+                othersWork={accounts.data.some((a) => a.name !== account.name && a.used_for.length > 0)}
               />
             ))}
           </ul>
@@ -81,7 +94,7 @@ export function AiAccounts(props: {
   );
 }
 
-function AccountRow(props: { account: Account; kind: Kind | undefined; local: boolean }) {
+function AccountRow(props: { account: Account; kind: Kind | undefined; local: boolean; othersWork: boolean }) {
   const { t, has } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
@@ -114,7 +127,12 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
         : kind && !kind.needs_key
           ? t("ai_accounts.no_key_needed")
           : t("ai_accounts.no_key");
-  const doing = account.used_for.length ? t("ai_accounts.used_for", { work: account.used_for.map(workName).join(", ") }) : t("ai_accounts.unused");
+  const backupFor = account.backup_for ?? [];
+  const doing = account.used_for.length
+    ? t("ai_accounts.used_for", { work: account.used_for.map(workName).join(", ") })
+    : backupFor.length
+      ? t("ai_accounts.backup_for", { work: backupFor.map(workName).join(", ") })
+      : t("ai_accounts.unused");
 
   const open = (next: Exclude<Mode, null>) => {
     setProblem("");
@@ -248,6 +266,39 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
     );
   };
 
+  // Stand in for the account that does the work: each kind of work it doesn't back up yet is checked with its exact
+  // settings on the model it would use, and the account is added only when every check passed.
+  const backupPlan = (
+    [
+      ["routine", everyday],
+      ["deep", deep],
+    ] as const
+  ).filter(([tier]) => !backupFor.includes(tier));
+  const backsUp = account.adapter !== "stub" && account.used_for.length === 0 && shorts.length > 0 && props.othersWork && backupPlan.length > 0 && (keyState === "saved" || (kind !== undefined && !kind.needs_key));
+  const useAsBackup = async () => {
+    setTesting(true);
+    setProblem("");
+    setResult(null);
+    try {
+      for (const [tier, short] of backupPlan) {
+        const line = (await api.testAccount(account.name, tier, short))[0];
+        if (line && !line.ok) {
+          setResult(line);
+          return;
+        }
+      }
+    } catch (err) {
+      fail(err);
+      return;
+    } finally {
+      setTesting(false);
+    }
+    void save(
+      (fingerprint) => api.changeAccount(account.name, { fingerprint, backup: Object.fromEntries(backupPlan) }),
+      t("ai_accounts.backup_set", { name: account.name }),
+    );
+  };
+
   // A change of model on an account that does work is a switch too; its price is asked for once the typing settles.
   const typedModels = useSettled(mode === "models" ? JSON.stringify(nextModels()) : "");
   const worksNow = account.used_for.length > 0;
@@ -271,6 +322,7 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
       : takesWork
         ? [{ id: "use", label: t("ai_accounts.use_for_work"), run: () => useForWork(false), disabled: busy }]
         : []),
+    ...(backsUp ? [{ id: "backup", label: t("ai_accounts.use_as_backup"), run: () => void useAsBackup(), disabled: testing || busy }] : []),
     { id: "key", label: t("ai_accounts.replace_key"), run: () => open("key") },
     { id: "expires", label: t("ai_accounts.key_ends_set"), run: () => open("expires") },
     { id: "models", label: t("ai_accounts.change_models"), run: () => open("models") },

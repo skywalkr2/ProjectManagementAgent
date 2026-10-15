@@ -1872,6 +1872,7 @@ class AiAccountView(BaseModel):
     base_url: str | None = None
     models: dict[str, str]
     used_for: list[str] = Field(description="The tiers whose main account it is.")
+    backup_for: list[str] = Field(default_factory=list, description="The tiers it stands in for as a backup.")
     has_key: bool = Field(description="A key or a reference to one is set.")
     key_state: Literal["saved", "missing", "none"] = Field(
         "none",
@@ -1901,6 +1902,11 @@ class AiAccountChange(BaseModel):
     )
     models: dict[str, str] | None = Field(None, description="Its models, replacing the ones it has.")
     use: dict[str, str] = Field(default_factory=dict, description="Tiers to one of its models by short name.")
+    backup: dict[str, str] = Field(
+        default_factory=dict,
+        description="Tiers to one of its models by short name, added to each tier's backups: the accounts tried in "
+        "order when the main one can't answer. Only a checked account, or one accepted unchecked, may be one.",
+    )
     fingerprint: str
 
 

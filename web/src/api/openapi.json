@@ -804,6 +804,14 @@
         "additionalProperties": false,
         "description": "A change to an existing account: a new key, other models, or the work it does.",
         "properties": {
+          "backup": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Tiers to one of its models by short name, added to each tier's backups: the accounts tried in order when the main one can't answer. Only a checked account, or one accepted unchecked, may be one.",
+            "title": "Backup",
+            "type": "object"
+          },
           "clear_credential_expires": {
             "anyOf": [
               {
@@ -893,6 +901,14 @@
           "adapter": {
             "title": "Adapter",
             "type": "string"
+          },
+          "backup_for": {
+            "description": "The tiers it stands in for as a backup.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Backup For",
+            "type": "array"
           },
           "base_url": {
             "anyOf": [

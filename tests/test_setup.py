@@ -636,6 +636,46 @@ def test_an_account_is_listed_changed_and_removed_with_undo(tmp_path):
     assert c.post(f"{api}/ai/accounts/nobody/remove", json={"fingerprint": "x"}).status_code == 404
 
 
+def test_an_account_becomes_a_backup_only_once_checked_and_says_which_work_it_backs_up(tmp_path):
+    """A second account stands in when the main one can't answer: "Use as backup" adds its model to each tier's
+    backups. Like any account in a chain, it must have passed its check or be accepted unchecked."""
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    kind = next(k for k in known_endpoints() if k["needs_key"] and k["base_url"])
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    for name in ("main", "spare"):
+        body = {
+            "name": name,
+            "adapter": kind["adapter"],
+            "endpoint": kind["id"],
+            "base_url": kind["base_url"],
+            "key": f"{name}-key",
+            "models": {"everyday": "a-model"},
+            "fingerprint": fingerprint,
+        }
+        if name == "main":
+            body["use"] = {"routine": "everyday", "deep": "everyday"}
+        fingerprint = c.post(f"{api}/ai/accounts", json=body).json()["fingerprint"]
+    assert {t: v.use for t, v in load_config(ws.config_dir, env={}).ai.tiers.items()} == {
+        "routine": "main/everyday",
+        "deep": "main/everyday",
+    }
+    backup = {"routine": "everyday", "deep": "everyday"}
+    refused = c.post(f"{api}/ai/accounts/spare", json={"backup": backup, "fingerprint": fingerprint})
+    assert refused.status_code == 400 and "spare" in refused.text and "already" not in refused.text
+    accepted = c.post(
+        f"{api}/settings", json={"changes": {"ai.providers.spare.accepted_unchecked": True}, "fingerprint": fingerprint}
+    ).json()
+    done = c.post(f"{api}/ai/accounts/spare", json={"backup": backup, "fingerprint": accepted["fingerprint"]})
+    assert done.status_code == 200, done.text
+    after = load_config(ws.config_dir, env={})
+    assert all(after.ai.tiers[t].fallback[-1] == "spare/everyday" for t in ("routine", "deep"))
+    listed = {a["name"]: a for a in c.get(f"{api}/ai/accounts").json()}
+    assert sorted(listed["spare"]["backup_for"]) == ["deep", "routine"] and listed["spare"]["used_for"] == []
+    again = c.post(f"{api}/ai/accounts/spare", json={"backup": backup, "fingerprint": done.json()["fingerprint"]})
+    assert again.status_code == 400, "an account already a backup there isn't added twice"
+
+
 def test_built_in_agents_start_with_their_tools_off_and_say_if_installed(tmp_path):
     ws, cfg, store = make(tmp_path)
     c, api = client(ws, cfg, store)
