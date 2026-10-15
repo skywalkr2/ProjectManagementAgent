@@ -22,6 +22,11 @@ passed as first scored. Every failure was classified from what the run produced:
   `own-edit-closes-action` 1 of 3), and once each named an owner for a shared first name and filed a date as a held
   action. The notes prompt now says how a new date for an open action is recorded (`record.set` on its due, the entry
   beside it) and that an input changes only the items its words name. The two single runs are left as variance.
+- **The rerun at `c6d467c`** passed 74 of 81 golden runs and 44 of 57 harder ones, but most learning pairs failed
+  before scoring: the assistant wrote a lesson's reach as `{"project": …}` or `{"id": …}` and links as titles. No
+  adapter shows a model the answer's schema, so the op reference's field names were all it had of a nested shape. The
+  reference now gives every nested field its keys, the values a choice allows, the kind of id a reference holds, and
+  lists and mappings as such; a test checks every core op names each key its nested fields accept.
 **Why:** the comparison with O1 and O2 must measure the assistant, not cases that lag the prompt; each correction is
 shown beside the raw number. **Impact:** `engine/evaluate.py`, `engine/records.py`, `engine/ops.py`, the notes prompt,
 17 cases; roadmap O3 (a short rerun of the four affected cases at the fix commit). No change to scope.

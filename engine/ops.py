@@ -6,12 +6,14 @@ Evidence is the exact words from the input that justify the op.
 
 from __future__ import annotations
 
+import json
+import types
 from datetime import date
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator, model_validator
 
-from engine.records import Scope, canonical_time, entry_problem
+from engine.records import RefTo, Scope, canonical_time, entry_problem
 
 Tier = Literal["data", "outbound", "system"]
 
@@ -1060,6 +1062,43 @@ def schema_for(op_names: list[str], registry: dict | None = None) -> dict[str, A
     }
 
 
+def _field_line(name: str, info: Any, depth: int = 0) -> str:
+    """A field as the reference lists it: its key, `?` when it may be left out, and its shape when its name alone
+    doesn't give it (the keys of a nested object, the values a choice allows, the kind of id a reference holds)."""
+    ref = next((m for m in info.metadata if isinstance(m, RefTo)), None)
+    shape = f"{ref.kind} id" if ref is not None else _shape(info.annotation, depth)
+    return f"{name}{'' if info.is_required() else '?'}" + (f": {shape}" if shape else "")
+
+
+#: What an item of a list of plain values is called in the reference.
+_PLAIN: dict[Any, str] = {str: "text", int: "number", float: "number", bool: "true or false", date: "date"}
+
+
+def _shape(annotation: Any, depth: int = 0) -> str | None:
+    """The shape of a value for the reference, or None when the field's name says enough (text, numbers, dates)."""
+    origin = get_origin(annotation)
+    if origin is Annotated:
+        base, *marks = get_args(annotation)
+        ref = next((m for m in marks if isinstance(m, RefTo)), None)
+        return f"{ref.kind} id" if ref is not None else _shape(base, depth)
+    if origin in (Union, types.UnionType):
+        options = [a for a in get_args(annotation) if a is not type(None)]
+        return _shape(options[0], depth) if len(options) == 1 else None
+    if origin is Literal:
+        return " | ".join(json.dumps(value) for value in get_args(annotation))
+    if origin in (list, tuple, set, frozenset):
+        inner = get_args(annotation)[0] if get_args(annotation) else Any
+        return f"[{_shape(inner, depth) or _PLAIN.get(inner, 'value')}]"
+    if origin is dict or annotation is dict:
+        return "{field: value}"
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        if depth >= 2:
+            return "{...}"
+        keys = [_field_line(info.alias or key, info, depth + 1) for key, info in annotation.model_fields.items()]
+        return "{" + ", ".join(keys) + "}"
+    return None
+
+
 def reference_for(op_names: list[str], registry: dict | None = None, invariants: dict | None = None) -> str:
     """A readable op reference for the prompt: each op, what it's for and its fields, with the one-line constraint of
     each invariant that applies to it under it. Constraints that apply to every op follow the list once."""
@@ -1073,8 +1112,7 @@ def reference_for(op_names: list[str], registry: dict | None = None, invariants:
         for key, info in model.model_fields.items():
             if key in ("op", "group"):
                 continue
-            required = info.is_required()
-            fields.append(f"{key}{'' if required else '?'}")
+            fields.append(_field_line(info.alias or key, info))
         doc = (model.__doc__ or "").strip()
         lines.append(f'- "{name}": {doc} Fields: {", ".join(fields)}.')
         lines += [f"  Always checked: {line}" for line in shipped.lines_for(name, known)]
