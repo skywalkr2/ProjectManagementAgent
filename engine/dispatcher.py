@@ -1211,10 +1211,8 @@ def signal(
             made = tx.get("changeset", changeset)
             run = made.data.get("run") if made is not None else None
         data = {"kind": kind, "refs": refs, "changeset": changeset, "run": run, "note": note, "at": now.isoformat()}
-        signal_id = tx.create("signal", data, _PM).id
         record_named(tx, run, refs)  # a correction that names a rule counts it as applied on the run it corrects
-        learn.on_signal(tx, store.plugins.cfg, signal_id, now)  # and each one that teaches queues its learning
-        return signal_id
+        return learn.record(tx, store.plugins.cfg, data, _PM, now)  # and each one that teaches queues its learning
 
 
 def undo_changeset(store: Store, changeset_id: str, indices: list[int] | None = None):

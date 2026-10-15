@@ -939,6 +939,15 @@ yet follow, that it is *designed*, with its phase.
 | "Change this" and the question menu (6.8, 7.18) | Routes only | "Change this" in the menu of an action, question, decision, calendar entry of the app's own and a fact (on its page); a question's menu has Reword, Ask someone else, Drop and Already sent. Built: `web/src/components/ChangeThis.test.tsx`, `web/src/components/TodayBoard.test.tsx` |
 | Which knowledge shaped this (6.20, 7.18) | `applied` and `first_on_account` kept, not shown | The changes view carries both; the card shows "Because you told me: ..." linked to the entry, with This doesn't apply here (leave a project out, or retire; at once with Undo), and "First run on ..." for a stand-in account. Built: `web/src/components/WhatChangedLearning.test.tsx`, `tests/test_learned_lines.py::test_the_changes_view_carries_what_a_run_applied_and_the_account_it_first_ran_on` |
 
+## 60. L3 finish: the assistant holds and drops, folding an unowned action, every correction teaches (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Ops (6.8) | "Change this" asked for a hold or a drop the assistant couldn't make | `action.hold`, `action.drop` (status `dropped`, `dropped_reason`), and the assistant's `question.drop`, each with evidence and Undo; only the person's own drop records `dropped`. Built: `tests/test_hold_drop_fold.py` |
+| Pick an owner (6.9) | The nearest action was offered but couldn't be used | Fold: `POST /api/changesets/{cs_id}/ops/{index}/fold`, one change with Undo, `held_declined` |
+| Signals (6.20) | Question corrections never queued learning | Every signal is written through `learn.record`, which queues learning |
+| Screens (7.18) | No Drop on an action | Drop with a reason and Undo on action rows; "Add to …" on the held item |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

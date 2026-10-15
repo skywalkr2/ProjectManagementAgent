@@ -392,3 +392,39 @@ def test_the_fold_route_folds_with_undo_and_the_held_item_carries_the_action_to_
     assert done.status_code == 200 and data(store, "action", held)["status"] == "dropped"
     assert client.post(f"/api/changesets/{done.json()['changeset']}/undo", json={}).status_code == 200
     assert data(store, "action", held)["status"] == "held"
+
+
+def test_every_correction_the_person_makes_here_queues_what_the_assistant_learns_from_it(env):
+    from engine.learn import learn_request
+
+    _, cfg, store = env
+    made = {
+        "op": "action.add",
+        "text": "Book the caterer",
+        "owners": [other_of(cfg)],
+        "evidence": {"quote": "Notes for the item."},
+    }
+    _, _, action_id = made_by_a_run(env, made, "action")
+    apply_as_person(store, cfg, [{"op": "action.drop", "id": action_id, "reason": "Not needed"}], "Drop")
+    _, _, mine = asked_by_a_run(env, decision_op(cfg))
+    apply_as_person(store, cfg, [{"op": "question.update", "id": mine, "text": "Which room do we book?"}], "Reword")
+    near, _, _, cs_id = with_a_near_action(env)
+    fold_unowned(store, cfg, cs_id, 0, near, store.read().get("action", near).version)
+    view = store.read()
+    for kind in ("dropped", "reworded", "held_declined"):
+        (signal,) = [s for s in view.list("signal") if s.data["kind"] == kind]
+        assert learn_request(view, signal.id) is not None, f"a {kind} correction queued no learning"
+
+
+def test_signals_are_written_only_through_the_one_place_that_queues_their_learning():
+    import re
+
+    root = Path(__file__).resolve().parents[1]
+    writes = re.compile(r'create\(\s*"signal"')
+    writers = sorted(
+        str(path.relative_to(root))
+        for folder in ("engine", "api")
+        for path in (root / folder).rglob("*.py")
+        if writes.search(path.read_text(encoding="utf-8"))
+    )
+    assert writers == ["engine/learn.py"], writers

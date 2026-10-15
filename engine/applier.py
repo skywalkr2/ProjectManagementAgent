@@ -1401,8 +1401,9 @@ def _correct_question(tx: Tx, op: OpModel, ctx: Context, w: WriteContext) -> lis
     tx.update("question", qid, changes, w, read_version=cur.version)
     # A drop the assistant proposes is its own work, not a correction; only the person's own drop is one.
     if kind is not None and (kind != "dropped" or ctx.actor == "pm"):
-        tx.create(
-            "signal",
+        learn.record(
+            tx,
+            ctx.cfg,
             {
                 "kind": kind,
                 "refs": refs,
@@ -1412,6 +1413,7 @@ def _correct_question(tx: Tx, op: OpModel, ctx: Context, w: WriteContext) -> lis
                 "at": ctx.store.clock(),
             },
             WriteContext(actor="pm", trust="trusted", op=kind),
+            ctx.store.clock(),
         )
     return [{"kind": "question", "id": qid}]
 
@@ -1420,8 +1422,9 @@ def _record_dropped(tx: Tx, ctx: Context, kind: str, record_id: str, reason: str
     """The person's own drop of something the assistant may have made: a `dropped` signal naming it and, when the
     assistant made it, the changeset and run. It is written apart from the change, so Undo leaves it as it was."""
     changeset, run = _made_by(tx, kind, record_id)
-    tx.create(
-        "signal",
+    learn.record(
+        tx,
+        ctx.cfg,
         {
             "kind": "dropped",
             "refs": [record_id],
@@ -1431,6 +1434,7 @@ def _record_dropped(tx: Tx, ctx: Context, kind: str, record_id: str, reason: str
             "at": ctx.store.clock(),
         },
         WriteContext(actor="pm", trust="trusted", op="dropped"),
+        ctx.store.clock(),
     )
 
 
@@ -1711,8 +1715,9 @@ def fold_unowned(
         reason = words.folded_reason.format(text=target.data["text"])
         tx.update("action", held_id, {"status": "dropped", "dropped_reason": reason}, w, read_version=held.version)
         tx.update("question", qid, {"status": "dropped", "dropped_reason": reason}, w, read_version=question.version)
-        tx.create(
-            "signal",
+        learn.record(
+            tx,
+            store.plugins.cfg,
             {
                 "kind": "held_declined",
                 "refs": [changeset_id, held_id, into],
@@ -1722,6 +1727,7 @@ def fold_unowned(
                 "at": now.isoformat(),
             },
             WriteContext(actor="pm", trust="trusted", op="held_declined"),
+            now,
         )
         records = [{"kind": "action", "id": held_id}, {"kind": "action", "id": into}, {"kind": "question", "id": qid}]
         done = OpOutcome(0, {"op": FOLD_OP, "id": held_id, "into": into}, "applied", "op0", records=records)
@@ -1758,7 +1764,7 @@ def _record_routed(
         "note": name,
         "at": now.isoformat(),
     }
-    learn.on_signal(tx, cfg, tx.create("signal", data, w).id, now)
+    learn.record(tx, cfg, data, w, now)
 
 
 def _question_name(store: Store, qid: str) -> str | None:

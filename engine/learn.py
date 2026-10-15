@@ -110,6 +110,14 @@ def _names_set_aside(reader: Any, signal: Mapping[str, Any]) -> bool:
     return False
 
 
+def record(tx: Any, cfg: Any, data: dict[str, Any], write: Any, now: datetime | str) -> str:
+    """Write a correction's signal and queue what the assistant learns from it, in the same transaction. Every signal is
+    written through here, so no correction is recorded without its learning."""
+    signal_id = tx.create("signal", data, write).id
+    on_signal(tx, cfg, signal_id, _when(now))
+    return signal_id
+
+
 def on_signal(tx: Any, cfg: Any, signal_id: str, now: datetime) -> str | None:
     """Queue the learning for a correction that was just recorded, inside the transaction that recorded it. One that
     needs no wait is queued to run now. A silent one is queued with the time of the next batch as the reason it

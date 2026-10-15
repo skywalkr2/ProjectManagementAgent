@@ -726,10 +726,22 @@ is marked *designed*, with the phase.
   Undo. A dropped action has status `dropped` and a `dropped_reason`: it is never done, never credited to its owner, never
   chased, and leaves Today and the to-do list. The person can drop an action from its row menu too (a reason, Undo), which
   records a `dropped` signal when the assistant made it. An op the assistant applies records no signal; only the
-  person's own act is a correction. *Being built (L3).*
+  person's own act is a correction. Hold and drop are refused for an action that isn't open; a held action (waiting for
+  an owner) is folded, not dropped. **Built:** `tests/test_hold_drop_fold.py::test_action_hold_writes_what_the_persons_hold_writes_records_no_signal_and_undo_restores_it`,
+  `tests/test_hold_drop_fold.py::test_action_drop_is_never_done_or_credited_records_no_signal_and_undo_opens_it_again`,
+  `tests/test_hold_drop_fold.py::test_a_dropped_action_leaves_the_to_do_list_the_overdue_line_the_follow_ups_and_the_packets_open_list`,
+  `tests/test_hold_drop_fold.py::test_the_assistants_question_drop_needs_evidence_and_records_no_signal_while_the_persons_still_does`,
+  `tests/test_hold_drop_fold.py::test_reading_notes_is_offered_the_three_ops_and_a_change_this_note_for_a_hold_is_done_not_refused`.
 - **Folding an unowned action into the nearest one** (6.9): the held "Pick an owner" item offers the nearest open action;
   folding declines the held `action.add` and logs its text and evidence on that action, in one change with Undo, and
-  records `held_declined` with a note naming the action it went into. *Being built (L3).*
+  records `held_declined` with a note naming the action it went into. *As built,* the held item is an applied action with
+  status `held` and an owner question: folding sets it to `dropped` with the reason, drops the owner question, and appends
+  its text and quote to the target's notes (`language.messages.folded_note`, `folded_reason`). **Built:**
+  `tests/test_hold_drop_fold.py::test_folding_declines_the_held_action_logs_it_on_the_target_records_held_declined_and_undo_restores_both`,
+  `tests/test_hold_drop_fold.py::test_folding_is_refused_for_a_target_that_changed_is_closed_or_is_the_action_itself_or_one_that_has_an_owner`.
+- **Every correction queues its learning:** a signal is written only through `learn.record`, which queues what the
+  assistant learns from it in the same transaction. **Built:** `tests/test_hold_drop_fold.py::test_every_correction_the_person_makes_here_queues_what_the_assistant_learns_from_it`,
+  `tests/test_hold_drop_fold.py::test_signals_are_written_only_through_the_one_place_that_queues_their_learning`.
 - **One question per id, and a stake for anyone else's.** The lint `several-questions` (default `return`, and for a
   question or decision to the person too) fires on a text that holds `tuning.several_questions.minimum` (2) or more items of
   a numbered list that ask. `question-without-stake` (default `return`) fires on a `question.add` to anyone but the person

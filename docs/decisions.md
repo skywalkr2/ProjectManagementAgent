@@ -12,6 +12,9 @@ records a correction signal. A dropped action is never done or credited (product
 owner, so a drop must not look like a close). Folding a held unowned action into the nearest open one is one change
 with Undo. Also moved: the learning pairs and the switch check to L4, a project's "what the assistant knows" and
 "Overlaps with" to phase B. **Impact:** design 6.8, 6.9, 5.1 (action status); roadmap L3, L4, B. No change to scope.
+**Found while merging:** the person's question corrections (reword, drop, reroute) wrote their signals without
+queueing learning, so they never taught. Every signal is now written through one function that queues its learning,
+and a test keeps it the only writer.
 
 ## 2026-10-14: L3, third wave B: learning on the card and on Today, the choices made while building
 

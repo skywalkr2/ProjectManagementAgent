@@ -26,8 +26,7 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
   - the measures: the knowledge-used and repeat-correction rates, the missing-op list, checked backup accounts;
   - the screens: the Learned line, the Review and catch-up lists, the Knowledge screen, the rules review, "Because you
     told me".
-  - **Left in L3** (now being built): "Change this" asking for a hold or a drop, folding an unowned action into the
-    nearest one, queueing the catch-up's learning runs, skipping an unchecked backup account at run time, the send-back
+  - **Left in L3** (now being built): queueing the catch-up's learning runs, skipping an unchecked backup account at run time, the send-back
     packet carrying the item as it is now, and the reach in words on the Learned line.
   - Moved out of L3: the learning pairs and the switch check (L4), and a project's "what the assistant knows" and
     "Overlaps with" (phase B).
@@ -992,7 +991,7 @@ From L1:
   built with the `learn` task kinds (L3) and is tested there. *Built in L3:* `tests/test_learn_correction.py::test_the_learning_proposal_applies_on_a_command_line_agent_account`, and the switch check's knowledge round-trip: `tests/test_quality.py::test_the_account_check_gives_every_account_one_learning_call_and_a_proposal_the_app_accepts_passes`, `tests/test_quality.py::test_a_command_line_agent_account_takes_the_learning_round_trip_too`, `tests/test_quality.py::test_the_learning_round_trip_fails_saying_which_part_failed`.
 - [ ] The exclusions of a scope, shown in words on the Learned line.
 From the original designer's lessons of 2026-10-14:
-- [ ] **"Change this" on every row the assistant made** (lesson 4): action, question, decision, calendar entry and fact
+- [x] **"Change this" on every row the assistant made** (lesson 4): action, question, decision, calendar entry and fact
   each have a note on their row. The assistant rewords, re-dates, puts on hold, turns it into another kind (an action
   that is really a decision), splits or drops it as the note says, never marks it done unless the note says so, and each
   records a correction signal. Today only questions have "Respond to the assistant".
@@ -1000,7 +999,7 @@ From the original designer's lessons of 2026-10-14:
   item, and the notes prompt's rules (`tests/test_corrections.py::test_change_this_records_a_signal_and_queues_a_notes_request_whose_packet_carries_the_item_as_it_is_now`,
   `tests/test_corrections.py::test_change_this_route_queues_the_request_and_names_the_signal`). Left: the note box on each
   row (the screens), and an op for the assistant to put an action on hold or drop an item (a note asking for either gets an
-  answer that says it can't). *Built in L3 (engine and API):* `POST /api/items/{kind}/{id}/change` for the five kinds, with its signal and request (`tests/test_corrections.py`). *Built in L3 wave 3B (screens):* the note box in the menu of an action (Follow-ups, Today's to-do), a question or decision, a calendar entry of the app's own, and a fact's page, with the toast saying the assistant will look at it (`web/src/components/ChangeThis.test.tsx`, `web/src/components/TodayBoard.test.tsx`). Left: ops for putting an item on hold or dropping it, which the assistant has none of yet (the missing-op list).
+  answer that says it can't). *Built in L3 (engine and API):* `POST /api/items/{kind}/{id}/change` for the five kinds, with its signal and request (`tests/test_corrections.py`). *Built in L3 wave 3B (screens):* the note box in the menu of an action (Follow-ups, Today's to-do), a question or decision, a calendar entry of the app's own, and a fact's page, with the toast saying the assistant will look at it (`web/src/components/ChangeThis.test.tsx`, `web/src/components/TodayBoard.test.tsx`). The assistant's hold and drop: `tests/test_hold_drop_fold.py::test_reading_notes_is_offered_the_three_ops_and_a_change_this_note_for_a_hold_is_done_not_refused`, `tests/test_hold_drop_fold.py::test_action_drop_is_never_done_or_credited_records_no_signal_and_undo_opens_it_again`.
 - [ ] **The missing-op list** (lesson 2, design 6.13): every "no op can do this" in a run's result and every hand fix of
   the assistant's work, listed weekly on Quality, each becoming an op with its check and Undo or a recorded "the person
   does this". Checked against the code (2026-10-14), of the designer's six hand fixes: adding a person and logging a
@@ -1026,7 +1025,7 @@ From the original designer's lessons of 2026-10-14:
   questions that another tool wrote about an input are notes about the input, never passed on (the notes playbook).
   Built: the lint and its setting (`tests/test_corrections.py::test_several_questions_returns_a_question_or_decision_at_the_configured_number_and_not_below`),
   and the notes prompt's one-question rule. Left: the playbook entry about questions another tool wrote. Built: `tests/test_corrections.py::test_several_questions_returns_a_question_or_decision_at_the_configured_number_and_not_below`, `tests/test_corrections.py::test_a_question_to_someone_else_without_a_stake_is_returned_and_then_held_so_it_is_never_sent`. The notes prompt says questions another tool wrote are notes about the input.
-- [ ] **An action with no owner is held with a suggestion** (afternoon lesson 4): the held "Pick an owner" proposes an
+- [x] **An action with no owner is held with a suggestion** (afternoon lesson 4): the held "Pick an owner" proposes an
   owner and says why, from the workspace's routing entries, offers the nearest existing action to fold it into, and the
   unowned action stays visible until the owner is named, then is created at once. Before adding, the run looks for an
   existing record of the same case (the search round and `near-duplicate-action` already do this for actions).
@@ -1034,7 +1033,7 @@ From the original designer's lessons of 2026-10-14:
   (`tests/test_corrections.py::test_an_unowned_action_is_held_with_the_owner_a_routing_entry_suggests_and_why`,
   `tests/test_corrections.py::test_the_nearest_open_action_is_offered_to_fold_it_into_at_the_near_duplicate_setting`,
   `tests/test_corrections.py::test_the_owner_suggestion_is_in_todays_line_and_the_held_items_ask`). Left: folding the
-  held action into the nearest one in one step, and the screen's use of the fields. *Built in L3:* the suggestion and the nearest action on the held item (`tests/test_corrections.py::test_an_unowned_action_is_held_with_the_owner_a_routing_entry_suggests_and_why`, `tests/test_corrections.py::test_the_nearest_open_action_is_offered_to_fold_it_into_at_the_near_duplicate_setting`). Left: folding it into that action in one step, and its screen.
+  held action into the nearest one in one step, and the screen's use of the fields. *Built in L3:* the suggestion and the nearest action on the held item (`tests/test_corrections.py::test_an_unowned_action_is_held_with_the_owner_a_routing_entry_suggests_and_why`, `tests/test_corrections.py::test_the_nearest_open_action_is_offered_to_fold_it_into_at_the_near_duplicate_setting`). Folding it into that action in one step, with "Add to …" on the held item: `tests/test_hold_drop_fold.py::test_the_fold_route_folds_with_undo_and_the_held_item_carries_the_action_to_add_it_to`, `web/src/components/NoteBox.test.tsx`.
 - [x] **Glossary ops offered to reading notes** (afternoon audit): `glossary.add` exists (L1) with `confidence: unknown`,
   but notes runs aren't offered it yet; they are with the learning task kinds here, so an unknown system name can be
   recorded or marked unknown. Built: reading notes is offered `glossary.add` and no other knowledge op, and it applies as a

@@ -10,6 +10,14 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.71 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes; a plugin that reads actions sees one more status.
+
+- **Core ops:** `action.hold` (an action and what it waits for) and `action.drop` (an action and why it is no longer
+  needed); `question.drop` may now come from the assistant with evidence, and is offered to a person action too.
+- **Core records:** an action's status may be `dropped`, with `dropped_reason`; a dropped action is never done.
+
 ## What 0.3.70 changes
 
 Manifests stay `'>=0.3,<0.4'`. **A fix of a silent change in 0.3.64:** from 0.3.64 to 0.3.69 the store saved every
