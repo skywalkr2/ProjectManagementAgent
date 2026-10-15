@@ -2060,6 +2060,20 @@ Someone the input names who isn't on file yet. From outside content it waits for
 | `role` | str \| None | `None` | Their job or part in the work, if stated. |
 | `org` | str \| None | `None` | The organization they work for, if stated. |
 | `aliases` | list[str] | `[]` | Other names the input uses for them. |
+| `first_name` | str \| None | `None` | The name a greeting to them uses, if the input shows how they sign it. |
+
+### `person.contact`
+
+A way to reach a person that the input gives, such as a phone number or an address in their signature. It always waits for the person to confirm it, whoever proposes it: a detail from outside content would otherwise become a way to reach someone. Confirming sets the detail of that kind on the person, replacing one of the same kind. The kind is one of the contact kinds the workspace offers; evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `person` | str | required | The id of the person the detail belongs to. |
+| `kind` | str | required | What the detail is: one of the contact kinds listed in the request. |
+| `value` | str | required | The detail itself, as the input gives it. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that give it; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `project.add`
 
@@ -2073,6 +2087,8 @@ Start a new project, optionally inside another (a book in its series). A system 
 | `parent` | str \| None | `None` | The id of the project it belongs to, if any. |
 | `language` | str \| None | `None` | Its language tag, if it differs from its parent's or the workspace's. |
 | `children` | list[str] | `[]` | Ids of existing projects to move inside the new one (books into a new series), in the same op. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that name the project, when an input is where it came from. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `question.add`
 

@@ -1,0 +1,32 @@
+id: new-person-with-organization
+title: A new person with their organization is proposed for the person to add, never added unasked
+received: '2026-10-14'
+given_file: busy-portfolio.yaml
+pasted: |-
+  From: Tobias Wren
+
+  Riley Ashby from Harrowfield Couriers will drive the pallet audit by the 20th. Riley runs their depot.
+expect:
+- held: person.add
+  text_has:
+  - Riley Ashby
+  - Harrowfield Couriers
+- held: who-is
+  options: 0
+  count: 1
+forbid:
+- new_person: true
+stub_answer:
+  summary: One action for a person the workspace doesn't know, with the person and their organization proposed.
+  ops:
+  - op: person.add
+    full_name: Riley Ashby
+    org: Harrowfield Couriers
+    role: Depot manager
+  - op: action.add
+    text: Drive the pallet audit
+    owners:
+    - Riley Ashby
+    due: '2026-10-20'
+    evidence:
+      quote: Riley Ashby from Harrowfield Couriers will drive the pallet audit by the 20th

@@ -12,6 +12,7 @@ import { useSetAside } from "../lib/set-aside";
 import { useAfterSave } from "../lib/settings-save";
 import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
+import { ProjectProposalRow } from "./NextSteps";
 import { Because } from "./Because";
 import { LearnedLines } from "./Learned";
 import { FirstGoRow } from "./FirstGoRow";
@@ -342,9 +343,13 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?:
           {cs && cs.ops.length === 0 && !cs.summary.trim() && <p className="hint">{t("changes.nothing_done")}</p>}
           {cs && cs.ops.length > 0 && (
             <ul className="children" aria-label={tn("changes.did", cs.ops.length)}>
-              {cs.ops.map((op) => (
-                <OpRow key={op.index} op={op} cs={cs} source={item.source} />
-              ))}
+              {cs.ops.map((op) =>
+                op.op === "project.add" && op.status === "held" ? (
+                  <ProjectProposalRow key={op.index} op={op} changeset={cs.id} />
+                ) : (
+                  <OpRow key={op.index} op={op} cs={cs} source={item.source} />
+                ),
+              )}
             </ul>
           )}
           {sendingBack && cs && <SendBackForm cs={cs.id} onDone={() => setSendingBack(false)} />}

@@ -161,6 +161,12 @@ class WorkspaceFile(FileModel):
         "may set its own.",
     )
     plugins: PluginSettings = Field(default_factory=PluginSettings, description="Which plugins run in this workspace.")
+    contact_kinds: list[str] = Field(
+        default_factory=lambda: ["email", "phone", "address"],
+        description="The kinds of contact detail a person's record can hold, such as email or phone. A detail the "
+        "assistant finds in a signature is offered under one of these, and the person picks from them when adding "
+        "someone.",
+    )
     our_accounts: list[str] = Field(
         default_factory=list,
         description="The names the PM and this app use on watched sources, so changes by them read as ours.",
@@ -169,6 +175,16 @@ class WorkspaceFile(FileModel):
         False,
         description="Made-up example data: every screen says so, so nobody mistakes it for real work.",
     )
+
+    @field_validator("contact_kinds")
+    @classmethod
+    def _kinds_are_words(cls, value: list[str]) -> list[str]:
+        kinds = [" ".join(k.split()) for k in value]
+        if any(not k for k in kinds):
+            raise ValueError("a kind of contact detail can't be blank")
+        if len({k.casefold() for k in kinds}) != len(kinds):
+            raise ValueError("each kind of contact detail is listed once")
+        return kinds
 
     @field_validator("owner_format")
     @classmethod
@@ -966,6 +982,25 @@ class MessageSettings(ConfigModel):
         "Added to \u201c{text}\u201d instead",
         description="Why an action that was added to another one is closed as dropped: {text} is the action it "
         "went into.",
+    )
+    part_of_meaning: str = Field(
+        "A name for {project}.",
+        description="What the glossary entry says when the person tells the assistant that words it took for a new "
+        "project are a name for an existing one: {project} is that project's name.",
+    )
+    part_of_reason: str = Field(
+        "Filed under {project} instead",
+        description="Why a proposed project is set aside when the person says it is part of another: {project} is "
+        "the project the work went under.",
+    )
+    not_a_project_meaning: str = Field(
+        "Not a project.",
+        description="What the glossary entry says when the person tells the assistant that words it took for a "
+        "project are not one.",
+    )
+    not_a_project_reason: str = Field(
+        "You said this isn't a project",
+        description="Why a proposed project is set aside when the person says the words aren't a project.",
     )
     date_format: str = Field("%a, %b %d", description="How dates appear in messages (strftime codes).")
     date_time_format: str = Field(

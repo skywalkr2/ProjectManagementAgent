@@ -19,6 +19,10 @@ from api.schemas import (
     DroppedQuestionView,
     FoldIn,
     ListMergeIn,
+    NewPersonDone,
+    NewPersonIn,
+    NewPersonPrefillView,
+    PartOfIn,
     QuestionDropIn,
     QuestionRerouteIn,
     QuestionRewordIn,
@@ -29,6 +33,13 @@ from engine.config import Config
 from engine.corrections import CHANGEABLE, request_change
 from engine.intake import IntakeError
 from engine.names import People
+from engine.next_steps import (
+    NewPersonForm,
+    add_new_person,
+    file_under,
+    new_person_prefill,
+    not_a_project,
+)
 from engine.origin import origins
 from engine.storage import Store, StoreError
 from engine.worker import Events, Worker
@@ -88,6 +99,46 @@ def build_correction_router(ws: Workspace, cfg: Config, store: Store, events: Ev
         need("changeset", cs_id)
         need("action", body.into)
         done = guard(lambda: fold_unowned(store, cfg, cs_id, index, body.into, body.read_version))
+        events.changed()
+        return Applied(changeset=done)
+
+    @r.get("/questions/{qid}/new-person")
+    def new_person_form(qid: str) -> NewPersonPrefillView:
+        """What "Add a new person" starts with for a "Who is this?" question: the name as written and what the input
+        says about them."""
+        need("question", qid)
+        found = guard(lambda: new_person_prefill(store, cfg, ws, qid))
+        return NewPersonPrefillView(**vars(found))
+
+    @r.post("/questions/{qid}/new-person")
+    def new_person(qid: str, body: NewPersonIn) -> NewPersonDone:
+        """Answer a "Who is this?" question with a new person, saved as the person's own with Undo. An organization no
+        record has is added with them, the held items waiting on the name go ahead, and a routed correction is
+        recorded naming the new person. Undo the released items first, then the changes in `undo`."""
+        need("question", qid)
+        done = guard(lambda: add_new_person(store, cfg, ws, qid, NewPersonForm(**body.model_dump())))
+        events.changed()
+        return NewPersonDone(
+            person=done.person, name=done.name, undo=done.changesets, changeset=done.changeset, released=done.released
+        )
+
+    @r.post("/changesets/{cs_id}/ops/{index}/part-of")
+    def project_part_of(cs_id: str, index: int, body: PartOfIn) -> Applied:
+        """A project the assistant found is part of an existing one: the work of that change goes under it, the words
+        are kept as a glossary entry naming it, and the proposal is set aside, as one change with Undo. Records a
+        declined correction."""
+        need("changeset", cs_id)
+        need("project", body.project)
+        done = guard(lambda: file_under(store, cfg, cs_id, index, body.project))
+        events.changed()
+        return Applied(changeset=done)
+
+    @r.post("/changesets/{cs_id}/ops/{index}/not-a-project")
+    def project_not_a_project(cs_id: str, index: int) -> Applied:
+        """A project the assistant found isn't one: the proposal is set aside and the words are kept as a glossary
+        entry saying so, as one change with Undo. Records a declined correction."""
+        need("changeset", cs_id)
+        done = guard(lambda: not_a_project(store, cfg, cs_id, index))
         events.changed()
         return Applied(changeset=done)
 

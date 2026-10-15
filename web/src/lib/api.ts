@@ -107,6 +107,11 @@ export const api = {
   sendBack: (cs: string, note: string) => call<S["Requeued"]>("POST", `changesets/${id(cs)}/send-back`, { note }),
   release: (cs: string, index: number, person?: string) =>
     call<S["Ok"]>("POST", `changesets/${id(cs)}/ops/${index}/release`, { person: person ?? null }),
+  newPersonForm: (q: string) => call<S["NewPersonPrefillView"]>("GET", `questions/${id(q)}/new-person`),
+  addNewPerson: (q: string, body: S["NewPersonIn"]) => call<S["NewPersonDone"]>("POST", `questions/${id(q)}/new-person`, body),
+  projectPartOf: (cs: string, index: number, project: string) =>
+    call<S["Applied"]>("POST", `changesets/${id(cs)}/ops/${index}/part-of`, { project }),
+  notAProject: (cs: string, index: number) => call<S["Applied"]>("POST", `changesets/${id(cs)}/ops/${index}/not-a-project`),
   answer: (q: string, body: S["Answer"]) => call<S["Noted"]>("POST", `questions/${id(q)}/answer`, body),
   /** A note goes with the change only when there is one: with none, the request is the same as it always was. */
   actionStatus: (a: string, status: S["ActionState"]["status"], note?: string) =>

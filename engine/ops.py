@@ -318,6 +318,35 @@ class PersonAddOp(OpModel):
     role: str | None = Field(None, description="Their job or part in the work, if stated.")
     org: str | None = Field(None, description="The organization they work for, if stated.")
     aliases: list[str] = Field(default_factory=list, description="Other names the input uses for them.")
+    first_name: str | None = Field(
+        None, description="The name a greeting to them uses, if the input shows how they sign it."
+    )
+
+
+class PersonContactOp(OpModel):
+    """A way to reach a person that the input gives, such as a phone number or an address in their signature. It always
+    waits for the person to confirm it, whoever proposes it: a detail from outside content would otherwise become a way
+    to reach someone. Confirming sets the detail of that kind on the person, replacing one of the same kind. The kind is
+    one of the contact kinds the workspace offers; evidence is required."""
+
+    op: Literal["person.contact"] = "person.contact"
+    person: str = Field(description="The id of the person the detail belongs to.")
+    kind: str = Field(min_length=1, description="What the detail is: one of the contact kinds listed in the request.")
+    value: str = Field(min_length=1, max_length=300, description="The detail itself, as the input gives it.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that give it; required unless the person makes it."
+    )
+
+    @field_validator("value", mode="after")
+    @classmethod
+    def _one_line(cls, value: str) -> str:
+        text = " ".join(value.split())
+        if not text:
+            raise ValueError("name the detail")
+        return text
+
+    def describe(self) -> str | None:
+        return f"Add a {self.kind} for {self.person}"
 
 
 class RecordRef(BaseModel):
@@ -384,6 +413,9 @@ class ProjectAddOp(OpModel):
     children: list[str] = Field(
         default_factory=list,
         description="Ids of existing projects to move inside the new one (books into a new series), in the same op.",
+    )
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that name the project, when an input is where it came from."
     )
 
     def describe(self) -> str | None:
@@ -777,6 +809,7 @@ Op = Annotated[
     | QuestionDropOp
     | QuestionMarkSentOp
     | PersonAddOp
+    | PersonContactOp
     | StageMoveOp
     | RecordDeleteOp
     | FileAddOp
@@ -825,6 +858,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "question.drop": QuestionDropOp,
     "question.mark_sent": QuestionMarkSentOp,
     "person.add": PersonAddOp,
+    "person.contact": PersonContactOp,
     "stage.move": StageMoveOp,
     "record.delete": RecordDeleteOp,
     "file.add": FileAddOp,
@@ -906,6 +940,7 @@ NEEDS_EVIDENCE = {
     "action.drop",
     "question.drop",
     "question.done",
+    "person.contact",
 }
 #: Ops that need evidence from the assistant but not when the person makes them: their own act is not a claim from an
 #: input, so a person's action or screen may use them without a quote.

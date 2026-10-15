@@ -73,6 +73,15 @@ How to answer:
 - When the input names a date or a range of dates for something (a delivery window, a deadline, an appointment, a
   launch), also add an "event.add" beside the fact or action, with the same quoted words and the dates as the input
   gives them (a range's last day as "end").
+- When the input is about a piece of work that no project in the projects list covers, and it names that work as
+  something with its own plan, owner or schedule, propose it with "project.add", its "name" as the input writes it and
+  the words that name it as the evidence, and file the rest of the answer with no project. It waits for the PM, who may add it, say it is part of an existing
+  project, or say it is not a project at all. Never propose a project for a topic, a task, a product feature or a
+  passing mention, and never when a project in the list already goes by that name.
+- When an input's signature or body gives a way to reach a person who is in the people directory (a phone number, an
+  address, an email address), propose it with "person.contact": the person's id, the "kind" (one of: {{contact_kinds}}),
+  the "value" exactly as written, and the words as the evidence. Propose one only for a detail the person's record
+  doesn't have yet, and never for the PM. It always waits for the PM to confirm it.
 - The topic names the subject in a few plain words ("cover proof dates", "launch reading guest list"), never a
   greeting, a sender or a whole sentence.
 - If nothing in the input needs recording, answer with an empty "ops" list and say so in the summary.

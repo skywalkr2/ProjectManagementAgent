@@ -101,6 +101,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     # the core's learning runs on.
     values = {
         "assistant_name": cfg.workspace.assistant_name,
+        "contact_kinds": ", ".join(cfg.workspace.contact_kinds),
         "learning_from_input": render("notes-learning", {}, ws.root) if kind.name == "notes" and learns else "",
     }
     instructions = render(kind.prompt, values, ws.root, kind.prompt_file)

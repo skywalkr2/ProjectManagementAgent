@@ -5,6 +5,7 @@ import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { useWords } from "../lib/wording";
 import { NoteBox, useNoted } from "./NoteBox";
+import { NewPersonForm } from "./NextSteps";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu } from "./RowMenu";
 
@@ -27,6 +28,7 @@ export function AskChooser(props: {
   const chosen = people.data?.find((p) => p.id === person)?.name ?? "";
   const noted = useNoted();
   const [noting, setNoting] = useState(false);
+  const [adding, setAdding] = useState(false);
   const word = ask.about === "owner" ? t("ask.add_owner") : t("ask.use_person");
   const near = ask.about === "owner" && props.fold ? ask.suggestion : null;
   const foldInto = near?.fold_into && near.fold_version != null ? { id: near.fold_into, version: near.fold_version, text: near.fold_into_text ?? "" } : null;
@@ -57,6 +59,11 @@ export function AskChooser(props: {
         <button type="button" className="btn primary" data-key="primary" disabled={!person} onClick={() => void choose()}>
           {word}
         </button>
+        {ask.about === "held-op" && (
+          <button type="button" className="btn" aria-expanded={adding} onClick={() => setAdding((v) => !v)}>
+            {t("ask.add_person")}
+          </button>
+        )}
         {foldInto && (
           <button type="button" className="btn" onClick={fold}>
             {t("ask.fold", { action: foldInto.text })}
@@ -69,6 +76,7 @@ export function AskChooser(props: {
           ]}
         />
       </div>
+      {adding && <NewPersonForm question={ask.id} onClose={() => setAdding(false)} />}
       {noting && person && <NoteBox sends={[{ label: word, run: choose }]} onClose={() => setNoting(false)} />}
     </div>
   );

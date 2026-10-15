@@ -1,0 +1,30 @@
+id: signature-phone
+title: A phone number in a signature is offered for the sender's record, never added unasked
+received: '2026-10-09'
+pasted: |-
+  From: Maya Okafor <maya.okafor@example.org>
+  Subject: Jacket proofs
+
+  The jacket proofs look right to me.
+
+  --
+  Maya Okafor
+  Editor, Lantern House
+  555 0142
+expect:
+- held: person.contact
+  text_has:
+  - PER-2
+  - phone
+  - '555 0142'
+forbid:
+- op: person.contact
+stub_answer:
+  summary: The sender's signature gives a phone number.
+  ops:
+  - op: person.contact
+    person: PER-2
+    kind: phone
+    value: 555 0142
+    evidence:
+      quote: 555 0142

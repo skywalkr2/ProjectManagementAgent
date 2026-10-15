@@ -47,6 +47,7 @@ from engine.ops import (
     NoteOp,
     OpModel,
     PersonAddOp,
+    PersonContactOp,
     ProjectAddOp,
     QuestionAddOp,
     QuestionDoneOp,
@@ -309,6 +310,13 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                         why = parent_problem(view, op.id, op.value)
                         if why:
                             refuse(i, "targets", why)
+        if isinstance(op, PersonContactOp):
+            why = contact_problem(view, ctx.cfg, op)
+            if why:
+                refuse(i, "targets", why)
+            elif ctx.actor != "pm" and not ctx.confirmed_by_pm:
+                # Whoever proposes it, a way to reach someone waits for the person.
+                problems.append(Problem("contact-confirm", "hold", i, CONTACT_WAITS))
         if isinstance(op, ProjectAddOp):
             taken = {p.data["name"].strip().lower() for p in view.list("project")}
             if op.name.strip().lower() in taken:
@@ -429,12 +437,32 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             request = view.get("request", ctx.inputs.request)
             reported = request is not None and is_reported(_source_data(view, request))
             why = "comes from what someone else reported; needs your confirmation"
-            problems.append(
-                Problem(
-                    "tier", "hold", i, why if reported else "changes how the product behaves; needs your confirmation"
-                )
-            )
+            if isinstance(op, ProjectAddOp):
+                held = PROJECT_WAITS
+            else:
+                held = why if reported else "changes how the product behaves; needs your confirmation"
+            problems.append(Problem("tier", "hold", i, held))
     return problems
+
+
+#: Why a contact detail or a project the assistant found waits, as the held line says it.
+CONTACT_WAITS = "A way to reach someone waits for your confirmation."
+PROJECT_WAITS = "A project the workspace doesn't have yet: add it, or say where this belongs?"
+
+
+def contact_problem(view: Any, cfg: Config, op: PersonContactOp) -> str | None:
+    """Why a contact detail can't be set, or None: the person exists and the kind is one the workspace offers."""
+    if view.get("person", op.person) is None:
+        return f"there is no person {op.person}"
+    if contact_kind(cfg, op.kind) is None:
+        return f"{op.kind} isn't a kind of contact detail here; use one of: {', '.join(cfg.workspace.contact_kinds)}"
+    return None
+
+
+def contact_kind(cfg: Config, kind: str) -> str | None:
+    """The configured spelling of a kind of contact detail, matched ignoring case and spaces, or None."""
+    wanted = " ".join(kind.split()).casefold()
+    return next((k for k in cfg.workspace.contact_kinds if " ".join(k.split()).casefold() == wanted), None)
 
 
 def _from_pm(view: Any, ctx: Context) -> bool:
@@ -750,6 +778,10 @@ def _label(op: OpModel, view: Any = None, store: Store | None = None) -> str | N
     """An op's own one-line label. A plugin op's `describe` may take a read view, to name the records it changes."""
     import inspect
 
+    if isinstance(op, PersonContactOp) and view is not None:
+        found = view.get("person", op.person)
+        if found is not None:
+            return " ".join(f"Add {op.kind} for {found.data['full_name']}: {op.value}".split())[:200]
     try:
         takes_view = len(inspect.signature(op.describe).parameters) >= 1
         if takes_view and view is not None and store is not None and "/" in op.op:
@@ -1414,10 +1446,18 @@ def _apply_op(
         from engine.organizations import resolve
 
         org = resolve(tx, op.org, w)
-        made(
-            "person",
-            tx.create("person", {"full_name": op.full_name, "role": op.role, "org": org, "aliases": op.aliases}, w).id,
-        )
+        data = {"full_name": op.full_name, "role": op.role, "org": org, "aliases": op.aliases}
+        if op.first_name:
+            data["first_name"] = " ".join(op.first_name.split())
+        made("person", tx.create("person", data, w).id)
+    elif isinstance(op, PersonContactOp):
+        found = tx.get("person", op.person)
+        kind = contact_kind(ctx.cfg, op.kind)
+        if found is None or kind is None:
+            raise StoreError(contact_problem(tx, ctx.cfg, op) or "that contact detail can't be set")
+        reach = {**found.data.get("how_to_reach", {}), kind: op.value}
+        tx.update("person", op.person, {"how_to_reach": reach}, w, read_version=found.version)
+        made("person", op.person)
     return touched, None
 
 

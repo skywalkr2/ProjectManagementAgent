@@ -119,6 +119,47 @@ class FoldIn(BaseModel):
     read_version: int = Field(description="The version of that action as the person saw it.")
 
 
+class NewPersonIn(BaseModel):
+    """The form that answers a "Who is this?" question with a new person."""
+
+    full_name: str = Field(min_length=1, description="The person's full name.")
+    first_name: str | None = Field(None, description="The name a greeting to them uses, when it isn't the first word.")
+    org: str | None = Field(
+        None, description="The organization's name or id; a name no record has makes a new organization."
+    )
+    role: str | None = Field(None, description="Their job or part in the work.")
+    contact_kind: str | None = Field(
+        None, description="What kind of contact detail the value is, from the offered kinds."
+    )
+    contact_value: str | None = Field(None, description="A way to reach them, of that kind.")
+
+
+class NewPersonPrefillView(BaseModel):
+    """What the "Add a new person" form starts with, from the question and the input it came from."""
+
+    full_name: str = Field(description="The name as the input wrote it.")
+    first_name: str
+    org: str = Field(description="The organization the input gives, by name; empty when it gives none.")
+    role: str = Field(description="The role the input gives; empty when it gives none.")
+    contact_kind: str = Field(description="The kind of the detail the input gives for them; empty when none.")
+    contact_value: str = Field(description="The contact detail the input gives for them; empty when none.")
+    contact_kinds: list[str] = Field(description="The kinds of contact detail to pick from.")
+
+
+class NewPersonDone(BaseModel):
+    """A new person was added and the work waiting on the name went ahead."""
+
+    person: str = Field(description="The new person's id.")
+    name: str = Field(description="Their full name.")
+    undo: list[str] = Field(description="The changes that add them, newest first, to undo after the released items.")
+    changeset: str | None = Field(None, description="The change whose held items went ahead.")
+    released: list[int] = Field(description="The positions of the held items that went ahead.")
+
+
+class PartOfIn(BaseModel):
+    project: str = Field(min_length=1, description="The id of the project the held project is part of.")
+
+
 class QuestionSentIn(BaseModel):
     on: date | None = Field(None, description="The day the person sent it themselves; today when left out.")
 
@@ -328,6 +369,7 @@ class OpMeta(BaseModel):
     to: str | None = None
     field: str | None = None
     value: Any = None
+    name: str | None = Field(None, description="The name of what the op proposes to add, such as a project.")
 
 
 class OpView(BaseModel):

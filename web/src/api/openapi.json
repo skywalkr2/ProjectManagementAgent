@@ -5113,6 +5113,186 @@
         "title": "NetworkWait",
         "type": "object"
       },
+      "NewPersonDone": {
+        "description": "A new person was added and the work waiting on the name went ahead.",
+        "properties": {
+          "changeset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The change whose held items went ahead.",
+            "title": "Changeset"
+          },
+          "name": {
+            "description": "Their full name.",
+            "title": "Name",
+            "type": "string"
+          },
+          "person": {
+            "description": "The new person's id.",
+            "title": "Person",
+            "type": "string"
+          },
+          "released": {
+            "description": "The positions of the held items that went ahead.",
+            "items": {
+              "type": "integer"
+            },
+            "title": "Released",
+            "type": "array"
+          },
+          "undo": {
+            "description": "The changes that add them, newest first, to undo after the released items.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Undo",
+            "type": "array"
+          }
+        },
+        "required": [
+          "person",
+          "name",
+          "undo",
+          "released"
+        ],
+        "title": "NewPersonDone",
+        "type": "object"
+      },
+      "NewPersonIn": {
+        "description": "The form that answers a \"Who is this?\" question with a new person.",
+        "properties": {
+          "contact_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What kind of contact detail the value is, from the offered kinds.",
+            "title": "Contact Kind"
+          },
+          "contact_value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A way to reach them, of that kind.",
+            "title": "Contact Value"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name a greeting to them uses, when it isn't the first word.",
+            "title": "First Name"
+          },
+          "full_name": {
+            "description": "The person's full name.",
+            "minLength": 1,
+            "title": "Full Name",
+            "type": "string"
+          },
+          "org": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The organization's name or id; a name no record has makes a new organization.",
+            "title": "Org"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Their job or part in the work.",
+            "title": "Role"
+          }
+        },
+        "required": [
+          "full_name"
+        ],
+        "title": "NewPersonIn",
+        "type": "object"
+      },
+      "NewPersonPrefillView": {
+        "description": "What the \"Add a new person\" form starts with, from the question and the input it came from.",
+        "properties": {
+          "contact_kind": {
+            "description": "The kind of the detail the input gives for them; empty when none.",
+            "title": "Contact Kind",
+            "type": "string"
+          },
+          "contact_kinds": {
+            "description": "The kinds of contact detail to pick from.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Contact Kinds",
+            "type": "array"
+          },
+          "contact_value": {
+            "description": "The contact detail the input gives for them; empty when none.",
+            "title": "Contact Value",
+            "type": "string"
+          },
+          "first_name": {
+            "title": "First Name",
+            "type": "string"
+          },
+          "full_name": {
+            "description": "The name as the input wrote it.",
+            "title": "Full Name",
+            "type": "string"
+          },
+          "org": {
+            "description": "The organization the input gives, by name; empty when it gives none.",
+            "title": "Org",
+            "type": "string"
+          },
+          "role": {
+            "description": "The role the input gives; empty when it gives none.",
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "full_name",
+          "first_name",
+          "org",
+          "role",
+          "contact_kind",
+          "contact_value",
+          "contact_kinds"
+        ],
+        "title": "NewPersonPrefillView",
+        "type": "object"
+      },
       "NoteIn": {
         "properties": {
           "note": {
@@ -5260,6 +5440,18 @@
               }
             ],
             "title": "Field"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of what the op proposes to add, such as a project.",
+            "title": "Name"
           },
           "owners": {
             "default": [],
@@ -6472,6 +6664,21 @@
           "row_actions"
         ],
         "title": "PanelView",
+        "type": "object"
+      },
+      "PartOfIn": {
+        "properties": {
+          "project": {
+            "description": "The id of the project the held project is part of.",
+            "minLength": 1,
+            "title": "Project",
+            "type": "string"
+          }
+        },
+        "required": [
+          "project"
+        ],
+        "title": "PartOfIn",
         "type": "object"
       },
       "PersonActionView": {
@@ -13140,6 +13347,114 @@
         "summary": "Fold"
       }
     },
+    "/api/changesets/{cs_id}/ops/{index}/not-a-project": {
+      "post": {
+        "description": "A project the assistant found isn't one: the proposal is set aside and the words are kept as a glossary\nentry saying so, as one change with Undo. Records a declined correction.",
+        "operationId": "project_not_a_project_api_changesets__cs_id__ops__index__not_a_project_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Not A Project"
+      }
+    },
+    "/api/changesets/{cs_id}/ops/{index}/part-of": {
+      "post": {
+        "description": "A project the assistant found is part of an existing one: the work of that change goes under it, the words\nare kept as a glossary entry naming it, and the proposal is set aside, as one change with Undo. Records a\ndeclined correction.",
+        "operationId": "project_part_of_api_changesets__cs_id__ops__index__part_of_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartOfIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Part Of"
+      }
+    },
     "/api/changesets/{cs_id}/ops/{index}/release": {
       "post": {
         "operationId": "release_op_api_changesets__cs_id__ops__index__release_post",
@@ -16536,6 +16851,94 @@
           }
         },
         "summary": "Drop"
+      }
+    },
+    "/api/questions/{qid}/new-person": {
+      "get": {
+        "description": "What \"Add a new person\" starts with for a \"Who is this?\" question: the name as written and what the input\nsays about them.",
+        "operationId": "new_person_form_api_questions__qid__new_person_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "qid",
+            "required": true,
+            "schema": {
+              "title": "Qid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewPersonPrefillView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "New Person Form"
+      },
+      "post": {
+        "description": "Answer a \"Who is this?\" question with a new person, saved as the person's own with Undo. An organization no\nrecord has is added with them, the held items waiting on the name go ahead, and a routed correction is\nrecorded naming the new person. Undo the released items first, then the changes in `undo`.",
+        "operationId": "new_person_api_questions__qid__new_person_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "qid",
+            "required": true,
+            "schema": {
+              "title": "Qid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPersonIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NewPersonDone"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "New Person"
       }
     },
     "/api/questions/{qid}/pick-owner": {

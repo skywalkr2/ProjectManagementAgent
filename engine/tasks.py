@@ -17,16 +17,15 @@ from engine.ops import KNOWLEDGE_OPS, OP_MODELS, PERSON_ONLY_OPS
 #: the person's own.
 OFFERED_TO_NOTES = frozenset({"glossary.add", "routing.add"})
 
-#: Core ops reading notes never offers: deleting is the person's call, file.add is made only by person actions,
-#: starting projects is for actions and plugin work, the ops only the person makes are theirs alone, and the ops that
-#: keep what the assistant learned belong to the work that learns (design 6.22), except the one in `OFFERED_TO_NOTES`.
+#: Core ops reading notes never offers: deleting is the person's call, file.add is made only by person actions, the
+#: ops only the person makes are theirs alone, and the ops that keep what the assistant learned belong to the work that
+#: learns (design 6.22), except the ones in `OFFERED_TO_NOTES`.
 NOT_FROM_NOTES = (
     (KNOWLEDGE_OPS - OFFERED_TO_NOTES)
     | PERSON_ONLY_OPS
     | {
         "record.delete",
         "file.add",
-        "project.add",
         "text.propose",
         "text.draft",
         "answer",
@@ -34,6 +33,9 @@ NOT_FROM_NOTES = (
         "report.draft",
     }
 )
+#: Ops reading notes is offered that an ask is not: a project the input names, which waits for the person as a
+#: system op, and a contact detail from a signature, which always waits.
+NOTES_ONLY = frozenset({"project.add", "person.contact"})
 #: What an ask may do besides what reading notes does: answer, suggest a setting, draft a report to the maintainers.
 ASK_OPS = ("answer", "setting.propose", "report.draft")
 #: What learning from a correction may propose (design 6.22): one entry to keep, or a change to a lesson that should
@@ -102,7 +104,7 @@ TASKS: dict[str, TaskKind] = {
     # A question from the PM about the app or the workspace (design 6.25), answered from the material it is given.
     "ask": TaskKind(
         name="ask",
-        ops=(*ASK_OPS, *(n for n in OP_MODELS if n not in NOT_FROM_NOTES | OFFERED_TO_NOTES)),
+        ops=(*ASK_OPS, *(n for n in OP_MODELS if n not in NOT_FROM_NOTES | OFFERED_TO_NOTES | NOTES_ONLY)),
         prompt="ask",
         playbook="notes",
         label="Ask",

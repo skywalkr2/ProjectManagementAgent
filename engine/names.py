@@ -63,6 +63,28 @@ def header_entries(text: str) -> list[str]:
     return entries
 
 
+def input_entries(store: Store, request_id: str, text: str) -> list[str]:
+    """The people an input says it is from and to, each as written: the header lines of its text, then the saved sender
+    and participants of a watched message."""
+    view = store.read()
+    request = view.get("request", request_id)
+    if request is None:
+        return []
+    source = view.get("source", request.data["source"]) if request.data.get("source") else None
+    entries = header_entries(text)
+    watched = source.data.get("watched") if source is not None else None
+    if watched:
+        snapshot = next(iter(view.find("snapshot", {"source": watched["source"], "key": watched["key"]})), None)
+        message = (snapshot.data.get("message") if snapshot is not None else None) or {}
+        entries += [e for e in [message.get("sender"), *message.get("participants", [])] if e]
+    return entries
+
+
+def entry_parts(entry: str) -> tuple[str, str]:
+    """A header entry as (name, address): `Name <address>`, an address alone, or a name alone."""
+    return _parts(entry)
+
+
 def _parts(entry: str) -> tuple[str, str]:
     """A header entry as (name, address): `Name <address>`, an address alone, or a name alone."""
     label, address = parseaddr(entry) if "<" in entry or "@" in entry else ("", "")
@@ -224,13 +246,7 @@ class People:
         if request is None:
             return frozenset()
         source = view.get("source", request.data["source"]) if request.data.get("source") else None
-        entries = header_entries(text)
-        watched = source.data.get("watched") if source is not None else None
-        if watched:
-            snapshot = next(iter(view.find("snapshot", {"source": watched["source"], "key": watched["key"]})), None)
-            message = (snapshot.data.get("message") if snapshot is not None else None) or {}
-            entries += [e for e in [message.get("sender"), *message.get("participants", [])] if e]
-        found = self.match_entries(entries)
+        found = self.match_entries(input_entries(store, request_id, text))
         projects = {request.data.get("project"), *(source.data.get("projects", []) if source is not None else [])}
         for project_id in projects - {None}:
             project = view.get("project", project_id)

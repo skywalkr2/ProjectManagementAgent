@@ -1964,6 +1964,8 @@ def _op_view(
     if op["op"] == "record.set":
         meta["field"] = op["field"]
         meta["value"] = op["value"]
+    if op["op"] == "project.add":
+        meta["name"] = op["name"]
     evidence = op.get("evidence")
     return OpView(
         index=o["index"],
