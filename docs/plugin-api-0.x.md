@@ -10,6 +10,14 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.72 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.
+
+- **Core op:** `action.unhold` (an action and the words saying its wait is over).
+- **Core lint:** `unnamed-recipient`.
+- `ref_fields` is worked out once per model class (faster; no change for callers).
+
 ## What 0.3.71 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes; a plugin that reads actions sees one more status.

@@ -1150,18 +1150,24 @@ around. Each is the person's choice, with Undo, and each answer is learned (L3).
   project" beside it. Reading notes may then propose `project.add`, which waits for the person as a system op (design
   6.7). Today reading notes can't propose a project at all (`NOT_FROM_NOTES`), so the work is filed with no project.
   "Part of" and "Not a project" are learned as names for the project, or as words that aren't one.
-- [ ] **Dates go under their project:** a date for something becomes a dated entry in the app's calendar under its
-  project (L0, `event.add`), and a milestone in that project's plan when the project management pack is on (C2).
+- [x] **Dates go under their project:** a date for something becomes a dated entry in the app's calendar under its
+  project (L0, `event.add`), and a milestone in that project's plan when the project management pack is on (C2). Built: `tests/test_obvious_steps_f.py::test_an_entry_made_from_an_input_the_person_filed_under_a_project_carries_that_project`.
+  Moved to C2: the milestone in the plan (the pack's plan item).
 - [ ] **The rest of the obvious set,** each the same way:
   - an organization it hasn't heard of is added with the person;
   - an address or phone number in a sender's signature is offered for their record;
-  - an action with a date in the input gets that due date;
-  - a reply that answers an open question proposes marking it answered;
-  - a meeting invitation shows on the agenda, under its project.
-  - an input saying a blocker is gone proposes unblocking the action that waited on it.
-- [ ] **Don't guess who something was sent to** (the original designer's lessons from running, 2026-10-13): when the person reports something they already sent or asked and
+  - an action with a date in the input gets that due date (built: the golden case `relative-due-date`);
+  - a reply that answers an open question proposes marking it answered (built: the golden cases `answer-question`,
+    `partial-answer`);
+  - a meeting invitation shows on the agenda, under its project (built: the golden case `invitation-event`);
+  - an input saying a blocker is gone proposes unblocking the action that waited on it (built: `action.unhold` and the
+    golden case `blocker-gone-unhold`, `tests/test_obvious_steps_f.py::test_action_unhold_takes_the_action_off_hold_as_data_and_undo_puts_the_hold_back`);
+  - the person's own edit in a watched source closes the action it fulfils (built: the packet marks an edit by one of the
+    person's accounts, and the golden case `own-edit-closes-action`).
+- [x] **Don't guess who something was sent to** (the original designer's lessons from running, 2026-10-13): when the person reports something they already sent or asked and
   doesn't name the recipient, that is a "who did you send this to?" decision, never inferred from the nearest name. A
-  golden case.
+  golden case. Built: the golden case `sent-without-recipient` and the lint `unnamed-recipient` (default `return`,
+  phrases in `language.already_sent_phrases`): `tests/test_obvious_steps_f.py::test_a_question_or_action_naming_a_recipient_nobody_gave_is_returned`.
 - [ ] **Exit check:** a golden-set case for each kind and a learning pair for each answer kind (the second time, no
   question). A journey test presses each button and sees the record made and Undo work.
 
@@ -1450,7 +1456,8 @@ being done, builds schedules and tracks action items.
   - [ ] **The files a project manager hands around** (owner, 2026-10-13: "PPTs, excels, etc"): slide decks, spreadsheets
     (schedules, trackers, budgets) and documents, built from the records in the person's template and saved or shared
     through the core's publisher after the person approves the exact file (C4).
-  - [ ] **The plan:** goals, phases, deliverables and milestones.
+  - [ ] **The plan:** goals, phases, deliverables and milestones; a date the core files as a calendar entry under a project
+    becomes a milestone in that project's plan (moved from L3b).
   - [ ] **The schedule:** work items with durations and dependencies, a critical path, dates worked out from the
     dependencies, baselines, and slips against them. Only the person rebaselines.
   - [ ] **Building it with the assistant:** from a brief, notes or another pack's milestones, the assistant drafts a

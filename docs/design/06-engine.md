@@ -528,7 +528,11 @@ How each is recorded (decided 2026-10-15; *being built, L3b*):
   gets it as `due`; **a meeting invitation** is an `event.add` under its project; **the person's own edit** in a watched
   source they author that does what one of their open actions asks closes it (`action.close`) with Undo; **something the
   person says they sent without naming to whom** is a decision to the person ("Who did you send this to?"), never a
-  guess from the nearest name. Each has a golden case.
+  guess from the nearest name. Each has a golden case. *As built* (F): `action.unhold`; a watched input from one of the
+  person's own accounts carries `by_us="yes"` on its outside-content block (still untrusted); an `event.add` with no
+  project takes the request's project, else the source's only one; the lint `unnamed-recipient` (default `return`)
+  returns a question or action naming a recipient the input never gave when the input says something was already sent
+  (`language.already_sent_phrases`). **Built:** `tests/test_obvious_steps_f.py`.
 
 `event.add` (data tier, offered to reading notes) adds a calendar entry to the app's own calendar: a title, a start (a
 day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, and
