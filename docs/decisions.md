@@ -3,6 +3,16 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: L5, what the extractors and backup encryption use
+
+**Decided by:** the technical PM, before building L5 (the owner: finish the L phases, then the UI). **What:** documents,
+spreadsheets and presentations are read with the standard library (they are zipped XML); PDFs with one pure-Python
+library (`pypdf`), so nothing outside Python is installed. Each extractor checks itself at startup on a small fixture and
+a failure is a Today line. Backups are encrypted with the `cryptography` library when `storage.backups.encrypt` names a
+key reference (`env:` or `file:`): every backup copy is then encrypted, restoring asks for the key, and the setting's
+description and the backup screen say that a lost key means a backup that can't be read. **Impact:** design 4.15, 6.2,
+12.1; roadmap L5; two dependencies. No change to scope.
+
 ## 2026-10-15: L3b, how each obvious next step is recorded
 
 **Decided by:** the technical PM, before building L3b. **What:** "Add a new person" answers the routing question with a
