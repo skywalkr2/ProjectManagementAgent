@@ -1235,6 +1235,9 @@ class Note(Record):
 
     text: str = Field(min_length=1, description="What was kept.")
     project: str | None = Field(None, description="The id of the project it is about, if any.")
+    question: Annotated[str | None, RefTo("question")] = Field(
+        None, description="The id of the question it adds to, if any: what an input says about a question."
+    )
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     trust: Literal["trusted", "untrusted"] = Field(
         "trusted", description="untrusted when it came from outside content."
@@ -1644,7 +1647,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     ],
     "signal": [("run", "run"), ("changeset", "changeset")],
     "event": [("project", "project"), ("source", "source")],
-    "note": [("project", "project"), ("source", "source")],
+    "note": [("project", "project"), ("question", "question"), ("source", "source")],
     "lesson": [*KNOWLEDGE_REFERENCES, ("signal", "signal")],
     "glossary_entry": [*KNOWLEDGE_REFERENCES, ("project", "project")],
     "routing_entry": [*KNOWLEDGE_REFERENCES, ("person", "person"), ("team", "team")],

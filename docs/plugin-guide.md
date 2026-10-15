@@ -1378,6 +1378,7 @@ Something kept from an input that is not a fact, action or question. Added by `n
 |---|---|---|---|
 | `text` | str | required | What was kept. |
 | `project` | str \| None | `None` | The id of the project it is about, if any. |
+| `question` | str \| None | `None` | The id of the question it adds to, if any: what an input says about a question. |
 | `source` | str \| None | `None` | The id of the source it came from, if any. |
 | `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
 
@@ -2084,6 +2085,7 @@ Keep something from the input that isn't a fact, action or question. Creates a n
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `text` | str | required | What to keep. |
 | `project` | str \| None | `None` | Project id, if the note is about one. |
+| `question` | str \| None | `None` | The id of the open question it adds to, when the input says more about one. |
 
 ### `person.add`
 

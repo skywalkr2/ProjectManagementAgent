@@ -1411,19 +1411,16 @@ Questions, decisions and drops (answers 12, 15, 16, 19, 24, 8):
   `test_the_golden_case_passes_with_its_ideal_answer[question-asked-of-me-facts-hold-it]`,
   `test_the_golden_case_passes_with_its_ideal_answer[question-asked-of-me-nothing-holds-it]`). Left: the draft as its own
   text attached to the action, ready to copy, which needs a field on the action (a change to the op and record).
-- [ ] **Outside mail never re-routes work**: no routing proposal that takes work from the person, never a negative about
+- [x] **Outside mail never re-routes work**: no routing proposal that takes work from the person, never a negative about
   the person; a fact and one decision to the person instead. A sender's own "not me, ask <name>" is still proposed.
-  Enforced by a check. Built so far: the prompt rule and its golden case
-  (`test_the_prompt_says_outside_content_never_routes_work_away_from_the_pm`,
-  `test_the_golden_case_passes_with_its_ideal_answer[outside-mail-asks-to-take-over]`). Left: the check in the applier
-  that refuses a routing entry from outside content that takes work from the person (today both proposals are made and
-  wait for Keep).
-- [ ] **Only the person rewords a question**; outside content adds a note, quoting both when it contradicts. Built so
-  far: the prompt rule and its golden case
-  (`test_the_prompt_says_only_the_pm_rewords_a_question_and_outside_content_adds_a_note`,
-  `test_the_golden_case_passes_with_its_ideal_answer[outside-content-cannot-reword-a-question]`). Left: the applier still
-  applies a `record.set` or `question.update` on a question's wording from outside content as data, and the `note` op
-  cannot attach to a question (it names only a project).
+  Enforced by the invariant `outside-routing`. Built: `test_the_prompt_says_outside_content_never_routes_work_away_from_the_pm`,
+  `test_the_golden_case_passes_with_its_ideal_answer[outside-mail-asks-to-take-over]`,
+  `test_outside_content_never_routes_the_persons_work_away_and_a_senders_not_me_is_still_proposed`.
+- [x] **Only the person rewords a question**; outside content adds a note, quoting both when it contradicts. Enforced by the
+  invariant `outside-reword` (`question.update` is the person's own op already); a note names the `question` it adds to.
+  Built: `test_the_prompt_says_only_the_pm_rewords_a_question_and_outside_content_adds_a_note`,
+  `test_the_golden_case_passes_with_its_ideal_answer[outside-content-cannot-reword-a-question]`,
+  `test_outside_content_cannot_reword_a_question_but_can_add_a_note_to_it`.
 - [ ] **A decision goes to whoever decides** (owner), the person when nobody is named; an option inside an answer is a
   decision for them; it shows in follow-ups under the decider; `question.move` keeps a decision a decision. Its Today
   line ("Waiting on <name>'s decision: blocks <action>") comes with the pack's dependencies (phase P). *Today:* decisions

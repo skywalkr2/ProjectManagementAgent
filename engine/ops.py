@@ -76,6 +76,9 @@ class NoteOp(OpModel):
     op: Literal["note"]
     text: str = Field(min_length=1, description="What to keep.")
     project: str | None = Field(None, description="Project id, if the note is about one.")
+    question: Annotated[str | None, RefTo("question")] = Field(
+        None, description="The id of the open question it adds to, when the input says more about one."
+    )
 
 
 class FactOp(OpModel):
