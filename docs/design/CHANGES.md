@@ -994,6 +994,14 @@ yet follow, that it is *designed*, with its phase.
 | Checks (6.7) | Nothing enforced scope | `watched-project` and `other-team-item`, returned once then held; the person's own note exempt. Built: `tests/test_scope_slice.py` |
 | Packets (6.6) | Projects without the person's part | The part shown when it isn't "run" |
 
+## 66. L3b done, and a watched source names its author (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Projects (6.7) | Add only created the project | Add files the input's unfiled work under it, with Undo |
+| Watched sources (6.10, 4.1) | The person's edits and the app's publishes were both `by_us` | `workspace.user.accounts` and a source's `author`; the packet marks `author="you"` or the credited name, and `by_us` only for the app |
+| Journeys | No journey for the next-step buttons | J7 presses each one and checks Undo |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

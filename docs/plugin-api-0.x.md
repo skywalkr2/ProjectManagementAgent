@@ -10,6 +10,13 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.76 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.
+
+- **Watched items:** `by_you` (the person's own work) and `credited_to` (a source's named author); `by_us` now means
+  only the app's own publish.
+
 ## What 0.3.75 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes; a plugin that reads projects, people or changesets sees

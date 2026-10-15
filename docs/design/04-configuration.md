@@ -84,8 +84,11 @@ Built keys, with defaults:
 - `language`: the language and variety work is written in, as a tag (default `en-US`). A project may set its own (5.1).
 - `contact_kinds`: the kinds of contact detail a person record keeps and the assistant may propose from a signature
   (`person.contact`), picked from a list on screen. Default `email`, `phone`, `address`.
-- `our_accounts`: the names the PM and this app use on watched sources. A watched change by one of them is marked `by_us`
-  (6.4, 6.5). Live.
+- `our_accounts`: the names this app uses on watched sources (its own publishes). A watched change by one of them is
+  marked `by_us` (6.4, 6.5). Live.
+- `user.accounts`: the person's own names on watched sources. A change by one of them is the person's own work
+  (`by_you`): never news credited to others, never a question back to them. A source in `watch.yaml` may also name its
+  `author` (the person, a colleague or a team, picked from lists on screen); its changes are credited to them.
 - `demo`: made-up example data; every screen says so, so nobody mistakes it for real work.
 - `plugins`, which holds every setting that limits or describes add-ons:
   - `enabled`: plugins enabled in this workspace, by name. Turning one on or off is done from the Add-ons screen (with

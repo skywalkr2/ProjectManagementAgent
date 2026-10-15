@@ -345,9 +345,13 @@ real use starts. The rest (L-more) comes after the packs.
     summary field; findings go to facts. Placing a sentence by audience on published pages is the publisher's and the
     project management pack's (C2, C4), using the data levels the core already has. Built:
     `tests/test_first_week_lints.py::test_a_summary_longer_than_the_setting_or_holding_findings_is_returned`.
-  - [ ] **A watched source can name its author** (afternoon lesson 7): the person, a named colleague or a team, set on the
+  - [x] **A watched source can name its author** (afternoon lesson 7): the person, a named colleague or a team, set on the
     source in the watch settings. The person's own edits are their own work: never news credited to others, never
-    questions back to them. Closing the action an edit fulfills is L3b's.
+    questions back to them. Closing the action an edit fulfills is L3b's. Built: `watch.yaml` `author` and
+    `workspace.user.accounts` (the person's own names, kept apart from the app's `our_accounts`):
+    `tests/test_watch.py::test_a_source_that_names_the_person_as_its_author_holds_their_own_work`,
+    `tests/test_watch.py::test_a_change_made_under_one_of_the_persons_names_is_theirs_and_the_apps_own_names_are_kept_apart`,
+    `tests/test_watch.py::test_a_source_that_names_a_colleague_or_a_team_credits_its_changes_to_them_by_name`.
   - [x] **No tool version numbers in messages to people** (lesson 9): a lint (default `return`) on questions and drafts
     that go to someone else, with the version patterns in settings: name the page, link it, say what changed or when. A
     version that is part of a product's own name passes. The lint is the core's; a connector pack ships the patterns for
@@ -1167,7 +1171,7 @@ around. Each is the person's choice, with Undo, and each answer is learned (L3).
   `tests/test_next_steps.py::test_a_project_from_an_input_waits_and_from_the_persons_own_note_applies`,
   `tests/test_next_steps.py::test_part_of_files_the_work_under_the_project_keeps_a_confirmed_entry_records_a_signal_and_undo_restores_it`,
   `tests/test_next_steps.py::test_not_a_project_sets_the_proposal_aside_keeps_an_entry_saying_so_records_a_signal_and_undo_restores_it`.
-  Add files the input's other unfiled work under the new project: being built with the exit check.
+  Add files the input's other unfiled work under the new project: `tests/test_next_steps.py::test_add_files_the_unfiled_work_under_the_new_project_and_undo_takes_the_project_and_the_filing_away`.
 - [x] **Dates go under their project:** a date for something becomes a dated entry in the app's calendar under its
   project (L0, `event.add`), and a milestone in that project's plan when the project management pack is on (C2). Built: `tests/test_obvious_steps_f.py::test_an_entry_made_from_an_input_the_person_filed_under_a_project_carries_that_project`.
   Moved to C2: the milestone in the plan (the pack's plan item).
@@ -1187,8 +1191,10 @@ around. Each is the person's choice, with Undo, and each answer is learned (L3).
   doesn't name the recipient, that is a "who did you send this to?" decision, never inferred from the nearest name. A
   golden case. Built: the golden case `sent-without-recipient` and the lint `unnamed-recipient` (default `return`,
   phrases in `language.already_sent_phrases`): `tests/test_obvious_steps_f.py::test_a_question_or_action_naming_a_recipient_nobody_gave_is_returned`.
-- [ ] **Exit check:** a golden-set case for each kind and a learning pair for each answer kind (the second time, no
-  question). A journey test presses each button and sees the record made and Undo work.
+- [x] **Exit check:** a golden-set case for each kind and a learning pair for each answer kind (the second time, no
+  question). A journey test presses each button and sees the record made and Undo work. Built: the journey J7
+  (`web/e2e/journeys.spec.ts`, every L3b button with Undo) and a golden case for each kind (`tests/test_next_steps.py`,
+  `tests/test_obvious_steps_f.py`). Moved to L4: the learning pairs for the answer kinds (the fixture pairs).
 
 The buttons are laid out with the rest of the screens in phase B; their behavior and tests are here.
 
@@ -1300,6 +1306,8 @@ From L3 (design 7.18):
 - [ ] A project's "what the assistant knows" section on its page: sources and the last input, facts with source and date,
   glossary terms used there (confirmed, assumed, unknown), who answers what, and what is still unknown with its question.
 - [ ] "Overlaps with …" on the Learned line, linking the entry a proposal would merge with.
+- [ ] A held item's button says what it does ("Confirm", "Add"), not "Do it anyway", which reads wrong for a
+  confirmation such as a contact detail (L3b).
 - [ ] The Quality screen (6.20): the knowledge-used and repeat-correction rates and the weekly missing-op list, from
   `GET /api/quality` (built in L3).
 
