@@ -25,7 +25,7 @@ PROSE_FIELDS: dict[str, tuple[str, ...]] = {
     "fact": ("text",),
     "event.add": ("title",),
     "series.add": ("title",),
-    "action.add": ("text",),
+    "action.add": ("text", "reply"),
     "question.add": ("title", "text"),
     "record.log": ("text",),
     "answer": ("text",),

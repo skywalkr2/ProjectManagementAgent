@@ -650,7 +650,7 @@ Something to look at on the review (an image the plugin rendered, or plain text)
 
 Previews may be: `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
-Core ops an action may propose: `action.drop`, `action.hold`, `action.unhold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
+Core ops an action may propose: `action.drop`, `action.hold`, `action.reply`, `action.unhold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
 
 ## AI task kinds
 
@@ -1156,7 +1156,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 
 ### `action` (ACT-n)
 
-Something a person will do. Added by `action.add`, closed by `action.close`, dropped by `action.drop`; `record.set` changes text, due, notes and the calendar entry or series it belongs to, `action.hold` or the person puts it on hold and the person takes it off, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and who said it was done; dropping records why it is no longer needed and credits no one.
+Something a person will do. Added by `action.add`, closed by `action.close`, dropped by `action.drop`; `action.reply` approves or replaces its drafted reply (only the person does), `record.set` changes text, due, notes and the calendar entry or series it belongs to, `action.hold` or the person puts it on hold and the person takes it off, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and who said it was done; dropping records why it is no longer needed and credits no one.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1169,6 +1169,8 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `status` | Literal['held', 'open', 'done', 'dropped'] | `'open'` | held: waiting for an owner to be picked. open: to be done. done: finished. dropped: closed because it is no longer needed; never done, never credited, never chased. |
 | `dropped_reason` | str \| None | `None` | Why it was dropped, in plain words; set when it is dropped. |
 | `notes` | str \| None | `None` | Extra detail about the action. |
+| `reply` | str \| None | `None` | The reply the assistant drafted for a question someone asked the person, ready to copy. Empty when no recorded fact holds the answer; the action's text then says what is missing. |
+| `reply_reviewed` | bool | `False` | False until the person approves the drafted reply or writes their own; a reply that is not reviewed is shown as a draft. |
 | `on_hold` | OnHold \| None | see below | Set while the action waits for something outside the person's control; the person sets and clears it. An action on hold is never counted as due, overdue or in need of a follow-up, and keeps its due date for when it comes off hold. |
 | `on_hold.waiting_for` | str | required | What it waits for, in plain words. |
 | `on_hold.since` | date | required | The day it was put on hold. |
@@ -1849,6 +1851,7 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `owners` | list[str] | `[]` | The people who do it, each by name or id; empty if nobody is named. A name that isn't one known person waits for the PM to say who. |
 | `due` | datetime.date \| None | `None` | The day it is due, if one is stated. |
 | `project` | str \| None | `None` | Project id, if the action belongs to one. |
+| `reply` | str \| None | `None` | For an action that is a reply the person owes: the drafted reply, ready to copy, only when a recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the answer. It stays marked as a draft until the person approves it. |
 | `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
 | `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
@@ -1888,6 +1891,16 @@ Put an open action on hold: it waits for something outside the person's control 
 | `waiting_for` | str | required | What it waits for, in plain words. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `action.reply`
+
+Approve the drafted reply of an action as it is, or replace it with the person's own words; either marks it reviewed. Only the person uses it; Undo puts the reply and its mark back.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the action. |
+| `text` | str \| None | `None` | The person's own wording of the reply; left out, the draft is approved. |
 
 ### `action.unhold`
 

@@ -36,6 +36,7 @@ from engine.ops import (
     ActionCloseOp,
     ActionDropOp,
     ActionHoldOp,
+    ActionReplyOp,
     ActionUnholdOp,
     AnswerOp,
     ChangesetIn,
@@ -351,6 +352,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"question {op.id} is already closed")
             elif evidence is not None and not _shares_words(evidence.quote, target.data["title"] + " " + op.answer):
                 lint(i, "evidence-fit", f"the quote doesn't seem to answer question {op.id}")
+        if isinstance(op, ActionReplyOp):
+            why = action_reply_problem(view, op)
+            if why:
+                refuse(i, "targets", why)
         if isinstance(op, (QuestionUpdateOp, QuestionMoveOp, QuestionDropOp, QuestionMarkSentOp)):
             why = question_correction_problem(ctx, view, op)
             if why:
@@ -483,6 +488,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             quotes = _quotes_in(op, ctx)
             reads = words_of(op.text, quotes)
             _wording(i, op.text, ctx, lint, quotes)
+            if op.reply:
+                _wording(i, op.reply, ctx, lint, quotes)
             if any(sep in reads for sep in ctx.cfg.language.run_on_separators):
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
             for existing in known_actions:
@@ -796,7 +803,7 @@ def _projects_of(op: OpModel) -> list[str]:
 
 def _texts(op: OpModel) -> list[str]:
     out = []
-    for key in ("text", "title", "answer", "summary", "reason", "waiting_for"):
+    for key in ("text", "title", "answer", "summary", "reason", "waiting_for", "reply"):
         value = getattr(op, key, None)
         if isinstance(value, str):
             out.append(value)
@@ -1404,6 +1411,8 @@ def _apply_op(
         return set_aside.restore_in(tx, ctx.store, Workspace(ctx.store.path.parent), ctx.cfg, op.snapshot, w), None
     if isinstance(op, (QuestionUpdateOp, QuestionMoveOp, QuestionDropOp, QuestionMarkSentOp)):
         return _correct_question(tx, op, ctx, w), None
+    if isinstance(op, ActionReplyOp):
+        return _review_reply(tx, op, ctx, w), None
     if isinstance(op, RuleAddOp):
         from engine.rules import add_rule
 
@@ -1649,6 +1658,8 @@ def _apply_op(
             "source": source,
             "evidence": ev,
             "status": "open" if owners else "held",
+            "reply": op.reply,  # a draft: it stays unreviewed until the person approves or rewords it
+            "reply_reviewed": False,
         }
         action = tx.create("action", data, w)
         made("action", action.id)
@@ -1813,6 +1824,47 @@ def _correct_question(tx: Tx, op: OpModel, ctx: Context, w: WriteContext) -> lis
             ctx.store.clock(),
         )
     return [{"kind": "question", "id": qid}]
+
+
+def action_reply_problem(view: Any, op: ActionReplyOp) -> str | None:
+    """Why the person's approval or rewording of an action's drafted reply can't apply, or None. The action must exist
+    and not be closed; approving needs a draft to approve."""
+    found = view.get("action", op.id)
+    if found is None:
+        return f"there is no action {op.id}"
+    if found.data["status"] in ("done", "dropped"):
+        return f"action {op.id} is already {found.data['status']}"
+    if op.text is None and not found.data.get("reply"):
+        return f"action {op.id} has no drafted reply to approve"
+    return None
+
+
+def _review_reply(tx: Tx, op: ActionReplyOp, ctx: Context, w: WriteContext) -> list[dict[str, Any]]:
+    """The person approves an action's drafted reply or replaces it: either way it is reviewed. Rewording a draft the
+    assistant wrote records a `draft_edited` signal with the text as the person used it, naming the action and the
+    changeset and run that made it; writing a reply where there was none, or approving as is, corrects nothing. The
+    signal is written apart from the change, so Undo puts the reply back and leaves the signal as it was."""
+    cur = tx.get("action", op.id)
+    draft = cur.data.get("reply")
+    text = op.text.strip() if op.text is not None else draft
+    tx.update("action", op.id, {"reply": text, "reply_reviewed": True}, w, read_version=cur.version)
+    if draft and not cur.data.get("reply_reviewed") and normalize(text) != normalize(draft):
+        changeset, run = _made_by(tx, "action", op.id)
+        learn.record(
+            tx,
+            ctx.cfg,
+            {
+                "kind": "draft_edited",
+                "refs": [op.id],
+                "changeset": changeset,
+                "run": run,
+                "note": text,
+                "at": ctx.store.clock(),
+            },
+            WriteContext(actor="pm", trust="trusted", op="draft_edited"),
+            ctx.store.clock(),
+        )
+    return [{"kind": "action", "id": op.id}]
 
 
 def _record_dropped(tx: Tx, ctx: Context, kind: str, record_id: str, reason: str) -> None:

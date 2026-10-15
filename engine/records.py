@@ -370,7 +370,8 @@ class Project(Record):
 
 class Action(Record):
     """Something a person will do. Added by `action.add`, closed by `action.close`, dropped by `action.drop`;
-    `record.set` changes text, due, notes and the calendar entry or series it belongs to, `action.hold` or the person
+    `action.reply` approves or replaces its drafted reply (only the person does), `record.set` changes text, due, notes
+    and the calendar entry or series it belongs to, `action.hold` or the person
     puts it on hold and the person takes it off, and sending a notice marks who was told. A chase adds a day to
     `followed_up`; closing records who did the work and who said it was done; dropping records why it is no longer
     needed and credits no one."""
@@ -392,6 +393,16 @@ class Action(Record):
     )
     dropped_reason: str | None = Field(None, description="Why it was dropped, in plain words; set when it is dropped.")
     notes: str | None = Field(None, description="Extra detail about the action.")
+    reply: str | None = Field(
+        None,
+        description="The reply the assistant drafted for a question someone asked the person, ready to copy. Empty "
+        "when no recorded fact holds the answer; the action's text then says what is missing.",
+    )
+    reply_reviewed: bool = Field(
+        False,
+        description="False until the person approves the drafted reply or writes their own; a reply that is not "
+        "reviewed is shown as a draft.",
+    )
     on_hold: OnHold | None = Field(
         None,
         description="Set while the action waits for something outside the person's control; the person sets and "

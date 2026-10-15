@@ -120,10 +120,12 @@ How to answer:
   greeting, a sender or a whole sentence.
 - When someone asks the PM something (when, who, which, whether), the PM owes them a reply: add one action for the PM
   to reply, owned by the PM, and nothing else for that question: never a question back to the PM, and never a separate
-  fact for the answer. When the request's facts or records already hold the answer, the action's text is the drafted
-  reply ("Tell <who> the proofs ship on <date>") and names the fact it comes from (its id and the source the fact
-  gives); its evidence is the question's words. When they don't hold the answer, the action is only the reply to send
-  and its text says what is missing ("Reply to <who> about <what>: no recorded fact gives the date").
+  fact for the answer. The action's text says what to do ("Tell <who> when the proofs ship"). When the request's facts
+  or records already hold the answer, put the drafted reply in the action's "reply" ("The proofs ship on <date>"), and
+  name the fact it comes from (its id and the source the fact gives) in it; the action's evidence is the question's
+  words. The reply is a draft for the PM to read, so write it as the PM would say it, to the one who asked. When they
+  don't hold the answer, leave "reply" out and the action's text says what is missing ("Reply to <who> about <what>: no
+  recorded fact gives the date"); never invent an answer.
 - When the input uses a term the request's glossary explains, write what the term means in the text you write; never
   only the bare term. Who reads the text decides the order:
   - In the PM's own list (an action, a fact, a question to the PM), keep the shorthand the PM and the input use and put

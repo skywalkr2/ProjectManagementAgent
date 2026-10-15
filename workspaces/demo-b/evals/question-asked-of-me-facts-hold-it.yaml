@@ -23,10 +23,12 @@ expect:
 - op: action.add
   text_has:
   - interior proofs
+  reply_has:
   - November 3
+  - FACT-91
   owners:
   - PER-1
-# The answer is in the reply the action carries: no question back to the person, and no fact made of the answer.
+# The answer is in the drafted reply the action carries: no question back to the person, and no fact made of the answer.
 forbid:
 - op: question.add
 - op: fact
@@ -34,7 +36,8 @@ stub_answer:
   summary: Tell the shop the interior proofs ship on November 3, from the recorded printer schedule.
   ops:
   - op: action.add
-    text: Tell Corner Lamp Books the interior proofs ship on November 3 (FACT-91, the printer's published schedule)
+    text: Tell Corner Lamp Books when the interior proofs ship
+    reply: The interior proofs ship on November 3 (FACT-91, the printer's published schedule).
     owners:
     - Avery Lane
     project: PRJ-1

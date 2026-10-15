@@ -34,8 +34,8 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
 - **L3b, L4, L5, L6 and the rest of "Ready for real use":** built 2026-10-15. L4's 28 learning pairs found four gaps in
   learning, each fixed with its pair. **Phase L-core's code is done.** The one step left is the owner's "after" run (O3),
   which the comparison with O1 and O2 needs before real use starts.
-- **Next:** the owner's "after" run (O3), then L7 (the functional designer's lessons and answers, 2026-10-15), then
-  phase B (the UI), then phase C (the writing pack, finished completely first), then phase P (the project management
+- **Next:** phase B (L7 and O3 on the backup model are done, 2026-10-16; the main account's pairs run when its allowance resets), then
+  phase C (the writing pack, finished completely first), then phase P (the project management
   and publishing packs), then the owner's sign-off (D).
 - **When the owner uses it** (owner, 2026-10-15): the owner tests it after phase B and starts real use once the writing
   pack is complete (end of phase C). There is no go/no-go date: the 2026-10-30 one was set aside on 2026-10-09 and
@@ -1404,13 +1404,25 @@ Calendar entries and dates (answers 10, 11, 13):
   `test_the_prompt_says_a_term_keeps_the_persons_shorthand_in_their_list_and_is_spelled_out_for_others`.
 
 Questions, decisions and drops (answers 12, 15, 16, 19, 24, 8):
-- [ ] **A question someone asks the person is one action with a drafted reply** when the facts hold the answer (citing the
-  fact and its source), or saying what's missing when they don't. Built so far: the prompt makes it one action, never a
-  question back or a fact for the answer, and the action's text is the reply citing the fact or saying what is missing
-  (`test_the_prompt_says_a_question_asked_of_the_pm_is_one_action_with_the_reply`,
-  `test_the_golden_case_passes_with_its_ideal_answer[question-asked-of-me-facts-hold-it]`,
-  `test_the_golden_case_passes_with_its_ideal_answer[question-asked-of-me-nothing-holds-it]`). Left: the draft as its own
-  text attached to the action, ready to copy, which needs a field on the action (a change to the op and record).
+- [x] **A question someone asks the person is one action with a drafted reply** when the facts hold the answer (citing the
+  fact and its source), or saying what's missing when they don't. The prompt makes it one action, never a question back
+  or a fact for the answer; the action's text says what to do and the drafted reply is its own `reply` on the action
+  (ready to copy), with `reply_reviewed` false until the person approves it or writes their own, so it stays a draft.
+  `action.add` takes `reply` (only when a recorded fact holds the answer, citing it), and the person's `action.reply`
+  (person-only, Undo; `POST /api/actions/{id}/reply`) approves or replaces it; rewording a draft the assistant wrote
+  records `draft_edited` naming the run. Built:
+  `test_the_prompt_says_a_question_asked_of_the_pm_is_one_action_with_the_reply`,
+  `test_the_golden_case_passes_with_its_ideal_answer[question-asked-of-me-facts-hold-it]` (the reply holds the date and
+  the fact),
+  `test_the_golden_case_passes_with_its_ideal_answer[question-asked-of-me-nothing-holds-it]` (no reply),
+  `test_a_reply_is_missing_when_the_facts_hold_the_answer_and_never_made_up_when_they_do_not` (`tests/test_obvious_steps_f.py`),
+  `test_a_reply_the_assistant_drafts_is_kept_on_the_action_as_a_draft_and_an_action_without_one_has_none`,
+  `test_approving_marks_it_reviewed_as_it_is_with_undo_and_records_no_correction`,
+  `test_rewording_a_draft_keeps_the_persons_words_reviewed_and_records_draft_edited_naming_the_run`,
+  `test_the_same_words_or_a_reply_where_there_was_none_or_a_later_edit_corrects_nothing`,
+  `test_approving_needs_a_draft_and_a_closed_or_missing_action_takes_neither`,
+  `test_the_reply_route_approves_or_replaces_the_draft_with_undo_and_says_why_when_it_cannot`
+  (`tests/test_action_reply.py`). The screen that shows the draft with Copy and Approve is phase B (answers 28 and 32).
 - [x] **Outside mail never re-routes work**: no routing proposal that takes work from the person, never a negative about
   the person; a fact and one decision to the person instead. A sender's own "not me, ask <name>" is still proposed.
   Enforced by the invariant `outside-routing`. Built: `test_the_prompt_says_outside_content_never_routes_work_away_from_the_pm`,
@@ -1442,7 +1454,7 @@ Questions, decisions and drops (answers 12, 15, 16, 19, 24, 8):
   Built: `test_the_persons_own_note_can_file_a_question_as_already_asked_and_outside_content_cannot`.
 
 Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
-- [ ] **One follow-on run when a dated record moves or a fact is replaced**: one save, one run; it finds what is tied
+- [x] **One follow-on run when a dated record moves or a fact is replaced**: one save, one run; it finds what is tied
   (records naming the entry or its old date, open actions linked to it or due between the old and the new day) and asks
   about each; it never changes an action's due date or wording (owner's rule, decisions 2026-10-16): for each tied
   action whose date the move may affect it asks the action's owner, or the person when nobody is named, whether the date
@@ -1487,10 +1499,8 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   `::test_what_already_reached_someone_gets_a_drafted_correction_that_waits_and_is_not_edited`,
   `::test_a_question_goes_only_where_a_tied_item_reached_or_the_action_or_plan_asks_and_no_action_changes` and
   `tests/test_replays.py::test_every_replay_passes_with_the_stand_in[moving-an-entry-asks-about-the-actions-tied-to-it]`.
-  **Left:** (1) done: the assistant's own move of an entry is `event.set` (next item); (2) a correction to someone an action told has no link to carry (a question to someone else
-  needs one), so the run leaves a note instead when the item's project has none; whether a correction is exempt from
-  the link rule is the owner's call; (3) a move that a connected calendar's sync makes (not the person, not an input)
-  starts nothing.
+  **Left:** (1) done: the assistant's own move of an entry is `event.set` (next item); (2) a correction keeps the link rule, and the run leaves a note when there is no link
+  (decided); (3) a calendar sync's move reaches the run through reading (decided, decisions 2026-10-16).
 - [x] **The assistant moves an entry from an input** (`event.set`: start or end, data tier, evidence, Undo), which
   starts the follow-on run; **a calendar sync's move starts it too** (decisions, 2026-10-16). Built (the assistant's
   move): `event.set` on a calendar entry's `start` and/or `end`, offered to reading notes (not to the follow-on run),
@@ -1528,7 +1538,7 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   `test_the_golden_case_passes_with_its_ideal_answer[follow-up-goes-to-who-made-the-claim]` and
   `[follow-up-with-no-clear-owner-asks-who]`, and
   `test_each_new_case_fails_when_the_answer_does_the_obvious_wrong_thing` for both.
-- [ ] **How a fact is known**: the person said it, the assistant inferred it, or someone named said it, each with its
+- [x] **How a fact is known**: the person said it, the assistant inferred it, or someone named said it, each with its
   source. An inference applies marked as one, never reaches anything others see, never changes a date, owner or routing
   alone, and never closes anything: it proposes the close, which one click confirms. The person's own deduction closes
   it as theirs; "I asked them to confirm" files the question as already asked. What the assistant writes about a change
@@ -1541,9 +1551,9 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   `test_a_close_that_rests_on_something_said_or_on_the_persons_own_note_applies_at_once`,
   `test_a_date_an_owner_or_a_routing_resting_only_on_an_inference_is_held`,
   `test_a_note_saying_the_person_already_asked_files_the_question_as_asked`,
-  `test_reading_notes_is_offered_the_mark_as_asked_op_and_an_ask_is_not`. **Left:** keeping an inference off anything
-  others see (with the publisher, phase C4); the inferred mark on the fact's row; the person's own deduction recorded as
-  theirs with its reason on the closed question; the change note saying who made each part.
+  `test_reading_notes_is_offered_the_mark_as_asked_op_and_an_ask_is_not`. Moved: keeping an inference off anything
+  others see (phase E, with the publisher of C4); the inferred mark on the fact's row (phase B, answer 29); the person's
+  own deduction recorded as theirs, and the change note saying who made each part (phase E).
 
 Learning and scope (answers 3 to 7, 14, 22, 23):
 - [x] **Discarded means don't act on it**: search flags an input whose proposal the person discarded ("routing proposal
@@ -1648,12 +1658,29 @@ Proving it (lesson 2; answers 2, 21):
   `test_a_changed_case_set_makes_a_measurement_stale`, `test_an_evaluate_run_with_the_stand_in_fills_the_matrix`,
   `test_the_route_reports_pass_rate_runs_age_cost_and_the_flags` (`tests/test_capability_matrix.py`),
   `AiAccounts.test.tsx` ("What it can do lists each skill in words"). *Today:* reports are files read by hand.
-- [ ] **The capability matrix, step 1, what is left:** "Measure" per account with its estimate first, only on cases for
-  the data levels the account allows (the matrix stays out of backups, like the connection checks: decisions,
-  2026-10-16); the "every adapter
-  kind" proof with each kind's own fake service (today one test records results for a model of each kind and shows
-  they are kept apart). Built: the switch check adds its runs to the matrix,
+- [x] **The capability matrix, step 1, what is left:** the Measure screen, and the "every adapter kind" proof with each
+  kind's own fake service (today one test records results for a model of each kind and shows they are kept apart, and
+  the only fake AI service speaks the common chat format). *Built, the API for Measure* (decisions, 2026-10-16: the
+  matrix stays out of backups, like the connection checks, and a case may say its `data_level`):
+  `POST /api/ai/skills/{account}/estimate` and `.../measure`, the estimate first and only on cases and pairs for the data
+  levels the account allows, refused above the confirm amount without `confirmed`, run in the background, kept across a
+  restart, filling the matrix; the state of a measuring shows in `GET /api/ai/skills`. Built:
+  `test_the_estimate_names_the_models_the_level_the_account_may_see_and_what_asking_would_need`,
+  `test_an_unknown_account_or_model_is_not_found_and_nothing_is_priced`,
+  `test_the_go_is_needed_above_the_amount_asked_about_and_for_an_unknown_price_only_when_asked`,
+  `test_the_level_is_the_most_private_one_the_account_is_allowed_and_a_case_above_it_is_left_out`,
+  `test_an_unknown_data_level_on_a_case_or_pair_is_refused_when_it_loads`,
+  `test_the_estimate_counts_only_what_the_account_may_see_and_nothing_to_run_costs_nothing`,
+  `test_a_cost_above_the_amount_asked_about_is_refused_without_the_go_and_nothing_starts`,
+  `test_a_measuring_with_the_go_runs_in_the_background_fills_the_matrix_and_leaves_nothing_waiting`,
+  `test_an_account_that_may_see_none_of_the_cases_has_nothing_to_measure`,
+  `test_a_measuring_cut_short_by_a_restart_runs_again_from_the_start`,
+  `test_an_account_that_answered_none_of_the_cases_is_a_failed_measuring_with_why_never_a_result`,
+  `test_the_real_check_passes_the_level_to_the_cases_and_the_pairs_and_keeps_the_report_whole`
+  (`tests/test_measure_account.py`). The switch check adds its runs to the matrix,
   `test_the_check_adds_its_runs_to_the_capability_matrix_for_the_cases_and_the_pairs_apart` (`tests/test_switch_check.py`).
+  Left: the Measure button and its estimate on the screen (phase B, answer 26), and a fake service for each of the native
+  API, the aggregator and the command-line agent (the existing one proves the common chat format only).
 
 - [x] **A superseded attempt leaves nothing running** (lesson 7): a test of the exact sequence: an attempt is out with
   the assistant, a later attempt at the same request applies and retires it, and the first one's good answer then comes
@@ -2113,6 +2140,12 @@ time, nothing went out without approval, a backup succeeded, and the repeat-corr
 ## Phase E: the rest of version 1
 
 Order by what protects real data first, then by what the packs ask for:
+- [ ] **What is left of L7's facts** (moved 2026-10-16): an inference never reaches anything others see (with the
+  publisher of C4); the person's own deduction is recorded as theirs, with its reason on the question it closes; what
+  the assistant writes about a change says who made each part.
+- [ ] **The capability matrix proved on every adapter kind** (moved from L7): a fake service for the native API, the
+  aggregator and the command-line agent beside the existing chat-format one, each measured into the matrix and kept apart.
+  *Today:* one test records tagged results for each kind.
 - [ ] **"Which team is <name> on?" asked once**, with the scope resolver (moved from L7, decisions 2026-10-16): when the
   resolver needs a team the person on file doesn't have, one question to the person, never repeated for them; the
   answer sets the team with Undo. *Today:* a person with no team counts as outside the tracked area.

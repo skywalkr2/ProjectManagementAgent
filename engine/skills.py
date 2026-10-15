@@ -3,6 +3,10 @@
 The core ships the list as data (`engine/defaults/skills.yaml`): an id, a label in plain words and a description. Every
 evaluation case, learning pair and scenario names the skills it proves with `skills:`, and a name that isn't on the list
 is refused. A pack adds its own skills with `merge`; the list the screens and the checks read is `skills()`.
+
+A case, pair or scenario may also say the data level its material carries (`data_level:`, one of the levels an account's
+`allowed_data` names); it defaults to the level a handed-in note carries. Measuring an account runs only the ones it is
+allowed to see (`within_level`).
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from engine.ai.router import LEVELS
 from engine.yaml_load import load_yaml
 
 DEFAULTS = Path(__file__).parent / "defaults" / "skills.yaml"
@@ -60,3 +65,25 @@ def check_named(where: str, value: Any, *, required: bool = False) -> list[str]:
     if unknown:
         raise ValueError(f"{where}: unknown skill {', '.join(unknown)} (the list is engine/defaults/skills.yaml)")
     return list(dict.fromkeys(value))
+
+
+#: The level of an item that says none (a handed-in note's).
+DEFAULT_LEVEL = "internal"
+
+
+def check_level(where: str, value: Any) -> str:
+    """The data level a case names (`data_level:`), or the default when it names none. Raises ValueError saying what
+    is wrong."""
+    if value is None:
+        return DEFAULT_LEVEL
+    if value not in LEVELS:
+        raise ValueError(f"{where}: data_level is one of {', '.join(LEVELS)}")
+    return str(value)
+
+
+def within_level(item: dict[str, Any], most_private: str | None) -> bool:
+    """Whether a case, pair or scenario may run on an account whose most private allowed level is `most_private`
+    (None: no limit)."""
+    if most_private is None:
+        return True
+    return LEVELS.index(check_level("data_level", item.get("data_level"))) <= LEVELS.index(most_private)

@@ -15,6 +15,7 @@ expect:
 - op: action.add
   text_has:
   - paperback
+  no_reply: true
   owners:
   - PER-1
 forbid:

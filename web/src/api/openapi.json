@@ -373,6 +373,25 @@
         "title": "ActionProposalView",
         "type": "object"
       },
+      "ActionReplyIn": {
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person's own wording of the reply; left out, the drafted reply is approved as it is.",
+            "title": "Text"
+          }
+        },
+        "title": "ActionReplyIn",
+        "type": "object"
+      },
       "ActionRequestView": {
         "properties": {
           "about": {
@@ -1075,8 +1094,170 @@
         "title": "AiBorrowed",
         "type": "object"
       },
+      "AiMeasureEstimate": {
+        "description": "What measuring an account would run and cost, shown before anything is spent.",
+        "properties": {
+          "cases": {
+            "description": "How many cases and pairs each model runs: only those the account may see.",
+            "title": "Cases",
+            "type": "integer"
+          },
+          "confirm_above_usd": {
+            "description": "The amount above which the person is asked first.",
+            "title": "Confirm Above Usd",
+            "type": "number"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "open",
+                  "internal",
+                  "restricted"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The most private material the account is allowed to see; none when it is allowed none.",
+            "title": "Level"
+          },
+          "models": {
+            "description": "The short names of the models that would be measured, each on its own.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "needs_go": {
+            "description": "Starting it needs `confirmed`: the estimate is above that amount.",
+            "title": "Needs Go",
+            "type": "boolean"
+          },
+          "runs": {
+            "description": "How many times each runs.",
+            "title": "Runs",
+            "type": "integer"
+          },
+          "skipped": {
+            "description": "How many are left out because their material is more private than allowed.",
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "About what all of it costs; none when a model has no known price.",
+            "title": "Usd"
+          }
+        },
+        "required": [
+          "models",
+          "cases",
+          "skipped",
+          "runs",
+          "confirm_above_usd",
+          "needs_go"
+        ],
+        "title": "AiMeasureEstimate",
+        "type": "object"
+      },
+      "AiMeasureIn": {
+        "additionalProperties": false,
+        "description": "What to measure: one of the account's models, or all of them.",
+        "properties": {
+          "confirmed": {
+            "default": false,
+            "description": "The person's go for a cost above the amount they asked to be asked about; without it such a measuring is refused.",
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The short name of the model to measure; left out, every model of the account is measured.",
+            "title": "Model"
+          }
+        },
+        "title": "AiMeasureIn",
+        "type": "object"
+      },
+      "AiMeasureStarted": {
+        "properties": {
+          "already": {
+            "description": "The models already waiting or running, left as they were.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Already",
+            "type": "array"
+          },
+          "estimate": {
+            "$ref": "#/components/schemas/AiMeasureEstimate"
+          },
+          "started": {
+            "description": "The models whose measuring was started, by short name.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Started",
+            "type": "array"
+          }
+        },
+        "required": [
+          "started",
+          "already",
+          "estimate"
+        ],
+        "title": "AiMeasureStarted",
+        "type": "object"
+      },
       "AiModelSkills": {
         "properties": {
+          "measure": {
+            "anyOf": [
+              {
+                "enum": [
+                  "waiting",
+                  "measuring",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where a measuring the person asked for stands: waiting its turn, running, or failed (then `measure_why` says why). None when none is asked for.",
+            "title": "Measure"
+          },
+          "measure_why": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the last measuring failed, in plain words.",
+            "title": "Measure Why"
+          },
           "model": {
             "description": "The short name the person gave the model, never its id.",
             "title": "Model",
@@ -13296,6 +13477,56 @@
         "summary": "Action Hold Restored"
       }
     },
+    "/api/actions/{action_id}/reply": {
+      "post": {
+        "description": "Approve the reply the assistant drafted for an action as it is, or replace it with the person's own words;\neither marks it reviewed, with Undo. Rewording a draft records a draft_edited correction naming the change and\nrun that made the action, with the text as the person used it.",
+        "operationId": "review_reply_api_actions__action_id__reply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionReplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Review Reply"
+      }
+    },
     "/api/actions/{action_id}/status": {
       "post": {
         "operationId": "action_status_api_actions__action_id__status_post",
@@ -13860,6 +14091,120 @@
           }
         },
         "summary": "Ai Skills"
+      }
+    },
+    "/api/ai/skills/{account}/estimate": {
+      "post": {
+        "description": "What measuring this account would cost: its models (or the one named) on the golden cases, the add-ons'\ncases and the learning pairs, only those whose material the account is allowed to see, each as many times as\nthe configured number of runs. Nothing is run or spent.",
+        "operationId": "ai_measure_estimate_api_ai_skills__account__estimate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "title": "Account",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AiMeasureIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiMeasureEstimate"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Measure Estimate"
+      }
+    },
+    "/api/ai/skills/{account}/measure": {
+      "post": {
+        "description": "Measure this account in the background, filling what it can do (`GET /api/ai/skills`). A cost above the\namount the person asked to be asked about is refused unless `confirmed` is sent; an account that may see none\nof the cases has nothing to measure.",
+        "operationId": "ai_measure_api_ai_skills__account__measure_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "title": "Account",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AiMeasureIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiMeasureStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Measure"
       }
     },
     "/api/ai/switch/{tier}/back": {

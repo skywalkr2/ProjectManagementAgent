@@ -496,6 +496,8 @@ field):
   for the person's review there), `record.delete` (with Undo), `file.add` (made only by plugin actions, with the file's
   bytes), and the long-text ops `text.draft` (the assistant's text, always a pending draft), `text.propose` (the person's own
   work arriving from outside), `text.accept`, `text.discard` and `text.edit`.
+- `action.reply`, person-only with Undo: approve the reply the assistant drafted for an action as it is, or replace it with
+  the person's own words; either marks it reviewed (6.8).
 - The person's corrections of a question (6.8), each person-only with Undo and each, but `question.mark_sent`, recording a
   signal (6.20): `question.update` (reword), `question.move` (ask someone else), `question.drop` (with a reason) and
   `question.mark_sent` (the person sent it themselves).
@@ -891,6 +893,12 @@ is marked *designed*, with the phase.
 - **A question someone asks the person** is one item: an action owned by the person ("Reply to the shop: when the cover
   proofs ship"). When the facts hold the answer, the action carries a drafted reply, ready to copy, citing the fact and its
   source; when they don't, it carries no draft and says what's missing. Never an action and an output for one reply.
+  *Built:* the draft is its own text on the action (`reply`, with `reply_reviewed`, false until the person approves it or
+  writes their own, so it shows as a draft); `action.add` takes it, and the person's `action.reply` (person-only, Undo;
+  `POST /api/actions/{id}/reply`: no text approves the draft, text replaces it) marks it reviewed. Rewording a draft the
+  assistant wrote records `draft_edited` with the text as used, naming the action and the changeset and run that made it;
+  approving as it is, or writing a reply where there was none, corrects nothing. The reply goes through the same
+  wording and never-shown checks as the action's text. The screen shows it in phase B (answers 28 and 32).
 - **Only the person changes a question's wording.** Outside content adds a note to it; a note that contradicts the
   question ("matte or gloss?" against "matte or soft-touch?") quotes both, and the question stays as the person wrote it.
 - **A decision for someone else** shows in the person's follow-ups under the decider, to copy and send. It reaches Today
@@ -1247,6 +1255,15 @@ evaluation reports.
   the old runs.
 - **Measuring.** `cockpit evaluate` and the switch check (6.22) fill it; Settings offers "Measure" per account with its
   estimate first (spending is the person's choice, 6.16), and only on cases for the data levels the account is allowed.
+  *Built (API; the screen is phase B):* `POST /api/ai/skills/{account}/estimate` says what measuring would run and cost
+  (the account's models, or the one named, on the golden cases, the plugins' cases and the learning pairs, each
+  `ai.evaluation.runs` times, priced as the switch check prices its cases); `POST /api/ai/skills/{account}/measure` is
+  refused above `ai.budgets.confirm_above_usd` (or with no price, when `confirm_unpriced` is on) unless `confirmed` is
+  sent, then runs on a thread of its own and fills the matrix (`engine/ai/measure.py`). What was asked for is kept in the
+  private folder (`ai-measures.json`) so a restart finishes it; one that was answered not at all, or couldn't finish, is
+  `failed` with why in `GET /api/ai/skills`, never a result. A case, pair or scenario may say its `data_level` (default
+  `internal`, the level a handed-in note has); an account runs and is priced only for those no more private than its most
+  private `allowed_data`, and the report still names every case, so the set measured doesn't change.
   Real use adds evidence too: a correction of a run counts against that model for the skills the correction's kind
   touches, shown apart from the measured cases (6.20).
 - **Seeing it.** Settings shows each account's models × skills, under the account's row ("What it can do", `GET

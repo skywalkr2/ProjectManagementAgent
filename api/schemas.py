@@ -114,6 +114,14 @@ class ActionDropIn(BaseModel):
     reason: str = Field(min_length=1, max_length=500, description="Why the action isn't needed, in plain words.")
 
 
+class ActionReplyIn(BaseModel):
+    text: str | None = Field(
+        None,
+        min_length=1,
+        description="The person's own wording of the reply; left out, the drafted reply is approved as it is.",
+    )
+
+
 class FoldIn(BaseModel):
     into: str = Field(min_length=1, description="The id of the open action to add the one waiting for an owner to.")
     read_version: int = Field(description="The version of that action as the person saw it.")
@@ -1912,6 +1920,12 @@ class AiSkillView(BaseModel):
 
 class AiModelSkills(BaseModel):
     model: str = Field(description="The short name the person gave the model, never its id.")
+    measure: Literal["waiting", "measuring", "failed"] | None = Field(
+        None,
+        description="Where a measuring the person asked for stands: waiting its turn, running, or failed (then "
+        "`measure_why` says why). None when none is asked for.",
+    )
+    measure_why: ScreenText | None = Field(None, description="Why the last measuring failed, in plain words.")
     skills: list[AiSkillView]
 
 
@@ -1926,6 +1940,42 @@ class AiSkillsView(BaseModel):
     min_score: float = Field(description="ai.skills.min_score: the pass rate a skill needs to count as able.")
     stale_days: int = Field(description="ai.skills.stale_days: how long a measurement is trusted.")
     accounts: list[AiAccountSkills]
+
+
+class AiMeasureIn(BaseModel):
+    """What to measure: one of the account's models, or all of them."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    model: str | None = Field(
+        None, description="The short name of the model to measure; left out, every model of the account is measured."
+    )
+    confirmed: bool = Field(
+        False,
+        description="The person's go for a cost above the amount they asked to be asked about; without it such a "
+        "measuring is refused.",
+    )
+
+
+class AiMeasureEstimate(BaseModel):
+    """What measuring an account would run and cost, shown before anything is spent."""
+
+    models: list[str] = Field(description="The short names of the models that would be measured, each on its own.")
+    level: Literal["open", "internal", "restricted"] | None = Field(
+        None, description="The most private material the account is allowed to see; none when it is allowed none."
+    )
+    cases: int = Field(description="How many cases and pairs each model runs: only those the account may see.")
+    skipped: int = Field(description="How many are left out because their material is more private than allowed.")
+    runs: int = Field(description="How many times each runs.")
+    usd: float | None = Field(None, description="About what all of it costs; none when a model has no known price.")
+    confirm_above_usd: float = Field(description="The amount above which the person is asked first.")
+    needs_go: bool = Field(description="Starting it needs `confirmed`: the estimate is above that amount.")
+
+
+class AiMeasureStarted(BaseModel):
+    started: list[str] = Field(description="The models whose measuring was started, by short name.")
+    already: list[str] = Field(description="The models already waiting or running, left as they were.")
+    estimate: AiMeasureEstimate
 
 
 class AiAccountChange(BaseModel):

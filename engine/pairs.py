@@ -5,6 +5,8 @@ A pair is a file in a workspace's `pairs/` folder. It runs in a fresh copy of th
 
     id, title
     skills: [dates, ...]      # the skills it proves (ids in engine/defaults/skills.yaml); a scenario has the same key
+    data_level: internal      # optional: the level of its material (open, internal or restricted; default internal);
+                              # measuring an account runs only the pairs it is allowed to see
     negative: true            # the later output must not change, however much the person kept
     pending: <why>            # the gap in the code that stops it passing; it is run only when named, and a test says
                               # it still fails, so the flag goes the day the gap is closed
@@ -102,7 +104,7 @@ from engine.extract import EXTENSIONS, read_file
 from engine.extract import fixtures as file_fixtures
 from engine.next_steps import NewPersonForm, add_new_person, file_under, not_a_project
 from engine.records import REGISTRY
-from engine.skills import check_named
+from engine.skills import check_level, check_named, within_level
 from engine.storage import Store, StoreError, WriteContext
 from engine.workspace import Workspace, init_workspace
 from engine.yaml_load import load_yaml
@@ -221,6 +223,7 @@ def _fixed_answer(first: Mapping[str, Any]) -> Any:
 def _check_pair(template: Path, pair: dict[str, Any]) -> None:
     where = f"pair {pair['id']}"
     check_named(where, pair.get("skills"))
+    check_level(where, pair.get("data_level"))
     first, later, ideal = _need(where, pair, "first"), _need(where, pair, "later"), _need(where, pair, "ideal")
     _check_input(f"{where} first", first)
     starting_records(template, {"id": pair["id"], **first})
@@ -263,6 +266,7 @@ def _check_pair(template: Path, pair: dict[str, Any]) -> None:
 def _check_scenario(template: Path, scenario: dict[str, Any]) -> None:
     where = f"scenario {scenario['id']}"
     check_named(where, scenario.get("skills"))
+    check_level(where, scenario.get("data_level"))
     _check_input(f"{where} input", _need(where, scenario, "input"))
     starting_records(template, {"id": scenario["id"], **scenario})
     ideal = _need(where, scenario, "ideal")
@@ -1024,9 +1028,11 @@ def evaluate_pairs(
     progress: Callable[[RunResult, int, int], None] | None = None,
     notice: Callable[[str], None] | None = None,
     adapter_factory: AdapterFactory = make_adapter,
+    most_private: str | None = None,
 ) -> Report:
     """Run every pair and scenario (or `only` these) `runs` times. With `stub`, each stage answers from the pair's
-    `ideal`, which checks the pairs and the plumbing rather than a model."""
+    `ideal`, which checks the pairs and the plumbing rather than a model. With `most_private`, one whose `data_level`
+    is more private than that is left out; the report still names every pair."""
     env = os.environ if env is None else env
     versions: dict[str, str | None] = {}
     items = everything = [
@@ -1034,7 +1040,11 @@ def evaluate_pairs(
         *((_run_scenario, s) for s in load_scenarios(template)),
     ]
     # A pending pair is run only when it is named.
-    items = [(run, item) for run, item in items if (item["id"] in only if only else not item.get("pending"))]
+    items = [
+        (run, item)
+        for run, item in items
+        if (item["id"] in only if only else not item.get("pending")) and within_level(item, most_private)
+    ]
     total, results = len(items) * runs, []
     for run, item, n in ((run, item, n) for run, item in items for n in range(1, runs + 1)):
         if results and results[-1].out_of_quota:

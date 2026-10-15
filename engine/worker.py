@@ -223,6 +223,7 @@ class Worker:
         self._sync: threading.Thread | None = None
         self._jobs: threading.Thread | None = None
         self._switching: threading.Thread | None = None
+        self._measuring: threading.Thread | None = None
         self._swept_on: date | None = None
         self._rolled_on: date | None = None
         self._catch_up_queued = False
@@ -328,6 +329,7 @@ class Worker:
         self._jobs = threading.Thread(target=self._jobs_loop, name="cockpit-jobs", daemon=True)
         self._jobs.start()
         self.check_switch_soon()
+        self.measure_soon()
 
     def stop(self) -> None:
         self._stop.set()
@@ -537,6 +539,34 @@ class Worker:
         self._switching = threading.Thread(target=run, name="cockpit-switch-check", daemon=True)
         self._switching.start()
         return self._switching
+
+    def measure_soon(self) -> threading.Thread | None:
+        """Run the measurings the person asked for that are still waiting (an account's cases and pairs, added to the
+        capability matrix), on one thread of their own so a long one never holds up other work. One cut short by a
+        restart runs again from the start. Returns the thread, or None when nothing waits; while one is running a new
+        request is picked up by it."""
+        from engine.ai import measure
+
+        if self._measuring is not None and self._measuring.is_alive():
+            return self._measuring
+        measure.interrupted(self.ws)
+        if not measure.waiting(self.ws):
+            return None
+
+        def run() -> None:
+            try:
+                while measure.waiting(self.ws) and not self._stop.is_set():
+                    measure.run_waiting(self.ws, os.environ)
+                    self.events.changed()
+            except (
+                Exception
+            ):  # a measuring that can't run is kept as one that didn't finish; nothing here may stop the app
+                log.exception("measuring an account failed")
+                self.events.changed()
+
+        self._measuring = threading.Thread(target=run, name="cockpit-measure", daemon=True)
+        self._measuring.start()
+        return self._measuring
 
     def sync_if_changed(self) -> bool:
         """Write the synced folder when anything changed since it was last written, and keep this install's lease

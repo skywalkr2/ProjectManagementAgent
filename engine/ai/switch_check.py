@@ -152,18 +152,32 @@ def _template() -> Path:
 PAIR_CALLS = 3
 
 
-def evaluate_on(account: str, cfg: Config, ws: Any, env: Mapping[str, str]) -> Any:
+def evaluate_on(account: str, cfg: Config, ws: Any, env: Mapping[str, str], most_private: str | None = None) -> Any:
     """The report of the golden cases, the plugins' own cases and the learning pairs on one choice, with the person's
-    accounts: what `cockpit evaluate` and `cockpit evaluate --pairs` run, as one report."""
+    accounts: what `cockpit evaluate` and `cockpit evaluate --pairs` run, as one report. With `most_private`, only the
+    ones whose material is no more private than that run (measuring an account that may not see the rest)."""
     from engine.ai.matrix import record_report
     from engine.evaluate import Report, evaluate
     from engine.pairs import evaluate_pairs
 
     runs = cfg.ai.evaluation.runs
     cases = evaluate(
-        _template(), account=account, runs=runs, ai_config=ws.config_dir / "ai.yaml", packs_of=ws.root, env=env
+        _template(),
+        account=account,
+        runs=runs,
+        ai_config=ws.config_dir / "ai.yaml",
+        packs_of=ws.root,
+        env=env,
+        most_private=most_private,
     )
-    pairs = evaluate_pairs(_template(), account=account, runs=runs, ai_config=ws.config_dir / "ai.yaml", env=env)
+    pairs = evaluate_pairs(
+        _template(),
+        account=account,
+        runs=runs,
+        ai_config=ws.config_dir / "ai.yaml",
+        env=env,
+        most_private=most_private,
+    )
     for done in (cases, pairs):
         record_report(ws, done, stale_days=cfg.ai.skills.stale_days)
     return Report(
@@ -186,20 +200,33 @@ def titles(ws: Any) -> dict[str, str]:
 
 
 def estimate(
-    cfg: Config, ws: Any, ref: str, env: Mapping[str, str] | None = None, ai_config: Path | None = None
+    cfg: Config,
+    ws: Any,
+    ref: str,
+    env: Mapping[str, str] | None = None,
+    ai_config: Path | None = None,
+    most_private: str | None = None,
 ) -> tuple[float | None, int]:
     """About what the check of one choice would cost in USD (None when its price isn't known), and its case count.
-    `ai_config` is the accounts file to price it with (the saved one unless the change isn't saved yet)."""
+    `ai_config` is the accounts file to price it with (the saved one unless the change isn't saved yet). With
+    `most_private`, cases and pairs whose material is more private than that aren't counted."""
     from engine.evaluate import estimate_cases
     from engine.pairs import load_pairs, load_scenarios
+    from engine.skills import within_level
 
     runs = cfg.ai.evaluation.runs
     price, count = estimate_cases(
-        _template(), account=ref, runs=runs, ai_config=ai_config or ws.config_dir / "ai.yaml", packs_of=ws.root, env=env
+        _template(),
+        account=ref,
+        runs=runs,
+        ai_config=ai_config or ws.config_dir / "ai.yaml",
+        packs_of=ws.root,
+        env=env,
+        most_private=most_private,
     )
     # A pair or scenario makes about PAIR_CALLS calls (the learning run, the later input and what it proposes), each
     # priced at the cases' average.
-    pairs = len(load_pairs(_template())) + len(load_scenarios(_template()))
+    pairs = sum(within_level(p, most_private) for p in (*load_pairs(_template()), *load_scenarios(_template())))
     if price is None or not count:
         return None, count + pairs
     return price + price / count * PAIR_CALLS * pairs, count + pairs

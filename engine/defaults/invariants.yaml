@@ -16,6 +16,7 @@ invariants:
       - text.accept
       - text.discard
       - record.edit
+      - action.reply
       - question.update
       - question.move
       - question.mark_sent
@@ -38,6 +39,7 @@ invariants:
       - action.hold
       - action.unhold
       - action.drop
+      - action.reply
       - question.add
       - question.done
       - question.update

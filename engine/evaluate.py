@@ -13,7 +13,8 @@ run passes while the weighed extras stay within `ai.evaluation.extra_allowance`.
 kinds that are right but optional there, which weigh nothing. An expected op
 may name several kinds (`op: [fact, action.add]`) when the case checks something either of them can hold, and is met by
 any one of them. Wherever an expectation lists words (`text_has`, `topic_has`), a word with `|` is met by any one of its
-alternatives (`complet|finish|done`), each a case-insensitive part of the text.
+alternatives (`complet|finish|done`), each a case-insensitive part of the text. An expected `action.add` may also name
+`reply_has` (words in the drafted reply attached to the action) or `no_reply: true` (the action carries no draft).
 A case may name the `project` its input is about (as the person does when handing it in), or give `watched` (title,
 change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a
 held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A
@@ -23,6 +24,9 @@ plugin enabled in the workspace being evaluated: such a case may name a task kin
 of the plugin (`score`) that judges the plugin's own ops, while the core's exact matching scores everything else.
 The report says which accounts ran, the version of each command-line agent, and whether every tier ran on
 one account.
+
+A case, pair and scenario may name the `data_level` of their material (default: a handed-in note's, `internal`);
+measuring an account runs only those it is allowed to see.
 
 A case, pair and scenario name the skills they prove (`skills:`, ids from `engine/skills.py`); each finished run is
 added to the capability matrix for every skill its case names (`engine/ai/matrix.py`).
@@ -54,7 +58,7 @@ from engine.followups import they_finished
 from engine.intake import hand_in, note_as_input
 from engine.names import People
 from engine.records import REGISTRY, canonical_time
-from engine.skills import check_named
+from engine.skills import check_level, check_named, within_level
 from engine.storage import Store, StoreError, WriteContext
 from engine.workspace import Workspace, init_workspace
 from engine.yaml_load import load_yaml
@@ -236,6 +240,7 @@ def _check_case(folder: Path, case: dict[str, Any]) -> None:
     if case.get("watched") is not None and not isinstance(case["watched"], dict):
         raise ValueError(f"{where}: watched is a mapping (title, change, author, by_us, by_you, credited_to)")
     check_named(where, case.get("skills"))
+    check_level(where, case.get("data_level"))
     starting_records(folder.parent, case)
 
 
@@ -292,16 +297,18 @@ def evaluate(
     notice: Callable[[str], None] | None = None,
     adapter_factory: AdapterFactory = make_adapter,
     packs_of: Path | None = None,
+    most_private: str | None = None,
 ) -> Report:
     """Run every case (or `only` these) `runs` times. With `stub`, the stand-in AI gives each case's ideal answer, which
     checks the cases and the pipeline rather than a model. `ai_config` replaces the fixture's AI setup with another
     workspace's `ai.yaml`, so the PM's own accounts run against the fictional cases. The cases of the plugins enabled
-    in `packs_of` (default: the template) run after the core's."""
+    in `packs_of` (default: the template) run after the core's. With `most_private`, a case whose `data_level` is more
+    private than that is left out (the account may not see its material); the report still names every case."""
     env = os.environ if env is None else env
     results: list[RunResult] = []
     versions: dict[str, str | None] = {}
     found = [*load_cases(template), *load_pack_cases(packs_of or template)]
-    cases = [c for c in found if not only or c["id"] in only]
+    cases = [c for c in found if (not only or c["id"] in only) and within_level(c, most_private)]
     total = len(cases) * runs
     for case, n in ((case, n) for case in cases for n in range(1, runs + 1)):
         if results and results[-1].out_of_quota:
@@ -649,6 +656,10 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             return False
         if "text_has" in e and not _has_words(a["text"], e["text_has"]):
             return False
+        if "reply_has" in e and not _has_words(a.get("reply") or "", e["reply_has"]):
+            return False
+        if e.get("no_reply") and a.get("reply"):
+            return False
         if "due" in e and a.get("due") != e["due"]:
             return False
         return "status" not in e or a["status"] == e["status"]
@@ -952,14 +963,18 @@ def estimate_cases(
     ai_config: Path | None = None,
     packs_of: Path | None = None,
     env: Mapping[str, str] | None = None,
+    most_private: str | None = None,
 ) -> tuple[float | None, int]:
     """About what running every case `runs` times on an account would cost in USD, and how many cases that is. A few
     evenly spread cases have their packets built and priced as a real run is; the rest are taken to cost the average of
-    those. None when the account's price isn't known or no case could be priced."""
+    those. None when the account's price isn't known or no case could be priced. Cases more private than
+    `most_private` aren't counted."""
     from engine.dispatcher import estimate_request
 
     env = os.environ if env is None else env
-    cases = [*load_cases(template), *load_pack_cases(packs_of or template)]
+    cases = [
+        c for c in [*load_cases(template), *load_pack_cases(packs_of or template)] if within_level(c, most_private)
+    ]
     core = [c for c in cases if not c.get("_pack")]
     step = max(1, len(core) // ESTIMATE_SAMPLE)
     prices: list[float | None] = []

@@ -3,6 +3,32 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: A drafted reply is its own text on the action, changed only through `action.reply`
+
+- **Decided (main session, from the functional designer's answer, for review):** the reply to a question someone asks the
+  person is `reply` on the action, with `reply_reviewed` false until the person approves it or writes their own. The
+  action's text says what to do. The person approves or rewords it with a new person-only op, `action.reply` (Undo; the
+  route is `POST /api/actions/{id}/reply`); rewording a draft the assistant wrote records `draft_edited`, and approving
+  as it is records nothing. The assistant's `action.add` takes `reply`, only when a recorded fact holds the answer; the
+  golden case with no such fact expects no reply.
+- **Why:** a reply folded into the action's text could not be copied, edited or marked reviewed on its own, and a draft
+  must stay marked unreviewed until the person approves it.
+- **Impact:** design 5.1 (two optional fields on `action`), 6.7 (the op), 6.8; the plugin guide is regenerated (a core
+  record and an op changed). No new setting. No change to scope.
+
+## 2026-10-16: Measure counts only the cases an account may see, and asks first above the confirm amount
+
+- **Decided (main session, for review):** a case, pair or scenario may say its `data_level` (default `internal`, the level
+  a handed-in note has; none of the shipped ones says another). Measuring an account prices and runs only those no more
+  private than the account's most private allowed level, and the report keeps naming every case so the set measured
+  does not change. `POST /api/ai/skills/{account}/measure` is refused above `ai.budgets.confirm_above_usd` unless
+  `confirmed: true` is sent (and with no estimate when `confirm_unpriced` is on), and one asked for is kept in the
+  private folder so a restart finishes it.
+- **Why:** a case run on an account that may not see its material would fail on the router's refusal and count against
+  the model; spending is the person's choice.
+- **Impact:** design 6.16 (Measuring). A new optional key on cases and pairs, no new setting. The Measure screen and the
+  proof with each adapter kind's own fake service stay phase B.
+
 ## 2026-10-16: A calendar sync reaches the follow-on run through reading; asking for a team waits for the scope resolver
 
 - **Found:** a connected calendar's sync writes its changes as inputs (snapshots), not as calendar entries, and the

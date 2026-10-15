@@ -1026,6 +1026,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 80. A drafted reply on the action, and Measure's estimate and request (2026-10-16)
+
+| Where | Before | Now |
+|---|---|---|
+| Actions (5.1, 6.8) | A question someone asked the person was an action whose text was the reply | The reply is the action's own `reply` text with `reply_reviewed` (a draft until the person approves it or writes their own); new person-only op `action.reply` and `POST /api/actions/{id}/reply`; rewording a draft records `draft_edited`. Built: `tests/test_action_reply.py`, golden cases `question-asked-of-me-facts-hold-it` and `question-asked-of-me-nothing-holds-it` (`reply_has`, `no_reply`) |
+| Capability matrix (6.16) | Only an evaluation run or a switch check filled it | `POST /api/ai/skills/{account}/estimate` and `.../measure` (refused above the confirm amount without `confirmed`, background, kept across a restart); a case may say its `data_level` and an account measures only what it may see. Built: `tests/test_measure_account.py`. Not built: the Measure screen and the proof with each adapter kind's own fake service (phase B) |
+
 ## 79. The assistant moves a calendar entry from an input (2026-10-16)
 
 | Where | Before | Now |

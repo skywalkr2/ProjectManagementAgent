@@ -279,6 +279,7 @@
   "op.action.hold": "Put an action on hold",
   "op.action.unhold": "Took an action off hold",
   "op.action.drop": "Dropped an action",
+  "op.action.reply": "Approved or reworded the reply to a question",
   "op.action.fold": "Added an action to another one",
   "op.question.add": "Asked a question",
   "op.question.done": "Marked a question answered",

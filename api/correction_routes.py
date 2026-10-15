@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     ActionDropIn,
+    ActionReplyIn,
     Applied,
     ChangeIn,
     ChangeRequested,
@@ -90,6 +91,15 @@ def build_correction_router(ws: Workspace, cfg: Config, store: Store, events: Ev
         every list. Records a dropped correction naming the change and run that made it, when there was one."""
         need("action", action_id)
         return person_op({"op": "action.drop", "id": action_id, "reason": body.reason}, "Dropped an action")
+
+    @r.post("/actions/{action_id}/reply")
+    def review_reply(action_id: str, body: ActionReplyIn) -> Applied:
+        """Approve the reply the assistant drafted for an action as it is, or replace it with the person's own words;
+        either marks it reviewed, with Undo. Rewording a draft records a draft_edited correction naming the change and
+        run that made the action, with the text as the person used it."""
+        need("action", action_id)
+        op = {"op": "action.reply", "id": action_id, **body.model_dump(exclude_none=True)}
+        return person_op(op, "Approved a reply" if body.text is None else "Reworded a reply")
 
     @r.post("/changesets/{cs_id}/ops/{index}/fold")
     def fold(cs_id: str, index: int, body: FoldIn) -> Applied:

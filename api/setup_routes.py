@@ -16,6 +16,9 @@ from api.schemas import (
     AiAccountView,
     AiBorrowAnswer,
     AiBorrowed,
+    AiMeasureEstimate,
+    AiMeasureIn,
+    AiMeasureStarted,
     AiModelsAsk,
     AiModelSkills,
     AiModelsView,
@@ -70,6 +73,13 @@ log = logging.getLogger(__name__)
 
 #: What a hosted app says to a pasted key: keys stay in the app's own environment, given by their reference.
 HOSTED_KEY = "On a hosted app, a key can't be pasted: keep it in the app's environment and give where it is instead."
+
+#: Why a measuring failed, in words.
+MEASURE_WHY = {
+    "no-answer": "The account didn't take any of the cases (it asked to slow down or its plan was used up), so nothing "
+    "was measured.",
+    "unfinished": "Measuring couldn't finish; nothing was added.",
+}
 
 #: Settings an add-on's setup step may never suggest: where keys come from and which accounts get the work.
 #: How many confirmed senders on one domain make the screen offer a rule for the whole domain.
@@ -620,12 +630,13 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         minimum score (design 6.16). A skill nobody measured is listed as not measured."""
         from datetime import UTC, datetime
 
-        from engine.ai import matrix
+        from engine.ai import matrix, measure
         from engine.ai.adapters import make_adapter
         from engine.shipped import DEMOS, demo
 
         now = current()
         today = datetime.now(UTC).date()
+        asked = measure.read(ws)
         sets: dict[str, dict[str, str]] = {}
         for name in DEMOS:
             sets |= matrix.case_sets(demo(name), ws.root)
@@ -637,9 +648,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 held = matrix.standing(
                     ws, now, f"{name}/{model_id}", program_version=version, current_sets=sets, today=today
                 )
+                asked_now = asked.get(f"{name}/{short}") or {}
                 models.append(
                     AiModelSkills(
                         model=short,
+                        measure=asked_now.get("state"),
+                        measure_why=MEASURE_WHY.get(asked_now.get("why") or ""),
                         skills=[
                             AiSkillView(
                                 id=s.skill.id,
@@ -660,6 +674,76 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 )
             accounts.append(AiAccountSkills(name=name, models=models))
         return AiSkillsView(min_score=now.ai.skills.min_score, stale_days=now.ai.skills.stale_days, accounts=accounts)
+
+    measure_estimates: dict[tuple[Any, ...], Any] = {}
+
+    def measure_plan(name: str, model: str | None) -> tuple[Config, Any]:
+        """What measuring an account would run and cost. Pricing builds a few packets, so the answer is kept for as
+        long as the accounts file, the account and the number of runs stay."""
+        from engine.ai import measure
+
+        now = current()
+        key = ((ws.config_dir / "ai.yaml").read_text(encoding="utf-8"), name, model, now.ai.evaluation.runs)
+        if key not in measure_estimates:
+            try:
+                measure_estimates[key] = measure.estimate(now, ws, name, model)
+            except measure.MeasureError as err:
+                raise HTTPException(status_code=404, detail=str(err)) from None
+            if len(measure_estimates) > 50:
+                measure_estimates.pop(next(iter(measure_estimates)))
+        return now, measure_estimates[key]
+
+    def measure_view(now: Config, plan: Any) -> AiMeasureEstimate:
+        from engine.ai import measure
+
+        return AiMeasureEstimate(
+            models=plan.models,
+            level=plan.level,
+            cases=plan.cases,
+            skipped=plan.skipped,
+            runs=plan.runs,
+            usd=plan.usd,
+            confirm_above_usd=now.ai.budgets.confirm_above_usd,
+            needs_go=measure.needs_go(now, plan),
+        )
+
+    @r.post("/ai/skills/{account}/estimate")
+    def ai_measure_estimate(account: str, body: AiMeasureIn | None = None) -> AiMeasureEstimate:
+        """What measuring this account would cost: its models (or the one named) on the golden cases, the add-ons'
+        cases and the learning pairs, only those whose material the account is allowed to see, each as many times as
+        the configured number of runs. Nothing is run or spent."""
+        now, plan = measure_plan(account, body.model if body else None)
+        return measure_view(now, plan)
+
+    @r.post("/ai/skills/{account}/measure")
+    def ai_measure(account: str, body: AiMeasureIn | None = None) -> AiMeasureStarted:
+        """Measure this account in the background, filling what it can do (`GET /api/ai/skills`). A cost above the
+        amount the person asked to be asked about is refused unless `confirmed` is sent; an account that may see none
+        of the cases has nothing to measure."""
+        from engine.ai import measure
+
+        body = body or AiMeasureIn()
+        now, plan = measure_plan(account, body.model)
+        if not plan.cases:
+            raise HTTPException(
+                status_code=409,
+                detail="Nothing to measure: this account isn't allowed to see the material of any case.",
+            )
+        if measure.needs_go(now, plan) and not body.confirmed:
+            cost = "its cost can't be estimated" if plan.usd is None else f"it would cost about ${plan.usd:.2f}"
+            raise HTTPException(
+                status_code=409,
+                detail=f"Measuring needs your go first: {cost}, and you asked to be asked about that.",
+            )
+        refs = [f"{account}/{short}" for short in plan.models]
+        already = measure.begin(ws, refs)
+        worker.measure_soon()
+        events.changed()
+        return AiMeasureStarted(
+            started=[r.partition("/")[2] for r in refs if r not in already],
+            already=[r.partition("/")[2] for r in already],
+            estimate=measure_view(now, plan),
+        )
 
     @r.post("/ai/accounts/{name}/test")
     def ai_account_test(name: str, tier: str | None = None, model: str | None = None) -> list[AiTestResult]:

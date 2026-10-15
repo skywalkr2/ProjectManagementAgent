@@ -268,6 +268,12 @@ class ActionAddOp(OpModel):
     )
     due: date | None = Field(None, description="The day it is due, if one is stated.")
     project: str | None = Field(None, description="Project id, if the action belongs to one.")
+    reply: str | None = Field(
+        None,
+        description="For an action that is a reply the person owes: the drafted reply, ready to copy, only when a "
+        "recorded fact holds the answer, naming the fact it comes from. Left out when nothing recorded holds the "
+        "answer. It stays marked as a draft until the person approves it.",
+    )
     event: Annotated[str | None, RefTo("event")] = Field(
         None, description="The calendar entry it is for, when the input ties it to one."
     )
@@ -275,6 +281,22 @@ class ActionAddOp(OpModel):
         None, description="The series of a repeating meeting it is for; it sits on the next instance."
     )
     evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
+
+
+class ActionReplyOp(OpModel):
+    """Approve the drafted reply of an action as it is, or replace it with the person's own words; either marks it
+    reviewed. Only the person uses it; Undo puts the reply and its mark back."""
+
+    op: Literal["action.reply"] = "action.reply"
+    id: str = Field(description="The id of the action.")
+    text: str | None = Field(
+        None, min_length=1, description="The person's own wording of the reply; left out, the draft is approved."
+    )
+
+    def describe(self) -> str | None:
+        return (
+            f"Approve the reply of action {self.id}" if self.text is None else f"Reword the reply of action {self.id}"
+        )
 
 
 class ActionCloseOp(OpModel):
@@ -940,6 +962,7 @@ Op = Annotated[
     | RecordSetOp
     | RecordLogOp
     | ActionAddOp
+    | ActionReplyOp
     | ActionCloseOp
     | ActionHoldOp
     | ActionUnholdOp
@@ -993,6 +1016,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "record.set": RecordSetOp,
     "record.log": RecordLogOp,
     "action.add": ActionAddOp,
+    "action.reply": ActionReplyOp,
     "action.close": ActionCloseOp,
     "action.hold": ActionHoldOp,
     "action.unhold": ActionUnholdOp,
@@ -1055,6 +1079,7 @@ PERSON_ONLY_OPS = {
     "text.accept",
     "text.discard",
     "record.edit",
+    "action.reply",
     "question.update",
     "question.move",
     "question.mark_sent",

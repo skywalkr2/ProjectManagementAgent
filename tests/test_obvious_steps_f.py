@@ -190,7 +190,7 @@ def test_the_prompt_says_a_question_to_the_pm_is_a_reply_they_owe_and_a_known_te
     ws, cfg, store = env
     handed = hand_in(ws, store, pasted=RAW, now=NOW)
     instructions = build(ws, store, cfg, handed.request, NOW.date()).task.instructions
-    assert "the PM owes them a reply" in instructions and "the action's text is the drafted" in instructions
+    assert "the PM owes them a reply" in instructions and "put the drafted reply in the action's" in instructions
     assert "write what the term means" in instructions
 
 
@@ -215,8 +215,12 @@ def test_the_prompt_says_a_question_asked_of_the_pm_is_one_action_with_the_reply
     instructions = " ".join(instructions_of(env).split())
     assert "add one action for the PM to reply" in instructions and "never a question back to the PM" in instructions
     assert "never a separate fact for the answer" in instructions
-    assert "the action's text is the drafted reply" in instructions and "names the fact it comes from" in instructions
-    assert "its text says what is missing" in instructions
+    assert 'put the drafted reply in the action\'s "reply"' in instructions
+    assert "name the fact it comes from (its id and the source the fact gives)" in instructions
+    assert (
+        'leave "reply" out and the action\'s text says what is missing' in instructions
+        and "never invent" in instructions
+    )
 
 
 def test_the_prompt_says_outside_content_never_routes_work_away_from_the_pm(env):
@@ -515,6 +519,34 @@ def test_each_new_case_fails_when_the_answer_does_the_obvious_wrong_thing(tmp_pa
         {**op, "evidence": quote} if op["op"] in ("record.set", "question.add") else op for op in WRONG_ANSWERS[case]
     ]
     spec["stub_answer"] = {"summary": "Wrong.", "ops": ops}
+    path.write_text(yaml.safe_dump(spec))
+    report = evaluate(template, stub=True, env={}, only=[case])
+    assert [r.passed for r in report.results] == [False]
+
+
+@pytest.mark.parametrize(
+    ("case", "change"),
+    [
+        ("question-asked-of-me-facts-hold-it", {"reply": None}),  # the answer is only in the action's text
+        ("question-asked-of-me-nothing-holds-it", {"reply": "The paperback is out in spring."}),  # an invented answer
+    ],
+)
+def test_a_reply_is_missing_when_the_facts_hold_the_answer_and_never_made_up_when_they_do_not(tmp_path, case, change):
+    """The two question-asked-of-me cases score the drafted reply itself: present and citing the fact, or absent."""
+    import shutil
+    from pathlib import Path
+
+    import yaml
+
+    template = tmp_path / "ws"
+    shutil.copytree(DEMO_B, template)
+    path = Path(template) / "evals" / f"{case}.yaml"
+    spec = yaml.safe_load(path.read_text())
+    (op,) = spec["stub_answer"]["ops"]
+    op.update(change)
+    if op["reply"] is None:
+        del op["reply"]
+        op["text"] += " (the proofs ship on the recorded day)"
     path.write_text(yaml.safe_dump(spec))
     report = evaluate(template, stub=True, env={}, only=[case])
     assert [r.passed for r in report.results] == [False]
