@@ -84,6 +84,8 @@ uv run cockpit evaluate --pairs --from workspaces/demo-a -w ~/cockpit-exit --acc
   account's monthly quota ran out during the pairs, so both pair sets run again at `4b672f6` (a spent plan is now read
   as one, and the pairs check learning rather than wording), on the backup account the owner set for the rest of the
   month (owner, 2026-10-15: the main account first, a low-cost API model as its checked backup); the report names it.
+  The owner's `cockpit-after` copy now follows the branch (at `fd30934`, whose engine, prompts and cases are those of
+  `4b672f6`), and the two pair commands above run with `--account` set to the backup's name as `ai test` shows it.
 - **Keep the computer awake:** start each command with `caffeinate -i` on a Mac. A run frozen by sleep can take many
   minutes to recover, since each call waits up to 90 seconds before giving up.
 - **Then:** send the four files (in your home folder) to the session. It checks them for account names or addresses, writes the comparison
@@ -1478,6 +1480,9 @@ From the original designer's lessons of 2026-10-14:
   synced folder lives only in Settings.
 - [ ] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
+- [ ] **Add an account in Settings, in place** (owner, 2026-10-15; design 7.16): the button opens only the AI account
+  form (service, key, models, what it is for) inside Settings, never the setup guide. *Today:* it opens the setup guide
+  at its AI step.
 - [ ] **Setup guide** as steps | step.
 - [ ] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its

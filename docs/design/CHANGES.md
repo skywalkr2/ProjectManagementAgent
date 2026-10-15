@@ -1031,6 +1031,7 @@ yet follow, that it is *designed*, with its phase.
 | Where | Before | Now |
 |---|---|---|
 | AI accounts (7.16) | A backup account was only the raw tier setting; Settings had no way to add an account | "Use as backup" checks the account for each kind of work and adds it to their backups with Undo; "Add an account" in Settings opens the guide's AI step. Built: `AiAccounts.test.tsx`, `tests/test_setup.py` |
+| AI accounts (7.16) | "Add an account" opens the setup guide | It adds the account in place in Settings, with the AI choices only (owner). Not built: phase B |
 
 ## 71. The functional designer's answers to the round of 2026-10-15
 

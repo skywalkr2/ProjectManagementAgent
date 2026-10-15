@@ -3,6 +3,13 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: Adding an AI account from Settings stays in Settings
+
+- **Decided (owner):** "Add an account" in Settings opens only the AI account form, in place; it never sends the person
+  back into the setup guide. The guide is for a first start.
+- **Why:** the person came to change one thing; the guide's other steps are noise there.
+- **Impact:** design 7.16 says so; built in phase B (roadmap, Settings). Until then the button opens the guide's AI step.
+
 ## 2026-10-15: The "after" run's last report: a spent plan, and pair checks on wording
 
 **Decided by:** the technical PM, reading the owner's reports at `b136c7d`. **What:** the golden set passed 73 of 81 and
