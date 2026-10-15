@@ -51,16 +51,17 @@ blocks; everything else goes ahead without it.
 | O3 | **The "after" run** (L4's last step): the golden set, the harder set and the learning pairs on the owner's account, 3 runs per case, pinned to commit `786563c` (the last L-core code). Compared case by case with O1 and O2. Steps below. | The owner's computer, with the account used for O1 and O2 | Real use: the comparison has to exist before it starts. | Phase B, which goes ahead meanwhile. |
 
 **O3 steps** (pinned to commit `786563c`, phase L-core's last code). In the owner's copy of the repository, on their
-own computer:
+own computer, on the workspace and account used for O2:
 ```
 git fetch origin claude/tender-tesla-16a8ob
 git worktree add ../cockpit-after 786563c
 cd ../cockpit-after
 uv sync
-uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --account "<the account used for O1>" --runs 3 --json > after.json
-uv run cockpit evaluate --from workspaces/demo-a -w <your workspace folder> --account "<the account used for O1>" --runs 3 --json > after-harder.json
-uv run cockpit evaluate --pairs --from workspaces/demo-b -w <your workspace folder> --account "<the account used for O1>" --runs 3 --json > after-pairs.json
-uv run cockpit evaluate --pairs --from workspaces/demo-a -w <your workspace folder> --account "<the account used for O1>" --runs 3 --json > after-pairs-harder.json
+uv run cockpit ai test -w ~/cockpit-exit          # every tier should say ok first
+uv run cockpit evaluate --from workspaces/demo-b -w ~/cockpit-exit --account "<the account used for O2>" --runs 3 --json > ~/after.json
+uv run cockpit evaluate --from workspaces/demo-a -w ~/cockpit-exit --account "<the account used for O2>" --runs 3 --json > ~/after-harder.json
+uv run cockpit evaluate --pairs --from workspaces/demo-b -w ~/cockpit-exit --account "<the account used for O2>" --runs 3 --json > ~/after-pairs.json
+uv run cockpit evaluate --pairs --from workspaces/demo-a -w ~/cockpit-exit --account "<the account used for O2>" --runs 3 --json > ~/after-pairs-harder.json
 ```
 - **Cost:** about 430 small runs in all on the one account: 81 and 60 for the two sets (27 and 20 cases × 3), and
   about 280 for the pairs (30 pairs and the day-30 scenario, each about three calls, × 3). On a subscription agent it is
@@ -70,7 +71,7 @@ uv run cockpit evaluate --pairs --from workspaces/demo-a -w <your workspace fold
   cases plus the ones added since (those have no "before" number). A pair passes only when the later input comes out
   right with the correction not repeated, and a negative pair passes only when its later input is unchanged. A pair
   that fails names what the later run was given, so a gap in learning shows which knowledge didn't reach it.
-- **Then:** send the four files to the session. It checks them for account names or addresses, writes the comparison
+- **Then:** send the four files (in your home folder) to the session. It checks them for account names or addresses, writes the comparison
   with O1 and O2 in `docs/project/evals/`, and turns any failing pair into a fix with its test before real use starts.
   After that, `git worktree remove ../cockpit-after`.
 
