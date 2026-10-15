@@ -190,13 +190,13 @@ def test_a_question_that_holds_something_or_is_closed_is_not_reworded_moved_or_d
 # ---- reroute ---------------------------------------------------------------------------------------------------------
 
 
-def test_moving_a_decision_to_someone_else_makes_it_a_question_records_routed_and_undo_sends_it_back(env):
+def test_moving_a_decision_to_someone_else_keeps_it_a_decision_records_routed_and_undo_sends_it_back(env):
     _, cfg, store = env
     cs_id, run_id, qid = asked_by_a_run(env, decision_op(cfg))
     other = other_of(cfg)
     done = person_op(env, {"op": "question.move", "id": qid, "to": other})
     moved = question_of(store, qid)
-    assert (moved["to"], moved["kind"]) == (other, "question")
+    assert (moved["to"], moved["kind"]) == (other, "decision")
     (signal,) = signals(store, "routed")
     assert signal["refs"] == [cs_id, qid, other] and signal["changeset"] == cs_id and signal["run"] == run_id
     undo_changeset(store, done)
@@ -748,7 +748,7 @@ def test_the_question_routes_apply_as_the_person_with_undo_and_the_dropped_view_
     assert reworded.status_code == 200, reworded.text
     assert question_of(store, qid)["title"] == "Matte or soft-touch, then?"
     assert client.post(f"{base}/questions/{qid}/reroute", json={"to": other}).status_code == 200
-    assert question_of(store, qid)["to"] == other and question_of(store, qid)["kind"] == "question"
+    assert question_of(store, qid)["to"] == other and question_of(store, qid)["kind"] == "decision"
     assert client.post(f"{base}/questions/{qid}/sent", json={}).status_code == 200
     assert question_of(store, qid)["status"] == "sent"
     assert client.post(f"{base}/questions/{qid}/drop", json={"reason": ""}).status_code == 422

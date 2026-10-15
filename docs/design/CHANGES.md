@@ -1078,7 +1078,8 @@ All *not yet built*: L7, phase B and phase P.
 
 | Where | Before | Now |
 |---|---|---|
-| Decisions (6.8, 5.1) | A decision is a question to the PM | A decision goes to whoever decides, the PM when nobody is named; an option inside an answer is a decision for them (owner). Built in L7 |
+| Decisions (6.8, 5.1) | A decision is a question to the PM | A decision goes to whoever decides, the PM when nobody is named; an option inside an answer is a decision for them (owner). Built in L7; moving one keeps it a decision |
+| Follow-ups (6.19) | A follow-up went to whoever the input named | A follow-up goes to whoever made the claim or owns the thing; when neither is clear it is a question to the person about who to ask, never someone known from a passing mention. Built in L7 |
 | Follow-on changes (6.7) | None | Moving or retitling a dated record, or replacing a fact, makes one request that brings tied records in line; records can name the calendar entry they belong to. Built in L7; the agenda is the project management pack's |
 | Facts (6.19) | Source and trust only | Each fact says who it rests on: the person, the assistant's inference or someone named; a correction replaces the fact it contradicts. Built in L7 |
 | Evaluation (6.16) | Cases start from an input | Replay cases start from the person's own action and score the end state. Built in L7 |

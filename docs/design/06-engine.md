@@ -728,9 +728,12 @@ is marked *designed*, with the phase.
   notice kinds), and the screen follows the stored kind: a question of kind `decision` shows as a decision, and one of kind
   `question` shows as a question to answer; a decision to someone else shows in the PM's follow-ups under that person.
   Keeping the kind makes the assistant's call checkable and lets a mistaken one be corrected. An option offered inside an
-  answer ("there is a feature we can turn on") is a decision for whoever decides. *As built today, and changed in L7:*
-  decisions go only to the PM, and moving a question from the PM to someone else makes it an ordinary question
-  (`question.move`, below). **Built:** `web/src/components/FollowUps.test.tsx` ("a question to the PM shows as a decision or as a question by its stored kind"), `tests/test_corrections.py::test_moving_a_decision_to_someone_else_makes_it_a_question_records_routed_and_undo_sends_it_back`.
+  answer ("there is a feature we can turn on") is a decision for whoever decides. Moving a decision to someone else
+  keeps it a decision (`question.move`, below). Its Today line ("Waiting on <name>'s decision: blocks <action>") comes
+  with the dependencies of the project management pack (phase P, 6.23). **Built:** `web/src/components/FollowUps.test.tsx`
+  ("a question to the PM shows as a decision or as a question by its stored kind"),
+  `tests/test_corrections.py::test_moving_a_decision_to_someone_else_keeps_it_a_decision_records_routed_and_undo_sends_it_back`,
+  and the prompt and golden cases below.
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
     (*designed, phase L3*, 6.22). A held op the PM's answer releases ("yes, add them" to a `project.add`) counts as the PM's own.
@@ -752,8 +755,8 @@ is marked *designed*, with the phase.
   *designed, not yet built, not scheduled*). The person's own ops (L3), each applied as theirs with Undo
   (`POST /api/changesets/{id}/undo`), with the tests below:
   - `question.update` (reword the title, the text or both; `POST /api/questions/{id}/reword`) records `reworded`;
-  - `question.move` (ask someone else, by id or name; `.../reroute`) records `routed`, turns a decision into an ordinary
-    question when it leaves the person, and makes a sent question open again for the new person;
+  - `question.move` (ask someone else, by id or name; `.../reroute`) records `routed`, keeps a decision a decision for the
+    new person, and makes a sent question open again for the new person;
   - `question.drop` (with a reason; `.../drop`) records `dropped`; the question stays, status `dropped`, with
     `dropped_reason`, and `GET /api/questions/dropped` lists it (a question that holds an item until it is answered is
     never in the list);
@@ -1567,7 +1570,9 @@ confirms. The person's own deduction closes it, recorded as theirs.
 **A correction, not a second fact.** An answer that contradicts a recorded fact replaces it (`supersedes`, which quotes
 the old fact), and the records that repeated the old fact are brought in line by a follow-on run (6.7). A follow-up
 question goes to whoever made the claim or owns the thing it is about; when neither is clear, it is a question to the
-person about who to ask, never a guess from a passing mention.
+person about who to ask, never a guess from a passing mention. **Built:** the prompt rule and the golden cases
+`follow-up-goes-to-who-made-the-claim` and `follow-up-with-no-clear-owner-asks-who`
+(`tests/test_obvious_steps_f.py::test_the_prompt_says_a_follow_up_goes_to_the_claims_maker_or_owner_and_otherwise_asks_who`).
 
 ## 6.20 Quality signals
 

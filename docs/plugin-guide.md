@@ -1193,7 +1193,7 @@ A question for a person; a decision is a question to the PM. Added by `question.
 | `links` | list[Link] | `[]` | Pages the reader can open to see what it is about. |
 | `links[].label` | str | required | What the link is, in words for the reader. |
 | `links[].url` | str | required | The address to open. |
-| `kind` | Literal['question', 'decision', 'action-notice', 'routing', 'impact'] | `'question'` | question: an ordinary question. decision: a choice for the PM to make. action-notice: tells someone about an action. routing: asks the PM who or what something is. impact: asks another area's contact how a change affects them. |
+| `kind` | Literal['question', 'decision', 'action-notice', 'routing', 'impact'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. action-notice: tells someone about an action. routing: asks the PM who or what something is. impact: asks another area's contact how a change affects them. |
 | `projects` | list[str] | `[]` | The ids of the projects it is about. |
 | `batch` | Literal['now', 'later'] | `'now'` | Whether it is ready to go out now or waits for a later batch. |
 | `status` | Literal['open', 'sent', 'answered', 'dropped'] | `'open'` | open: not yet sent. sent: marked as sent, waiting for an answer. answered: closed with an answer. dropped: closed without one. |
@@ -2143,7 +2143,7 @@ Set a person's part in a project: they run it, design for it, or only watch it. 
 
 ### `question.add`
 
-A question for a person, written for its reader. Decisions are questions to the PM. A question to anyone else needs at least one link the recipient can open.
+A question for a person, written for its reader. A decision is a question to whoever decides, the PM when nobody is named. A question to anyone else needs at least one link the recipient can open.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -2155,7 +2155,7 @@ A question for a person, written for its reader. Decisions are questions to the 
 | `links[].label` | str | required | What the link is, in words for the reader. |
 | `links[].url` | str | required | The address to open; a question to someone else needs one the recipient can open. |
 | `project` | str \| None | `None` | Project id, if the question is about one. |
-| `kind` | Literal['question', 'decision'] | `'question'` | question: an ordinary question. decision: a choice for the PM to make. |
+| `kind` | Literal['question', 'decision'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. |
 | `matters_for` | str \| None | `None` | For a question to anyone but the PM: which of the PM's decisions, designs or dated items depends on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead and say so in the change's note. |
 
 ### `question.done`
@@ -2184,7 +2184,7 @@ Drop a question that isn't needed, with the reason. It stays on record as droppe
 
 ### `question.mark_sent`
 
-Record that the person already sent an open question themselves, the day they did (today when left out). Only the person uses it; Undo makes it open again.
+Record that the person already sent an open question themselves, the day they did (today when left out). The person uses it, or the assistant when the person's own note says they asked; Undo makes it open again.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -2194,7 +2194,7 @@ Record that the person already sent an open question themselves, the day they di
 
 ### `question.move`
 
-Ask someone else instead: the question goes to another person, by name or id. A decision moved off the PM becomes an ordinary question. Only the person uses it; Undo sends it back to the one it was for.
+Ask someone else instead: the question goes to another person, by name or id, and keeps its kind: a decision stays a decision for the new person. Only the person uses it; Undo sends it back to the one it was for.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|

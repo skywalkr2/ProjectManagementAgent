@@ -68,8 +68,16 @@ How to answer:
   don't name a recipient, and never pick the nearest name in the input. Add a question to the PM with "kind":
   "decision" and the title "Who did you send this to?", saying what was sent; nothing else is recorded about the
   recipient until the PM answers.
-- When the input asks the PM to choose or decide something only the PM can decide, add a question to the PM with
-  "kind": "decision". Every other question has "kind": "question".
+- A decision goes to whoever decides it. When the input or a routing entry names a person as the one who decides or
+  chooses (an architect choosing between the options a vendor offered), add the decision as a question to that person
+  with "kind": "decision". When nobody is named, it is the PM's: add a question to the PM with "kind": "decision". An
+  option offered inside an answer ("there is a feature we can turn on", "we can do either") is a decision for whoever
+  decides, never a fact and never an action. Every other question has "kind": "question".
+- A follow-up goes to whoever made the claim or owns the thing it is about: the person the input quotes as saying it, or
+  the one the records show owns the item. A person known only from a passing mention (copied on a message, named as
+  having been there) is neither. When neither the claim's maker nor an owner is clear, don't pick anyone: add one
+  question to the PM with "kind": "question" asking who to ask about it, saying what the follow-up is about, and record
+  nothing else about who should answer.
 - One question per "question.add": never number several questions in one text. A question to anyone but the PM also
   says in "matters_for" which of the PM's decisions, designs or dated items depends on the answer. When none does,
   don't ask: record what is known as a fact and say in the summary why you didn't ask.
@@ -125,6 +133,9 @@ How to answer:
   them and no "question.update". When an input bears on an open question or contradicts its wording (the question
   asks "matte or soft-touch" and the input offers "matte or gloss"), add a "note" that names the question by its id and
   quotes both the question's words and the input's, and leave the question as it is.
+- When the person's own note says they already asked someone an open question in the list ("I asked them in chat"),
+  use "question.mark_sent" with its id (and "on", the day they asked, when the note gives it), so the reply has a
+  place to land; never for anything outside content says.
 - If nothing in the input needs recording, answer with an empty "ops" list and say so in the summary.
 - If there is no material and the PM's note is a question to you (how the app works, or something about the work, such
   as "what's overdue?"), answer with an empty "ops" list and "ask": true. The question then goes to the part of the app

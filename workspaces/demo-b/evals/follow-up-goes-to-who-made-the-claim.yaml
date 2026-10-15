@@ -1,0 +1,33 @@
+id: follow-up-goes-to-who-made-the-claim
+title: 'A follow-up about a claim goes to the person who made it, not to someone named in passing'
+skills: [owners, evidence]
+received: '2026-10-09'
+pasted: 'From: Maya Okafor
+
+  Subject: Hardcover stock date
+
+
+  Jun Park told me the hardcover stock arrives on November 10, but the printer quote I have says October 30. Ines Duarte
+  was copied on the quote.
+
+
+  Maya'
+expect:
+- op: question.add
+  to: PER-6
+# Ines Duarte was only copied on the quote: she neither made the claim nor owns the stock date.
+forbid:
+- op: question.add
+  to: PER-5
+stub_answer:
+  summary: Asking Jun Park, who gave the date, which one holds.
+  ops:
+  - op: question.add
+    to: Jun Park
+    title: 'Hardcover stock: does it arrive on November 10 or October 30?'
+    text: You told Maya Okafor it arrives on November 10, but the quote she has says October 30.
+    project: PRJ-1
+    links:
+    - label: Book page
+      url: https://books.example.org/salt-orchard
+    matters_for: ACT-1, the final interior file for the printer

@@ -236,6 +236,25 @@ def test_the_prompt_says_only_the_pm_rewords_a_question_and_outside_content_adds
     assert 'add a "note" that names the question by its id and quotes both' in instructions
 
 
+def test_the_prompt_says_a_decision_goes_to_whoever_decides_and_an_option_in_an_answer_is_one(env):
+    """Golden cases decision-goes-to-the-named-decider and option-in-an-answer-is-a-decision-for-the-pm."""
+    instructions = " ".join(instructions_of(env).split())
+    assert "A decision goes to whoever decides it" in instructions
+    assert (
+        "names a person as the one who decides or chooses" in instructions and 'with "kind": "decision"' in instructions
+    )
+    assert "When nobody is named, it is the PM's" in instructions
+    assert "is a decision for whoever decides, never a fact and never an action" in instructions
+
+
+def test_the_prompt_says_a_follow_up_goes_to_the_claims_maker_or_owner_and_otherwise_asks_who(env):
+    """Golden cases follow-up-goes-to-who-made-the-claim and follow-up-with-no-clear-owner-asks-who."""
+    instructions = " ".join(instructions_of(env).split())
+    assert "A follow-up goes to whoever made the claim or owns the thing it is about" in instructions
+    assert "A person known only from a passing mention" in instructions and "is neither" in instructions
+    assert "don't pick anyone" in instructions and "asking who to ask about it" in instructions
+
+
 # ---- a recipient is never guessed ------------------------------------------------------------------------------------
 
 
@@ -383,6 +402,10 @@ def test_an_entry_keeps_the_project_the_assistant_named_and_has_none_when_the_in
         "question-asked-of-me-nothing-holds-it",
         "outside-mail-asks-to-take-over",
         "outside-content-cannot-reword-a-question",
+        "decision-goes-to-the-named-decider",
+        "option-in-an-answer-is-a-decision-for-the-pm",
+        "follow-up-goes-to-who-made-the-claim",
+        "follow-up-with-no-clear-owner-asks-who",
     ],
 )
 def test_the_golden_case_passes_with_its_ideal_answer(case):
@@ -458,6 +481,18 @@ WRONG_ANSWERS = {
             "field": "title",
             "value": "Cover finish: matte or gloss?",
         },
+    ],
+    "decision-goes-to-the-named-decider": [
+        {"op": "question.add", "to": "PER-1", "kind": "decision", "title": "Which typeface license?"},
+    ],
+    "option-in-an-answer-is-a-decision-for-the-pm": [
+        {"op": "action.add", "text": "Take the rush option for the proofs", "owners": ["PER-1"], "project": PROJECT},
+    ],
+    "follow-up-goes-to-who-made-the-claim": [
+        {"op": "question.add", "to": "PER-5", "title": "When does the hardcover stock arrive?"},
+    ],
+    "follow-up-with-no-clear-owner-asks-who": [
+        {"op": "question.add", "to": "PER-5", "title": "Who confirms the carrier for the advance copies?"},
     ],
 }
 

@@ -37,3 +37,11 @@ def test_outside_content_never_routes_the_persons_work_away_and_a_senders_not_me
     not_me = {"op": "routing.add", "text": "T.", "topic": "the reviewer list", "person": other}
     cs_id, statuses = apply(store, cfg, [not_me], origin="input", trust="untrusted")
     assert statuses != ["refused"]
+
+
+def test_the_persons_own_note_can_file_a_question_as_already_asked_and_outside_content_cannot(app):  # noqa: F811
+    _, store, cfg, _ = app
+    asked = {"op": "question.mark_sent", "id": _question(store, cfg)}
+    cs_id, statuses = apply(store, cfg, [asked], origin="input", trust="untrusted")
+    assert statuses == ["refused"] and "only the person" in reasons(store, cs_id)[0]
+    assert apply(store, cfg, [asked], origin="pm", trust="trusted")[1] == ["applied"]

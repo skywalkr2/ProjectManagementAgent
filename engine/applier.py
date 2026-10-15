@@ -174,7 +174,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         if name not in ctx.allowed_ops:
             refuse(i, "allowed-ops", f"{name} isn't an op this task may use")
             continue
-        if name in PERSON_ONLY_OPS and ctx.actor != "pm":
+        # The person's own note saying they already asked is theirs to file; outside content never is.
+        if name in PERSON_ONLY_OPS and ctx.actor != "pm" and not (name == "question.mark_sent" and _from_pm(view, ctx)):
             refuse(i, "person-only", f"only the person can use {name}")
             continue
         if isinstance(op, (TextEditOp, TextProposeOp, TextDraftOp)):
@@ -1615,8 +1616,6 @@ def _correct_question(tx: Tx, op: OpModel, ctx: Context, w: WriteContext) -> lis
     elif isinstance(op, QuestionMoveOp):
         person = people.resolve(op.to).person
         changes = {"to": person}
-        if cur.data["kind"] == "decision" and person != people.pm:
-            changes["kind"] = "question"
         if cur.data["status"] == "sent":
             changes |= {"status": "open", "sent_at": None}  # it hasn't gone to the new person yet
         kind = "routed"

@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: What "three ops the assistant may propose" means in the code
+
+- **Found:** bringing back a set-aside item (`mail.restore`) and merging or retiring a list value (`list.merge`,
+  `list.retire`) were already proposals the assistant may make. Removing a project record is `record.delete`, the
+  person's own act by design.
+- **Decided (main session):** a project record stays the person's to remove; "Not a project" already handles one the
+  assistant only proposed. Marking a question as already asked applies when the person's own note says they asked;
+  outside content can't, so the `person-only` invariant is narrowed for the person's own words only, never loosened for
+  anything else.
+- **Impact:** design 6.8 unchanged in substance; the roadmap item is closed with its test.
+
 ## 2026-10-16: The capability matrix stays out of backups
 
 - **Decided (main session):** the matrix stays in the workspace's private folder beside the connection checks, and like

@@ -436,9 +436,9 @@ class Question(Record):
     kind: Literal["question", "decision", "action-notice", "routing", "impact"] = Field(
         "question",
         description=(
-            "question: an ordinary question. decision: a choice for the PM to make. action-notice: tells someone "
-            "about an action. routing: asks the PM who or what something is. impact: asks another area's contact "
-            "how a change affects them."
+            "question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. "
+            "action-notice: tells someone about an action. routing: asks the PM who or what something is. impact: "
+            "asks another area's contact how a change affects them."
         ),
     )
     projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")

@@ -17923,7 +17923,7 @@
     },
     "/api/questions/{qid}/reroute": {
       "post": {
-        "description": "Ask someone else instead, with Undo. Records a routed correction; a decision moved off the person becomes an\nordinary question.",
+        "description": "Ask someone else instead, with Undo. Records a routed correction; a decision stays a decision for the new\nperson.",
         "operationId": "reroute_api_questions__qid__reroute_post",
         "parameters": [
           {

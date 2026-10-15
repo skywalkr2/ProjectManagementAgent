@@ -1,0 +1,32 @@
+id: option-in-an-answer-is-a-decision-for-the-pm
+title: 'An option offered inside an answer, with nobody named to decide, is a decision for the PM'
+skills: [owners]
+received: '2026-10-09'
+pasted: 'From: Jun Park
+
+  Subject: Re: Proof schedule
+
+
+  The interior proofs ship on November 3 as planned. There is also a rush option we can turn on that moves them up by two
+  days for a flat fee.
+
+
+  Jun'
+expect:
+- op: question.add
+  to: PER-1
+  kind: decision
+# The option is not an action and nobody was told to take it.
+forbid:
+- op: action.add
+allow:
+- fact  # the shipping date the mail gives may be recorded
+stub_answer:
+  summary: The proofs ship November 3; the rush option is yours to decide.
+  ops:
+  - op: question.add
+    to: me
+    kind: decision
+    title: 'Interior proofs: take the printer''s rush option?'
+    text: The printer can move the proofs up by two days for a flat fee. They ship on November 3 otherwise.
+    project: PRJ-1

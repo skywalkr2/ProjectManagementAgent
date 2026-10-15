@@ -19,7 +19,7 @@ invariants:
       - question.update
       - question.move
       - question.mark_sent
-    line: Only the person can make this change; from the assistant it is refused.
+    line: Only the person can make this change; from the assistant it is refused, except marking a question already asked when the person's own note says so.
     seed: >-
       Some changes are the person's alone: editing text, accepting or discarding a proposed version, editing a
       record's fields. Never include them. Propose the new text for the person to review, or ask a question.

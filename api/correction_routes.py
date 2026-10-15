@@ -73,8 +73,8 @@ def build_correction_router(ws: Workspace, cfg: Config, store: Store, events: Ev
 
     @r.post("/questions/{qid}/reroute")
     def reroute(qid: str, body: QuestionRerouteIn) -> Applied:
-        """Ask someone else instead, with Undo. Records a routed correction; a decision moved off the person becomes an
-        ordinary question."""
+        """Ask someone else instead, with Undo. Records a routed correction; a decision stays a decision for the new
+        person."""
         need("question", qid)
         return person_op({"op": "question.move", "id": qid, "to": body.to}, "Asked someone else instead")
 

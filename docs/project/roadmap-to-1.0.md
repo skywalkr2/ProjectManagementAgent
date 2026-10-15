@@ -1139,7 +1139,7 @@ From the original designer's lessons of 2026-10-14:
   send back a whole changeset and cannot reword, reroute or drop a question.
   Built: the four ops with Undo and their signals, their routes, the dropped-questions list and the `draft_edited` tie
   (`tests/test_corrections.py::test_reword_changes_the_question_records_a_reworded_signal_naming_its_run_and_undo_restores_it`,
-  `tests/test_corrections.py::test_moving_a_decision_to_someone_else_makes_it_a_question_records_routed_and_undo_sends_it_back`,
+  `tests/test_corrections.py::test_moving_a_decision_to_someone_else_keeps_it_a_decision_records_routed_and_undo_sends_it_back`,
   `tests/test_corrections.py::test_drop_keeps_the_question_with_its_reason_records_dropped_and_undo_opens_it_again`,
   `tests/test_corrections.py::test_an_edited_message_names_the_question_ids_and_the_run_that_wrote_them`). "Not me,
   ask X" is a routing proposal (`tests/test_learn_input.py::test_a_reply_that_says_not_me_ask_x_proposes_routing_and_leaves_the_question_open`).
@@ -1421,17 +1421,25 @@ Questions, decisions and drops (answers 12, 15, 16, 19, 24, 8):
   Built: `test_the_prompt_says_only_the_pm_rewords_a_question_and_outside_content_adds_a_note`,
   `test_the_golden_case_passes_with_its_ideal_answer[outside-content-cannot-reword-a-question]`,
   `test_outside_content_cannot_reword_a_question_but_can_add_a_note_to_it`.
-- [ ] **A decision goes to whoever decides** (owner), the person when nobody is named; an option inside an answer is a
-  decision for them; it shows in follow-ups under the decider; `question.move` keeps a decision a decision. Its Today
-  line ("Waiting on <name>'s decision: blocks <action>") comes with the pack's dependencies (phase P). *Today:* decisions
-  go only to the person, and moving one makes it an ordinary question.
+- [x] **A decision goes to whoever decides** (owner), the person when nobody is named; an option inside an answer is a
+  decision for them; it shows in follow-ups under the decider; `question.move` keeps a decision a decision. Built:
+  `test_the_prompt_says_a_decision_goes_to_whoever_decides_and_an_option_in_an_answer_is_one`,
+  `test_the_golden_case_passes_with_its_ideal_answer[decision-goes-to-the-named-decider]` and
+  `[option-in-an-answer-is-a-decision-for-the-pm]`,
+  `test_each_new_case_fails_when_the_answer_does_the_obvious_wrong_thing[decision-goes-to-the-named-decider]`,
+  `tests/test_corrections.py::test_moving_a_decision_to_someone_else_keeps_it_a_decision_records_routed_and_undo_sends_it_back`;
+  the follow-ups row follows the stored kind (`web/src/components/FollowUps.test.tsx`). Its Today line ("Waiting on
+  <name>'s decision: blocks <action>") comes with the pack's dependencies (phase P).
 - [x] **A drop by the assistant** applies with Undo, except an item that already reached someone (a question marked
   sent, an action someone was told about or chased for), which waits for the person's look with a plain reason; the
   person's own drop, and one they confirm, apply. Built: `tests/test_hold_drop_fold.py`:
   `test_the_assistants_drop_of_a_sent_question_waits_for_a_look_and_one_not_sent_applies`,
   `test_the_assistants_drop_of_an_action_someone_was_told_about_or_chased_for_waits_for_a_look`.
-- [ ] **Three ops the assistant may propose**, each with Undo: bring back a set-aside item, remove or merge a list row
-  that was never a project, mark a question as already asked. *Today:* all three exist as the person's own ops only.
+- [x] **Three ops the assistant may propose**, each with Undo: bring back a set-aside item, remove or merge a list row
+  that was never a project, mark a question as already asked. `mail.restore`, `list.merge` and `list.retire` were already
+  system-tier proposals; a project record stays the person's own to remove (deletion is the person's act, and "Not a
+  project" covers a proposed one); `question.mark_sent` applies from the person's own note only (decisions, 2026-10-16).
+  Built: `test_the_persons_own_note_can_file_a_question_as_already_asked_and_outside_content_cannot`.
 
 Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
 - [ ] **One follow-on run when a dated record moves or a fact is replaced**: one save, one run; it finds what is tied
@@ -1442,8 +1450,12 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   `edited` signal only; `supersedes` exists, and nothing follows on.
 - [ ] **Records can name the calendar entry, or the series, they belong to**; an item on a series sits on its next
   instance and rolls to the next one when an instance passes with it unsettled. *Today:* no links and no series.
-- [ ] **A follow-up goes to whoever made the claim or owns the thing**; when neither is clear, a question to the person
-  about who to ask, never a person known only from a passing mention.
+- [x] **A follow-up goes to whoever made the claim or owns the thing**; when neither is clear, a question to the person
+  about who to ask, never a person known only from a passing mention. Built:
+  `test_the_prompt_says_a_follow_up_goes_to_the_claims_maker_or_owner_and_otherwise_asks_who`,
+  `test_the_golden_case_passes_with_its_ideal_answer[follow-up-goes-to-who-made-the-claim]` and
+  `[follow-up-with-no-clear-owner-asks-who]`, and
+  `test_each_new_case_fails_when_the_answer_does_the_obvious_wrong_thing` for both.
 - [ ] **How a fact is known**: the person said it, the assistant inferred it, or someone named said it, each with its
   source. An inference applies marked as one, never reaches anything others see, never changes a date, owner or routing
   alone, and never closes anything: it proposes the close, which one click confirms. The person's own deduction closes

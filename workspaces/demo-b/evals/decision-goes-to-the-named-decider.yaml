@@ -1,0 +1,35 @@
+id: decision-goes-to-the-named-decider
+title: 'A choice the input says someone else makes is a decision for that person, not for the PM'
+skills: [owners, follow-routing]
+received: '2026-10-09'
+pasted: 'From: Maya Okafor
+
+  Subject: Typeface for the interior
+
+
+  The foundry offered two licenses for the interior typeface: a single-title license or a studio license. Sam Rivera decides
+  which one we take, since the typesetting is Sam''s call.
+
+
+  Maya'
+expect:
+- op: question.add
+  to: PER-4
+  kind: decision
+# The one who decides is named, so the PM gets no decision of their own for it.
+forbid:
+- op: question.add
+  to: PER-1
+stub_answer:
+  summary: A decision for Sam Rivera, who chooses the typeface license.
+  ops:
+  - op: question.add
+    to: Sam Rivera
+    kind: decision
+    title: 'Interior typeface: single-title license or studio license?'
+    text: The foundry offered both. Maya Okafor says the choice is yours as the typesetter.
+    project: PRJ-1
+    links:
+    - label: Book page
+      url: https://books.example.org/salt-orchard
+    matters_for: ACT-1, the final interior file for the printer

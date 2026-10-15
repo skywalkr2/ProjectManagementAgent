@@ -228,8 +228,8 @@ class ActionDropOp(OpModel):
 
 
 class QuestionAddOp(OpModel):
-    """A question for a person, written for its reader. Decisions are questions to the PM. A question to anyone else
-    needs at least one link the recipient can open."""
+    """A question for a person, written for its reader. A decision is a question to whoever decides, the PM when
+    nobody is named. A question to anyone else needs at least one link the recipient can open."""
 
     op: Literal["question.add"]
     to: str = Field(description="The person, by name or id.")
@@ -238,7 +238,9 @@ class QuestionAddOp(OpModel):
     links: list[LinkIn] = Field(default_factory=list, description="Pages the reader can open to see what it is about.")
     project: str | None = Field(None, description="Project id, if the question is about one.")
     kind: Literal["question", "decision"] = Field(
-        "question", description="question: an ordinary question. decision: a choice for the PM to make."
+        "question",
+        description="question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is "
+        "named.",
     )
     matters_for: str | None = Field(
         None,
@@ -267,8 +269,8 @@ class QuestionUpdateOp(OpModel):
 
 
 class QuestionMoveOp(OpModel):
-    """Ask someone else instead: the question goes to another person, by name or id. A decision moved off the PM
-    becomes an ordinary question. Only the person uses it; Undo sends it back to the one it was for."""
+    """Ask someone else instead: the question goes to another person, by name or id, and keeps its kind: a decision
+    stays a decision for the new person. Only the person uses it; Undo sends it back to the one it was for."""
 
     op: Literal["question.move"] = "question.move"
     id: str = Field(description="The id of the question.")
@@ -294,8 +296,8 @@ class QuestionDropOp(OpModel):
 
 
 class QuestionMarkSentOp(OpModel):
-    """Record that the person already sent an open question themselves, the day they did (today when left out). Only
-    the person uses it; Undo makes it open again."""
+    """Record that the person already sent an open question themselves, the day they did (today when left out). The
+    person uses it, or the assistant when the person's own note says they asked; Undo makes it open again."""
 
     op: Literal["question.mark_sent"] = "question.mark_sent"
     id: str = Field(description="The id of the open question.")
