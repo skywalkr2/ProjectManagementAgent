@@ -285,7 +285,8 @@ def per_input_section(
     then the facts of its projects, ranked and cut at `facts_budget`. `text` is the input's words, which decide the
     terms and rank the facts. Returns the text, the ids given, the ids left out by scope, and how many facts didn't
     fit. With `facts` False (work the core's learning doesn't run on) the facts are left out. Scopes are matched against
-    `scope_projects` (the projects and their ancestors; the projects alone when None); facts stay per exact project."""
+    `scope_projects` (the projects and their ancestors; the projects alone when None); facts stay per exact project,
+    except a fact marked as reaching the projects inside its own, which goes with them too."""
     project_set, people_set, moved_set = set(projects), set(people), set(moved)
     scoped = set(scope_projects) if scope_projects is not None else project_set
     ids: list[str] = []
@@ -363,7 +364,7 @@ def per_input_section(
     add(HEADINGS["input_glossary"], terms)
 
     fact_text, fact_ids, cut = (
-        _facts_section(view, project_set, text, today, settings.facts_budget) if facts else ("", [], 0)
+        _facts_section(view, project_set, text, today, settings.facts_budget, scoped) if facts else ("", [], 0)
     )
     if fact_text:
         sections.append(fact_text)
@@ -371,12 +372,22 @@ def per_input_section(
     return PerInput("\n\n".join(sections), ids, sorted(left_out, key=_id_key), cut)
 
 
-def _facts_section(view: Any, projects: set[str], text: str, today: date, budget: int) -> tuple[str, list[str], int]:
+def _facts_section(
+    view: Any, projects: set[str], text: str, today: date, budget: int, scoped: set[str] | None = None
+) -> tuple[str, list[str], int]:
     """The input's projects' facts that no newer fact replaces, key facts first, then by how many of the input's words
-    and ids they share, then newest; cut at `budget` characters with the count of those left out said."""
+    and ids they share, then newest; cut at `budget` characters with the count of those left out said. A fact of a
+    project above them (`scoped` holds the projects and their ancestors) goes too when it is marked as reaching the
+    projects inside it; any other fact of an ancestor stays with that project."""
     facts = view.list("fact")
     replaced = {f.data["supersedes"] for f in facts if f.data.get("supersedes")}
-    mine = [f for f in facts if f.data.get("project") in projects and f.id not in replaced]
+    above = (scoped or projects) - projects
+    mine = [
+        f
+        for f in facts
+        if f.id not in replaced
+        and (f.data.get("project") in projects or (f.data.get("project") in above and f.data.get("reaches_children")))
+    ]
     if not mine:
         return "", [], 0
     words = _overlap_words(text)

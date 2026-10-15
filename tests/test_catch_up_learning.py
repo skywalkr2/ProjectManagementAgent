@@ -154,6 +154,32 @@ def test_a_kind_is_learned_from_through_an_older_correction_when_the_newest_was_
     assert store.read().get("request", made).data["about"]["id"] == older
 
 
+def test_a_kind_is_learned_from_through_the_newest_correction_that_holds_the_persons_own_words(env):
+    ws, cfg, store = env
+
+    def noted(kind: str, note: str | None, minute: int) -> str:
+        at = NOW.replace(hour=8, minute=minute).isoformat()
+        with store.transaction() as tx:
+            return tx.create(
+                "signal",
+                {"kind": kind, "refs": [ACTION], "changeset": None, "run": None, "note": note, "at": at},
+                _TEST,
+            ).id
+
+    noted("sent_back", "Check the date first.", 1)
+    wrote = noted("sent_back", "Never close it from a mail that only mentions it.", 2)
+    noted("sent_back", None, 3)  # the newest says nothing
+    unwritten = noted("undone", "ops [0]", 4)  # a note the engine wrote isn't the person's words
+    newest = noted("undone", None, 5)
+    catch_up.start(store, cfg, NOW)
+    made = catch_up.queue_learning(ws, store, cfg, now=NOW)
+    learned_from = {store.read().get("request", r).data["about"]["id"] for r in made}
+    assert learned_from == {wrote, newest} and unwritten not in learned_from
+    assert catch_up.holds_their_words({"kind": "sent_back", "note": "Redo it."})
+    assert not catch_up.holds_their_words({"kind": "sent_back", "note": "  "})
+    assert not catch_up.holds_their_words({"kind": "undone", "note": "ops [0]"})
+
+
 def test_nothing_is_queued_while_learning_is_off_or_before_the_list_is_made(env):
     ws, cfg, store = env
     three_kinds(store)

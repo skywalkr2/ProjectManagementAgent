@@ -1042,7 +1042,22 @@ class Fact(Record):
         description="The id of the fact this one replaces. The older fact stays on record and is shown as replaced "
         "by this one.",
     )
-    fixed_fields: ClassVar[tuple[str, ...]] = ("supersedes",)
+    basis: Literal["person", "inferred", "said"] | None = Field(
+        None,
+        description="Who the fact rests on. person: the person said it. inferred: the assistant worked it out, so it "
+        "feeds the record only: it never closes anything, never changes a date, an owner or a routing, and never goes "
+        "on anything others see. said: someone else said it (`said_by`). Empty for a fact recorded before this was "
+        "kept.",
+    )
+    said_by: Annotated[str | None, RefTo("person")] = Field(
+        None, description="The id of the person who said it, when `basis` is said and the input names them."
+    )
+    reaches_children: bool = Field(
+        False,
+        description="True for a fact about a project that holds for the projects inside it too (a series' fact for "
+        "each of its books): it goes into the packets of those projects as well.",
+    )
+    fixed_fields: ClassVar[tuple[str, ...]] = ("supersedes", "basis", "said_by")
 
 
 class Scope(BaseModel):
@@ -1498,6 +1513,7 @@ class Signal(Record):
         "change_requested",
         "answered_assistant",
         "edited",
+        "not_now",
     ] = Field(
         description="What the person did: sent_back, undone, dropped or reworded something the assistant made; "
         "pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; "
@@ -1507,7 +1523,8 @@ class Signal(Record):
         "narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for "
         "this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a "
         "note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed "
-        "fields the assistant had set (the note says which, from what to what)."
+        "fields the assistant had set (the note says which, from what to what); not_now, put off the rules review "
+        "line for its week (not a correction of anything the assistant made)."
     )
     refs: list[str] = Field(default_factory=list, description="The ids of the records the correction is about.")
     run: str | None = Field(None, description="The id of the AI run whose work was corrected, when there was one.")
@@ -1637,7 +1654,7 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("project", "project"),
     ],
     "changeset": [("request", "request"), ("run", "run")],
-    "fact": [("project", "project"), ("source", "source"), ("supersedes", "fact")],
+    "fact": [("project", "project"), ("source", "source"), ("supersedes", "fact"), ("said_by", "person")],
     "rule": [
         *MORE_EVIDENCE_REFERENCES,
         ("kept_by", "person"),

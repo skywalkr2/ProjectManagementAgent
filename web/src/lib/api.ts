@@ -366,6 +366,8 @@ export const api = {
   knowledge: () => call<S["KnowledgeView"][]>("GET", "knowledge"),
   knowledgeRules: () => call<S["RuleView"][]>("GET", "knowledge/rules"),
   ruleReview: () => call<S["RuleReviewView"]>("GET", "knowledge/rules/review"),
+  /** "Not now" on the rules review line: the review leaves Today for its week, and no rule changes. */
+  ruleReviewNotNow: () => call<S["RuleReviewPutOff"]>("POST", "knowledge/rules/review/not-now"),
   keepRule: (entry: string, readVersion: number) =>
     call<S["Applied"]>("POST", `knowledge/${id(entry)}/keep-rule`, { read_version: readVersion } satisfies S["ReadVersion"]),
 };

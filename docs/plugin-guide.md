@@ -1316,6 +1316,9 @@ Something recorded as true, with the words that show it. Added by `fact` and by 
 | `key` | bool | `False` | True for the facts that matter most, which are always shown first. |
 | `as_of` | datetime.date \| None | `None` | The day the fact was true as of: the day the input it came from was received, unless a later input says otherwise. |
 | `supersedes` | str \| None | `None` | The id of the fact this one replaces. The older fact stays on record and is shown as replaced by this one. |
+| `basis` | Optional[Literal['person', 'inferred', 'said']] | `None` | Who the fact rests on. person: the person said it. inferred: the assistant worked it out, so it feeds the record only: it never closes anything, never changes a date, an owner or a routing, and never goes on anything others see. said: someone else said it (`said_by`). Empty for a fact recorded before this was kept. |
+| `said_by` | str \| None | `None` | The id of the person who said it, when `basis` is said and the input names them. |
+| `reaches_children` | bool | `False` | True for a fact about a project that holds for the projects inside it too (a series' fact for each of its books): it goes into the packets of those projects as well. |
 
 ### `rule` (RULE-n)
 
@@ -1583,7 +1586,7 @@ A correction by the PM, the measure of how well the assistant does. The engine r
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
-| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed', 'just_this_time', 'change_requested', 'answered_assistant', 'edited'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed fields the assistant had set (the note says which, from what to what). |
+| `kind` | Literal['sent_back', 'undone', 'dropped', 'reworded', 'pulled_back', 'draft_edited', 'held_declined', 'routed', 'set_aside', 'put_on_hold', 'taken_off_hold', 'kept', 'discarded', 'retired', 'narrowed', 'just_this_time', 'change_requested', 'answered_assistant', 'edited', 'not_now'] | required | What the person did: sent_back, undone, dropped or reworded something the assistant made; pulled_back an automatic change; draft_edited a draft before approving it; held_declined a held op; routed, said who a name or an owner is; set_aside, moved a mail item to the Set aside folder by hand; put_on_hold or taken_off_hold, changed whether an action waits for something; kept, discarded or retired a piece of what the assistant learned (a lesson, glossary entry, routing entry, style note or standing rule); narrowed, limited what a rule applies to; just_this_time, said a proposed piece of learning was right for this case but is not a pattern; change_requested, asked for something the assistant made to be changed, in a note on its row; answered_assistant, wrote an answer to a question the assistant asked them; edited, changed fields the assistant had set (the note says which, from what to what); not_now, put off the rules review line for its week (not a correction of anything the assistant made). |
 | `refs` | list[str] | `[]` | The ids of the records the correction is about. |
 | `run` | str \| None | `None` | The id of the AI run whose work was corrected, when there was one. |
 | `changeset` | str \| None | `None` | The id of the changeset the correction is about, when there is one. |
@@ -1912,6 +1915,9 @@ Record something the input states as true. Creates a fact record; evidence is re
 | `key` | bool | `False` | True only for a fact that matters most to the project; it is shown first. |
 | `as_of` | datetime.date \| None | `None` | The day the fact was true as of, written YYYY-MM-DD, when the input or the person's note names one (a note often reports something said earlier); left out, it is the day the input was received or the note was typed. |
 | `supersedes` | str \| None | `None` | The id of an existing fact this one replaces (the same thing, newer). The older fact stays on record. |
+| `basis` | Optional[Literal['inferred', 'said']] | `None` | Who the fact rests on, when it isn't what the input's origin says (leave it out then: the person's own note is the person's word, and content from outside is said by its sender). inferred: the input doesn't say this outright; you worked it out from the words you quote. said: someone else said it, named in said_by. |
+| `said_by` | str \| None | `None` | With basis said: who said it, by name or id, when the input names someone. |
+| `reaches_children` | bool | `False` | True only for a fact about a project that holds for every project inside it too (a fact about a series that is true of each of its books); needs the project. Left false, it is about that project alone. |
 
 ### `file.add`
 

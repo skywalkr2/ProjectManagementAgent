@@ -1460,7 +1460,18 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   source. An inference applies marked as one, never reaches anything others see, never changes a date, owner or routing
   alone, and never closes anything: it proposes the close, which one click confirms. The person's own deduction closes
   it as theirs; "I asked them to confirm" files the question as already asked. What the assistant writes about a change
-  says who made each part. *Today:* a fact carries its source and trust only.
+  says who made each part. Built (the record, the applier's holds, the notes task and its prompt): a fact's `basis`
+  and `said_by`, the hold `inference-confirm`, `question.mark_sent` offered to reading notes. `tests/test_fact_basis.py`:
+  `test_a_fact_from_the_persons_note_rests_on_the_person_and_one_from_outside_on_its_sender`,
+  `test_the_model_can_mark_a_fact_inferred_or_name_who_said_it`,
+  `test_who_said_it_must_be_one_known_person_and_goes_with_basis_said`,
+  `test_a_close_that_rests_only_on_an_inference_is_held_with_a_plain_reason_and_one_click_closes_it`,
+  `test_a_close_that_rests_on_something_said_or_on_the_persons_own_note_applies_at_once`,
+  `test_a_date_an_owner_or_a_routing_resting_only_on_an_inference_is_held`,
+  `test_a_note_saying_the_person_already_asked_files_the_question_as_asked`,
+  `test_reading_notes_is_offered_the_mark_as_asked_op_and_an_ask_is_not`. **Left:** keeping an inference off anything
+  others see (with the publisher, phase C4); the inferred mark on the fact's row; the person's own deduction recorded as
+  theirs with its reason on the closed question; the change note saying who made each part.
 
 Learning and scope (answers 3 to 7, 14, 22, 23):
 - [x] **Discarded means don't act on it**: search flags an input whose proposal the person discarded ("routing proposal
@@ -1492,9 +1503,20 @@ Learning and scope (answers 3 to 7, 14, 22, 23):
   `test_the_reported_speech_words_have_defaults_and_demo_values_in_both_workspaces`.
 - [ ] **Checks run on every output** a rule's scope covers, so a checked rule counts as applied each time it holds.
   *Today:* stage checks run only on stage moves.
-- [ ] **"Not now"** on the rules review line, starting its week; **a floor** of 3 identical refusals in a week brings a
+- [x] **"Not now"** on the rules review line, starting its week; **a floor** of 3 identical refusals in a week brings a
   check's guidance in whatever the share; **the catch-up** learns from the correction with the person's own words first;
-  **a series fact**: a parent project's fact marked to reach its children.
+  **a series fact**: a parent project's fact marked to reach its children. Built: `tests/test_rule_review.py`:
+  `test_not_now_starts_the_lines_week_without_deciding_anything_even_when_only_rules_moved`,
+  `test_not_now_route_records_a_signal_names_the_flagged_rules_and_changes_no_rule`; `HeldLines.test.tsx`: "Not now on
+  the rules review puts it off for its week and the line goes"; `tests/test_refusals.py`:
+  `test_the_same_check_refusing_the_floor_times_in_its_days_brings_its_lesson_whatever_the_share`,
+  `test_the_floor_counts_runs_of_the_same_check_within_its_days_only`,
+  `test_a_check_counts_once_per_run_for_the_floor_and_the_floor_is_a_setting`,
+  `test_a_packet_carries_the_floored_lesson_and_logs_it`; `tests/test_catch_up_learning.py`:
+  `test_a_kind_is_learned_from_through_the_newest_correction_that_holds_the_persons_own_words`;
+  `tests/test_knowledge_section.py`:
+  `test_a_series_fact_marked_to_reach_its_children_goes_into_their_packets_and_no_other_fact_of_a_parent_does`,
+  `tests/test_fact_basis.py::test_a_fact_marked_to_reach_the_projects_inside_its_own_is_kept_so_and_needs_its_project`.
 
 Proving it (lesson 2; answers 2, 21):
 - [ ] **Replay cases**: start from the person's own action through the screen's entry point and score the records' end

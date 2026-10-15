@@ -395,11 +395,19 @@ function CatchUpGoLine(props: { line: Line }) {
   );
 }
 
-/** The standing rules given to runs and never shown applying: the line opens the review. */
+/** The standing rules given to runs and never shown applying: the line opens the review, and "Not now" puts it off for
+ * its week without deciding anything. */
 function RuleReviewLine(props: { line: Line; onOpen?: () => void }) {
   const { t, tn } = useWords();
+  const act = useAct();
+  const [busy, setBusy] = useState(false);
   const { line } = props;
   const text = line.count > 0 ? tn("queue.rule_review", line.count, { days: line.days ?? "" }) : t("queue.rule_review.moved");
+  const notNow = async () => {
+    setBusy(true);
+    await act(api.ruleReviewNotNow, (put) => ({ message: t("queue.rule_review.not_now_done", { day: day(put.until) }) }));
+    setBusy(false);
+  };
   return (
     <section className={styles.line} aria-label={t("queue.rule_review.label")} data-queue-line="rule_review">
       <Pill tone="neutral">{t("queue.rule_review.label")}</Pill>
@@ -407,13 +415,16 @@ function RuleReviewLine(props: { line: Line; onOpen?: () => void }) {
         <p className={styles.text}>{text}</p>
         <p className={styles.sub}>{t("queue.rule_review.sub")}</p>
       </div>
-      {props.onOpen && (
-        <div className={styles.actions}>
-          <Button size="sm" variant="primary" onClick={props.onOpen}>
+      <div className={styles.actions}>
+        {props.onOpen && (
+          <Button size="sm" variant="primary" disabled={busy} onClick={props.onOpen}>
             {t("queue.rule_review.open")}
           </Button>
-        </div>
-      )}
+        )}
+        <Button size="sm" variant="secondary" loading={busy} onClick={() => void notNow()}>
+          {t("queue.rule_review.not_now")}
+        </Button>
+      </div>
     </section>
   );
 }

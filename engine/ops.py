@@ -100,6 +100,21 @@ class FactOp(OpModel):
         description="The id of an existing fact this one replaces (the same thing, newer). The older fact stays on "
         "record.",
     )
+    basis: Literal["inferred", "said"] | None = Field(
+        None,
+        description="Who the fact rests on, when it isn't what the input's origin says (leave it out then: the "
+        "person's own note is the person's word, and content from outside is said by its sender). inferred: the "
+        "input doesn't say this outright; you worked it out from the words you quote. said: someone else said it, "
+        "named in said_by.",
+    )
+    said_by: str | None = Field(
+        None, description="With basis said: who said it, by name or id, when the input names someone."
+    )
+    reaches_children: bool = Field(
+        False,
+        description="True only for a fact about a project that holds for every project inside it too (a fact about a "
+        "series that is true of each of its books); needs the project. Left false, it is about that project alone.",
+    )
 
 
 class EventAddOp(OpModel):

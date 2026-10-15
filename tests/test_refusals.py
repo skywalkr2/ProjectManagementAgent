@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 
@@ -16,7 +16,7 @@ from engine.config.schema import KnowledgeSettings
 from engine.dispatcher import process
 from engine.intake import hand_in
 from engine.packet import build
-from engine.refusals import refusal_shares, seed_id, seed_section
+from engine.refusals import floor_counts, refusal_shares, seed_id, seed_section
 from engine.storage import Store, WriteContext
 from engine.worker import Events, Worker
 from engine.workspace import init_workspace
@@ -48,13 +48,13 @@ def limits(share: float, of_last: int, min_runs: int = 1) -> KnowledgeSettings:
     return KnowledgeSettings(refusals_to_packet={"share": share, "of_last": of_last, "min_runs": min_runs})
 
 
-def a_run(store, task: str, refused_by: list[str], *, whole: list[str] = ()) -> str:
+def a_run(store, task: str, refused_by: list[str], *, whole: list[str] = (), at: datetime = NOW) -> str:
     """A request the assistant answered, with a changeset whose single op was refused by these checks."""
     problems = [{"check": name, "severity": "refuse", "op": 0, "message": "no"} for name in refused_by]
     problems.append({"check": "blocked-wording", "severity": "warn", "op": 0, "message": "only a warning"})
     with store.transaction() as tx:
         request = tx.create(
-            "request", {"task": task, "origin": "pm", "state": "review", "created_at": NOW.isoformat()}, _TEST
+            "request", {"task": task, "origin": "pm", "state": "review", "created_at": at.isoformat()}, _TEST
         )
         run = tx.create(
             "run",
@@ -65,7 +65,7 @@ def a_run(store, task: str, refused_by: list[str], *, whole: list[str] = ()) -> 
                 "model": "m",
                 "tier": "t",
                 "outcome": "ok",
-                "started_at": NOW.isoformat(),
+                "started_at": at.isoformat(),
             },
             _TEST,
         )
@@ -76,7 +76,7 @@ def a_run(store, task: str, refused_by: list[str], *, whole: list[str] = ()) -> 
                 "run": run.id,
                 "status": "rejected" if refused_by else "applied",
                 "trust": "trusted",
-                "created_at": NOW.isoformat(),
+                "created_at": at.isoformat(),
                 "ops": [{"index": 0, "status": "refused", "problems": problems}],
                 "problems": [{"check": name, "severity": "refuse", "op": None, "message": "no"} for name in whole],
             },
@@ -232,10 +232,70 @@ def test_the_refusals_setting_has_its_defaults_and_both_demo_workspaces_set_it()
 
     default = KnowledgeSettings().refusals_to_packet
     assert (default.share, default.of_last, default.min_runs) == (0.05, 50, 10)
+    assert (default.floor, default.floor_days) == (3, 7)
     for root in (DEMO_B, DEMO_B.parent / "demo-a"):
         loaded = load_config(root / "config", env={}).dispatch.knowledge.refusals_to_packet
         assert (loaded.share, loaded.of_last, loaded.min_runs) == (0.05, 50, 10)
+        assert (loaded.floor, loaded.floor_days) == (3, 7)
         assert "refusals_to_packet" in (root / "config" / "dispatch.yaml").read_text(encoding="utf-8")
+
+
+# ---- the floor for rare work -----------------------------------------------------------------------------------------
+
+
+def test_the_same_check_refusing_the_floor_times_in_its_days_brings_its_lesson_whatever_the_share(env):
+    _, _, store = env
+    settings = KnowledgeSettings()  # the defaults: 3 refusals in 7 days, and no lesson before 10 runs
+    floor = settings.refusals_to_packet.floor
+    for _ in range(floor - 1):
+        a_run(store, TASK, ["evidence"])
+    assert seed_section(store.read(), TASK, settings, today=TODAY).ids == []
+    a_run(store, TASK, ["evidence"])
+    view = store.read()
+    assert seed_section(view, TASK, settings).ids == []  # the share rule alone: too few runs counted
+    floored = seed_section(view, TASK, settings, today=TODAY)
+    assert floored.ids == ["SEED-evidence"] and SEEDED["evidence"].seed in floored.text
+    # Every run was refused by the check, so the share doesn't matter: nor does another kind of work's count.
+    assert seed_section(view, OTHER_TASK, settings, today=TODAY).ids == []
+
+
+def test_the_floor_counts_runs_of_the_same_check_within_its_days_only(env):
+    _, _, store = env
+    settings = KnowledgeSettings()
+    days = settings.refusals_to_packet.floor_days
+    a_run(store, TASK, ["evidence"], at=NOW - timedelta(days=days))  # one day too old
+    a_run(store, TASK, ["evidence"], at=NOW - timedelta(days=days - 1))
+    a_run(store, TASK, ["evidence"])
+    a_run(store, TASK, ["targets"])
+    a_run(store, TASK, ["targets"])
+    a_run(store, TASK, ["targets"], at=NOW - timedelta(days=2))
+    a_run(store, TASK, ["evidence", "targets"], at=NOW + timedelta(days=1))  # not yet: after today
+    assert floor_counts(store.read(), TASK, settings, TODAY) == {"evidence": 2, "targets": 3}
+    # Different checks never add up: only the one at the floor brings its lesson.
+    assert seed_section(store.read(), TASK, settings, today=TODAY).ids == ["SEED-targets"]
+
+
+def test_a_check_counts_once_per_run_for_the_floor_and_the_floor_is_a_setting(env):
+    _, _, store = env
+    a_run(store, TASK, ["evidence", "evidence"], whole=["evidence"])
+    a_run(store, TASK, ["evidence"])
+    view = store.read()
+    assert floor_counts(view, TASK, KnowledgeSettings(), TODAY) == {"evidence": 2}
+    two = KnowledgeSettings(refusals_to_packet={"floor": 2})
+    assert seed_section(view, TASK, two, today=TODAY).ids == ["SEED-evidence"]
+    one_day = KnowledgeSettings(refusals_to_packet={"floor": 2, "floor_days": 1})
+    assert seed_section(view, TASK, one_day, today=TODAY + timedelta(days=1)).ids == []
+
+
+def test_a_packet_carries_the_floored_lesson_and_logs_it(env):
+    ws, cfg, store = env
+    for _ in range(cfg.dispatch.knowledge.refusals_to_packet.floor):
+        a_run(store, TASK, ["evidence"])
+    handed = hand_in(ws, store, pasted="Subject: One\n\nThe proof is late.", now=NOW)
+    packet = build(ws, store, cfg, handed.request, TODAY)
+    assert SEEDED["evidence"].seed in packet.task.stable and packet.knowledge.given == ["SEED-evidence"]
+    quiet = build(ws, store, cfg, handed.request, TODAY + timedelta(days=30))
+    assert SEEDED["evidence"].seed not in quiet.task.stable and quiet.knowledge.given == []
 
 
 # ---- the batch prefix is not frozen ----------------------------------------------------------------------------------

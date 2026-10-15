@@ -18,7 +18,7 @@ from engine.config import load_config
 from engine.config.schema import KnowledgeSettings
 from engine.dispatcher import process
 from engine.intake import hand_in
-from engine.knowledge_section import per_input_section, stable_section
+from engine.knowledge_section import per_input_section, stable_section, with_ancestors
 from engine.names import People
 from engine.packet import build
 from engine.storage import Store, WriteContext
@@ -364,6 +364,30 @@ def test_a_fact_a_newer_one_replaces_is_left_out_until_the_newer_one_goes(store)
     with store.transaction() as tx:
         tx.delete("fact", newer, _TEST, read_version=tx.get("fact", newer).version)
     assert per_input(store, projects=[PROJECT]).ids == [older]
+
+
+def test_a_series_fact_marked_to_reach_its_children_goes_into_their_packets_and_no_other_fact_of_a_parent_does(store):
+    series = project(store, "A series")
+    book = make(store, "project", {"name": "A book", "parent": series})
+    chapter = make(store, "project", {"name": "A part of the book", "parent": book})
+    reaches = fact(
+        store, "Every book in the series uses one trim size", series, as_of="2026-09-01", reaches_children=True
+    )
+    stays = fact(store, "The series page is being rebuilt", series, as_of="2026-09-02")
+    own = fact(store, "This book is on its second proof", book, as_of="2026-09-03")
+    below = fact(store, "A part waits for the index", chapter, as_of="2026-09-04", reaches_children=True)
+
+    def got(*projects):
+        shown = per_input_section(
+            store.read(), TASK, projects, (), "", TODAY, SETTINGS, scope_projects=with_ancestors(store.read(), projects)
+        )
+        return sorted(shown.ids)
+
+    assert got(book) == sorted([own, reaches])  # the series' marked fact comes with the book's own; the other stays
+    assert got(chapter) == sorted([below, reaches])  # at any depth; a child's fact goes no further up
+    assert got(series) == sorted([stays, reaches])
+    # Without the ancestors given, facts stay per exact project.
+    assert per_input(store, projects=[book]).ids == [own]
 
 
 def test_people_in_an_input_are_found_by_id_name_alias_and_header_but_not_by_a_shared_name(store):

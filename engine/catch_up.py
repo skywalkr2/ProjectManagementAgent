@@ -295,16 +295,27 @@ def waits_on_go(request: Any) -> bool:
     )
 
 
+#: The kinds of correction whose note is what the person wrote: a send-back's note, what they asked to change, their
+#: answer, the new wording of a question, the text of a message as they used it.
+THEIR_WORDS = ("sent_back", "change_requested", "answered_assistant", "reworded", "draft_edited")
+
+
+def holds_their_words(signal: dict[str, Any]) -> bool:
+    """Whether a correction carries something the person wrote (a note on a kind whose note is theirs)."""
+    return signal["kind"] in THEIR_WORDS and bool((signal.get("note") or "").strip())
+
+
 def _to_learn_from(view: Any, group: Group, requests: dict[str, Any]) -> str | None:
-    """The correction to learn a kind from: the newest that has no learning request of its own and can be learned
-    from. None when the kind already has a learning request that wasn't netted out (it is queued, running or done), or
-    nothing in it can be learned from."""
+    """The correction to learn a kind from: the newest that holds the person's own words, else the newest, among those
+    with no learning request of its own that can be learned from. None when the kind already has a learning request
+    that wasn't netted out (it is queued, running or done), or nothing in it can be learned from."""
     for signal_id in group.signals:
         found = requests.get(signal_id)
         if found is not None and not (
             found.data["state"] == "done" and found.data.get("waiting") == learn.NETTED_WAITING
         ):
             return None
+    eligible = []
     for signal_id in group.signals:
         stored = view.get("signal", signal_id)
         if (
@@ -313,8 +324,9 @@ def _to_learn_from(view: Any, group: Group, requests: dict[str, Any]) -> str | N
             and stored.data["kind"] in learn.TEACHES
             and not learn._names_set_aside(view, stored.data)
         ):
-            return signal_id
-    return None
+            eligible.append(stored)
+    # One that holds the person's own words says most about what they wanted; otherwise the newest.
+    return next((s.id for s in eligible if holds_their_words(s.data)), eligible[0].id if eligible else None)
 
 
 def queue_learning(ws: Any, store: Any, cfg: Any, router: Any = None, now: datetime | None = None) -> list[str]:

@@ -6,7 +6,7 @@ whether it applied or was only present (engine/rule_use.py). A rule is flagged w
 present at least once and applied never, and no code check enforces it: a check holds a rule whether or not anything
 triggers it. A rule is old enough to be flagged only once the review window has passed since it was learned or last
 kept, so keeping a rule starts its count again. The Today line built from this is offered at most once a period,
-counted from the last time the person kept, narrowed or retired a rule.
+counted from the last time the person kept, narrowed or retired a rule, or said "not now" to the line.
 """
 
 from __future__ import annotations
@@ -18,8 +18,9 @@ from typing import Any
 from engine.config.schema import KnowledgeSettings
 from engine.records import Rule
 
-#: What the person does to a rule in the review, as the signals that record it.
-ACTS = ("kept", "narrowed", "retired")
+#: What the person does in the review, as the signals that record it. Each starts the line's week; the first three are
+#: about rules (their refs name them), "not now" is about the line itself.
+ACTS = ("kept", "narrowed", "retired", "not_now")
 
 
 @dataclass(frozen=True)
@@ -110,19 +111,21 @@ def _number(record_id: str) -> int:
 
 
 def last_acted(view: Any) -> datetime | None:
-    """When the person last kept, narrowed or retired a rule, from the signals those acts record."""
+    """When the person last kept, narrowed or retired a rule, or said "not now" to the line, from the signals those acts
+    record."""
     prefix = f"{Rule.prefix}-"
     moments = [
         _at(s.data["at"])
         for s in view.list("signal")
-        if s.data["kind"] in ACTS and any(ref.startswith(prefix) for ref in s.data.get("refs", []))
+        if s.data["kind"] == "not_now"
+        or (s.data["kind"] in ACTS and any(ref.startswith(prefix) for ref in s.data.get("refs", [])))
     ]
     return max((m for m in moments if m is not None), default=None)
 
 
 def due(view: Any, settings: KnowledgeSettings, now: datetime, found: RuleReview | None = None) -> bool:
     """Whether the review is offered now: something is flagged or rules were moved, and the person hasn't acted on
-    it within `rule_review_every_days`."""
+    it (or said "not now") within `rule_review_every_days`."""
     found = found if found is not None else review(view, settings, now)
     if not found.needed:
         return False

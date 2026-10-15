@@ -5,11 +5,14 @@ the assistant answered with a changeset. The share of a check is how many of the
 refused at least once, over the runs counted. Refusals a fix round repaired count too: each call's knowledge log names
 the checks that refused its answer. Below `min_runs` runs counted, no seed lesson is given. A check whose share reaches
 the configured share has its seed lesson (`engine/defaults/invariants.yaml`) added to that task kind's stable section,
-marked as the product's own guidance, in the order the file lists the checks.
+marked as the product's own guidance, in the order the file lists the checks. The floor is for rare work: a check that
+refused `floor` runs of the task kind within `floor_days` days brings its seed lesson in whatever the share and however
+few runs are counted.
 """
 
 from __future__ import annotations
 
+from datetime import date, datetime, timedelta
 from typing import Any, NamedTuple
 
 from engine import invariants
@@ -70,23 +73,51 @@ def refusal_shares(view: Any, task_kind: str, of_last: int) -> dict[str, float]:
     return {name: count / runs for name, count in counts.items()}
 
 
+def _in_window(stamp: Any, today: date, days: int) -> bool:
+    """Whether a run made at `stamp` falls in the `days` days that end on `today`."""
+    try:
+        day = datetime.fromisoformat(str(stamp)).date()
+    except ValueError:
+        return False
+    return today - timedelta(days=days) < day <= today
+
+
+def floor_counts(view: Any, task_kind: str, settings: KnowledgeSettings, today: date) -> dict[str, int]:
+    """For each check that refused the task kind's runs in the last `floor_days` days, how many of those runs it
+    refused (the runs of any age are looked at, not only the last `of_last`)."""
+    limits = settings.refusals_to_packet
+    counts: dict[str, int] = {}
+    for request, changeset in recent_runs(view, task_kind, len(view.find("request", {"task": task_kind}))):
+        if not _in_window(changeset.data.get("created_at"), today, limits.floor_days):
+            continue
+        for name in _refused_by(view, request, changeset):
+            counts[name] = counts.get(name, 0) + 1
+    return counts
+
+
 def seed_section(
     view: Any,
     task_kind: str,
     settings: KnowledgeSettings,
     known: dict[str, invariants.Invariant] | None = None,
+    today: date | None = None,
 ) -> Seeded:
     """The seed lessons of the checks that refuse the task kind's runs at or above the configured share. Nothing for a
-    check with no seed lesson, or that refused no run, and nothing until `min_runs` runs are counted."""
+    check with no seed lesson, or that refused no run, and nothing until `min_runs` runs are counted. With `today`, a
+    check that refused the task kind's runs `floor` times in the last `floor_days` days also has its lesson given,
+    whatever the share and the number of runs counted."""
     limits = settings.refusals_to_packet
     counts, runs = counted(view, task_kind, limits.of_last)
-    if runs < limits.min_runs:
-        return Seeded("", [])
-    shares = {name: count / runs for name, count in counts.items()}
+    shares = {name: count / runs for name, count in counts.items()} if runs >= limits.min_runs else {}
+    floor = floor_counts(view, task_kind, settings, today) if today is not None else {}
     lessons = [
         i
         for i in (known if known is not None else invariants.load()).values()
-        if i.seed and shares.get(i.name, 0) > 0 and shares[i.name] >= limits.share - 1e-9
+        if i.seed
+        and (
+            (shares.get(i.name, 0) > 0 and shares[i.name] >= limits.share - 1e-9)
+            or floor.get(i.name, 0) >= limits.floor
+        )
     ]
     if not lessons:
         return Seeded("", [])

@@ -284,7 +284,8 @@ def test_the_question_ops_only_the_person_makes_are_never_offered_to_the_assista
     _, cfg, store = env
     mine = {"question.update", "question.move", "question.mark_sent"}
     assert mine <= PERSON_ONLY_OPS and "question.drop" not in PERSON_ONLY_OPS  # a drop may be proposed, with evidence
-    assert not mine & set(TASKS["notes"].ops) and not mine & set(TASKS["ask"].ops)
+    assert not mine & set(TASKS["ask"].ops)
+    assert mine & set(TASKS["notes"].ops) == {"question.mark_sent"}  # only the person's own note may file one as asked
     for op in (
         {"op": "question.move", "id": FIXTURE_DECISION["id"], "to": other_of(cfg)},
         {"op": "question.mark_sent", "id": FIXTURE_DECISION["id"]},

@@ -229,7 +229,7 @@ def _learned(
     named = [*projects, *(source.data.get("projects", []) if source is not None else [])]
     in_input = [p for p in dict.fromkeys(named) if view.get("project", p) is not None]
     stable = stable_section(view, kind.name, settings)
-    seeds = seed_section(view, kind.name, settings)
+    seeds = seed_section(view, kind.name, settings, today=today)
     per_input = per_input_section(
         view,
         kind.name,

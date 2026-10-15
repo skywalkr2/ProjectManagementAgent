@@ -1026,6 +1026,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 76. How a fact is known, "Not now", the floor, the catch-up's words and series facts (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Facts (6.19) | A fact carried its source and trust only | Also `basis` (person, inferred or said, with `said_by`). An inference applies marked as one; a close, a changed date or owner, or a routing that rests only on it is held for one click (`inference-confirm`). Reading notes is offered `question.mark_sent`, which applies only from the person's own note. Built: `test_fact_basis.py`. Not built: outbound filtering (phase C4), the mark on screen, the change note saying who made each part |
+| Rules review (6.21, 6.22) | The line left only when the person kept, narrowed or retired a rule | "Not now" also starts its week: the `not_now` signal. Built: `test_rule_review.py`, `HeldLines.test.tsx` |
+| Refusals (6.22) | A check's guidance came in only at a share of at least `min_runs` runs | Also at `knowledge.refusals_to_packet.floor` (3) refusals by one check within `floor_days` (7). Built: `test_refusals.py` |
+| Catch-up (6.22) | A kind was learned from through its newest correction | Through the newest that holds the person's own words, else the newest. Built: `test_catch_up_learning.py` |
+| Facts (6.22) | Facts went only with their exact project | A fact marked `reaches_children` also goes with the projects inside its own. Built: `test_knowledge_section.py` |
+
 ## 75. Three checks the designer's answers asked for, and two tests (2026-10-15)
 
 | Where | Before | Now |

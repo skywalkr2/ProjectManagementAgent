@@ -214,6 +214,24 @@ test("rules to look over are a line that starts with the look and opens the revi
   expect(onOpenRules).toHaveBeenCalledTimes(1);
 });
 
+test("Not now on the rules review puts it off for its week and the line goes", async () => {
+  const user = userEvent.setup();
+  let putOff = false;
+  const { calls, onOpenRules } = show([], {
+    "GET today/queue": () => (putOff ? [] : [line("rule_review", { key: "rule_review", group: "review", count: 2, days: 30, rules: ["RULE-1", "RULE-2"] })]),
+    "POST knowledge/rules/review/not-now": () => {
+      putOff = true;
+      return { until: "2026-10-22T09:00:00+00:00" };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Rules to look over" });
+  await user.click(within(row).getByRole("button", { name: "Not now" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST knowledge/rules/review/not-now")).toHaveLength(1));
+  expect(await screen.findByText(/The rules review is off Today until/)).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Rules to look over" })).toBeNull());
+  expect(onOpenRules).not.toHaveBeenCalled();
+});
+
 test("one rule is singular, and rules only moved out of the always-sent part have their own words", async () => {
   show([line("rule_review", { key: "one", group: "review", count: 1, days: 14 }), line("rule_review", { key: "moved", group: "review", count: 0, moved: 2 })]);
   const rows = await screen.findAllByRole("region", { name: "Rules to look over" });

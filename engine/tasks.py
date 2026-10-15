@@ -16,13 +16,16 @@ from engine.ops import KNOWLEDGE_OPS, OP_MODELS, PERSON_ONLY_OPS
 #: question (or who doesn't) can be recorded as a routing entry. Each still applies as a proposal unless the words are
 #: the person's own.
 OFFERED_TO_NOTES = frozenset({"glossary.add", "routing.add"})
+#: The one op only the person makes that reading notes is offered: filing an open question as already asked, which
+#: the applier accepts only when the input is the person's own note.
+PERSON_NOTE_OPS = frozenset({"question.mark_sent"})
 
 #: Core ops reading notes never offers: deleting is the person's call, file.add is made only by person actions, the
 #: ops only the person makes are theirs alone, and the ops that keep what the assistant learned belong to the work that
 #: learns (design 6.22), except the ones in `OFFERED_TO_NOTES`.
 NOT_FROM_NOTES = (
     (KNOWLEDGE_OPS - OFFERED_TO_NOTES)
-    | PERSON_ONLY_OPS
+    | (PERSON_ONLY_OPS - PERSON_NOTE_OPS)
     | {
         "record.delete",
         "file.add",
@@ -105,7 +108,10 @@ TASKS: dict[str, TaskKind] = {
     # A question from the PM about the app or the workspace (design 6.25), answered from the material it is given.
     "ask": TaskKind(
         name="ask",
-        ops=(*ASK_OPS, *(n for n in OP_MODELS if n not in NOT_FROM_NOTES | OFFERED_TO_NOTES | NOTES_ONLY)),
+        ops=(
+            *ASK_OPS,
+            *(n for n in OP_MODELS if n not in NOT_FROM_NOTES | OFFERED_TO_NOTES | NOTES_ONLY | PERSON_NOTE_OPS),
+        ),
         prompt="ask",
         playbook="notes",
         label="Ask",

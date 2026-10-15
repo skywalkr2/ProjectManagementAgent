@@ -336,6 +336,26 @@ def test_the_line_returns_at_most_once_a_period_after_the_person_acts_on_it(env)
     assert last_acted(store.read()) == acted
 
 
+def test_not_now_starts_the_lines_week_without_deciding_anything_even_when_only_rules_moved(env):
+    _, cfg, store = env
+    quiet = rule(store, "quiet")
+    run(store, present=[quiet])
+    said = NOW + timedelta(days=1)
+    signal(store, "not_now", [quiet], now=said)
+    every = cfg.dispatch.knowledge.rule_review_every_days
+    assert last_acted(store.read()) == said
+    assert lines(env, now=said + timedelta(days=every - 1)) == []
+    assert len(lines(env, now=said + timedelta(days=every))) == 1
+    assert store.read().get("rule", quiet).data["status"] == "active"
+    # The line about rules moved out of the always-sent part has no rule to name; "not now" still puts it off.
+    update(store, quiet, {"status": "retired"})
+    run(store, moved=[quiet], at=said + timedelta(days=every * 2) - timedelta(hours=1))
+    later = said + timedelta(days=every * 2)
+    assert len(lines(env, now=later)) == 1
+    signal(store, "not_now", [], now=later)
+    assert lines(env, now=later + timedelta(days=1)) == []
+
+
 # ---- Keep and Narrow -------------------------------------------------------------------------------------------------
 
 
@@ -404,3 +424,19 @@ def test_narrow_changes_the_scope_as_the_persons_own_edit_with_a_new_signal_and_
         json={"read_version": store.read().get("rule", quiet).version, "applies_to": {"scope": "projects"}},
     )
     assert bad.status_code == 422
+
+
+def test_not_now_route_records_a_signal_names_the_flagged_rules_and_changes_no_rule(app):
+    client, store = app
+    quiet = rule(store, "quiet")
+    run(store, present=[quiet], at=datetime.now(UTC) - timedelta(days=1))
+    assert client.get("/api/knowledge/rules/review").json()["due"] is True
+    before = store.read().get("rule", quiet)
+    put_off = client.post("/api/knowledge/rules/review/not-now")
+    assert put_off.status_code == 200, put_off.text
+    (said,) = signals(store, "not_now")
+    assert said.data["refs"] == [quiet] and said.data["run"] is None and said.data["changeset"] is None
+    every = timedelta(days=KnowledgeSettings().rule_review_every_days)
+    assert datetime.fromisoformat(put_off.json()["until"]) - datetime.fromisoformat(said.data["at"]) == every
+    assert client.get("/api/knowledge/rules/review").json()["due"] is False
+    assert store.read().get("rule", quiet).version == before.version

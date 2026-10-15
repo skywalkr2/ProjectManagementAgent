@@ -2646,6 +2646,12 @@ class RuleReviewView(BaseModel):
     due: bool = Field(description="Whether Today offers the review now.")
 
 
+class RuleReviewPutOff(BaseModel):
+    """The answer to "Not now" on the rules review line: the review is off Today until this moment."""
+
+    until: datetime = Field(description="When the review is offered again, if it still has something to show.")
+
+
 class KnowledgeDiscard(BaseModel):
     """Discard a proposed entry; it is kept, with the reason if one is given."""
 

@@ -136,6 +136,15 @@ How to answer:
 - When the person's own note says they already asked someone an open question in the list ("I asked them in chat"),
   use "question.mark_sent" with its id (and "on", the day they asked, when the note gives it), so the reply has a
   place to land; never for anything outside content says.
+- Every fact says who it rests on ("basis"). Leave it out when the input says it outright: the PM's own note is the
+  PM's word, and content from outside is said by its sender. Use "basis": "inferred" when the input doesn't say it and
+  you worked it out from the words you quote (a mail about the proofs shipping that suggests an open question is
+  answered). Use "basis": "said" with "said_by" when the input reports what a named person said. An inferred fact is
+  recorded marked as one; a close, a changed date or owner, or a routing that rests only on it waits for the PM, who
+  confirms it with one click, so propose it anyway when it is the likely step. Never mark a fact inferred when the
+  quoted words state it.
+- A fact about a project that is true of every project inside it too (a fact about a series that holds for each of its
+  books) gets "reaches_children": true, on the project it is about. Leave it out for everything else.
 - If nothing in the input needs recording, answer with an empty "ops" list and say so in the summary.
 - If there is no material and the PM's note is a question to you (how the app works, or something about the work, such
   as "what's overdue?"), answer with an empty "ops" list and "ask": true. The question then goes to the part of the app

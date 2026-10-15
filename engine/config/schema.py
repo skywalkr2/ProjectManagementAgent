@@ -781,6 +781,17 @@ class RefusalsToPacketSettings(ConfigModel):
         description="How many recent runs of a kind of work must be counted before any check's guidance is added to "
         "its packets, so a few early refusals don't decide it.",
     )
+    floor: int = Field(
+        3,
+        ge=1,
+        le=1000,
+        description="How many times within the floor window the same check may refuse a kind of work before its fuller "
+        "guidance is added to that kind of work's packets, whatever the share and however few runs there have been, "
+        "so rare work isn't left out because it never reaches the minimum.",
+    )
+    floor_days: int = Field(
+        7, ge=1, le=365, description="How many days back the floor counts the same check's refusals of a kind of work."
+    )
 
 
 class KnowledgeSettings(ConfigModel):

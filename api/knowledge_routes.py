@@ -22,6 +22,7 @@ from api.schemas import (
     ProposalsView,
     ProposalView,
     ReadVersion,
+    RuleReviewPutOff,
     RuleReviewRule,
     RuleReviewView,
     RuleView,
@@ -348,6 +349,18 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events, worker: Wo
             moved=found.moved,
             due=due(view, settings, now, found),
         )
+
+    @r.post("/knowledge/rules/review/not-now")
+    def rule_review_not_now() -> RuleReviewPutOff:
+        """ "Not now" on the rules review line: the line leaves Today for `knowledge.rule_review_every_days`, as it does
+        when the person keeps, narrows or retires a rule, so the person never has to decide something to make it go
+        away. It records a `not_now` signal naming the rules flagged, and changes no rule."""
+        now = datetime.now(UTC)
+        settings = cfg.dispatch.knowledge
+        flagged = review(store.read(), settings, now).flagged
+        signal(store, "not_now", [f.id for f in flagged], now=now)
+        events.changed()
+        return RuleReviewPutOff(until=now + timedelta(days=settings.rule_review_every_days))
 
     @r.post("/knowledge/{entry_id}/keep-rule")
     def keep_rule(entry_id: str, body: ReadVersion) -> Applied:

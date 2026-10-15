@@ -1999,6 +1999,8 @@
   "queue.rule_review.moved": "Look over the rules: some moved out of the part sent every time",
   "queue.rule_review.sub": "They were given to {assistant} and never showed in its work.",
   "queue.rule_review.open": "Look over",
+  "queue.rule_review.not_now": "Not now",
+  "queue.rule_review.not_now_done": "The rules review is off Today until {day}.",
   "reach.unknown_project": "a project",
   "reach.all_work": "All kinds of work",
   "reach.on_projects": "on {names}",

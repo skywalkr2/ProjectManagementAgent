@@ -1557,15 +1557,36 @@ looked up.
   the watcher picks it up.
 - **Enforced:** the applier refuses questions for these facts (6.7), so a model that ignores the packet can't send one.
 
-**How a fact is known** (functional designer's lessons from running, 2026-10-15; *not yet built*, roadmap L7). Every fact
+**How a fact is known** (functional designer's lessons from running, 2026-10-15; roadmap L7, *partly built*). Every fact
 says who it rests on, with its source: the person said it, the assistant inferred it, or someone else said it (named).
 The person's own deduction is recorded as their inference, and a question it settles closes with that as the reason.
 When the person says they asked someone directly, the question is filed as already asked, so the reply has a place to
 land. What the assistant writes about a change says who made each part of it: the person's edits are never described as
-the assistant's, nor the other way round. **An inference only feeds the record** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): it applies at once, marked
-inferred, but never goes on anything others see and never changes a date, an owner or a routing on its own. It never
-closes a question or an action either: it proposes the close ("this looks answered by <source>: close?"), which one click
-confirms. The person's own deduction closes it, recorded as theirs.
+the assistant's, nor the other way round. **An inference only feeds the record** (functional designer's answers,
+2026-10-15): it applies at once, marked inferred, but never goes on anything others see and never changes a date, an
+owner or a routing on its own. It never closes a question or an action either: it proposes the close ("this looks
+answered by <source>: close?"), which one click confirms. The person's own deduction closes it, recorded as theirs.
+
+*As built:* a fact record has `basis` (`person`, `inferred` or `said`, empty on a fact recorded before this) and
+`said_by` (the person's id when someone named said it). The `fact` op takes `basis` (`inferred` or `said`, with
+`said_by`) and leaves it out when the input's origin says it: the person's own note is `person`, and content from
+outside is `said` by its sender (nobody named when the input doesn't give one known person). The applier holds, with
+a plain reason and `inference-confirm` as the check, an `action.close`, a `question.done`, a `record.set` of a due date,
+target, owner or owners, and a `routing.add` that rests only on an inference: an op rests on a fact of the same changeset
+when the words it quotes and the fact's quoted words overlap, and only on an inference when every fact it shares words
+with is inferred. Releasing the hold is the person's one click; the person's own acts and a confirmed op are never held.
+"I asked them to confirm" in the person's own note files the question as already asked: `question.mark_sent` is offered to
+reading notes and applies only when the input is the person's own note. **Built:**
+`tests/test_fact_basis.py::test_a_fact_from_the_persons_note_rests_on_the_person_and_one_from_outside_on_its_sender`,
+`::test_the_model_can_mark_a_fact_inferred_or_name_who_said_it`,
+`::test_a_close_that_rests_only_on_an_inference_is_held_with_a_plain_reason_and_one_click_closes_it`,
+`::test_a_close_that_rests_on_something_said_or_on_the_persons_own_note_applies_at_once`,
+`::test_a_date_an_owner_or_a_routing_resting_only_on_an_inference_is_held`,
+`::test_a_note_saying_the_person_already_asked_files_the_question_as_asked`,
+`::test_the_notes_prompt_says_when_a_fact_is_inferred_and_when_to_mark_a_question_asked`.
+*Not built:* keeping an inference off anything others see (the outbound filtering lands with the publisher, phase C4);
+the mark on screen; the person's deduction recorded as theirs with its reason on the closed question; and the change
+note saying who made each part.
 
 **A correction, not a second fact.** An answer that contradicts a recorded fact replaces it (`supersedes`, which quotes
 the old fact), and the records that repeated the old fact are brought in line by a follow-on run (6.7). A follow-up
@@ -1599,6 +1620,7 @@ hand, an automatic close pulled back, and an edited follow-up message (a draft t
 | routed | the person said who a name or an owner is, answering "Who is X?" or "Pick an owner" (refs: the changeset, the question, the person chosen; the note is the name as written), or asked someone else about a question (`question.move`; refs as above; the note says from whom to whom; undoing it leaves the signal). Undoing the person's own release of a held op records no signal: it is their decision, not the assistant's work. **Built**: `tests/test_pipeline.py::test_saying_who_a_name_is_and_picking_an_owner_each_record_a_routed_signal`, `tests/test_pipeline.py::test_undoing_a_release_records_no_undone_signal_but_undoing_the_assistants_work_does` |
 | put on hold / taken off hold | the person puts an action on hold or takes it off (refs: the action; the note is what it waits for). Undoing either records no signal. **Built**: `tests/test_on_hold_and_follow_ups.py::test_putting_an_action_on_hold_records_what_it_waits_for_and_a_signal_and_taking_it_off_keeps_the_due_date`, `tests/test_on_hold_and_follow_ups.py::test_a_hold_needs_words_and_an_open_action_and_undoing_it_records_no_signal` |
 | just this time | the person says a proposed piece of learning is right for this case but is not a pattern (7.18). Refs: the entry; no note. The entry is discarded with that as its reason and nothing replaces it; a repeat of the same correction is shown with how many times this was said. Undoing records no signal. **Built**: `tests/test_proposals.py::test_just_this_time_records_its_signal_discards_and_the_repeat_is_marked` |
+| not now | the person says "Not now" to the rules review line (6.22). Refs: the rules flagged then (none when only rules moved out of the always-sent part); no note, run or changeset. Not a correction: it starts the line's week and nothing learns from it. Undoing records no signal. **Built**: `tests/test_rule_review.py::test_not_now_route_records_a_signal_names_the_flagged_rules_and_changes_no_rule` |
 | kept / discarded / retired | the person keeps or discards a proposed piece of what the assistant learned, or retires an active one (6.22). Refs: the entry; no note (a discard's reason stays on the entry). Undoing records no signal. **Built**: `tests/test_knowledge_records.py::test_keep_with_an_edited_text_makes_it_active_and_the_person_its_author`, `tests/test_knowledge_records.py::test_discard_keeps_the_proposal_with_its_reason_and_undo_brings_it_back`, `tests/test_knowledge_records.py::test_retire_ends_an_active_entry_and_undo_makes_it_active_again` |
 | edited | the person changes a field the assistant set (a fact, an owner, a due date, an item's project, a question's wording before it is sent). The ledger shows who set each field, so this needs no AI. A silent correction, learned from in the batch. *As built:* an edit through `record.edit` or `record.set` of an action's text, due, owners or project, a question's title, text, recipient, stake or project, a fact's key, value, date or project, or a calendar entry's title, dates or project, whose previous value the assistant set, records one `edited` signal per record naming the change and run that set it; a record another signal of the same change already names is left alone. **Built**: `tests/test_hold_drop_fold.py::test_the_persons_edit_of_what_the_assistant_set_is_an_edited_correction_that_queues_learning` |
 | answered the assistant | the person writes an answer to a question the assistant asked them. Refs: the question; its changeset and run. Learned from at once. A bare confirmation, or an answer about someone else, records none. **Built**: `tests/test_learn_input.py::test_an_answer_to_the_assistants_question_records_a_signal_and_queues_learning_at_once` |
@@ -1813,8 +1835,13 @@ silently: "Review your standing rules" shows at most once a week, with the secti
 **What a rule constrains, and whether it applied** (built in L2, `engine/rule_use.py`, `engine/rule_review.py`; the
 screen for the review is L3's; the original designer, 2026-10-14). A rule is flagged only after a whole review period
 since it was learned or last kept, so Keep starts the count again; the line's weekly clock is the last time the person
-kept, narrowed or retired a rule. **"Not now"** on the line also starts its week (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7), so the person never has
-to decide something to make it go away. A rule
+kept, narrowed or retired a rule. **"Not now"** on the line also starts its week (functional designer's answers, 2026-10-15), so the person never has
+to decide something to make it go away. *As built:* `POST /api/knowledge/rules/review/not-now` records a `not_now` signal
+(refs: the rules flagged then; no run or changeset; it is not a correction and learning never reads it), and the line's
+clock counts it like a Keep, Narrow or Retire. **Built:**
+`tests/test_rule_review.py::test_not_now_starts_the_lines_week_without_deciding_anything_even_when_only_rules_moved`,
+`::test_not_now_route_records_a_signal_names_the_flagged_rules_and_changes_no_rule`,
+`web/src/shell/HeldLines.test.tsx`: "Not now on the rules review puts it off for its week and the line goes". A rule
 says what it constrains (`constrains`): the op kinds or fields it is about ("questions to someone", "an action's owner",
 "a due date"), or the check that enforces it. For each run in its scope the knowledge log records it as **applied** when
 the run produced an op or field it constrains, or its check ran on that output (passing or refusing), or a correction
@@ -1846,8 +1873,13 @@ constrains in the op reference, and a seed lesson (`engine/defaults/invariants.y
 invariant without a line. Refusals are counted per check over a task kind's last runs, including those a fix round
 repaired (logged on the run as `refused_checks`); a check whose share reaches `knowledge.refusals_to_packet.share`, once at
 least `min_runs` runs are counted, brings its seed lesson into the stable part, marked as the product's own guidance.
-**A floor for rare work** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): the same refusal `knowledge.refusals_to_packet.floor` times (3) within a week
-brings the guidance in whatever the share, since a rare kind of work never reaches the minimum runs quickly.
+**A floor for rare work** (functional designer's answers, 2026-10-15): the same check refusing a kind of work's runs
+`knowledge.refusals_to_packet.floor` times (3) within `floor_days` days (7) brings its guidance in whatever the share and
+however few runs are counted, since a rare kind of work never reaches the minimum runs quickly. A check counts once per
+run. **Built:** `tests/test_refusals.py::test_the_same_check_refusing_the_floor_times_in_its_days_brings_its_lesson_whatever_the_share`,
+`::test_the_floor_counts_runs_of_the_same_check_within_its_days_only`,
+`::test_a_check_counts_once_per_run_for_the_floor_and_the_floor_is_a_setting`,
+`::test_a_packet_carries_the_floored_lesson_and_logs_it`.
 
 **From the functional designer's answers** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7):
 - **Terms by audience.** On the person's own list the assistant keeps their shorthand with the meaning beside it the
@@ -1865,8 +1897,14 @@ brings the guidance in whatever the share, since a rare kind of work never reach
   `discarded-routing` (`tests/test_proposals.py::test_search_flags_an_input_whose_proposal_was_discarded_but_not_one_kept_or_set_aside`,
   `::test_a_routing_that_matches_a_discarded_proposal_is_refused_unless_it_rests_on_the_persons_words`).
 - **The catch-up learns from the person's words** when a kind's corrections hold some, else from the newest.
+  **Built:** a correction holds the person's words when its kind's note is theirs (`catch_up.THEIR_WORDS`: a send-back,
+  a change requested, an answer, a reworded question, a message as they used it) and the note isn't empty
+  (`tests/test_catch_up_learning.py::test_a_kind_is_learned_from_through_the_newest_correction_that_holds_the_persons_own_words`).
 - **A fact for a whole series.** A fact on a parent project can be marked as applying to its children, and then reaches
-  their runs; other facts stay with their exact project.
+  their runs; other facts stay with their exact project. **Built:** the fact's `reaches_children` (the `fact` op sets it,
+  and it needs the project); a run for a project at any depth below gets the marked facts of the projects above it in
+  its facts section (`tests/test_knowledge_section.py::test_a_series_fact_marked_to_reach_its_children_goes_into_their_packets_and_no_other_fact_of_a_parent_does`,
+  `tests/test_fact_basis.py::test_a_fact_marked_to_reach_the_projects_inside_its_own_is_kept_so_and_needs_its_project`).
 
 **The knowledge log.** Each `Run` records:
 - which knowledge entries it was given, by id, and for each rule whether it was applied or only present (above);

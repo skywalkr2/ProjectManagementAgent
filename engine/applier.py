@@ -214,6 +214,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             except StoreError as err:
                 messages.append(str(err))
             problems.append(Problem("stage-confirm", "hold", i, "; ".join(messages)))
+        if isinstance(op, FactOp) and (why := _fact_problem(op, ctx)) is not None:
+            refuse(i, "targets", why)
         # evidence
         evidence = _evidence(op)
         needs = name in NEEDS_EVIDENCE or (isinstance(op, RecordSetOp) and op.field in EVIDENCE_FIELDS)
@@ -511,6 +513,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             else:
                 held = why if reported else "changes how the product behaves; needs your confirmation"
             problems.append(Problem("tier", "hold", i, held))
+    problems += _inference_holds(cs, ctx, view)
     if ctx.actor != "pm":
         problems += _made_problems(cs, ctx, lints)
     return problems
@@ -538,6 +541,73 @@ def _waits_for_a_look(view: Any, ctx: Context, kind: str, record_id: str) -> boo
         return False
     found = view.get(kind, record_id)
     return found is not None and reached_someone(found)
+
+
+CLOSE_ON_INFERENCE_WAITS = "This rests on something worked out, not something anyone said: close it?"
+CHANGE_ON_INFERENCE_WAITS = "This rests on something worked out, not something anyone said: make the change?"
+ROUTING_ON_INFERENCE_WAITS = "This rests on something worked out, not something anyone said: keep this routing?"
+
+#: The fields whose change is a date or an owner: a change to one that rests only on an inference waits for the person.
+DATE_OR_OWNER_FIELDS = frozenset({"due", "target", "owner", "owners"})
+
+
+def _fact_problem(op: FactOp, ctx: Context) -> str | None:
+    """Why a fact's `basis`, `said_by` and `reaches_children` don't fit with the rest, or None."""
+    if op.reaches_children and not op.project:
+        return "a fact that reaches the projects inside one needs the project it is about"
+    if op.said_by is None:
+        return None
+    if op.basis != "said":
+        return "said_by goes with basis said"
+    if ctx.people.resolve(op.said_by).status != "ok":
+        return f"{op.said_by} isn't one known person, so the fact can't be said by them"
+    return None
+
+
+def fact_basis(op: FactOp, ctx: Context, view: Any) -> tuple[str, str | None]:
+    """Who a fact rests on, and the person who said it when that is someone else: what the op says when it says
+    (`inferred`, or `said` by a named person); otherwise the person's own word for their own note, and the sender's
+    for content from outside (nobody named when the input doesn't name one known person)."""
+    own = ctx.actor == "pm" or ctx.confirmed_by_pm or _from_pm(view, ctx)
+    if op.basis == "inferred":
+        return "inferred", None
+    named = ctx.people.resolve(op.said_by).person if op.said_by else None
+    if op.basis == "said":
+        return "said", named or (None if own else _reporter(ctx))
+    return ("person", None) if own else ("said", _reporter(ctx))
+
+
+def _quote_key(text: str) -> str:
+    return " ".join(text.lower().split())
+
+
+def _inference_holds(cs: ChangesetIn, ctx: Context, view: Any) -> list[Problem]:
+    """Holds for ops that rest only on an inference (6.19): a close, a change of a date, an owner or a routing. An op
+    rests on a fact of the changeset when the words it quotes and the fact's words overlap; it rests only on an
+    inference when every fact it shares words with is one. The person's own acts and a confirmed op are never held."""
+    if ctx.actor == "pm" or ctx.confirmed_by_pm:
+        return []
+    facts = [(_quote_key(op.evidence.quote), fact_basis(op, ctx, view)[0]) for op in cs.ops if isinstance(op, FactOp)]
+    if not any(basis == "inferred" for _, basis in facts):
+        return []
+    held: list[Problem] = []
+    for i, op in enumerate(cs.ops):
+        if isinstance(op, (ActionCloseOp, QuestionDoneOp)):
+            waits = CLOSE_ON_INFERENCE_WAITS
+        elif isinstance(op, RecordSetOp) and op.field in DATE_OR_OWNER_FIELDS:
+            waits = CHANGE_ON_INFERENCE_WAITS
+        elif isinstance(op, RoutingAddOp):
+            waits = ROUTING_ON_INFERENCE_WAITS
+        else:
+            continue
+        evidence = _evidence(op)
+        if evidence is None:
+            continue
+        quote = _quote_key(evidence.quote)
+        shared = [basis for words, basis in facts if words in quote or quote in words]
+        if shared and all(basis == "inferred" for basis in shared):
+            held.append(Problem("inference-confirm", "hold", i, waits))
+    return held
 
 
 def contact_problem(view: Any, cfg: Config, op: PersonContactOp) -> str | None:
@@ -1430,6 +1500,7 @@ def _apply_op(
 
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
         check_replaces(tx, op.supersedes)
+        basis, said_by = fact_basis(op, ctx, tx)
         as_of = op.as_of or received_on(tx, ctx.inputs.request, source)
         data = {
             "text": op.text,
@@ -1440,6 +1511,9 @@ def _apply_op(
             "key": op.key,
             "as_of": as_of.isoformat() if as_of else None,
             "supersedes": op.supersedes,
+            "basis": basis,
+            "said_by": said_by,
+            "reaches_children": op.reaches_children,
         }
         made("fact", tx.create("fact", data, w).id)
     elif isinstance(op, EventAddOp):

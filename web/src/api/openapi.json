@@ -9639,6 +9639,22 @@
         "title": "RetryRequest",
         "type": "object"
       },
+      "RuleReviewPutOff": {
+        "description": "The answer to \"Not now\" on the rules review line: the review is off Today until this moment.",
+        "properties": {
+          "until": {
+            "description": "When the review is offered again, if it still has something to show.",
+            "format": "date-time",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "until"
+        ],
+        "title": "RuleReviewPutOff",
+        "type": "object"
+      },
       "RuleReviewRule": {
         "description": "A standing rule offered for review: given to runs and never shown to apply.",
         "properties": {
@@ -15751,6 +15767,25 @@
           }
         },
         "summary": "Rule Review"
+      }
+    },
+    "/api/knowledge/rules/review/not-now": {
+      "post": {
+        "description": "\"Not now\" on the rules review line: the line leaves Today for `knowledge.rule_review_every_days`, as it does\nwhen the person keeps, narrows or retires a rule, so the person never has to decide something to make it go\naway. It records a `not_now` signal naming the rules flagged, and changes no rule.",
+        "operationId": "rule_review_not_now_api_knowledge_rules_review_not_now_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleReviewPutOff"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Rule Review Not Now"
       }
     },
     "/api/knowledge/{entry_id}/discard": {
