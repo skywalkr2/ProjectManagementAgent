@@ -35,8 +35,7 @@ later:
   - op: question.add
     to: PER-1
   # The fact beside the question records what the row said.
-  allow:
-  - fact
+  allow: [fact, event.add]
   packet_has: [another team]
 ideal:
   learn:

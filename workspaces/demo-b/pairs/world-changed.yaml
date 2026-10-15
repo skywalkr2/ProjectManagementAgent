@@ -40,6 +40,7 @@ first:
   expect_proposal: none
   keep: false
 later:
+  allow: [event.add]  # the calendar entry the prompt asks for beside a dated item
   received: '2026-10-20'
   project: PRJ-1
   pasted: |-

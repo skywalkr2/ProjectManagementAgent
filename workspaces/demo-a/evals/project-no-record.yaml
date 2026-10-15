@@ -18,6 +18,8 @@ expect:
   - Depot Scanner Pilot
 forbid:
 - op: project.add
+allow:
+- event.add
 stub_answer:
   summary: A plan for a pilot that isn't a project here yet; the project is proposed.
   ops:

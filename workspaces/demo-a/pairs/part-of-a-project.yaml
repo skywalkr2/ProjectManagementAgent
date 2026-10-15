@@ -31,6 +31,7 @@ first:
     origin: person
     text_has: [name for Route Optimizer Rollout]
 later:
+  allow: [event.add]  # the calendar entry the prompt asks for beside a dated item
   received: '2026-10-20'
   project: PRJ-1
   pasted: |-

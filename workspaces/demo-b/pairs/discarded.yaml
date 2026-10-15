@@ -24,12 +24,12 @@ later:
     From: Theo Brandt
 
     Not me, ask Ines Duarte. She owns the advance-copy reviewer list. The cover finish is soft-touch.
+  # The mail answers the open question about the cover finish, so it closes that question.
   expect:
-  - op: fact
-    text_has: [soft-touch]
+  - op: question.done
+    id: Q-2
   # The repeated proposal is saved as a discarded entry nobody sees, so the op still counts as applied.
-  allow:
-  - routing.add
+  allow: [routing.add, fact]
   expect_proposal: none
   packet_lacks: [Who answers what]
 ideal:
@@ -63,8 +63,8 @@ ideal:
       applies_to: {scope: projects, projects: [PRJ-1]}
       evidence:
         quote: Not me, ask Ines Duarte. She owns the advance-copy reviewer list
-    - op: fact
-      text: The cover finish is soft-touch.
-      project: PRJ-1
+    - op: question.done
+      id: Q-2
+      answer: The cover finish is soft-touch.
       evidence:
         quote: The cover finish is soft-touch

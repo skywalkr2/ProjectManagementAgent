@@ -19,6 +19,7 @@ first:
   expect_learning: false
   expect_proposal: none
 later:
+  allow: [event.add, action.close]  # the calendar entry the prompt asks for beside a dated item; the mail says the copy is agreed, which closes that action
   received: '2026-10-14'
   project: PRJ-1
   pasted: |-

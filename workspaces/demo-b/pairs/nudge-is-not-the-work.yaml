@@ -31,6 +31,7 @@ later:
     Thanks for checking in. I am working on the interior file and will send it to the printer tomorrow.
   forbid:
   - op: action.close
+  allow: [record.set, event.add]  # Sam's own new day for the interior file moves its due date, with its calendar entry
   packet_has: [not completion]
 ideal:
   learn:

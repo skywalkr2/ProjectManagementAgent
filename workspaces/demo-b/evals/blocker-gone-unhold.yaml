@@ -28,6 +28,8 @@ expect:
 forbid:
 - op: action.close
   id: ACT-90
+allow:
+- fact
 stub_answer:
   summary: The proof sign-off came through, so the cover file action is no longer waiting.
   ops:

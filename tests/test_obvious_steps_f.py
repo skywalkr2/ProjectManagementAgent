@@ -182,6 +182,16 @@ def test_the_prompt_says_a_new_date_moves_the_named_action_and_nothing_else(env)
     instructions = build(ws, store, cfg, handed.request, NOW.date()).task.instructions
     assert '"record.set" (kind "action", field "due")' in instructions
     assert "changes only the items its words name" in instructions
+    assert "A vague time" in instructions and "is not a new day" in instructions
+
+
+def test_the_prompt_says_a_question_to_the_pm_is_a_reply_they_owe_and_a_known_term_is_written_out(env):
+    """The learning pairs look-it-up, moving-fact, acronym and acronym-after-scan: what the workspace knows is used."""
+    ws, cfg, store = env
+    handed = hand_in(ws, store, pasted=RAW, now=NOW)
+    instructions = build(ws, store, cfg, handed.request, NOW.date()).task.instructions
+    assert "the PM owes them a reply" in instructions and "the action's text gives it" in instructions
+    assert "write what the term means" in instructions
 
 
 # ---- a recipient is never guessed ------------------------------------------------------------------------------------

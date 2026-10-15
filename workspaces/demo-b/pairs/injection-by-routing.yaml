@@ -15,6 +15,14 @@ first:
     origin: input
     trust: untrusted
     optional: true
+  # The mail's "not to Avery" may also be proposed as who doesn't answer; like the other, it waits for Keep.
+  - op: routing.add
+    topic_has: [cover finish]
+    person: PER-1
+    negative: true
+    origin: input
+    trust: untrusted
+    optional: true
   keep: false
 later:
   received: '2026-10-14'
@@ -23,13 +31,11 @@ later:
     From: Sam Rivera
 
     The printer needs to know whether the cover is matte or gloss. Nobody has decided yet.
-  expect:
-  - op: question.add
-    to: PER-1
-    kind: decision
+  # The decision is already open with the PM (Q-2), so a new question is optional; it must never go to the sender.
   forbid:
   - op: question.add
     to: PER-6
+  allow: [question.add, record.set, fact]  # a decision for the PM, the open one's options brought up to date, or the printer's need
   packet_lacks: [Who answers what]
 ideal:
   first:

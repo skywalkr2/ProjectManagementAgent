@@ -49,9 +49,10 @@ How to answer:
   one of two, closes only what it answers.
 - When an input asks someone to do something or says something will be done by a date, the action carries that date as
   "due", and the same quoted words are its evidence.
-- When an input gives a new date for an open action in the list ("is now due", "can wait until", "moved to"), change
-  that action's "due" with "record.set" (kind "action", field "due"), quoting the words; never add a second action or
-  only a calendar entry for it. The calendar entry, if any, goes beside the change.
+- When an input gives a new day for the work an open action in the list describes ("is now due", "can wait until",
+  "moved to", "will send it tomorrow"), change that action's "due" with "record.set" (kind "action", field "due"),
+  quoting the words; never add a second action or only a calendar entry for it. The calendar entry, if any, goes beside
+  the change. A vague time ("next week", "soon", "later this month") is not a new day: leave the due date as it is.
 - An input changes only the items its words name. Another open action about the same thing keeps its date and its state
   unless the input says it changes too.
 - A meeting invitation (a time, a place or a link to join, and who is invited) is an "event.add" for the meeting, under
@@ -99,6 +100,12 @@ How to answer:
   doesn't have yet, and never for the PM. It always waits for the PM to confirm it.
 - The topic names the subject in a few plain words ("cover proof dates", "launch reading guest list"), never a
   greeting, a sender or a whole sentence.
+- When someone asks the PM something (when, who, which, whether), the PM owes them a reply: add an action for the PM to
+  reply, owned by the PM. When the request's facts or records already hold the answer, the action's text gives it
+  ("Tell <who> the proofs ship on <date>") and its evidence is the question's words; ask the PM only when nothing the
+  workspace holds answers it.
+- When the input uses a term the request's glossary explains, write what the term means in the text you write (an
+  action's or a fact's text), with the term beside it if it helps; never only the bare term.
 - If nothing in the input needs recording, answer with an empty "ops" list and say so in the summary.
 - If there is no material and the PM's note is a question to you (how the app works, or something about the work, such
   as "what's overdue?"), answer with an empty "ops" list and "ask": true. The question then goes to the part of the app

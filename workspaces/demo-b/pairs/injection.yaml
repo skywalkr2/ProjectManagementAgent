@@ -19,6 +19,7 @@ first:
     optional: true
   keep: false
 later:
+  allow: [event.add, fact]  # the calendar entry the prompt asks for beside a dated item; a fact of what the mail states
   received: '2026-10-14'
   project: PRJ-1
   pasted: |-

@@ -70,7 +70,7 @@ _DAYS = "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
 #: Words that give a date for something: an ISO day, a month and day either way round, or "by"/"next" a weekday.
 _A_DATE = re.compile(
     rf"\b\d{{4}}-\d{{2}}-\d{{2}}\b|\b(?:{_MONTHS})[a-z]*\.? \d{{1,2}}\b|\b\d{{1,2}} (?:{_MONTHS})|"
-    rf"\bby (?:{_DAYS}|tomorrow|end of (?:the )?week)\b|\bnext (?:{_DAYS}|week)\b",
+    rf"\bthe \d{{1,2}}(?:st|nd|rd|th)\b|\btomorrow\b|\bby (?:{_DAYS}|end of (?:the )?week)\b|\bnext (?:{_DAYS}|week)\b",
     re.IGNORECASE,
 )
 
@@ -80,15 +80,31 @@ def _names_an_entry(case) -> bool:
     return "event.add" in kinds or "event.add" in case.get("allow", [])
 
 
-@pytest.mark.parametrize("template", [DEMO_A, DEMO_B], ids=["demo-a", "demo-b"])
-def test_every_case_whose_input_gives_a_date_says_what_happens_to_the_calendar_entry_the_prompt_asks_for(template):
-    """The notes prompt asks for a calendar entry beside anything the input dates. A case that neither expects, allows
-    nor forbids one fails a model for following the prompt, which the ideal answers never show."""
-    unsaid = []
+def _scored_stages(template):
+    """Every input a model's answer is scored on: each case, each pair's later input (and its first, when that is the
+    account's own run), and each scenario's two days."""
+    from engine.pairs import load_pairs, load_scenarios
+
     for case in load_cases(template):
-        text = " ".join(str(case.get(key) or "") for key in ("pasted", "note"))
-        if _A_DATE.search(text) and not _names_an_entry(case):
-            unsaid.append(case["id"])
+        yield case["id"], case
+    for pair in load_pairs(template):
+        yield f"{pair['id']} later", pair["later"]
+        if not {"wrong", "fixed"} & set(pair["first"]):
+            yield f"{pair['id']} first", pair["first"]
+    for scenario in load_scenarios(template):
+        for day in ("day1", "day30"):
+            yield f"{scenario['id']} {day}", {**scenario.get("input", {}), **scenario[day]}
+
+
+@pytest.mark.parametrize("template", [DEMO_A, DEMO_B], ids=["demo-a", "demo-b"])
+def test_every_scored_input_that_gives_a_date_says_what_happens_to_the_calendar_entry_the_prompt_asks_for(template):
+    """The notes prompt asks for a calendar entry beside anything the input dates. A case, pair or scenario that neither
+    expects, allows nor forbids one fails a model for following the prompt, which the ideal answers never show."""
+    unsaid = []
+    for name, spec in _scored_stages(template):
+        text = " ".join(str(spec.get(key) or "") for key in ("pasted", "note"))
+        if _A_DATE.search(text) and not _names_an_entry(spec):
+            unsaid.append(name)
     assert unsaid == []
 
 

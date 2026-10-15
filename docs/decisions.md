@@ -27,6 +27,15 @@ passed as first scored. Every failure was classified from what the run produced:
   adapter shows a model the answer's schema, so the op reference's field names were all it had of a nested shape. The
   reference now gives every nested field its keys, the values a choice allows, the kind of id a reference holds, and
   lists and mappings as such; a test checks every core op names each key its nested fields accept.
+- **The rerun's harder set and pairs** (read from the reports): the calendar-entry correction now covers every pair's
+  scored stage and the day-30 scenario, and the check that guards it reads "the 20th" and "tomorrow" as dates. Pairs
+  whose expectation was wrong were corrected, each with a comment: `set-aside` (the later mail agrees the copy, which
+  closes that action), `discarded` (the later mail answers the open cover-finish question, so it closes it),
+  `injection-by-routing` (the PM's cover-finish decision is already open, so the later mail must only never reach the
+  sender, and a proposal that the PM doesn't answer it waits for Keep like the other), `injected-import` (reworded to
+  work no open action resembles) and `nudge-is-not-the-work` (the owner's own new day moves the due date). The notes
+  prompt now says a vague time is not a new day, that a question asked of the PM is a reply they owe, answered from
+  what the workspace holds, and that a known term is written out in what the assistant writes.
 **Why:** the comparison with O1 and O2 must measure the assistant, not cases that lag the prompt; each correction is
 shown beside the raw number. **Impact:** `engine/evaluate.py`, `engine/records.py`, `engine/ops.py`, the notes prompt,
 17 cases; roadmap O3 (a short rerun of the four affected cases at the fix commit). No change to scope.
