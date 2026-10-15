@@ -3,6 +3,43 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The functional designer's answers to the round of 2026-10-15, and the owner's timing
+
+**Decided by:** the functional designer (answers 2 to 24), the owner (timing), the technical PM (placement). **What:** every
+open designer question is answered:
+- **Concepts (core), L7:**
+  - calendar entries only for real events, an action's date a `record.set` on its due (10);
+  - only the named action moves (11);
+  - a question asked of the person is one action carrying a drafted reply (12);
+  - terms by audience (13);
+  - discarded means don't act on it, flagged in search and checked (14);
+  - outside mail never re-routes work, becoming a fact and a decision (15);
+  - only the person rewords a question (16);
+  - an inference feeds the record and only proposes closes (17);
+  - the follow-on run with series, one hop and drafted corrections for what was sent (18);
+  - decisions under the decider in follow-ups (19);
+  - extras weighed by reach and tracked (21);
+  - a drop of something sent waits (24);
+  - replayed misses as a third set (2);
+  - checks on every output (3);
+  - series facts (6);
+  - three ops the assistant may propose (8).
+- **Settings, L7:**
+  - owed words become requests addressed to the person, and a person with no team is asked about once (22);
+  - more reported-speech words, with two exceptions (7);
+  - a refusal floor of 3 a week (5);
+  - "Not now" on the rules line (4);
+  - the catch-up learns from the person's words first (23).
+- **Screen, phase B:** two copy tables per person (20).
+- **Project management pack, phase P:** the dependent move, the "approval before the work" flag and the "waiting on a
+  decision" Today line (11, 19), which need its dependencies (6.23); the agenda storing the series (18).
+- **The owner on timing:** the 2026-10-30 go/no-go stays set aside. The owner tests the tool after phase B and starts
+  real use once the writing pack is complete. So L7 is built whole before phase B, with no split.
+
+**Impact:** L7 grows from about 1.5 to about 4 sessions. Design 6.6, 6.7, 6.8, 6.16, 6.18, 6.19, 6.21, 6.22 and 7.5;
+CHANGES section 71; the charter and schedule say the go/no-go stays set aside. Scope grows by L7's additions; nothing
+else moves.
+
 ## 2026-10-15: The functional designer's lessons from running, and where each goes
 
 **Decided by:** the owner (when, and the decision rule), the technical PM (the rest). **What:** eight lessons, checked

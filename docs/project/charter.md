@@ -69,7 +69,11 @@ workspace outside this repository, starting with the run-up to its first book la
 
 ## Objectives and success measures
 
-**By the go/no-go (2026-10-30), the launch slice (`schedule.md`) is useful or it waits:**
+**Set aside (owner, 2026-10-09 and 2026-10-12; confirmed 2026-10-15):** there is no go/no-go date. The 2026-12-01 launch
+goes ahead without the tool. The owner tests it after the UI phase (B) and starts real use once the writing pack is
+complete (phase C); the order of work is `roadmap-to-1.0.md`. The original criteria are kept below for the record.
+
+**By the go/no-go (2026-10-30), the launch slice (`schedule.md`) is useful or it waits** (set aside, above):
 
 - The milestone 2 acceptance scenario (`schedule.md`) passes on the fictional imprint.
 - A week of the owner's real launch notes and emails runs through it, and the owner judges it saved time.

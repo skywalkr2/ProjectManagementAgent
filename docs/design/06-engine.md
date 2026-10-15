@@ -285,7 +285,11 @@ for the person with the reason that someone else reported it. **Attributed words
 original designer's L1 check-in, 2026-10-14; built): a note on the person's own button that repeats someone else ("<name>
 said / says / confirmed …", or a passage in quotation marks; the words are the setting `language.reported_speech`) is
 reported content too. Its source is marked `reported` and its author stays the person who typed it; facts and dates from it
-apply, and a system op from it is held. Built: `tests/test_note_input.py::test_a_rule_from_someone_else_repeated_in_a_mark_done_note_waits_for_the_person`. Knowledge proposals (lessons, glossary entries, routing
+apply, and a system op from it is held. Built: `tests/test_note_input.py::test_a_rule_from_someone_else_repeated_in_a_mark_done_note_waits_for_the_person`.
+**More reported speech, and two that aren't** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): "per", "according to", "mentioned", "replied", "responded",
+"noted", "commented" and "pinged" join the words; a pasted chat (or a screenshot of one) is reported content as a whole.
+"I told <name> …" is the person's own report of what they did, and "<name> asked me to …" is a request to the person (an
+action), never a rule; neither counts as reported content. Knowledge proposals (lessons, glossary entries, routing
 entries, style notes, rules) are system-tier ops when they are added (L1), so they wait for Keep and are never active at
 once from reported content; the learning pair that proves it is added in L4. **Undo** of the button's change does not
 take the input back: the words stay saved and the queued work stays; what the assistant makes of it is a changeset the
@@ -548,9 +552,12 @@ How each is recorded (decided 2026-10-15; *being built, L3b*):
 
 `event.add` (data tier, offered to reading notes) adds a calendar entry to the app's own calendar: a title, a start (a
 day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, and
-evidence, which is required. The notes prompt asks for one when an input that isn't set aside names a date or a range for
-something (a delivery window, a deadline, an appointment, a launch), beside the fact or action, with the same quoted words;
-dates come only from the input, as for actions. An end before the start is refused alone; a start or end that isn't an
+evidence, which is required. **Calendar entries are for real events only** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): meetings, launches, delivery
+windows, appointments. An action's due date lives on the action and never gets an entry of its own, and a new date for an
+open action is one op, `record.set` on its due, with no fact and no history entry (a date-only move). The cases' check is
+turned round with it: it fails an entry made for an action's own date. *As built until L7:* the notes prompt asks for an
+entry whenever an input that isn't set aside names a date or a range for something, beside the fact or action, with the
+same quoted words. Dates come only from the input, as for actions. An end before the start is refused alone; a start or end that isn't an
 ISO day or date-time makes the answer unreadable and goes back for a fix. The entry is an `event` record (`EVT`, shown as
 "calendar entry"; 5.1), made by the applier and removed by Undo like any create. It is never written to a calendar service
 (owner, 2026-10-13). **Built:** `tests/test_calendar_entries.py` (op validation, refusals, create and undo, the golden case
@@ -687,7 +694,14 @@ new date that are to be settled there, and anything a record says will be covere
 usual ops, with Undo. Links are stored when they are made (a record names the calendar entry it belongs to), so finding
 them doesn't rest on matching words; matching words is the fallback. A date-only move writes no history entry of its own;
 marking a meeting done starts no run (its notes come in as their own input). The meeting's agenda and its items belong to
-the project management pack (6.24), which builds on these links.
+the project management pack (6.24), which builds on these links. From the functional designer's answers (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7):
+- **A series:** an entry can be one instance of a series ("then every three days"). An item belongs to the series and
+  sits on its next instance; when an instance passes with the item unsettled, it rolls to the next one, never to nowhere.
+- **Who starts it:** the assistant's own move from an input ("Thursday's sync moves to Monday") starts the same run as the
+  person's. The follow-on run's own changes never start another: one hop, no cascades.
+- **What applies at once:** changes to the person's own items and the agenda apply with Undo. Anything that already
+  reached someone (a question or a notice sent that named the old date) gets a drafted correction to send, not a silent
+  edit.
 
 ## 6.8 Questions service
 
@@ -805,6 +819,20 @@ is marked *designed*, with the phase.
   nothing in the packet states the named item's current state.
 - Aging: "waiting Nd" after Mark sent (built); chase suggestions by the one follow-up rule (6.9, built); one escalation suggestion when `routing.escalation` says so (4.3, 6.24; *designed, phase C2*, with the
   project management pack: no `routing` setting exists today).
+
+**From the functional designer's answers** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7):
+- **A question someone asks the person** is one item: an action owned by the person ("Reply to the shop: when the cover
+  proofs ship"). When the facts hold the answer, the action carries a drafted reply, ready to copy, citing the fact and its
+  source; when they don't, it carries no draft and says what's missing. Never an action and an output for one reply.
+- **Only the person changes a question's wording.** Outside content adds a note to it; a note that contradicts the
+  question ("matte or gloss?" against "matte or soft-touch?") quotes both, and the question stays as the person wrote it.
+- **A decision for someone else** shows in the person's follow-ups under the decider, to copy and send. It reaches Today
+  only when something of the person's depends on it and is due within a week ("Waiting on <name>'s decision: blocks
+  <action>, due Fri"), which needs the dependency the project management pack records (6.23).
+- **A drop by the assistant** applies with Undo and shows on the review card; an item that already reached someone (a
+  sent question, a notice) waits for the person's look instead, since the other side may still be waiting on it.
+- **Three more ops the assistant may propose,** each with Undo: bring back a set-aside item, remove or merge a list row
+  that was never a project, and mark a question as already asked ("I asked them in chat").
 
 ## 6.9 Actions service
 
@@ -1408,7 +1436,12 @@ none is, the request goes to the PM instead. Secrets come from secret references
 real miss becomes a replayable case: the starting records, the person's action through the same entry point the screen
 uses (an edit, a move, a button), and the expected end state, scored on the records as they end up as well as on the ops.
 Replays run in a throwaway copy, never the person's workspace, since Undo rightly refuses to roll back a record that has
-changed since.
+changed since. Replayed misses are a third set beside the golden and harder sets.
+
+**Extras are weighed and tracked** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7). Missing and forbidden ops stay exact. An op a case didn't expect is weighed
+by its reach: a fact or a note is free; an internal action or a calendar entry costs a little; anything that reaches
+another person (a question, a notice, a history entry on a page others read) fails the run. Each report gives the extras
+per run as their own number, kept over time, so a case's `allow` list can't hide a trend.
 
 ## 6.17 Periodic jobs (later)
 
@@ -1444,7 +1477,11 @@ check-up and the UI all ask it; no other part of the product decides scope on it
   the lints `watched-project` and `other-team-item` (default `return`; returned once, then held and never applied even
   when the item reaches no one); "the person owes it" when the quote names the person or their team or holds a word in
   `language.owed_words`; the person's own note is exempt from both; the packet's project list says the person's part
-  when it isn't "run". **Built:** `tests/test_scope_slice.py`.
+  when it isn't "run". **Built:** `tests/test_scope_slice.py`. **Who owes what, revised** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): "we", "us"
+and "our" are usually the sender's own team committing to something, which is not owed to the person; what is owed is a
+request addressed to them ("you", "your team", "can you", "please send", or their name with a request verb), in
+`language.owed_words`. A person with no team still counts as outside, and is asked about once ("Which team is <name>
+on?") rather than guessed.
 
 ## 6.19 Facts and lookups
 
@@ -1467,7 +1504,10 @@ says who it rests on, with its source: the person said it, the assistant inferre
 The person's own deduction is recorded as their inference, and a question it settles closes with that as the reason.
 When the person says they asked someone directly, the question is filed as already asked, so the reply has a place to
 land. What the assistant writes about a change says who made each part of it: the person's edits are never described as
-the assistant's, nor the other way round.
+the assistant's, nor the other way round. **An inference only feeds the record** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): it applies at once, marked
+inferred, but never goes on anything others see and never changes a date, an owner or a routing on its own. It never
+closes a question or an action either: it proposes the close ("this looks answered by <source>: close?"), which one click
+confirms. The person's own deduction closes it, recorded as theirs.
 
 **A correction, not a second fact.** An answer that contradicts a recorded fact replaces it (`supersedes`, which quotes
 the old fact), and the records that repeated the old fact are brought in line by a follow-on run (6.7). A follow-up
@@ -1710,7 +1750,8 @@ silently: "Review your standing rules" shows at most once a week, with the secti
 **What a rule constrains, and whether it applied** (built in L2, `engine/rule_use.py`, `engine/rule_review.py`; the
 screen for the review is L3's; the original designer, 2026-10-14). A rule is flagged only after a whole review period
 since it was learned or last kept, so Keep starts the count again; the line's weekly clock is the last time the person
-kept, narrowed or retired a rule. A rule
+kept, narrowed or retired a rule. **"Not now"** on the line also starts its week (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7), so the person never has
+to decide something to make it go away. A rule
 says what it constrains (`constrains`): the op kinds or fields it is about ("questions to someone", "an action's owner",
 "a due date"), or the check that enforces it. For each run in its scope the knowledge log records it as **applied** when
 the run produced an op or field it constrains, or its check ran on that output (passing or refusing), or a correction
@@ -1718,6 +1759,8 @@ names it; otherwise as **present**. Both are checked without asking the model; t
 as a hint on the evidence line and is never counted. A rule present but not applied for `knowledge.rule_review_days` (30)
 is offered for review on the weekly card, most-present first, with Keep (resets the clock), Narrow and Retire. A rule
 enforced by a code check or an invariant is never flagged: the check holds it whether or not anything triggers.
+**Checks on every output** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): a rule with a check runs it on every run's output in its scope before the
+changeset applies, not only on stage moves, so a checked rule counts as applied each time it holds.
 
 **Search before asking.** A run that needs more than its packet holds asks for it with a `search` request: words, ids, a
 project, which kinds (facts, past inputs, records, knowledge). It is not a live tool call, so it works on every kind of AI
@@ -1740,6 +1783,23 @@ constrains in the op reference, and a seed lesson (`engine/defaults/invariants.y
 invariant without a line. Refusals are counted per check over a task kind's last runs, including those a fix round
 repaired (logged on the run as `refused_checks`); a check whose share reaches `knowledge.refusals_to_packet.share`, once at
 least `min_runs` runs are counted, brings its seed lesson into the stable part, marked as the product's own guidance.
+**A floor for rare work** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): the same refusal `knowledge.refusals_to_packet.floor` times (3) within a week
+brings the guidance in whatever the share, since a rare kind of work never reaches the minimum runs quickly.
+
+**From the functional designer's answers** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7):
+- **Terms by audience.** On the person's own list the assistant keeps their shorthand with the meaning beside it the
+  first time ("Approve the HLP (Harrowgate layout proof)"); in anything that goes to others, the meaning comes first and
+  the term only if the reader uses it. A term nobody has defined stays unknown, never guessed.
+- **Outside mail never re-routes work.** Content from outside never proposes routing work away from the person, and never
+  proposes that the person doesn't answer something. A mail asking to take over a kind of decision becomes a fact
+  ("<sender> asked that cover finish decisions go to them") and one decision to the person ("<sender> asks to take cover
+  finish decisions. Keep them with you, or change?"). A sender's own "not me, ask <name>" is still proposed as routing.
+- **Discarded means don't act on it.** Search still returns an input whose proposal was discarded, flagged ("routing
+  proposal discarded on <day>"), and a check refuses routing that matches a discarded proposal unless the person's own
+  words support it.
+- **The catch-up learns from the person's words** when a kind's corrections hold some, else from the newest.
+- **A fact for a whole series.** A fact on a parent project can be marked as applying to its children, and then reaches
+  their runs; other facts stay with their exact project.
 
 **The knowledge log.** Each `Run` records:
 - which knowledge entries it was given, by id, and for each rule whether it was applied or only present (above);

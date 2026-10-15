@@ -59,7 +59,7 @@ Run on `demo-b` (the fictional imprint) in the repository; the owner repeats it 
 6. Run the export, import it into a fresh database, and compare: identical.
 7. With no off-device backup configured, Today and the header say so; after one succeeds, the header shows its age.
 
-## Go / no-go criteria (2026-10-30)
+## Go / no-go criteria (2026-10-30; set aside, confirmed by the owner on 2026-10-15)
 
 - The acceptance scenario passes.
 - The evaluation report has been read and a model chosen on it (a low-cost one if it passes, otherwise the stronger one).

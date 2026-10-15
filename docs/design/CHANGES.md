@@ -1026,6 +1026,23 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 71. The functional designer's answers to the round of 2026-10-15
+
+| Where | Before | Now |
+|---|---|---|
+| Calendar entries (6.7) | An entry beside any dated fact or action | Real events only; an action's date is a `record.set` on its due |
+| Questions (6.8) | A question to the PM became an action; anyone's content could retitle a question | One action with a drafted reply; only the person rewords, outside content adds a note |
+| Decisions and drops (6.8) | Decisions to the PM; every drop applied | Whoever decides; a drop of something already sent waits for a look; three more ops the assistant may propose |
+| Follow-on runs (6.7) | One entry | A series, rolling items; the assistant's moves start it; one hop; what was sent gets a drafted correction |
+| Facts (6.19) | An inference not described | An inference only feeds the record and never closes anything; it proposes the close |
+| Learning (6.6, 6.21, 6.22) | — | Terms by audience; outside mail never re-routes; discarded proposals flagged in search; catch-up from the person's words; series facts; "Not now"; a refusal floor; checks on every output; more reported-speech words |
+| Scope (6.18) | "we/us/our" counted as owed | Requests addressed to the person count; a person with no team is asked about once |
+| Evaluation (6.16) | Any extra fails | Extras weighed by reach and tracked over time; replayed misses as a third set |
+| Follow-ups (7.5) | One message | Two copy tables (actions, questions) |
+| Plan | L7 about 1.5 sessions; go/no-go in the charter | L7 about 4 sessions, before phase B; the go/no-go stays set aside; the owner tests after phase B and uses it after phase C |
+
+All *not yet built*: L7, phase B and phase P.
+
 ## 70. The functional designer's lessons from running (2026-10-15)
 
 | Where | Before | Now |

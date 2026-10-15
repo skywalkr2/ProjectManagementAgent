@@ -34,9 +34,12 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
 - **L3b, L4, L5, L6 and the rest of "Ready for real use":** built 2026-10-15. L4's 28 learning pairs found four gaps in
   learning, each fixed with its pair. **Phase L-core's code is done.** The one step left is the owner's "after" run (O3),
   which the comparison with O1 and O2 needs before real use starts.
-- **Next:** the owner's "after" run (O3), then L7 (the functional designer's lessons from running, 2026-10-15) while
-  real use starts, then phase B (the UI), then phase C (the writing pack, finished completely first; owner, 2026-10-15),
-  then phase P (the project management and publishing packs), then the owner's sign-off (D).
+- **Next:** the owner's "after" run (O3), then L7 (the functional designer's lessons and answers, 2026-10-15), then
+  phase B (the UI), then phase C (the writing pack, finished completely first), then phase P (the project management
+  and publishing packs), then the owner's sign-off (D).
+- **When the owner uses it** (owner, 2026-10-15): the owner tests it after phase B and starts real use once the writing
+  pack is complete (end of phase C). There is no go/no-go date: the 2026-10-30 one was set aside on 2026-10-09 and
+  2026-10-12, and stays set aside.
 - **Plugin API:** 0.3.79 (see the table below).
 
 ## Owner actions on the critical path
@@ -1346,34 +1349,78 @@ L6. **The rules that bite in the first week of real use** (design 8.8).
 - [x] Every link checked before it is shown. Built: `tests/test_first_week_lints.py::test_a_link_nothing_holds_is_returned_and_one_the_input_a_record_or_a_source_holds_passes`
   ("checked" means it came from the input, a record or a configured source; nothing is fetched).
 
-L7. **Lessons from running, 2026-10-15** (the functional designer's eight lessons; owner, 2026-10-15: built right after
-the owner's "after" run (O3), before phase B; about 1.5 sessions). Design 6.7 "Follow-on changes", 6.8, 6.16 "Replaying
-the real event", 6.19 "How a fact is known". What the code does today is said for each.
-- [ ] **One follow-on run when a dated record moves** (lesson 1). The person's move or retitle of a calendar entry, or a
-  new day typed in its notes, makes one request listing what changed (one save, one run). It finds what is tied: records
-  that name the entry or its old date, open actions linked to it or due before its new date that are settled there, and
-  anything a record says will be covered there; each is brought in line with Undo. A date-only move writes no history
-  entry; marking it done starts no run. Records can name the calendar entry they belong to, set when they are made, so
-  finding them doesn't rest on words. *Today:* an edit of an entry only records an `edited` signal; nothing links a
-  record to an entry. The agenda and its items are the project management pack's (P, C2), built on these links.
-- [ ] **A correction, not a second fact** (lesson 4). An answer that contradicts a fact replaces it (`supersedes`, quoting
-  the old fact), and a follow-on run brings in line what repeated it. *Today:* `supersedes` exists; nothing follows on.
-- [ ] **A follow-up goes to whoever made the claim or owns the thing** (lesson 4); when neither is clear, a question to
-  the person about who to ask, never a person known only from a passing mention.
-- [ ] **A decision goes to whoever decides** (lesson 4; owner, 2026-10-15): the person the input or a routing entry names
-  as deciding, the PM when nobody is named; an option offered inside an answer is a decision for them. `question.move`
-  keeps a decision a decision. *Today:* decisions go only to the PM, and moving one makes it an ordinary question.
-- [ ] **How a fact is known** (lesson 3): the person said it, the assistant inferred it, or someone else said it (named),
-  each with its source; the person's deduction closes the question it settles with that reason; "I asked X to confirm"
-  files the question as already asked. What the assistant writes about a change says who made each part. *Today:* a fact
-  carries its source and trust only, and the packet marks the person's own work only for watched sources.
-- [ ] **Replay cases** (lesson 2): an evaluation case may start from the person's own action through the screen's entry
-  point (an edit, a move, a button) and expect an end state of records as well as ops; each miss above gets one. *Today:*
-  cases and pairs start from an input; a pair's correction already goes through the screens' code, in a throwaway copy.
-- [ ] **A superseded attempt leaves nothing running** (lesson 7): a test of the exact sequence (an attempt fails, the person
-  resubmits, the resubmission applies, and the queued try for the first never runs or writes). *Today:* every write takes
-  the database's exclusive write lock, and a retry that applies retires the attempts before it with their queued tries
-  (`retire_earlier_attempts`); the test pins it. Undo already skips a change whose records changed since (lesson 8).
+L7. **Lessons from running, and the designer's answers, 2026-10-15** (the functional designer's eight lessons and their
+answers to the round of 2026-10-15; owner: built after the "after" run (O3) and before phase B; about 4 sessions). Design
+6.6, 6.7 "Follow-on changes", 6.8, 6.16, 6.18, 6.19, 6.21, 6.22. What the code does today is said for each.
+
+Calendar entries and dates (answers 10, 11, 13):
+- [ ] **Entries for real events only**: meetings, launches, delivery windows, appointments; never for an action's own due
+  date. A new date for an open action is one `record.set` on its due, with no fact and no history entry. Changed in one
+  commit with the notes prompt, the golden cases, the pairs and the check that guards them, which is turned round to fail
+  an entry made for an action's own date. *Today:* the prompt asks for an entry beside any dated fact or action, and the
+  check fails a dated input that has none.
+- [ ] **Only the named action moves**; a dependent move waits for a recorded dependency (phase P). *Today:* the prompt says
+  so (`b136c7d`).
+- [ ] **Terms by audience**: the person's own list keeps their shorthand with the meaning beside it the first time; what
+  goes to others puts the meaning first. *Today:* the prompt writes the meaning first everywhere.
+
+Questions, decisions and drops (answers 12, 15, 16, 19, 24, 8):
+- [ ] **A question someone asks the person is one action with a drafted reply** when the facts hold the answer (citing the
+  fact and its source), or saying what's missing when they don't. *Today:* an action, with no draft attached.
+- [ ] **Outside mail never re-routes work**: no routing proposal that takes work from the person, never a negative about
+  the person; a fact and one decision to the person instead. A sender's own "not me, ask <name>" is still proposed.
+  Enforced by a check. *Today:* both proposals are made and wait for Keep.
+- [ ] **Only the person rewords a question**; outside content adds a note, quoting both when it contradicts. *Today:* a
+  `record.set` on a question's title from outside content applies as data.
+- [ ] **A decision goes to whoever decides** (owner), the person when nobody is named; an option inside an answer is a
+  decision for them; it shows in follow-ups under the decider; `question.move` keeps a decision a decision. Its Today
+  line ("Waiting on <name>'s decision: blocks <action>") comes with the pack's dependencies (phase P). *Today:* decisions
+  go only to the person, and moving one makes it an ordinary question.
+- [ ] **A drop by the assistant** applies with Undo, except an item that already reached someone, which waits for a look.
+  *Today:* every drop applies with Undo.
+- [ ] **Three ops the assistant may propose**, each with Undo: bring back a set-aside item, remove or merge a list row
+  that was never a project, mark a question as already asked. *Today:* all three exist as the person's own ops only.
+
+Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
+- [ ] **One follow-on run when a dated record moves or a fact is replaced**: one save, one run; it finds what is tied
+  (records naming the entry or its old date, open actions linked to it or due before the new date that are settled there,
+  anything said to be covered there) and brings each in line. Changes to the person's own items apply with Undo;
+  anything that already reached someone gets a drafted correction to send. The assistant's own move from an input
+  starts it too; its own changes never start another (one hop), with a test. *Today:* an entry's edit records an
+  `edited` signal only; `supersedes` exists, and nothing follows on.
+- [ ] **Records can name the calendar entry, or the series, they belong to**; an item on a series sits on its next
+  instance and rolls to the next one when an instance passes with it unsettled. *Today:* no links and no series.
+- [ ] **A follow-up goes to whoever made the claim or owns the thing**; when neither is clear, a question to the person
+  about who to ask, never a person known only from a passing mention.
+- [ ] **How a fact is known**: the person said it, the assistant inferred it, or someone named said it, each with its
+  source. An inference applies marked as one, never reaches anything others see, never changes a date, owner or routing
+  alone, and never closes anything: it proposes the close, which one click confirms. The person's own deduction closes
+  it as theirs; "I asked them to confirm" files the question as already asked. What the assistant writes about a change
+  says who made each part. *Today:* a fact carries its source and trust only.
+
+Learning and scope (answers 3 to 7, 14, 22, 23):
+- [ ] **Discarded means don't act on it**: search flags an input whose proposal was discarded, and a check refuses
+  routing that matches a discarded proposal unless the person's own words support it. *Today:* search returns it
+  unflagged.
+- [ ] **Who owes what**: a request addressed to the person ("you", "your team", "can you", "please send", their name with a
+  request verb) replaces "we", "us", "our" in `language.owed_words`; a person with no team is asked about once.
+  *Today:* the we-words count as owed.
+- [ ] **Reported speech**: "per", "according to", "mentioned", "replied", "responded", "noted", "commented", "pinged"
+  join the words; a pasted chat is reported as a whole; "I told <name>" and "<name> asked me to" are not reported content.
+- [ ] **Checks run on every output** a rule's scope covers, so a checked rule counts as applied each time it holds.
+  *Today:* stage checks run only on stage moves.
+- [ ] **"Not now"** on the rules review line, starting its week; **a floor** of 3 identical refusals in a week brings a
+  check's guidance in whatever the share; **the catch-up** learns from the correction with the person's own words first;
+  **a series fact**: a parent project's fact marked to reach its children.
+
+Proving it (lesson 2; answers 2, 21):
+- [ ] **Replay cases**: start from the person's own action through the screen's entry point and score the records' end
+  state; one per real miss above, as a third set. *Today:* cases and pairs start from an input.
+- [ ] **Extras weighed and tracked**: missing and forbidden stay exact; a fact or note is free, an internal action or
+  entry costs a little, anything reaching another person fails; extras per run reported over time. *Today:* any extra
+  not in `allow` fails the run.
+- [ ] **A superseded attempt leaves nothing running** (lesson 7): a test of the exact sequence. *Today:* the exclusive
+  write lock and `retire_earlier_attempts` hold it; Undo already skips a change whose records changed since (lesson 8).
 
 ## Phase B: finish the UI/UX redesign (about 4 sessions)
 
@@ -1392,12 +1439,11 @@ From L3 (design 7.18):
   `GET /api/quality` (built in L3).
 
 From the functional designer's lessons of 2026-10-15 (lessons 5 and 6):
-- [ ] **Copy table on each person's group in Follow-ups**: the same data the group shows (their open actions and the open
-  questions to them, an action notice not listed twice), copied in two forms at once: tab-separated text that pastes into
-  a spreadsheet as cells with links kept, and an HTML table that pastes into chat or mail. A blank last column for their
-  reply ("Your update", from the wording sheet). No AI run, so the list can't differ from the screen. A request for "a
-  list of X's items" is answered by pointing to it; the assistant never asks the person for a blank file. *Today:* each
-  group copies one message, not a table.
+- [ ] **Copy tables on each person's group in Follow-ups** (design 7.5): the same data the group shows, with no AI run,
+  as two tables: actions (project, action, due, "Your update", link) and questions (project, question, first asked,
+  "Your answer", link), with no status column. Each copies as tab-separated text (cells in a spreadsheet, links kept)
+  and as an HTML table (for chat or mail). A request for "a list of X's items" points here; the assistant never asks
+  for a blank file. *Today:* each group copies one message, not a table.
 
 From the original designer's lessons of 2026-10-14:
 - [ ] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.6 and 7.7): a project
@@ -1636,10 +1682,17 @@ being done, builds schedules and tracks action items.
     (schedules, trackers, budgets) and documents, built from the records in the person's template and saved or shared
     through the core's publisher after the person approves the exact file (C4).
   - [ ] **The plan:** goals, phases, deliverables and milestones; a date the core files as a calendar entry under a project
-    becomes a milestone in that project's plan (moved from L3b).
-  - [ ] **Meeting agendas linked to actions** (the functional designer's lesson 1, 2026-10-15): an agenda item stores the
-    action or question it covers when the agenda is written, so moving the meeting (the core's follow-on run, L7) finds
-    them by id; an item someone said they'd raise there is added if it's missing.
+    becomes a milestone in that project's plan (moved from L3b). From L7, entries are made only for real events
+    (meetings, launches, delivery windows, appointments), never an action's own due date, so a milestone comes from
+    one of those.
+  - [ ] **Meeting agendas linked to actions** (the functional designer's lesson 1 and answer 18, 2026-10-15): an agenda
+    item stores the action or question it covers, and the series as well as the instance, when the agenda is written,
+    so moving the meeting (the core's follow-on run, L7) finds them by id; an unsettled item rolls to the series' next
+    instance; an item someone said they'd raise there is added if it's missing.
+  - [ ] **What dependencies make possible in the core's terms** (answers 11 and 19): a dependent action moves with the
+    one it waits on, with Undo and said in the change's note; an approval due before the work it approves is flagged
+    to the person; a decision that blocks one of the person's actions due within a week is a Today line ("Waiting on
+    <name>'s decision"). Never from shared words.
   - [ ] **The schedule:** work items with durations and dependencies, a critical path, dates worked out from the
     dependencies, baselines, and slips against them. Only the person rebaselines.
   - [ ] **Building it with the assistant:** from a brief, notes or another pack's milestones, the assistant drafts a
