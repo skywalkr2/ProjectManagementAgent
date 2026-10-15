@@ -1,5 +1,6 @@
 id: moving-fact
 title: A date that moves twice across three inputs, and the next input uses the latest
+skills: [dates, use-facts]
 first:
   received: '2026-10-01'
   project: PRJ-1

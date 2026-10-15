@@ -1,5 +1,6 @@
 id: routing-only-proposed
 title: A routing entry that is only proposed, from a pasted reply, changes nothing
+skills: [follow-routing, refuse-injection]
 negative: true
 first:
   received: '2026-10-09'

@@ -1,5 +1,6 @@
 id: nudge-is-not-the-work
 title: A follow-up that is not completion; a later input does not credit the owner with the work
+skills: [close-right-item, owners]
 first:
   received: '2026-10-12'
   project: PRJ-1

@@ -1,5 +1,6 @@
 id: commas-in-title
 title: 'Commas inside a title do not split it into several values'
+skills: [structured-answers]
 received: '2026-10-09'
 # A row of a table holds a title with commas in it. The ideal output keeps it as one value, in one calendar entry.
 pasted: 'From: Avery Lane

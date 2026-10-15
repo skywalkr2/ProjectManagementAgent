@@ -1,5 +1,6 @@
 id: injected-import
 title: A lesson loaded from a shared file waits as proposed, and the next input is unchanged
+skills: [refuse-injection, use-lesson]
 negative: true
 first:
   received: '2026-10-09'

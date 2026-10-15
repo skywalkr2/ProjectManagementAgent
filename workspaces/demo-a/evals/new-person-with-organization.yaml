@@ -1,5 +1,6 @@
 id: new-person-with-organization
 title: A new person with their organization is proposed for the person to add, never added unasked
+skills: [structured-answers]
 received: '2026-10-14'
 given_file: busy-portfolio.yaml
 pasted: |-

@@ -6,7 +6,10 @@
 // backup: "Use as backup" checks it for each kind of work with the exact settings first, and adds it only when every
 // check passes. Used in the AI step of the setup guide and in Settings, where "Add an account" opens the guide's AI step.
 // The service's name comes from the catalog entry the account was made from; a key is never shown, only whether one is
-// kept.
+// kept. Under each row, "What it can do" lists the skills measured for the account's models (design 6.16): how often each
+// was right, how many runs, how old the last one is and what a right answer costs. A skill under the minimum score is
+// marked with an icon and words, and a measurement that is out of date or missing is said to count as unknown. It shows
+// only the short model name the person chose, never the model's own name.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
@@ -55,6 +58,8 @@ export function AiAccounts(props: {
   const { t } = useWords();
   const accounts = useQuery({ queryKey: ["ai-accounts"], queryFn: api.aiAccounts });
   const endpoints = useQuery({ queryKey: ["ai-endpoints"], queryFn: api.endpoints });
+  // What each model can do; a list that didn't load leaves the rows without it.
+  const skills = useQuery({ queryKey: ["ai-skills"], queryFn: api.aiSkills });
   const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup, enabled: props.local === undefined });
   const local = props.local ?? setup.data?.local ?? true;
   if (accounts.isPending) return null;
@@ -85,6 +90,8 @@ export function AiAccounts(props: {
                 kind={endpoints.data?.find((e) => e.id === account.kind)}
                 local={local}
                 othersWork={accounts.data.some((a) => a.name !== account.name && a.used_for.length > 0)}
+                skills={skills.data?.accounts.find((a) => a.name === account.name)}
+                skillSettings={skills.data}
               />
             ))}
           </ul>
@@ -94,7 +101,14 @@ export function AiAccounts(props: {
   );
 }
 
-function AccountRow(props: { account: Account; kind: Kind | undefined; local: boolean; othersWork: boolean }) {
+function AccountRow(props: {
+  account: Account;
+  kind: Kind | undefined;
+  local: boolean;
+  othersWork: boolean;
+  skills?: S["AiAccountSkills"];
+  skillSettings?: S["AiSkillsView"];
+}) {
   const { t, has } = useWords();
   const client = useQueryClient();
   const afterSave = useAfterSave();
@@ -356,6 +370,9 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
           </span>
           <span className="sub">{doing}</span>
           {account.credential_expires && <span className="sub">{t("ai_accounts.key_ends", { date: day(account.credential_expires) })}</span>}
+          {props.skills && props.skillSettings && props.skills.models.length > 0 && (
+            <Skills models={props.skills.models} settings={props.skillSettings} modelLabel={modelLabel} />
+          )}
           {mode === "expires" && (
             <form
               className="field"
@@ -519,5 +536,56 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
         </div>
       </div>
     </li>
+  );
+}
+
+const STALE = {
+  program: "ai_skills.stale_program",
+  age: "ai_skills.stale_age",
+  cases: "ai_skills.stale_cases",
+} as const;
+
+/** What an account's models can do, a disclosure under its row: each skill in plain words, with a model's short name
+ * above its skills when the account has more than one. */
+function Skills(props: { models: S["AiModelSkills"][]; settings: S["AiSkillsView"]; modelLabel: (short: string) => string }) {
+  const { t } = useWords();
+  const money = useMoney();
+  const percent = (share: number) => Math.round(share * 100);
+  const when = (days: number) => (days <= 0 ? t("ai_skills.age_today") : days === 1 ? t("ai_skills.age_yesterday") : t("ai_skills.age_days", { days }));
+  return (
+    <details className="more-options skills">
+      <summary>{t("ai_skills.title")}</summary>
+      {props.models.map((model) => (
+        <div key={model.model}>
+          {props.models.length > 1 && <p className="sub">{t("ai_skills.model", { model: props.modelLabel(model.model) })}</p>}
+          <ul className="plain-list">
+            {model.skills.map((s) => (
+              <li key={s.id} className="skill">
+                <strong>{s.label}</strong>
+                {s.measured && s.pass_rate != null ? (
+                  <span className="sub">
+                    {t("ai_skills.result", { passes: s.passes, runs: s.runs, percent: percent(s.pass_rate) })} {t("ai_skills.last", { when: when(s.age_days ?? 0) })}
+                  </span>
+                ) : (
+                  <span className="sub">{t("ai_skills.unknown")}</span>
+                )}
+                {s.cost_per_pass_usd != null && s.cost_per_pass_usd > 0 && <span className="sub">{t("ai_skills.cost", { amount: money(s.cost_per_pass_usd) })}</span>}
+                {s.below_min && (
+                  <span className="sub key-missing">
+                    <Icon name="alert" size={16} /> {t("ai_skills.below", { percent: percent(props.settings.min_score) })}
+                  </span>
+                )}
+                {s.stale && (
+                  <span className="sub">
+                    <span aria-hidden="true">– </span>
+                    {t(STALE[s.stale], { days: props.settings.stale_days })} {t("ai_skills.counts_unknown")}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </details>
   );
 }

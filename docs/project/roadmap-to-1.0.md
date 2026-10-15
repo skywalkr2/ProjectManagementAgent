@@ -1496,13 +1496,31 @@ Proving it (lesson 2; answers 2, 21):
   reports between the owner's computer and the session): `cockpit evaluate` prints each failing run in one compact line
   (missing, extra, kept, given) and writes them beside the report, and `--case-failed <report>` re-runs only what failed
   there. No pasted scripts, no quoting traps. Built: `test_a_failing_run_gets_one_line_and_a_failures_file`, `test_no_failure_prints_a_plain_line_and_writes_no_file`, `test_case_failed_runs_only_the_cases_that_failed`, `test_case_failed_merges_with_case`, `test_case_failed_with_a_missing_report_says_why_and_runs_nothing`, `test_case_failed_with_no_failing_case_says_so_and_runs_nothing` (`tests/test_evaluate_out.py`).
-- [ ] **The capability matrix, step 1: measured and shown** (owner, 2026-10-15; design 6.16 "the capability matrix";
+- [x] **The capability matrix, step 1: measured and shown** (owner, 2026-10-15; design 6.16 "the capability matrix";
   about 1.5 sessions): the shipped skills list (data, packs extend it); `skills:` on every golden case, pair and pack case,
   required by the self-check; `cockpit evaluate` and the switch check add each run to the matrix (model and program
   version × skill: passes, runs, date, cost per passing run), kept in the workspace and exported; staleness (model id,
   program version, `ai.skills.stale_days`, changed cases); Settings shows the grid per account in plain words with
   "Measure" (estimate first); proved on every adapter kind with the fake services (native API, OpenAI-compatible,
-  aggregator, command-line agent). *Today:* reports are files read by hand.
+  aggregator, command-line agent). *Built, apart from what the next item lists:* the skills list
+  (`engine/defaults/skills.yaml`, `engine/skills.py`; packs add skills with `engine.skills.merge`), `skills:` on every
+  golden case, pair and scenario of both fictional workspaces and the example pack's case, the matrix
+  (`engine/ai/matrix.py`, in the workspace's private folder), `GET /api/ai/skills`, "What it can do" under each account
+  in Settings, `ai.skills.min_score` and `ai.skills.stale_days`. Built: `test_the_shipped_cases_pass_the_skills_check`,
+  `test_the_self_check_fails_a_case_with_no_skills_or_an_unknown_one`,
+  `test_a_case_that_names_an_unknown_skill_does_not_load`, `test_a_run_adds_one_run_to_each_skill_its_case_names`,
+  `test_a_run_that_was_not_made_adds_nothing`, `test_results_of_every_kind_of_account_are_kept_apart`,
+  `test_the_program_version_makes_a_measurement_stale_and_recording_starts_it_again`,
+  `test_age_makes_a_measurement_stale_after_the_configured_days`,
+  `test_a_changed_case_set_makes_a_measurement_stale`, `test_an_evaluate_run_with_the_stand_in_fills_the_matrix`,
+  `test_the_route_reports_pass_rate_runs_age_cost_and_the_flags` (`tests/test_capability_matrix.py`),
+  `AiAccounts.test.tsx` ("What it can do lists each skill in words"). *Today:* reports are files read by hand.
+- [ ] **The capability matrix, step 1, what is left:** "Measure" per account with its estimate first, only on cases for
+  the data levels the account allows; the matrix exported with the workspace (today it is in the private folder, like
+  the connection checks, and a backup doesn't carry it); the "every adapter kind" proof with each kind's own fake
+  service (today one test records results for a model of each kind and shows they are kept apart); a test of its own
+  that the switch check adds its runs (`evaluate_on` does record them).
+
 - [ ] **A superseded attempt leaves nothing running** (lesson 7): a test of the exact sequence. *Today:* the exclusive
   write lock and `retire_earlier_attempts` hold it; Undo already skips a change whose records changed since (lesson 8).
 

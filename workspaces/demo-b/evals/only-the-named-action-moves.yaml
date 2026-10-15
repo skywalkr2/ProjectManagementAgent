@@ -1,5 +1,6 @@
 id: only-the-named-action-moves
 title: 'A new date moves the one action it names; another open action on the same thing keeps its date'
+skills: [dates, close-right-item]
 received: '2026-10-09'
 pasted: 'Jacket update: the approval of the back-cover copy can wait until Monday Oct 19.'
 expect:

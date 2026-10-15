@@ -1,5 +1,6 @@
 id: signature-phone
 title: A phone number in a signature is offered for the sender's record, never added unasked
+skills: [structured-answers]
 received: '2026-10-09'
 pasted: |-
   From: Maya Okafor <maya.okafor@example.org>

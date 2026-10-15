@@ -1,5 +1,6 @@
 id: routing
 title: A reply that says who answers is kept, and the next question on that topic goes to that person
+skills: [follow-routing, use-lesson]
 first:
   received: '2026-10-09'
   project: PRJ-1

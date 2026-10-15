@@ -12,12 +12,16 @@ from fastapi import APIRouter, HTTPException
 from api.schemas import (
     AiAccountAdd,
     AiAccountChange,
+    AiAccountSkills,
     AiAccountView,
     AiBorrowAnswer,
     AiBorrowed,
     AiModelsAsk,
+    AiModelSkills,
     AiModelsView,
     AiModelView,
+    AiSkillsView,
+    AiSkillView,
     AiSwitched,
     AiSwitchEstimate,
     AiTestResult,
@@ -608,6 +612,54 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 )
             )
         return found
+
+    @r.get("/ai/skills")
+    def ai_skills() -> AiSkillsView:
+        """What each account's models can do, from the evaluation runs kept in this workspace: per model and skill the
+        pass rate, the runs, the age of the last one, the cost of a passing run and whether it is stale or under the
+        minimum score (design 6.16). A skill nobody measured is listed as not measured."""
+        from datetime import UTC, datetime
+
+        from engine.ai import matrix
+        from engine.ai.adapters import make_adapter
+        from engine.shipped import DEMOS, demo
+
+        now = current()
+        today = datetime.now(UTC).date()
+        sets: dict[str, dict[str, str]] = {}
+        for name in DEMOS:
+            sets |= matrix.case_sets(demo(name), ws.root)
+        accounts = []
+        for name, provider in now.ai.providers.items():
+            version = matrix.current_program_version(now, name, make_adapter)
+            models = []
+            for short, model_id in provider.models.items():
+                held = matrix.standing(
+                    ws, now, f"{name}/{model_id}", program_version=version, current_sets=sets, today=today
+                )
+                models.append(
+                    AiModelSkills(
+                        model=short,
+                        skills=[
+                            AiSkillView(
+                                id=s.skill.id,
+                                label=s.skill.label,
+                                description=s.skill.description,
+                                measured=s.measured,
+                                runs=s.runs,
+                                passes=s.passes,
+                                pass_rate=s.pass_rate,
+                                age_days=s.age_days(today),
+                                cost_per_pass_usd=s.cost_per_pass_usd,
+                                stale=s.stale,
+                                below_min=s.below_min,
+                            )
+                            for s in held
+                        ],
+                    )
+                )
+            accounts.append(AiAccountSkills(name=name, models=models))
+        return AiSkillsView(min_score=now.ai.skills.min_score, stale_days=now.ai.skills.stale_days, accounts=accounts)
 
     @r.post("/ai/accounts/{name}/test")
     def ai_account_test(name: str, tier: str | None = None, model: str | None = None) -> list[AiTestResult]:

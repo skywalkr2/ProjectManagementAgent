@@ -1,5 +1,6 @@
 id: they-finished-note
 title: 'A note on "They finished it" with a link and a new date becomes a fact and a moved date'
+skills: [dates, evidence]
 received: '2026-10-13'
 typed_on:
   route: they_finished

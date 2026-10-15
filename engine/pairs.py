@@ -4,6 +4,7 @@ doesn't repeat a corrected mistake, and doesn't over-learn either.
 A pair is a file in a workspace's `pairs/` folder. It runs in a fresh copy of the workspace, in two halves.
 
     id, title
+    skills: [dates, ...]      # the skills it proves (ids in engine/defaults/skills.yaml); a scenario has the same key
     negative: true            # the later output must not change, however much the person kept
     pending: <why>            # the gap in the code that stops it passing; it is run only when named, and a test says
                               # it still fails, so the flag goes the day the gap is closed
@@ -90,6 +91,7 @@ from engine.evaluate import (
     _matching,
     _read_program_versions,
     _summarize,
+    configured_models,
     extras_of,
     not_made,
     received_of,
@@ -99,6 +101,7 @@ from engine.extract import EXTENSIONS, read_file
 from engine.extract import fixtures as file_fixtures
 from engine.next_steps import NewPersonForm, add_new_person, file_under, not_a_project
 from engine.records import REGISTRY
+from engine.skills import check_named
 from engine.storage import Store, StoreError, WriteContext
 from engine.workspace import Workspace, init_workspace
 from engine.yaml_load import load_yaml
@@ -210,6 +213,7 @@ def _fixed_answer(first: Mapping[str, Any]) -> Any:
 
 def _check_pair(template: Path, pair: dict[str, Any]) -> None:
     where = f"pair {pair['id']}"
+    check_named(where, pair.get("skills"))
     first, later, ideal = _need(where, pair, "first"), _need(where, pair, "later"), _need(where, pair, "ideal")
     _check_input(f"{where} first", first)
     starting_records(template, {"id": pair["id"], **first})
@@ -251,6 +255,7 @@ def _check_pair(template: Path, pair: dict[str, Any]) -> None:
 
 def _check_scenario(template: Path, scenario: dict[str, Any]) -> None:
     where = f"scenario {scenario['id']}"
+    check_named(where, scenario.get("skills"))
     _check_input(f"{where} input", _need(where, scenario, "input"))
     starting_records(template, {"id": scenario["id"], **scenario})
     ideal = _need(where, scenario, "ideal")
@@ -681,13 +686,14 @@ def _outcomes(store: Store, changesets: list[str | None]) -> list[dict[str, Any]
     return found
 
 
-def _usage(play: _Play) -> tuple[list[str], float, float]:
-    """The accounts, the cost and the seconds of the runs the person's own account made."""
+def _usage(play: _Play) -> tuple[list[str], float, float, list[str]]:
+    """The accounts, the cost, the seconds and the models (as set up) of the runs the person's own account made."""
     runs = [r.data for r in play.store.read().list("run") if r.data.get("request") in play.live_requests]
     return (
         sorted({f"{r['provider']}/{r['model']}" for r in runs}),
         sum(r.get("cost_usd") or 0.0 for r in runs),
         sum(r.get("seconds") or 0.0 for r in runs),
+        configured_models(play.live, runs),
     )
 
 
@@ -728,7 +734,7 @@ def _play_pair(
     kept: list[str] = []
 
     def result(passed: bool, **more: Any) -> RunResult:
-        accounts, cost, seconds = _usage(play)
+        accounts, cost, seconds, models = _usage(play)
         _versions(play, versions, factory)
         total = _joined(extras, Extras([], 0.0, False), entry_extra)
         return RunResult(
@@ -742,6 +748,7 @@ def _play_pair(
             cost_usd=cost,
             seconds=seconds,
             accounts=accounts,
+            models=models,
             given=given,
             kept=kept,
             negative=negative,
@@ -928,11 +935,12 @@ def _run_scenario(
                     )
         except _Stop as err:
             stopped = str(err)
-        accounts, cost, seconds = [], 0.0, 0.0
+        accounts, cost, seconds, models = [], 0.0, 0.0, []
         for play in played:
             found = _usage(play)
             accounts += found[0]
             cost, seconds = cost + found[1], seconds + found[2]
+            models += found[3]
         if played:
             _versions(played[-1], versions, factory)
         refused = bool(stopped and played and played[-1].refused(request or ""))
@@ -953,6 +961,7 @@ def _run_scenario(
             cost_usd=cost,
             seconds=seconds,
             accounts=sorted(set(accounts)),
+            models=sorted(set(models)),
             given=given,
             kept=kept,
             got=[] if passed else [_summarize(o) for o in seen.get(30, ([], None))[0]],
@@ -982,7 +991,7 @@ def evaluate_pairs(
     `ideal`, which checks the pairs and the plumbing rather than a model."""
     env = os.environ if env is None else env
     versions: dict[str, str | None] = {}
-    items = [
+    items = everything = [
         *((_run_pair, p) for p in load_pairs(template)),
         *((_run_scenario, s) for s in load_scenarios(template)),
     ]
@@ -1019,4 +1028,12 @@ def evaluate_pairs(
         )
         if progress is not None:
             progress(results[-1], len(results), total)
-    return Report(account or ("stub" if stub else "configured"), runs, results, versions)
+    return Report(
+        account or ("stub" if stub else "configured"),
+        runs,
+        results,
+        versions,
+        case_set={item["id"]: list(item.get("skills") or []) for _run, item in everything},
+        kind="pairs",
+        template=template.name,
+    )

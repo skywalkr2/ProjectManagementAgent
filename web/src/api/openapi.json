@@ -895,6 +895,28 @@
         "title": "AiAccountChange",
         "type": "object"
       },
+      "AiAccountSkills": {
+        "properties": {
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/AiModelSkills"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "name": {
+            "description": "The account's short name in ai.yaml.",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "models"
+        ],
+        "title": "AiAccountSkills",
+        "type": "object"
+      },
       "AiAccountView": {
         "description": "An AI account in the settings, for the screens: never its key.",
         "properties": {
@@ -1053,6 +1075,28 @@
         "title": "AiBorrowed",
         "type": "object"
       },
+      "AiModelSkills": {
+        "properties": {
+          "model": {
+            "description": "The short name the person gave the model, never its id.",
+            "title": "Model",
+            "type": "string"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/AiSkillView"
+            },
+            "title": "Skills",
+            "type": "array"
+          }
+        },
+        "required": [
+          "model",
+          "skills"
+        ],
+        "title": "AiModelSkills",
+        "type": "object"
+      },
       "AiModelView": {
         "properties": {
           "context_tokens": {
@@ -1176,6 +1220,136 @@
           }
         },
         "title": "AiModelsView",
+        "type": "object"
+      },
+      "AiSkillView": {
+        "description": "What the measurements hold for one model and one skill (design 6.16): a skill is one kind of thing a run can get\nright or wrong. A skill nobody measured has no runs.",
+        "properties": {
+          "age_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Days since the last run counted; none when never measured.",
+            "title": "Age Days"
+          },
+          "below_min": {
+            "default": false,
+            "description": "The pass rate is under the configured minimum score.",
+            "title": "Below Min",
+            "type": "boolean"
+          },
+          "cost_per_pass_usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What a passing run cost on average; none when no run passed.",
+            "title": "Cost Per Pass Usd"
+          },
+          "description": {
+            "description": "What the skill covers, in plain words.",
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "description": "The skill in plain words.",
+            "title": "Label",
+            "type": "string"
+          },
+          "measured": {
+            "description": "At least one run of a case that proves this skill was counted.",
+            "title": "Measured",
+            "type": "boolean"
+          },
+          "pass_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Share of runs that passed, 0 to 1; none when never measured.",
+            "title": "Pass Rate"
+          },
+          "passes": {
+            "default": 0,
+            "title": "Passes",
+            "type": "integer"
+          },
+          "runs": {
+            "default": 0,
+            "title": "Runs",
+            "type": "integer"
+          },
+          "stale": {
+            "anyOf": [
+              {
+                "enum": [
+                  "program",
+                  "age",
+                  "cases"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the measurement can't be trusted any more: the agent program changed, it is older than the configured number of days, or the cases that measured it changed. It counts as unknown for routing.",
+            "title": "Stale"
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "description",
+          "measured"
+        ],
+        "title": "AiSkillView",
+        "type": "object"
+      },
+      "AiSkillsView": {
+        "description": "Every account's models against every skill, for the grid in Settings.",
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/AiAccountSkills"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "min_score": {
+            "description": "ai.skills.min_score: the pass rate a skill needs to count as able.",
+            "title": "Min Score",
+            "type": "number"
+          },
+          "stale_days": {
+            "description": "ai.skills.stale_days: how long a measurement is trusted.",
+            "title": "Stale Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "min_score",
+          "stale_days",
+          "accounts"
+        ],
+        "title": "AiSkillsView",
         "type": "object"
       },
       "AiState": {
@@ -13651,6 +13825,25 @@
           }
         },
         "summary": "Ai Models"
+      }
+    },
+    "/api/ai/skills": {
+      "get": {
+        "description": "What each account's models can do, from the evaluation runs kept in this workspace: per model and skill the\npass rate, the runs, the age of the last one, the cost of a passing run and whether it is stale or under the\nminimum score (design 6.16). A skill nobody measured is listed as not measured.",
+        "operationId": "ai_skills_api_ai_skills_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSkillsView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Ai Skills"
       }
     },
     "/api/ai/switch/{tier}/back": {

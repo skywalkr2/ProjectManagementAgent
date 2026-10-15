@@ -1,5 +1,6 @@
 id: world-changed
 title: The person moved a due date because a later mail moved it, so nothing is learned
+skills: [use-lesson, dates]
 negative: true
 first:
   received: '2026-10-09'

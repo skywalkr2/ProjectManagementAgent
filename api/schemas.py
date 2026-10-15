@@ -1887,6 +1887,47 @@ class AiAccountView(BaseModel):
     )
 
 
+class AiSkillView(BaseModel):
+    """What the measurements hold for one model and one skill (design 6.16): a skill is one kind of thing a run can get
+    right or wrong. A skill nobody measured has no runs."""
+
+    id: str
+    label: ScreenText = Field(description="The skill in plain words.")
+    description: ScreenText = Field(description="What the skill covers, in plain words.")
+    measured: bool = Field(description="At least one run of a case that proves this skill was counted.")
+    runs: int = 0
+    passes: int = 0
+    pass_rate: float | None = Field(None, description="Share of runs that passed, 0 to 1; none when never measured.")
+    age_days: int | None = Field(None, description="Days since the last run counted; none when never measured.")
+    cost_per_pass_usd: float | None = Field(
+        None, description="What a passing run cost on average; none when no run passed."
+    )
+    stale: Literal["program", "age", "cases"] | None = Field(
+        None,
+        description="Why the measurement can't be trusted any more: the agent program changed, it is older than the "
+        "configured number of days, or the cases that measured it changed. It counts as unknown for routing.",
+    )
+    below_min: bool = Field(False, description="The pass rate is under the configured minimum score.")
+
+
+class AiModelSkills(BaseModel):
+    model: str = Field(description="The short name the person gave the model, never its id.")
+    skills: list[AiSkillView]
+
+
+class AiAccountSkills(BaseModel):
+    name: str = Field(description="The account's short name in ai.yaml.")
+    models: list[AiModelSkills]
+
+
+class AiSkillsView(BaseModel):
+    """Every account's models against every skill, for the grid in Settings."""
+
+    min_score: float = Field(description="ai.skills.min_score: the pass rate a skill needs to count as able.")
+    stale_days: int = Field(description="ai.skills.stale_days: how long a measurement is trusted.")
+    accounts: list[AiAccountSkills]
+
+
 class AiAccountChange(BaseModel):
     """A change to an existing account: a new key, other models, or the work it does."""
 

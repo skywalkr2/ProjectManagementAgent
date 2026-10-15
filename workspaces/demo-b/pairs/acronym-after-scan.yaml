@@ -2,6 +2,7 @@ id: acronym-after-scan
 # The scan for new terms proposes "HLP: not known yet" while the first input is read; the learned meaning then replaces
 # that unknown proposal (a duplicate that knows more), so Keep keeps the meaning and the next input reads it right.
 title: An unknown term is read the wrong way, corrected once, and read right the next time
+skills: [use-term, use-lesson]
 first:
   received: '2026-10-08'
   project: PRJ-1

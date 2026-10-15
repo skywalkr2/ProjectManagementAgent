@@ -1,5 +1,6 @@
 id: items-that-dont-exist
 title: The PM asks to close items that were never recorded
+skills: [close-right-item]
 received: '2026-10-09'
 note: 'Close the actions for the bookmarks order and the poster proofs, they are both done.'
 # Saying so in the summary with no ops, or asking the PM which items were meant, are both right; closing anything or

@@ -1154,7 +1154,9 @@ describe is treated as having no optional capabilities until the PM says otherwi
 up through the catalog, with no code change.
 
 **What a model can do, measured: the capability matrix** (owner, 2026-10-15: "very full featured … not just in claude
-but all the others"; *designed, not yet built*; roadmap L7 step 1, C0 step 2). Capabilities above are features a catalog
+but all the others"; step 1 (the skills list, the matrix, staleness and the grid in Settings) is built, apart from
+"Measure" and the export, which the roadmap lists; step 2 (using it) is *designed, not yet built*; roadmap L7 step 1,
+C0 step 2). Capabilities above are features a catalog
 states. Whether a model *does* a kind of work well is measured, the same way for every account the product supports:
 native vendor APIs, OpenAI-compatible endpoints (local servers included), aggregators and command-line agents. Nothing is
 assumed from a vendor's or model's name, and no vendor or model name appears outside adapters, `config/ai.yaml` and
@@ -1162,17 +1164,25 @@ evaluation reports.
 - **Skills.** A skill is one thing a run can get right or wrong: using a term, following routing, using a lesson, dates,
   owners, not repeating a question, evidence, structured answers, refusing injected instructions, and so on. The core
   ships the list as data; a pack adds its own (drafting in a voice, checking a manuscript's continuity). Every golden
-  case, learning pair and pack case names the skills it proves (`skills:`); the self-check fails a case without one.
-- **The matrix.** Each evaluation run adds to it: model (the account's model id, and a command-line agent's program
-  version) × skill → passes, runs, the last date, and the cost of a passing run (price × tokens, from the run's usage).
-  It is kept in the workspace, exported with it, and never sent anywhere. A measurement goes stale when the model id or
-  program version changes, after `ai.skills.stale_days`, or when the cases that measured it change; stale is shown and
-  counts as unknown for routing.
+  case, learning pair and pack case names the skills it proves (`skills:`); the self-check fails a case without one, or
+  one that names a skill not on the list, in the fictional workspaces and the bundled packs. A case anywhere that
+  names an unknown skill doesn't load; a pack's own case with no `skills:` still runs and adds nothing to the matrix.
+  *Built:* `engine/defaults/skills.yaml`, `engine/skills.py` (`merge` is where a pack's skills will be added).
+- **The matrix.** Each evaluation run adds to it: model (the account's model id as its tier was set up, and a
+  command-line agent's program version) × skill → passes, runs, the last date, and the cost of a passing run (price ×
+  tokens, from the run's usage; a run on two accounts counts for both, its cost divided). It is kept in the workspace's
+  private folder (`ai-skills.json`, `engine/ai/matrix.py`) and never sent anywhere; *exporting it with the workspace is
+  not built yet*. A measurement goes stale when the program version changes, after `ai.skills.stale_days`, or when
+  the cases that measured it change (a hash of the case ids that name the skill, kept for the golden cases and for the
+  pairs of each fictional workspace); a changed model id is a different row, so it starts unmeasured. Stale is shown and
+  counts as unknown for routing, and the next run recorded over a stale entry starts it again rather than mixing in
+  the old runs.
 - **Measuring.** `cockpit evaluate` and the switch check (6.22) fill it; Settings offers "Measure" per account with its
   estimate first (spending is the person's choice, 6.16), and only on cases for the data levels the account is allowed.
   Real use adds evidence too: a correction of a run counts against that model for the skills the correction's kind
   touches, shown apart from the measured cases (6.20).
-- **Seeing it.** Settings shows accounts × skills as a grid in plain words: pass rate, how many runs, how old, and cost
+- **Seeing it.** Settings shows each account's models × skills, under the account's row ("What it can do", `GET
+  /api/ai/skills`), in plain words: pass rate, how many runs, how old, and cost
   per passing run; skills below `ai.skills.min_score` are marked, unknown is said as unknown, never colour alone. The
   model's own name is never shown, only the account and the short model name the person chose.
 - **Using it.** Each task kind, the core's and a pack's, declares the skills it needs. The router picks, among the

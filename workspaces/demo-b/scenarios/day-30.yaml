@@ -1,5 +1,6 @@
 id: day-30
 title: The same mail on day 1 and after a month of history, which routes the question and reads the term differently
+skills: [use-term, follow-routing, use-lesson]
 # What the month has to change, written before the scenario is run: with the routing entry and the term kept, the
 # question about reviewers goes to Ines Duarte instead of Maya Okafor, and the action says the second printing where day 1
 # says Marlow. Nothing else may differ: the unrelated mail, the re-saved file and the moved meeting leave no trace in the

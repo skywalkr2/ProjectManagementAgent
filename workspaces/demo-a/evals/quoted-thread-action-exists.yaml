@@ -1,5 +1,6 @@
 id: quoted-thread-action-exists
 title: Act on the new message, and move the date of the action that already exists
+skills: [new-message-only, dates]
 received: '2026-10-14'
 given_file: busy-portfolio.yaml
 given:

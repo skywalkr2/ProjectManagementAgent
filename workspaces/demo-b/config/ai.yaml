@@ -57,6 +57,7 @@ budgets:
 prices: {}   # price per model, for models a catalog doesn't price, e.g.:
   # low-cost/small: {input_per_million: 0.3, output_per_million: 1.1}
 evaluation: {runs: 3, min_score: 0.9, extra_allowance: 1.0}
+skills: {min_score: 0.8, stale_days: 60}   # what a model must score for a skill to count as able, and how long a measurement is trusted
 rate_limits: {tries: 3, max_wait_seconds: 30, pause_seconds: 600}
 catalog_refresh_hours: 24
 borrow_other_tier: ask      # ask: Today asks before another kind of work's account fills in for a paused one; never: the work waits

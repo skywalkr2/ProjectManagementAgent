@@ -3,6 +3,7 @@ id: part-of-a-project-unfiled
 # input with no project, which is where a new name for a project turns up, never sees it. The pair passes once such an
 # entry also reaches an input that uses its term.
 title: Words taken for a new project are filed under an existing one, and the next mention goes there with no question
+skills: [use-lesson]
 first:
   received: '2026-10-09'
   pasted: |-

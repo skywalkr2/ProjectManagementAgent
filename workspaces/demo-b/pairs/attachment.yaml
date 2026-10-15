@@ -1,5 +1,6 @@
 id: attachment
 title: The fact needed is in an attached presentation; it is read, and nobody is asked to paste it
+skills: [use-facts, no-repeat-question]
 first:
   received: '2026-10-09'
   project: PRJ-1

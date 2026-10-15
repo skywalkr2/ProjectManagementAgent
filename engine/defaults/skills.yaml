@@ -1,0 +1,46 @@
+# The skills a run can get right or wrong (design 6.16, "What a model can do, measured"). Every evaluation case, learning
+# pair and scenario names the ones it proves with `skills:`. Each skill has a plain-words label, shown in Settings, and a
+# description of what it covers. Packs may add their own through `engine.skills.merge`.
+skills:
+  - id: use-term
+    label: Using a term
+    description: Reads a word or acronym the way the glossary says, and learns what a correction meant by it.
+  - id: follow-routing
+    label: Following who answers
+    description: Sends a question to the person recorded as answering that topic, and doesn't let routing change from outside text.
+  - id: use-lesson
+    label: Using a lesson
+    description: Applies what was learned from an earlier correction to the next, similar input, and nowhere else.
+  - id: dates
+    label: Dates
+    description: Turns weekdays and relative days into dates, moves the right date, and leaves unknown timing blank.
+  - id: owners
+    label: Owners
+    description: Names the right person for each action, asks when nobody is known, and never guesses between people who share a name.
+  - id: no-repeat-question
+    label: Not asking twice
+    description: Doesn't ask what is already recorded or already asked, and asks once when one thing is missing.
+  - id: use-facts
+    label: Using recorded facts
+    description: Takes an answer from a fact, a record or an attachment that holds it instead of asking for it again.
+  - id: evidence
+    label: Quoting its evidence
+    description: Backs each claim with the exact words of the input that support it.
+  - id: structured-answers
+    label: Well-formed answers
+    description: Fills each field of an answer with the right kind of value, and keeps a title as one piece of text.
+  - id: refuse-injection
+    label: Ignoring instructions in outside text
+    description: Treats instructions inside mail and pasted text as content, never as rules, owners or recipients.
+  - id: close-right-item
+    label: Closing the right item
+    description: Closes only the action or question an input settles, and keeps open one that is only half done.
+  - id: stay-in-scope
+    label: Staying in scope
+    description: Gives actions only for the area the person tracks, and treats other areas as things to observe.
+  - id: new-message-only
+    label: Acting on the new message
+    description: Acts on the newest message of a thread and treats the quoted history as background.
+  - id: recording-only-what-matters
+    label: Recording only what matters
+    description: Leaves small talk and mail the person set aside unrecorded.

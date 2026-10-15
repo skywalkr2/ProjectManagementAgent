@@ -1,5 +1,6 @@
 id: decision-already-made
 title: A decision the PM has already made is recorded, not asked again
+skills: [no-repeat-question, evidence]
 received: '2026-10-14'
 given_file: busy-portfolio.yaml
 note: 'Decided: the Route Optimizer Rollout cut-over moves to the January window.'

@@ -1,5 +1,6 @@
 id: example/capture-reminder
 title: A spoken reminder is captured with the words that matter
+skills: [structured-answers]
 received: '2026-10-14'
 task: example/capture
 note: Remind me to call the printer about the proof before Friday.

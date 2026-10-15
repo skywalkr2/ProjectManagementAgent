@@ -1,5 +1,6 @@
 id: role-becomes-run
 title: After the person runs a project, another team's defect that blocks its launch gives an action and a fact, not a parked note
+skills: [stay-in-scope, use-lesson]
 first:
   project: PRJ-3
   before:

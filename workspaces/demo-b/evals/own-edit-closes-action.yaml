@@ -1,5 +1,6 @@
 id: own-edit-closes-action
 title: 'The PM''s own edit in a watched source closes the open action it fulfills'
+skills: [close-right-item]
 received: '2026-10-14'
 watched:
   title: Salt Orchard launch checklist

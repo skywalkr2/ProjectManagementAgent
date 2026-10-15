@@ -1,5 +1,6 @@
 id: partial-answer
 title: A reply that answers one of two open questions closes only that one
+skills: [close-right-item]
 received: '2026-10-14'
 given_file: busy-portfolio.yaml
 pasted: |-

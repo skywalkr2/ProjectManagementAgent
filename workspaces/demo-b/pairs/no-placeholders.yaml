@@ -1,5 +1,6 @@
 id: no-placeholders
 title: An unknown date is left blank and asked of whoever owns it, never invented
+skills: [dates, owners]
 first:
   received: '2026-10-09'
   project: PRJ-1

@@ -1,5 +1,6 @@
 id: over-application
 title: A routing entry for who answers questions about one topic does not change who owns actions about it
+skills: [follow-routing, use-lesson]
 negative: true
 first:
   received: '2026-10-09'

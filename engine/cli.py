@@ -922,6 +922,20 @@ def _failed_cases_of(report_file: Path) -> tuple[list[str], str]:
     return list(dict.fromkeys(failed)), ""
 
 
+def _keep_in_matrix(workspace: Path, report: Any) -> None:
+    """Add the report's runs to the workspace's capability matrix (design 6.16); a matrix that can't be written is said,
+    never a reason to lose the report."""
+    from engine.ai.matrix import record_report
+    from engine.config import ConfigError, load_config
+    from engine.workspace import Workspace
+
+    try:
+        days = load_config(workspace / "config", env={}).ai.skills.stale_days
+        record_report(Workspace(workspace), report, stale_days=days)
+    except (ConfigError, OSError) as err:
+        print(f"cockpit: the results were not added to what each model can do: {err}", file=sys.stderr, flush=True)
+
+
 def cmd_evaluate(args: argparse.Namespace) -> int:
     from engine.config import load_config
     from engine.evaluate import Report, evaluate
@@ -981,6 +995,8 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
     if out is not None:
         write_whole(out, report.as_json())
         print(f"The report is in {out}.", file=sys.stderr, flush=True)
+    if workspace is not None:
+        _keep_in_matrix(workspace, report)
     print(report.as_json() if args.json else report.text(), flush=True)
     lines = [_failure_line(r) for r in report.results if _failed(r)]
     if not lines:

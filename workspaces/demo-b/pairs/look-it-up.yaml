@@ -1,5 +1,6 @@
 id: look-it-up
 title: A date the recorded facts already hold is asked of a person once, and used the next time
+skills: [use-facts, dates, no-repeat-question]
 first:
   received: '2026-10-09'
   project: PRJ-1

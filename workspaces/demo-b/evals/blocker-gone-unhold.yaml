@@ -1,5 +1,6 @@
 id: blocker-gone-unhold
 title: 'An input that says what a held action waited for has happened takes it off hold'
+skills: [close-right-item]
 received: '2026-10-14'
 given:
 - kind: action

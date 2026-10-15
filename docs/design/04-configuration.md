@@ -334,6 +334,7 @@ budgets:
   per_task: {}                   # caps by task kind, e.g. {notes: {per_day_usd: 1.5}}
 prices: {}                       # by provider/model, for models whose catalog gives none: {input_per_million, output_per_million, cached_input_per_million}
 evaluation: {runs: 3, min_score: 0.9}
+skills: {min_score: 0.8, stale_days: 60}   # what a model must score for a skill to count as able; how many days a measurement of it is trusted (6.16)
 catalog_refresh_hours: 24        # how old an account's model list and prices may get before they are fetched again
 rate_limits: {tries: 3, max_wait_seconds: 30, pause_seconds: 600}   # when the last account says to slow down: wait and try again; with another account, move on at once; a limit with a reset time, or one that keeps coming, pauses the account (6.16)
 routing:                         # rules checked in order before a call that send some requests to another tier; the first match wins

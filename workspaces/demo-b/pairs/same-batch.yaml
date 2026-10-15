@@ -1,5 +1,6 @@
 id: same-batch
 title: Two inputs about the same thing made two questions; the next two make one
+skills: [no-repeat-question, use-lesson]
 first:
   received: '2026-10-09'
   project: PRJ-1

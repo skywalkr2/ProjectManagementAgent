@@ -1,5 +1,6 @@
 id: question-asked-of-me-facts-hold-it
 title: 'A question someone asks the person is one action with the reply, when a recorded fact holds the answer'
+skills: [use-facts, owners]
 received: '2026-10-09'
 given:
 - kind: fact

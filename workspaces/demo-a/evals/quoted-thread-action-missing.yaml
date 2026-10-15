@@ -1,5 +1,6 @@
 id: quoted-thread-action-missing
 title: Act on the new message, and add the action that was only in the quoted history
+skills: [new-message-only, owners]
 received: '2026-10-14'
 pasted: |-
   From: Tobias Wren

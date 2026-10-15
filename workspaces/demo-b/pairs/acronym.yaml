@@ -1,5 +1,6 @@
 id: acronym
 title: A term nobody explained is read the wrong way, corrected once, and read right the next time
+skills: [use-term, use-lesson]
 first:
   received: '2026-10-08'
   project: PRJ-1

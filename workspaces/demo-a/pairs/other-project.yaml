@@ -1,5 +1,6 @@
 id: other-project
 title: A lesson for one project does not change the output for another project
+skills: [use-lesson, stay-in-scope]
 negative: true
 first:
   received: '2026-10-09'

@@ -1,5 +1,6 @@
 id: discarded
 title: A proposal the person discarded does not come back from the next input that mentions it
+skills: [use-lesson, no-repeat-question]
 negative: true
 first:
   received: '2026-10-09'

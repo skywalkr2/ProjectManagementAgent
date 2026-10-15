@@ -24,6 +24,9 @@ of the plugin (`score`) that judges the plugin's own ops, while the core's exact
 The report says which accounts ran, the version of each command-line agent, and whether every tier ran on
 one account.
 
+A case, pair and scenario name the skills they prove (`skills:`, ids from `engine/skills.py`); each finished run is
+added to the capability matrix for every skill its case names (`engine/ai/matrix.py`).
+
 Learning pairs and the day-30 scenario are run the same way, by `engine/pairs.py`, which documents their format.
 """
 
@@ -50,6 +53,7 @@ from engine.followups import they_finished
 from engine.intake import hand_in, note_as_input
 from engine.names import People
 from engine.records import REGISTRY, canonical_time
+from engine.skills import check_named
 from engine.storage import Store, StoreError, WriteContext
 from engine.workspace import Workspace, init_workspace
 from engine.yaml_load import load_yaml
@@ -85,6 +89,9 @@ class RunResult:
     not_run: bool = False  # the account wouldn't take the call (rate limit, quota); says nothing about the model
     out_of_quota: bool = False  # the account's plan was used up, so the runs after this one are not made
     accounts: list[str] = field(default_factory=list)  # provider/model of every call the case made
+    models: list[str] = field(
+        default_factory=list
+    )  # the same calls as set up: account/model id (the capability matrix)
     given: list[str] = field(default_factory=list)  # a pair's later run: what it was given from what was learned
     kept: list[str] = field(default_factory=list)  # a pair: the knowledge entries kept after the learning stage
     negative: bool = False  # a pair whose later output must not change
@@ -96,6 +103,12 @@ class Report:
     runs: int
     results: list[RunResult]
     program_versions: dict[str, str | None] = field(default_factory=dict)  # command-line agents, by provider
+    # What the capability matrix needs to add this report's runs (design 6.16): every case of the set it came from with
+    # the skills it names (not only the cases that ran), which kind of set it is (cases or pairs) and the workspace
+    # folder the set came from.
+    case_set: dict[str, list[str]] = field(default_factory=dict)
+    kind: str = ""
+    template: str = ""
 
     def pass_rate(self, case: str | None = None) -> float:
         rows = [r for r in self.results if (case is None or r.case == case) and not r.not_run]
@@ -221,6 +234,7 @@ def _check_case(folder: Path, case: dict[str, Any]) -> None:
         raise ValueError(f"{where}: score names a plugin's scorer, which only the plugin's own cases use")
     if case.get("watched") is not None and not isinstance(case["watched"], dict):
         raise ValueError(f"{where}: watched is a mapping (title, change, author, by_us, by_you, credited_to)")
+    check_named(where, case.get("skills"))
     starting_records(folder.parent, case)
 
 
@@ -318,7 +332,15 @@ def evaluate(
         )
         if progress is not None:
             progress(results[-1], len(results), total)
-    return Report(account or ("stub" if stub else "configured"), runs, results, versions)
+    return Report(
+        account or ("stub" if stub else "configured"),
+        runs,
+        results,
+        versions,
+        case_set={c["id"]: list(c.get("skills") or []) for c in found},
+        kind="cases",
+        template=template.name,
+    )
 
 
 def not_made(case_id: str, n: int, spent: RunResult) -> RunResult:
@@ -380,6 +402,7 @@ def _run_case(
             cs_id = process(ws, store, cfg, Router(cfg, store, env=env, on_wait=on_wait), request_id, now=now)
             runs = [r.data for r in store.read().list("run")]
             accounts = sorted({f"{r['provider']}/{r['model']}" for r in runs})
+            models = configured_models(cfg, runs)
             if versions is not None:
                 _read_program_versions(cfg, {r["provider"] for r in runs}, versions, adapter_factory)
             cost = sum(r.get("cost_usd") or 0.0 for r in runs)
@@ -398,6 +421,7 @@ def _run_case(
                     not_run=refused,
                     out_of_quota=last.get("error_kind") == "quota",
                     accounts=accounts,
+                    models=models,
                 )
             produced = store.read().get("changeset", cs_id).data["ops"]
             case, outcomes, own = _without_own_ops(case, produced)
@@ -426,10 +450,28 @@ def _run_case(
                 cost_usd=cost,
                 seconds=seconds,
                 accounts=accounts,
+                models=models,
             )
         finally:
             store.close()
             set_responder(None)
+
+
+def configured_models(cfg: Config, runs: list[dict[str, Any]]) -> list[str]:
+    """The model each run was set up to use, as "account/model id": the id its tier names for the account that answered
+    (a run records the model that answered, which an alias or a server may name differently). A run whose account its
+    tier doesn't name is listed as it answered."""
+    found = set()
+    for run in runs:
+        name, provider = run["provider"], cfg.ai.providers.get(run["provider"])
+        tier = cfg.ai.tiers.get(run.get("tier") or "")
+        refs = [r for r in ([tier.use, *tier.fallback] if tier else []) if r and r.partition("/")[0] == name]
+        if refs and provider is not None:
+            short = refs[0].partition("/")[2]
+            found.add(f"{name}/{provider.models.get(short, short)}")
+        else:
+            found.add(f"{name}/{run['model']}")
+    return sorted(found)
 
 
 def _read_program_versions(

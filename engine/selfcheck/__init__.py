@@ -21,6 +21,7 @@ from engine.selfcheck.scans import (
     scan_providers,
     scan_specificity,
 )
+from engine.selfcheck.skills import check_skills_named
 from engine.storage import Store, StoreError
 from engine.storage.export import export_data, import_data
 
@@ -154,6 +155,7 @@ def run(private_workspace: Path | None = None, *, out: Callable[[str], None] = p
         ("config coverage", scan_config_coverage),
         ("built claims", scan_built_claims),
         ("invariant lines", check_invariant_lines),
+        ("case skills", check_skills_named),
     ]
     checks += [(f"workspace {ws.name}", lambda ws=ws: check_workspace_fixture(ws)) for ws in FIXTURES]
     checks += [(f"core alone {ws.name}", lambda ws=ws: check_workspace_fixture(ws, plugins=False)) for ws in FIXTURES]

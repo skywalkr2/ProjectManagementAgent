@@ -454,3 +454,78 @@ test("without a way to add, as inside the setup guide, there is no Add button", 
   await screen.findByRole("heading", { name: "Your AI accounts" });
   expect(screen.queryByRole("button", { name: "Add an account" })).toBeNull();
 });
+
+const skill = (id: string, label: string, over: Partial<S["AiSkillView"]> = {}): S["AiSkillView"] => ({
+  id,
+  label,
+  description: "",
+  measured: false,
+  runs: 0,
+  passes: 0,
+  pass_rate: null,
+  age_days: null,
+  cost_per_pass_usd: null,
+  stale: null,
+  below_min: false,
+  ...over,
+});
+
+const SKILLS: S["AiSkillsView"] = {
+  min_score: 0.8,
+  stale_days: 60,
+  accounts: [
+    {
+      name: "main",
+      models: [
+        {
+          model: "everyday",
+          skills: [
+            skill("dates", "Dates", { measured: true, runs: 10, passes: 9, pass_rate: 0.9, age_days: 3, cost_per_pass_usd: 0.04 }),
+            skill("use-term", "Using a term", { measured: true, runs: 4, passes: 1, pass_rate: 0.25, age_days: 0, below_min: true }),
+            skill("owners", "Owners", { measured: true, runs: 5, passes: 5, pass_rate: 1, age_days: 90, stale: "age" }),
+            skill("evidence", "Quoting its evidence"),
+          ],
+        },
+        { model: "harder", skills: [skill("dates", "Dates", { measured: true, runs: 2, passes: 2, pass_rate: 1, age_days: 1, stale: "program" })] },
+      ],
+    },
+  ],
+};
+
+test("What it can do lists each skill in words: how often it was right, how old, what it costs, below the minimum and out of date", async () => {
+  const user = userEvent.setup();
+  api({ "GET ai/skills": () => SKILLS });
+  open();
+  const main = await row("main");
+  const more = await within(main).findByText("What it can do");
+  await user.click(more);
+  const items = within(main).getAllByRole("listitem").filter((li) => li.className === "skill");
+  const text = (label: string) => items.find((li) => li.textContent?.startsWith(label))?.textContent ?? "";
+  expect(text("Dates")).toContain("Right 9 of 10 times (90%). Last measured 3 days ago.");
+  expect(text("Dates")).toContain("About $0.04 for each right answer.");
+  // Below the minimum: an icon and words, never colour alone.
+  const term = items.find((li) => li.textContent?.startsWith("Using a term")) as HTMLElement;
+  expect(term).toHaveTextContent("Right 1 of 4 times (25%). Last measured today.");
+  expect(term).toHaveTextContent("Below the 80% needed for this work.");
+  expect(term.querySelector("svg")).not.toBeNull();
+  // Out of date and never measured both count as unknown, in words.
+  expect(text("Owners")).toContain("Out of date: measured more than 60 days ago. Counts as unknown until it is measured again.");
+  expect(text("Quoting its evidence")).toContain("Not measured yet. Counts as unknown.");
+  expect(text("Dates")).not.toContain("Below the");
+  // An account with two models names each by the short name the person chose, and a program change is said.
+  expect(within(main).getByText("Model for everyday work")).toBeInTheDocument();
+  expect(within(main).getByText("Model for harder work")).toBeInTheDocument();
+  expect(main).toHaveTextContent("Out of date: the program has changed since it was measured.");
+  // The model's own id is never shown.
+  expect(main).not.toHaveTextContent("model-a");
+});
+
+test("an account the measurements don't know, and a list that didn't load, show no What it can do", async () => {
+  api({ "GET ai/skills": () => ({ ...SKILLS, accounts: [] }) });
+  const view = open();
+  expect(await row("main")).not.toHaveTextContent("What it can do");
+  view.unmount();
+  api({ "GET ai/skills": () => new Refuse(500, "") });
+  open();
+  expect(await row("main")).not.toHaveTextContent("What it can do");
+});

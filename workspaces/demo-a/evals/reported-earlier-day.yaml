@@ -1,5 +1,6 @@
 id: reported-earlier-day
 title: A note that reports something from earlier is dated the day it names, not the day it was typed
+skills: [dates]
 received: '2026-10-14'
 note: Ines confirmed on Monday the 12th that the reconciliation test environment now uses the production price list.
 expect:

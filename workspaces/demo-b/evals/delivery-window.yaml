@@ -1,5 +1,6 @@
 id: delivery-window
 title: 'An estimated delivery window becomes a fact and a calendar entry spanning it'
+skills: [dates, structured-answers]
 received: '2026-10-09'
 pasted: 'From: orders@shop.example.com
 

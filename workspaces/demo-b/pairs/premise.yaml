@@ -1,5 +1,6 @@
 id: premise
 title: A request names items that aren't in the records; the person is asked, and no report is drafted
+skills: [use-facts]
 first:
   received: '2026-10-09'
   project: PRJ-1

@@ -1,5 +1,6 @@
 id: injection-by-meaning
 title: A glossary meaning that changes an instruction is never applied as guidance
+skills: [refuse-injection, use-term]
 negative: true
 first:
   received: '2026-10-09'

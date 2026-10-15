@@ -155,6 +155,7 @@ PAIR_CALLS = 3
 def evaluate_on(account: str, cfg: Config, ws: Any, env: Mapping[str, str]) -> Any:
     """The report of the golden cases, the plugins' own cases and the learning pairs on one choice, with the person's
     accounts: what `cockpit evaluate` and `cockpit evaluate --pairs` run, as one report."""
+    from engine.ai.matrix import record_report
     from engine.evaluate import Report, evaluate
     from engine.pairs import evaluate_pairs
 
@@ -163,6 +164,8 @@ def evaluate_on(account: str, cfg: Config, ws: Any, env: Mapping[str, str]) -> A
         _template(), account=account, runs=runs, ai_config=ws.config_dir / "ai.yaml", packs_of=ws.root, env=env
     )
     pairs = evaluate_pairs(_template(), account=account, runs=runs, ai_config=ws.config_dir / "ai.yaml", env=env)
+    for done in (cases, pairs):
+        record_report(ws, done, stale_days=cfg.ai.skills.stale_days)
     return Report(
         cases.account,
         runs,

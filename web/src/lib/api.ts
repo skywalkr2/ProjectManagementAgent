@@ -332,6 +332,7 @@ export const api = {
   aiLocal: () => call<S["LocalServerView"][]>("GET", "ai/local"),
   addAccount: (body: S["AiAccountAdd"]) => call<S["SettingsSaved"]>("POST", "ai/accounts", body),
   aiAccounts: () => call<S["AiAccountView"][]>("GET", "ai/accounts"),
+  aiSkills: () => call<S["AiSkillsView"]>("GET", "ai/skills"),
   changeAccount: (name: string, body: S["AiAccountChange"]) =>
     call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}`, body),
   /** What the check that comes with a change of account or model would cost, and whether one is offered at all. */

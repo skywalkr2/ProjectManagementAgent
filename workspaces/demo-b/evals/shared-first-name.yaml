@@ -1,5 +1,6 @@
 id: shared-first-name
 title: A first name two people share
+skills: [owners]
 received: '2026-10-09'
 pasted: 'Events: Maya will send the guest list for the launch reading by Nov 20.'
 expect:

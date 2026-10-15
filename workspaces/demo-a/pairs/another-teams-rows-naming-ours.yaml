@@ -1,5 +1,6 @@
 id: another-teams-rows-naming-ours
 title: A row of another team that does name our work still gets its question
+skills: [stay-in-scope, use-lesson]
 negative: true
 first:
   received: '2026-10-09'

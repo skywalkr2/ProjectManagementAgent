@@ -1,5 +1,6 @@
 id: invitation-event
 title: 'A meeting invitation becomes a calendar entry under the project the input is about'
+skills: [dates, structured-answers]
 received: '2026-10-14'
 project: PRJ-1
 pasted: 'From: Maya Lindqvist (Corner Lamp Books)

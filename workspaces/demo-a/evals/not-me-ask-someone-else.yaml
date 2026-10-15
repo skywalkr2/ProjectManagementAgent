@@ -1,5 +1,6 @@
 id: not-me-ask-someone-else
 title: A reply that passes the question on does not answer it
+skills: [close-right-item]
 received: '2026-10-14'
 given_file: busy-portfolio.yaml
 pasted: |-

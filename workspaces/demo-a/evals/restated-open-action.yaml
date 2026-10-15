@@ -1,5 +1,6 @@
 id: restated-open-action
 title: Someone restates an action that is already open
+skills: [close-right-item]
 received: '2026-10-14'
 given_file: busy-portfolio.yaml
 pasted: |-

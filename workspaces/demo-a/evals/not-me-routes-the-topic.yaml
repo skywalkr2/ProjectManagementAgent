@@ -1,5 +1,6 @@
 id: not-me-routes-the-topic
 title: A reply that names who answers keeps the question open and proposes who to ask next time
+skills: [close-right-item, follow-routing]
 received: '2026-10-14'
 given_file: busy-portfolio.yaml
 pasted: |-

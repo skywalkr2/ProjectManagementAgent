@@ -1,5 +1,6 @@
 id: sent-without-recipient
 title: '"I sent the brief" with no recipient asks the PM who, and names no one'
+skills: [owners]
 received: '2026-10-14'
 note: I sent the brief this morning.
 pasted: 'From: Sam Rivera

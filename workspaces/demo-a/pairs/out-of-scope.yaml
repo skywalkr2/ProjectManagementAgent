@@ -1,5 +1,6 @@
 id: out-of-scope
 title: An action for another team on a project the person only watches is corrected to observe only, and the next mail gives a fact
+skills: [stay-in-scope, use-lesson]
 first:
   received: '2026-10-09'
   project: PRJ-3

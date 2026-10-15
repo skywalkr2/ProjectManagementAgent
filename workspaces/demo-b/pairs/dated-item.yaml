@@ -1,5 +1,6 @@
 id: dated-item
 title: A delivery window read from the wrong dates is corrected, and the next order mail is read the corrected way
+skills: [dates, use-lesson]
 first:
   received: '2026-10-09'
   project: PRJ-1

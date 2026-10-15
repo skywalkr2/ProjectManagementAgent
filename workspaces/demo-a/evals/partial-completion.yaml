@@ -1,5 +1,6 @@
 id: partial-completion
 title: Half of an action done keeps the action open
+skills: [close-right-item]
 received: '2026-10-14'
 pasted: |-
   From: Tobias Wren

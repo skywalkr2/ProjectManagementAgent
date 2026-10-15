@@ -1,5 +1,6 @@
 id: first-name-in-thread
 title: A first name two people share, with one of them in the thread
+skills: [owners]
 received: '2026-10-09'
 # Two people are known as Maya; only one is on the message, so the bare name means her.
 pasted: 'From: Avery Lane

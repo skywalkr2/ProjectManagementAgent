@@ -612,6 +612,23 @@ class EvaluationSettings(ConfigModel):
     )
 
 
+class SkillSettings(ConfigModel):
+    min_score: float = Field(
+        0.8,
+        ge=0,
+        le=1,
+        description="The share of runs a model must get right for a skill before it counts as able to do that work. "
+        "Skills below it are marked in the accounts list.",
+    )
+    stale_days: int = Field(
+        60,
+        ge=1,
+        le=3650,
+        description="How many days a measurement of what a model can do is trusted. After that it is shown as out "
+        "of date and counts as unknown until it is measured again.",
+    )
+
+
 def _default_tiers() -> dict[str, TierSettings]:
     return {"routine": TierSettings(), "deep": TierSettings()}
 
@@ -664,6 +681,9 @@ class AiFile(FileModel):
         default_factory=dict, description="Prices by provider/model, for models whose provider doesn't publish them."
     )
     evaluation: EvaluationSettings = Field(default_factory=EvaluationSettings, description="How models are compared.")
+    skills: SkillSettings = Field(
+        default_factory=SkillSettings, description="How measurements of what each model can do are judged."
+    )
     catalog_refresh_hours: float = Field(
         24, ge=0, description="How often each account's model list and prices are fetched again from the provider."
     )
