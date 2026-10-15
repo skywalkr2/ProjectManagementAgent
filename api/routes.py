@@ -143,7 +143,7 @@ from api.schemas import (
     WorkingCopyView,
 )
 from engine import actions as person_actions
-from engine import learned
+from engine import catch_up, learned
 from engine.ai.smoke import ai_state
 from engine.applier import move_stage, pick_owner, release
 from engine.assistant_status import assistant_state
@@ -1265,6 +1265,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             d = req.data
             if d.get("set_aside"):
                 continue  # mail set aside as not work is listed in the Set aside folder
+            if catch_up.waits_on_go(d):
+                continue  # learning runs held for the catch-up list's go are one line on Today
             view = None
             cs = None
             source = sources.get(d.get("source") or "")

@@ -45,9 +45,10 @@ class Line:
     the person was asked), who_is (a name the assistant couldn't place), owner (an action with no owner), held (an
     item waiting for the person's yes), go (a run waiting for the person's go), first_go (every run waiting for the
     first go in the workspace, as one line: `estimate_usd` is their total estimate and `unpriced` how many have
-    none), refused, restart (work held until the person restarts the app: `count` is how many requests wait), handover
-    (the synced folder can't be used until the person settles it: `state` is diverged, chosen or elsewhere and `text`
-    the other computer), failed,
+    none), catch_up_go (the learning runs for the catch-up list, held together for one go: `count` runs, their total
+    `estimate_usd` and `unpriced` how many have none), refused, restart (work held until the person restarts the app:
+    `count` is how many requests wait), handover (the synced folder can't be used until the person settles it: `state`
+    is diverged, chosen or elsewhere and `text` the other computer), failed,
     paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), offline (work
     that has waited for the network longer than the configured time: `count` waiting and `waiting_since`, when the
     oldest began), overdue, account_check (an AI account in a fallback chain that can't stand in yet: its `account`, the
@@ -193,15 +194,20 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                     since=str(req.data.get("created_at") or ""),
                 )
             )
+    from engine import catch_up
     from engine.dispatcher import FIRST_GO, waits_on_first_go
 
     first_go: list[Any] = []
+    catch_up_go: list[Any] = []
     for req in requests.values():
         d = req.data
         if d.get("dismissed") or d.get("state") not in ("needs_you", "failed"):
             continue
         if waits_on_first_go(d):
             first_go.append(req)
+            continue
+        if catch_up.waits_on_go(d):
+            catch_up_go.append(req)
             continue
         if d["state"] == "failed":
             kind, group = "failed", "risk"
@@ -265,6 +271,21 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 unpriced=len(first_go) - len(priced) + sorting_unpriced,
                 waiting=FIRST_GO,
                 since=min(str(r.data.get("created_at") or "") for r in first_go),
+            )
+        )
+
+    if catch_up_go:
+        _, total, unpriced = catch_up.total_waiting(reader)
+        lines.append(
+            Line(
+                key="catch_up_go",
+                group="decide",
+                kind="catch_up_go",
+                count=len(catch_up_go),
+                estimate_usd=total,
+                unpriced=unpriced,
+                waiting=catch_up.WAITING,
+                since=min(str(r.data.get("created_at") or "") for r in catch_up_go),
             )
         )
 
@@ -412,7 +433,6 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
 
     # Review: what the assistant learned, as one line for the proposals from inputs and from corrections, and one for
     # the catch-up list of corrections made before it could learn from them.
-    from engine import catch_up
     from engine.proposals import expired_since, last_reviewed, proposals
 
     state = catch_up.load(store)
@@ -494,6 +514,7 @@ _KIND_ORDER = {
     "owner": 2,
     "held": 3,
     "go": 4,
+    "catch_up_go": 4,
     "refused": 5,
     "question": 6,
     "failed": 0,

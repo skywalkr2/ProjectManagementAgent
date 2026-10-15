@@ -269,7 +269,7 @@ def create_app(
     inner.include_router(build_sign_in_router(ws, cfg, store, worker))
     inner.include_router(build_pack_router(ws, cfg, store, worker))
     inner.include_router(build_data_form_router(store))
-    inner.include_router(build_knowledge_router(cfg, store, events))
+    inner.include_router(build_knowledge_router(cfg, store, events, worker))
     inner.include_router(build_quality_router(cfg, store))
     inner.state.worker = worker
     inner.state.store = store

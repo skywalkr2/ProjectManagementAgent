@@ -368,7 +368,7 @@ def test_a_failed_check_or_a_changed_account_is_not_checked_and_an_account_alrea
 
 def first_run_env(ws, store):
     """A workspace whose routine tier uses an account that is down and falls back to a second one."""
-    add_account(ws, "second", timeout_seconds=77)
+    add_account(ws, "second", timeout_seconds=77, accepted_unchecked=True)
     path = ws.config_dir / "ai.yaml"
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     data["tiers"]["routine"]["fallback"] = ["second/default"]

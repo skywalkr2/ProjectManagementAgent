@@ -1780,6 +1780,20 @@
         "title": "BackupStatus",
         "type": "object"
       },
+      "CatchUpStarted": {
+        "properties": {
+          "started": {
+            "description": "How many learning runs for the catch-up list the go started.",
+            "title": "Started",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "started"
+        ],
+        "title": "CatchUpStarted",
+        "type": "object"
+      },
       "CatchUpView": {
         "description": "The one list of what the assistant learned from corrections made before it could learn from them (design\n6.22): at most the configured number of kinds of correction, the most repeated first.",
         "properties": {
@@ -8078,7 +8092,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back.",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go).",
         "properties": {
           "account": {
             "anyOf": [
@@ -8159,7 +8173,7 @@
                 "type": "null"
               }
             ],
-            "description": "The estimated cost of everything the line starts (first_go), when any has a price.",
+            "description": "The estimated cost of everything the line starts (first_go, catch_up_go), when any has a price.",
             "title": "Estimate Usd"
           },
           "expired": {
@@ -8198,6 +8212,7 @@
               "held",
               "go",
               "first_go",
+              "catch_up_go",
               "refused",
               "restart",
               "handover",
@@ -8451,7 +8466,7 @@
           },
           "unpriced": {
             "default": 0,
-            "description": "How many of the things the line starts have no price (first_go).",
+            "description": "How many of the things the line starts have no price (first_go, catch_up_go).",
             "title": "Unpriced",
             "type": "integer"
           },
@@ -14456,6 +14471,25 @@
           }
         },
         "summary": "Catch Up List"
+      }
+    },
+    "/api/knowledge/catch-up/go": {
+      "post": {
+        "description": "The person's go for the learning runs held for the catch-up list: every one starts, and the list fills as\nthey finish.",
+        "operationId": "catch_up_go_api_knowledge_catch_up_go_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatchUpStarted"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Catch Up Go"
       }
     },
     "/api/knowledge/learned": {

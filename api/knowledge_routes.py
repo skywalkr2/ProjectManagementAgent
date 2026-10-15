@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
     Applied,
+    CatchUpStarted,
     CatchUpView,
     KnowledgeDiscard,
     KnowledgeKeep,
@@ -34,7 +35,7 @@ from engine.origin import origins
 from engine.records import Rule, Scope
 from engine.rule_review import due, review
 from engine.storage import Store, StoreError
-from engine.worker import Events
+from engine.worker import Events, Worker
 
 Kind = Literal["lesson", "glossary_entry", "routing_entry", "style_note"]
 Status = Literal["proposed", "active", "discarded", "expired", "retired"]
@@ -139,7 +140,7 @@ def _proposal(
     )
 
 
-def build_knowledge_router(cfg: Config, store: Store, events: Events) -> APIRouter:
+def build_knowledge_router(cfg: Config, store: Store, events: Events, worker: Worker) -> APIRouter:
     r = APIRouter(prefix="/api")
 
     def entry(entry_id: str, read_version: int, *, rules: bool = True) -> Any:
@@ -296,6 +297,16 @@ def build_knowledge_router(cfg: Config, store: Store, events: Events) -> APIRout
             left_out=state.left_out if state is not None else 0,
             most=cfg.dispatch.knowledge.catch_up_max,
         )
+
+    @r.post("/knowledge/catch-up/go")
+    def catch_up_go() -> CatchUpStarted:
+        """The person's go for the learning runs held for the catch-up list: every one starts, and the list fills as
+        they finish."""
+        started = catch_up.grant_go(store)
+        if started:
+            worker.poke()
+            events.changed()
+        return CatchUpStarted(started=started)
 
     @r.post("/knowledge/{entry_id}/just-this-time")
     def just_this_time(entry_id: str, body: ReadVersion) -> Applied:

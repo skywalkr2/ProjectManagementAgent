@@ -195,6 +195,7 @@ class Worker:
         self._sync: threading.Thread | None = None
         self._jobs: threading.Thread | None = None
         self._swept_on: date | None = None
+        self._catch_up_queued = False
         self._synced_at: int | None = -1
         self._said_no_git = False
         self._beat = 0.0
@@ -334,9 +335,27 @@ class Worker:
         self.restart_requested = True
         self.poke()
 
+    def queue_catch_up_learning(self) -> list[str]:
+        """Once for each start of the app, queue the learning runs for the catch-up list, held for the person's go. A
+        failure is logged and never stops the worker. Returns the requests made."""
+        if self._catch_up_queued:
+            return []
+        self._catch_up_queued = True
+        from engine.catch_up import queue_learning
+
+        try:
+            made = queue_learning(self.ws, self.store, self.cfg, self.router_factory, self.now())
+        except Exception:
+            log.exception("Couldn't queue the learning for the catch-up list")
+            return []
+        if made:
+            self.events.changed()
+        return made
+
     def run_pending(self) -> int:
         """Process every queued request now. Returns how many were processed."""
         done = 0
+        self.queue_catch_up_learning()
         while not self._stop.is_set():
             now = self.now()
             queued = [

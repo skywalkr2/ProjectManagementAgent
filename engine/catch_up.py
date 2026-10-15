@@ -4,8 +4,11 @@ once, into one list kept short enough for one sitting.
 The selection and ranking are plain functions over the signals. The app runs `start` once at startup: it fixes the
 moment the list was made, picks at most `knowledge.catch_up_max` kinds of correction that no entry was learned from,
 the most repeated first, counts the rest as left out, and moves the rule decisions that were held for the person
-into proposals. Running it again changes nothing. The learning runs for the chosen kinds are queued by the learning
-step, which asks `waiting` for the corrections to read; their proposals are in the list while they wait.
+into proposals. Running it again changes nothing.
+
+`queue_learning` then queues the learning runs for the chosen kinds: one request for each kind still waiting, about its
+newest correction that can be learned from. They are held together for the person's go, with one total estimate, and
+`grant_go` starts them all. Their proposals are in the list as they come in.
 """
 
 from __future__ import annotations
@@ -16,7 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from engine import knowledge
+from engine import knowledge, learn
 from engine.records import REGISTRY
 from engine.state_file import changing, write_whole
 from engine.storage import StoreError, WriteContext
@@ -37,6 +40,12 @@ LEARNED_FROM = (
 )
 
 _PREFIXES = {model.prefix: kind for kind, model in REGISTRY.items()}
+
+#: What the learning runs for the catch-up list wait on until the person's go; Today gathers them into one line.
+WAITING = "Learning from your earlier corrections waits for your go."
+
+_ENGINE = WriteContext(actor="engine", trust="trusted", op="catch_up.queue")
+_GO = WriteContext(actor="pm", trust="trusted", op="catch_up.go")
 
 
 @dataclass(frozen=True)
@@ -281,3 +290,123 @@ def _pm(store: Any, cfg: Any) -> str | None:
     from engine.names import People
 
     return People(store, cfg).pm
+
+
+# ---- the learning runs, held for one go ------------------------------------------------------------------------------
+
+
+def waits_on_go(request: Any) -> bool:
+    """Whether a request's data says it is a catch-up learning run waiting for the person's go."""
+    return (
+        request.get("state") == "needs_you"
+        and request.get("approval") == "required"
+        and request.get("waiting") == WAITING
+        and not request.get("dismissed")
+    )
+
+
+def _to_learn_from(view: Any, group: Group, requests: dict[str, Any]) -> str | None:
+    """The correction to learn a kind from: the newest that has no learning request of its own and can be learned
+    from. None when the kind already has a learning request that wasn't netted out (it is queued, running or done), or
+    nothing in it can be learned from."""
+    for signal_id in group.signals:
+        found = requests.get(signal_id)
+        if found is not None and not (
+            found.data["state"] == "done" and found.data.get("waiting") == learn.NETTED_WAITING
+        ):
+            return None
+    for signal_id in group.signals:
+        stored = view.get("signal", signal_id)
+        if (
+            signal_id not in requests
+            and stored is not None
+            and stored.data["kind"] in learn.TEACHES
+            and not learn._names_set_aside(view, stored.data)
+        ):
+            return signal_id
+    return None
+
+
+def queue_learning(ws: Any, store: Any, cfg: Any, router: Any = None, now: datetime | None = None) -> list[str]:
+    """Queue the learning runs for the kinds of correction on the list that no entry was learned from yet, held for
+    the person's go with each run's estimate. A correction that was learned from, was netted out, or already has a
+    learning request is skipped, so running this again queues nothing new. Nothing is queued while learning is off.
+    `router` is a router, or a function that makes one when there is something to price. Returns the ids of the
+    requests made."""
+    state = load(store)
+    if state is None or not cfg.dispatch.knowledge.learn:
+        return []
+    now = now or datetime.now(UTC)
+    with changing(state_path(store)):
+        view = store.read()
+        requests = {sid: r for r in view.list("request") if (sid := learn.signal_of(r.data)) is not None}
+        picked = [s for g in waiting(view, state) if (s := _to_learn_from(view, g, requests)) is not None]
+        if not picked:
+            return []
+        with store.transaction() as tx:
+            made = [
+                tx.create(
+                    "request",
+                    {
+                        "task": learn.TASK,
+                        "about": {"kind": "signal", "id": signal_id},
+                        "origin": "schedule",
+                        "state": "needs_you",
+                        "approval": "required",
+                        "waiting": WAITING,
+                        "created_at": now.isoformat(),
+                    },
+                    _ENGINE,
+                ).id
+                for signal_id in picked
+            ]
+    _price(ws, store, cfg, router, made, now)
+    return made
+
+
+def _price(ws: Any, store: Any, cfg: Any, router: Any, request_ids: list[str], now: datetime) -> None:
+    """Put each queued run's estimate on its request, so the line can show one total. A run with no price is left
+    without one."""
+    import os
+
+    from engine.ai.router import Router
+    from engine.dispatcher import estimate_request
+
+    router = router() if callable(router) else router or Router(cfg, store, env=os.environ)
+    for request_id in request_ids:
+        try:
+            estimate = estimate_request(ws, store, cfg, router, request_id, now)
+        except Exception:  # a run that can't be priced is shown as unpriced, never blocks the others
+            estimate = None
+        if estimate is None:
+            continue
+        with store.transaction() as tx:
+            current = tx.get("request", request_id)
+            tx.update(
+                "request", request_id, {"estimate_usd": round(estimate, 4)}, _ENGINE, read_version=current.version
+            )
+
+
+def total_waiting(view: Any) -> tuple[int, float | None, int]:
+    """The runs waiting for the go, what the ones with a price cost together (None when none has one) and how many
+    have no price."""
+    held = [r for r in view.list("request") if waits_on_go(r.data)]
+    priced = [r.data["estimate_usd"] for r in held if r.data.get("estimate_usd") is not None]
+    return len(held), (round(sum(priced), 4) if priced else None), len(held) - len(priced)
+
+
+def grant_go(store: Any) -> int:
+    """The person's go: every learning run held for it is approved and queued. Returns how many were."""
+    started = 0
+    with store.transaction() as tx:
+        for req in tx.list("request"):
+            if waits_on_go(req.data):
+                tx.update(
+                    "request",
+                    req.id,
+                    {"approval": "granted", "state": "queued", "waiting": None},
+                    _GO,
+                    read_version=req.version,
+                )
+                started += 1
+    return started

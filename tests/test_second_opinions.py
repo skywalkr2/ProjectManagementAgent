@@ -85,7 +85,12 @@ def workspace(tmp_path, ai=None):
     (ws.config_dir / "workspace.yaml").write_text(yaml.safe_dump(settings))
     ai_file = ws.config_dir / "ai.yaml"
     data = yaml.safe_load(ai_file.read_text())
-    data["providers"]["second"] = {"adapter": "stub", "models": {"default": "scripted"}, "allowed_data": ["internal"]}
+    data["providers"]["second"] = {
+        "adapter": "stub",
+        "models": {"default": "scripted"},
+        "allowed_data": ["internal"],
+        "accepted_unchecked": True,
+    }
     data["budgets"]["confirm_above_usd"] = 100
     for key, value in (ai or {}).items():
         data[key] = value

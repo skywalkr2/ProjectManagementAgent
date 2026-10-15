@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -80,10 +80,13 @@ def choices(
     use: str | None = None,
     content: frozenset[str] = frozenset(),
     independent: Independence | None = None,
+    unchecked: Collection[tuple[str, str]] = (),
 ) -> list[Choice]:
     """The main choice for the task's tier, then its fallbacks, keeping only accounts allowed to see this data. `use`
     (a "provider/model" the person picked for this request) replaces the tier's list. For a check, accounts that wrote
-    the work are left out, or put last when the person accepts the same account; the person's own pick stands."""
+    the work are left out, or put last when the person accepts the same account; the person's own pick stands.
+    `unchecked` holds the (tier, "provider/model") pairs of backup accounts that can't stand in yet: a backup named
+    there is never chosen."""
     task = cfg.ai.tasks.get(task_kind)
     tier_name = tier or (task.tier if task else "routine")
     tier_cfg = cfg.ai.tiers.get(tier_name)
@@ -99,6 +102,9 @@ def choices(
         provider = cfg.ai.providers.get(provider_name)
         if provider is None:
             refused.append(f"{provider_name} isn't one of your AI accounts")
+            continue
+        if use is None and (tier_name, ref) in unchecked:
+            refused.append(f"{provider_name} is a backup that hasn't passed its connection check for this work")
             continue
         if LEVELS.index(data_level) > max(LEVELS.index(lvl) for lvl in provider.allowed_data):
             refused.append(f"{provider_name} isn't allowed to see {data_level} material")
@@ -211,6 +217,13 @@ class Router:
         self.now = now
         self.pauses = Pauses(pauses_path(store), now)
 
+    def _unchecked(self) -> frozenset[tuple[str, str]]:
+        """The backup accounts that can't stand in yet, as (tier, "provider/model"): not checked for that tier's work
+        and not accepted unchecked, or whose last check failed. Read from what the checks kept, at the moment of use."""
+        from engine.ai.checked import cannot_stand_in, folder_of
+
+        return frozenset((s.tier, s.ref) for s in cannot_stand_in(folder_of(self.store), self.cfg))
+
     def call(
         self,
         task: AiTask,
@@ -228,7 +241,16 @@ class Router:
         request is already waiting for the network, so a call that again finds none is not recorded as another run."""
         self._check_budget(task.kind)
         last: AiError | None = None
-        picked = choices(self.cfg, task.kind, data_level, tier=tier, use=use, content=content, independent=independent)
+        picked = choices(
+            self.cfg,
+            task.kind,
+            data_level,
+            tier=tier,
+            use=use,
+            content=content,
+            independent=independent,
+            unchecked=self._unchecked(),
+        )
         options = self._that_fit(task, list(picked))
         paused: dict[str, datetime] = {}
         offline = 0  # accounts that could not be reached at all
@@ -354,7 +376,14 @@ class Router:
         Input from the packet's size; output from past runs of this kind, or its configured typical size."""
         try:
             options = choices(
-                self.cfg, task.kind, data_level, tier=tier, use=use, content=content, independent=independent
+                self.cfg,
+                task.kind,
+                data_level,
+                tier=tier,
+                use=use,
+                content=content,
+                independent=independent,
+                unchecked=self._unchecked(),
             )
             choice = self._that_fit(task, list(options))[0]
         except NoProvider:
@@ -372,7 +401,7 @@ class Router:
         USD on the account it would use first, priced as the request's go will be; None when the price isn't known
         or no account takes the work."""
         try:
-            options = list(choices(self.cfg, kind, data_level))
+            options = list(choices(self.cfg, kind, data_level, unchecked=self._unchecked()))
         except NoProvider:
             return None
         if not options:

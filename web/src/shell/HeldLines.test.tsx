@@ -220,3 +220,29 @@ test("one rule is singular, and rules only moved out of the always-sent part hav
   expect(rows[0]).toHaveTextContent("Look over 1 rule that never applied in the last 14 days");
   expect(rows[1]).toHaveTextContent("Look over the rules: some moved out of the part sent every time");
 });
+
+test("the catch-up learning runs are one line with the count and the total, and Go starts them all", async () => {
+  const user = userEvent.setup();
+  let started = false;
+  const { calls } = show([], {
+    "GET today/queue": () => (started ? [] : [line("catch_up_go", { key: "catch_up_go", group: "decide", count: 3, estimate_usd: 0.42 })]),
+    "POST knowledge/catch-up/go": () => {
+      started = true;
+      return { started: 3 };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Go needed" });
+  expect(row).toHaveTextContent("Learn from 3 kinds of earlier correction: About $0.42");
+  expect(row).toHaveTextContent("Nothing is spent until you press Go.");
+  await user.click(within(row).getByRole("button", { name: "Go" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST knowledge/catch-up/go")).toHaveLength(1));
+  expect(await screen.findByText("Learning from your earlier corrections has started.")).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Go needed" })).toBeNull());
+});
+
+test("catch-up runs with no price say they use the plan's allowance", async () => {
+  show([line("catch_up_go", { key: "catch_up_go", group: "decide", count: 1, estimate_usd: null, unpriced: 1 })]);
+  expect(await screen.findByRole("region", { name: "Go needed" })).toHaveTextContent(
+    "Learn from 1 kind of earlier correction. It uses your plan's allowance.",
+  );
+});

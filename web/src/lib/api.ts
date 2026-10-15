@@ -139,6 +139,8 @@ export const api = {
   learned: () => call<S["LearnedView"]>("GET", "knowledge/learned"),
   proposals: () => call<S["ProposalsView"]>("GET", "knowledge/proposals"),
   catchUp: () => call<S["CatchUpView"]>("GET", "knowledge/catch-up"),
+  /** The go for the learning runs held for the catch-up list: they all start. */
+  catchUpGo: () => call<S["CatchUpStarted"]>("POST", "knowledge/catch-up/go"),
   keepKnowledge: (entry: string, body: S["KnowledgeKeep"]) => call<S["Applied"]>("POST", `knowledge/${id(entry)}/keep`, body),
   discardKnowledge: (entry: string, readVersion: number, reason?: string) =>
     call<S["Applied"]>("POST", `knowledge/${id(entry)}/discard`, { read_version: readVersion, reason: reason || null }),

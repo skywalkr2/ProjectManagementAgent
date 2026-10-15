@@ -17,6 +17,7 @@ import {
   type Item,
   type Kind,
 } from "../lib/knowledge";
+import { useReachNames } from "../lib/reach";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -29,19 +30,6 @@ import { NarrowForm } from "./NarrowForm";
 import { OriginLink } from "./Origin";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import styles from "./Knowledge.module.css";
-
-/** The names a row needs to say what it reaches. */
-export function useReachNames() {
-  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
-  const people = useQuery({ queryKey: ["people"], queryFn: api.people });
-  return {
-    projectList: projects.data ?? [],
-    names: {
-      projects: new Map((projects.data ?? []).map((p) => [p.id, p.name])),
-      people: new Map((people.data ?? []).map((p) => [p.id, p.name])),
-    },
-  };
-}
 
 export function Knowledge(props: { onOpenReview: () => void }) {
   const words = useWords();

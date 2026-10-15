@@ -12,6 +12,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from engine.ai.smoke import SmokeResult, _params_for_tier
@@ -34,7 +35,19 @@ def account_fingerprint(cfg: Config, ref: str) -> str | None:
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()
 
 
-def _read(ws: Workspace) -> dict[str, Any]:
+@dataclass(frozen=True)
+class Folder:
+    """The private folder the results are kept in, for code that has the store and not the workspace."""
+
+    private_dir: Path
+
+
+def folder_of(store: Any) -> Folder:
+    """The private folder beside a store's database."""
+    return Folder(store.path.parent / ".cockpit")
+
+
+def _read(ws: Workspace | Folder) -> dict[str, Any]:
     try:
         data = json.loads((ws.private_dir / CHECKED_FILE).read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -73,7 +86,7 @@ def remember(ws: Workspace, cfg: Config, results: list[SmokeResult]) -> None:
     write_whole(ws.private_dir / CHECKED_FILE, json.dumps(kept, indent=2) + "\n")
 
 
-def is_checked(ws: Workspace, cfg: Config, ref: str, tier: str) -> bool:
+def is_checked(ws: Workspace | Folder, cfg: Config, ref: str, tier: str) -> bool:
     """Whether the account passed the check for this tier's kinds of work, with their exact parameters, as it is set up
     now: every one answered, and its lockdown probes and learning round-trip passed."""
     found = _read(ws).get(ref)
@@ -83,7 +96,7 @@ def is_checked(ws: Workspace, cfg: Config, ref: str, tier: str) -> bool:
     return bool(found.get("complete")) and {tuple(p) for p in _params_for_tier(cfg, tier)} <= passed
 
 
-def check_failed(ws: Workspace, cfg: Config, ref: str, tier: str) -> bool:
+def check_failed(ws: Workspace | Folder, cfg: Config, ref: str, tier: str) -> bool:
     """Whether the account's last check, as it is set up now, failed for this tier's kinds of work: one of their calls
     didn't answer, or a lockdown probe or the learning round-trip failed. An account never checked has not failed."""
     found = _read(ws).get(ref)
@@ -105,7 +118,7 @@ class Standing:
     failed: bool
 
 
-def cannot_stand_in(ws: Workspace, cfg: Config) -> list[Standing]:
+def cannot_stand_in(ws: Workspace | Folder, cfg: Config) -> list[Standing]:
     """Every account now in a fallback chain that is neither checked for that tier nor accepted unchecked, or whose
     last check failed. Reads the chains as they are, so a hand-edited file is covered too."""
     found = []

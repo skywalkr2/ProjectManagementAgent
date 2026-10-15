@@ -7,7 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useId, useMemo, useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { reachChoices, useReachWords, type ReachChoice } from "../lib/reach";
+import { reachWords } from "../lib/knowledge";
+import { reachChoices, useReachNames, useReachWords, type ReachChoice } from "../lib/reach";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Drawer } from "../ui/Drawer";
@@ -30,15 +31,19 @@ export function useLearned() {
 /** Everything a proposal's controls need: the reach to pick and its words, the four acts, and whether the edit form or
  * the discard form is open. Each act goes through at once and offers Undo. */
 export function useProposal(p: Proposal) {
-  const { t } = useWords();
+  const wording = useWords();
+  const { t } = wording;
   const act = useAct();
   const names = useProjectNames();
   const words = useReachWords(names);
+  const reach = useReachNames();
   const choices = useMemo(() => reachChoices(p.applies_to), [p.applies_to]);
   const [chosen, setChosen] = useState<ReachChoice["id"]>("proposed");
   const [editing, setEditing] = useState(false);
   const [discarding, setDiscarding] = useState(false);
   const scope = choices.find((c) => c.id === chosen)?.scope ?? p.applies_to;
+  // The chosen reach in plain words, with the projects it leaves out.
+  const reachSaid = reachWords(scope, reach.names, wording);
 
   const keep = (text?: string) =>
     act(
@@ -66,6 +71,7 @@ export function useProposal(p: Proposal) {
     setChosen,
     words,
     reachNow: words(choices.find((c) => c.id === chosen) ?? choices[0]),
+    reachSaid,
     keep,
     justThisTime,
     discard,
@@ -82,19 +88,30 @@ export function ReachPicker(props: {
   value: ReachChoice["id"];
   onChange: (id: ReachChoice["id"]) => void;
   words: (choice: ReachChoice) => string;
+  /** The chosen reach in plain words, shown beside the list. */
+  said: string;
 }) {
   const { t } = useWords();
   const id = useId();
+  const saidId = `${id}-said`;
   return (
     <span className={styles.reach}>
       <label htmlFor={id}>{t("learned.keep_for")}</label>
-      <select id={id} value={props.value} onChange={(e) => props.onChange(e.target.value as ReachChoice["id"])}>
+      <select
+        id={id}
+        value={props.value}
+        aria-describedby={saidId}
+        onChange={(e) => props.onChange(e.target.value as ReachChoice["id"])}
+      >
         {props.choices.map((c) => (
           <option key={c.id} value={c.id}>
             {props.words(c)}
           </option>
         ))}
       </select>
+      <span id={saidId} className={styles.reachSaid} data-reach-said="">
+        {props.said}
+      </span>
     </span>
   );
 }
@@ -135,7 +152,7 @@ function EditForm(props: { p: Proposal; state: ReturnType<typeof useProposal>; o
     >
       <label htmlFor={id}>{t("learned.edit_label")}</label>
       <textarea id={id} autoFocus value={text} onChange={(e) => setText(e.target.value)} />
-      <ReachPicker choices={state.choices} value={state.chosen} onChange={state.setChosen} words={state.words} />
+      <ReachPicker choices={state.choices} value={state.chosen} onChange={state.setChosen} words={state.words} said={state.reachSaid} />
       <ProposalEvidence p={p} />
       <div className={styles.formActs}>
         <Button onClick={props.onClose}>{t("action.cancel")}</Button>
@@ -199,7 +216,7 @@ function ProposalLine(props: { p: Proposal }) {
       <ProposalEvidence p={p} />
       {p.just_this_time_before > 0 && <p className={styles.hint}>{tn("learned.said_just_this_time", p.just_this_time_before)}</p>}
       <div className={styles.acts}>
-        <ReachPicker choices={state.choices} value={state.chosen} onChange={state.setChosen} words={state.words} />
+        <ReachPicker choices={state.choices} value={state.chosen} onChange={state.setChosen} words={state.words} said={state.reachSaid} />
         <Button size="sm" variant="primary" onClick={() => void state.keep()}>
           {t("learned.keep")}
         </Button>

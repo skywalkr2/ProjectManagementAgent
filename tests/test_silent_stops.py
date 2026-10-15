@@ -159,7 +159,7 @@ def test_the_pause_is_kept_on_disk_so_a_new_process_still_honors_it(env):
 def test_a_fallback_account_takes_the_work_while_the_first_is_paused(env):
     _, cfg, store, clock = env
     first = account_of(cfg)
-    cfg.ai.providers["second"] = cfg.ai.providers[first].model_copy()
+    cfg.ai.providers["second"] = cfg.ai.providers[first].model_copy(update={"accepted_unchecked": True})
     cfg.ai.tiers["routine"].fallback = ["second/default"]
     limited, other = Scripted(quota(7200)), Scripted(ANSWER)
     router = Router(
@@ -424,7 +424,7 @@ def test_a_lost_network_is_one_today_line_after_the_configured_minutes_and_goes_
 
 def test_another_account_in_the_chain_takes_the_work_when_one_has_no_connection(env):
     ws, cfg, store, clock = env
-    cfg.ai.providers["second"] = cfg.ai.providers[account_of(cfg)].model_copy()
+    cfg.ai.providers["second"] = cfg.ai.providers[account_of(cfg)].model_copy(update={"accepted_unchecked": True})
     cfg.ai.tiers["routine"].fallback = ["second/default"]
     cfg.ai.tiers["deep"].fallback = ["second/default"]
     request = hand(env)
@@ -458,7 +458,7 @@ def as_a_real_account(cfg) -> str:
 def test_a_lost_network_pauses_no_account_however_often_it_is_found_and_whichever_account_is_cut_off(env):
     _, cfg, store, clock = env
     first = account_of(cfg)
-    cfg.ai.providers["second"] = cfg.ai.providers[first].model_copy()
+    cfg.ai.providers["second"] = cfg.ai.providers[first].model_copy(update={"accepted_unchecked": True})
     cfg.ai.tiers["routine"].fallback = ["second/default"]
     cut_off, limited = Scripted(offline()), Scripted(quota(7200))
 

@@ -102,6 +102,7 @@ def test_the_first_account_the_tier_would_use_is_the_one_offered(env):
     config = yaml.safe_load((ws.config_dir / "ai.yaml").read_text())
     first = cfg.ai.tiers["routine"].use
     config["tiers"]["routine"]["fallback"] = ["second/default"]
+    config["providers"]["second"]["accepted_unchecked"] = True  # an unchecked backup is never offered
     (ws.config_dir / "ai.yaml").write_text(yaml.safe_dump(config, sort_keys=False))
     cfg = ws.config(env={})
     _answer()

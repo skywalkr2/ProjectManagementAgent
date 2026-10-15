@@ -1176,7 +1176,9 @@ class QueueLineView(BaseModel):
     is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
     POST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`
     waiting), after which the work runs again by itself; `offline` is work that has waited for the network longer than
-    the configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back."""
+    the configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;
+    `catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,
+    `unpriced`; the go is POST /api/knowledge/catch-up/go)."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -1188,6 +1190,7 @@ class QueueLineView(BaseModel):
         "held",
         "go",
         "first_go",
+        "catch_up_go",
         "refused",
         "restart",
         "handover",
@@ -1226,9 +1229,12 @@ class QueueLineView(BaseModel):
     )
     untrusted: bool = Field(False, description="Built from outside content.")
     estimate_usd: float | None = Field(
-        None, description="The estimated cost of everything the line starts (first_go), when any has a price."
+        None,
+        description="The estimated cost of everything the line starts (first_go, catch_up_go), when any has a price.",
     )
-    unpriced: int = Field(0, description="How many of the things the line starts have no price (first_go).")
+    unpriced: int = Field(
+        0, description="How many of the things the line starts have no price (first_go, catch_up_go)."
+    )
     account: str | None = Field(None, description="The AI account waiting for its limit to reset (paused).")
     until: datetime | None = Field(
         None,
@@ -1299,6 +1305,10 @@ class QueueLineView(BaseModel):
 
 class FirstGoStarted(BaseModel):
     started: int = Field(description="How many runs the first go started.")
+
+
+class CatchUpStarted(BaseModel):
+    started: int = Field(description="How many learning runs for the catch-up list the go started.")
 
 
 class FirstGoSorting(BaseModel):

@@ -9,6 +9,7 @@ import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { wallWhen } from "../lib/dates";
+import { useEstimate } from "../lib/money";
 import { useRestart, useRestartText } from "../lib/restart";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -17,7 +18,7 @@ import styles from "./HeldLines.module.css";
 
 type Line = S["QueueLineView"];
 
-const SHOWN: Line["kind"][] = ["restart", "paused", "offline", "handover", "account_check", "rule_review"];
+const SHOWN: Line["kind"][] = ["restart", "paused", "offline", "handover", "account_check", "rule_review", "catch_up_go"];
 
 export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
   const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
@@ -36,6 +37,8 @@ export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover:
           <AccountCheckLine key={line.key} line={line} />
         ) : line.kind === "rule_review" ? (
           <RuleReviewLine key={line.key} line={line} onOpen={props.onOpenRules} />
+        ) : line.kind === "catch_up_go" ? (
+          <CatchUpGoLine key={line.key} line={line} />
         ) : (
           <PausedLine key={line.key} line={line} onOpenAiAccounts={props.onOpenAiAccounts} />
         ),
@@ -173,6 +176,42 @@ function AccountCheckLine(props: { line: Line }) {
       <div className={styles.actions}>
         <Button size="sm" variant="primary" loading={checking} aria-label={t("queue.account_check.run_named", { account, work })} onClick={() => void run()}>
           {t("queue.account_check.run")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/** The learning runs for the corrections made before the assistant could learn from them, held together for one go: the
+ * count and what they would cost together, and the one Go that starts them all. */
+function CatchUpGoLine(props: { line: Line }) {
+  const { t, tn } = useWords();
+  const act = useAct();
+  const estimate = useEstimate();
+  const [busy, setBusy] = useState(false);
+  const { line } = props;
+  const cost = line.estimate_usd == null ? null : estimate(line.estimate_usd);
+  const text =
+    cost === null
+      ? tn("queue.catch_up_go.unpriced", line.count)
+      : line.unpriced > 0
+        ? tn("queue.catch_up_go.mixed", line.count, { cost })
+        : tn("queue.catch_up_go.priced", line.count, { cost });
+  const go = async () => {
+    setBusy(true);
+    await act(api.catchUpGo, () => ({ message: t("queue.catch_up_go.started") }));
+    setBusy(false);
+  };
+  return (
+    <section className={styles.line} aria-label={t("queue.catch_up_go.label")} data-queue-line="catch_up_go">
+      <Pill tone="warn">{t("queue.catch_up_go.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{text}</p>
+        <p className={styles.sub}>{t("queue.catch_up_go.sub")}</p>
+      </div>
+      <div className={styles.actions}>
+        <Button size="sm" variant="primary" loading={busy} onClick={() => void go()}>
+          {t("queue.catch_up_go.run")}
         </Button>
       </div>
     </section>

@@ -12,6 +12,7 @@ providers:
     auth: env:BACKUP_KEY
     models: {small: backup-small}
     allowed_data: [open, internal]
+    accepted_unchecked: true   # a backup in these tests stands in without a connection check
   public-only:
     adapter: openai-compatible
     base_url: https://open.example.net/v1

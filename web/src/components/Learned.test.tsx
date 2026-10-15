@@ -146,3 +146,26 @@ test("nothing is drawn when nothing was learned from the card", async () => {
   await waitFor(() => expect(calls.some((c) => c.route === "GET knowledge/learned")).toBe(true));
   expect(screen.queryByRole("list", { name: "What Helper learned from this" })).toBeNull();
 });
+
+test("the chosen reach is said in plain words beside Keep for, and follows the pick", async () => {
+  const user = userEvent.setup();
+  show([learnedLine()], { "GET people": () => [] });
+  const reach = await screen.findByRole("combobox", { name: "Keep for" });
+  const said = () => reach.parentElement!.querySelector("[data-reach-said]")!;
+  await waitFor(() => expect(said()).toHaveTextContent("Only Spring launch · for filing notes"));
+  expect(reach).toHaveAccessibleDescription("Only Spring launch · for filing notes");
+  await user.selectOptions(reach, "All kinds of work on every project");
+  await waitFor(() => expect(said()).toHaveTextContent(/^All projects$/));
+});
+
+test("a reach that leaves projects out says which, by name", async () => {
+  const everyProjectButOne = proposal({ applies_to: { task_kinds: ["notes"], scope: "workspace", projects: [], except: ["PRJ-2"] } });
+  show([learnedLine({ proposal: everyProjectButOne })], {
+    "GET projects": () => [project("PRJ-1", "Spring launch"), project("PRJ-2", "Autumn list")],
+    "GET people": () => [],
+  });
+  const reach = await screen.findByRole("combobox", { name: "Keep for" });
+  await waitFor(() =>
+    expect(reach.parentElement!.querySelector("[data-reach-said]")).toHaveTextContent("All projects except Autumn list · for filing notes"),
+  );
+});

@@ -174,7 +174,7 @@ function ProposalRow(props: { p: Proposal }) {
       menu={<RowMenu label={p.text} actions={menu} />}
     >
       <div className={styles.detail}>
-        {!state.editing && <ReachPicker choices={state.choices} value={state.chosen} onChange={state.setChosen} words={state.words} />}
+        {!state.editing && <ReachPicker choices={state.choices} value={state.chosen} onChange={state.setChosen} words={state.words} said={state.reachSaid} />}
         {!state.editing && <ProposalEvidence p={p} />}
         {p.just_this_time_before > 0 && <p className={styles.summary}>{tn("learned.said_just_this_time", p.just_this_time_before)}</p>}
         <ProposalForms p={p} state={state} />

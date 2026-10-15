@@ -436,6 +436,40 @@ def ops_for_level(store: Store, ops: tuple[str, ...], level: str) -> tuple[str, 
     return tuple(allowed)
 
 
+def estimate_request(
+    ws: Workspace, store: Store, cfg: Config, router: Router, request_id: str, now: datetime | None = None
+) -> float | None:
+    """What a queued request would cost to run, priced as `process` prices it: from its packet, on the account its tier
+    would use. None when the packet can't be built, no account takes the work, or the price isn't known."""
+    now = now or datetime.now(UTC)
+    req = store.read().get("request", request_id)
+    if req is None:
+        return None
+    try:
+        packet = build(ws, store, cfg, request_id, now.astimezone(zone(cfg)).date())
+    except PacketRefused:
+        return None
+    level = _data_level(store, req.data)
+    if packet.data_level and LEVELS.index(packet.data_level) > LEVELS.index(level):
+        level = packet.data_level
+    tier = route(
+        cfg,
+        packet.task.kind,
+        input_chars=packet.input_chars,
+        quoted_messages=quoted_messages(packet.cleaned.text),
+        data_level=level,
+        default=task_settings(cfg, store.plugins.task_kind(req.data["task"])).tier,
+    )
+    return router.estimate(
+        packet.task,
+        tier=tier,
+        data_level=level,
+        use=req.data.get("use"),
+        content=content_levels(store, req.data),
+        independent=independence(store, cfg, req.data),
+    )
+
+
 def content_levels(store: Store, request: dict) -> frozenset[str]:
     """The content levels a request's material carries: those the person set on the record it is about, and on that
     record's project (or the record itself when it is a project)."""

@@ -1,7 +1,8 @@
 // How far a piece of what the assistant learned reaches (design 7.18). A proposal starts at the narrowest reach its
 // correction supports; widening is a pick from a short list built from that reach, never typed. Narrowing an entry that
 // already applies leaves one project out of it.
-import type { S } from "./api";
+import { useQuery } from "@tanstack/react-query";
+import { api, type S } from "./api";
 import { useWords } from "./wording";
 import { useTaskWords } from "./stages";
 
@@ -86,5 +87,18 @@ export function useReachWords(names: (id: string) => string): (choice: ReachChoi
           : t("reach.every_project");
     const label = t("reach.label", { kinds, where });
     return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+}
+
+/** The names a line needs to say what something reaches: every project and person, by id. */
+export function useReachNames() {
+  const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
+  const people = useQuery({ queryKey: ["people"], queryFn: api.people });
+  return {
+    projectList: projects.data ?? [],
+    names: {
+      projects: new Map((projects.data ?? []).map((p) => [p.id, p.name])),
+      people: new Map((people.data ?? []).map((p) => [p.id, p.name])),
+    },
   };
 }
