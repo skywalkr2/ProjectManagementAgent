@@ -17,6 +17,8 @@ export function proposal(over: Partial<S["ProposalView"]> = {}): S["ProposalView
     batch: "daily",
     just_this_time_before: 0,
     more_evidence: [],
+    used: 0,
+    given: 0,
     ...over,
   };
 }
