@@ -371,14 +371,6 @@ real use starts. The rest (L-more) comes after the packs.
     is the person's path: a paused routine account, the question on Today, the work done on the other account after yes,
     and back on the routine account after the reset. Built: `tests/test_borrow_other_tier.py::test_a_paused_routine_account_asks_first_then_the_work_runs_on_the_other_account_until_the_reset`,
     `tests/test_borrow_other_tier.py::test_never_does_not_ask_and_refuses_an_answer`.
-  - [ ] **GitHub Models as another API option** (owner, 2026-10-14; *not built*: the service's own documentation, checked
-    2026-10-15, says it was retired on 2026-07-30, so the owner decides what replaces it): GitHub's model service is OpenAI-compatible and has a
-    free, rate-limited tier used with a GitHub token, so it can be a free second account beside a command-line agent.
-    It is settings, not code: an account choice in setup that fills in the service's address, asks for the token as an
-    `env:` or `file:` reference, lists its models from the adapter, and smoke-tests every tier. Before it is offered for
-    routine work, check against the service's own documentation (third-party listings are not enough) its daily and
-    per-request limits, and test a busy workspace's packet against the per-request size; if packets don't fit, setup says
-    which tasks it can take. Its test is the person's path: choose it in setup, test it, and a routine run answered by it.
 
 **Then the owner's real use starts** (owner, 2026-10-12), running through phases B and C beside the build. Building stays
 one stream; the owner uses it daily on their own mail, calendar and notes. For the first month, two numbers are reviewed

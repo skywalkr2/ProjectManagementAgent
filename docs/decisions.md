@@ -3,6 +3,13 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: GitHub Models leaves the plan
+
+**Decided by:** the owner. **What:** the service was added as a free second account before 1.0; its own documentation,
+checked on 2026-10-15, says it was retired on 2026-07-30, so the item is removed. A second account remains possible
+through any service that speaks the common format, an aggregator or a local model server. **Impact:** roadmap "Ready for
+real use". No change to scope.
+
 ## 2026-10-15: The scope slice, as merged
 
 **Decided by:** the technical PM, merging the scope slice. **What:** (1) the person's own typed note is exempt from
