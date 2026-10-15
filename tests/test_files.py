@@ -47,6 +47,19 @@ def test_limits_types_and_kinds_are_checked(env):
         add_file(store, cfg, PNG, name="x.png", media_type="image/png", meta={"surprise": 1})
 
 
+def test_a_file_sent_with_no_type_or_a_generic_one_takes_the_type_its_name_gives(env):
+    _, cfg, store = env
+    for sent in ("", "application/octet-stream"):
+        record = add_file(store, cfg, b"# Notes\n\nPlain words.", name="notes.md", media_type=sent)
+        assert record.data["media_type"] == "text/markdown"
+    # A name that says text but bytes that aren't text keep the generic type, which the workspace doesn't accept.
+    with pytest.raises(StoreError, match="can't be added"):
+        add_file(store, cfg, b"\xff\xfe\x00\x01binary", name="notes.md", media_type="application/octet-stream")
+    # A type the browser did send is kept as sent.
+    record = add_file(store, cfg, PNG, name="picture.md", media_type="image/png")
+    assert record.data["media_type"] == "image/png"
+
+
 def test_changed_bytes_on_disk_are_caught(env):
     _, cfg, store = env
     record = add_file(store, cfg, PNG, name="cover.png", media_type="image/png")

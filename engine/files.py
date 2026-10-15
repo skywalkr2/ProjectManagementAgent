@@ -58,6 +58,28 @@ def blob_path_in(root: Path, sha256: str) -> Path:
     return root / "files" / sha256[:2] / sha256
 
 
+def effective_type(name: str, media_type: str, data: bytes) -> str:
+    """The type a file is taken as. A type the sender gave is kept; with none, or a generic one (browsers send none for
+    an ending the computer has no program for), the file's ending gives it, from the readers' table and then the
+    standard one. A text type is taken only when the bytes are text."""
+    import mimetypes
+
+    from engine.extract import EXTENSIONS, GENERIC
+
+    sent = (media_type or "").split(";")[0].strip().lower()
+    if sent not in GENERIC:
+        return media_type
+    guessed = EXTENSIONS.get(Path(name).suffix.lower()) or mimetypes.guess_type(name)[0]
+    if not guessed:
+        return sent or "application/octet-stream"
+    if guessed.startswith("text/"):
+        try:
+            data.decode("utf-8")
+        except UnicodeDecodeError:
+            return "application/octet-stream"
+    return guessed
+
+
 def check_file(
     store: Store,
     cfg: Config,
@@ -139,6 +161,7 @@ def add_file(
 ) -> Stored:
     """Check a file against the limits and its kind, store its bytes once, and record it. `data_level` is the person's
     explicit choice; without one the file takes its kind's level."""
+    media_type = effective_type(name, media_type, data)
     check_file(
         store, cfg, store.read(), name=name, media_type=media_type, size=len(data), file_kind=file_kind, meta=meta
     )
