@@ -1383,8 +1383,8 @@ found"), each with its test:
 - [x] **The owner runs the failing pairs again** on the same account (`--case` for each), and the results are compared
   (`docs/project/evals/README.md`, 2026-10-15): seven more pass every run; the packet now says which kind of work was
   corrected (built: `test_a_lesson_naming_kinds_of_work_must_include_the_one_corrected_and_the_packet_says_which_it_was`);
-  what is left is the backup model not using what it was given. Owed: the pairs on the main account when its quota
-  resets.
+  what is left is the backup model not using what it was given; after the corrected-kind fix every kept lesson reached
+  its later run (21 of 21). Owed: the pairs on the main account when its monthly allowance resets.
 
 Calendar entries and dates (answers 10, 11, 13):
 - [ ] **Entries for real events only**: meetings, launches, delivery windows, appointments; never for an action's own due
