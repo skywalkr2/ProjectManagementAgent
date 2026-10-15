@@ -10,6 +10,17 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.75 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes; a plugin that reads projects, people or changesets sees
+more fields.
+
+- **Core records:** `Project.roles` (a person and their part: run, design or watch); `Person.name_verified`; a change's
+  view carries `made` (what it made, for its "Made:" links).
+- **Core op:** `project.role` (system tier).
+- **Core lints:** `watched-project`, `other-team-item`, `unverified-quote`, `unverified-name`, `unknown-link`,
+  `version-number`, `summary-is-status`, `unlinked-made`.
+
 ## What 0.3.74 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.

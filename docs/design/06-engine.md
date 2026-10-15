@@ -1419,7 +1419,12 @@ check-up and the UI all ask it; no other part of the product decides scope on it
   confirms, and it takes effect that day. A learning pair proves it (roadmap L4). **A slice comes before real use** (the
   original designer, 2026-10-14; the rest stays in phase E): the role and its proposal; on a project the person only
   watches, facts only (no actions, no questions to other people), enforced by the applier from the role; and another
-  team's item on any project is a fact unless the input says the person owes them something.
+  team's item on any project is a fact unless the input says the person owes them something. *As built (the slice,
+  2026-10-15):* `Project.roles` and `project.role` (system tier; a project with no role for the person is one they run);
+  the lints `watched-project` and `other-team-item` (default `return`; returned once, then held and never applied even
+  when the item reaches no one); "the person owes it" when the quote names the person or their team or holds a word in
+  `language.owed_words`; the person's own note is exempt from both; the packet's project list says the person's part
+  when it isn't "run". **Built:** `tests/test_scope_slice.py`.
 
 ## 6.19 Facts and lookups
 

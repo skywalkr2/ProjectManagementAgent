@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The scope slice, as merged
+
+**Decided by:** the technical PM, merging the scope slice. **What:** (1) the person's own typed note is exempt from
+`watched-project` and `other-team-item`: their own words decide what they track, and the checks read what came in;
+(2) the notes packet's project list says the person's part when it isn't "run", so the first answer on a watched project
+needn't be returned; (3) an action owned by another team counts as owed to the person when its quote names them or
+their team or says "we", "us", "our" or "me" (`language.owed_words`), so six golden cases were reworded to say who the
+work is for ("send us two spine options"), which is what real mail usually says; (4) a person with no team counts as
+outside the person's team. **Impact:** design 6.18; roadmap "Ready for real use" (scope slice done); designer question 9
+is answered as its default. No change to scope.
+
 ## 2026-10-15: The quote check is for what the assistant asks of people, not long text
 
 **Decided by:** the technical PM, merging L6. **What:** `unverified-quote` checks questions only; quotation marks in long

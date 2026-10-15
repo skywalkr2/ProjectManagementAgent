@@ -313,16 +313,21 @@ real use starts. The rest (L-more) comes after the packs.
 - **A slice of scope, before real use** (the original designer, 2026-10-14; the rest of 6.18 stays in E). Their running
   version needed scope on day two: 115 incoming changes closed as "not this person's" in two weeks, and 9 of 100 lessons
   were scope mistakes; "that's not ours" corrections in week one would swamp the first month's repeat-correction numbers.
-  - [ ] The person's role on each project (run, design, watch; per person id), set on the project and proposed by "I'm
-    running X now" in any input or note as a system op the person confirms.
-  - [ ] On a project the person watches, the assistant records facts only: no actions and no questions to other people.
+  - [x] The person's role on each project (run, design, watch; per person id), set on the project and proposed by "I'm
+    running X now" in any input or note as a system op the person confirms. Built: `tests/test_scope_slice.py::test_a_role_from_the_persons_own_note_applies_at_once_and_undo_puts_it_back`,
+    `tests/test_scope_slice.py::test_a_role_from_an_input_waits_for_the_person_and_applies_when_they_confirm`,
+    `tests/test_scope_slice.py::test_the_project_page_shows_the_persons_role_and_a_pick_changes_it_with_undo`.
+  - [x] On a project the person watches, the assistant records facts only: no actions and no questions to other people.
     Enforced by the applier from the role, not left to the model: such an op is returned once with "record it as a fact",
-    then held, never applied.
-  - [ ] Another team's item, on any project, is a fact unless the input says the person owes them something: an action
+    then held, never applied. Built: `tests/test_scope_slice.py::test_on_a_watched_project_an_action_for_someone_else_is_returned_then_held_and_never_applied`,
+    `tests/test_scope_slice.py::test_the_packet_says_which_projects_the_person_only_watches`.
+  - [x] Another team's item, on any project, is a fact unless the input says the person owes them something: an action
     whose owners are all outside the person's team is returned once to be recorded as a fact, unless its evidence shows
-    the person owes it.
-  - [ ] Its test is the person's path: a watched project's mail gives facts only; the role changed to run, the same mail
-    gives a risk and an action.
+    the person owes it. Built: `tests/test_scope_slice.py::test_another_teams_action_is_returned_then_held_and_never_applied`,
+    `tests/test_scope_slice.py::test_an_action_whose_quote_says_we_us_our_or_me_is_one_the_person_owes`. The person's own note is exempt
+    from both checks: `tests/test_scope_slice.py::test_the_persons_own_note_decides_what_they_track_and_the_scope_checks_read_only_what_came_in`.
+  - [x] Its test is the person's path: a watched project's mail gives facts only; the role changed to run, the same mail
+    gives a risk and an action. Built: `tests/test_scope_slice.py::test_a_watched_projects_mail_gives_facts_only_and_after_the_role_becomes_run_the_same_mail_gives_an_action`.
 - **From the original designer's lessons of 2026-10-14**, small and needed in the first week:
   - [ ] **A failed call never looks like an empty result** (lesson 7): wherever a list comes from a call (a connector, an
     account, a dry run), a failure shows its reason where the person is looking ("the service refused the sign-in: renew

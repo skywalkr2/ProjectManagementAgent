@@ -986,6 +986,14 @@ yet follow, that it is *designed*, with its phase.
 | Change cards (7.7) | What a change made was inside its details | "Made:" links on the row (`made` on the change view) |
 | Uploads (6.2) | A file sent with no type was refused as binary | Its name gives the type; a text type only when the bytes are text. Built: `tests/test_files.py::test_a_file_sent_with_no_type_or_a_generic_one_takes_the_type_its_name_gives` |
 
+## 65. The scope slice (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Projects (6.18, 5.1) | No role per person | `Project.roles` (run, design, watch), `project.role`, a pick on the project page |
+| Checks (6.7) | Nothing enforced scope | `watched-project` and `other-team-item`, returned once then held; the person's own note exempt. Built: `tests/test_scope_slice.py` |
+| Packets (6.6) | Projects without the person's part | The part shown when it isn't "run" |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
