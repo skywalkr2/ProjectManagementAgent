@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -224,6 +225,12 @@ def _parser() -> argparse.ArgumentParser:
     sp.add_argument("--ai-config", type=Path, help="use this ai.yaml instead of the cases' own AI setup")
     sp.add_argument("--runs", type=int, help="runs per case (default: ai.evaluation.runs)")
     sp.add_argument("--case", action="append", dest="only", help="run only this case (repeatable)")
+    sp.add_argument(
+        "--case-failed",
+        type=Path,
+        metavar="REPORT",
+        help="run only the cases that had a failing run in this report (written by --out); adds to any --case",
+    )
     sp.add_argument("--stub", action="store_true", help="answer each case ideally; checks the cases, not a model")
     sp.add_argument(
         "--pairs",
@@ -882,12 +889,51 @@ def _eval_progress(result, done: int, total: int) -> None:
     print(f"[{done}/{total}] {result.case}: {outcome} ({result.seconds:.0f}s)", file=sys.stderr, flush=True)
 
 
+FAILURE_PART_LIMIT = 300
+FAILURE_PARTS = ("missing", "forbidden", "extra", "error", "kept", "given")
+
+
+def _failed(result: Any) -> bool:
+    """Whether a run failed: it ran, and it did not pass."""
+    return not result.passed and not result.not_run
+
+
+def _failure_line(result: Any) -> str:
+    """One compact line for a failing run: the non-empty parts of what went wrong, each cut to a fixed length."""
+    parts = []
+    for name in FAILURE_PARTS:
+        value = getattr(result, name)
+        if not value:
+            continue
+        text = f"{name}: " + (value if isinstance(value, str) else "; ".join(value))
+        parts.append(text if len(text) <= FAILURE_PART_LIMIT else text[: FAILURE_PART_LIMIT - 1] + "…")
+    return f"FAILED {result.case} run {result.run}: " + " | ".join(parts)
+
+
+def _failed_cases_of(report_file: Path) -> tuple[list[str], str]:
+    """The case ids with at least one failing run in a saved report, and the reason when there are none."""
+    try:
+        rows = json.loads(report_file.read_text())["results"]
+        failed = [r["case"] for r in rows if not r["passed"] and not r.get("not_run")]
+    except (OSError, ValueError, KeyError, TypeError):
+        return [], f"cockpit: {report_file} is missing or is not a report written by --out."
+    if not failed:
+        return [], f"cockpit: no case failed in {report_file}, so there is nothing to run again."
+    return list(dict.fromkeys(failed)), ""
+
+
 def cmd_evaluate(args: argparse.Namespace) -> int:
     from engine.config import load_config
     from engine.evaluate import Report, evaluate
     from engine.pairs import evaluate_pairs
     from engine.state_file import write_whole
 
+    if args.case_failed:
+        failed_cases, reason = _failed_cases_of(args.case_failed.expanduser())
+        if reason:
+            print(reason, file=sys.stderr)
+            return 1
+        args.only = list(dict.fromkeys([*(args.only or []), *failed_cases]))
     workspace = args.workspace.expanduser() if args.workspace else None
     template = args.template or workspace
     if template is None:
@@ -936,6 +982,16 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
         write_whole(out, report.as_json())
         print(f"The report is in {out}.", file=sys.stderr, flush=True)
     print(report.as_json() if args.json else report.text(), flush=True)
+    lines = [_failure_line(r) for r in report.results if _failed(r)]
+    if not lines:
+        print("No run failed.", file=sys.stderr, flush=True)
+    else:
+        for line in lines:
+            print(line, file=sys.stderr, flush=True)
+        if out is not None:
+            failures = out.with_name(out.name + ".failures.txt")
+            write_whole(failures, "\n".join(lines) + "\n")
+            print(f"The failures are in {failures}.", file=sys.stderr, flush=True)
     return 0 if report.pass_rate() >= settings.min_score else 1
 
 
