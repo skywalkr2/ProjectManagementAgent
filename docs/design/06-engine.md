@@ -718,9 +718,18 @@ is marked *designed*, with the phase.
   to mark an action done unless the note says so, and to ask the PM when the record doesn't match the note. **Built:**
   `tests/test_corrections.py::test_change_this_records_a_signal_and_queues_a_notes_request_whose_packet_carries_the_item_as_it_is_now`,
   `tests/test_corrections.py::test_change_this_route_queues_the_request_and_names_the_signal`,
-  `tests/test_corrections.py::test_change_this_on_something_a_run_made_names_its_changeset_and_run`. Not built: the row's
-  note box (a screen), and an op for the assistant to put an action on hold or drop an item (listed for the missing-op
-  review, 6.13).
+  `tests/test_corrections.py::test_change_this_on_something_a_run_made_names_its_changeset_and_run`. The row's note box is
+  built with the screens (7.18).
+  **Holding and dropping** (decided 2026-10-15, from the missing-op review, 6.13): the assistant has `action.hold` (the
+  action and what it waits for) and `action.drop` (the action and why it is no longer needed), and may propose
+  `question.drop` with a reason; each needs evidence (the input's words, or the person's note) and applies as data with
+  Undo. A dropped action has status `dropped` and a `dropped_reason`: it is never done, never credited to its owner, never
+  chased, and leaves Today and the to-do list. The person can drop an action from its row menu too (a reason, Undo), which
+  records a `dropped` signal when the assistant made it. An op the assistant applies records no signal; only the
+  person's own act is a correction. *Being built (L3).*
+- **Folding an unowned action into the nearest one** (6.9): the held "Pick an owner" item offers the nearest open action;
+  folding declines the held `action.add` and logs its text and evidence on that action, in one change with Undo, and
+  records `held_declined` with a note naming the action it went into. *Being built (L3).*
 - **One question per id, and a stake for anyone else's.** The lint `several-questions` (default `return`, and for a
   question or decision to the person too) fires on a text that holds `tuning.several_questions.minimum` (2) or more items of
   a numbered list that ask. `question-without-stake` (default `return`) fires on a `question.add` to anyone but the person

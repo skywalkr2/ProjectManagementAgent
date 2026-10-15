@@ -17,6 +17,24 @@ a time, and a phase ends when its exit test passes, not when its code is written
 
 Durations are estimates in working sessions. Dates are set when a phase starts and recorded here.
 
+## Where things stand (2026-10-15)
+
+- **Done:** phase 0, phase A (2026-10-13), and in phase L: L0 (signed off 2026-10-13), L1, L1b with its "before" run (O2),
+  L2, and the first five "Ready for real use" items. Owner actions O1 and O2 are done.
+- **L3, every correction teaches:** built in three waves on 2026-10-14 and 15:
+  - the engine: learning from corrections and from inputs, the proposal rules, question corrections, "Change this";
+  - the measures: the knowledge-used and repeat-correction rates, the missing-op list, checked backup accounts;
+  - the screens: the Learned line, the Review and catch-up lists, the Knowledge screen, the rules review, "Because you
+    told me".
+  - **Left in L3** (now being built): "Change this" asking for a hold or a drop, folding an unowned action into the
+    nearest one, queueing the catch-up's learning runs, skipping an unchecked backup account at run time, the send-back
+    packet carrying the item as it is now, and the reach in words on the Learned line.
+  - Moved out of L3: the learning pairs and the switch check (L4), and a project's "what the assistant knows" and
+    "Overlaps with" (phase B).
+- **Next:** L3b (the obvious next step from what came in), L4 (proving it, with the owner's "after" run), L5, L6, then
+  the "Ready for real use" items still open (the scope slice and the rest), after which real use starts. Phase B follows.
+- **Plugin API:** 0.3.70 (see the table below).
+
 ## Owner actions on the critical path
 
 Things only the owner can do, usually because they need the owner's own computer or accounts. Each says exactly what it
@@ -72,7 +90,9 @@ Within 0.3 every change is additive: a pack built for an earlier 0.3 version kee
 | When (phase) | What the plugin API gains | Version | Breaks anything? |
 |---|---|---|---|
 | L0, now | Data levels on sources and files, a file kind's default data level, when a watched item last changed, the audit trail | 0.3.61, done | No |
-| L-core: L2 | One call that gives a pack's packets the knowledge section; `learning: own` for a record type or task kind | 0.3.x | No |
+| L-core: L1 | Knowledge records and ops, `source.reported`, the run's knowledge log | 0.3.64–0.3.66, done | No |
+| L-core: L2 | One call that gives a pack's packets the knowledge section; `learning: own` for a record type or task kind | 0.3.67, done | No |
+| L-core: L3 | Learning from corrections and inputs, the question ops, the changeset's `applied`/`missing`/`first_on_account`; 0.3.70 put a plugin's aliased record fields back to being stored by field name (a silent change in 0.3.64) | 0.3.68–0.3.70, done | No |
 | L-core: L4 | Packs' own evaluation cases (`provides.evals`) and domain scorers (`registrar.scorer`) | 0.3.x | No |
 | L-core: L5 | The text-extractor extension point; a connector item that carries files (mail attachments) | 0.3.x | No |
 | B | Nothing planned: panels, Today lines and jobs keep their contract through the redesign | none | No |
@@ -957,7 +977,7 @@ Settled with the original designer (answers to L2's three questions and notes fr
   fact ranking stay off it (fiction is not workspace knowledge). A correction yields either a pack record or a core
   lesson, never both (design 6.22). Built: `tests/test_plugin_learning.py::test_learning_own_work_gets_no_facts_and_no_people_matched`, `tests/test_plugin_learning.py::test_first_names_resolve_only_for_work_the_core_learns_on`, `tests/test_plugin_learning.py::test_learns_on_says_which_work_the_cores_learning_runs_on`. Input learning and the new-term scan don't exist yet; they call `engine/learning.py::learns_on` when built (L3).
 
-L3. **Every correction teaches.**
+L3. **Every correction teaches.** Built in three waves (2026-10-14 and 15); what is left is listed in "Where things stand".
 From L2:
 - [x] The screen for the weekly "Review your standing rules" line: the flagged rules with their counts, the section's size
   and the rules moved, and Keep, Narrow and Retire on each (the routes are built), with the Knowledge screen (7.18).
@@ -1034,11 +1054,11 @@ From the original designer's lessons of 2026-10-14:
   `proposed` rule, and the held decisions move once at startup. Built: `tests/test_proposals.py::test_a_rule_from_an_input_is_a_proposal_and_from_the_persons_note_is_active_with_undo`, `tests/test_proposals.py::test_held_rule_decisions_move_once_to_the_catch_up_list_and_running_twice_moves_them_once`,
   `tests/test_proposals.py::test_keeping_a_rule_proposal_makes_the_restatement_theirs_and_the_source_stays_outside_evidence`.
   *Left:* the screen that shows the restatement and Keep (the Learned line and the review list). Built: `tests/test_proposals.py::test_a_rule_from_an_input_is_a_proposal_and_from_the_persons_note_is_active_with_undo`, `tests/test_proposals.py::test_held_rule_decisions_move_once_to_the_catch_up_list_and_running_twice_moves_them_once`, `tests/test_learn_correction.py::test_a_lesson_change_from_learning_is_held_and_a_rule_from_learning_is_a_proposal`. The Keep screen is the "On screen" item's.
-- [ ] **A correction that will apply again is knowledge, never a code request** (the original designer's lessons from running, 2026-10-13): feedback on a question (Respond to
+- [x] **A correction that will apply again is knowledge, never a code request** (the original designer's lessons from running, 2026-10-13): feedback on a question (Respond to
   the assistant) proposes a rule or a lesson whenever the correction generalizes, stated as the general case ("rows
   scoped to another team get no impact question unless they name our work"), not just this instance. A report to the
   maintainers (`report.draft`) whose content is a rule is refused and turned into that proposal. Dates are evidence: a
-  thing that launched today or earlier needs no question about whether it needs work. A learning pair for each. *Built in L3:* a report to the maintainers whose content is a rule is refused and turned into a proposal (`tests/test_learn_correction.py::test_a_report_to_the_maintainers_whose_content_is_a_rule_is_refused_and_a_real_one_is_not`), and a send-back or a picked owner is learned from at once. An answer to "Respond to the assistant" is learned from at once (`tests/test_learn_input.py::test_an_answer_to_the_assistants_question_records_a_signal_and_queues_learning_at_once`). Left: its learning pairs (L4).
+  thing that launched today or earlier needs no question about whether it needs work. *Built in L3:* a report to the maintainers whose content is a rule is refused and turned into a proposal (`tests/test_learn_correction.py::test_a_report_to_the_maintainers_whose_content_is_a_rule_is_refused_and_a_real_one_is_not`), and a send-back or a picked owner is learned from at once. An answer to "Respond to the assistant" is learned from at once (`tests/test_learn_input.py::test_an_answer_to_the_assistants_question_records_a_signal_and_queues_learning_at_once`). Moved to L4: a learning pair for each (the fixture pairs).
 - [x] A correction the person undid within its undo time doesn't teach: signals stay immutable, so learning nets out a
   signal whose action was undone (a set-aside undone, a send-back withdrawn) instead of deleting it. Built: `tests/test_learn_correction.py::test_a_message_the_person_took_back_within_its_undo_time_teaches_nothing`, `tests/test_learn_correction.py::test_learning_that_already_ran_is_undone_when_its_correction_is_netted` (`engine/learn.py::net_out`; the only undo in the code today that withdraws a correction is taking back Mark sent; others call it as they are built).
 - [x] Learning from corrections (`learn-correction`, on the stronger tier): at most one proposal, or `lesson.update` when a
@@ -1085,9 +1105,11 @@ From the original designer's lessons of 2026-10-14:
   *Built in L3 wave 3B:* the list's screen, with the count waiting and the kinds left out (`web/src/components/LearnedToday.test.tsx`).
   *Left:* queueing the learning runs for the chosen kinds (`learn-correction`, which doesn't exist yet: `catch_up.waiting`
   is what it reads).
-- [ ] **A correction fixes the class, not the instance** (the original designer's L0 sign-off, 2026-10-13): the learner's one proposal states the general case and its
+- [x] **A correction fixes the class, not the instance** (the original designer's L0 sign-off, 2026-10-13): the learner's one proposal states the general case and its
   test (with evidence such as dates), and its learning pair checks the negative: a row that does name our work still
-  gets its question.
+  gets its question. The learning prompt asks for the general case and its test, and one proposal per correction is
+  enforced (`tests/test_learn_correction.py::test_more_than_one_proposal_refuses_the_whole_answer_and_asks_for_one`).
+  Moved to L4: its learning pair with the negative (the fixture pairs).
 - [ ] Fallback chains hold only checked accounts, or ones the person accepted unchecked; the first run on a fallback account
   is tagged on its cards. Built: the settings save refuses an unchecked account newly added to a chain, and the first run
   is tagged on its changeset (`tests/test_quality.py::test_an_unchecked_account_is_refused_from_a_chain_until_it_passes_for_that_tier_or_the_person_accepts_it`,
@@ -1098,7 +1120,7 @@ From the original designer's lessons of 2026-10-14:
   `web/src/shell/HeldLines.test.tsx::Check now runs the account's test for that work, and the line is gone once the queue no longer has it`).
   The tag on the cards, "First run on ..." (`web/src/components/WhatChangedLearning.test.tsx`, `tests/test_learned_lines.py::test_the_changes_view_carries_what_a_run_applied_and_the_account_it_first_ran_on`).
   Left: the router still doesn't skip an unchecked account at run time.
-- [ ] On screen (7.18), the parts the loop can't be trusted without:
+- [x] On screen (7.18), the parts the loop can't be trusted without (built: `web/src/components/Learned.test.tsx`, `web/src/components/LearnedToday.test.tsx`, `web/src/components/WhatChangedLearning.test.tsx`; the failed switch check moved to L4):
   - the Learned line on the correction's card, with **Keep for: this project ▾**, defaulting to the narrowest target;
   - the knowledge each output applied, on its evidence line, with **This doesn't apply here** (narrow or retire);
   - the Review line for proposals from silent corrections;
@@ -1111,8 +1133,8 @@ From the original designer's lessons of 2026-10-14:
   doesn't apply here (`web/src/components/WhatChangedLearning.test.tsx`); the Review line, the daily list and the catch-up
   list (`web/src/components/LearnedToday.test.tsx`); the server's side (`tests/test_learned_lines.py`). The Knowledge
   screen with use counts and the rules review are part A's (`web/src/components/Knowledge.test.tsx`,
-  `web/src/components/RuleReview.test.tsx`). *Left:* a failed switch check on Today for a tier's own account (a backup
-  account's failed check has its line), with Switch back.
+  `web/src/components/RuleReview.test.tsx`). Moved to L4: the switch check and its failed line with Switch back (L4's last
+  item). Moved to phase B: a project's "what the assistant knows" and "Overlaps with" on the Learned line.
 
 L3b. **The obvious next step from what came in** (owner, 2026-10-13: "standard obvious things"). When the assistant
 meets something new, it offers the obvious way to record it, as one click, instead of a question the person has to work
@@ -1144,7 +1166,9 @@ around. Each is the person's choice, with Undo, and each answer is learned (L3).
 The buttons are laid out with the rest of the screens in phase B; their behavior and tests are here.
 
 L4. **Proving it** (from the design author's review of this plan).
-- [ ] **15 to 20 fictional fixture pairs, about a third negative.** They include the pairs L0 and L1 left here: a reported note saying "from now on we always…" never
+- [ ] **15 to 20 fictional fixture pairs, about a third negative.** They include the pairs L0, L1 and L3 left here (from L3:
+  a question's feedback that generalizes becomes a rule or lesson stated as the general case; a correction about another
+  team's rows, with its negative: a row that does name our work still gets its question): a reported note saying "from now on we always…" never
   becomes an active rule; after a project's role changes to "run", an email about another team's defect blocking its
   launch gives a risk and an action, not a parked note (lessons of 2026-10-14, lesson 1); the same words repeated in the
   person's own Mark done note ("<name> said from now on…") never
@@ -1235,6 +1259,11 @@ The note box on action buttons, the header's "alive" line, on hold isn't due, th
 from" link are built for real use at the end of L-core ("Ready for real use"); phase B gives them their final layout.
 
 The design is in Part 7 (7.7, 7.12–7.14); the foundation and shell are built.
+
+From L3 (design 7.18):
+- [ ] A project's "what the assistant knows" section on its page: sources and the last input, facts with source and date,
+  glossary terms used there (confirmed, assumed, unknown), who answers what, and what is still unknown with its question.
+- [ ] "Overlaps with …" on the Learned line, linking the entry a proposal would merge with.
 
 From the original designer's lessons of 2026-10-14:
 - [ ] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.6 and 7.7): a project

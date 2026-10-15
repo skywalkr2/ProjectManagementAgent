@@ -3,6 +3,16 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The assistant can hold and drop; an unowned action can be folded into the nearest one
+
+**Decided by:** the technical PM, closing L3. **What:** "Change this" told the assistant to put on hold or drop, but it
+had no op for either. Added: `action.hold` and `action.drop` (a new action status `dropped` with its reason), and the
+assistant may propose `question.drop`; each needs evidence and applies as data with Undo, and only the person's own act
+records a correction signal. A dropped action is never done or credited (product rule: finished work is credited to its
+owner, so a drop must not look like a close). Folding a held unowned action into the nearest open one is one change
+with Undo. Also moved: the learning pairs and the switch check to L4, a project's "what the assistant knows" and
+"Overlaps with" to phase B. **Impact:** design 6.8, 6.9, 5.1 (action status); roadmap L3, L4, B. No change to scope.
+
 ## 2026-10-14: L3, third wave B: learning on the card and on Today, the choices made while building
 
 **Decided by:** the technical PM, reviewing and merging the builder's choices. **What:**
