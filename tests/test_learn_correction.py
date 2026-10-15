@@ -125,6 +125,21 @@ def ops_of(store, request_id: str) -> list[dict]:
     return store.read().get("changeset", store.read().get("request", request_id).data["changeset"]).data["ops"]
 
 
+def test_a_lesson_whose_answer_fills_the_signal_itself_is_tied_to_the_real_correction_with_no_fix_round(env):
+    """The correction a lesson comes from is the app's to say: whatever the answer writes there is replaced before the
+    answer is checked, so a model that fills it in is neither sent back nor refused."""
+    _, _, store = env
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, "Interior files go to the editor first.", now=NOW)
+    (made,) = store.read().list("signal")
+    (queued,) = learning(store)
+    asked = scripted(lesson_answer("go to the editor first", signal="Interior files go to the editor first."))
+    run_learning(env, queued.id)
+    assert len(asked) == 1, "no fix round"
+    (lesson,) = store.read().list("lesson")
+    assert lesson.data["signal"] == made.id
+
+
 # ---- when it runs ----------------------------------------------------------------------------------------------------
 
 

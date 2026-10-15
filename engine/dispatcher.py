@@ -348,8 +348,6 @@ def process(
         _set(store, request_id, task="ask", state="queued", waiting="With the assistant, starting now")
         return None
     changeset = changeset.model_copy(update={"ops": localize_ops(changeset.ops, cfg)})
-    if learn.is_learning(kind.name):
-        changeset = learn.link_signal(changeset, learn.signal_of(req.data) or "")
     extra = quality.claims(store, run_id, changeset.applied, changeset.missing)
     if outcome.fallback is not None and quality.first_run_on(store, run_id) == outcome.fallback:
         extra["first_on_account"] = outcome.fallback
@@ -785,6 +783,10 @@ def _rounds(
                 return _Outcome(run_id=out.run_id, stop=stop)
             log.warning("The assistant's answer couldn't be read after a second try: %s", err)
             return _Outcome(run_id=out.run_id, stop=UNREADABLE, escalate=True, retry=UNREADABLE_WHY)
+        if learn.is_learning(task.kind):
+            # Linked before the checks, so what the answer wrote there never costs a fix round.
+            request = store.read().get("request", request_id)
+            changeset = learn.link_signal(changeset, learn.signal_of(request.data) if request is not None else None)
         if previous_ops is not None and _ops_of(changeset) == previous_ops:
             if not last:
                 task = replace(task, request=shown + "\n\n" + REPEATED)

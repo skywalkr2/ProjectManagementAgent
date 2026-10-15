@@ -64,6 +64,9 @@ def problem(text: str, cfg: Any, store: Any = None) -> str | None:
         answer = parse(text, store.plugins.ops if store is not None else None)
     except Unreadable as err:
         return f"Its answer couldn't be read as the form this work needs ({err})."
+    from engine.learn import link_signal
+
+    answer = link_signal(answer, None)  # as in a real learning run, the app says which correction a lesson comes from
     if len(answer.ops) != 1:
         found = "none" if not answer.ops else str(len(answer.ops))
         return f"It was asked for one proposal and gave {found}."

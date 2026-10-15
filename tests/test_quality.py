@@ -467,6 +467,16 @@ def test_the_learning_round_trip_fails_saying_which_part_failed(env, answer, par
     assert not found.ok and part in found.detail, found.detail
 
 
+def test_the_learning_round_trip_passes_when_the_answer_fills_the_correction_it_came_from(env):
+    """A real learning run ties the lesson to its correction whatever the answer says there, so the check does too."""
+    _, cfg, store = env
+    lesson = {"op": "lesson.add", "text": "Delivery dates are asked of the delivery's owner.", "signal": CHECK_REQUEST}
+    answer = json.dumps({"summary": "A lesson.", "ops": [lesson]})
+    set_responder(lambda task: answer if task.request == CHECK_REQUEST else connection_answer(task))
+    (found,) = learning_results(smoke_test(cfg, {}, store=store))
+    assert found.ok, found.detail
+
+
 def test_a_failing_learning_round_trip_stops_the_account_from_counting_as_checked(env):
     ws, _, store = env
     add_account(ws, "second")

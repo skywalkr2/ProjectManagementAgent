@@ -272,8 +272,9 @@ def net_out(store: Any, kind: str, refs: list[str], *, at: Collection[Any] | Non
     return [request.id]
 
 
-def link_signal(changeset: ChangesetIn, signal_id: str) -> ChangesetIn:
-    """The answer with each lesson it adds tied to the correction it came from, whatever id the answer gave."""
+def link_signal(changeset: ChangesetIn, signal_id: str | None) -> ChangesetIn:
+    """The answer with each lesson it adds tied to the correction it came from (or to none, without one), whatever the
+    answer gave there: which correction a lesson comes from is the app's to say, never the answer's."""
     ops = [
         op.model_copy(update={"signal": signal_id}) if getattr(op, "op", None) == "lesson.add" else op
         for op in changeset.ops
