@@ -231,6 +231,11 @@ def _parser() -> argparse.ArgumentParser:
         help="run the learning pairs and the day-30 scenario (in pairs/ and scenarios/) instead of the golden cases",
     )
     sp.add_argument("--json", action="store_true", help="print the report as JSON")
+    sp.add_argument(
+        "--out",
+        type=Path,
+        help="also write the JSON report to this file, saved after every case so a stopped run keeps what it did",
+    )
     sp.set_defaults(func=cmd_evaluate)
 
     sp = sub.add_parser("selfcheck", help="run the product's own checks")
@@ -879,8 +884,9 @@ def _eval_progress(result, done: int, total: int) -> None:
 
 def cmd_evaluate(args: argparse.Namespace) -> int:
     from engine.config import load_config
-    from engine.evaluate import evaluate
+    from engine.evaluate import Report, evaluate
     from engine.pairs import evaluate_pairs
+    from engine.state_file import write_whole
 
     workspace = args.workspace.expanduser() if args.workspace else None
     template = args.template or workspace
@@ -905,18 +911,31 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
         settings = load_config(config_dir, env={}).ai.evaluation
     # A plugin's own cases come with the golden set; the learning pairs are the core's.
     how = {} if args.pairs else {"packs_of": workspace}
+    out = args.out.expanduser() if args.out else None
+    runs = args.runs or settings.runs
+    done: list[Any] = []
+
+    def progress(result: Any, n: int, total: int) -> None:
+        _eval_progress(result, n, total)
+        if out is not None:
+            done.append(result)
+            write_whole(out, Report(args.account or "configured", runs, done).as_json())
+
     report = (evaluate_pairs if args.pairs else evaluate)(
         template,
         account=args.account,
-        runs=args.runs or settings.runs,
+        runs=runs,
         stub=args.stub,
         only=args.only,
         ai_config=args.ai_config,
         **how,
-        progress=_eval_progress,
+        progress=progress,
         notice=lambda line: print(line, file=sys.stderr, flush=True),
     )
-    print(report.as_json() if args.json else report.text())
+    if out is not None:
+        write_whole(out, report.as_json())
+        print(f"The report is in {out}.", file=sys.stderr, flush=True)
+    print(report.as_json() if args.json else report.text(), flush=True)
     return 0 if report.pass_rate() >= settings.min_score else 1
 
 

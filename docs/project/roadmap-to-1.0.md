@@ -88,6 +88,8 @@ uv run cockpit evaluate --pairs --from workspaces/demo-a -w ~/cockpit-exit --acc
   The owner's `cockpit-after` copy now follows the branch, and the two pair commands above run there with `--account` set
   to the backup's name as `ai test` shows it, after the fix that shows the `"op"` field in the op reference (the backup's
   account check failed without it; decisions, 2026-10-15).
+  The first run on the backup finished every case but left both report files empty (the printed report never reached
+  them); `--out <file>` now saves the report after every case, and the pair commands are run again with it.
 - **Keep the computer awake:** start each command with `caffeinate -i` on a Mac. A run frozen by sleep can take many
   minutes to recover, since each call waits up to 90 seconds before giving up.
 - **Then:** send the four files (in your home folder) to the session. It checks them for account names or addresses, writes the comparison
