@@ -81,6 +81,22 @@ log = logging.getLogger(__name__)
 _DEFAULT_ASSISTANT_NAME = WorkspaceFile.model_fields["assistant_name"].default
 
 
+#: What the browser shows when this copy of the code has no built screens: the app runs, and the screens are a
+#: separate build step in a copy taken straight from the repository.
+NOT_BUILT_PAGE = """<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens not built yet</title></head>
+<body>
+<h1>The screens aren't built in this copy yet</h1>
+<p>The app is running, but this copy of its code doesn't have its screens built. In a terminal, in the app's folder,
+run these two commands, then reload this page:</p>
+<pre>npm --prefix web install
+npm --prefix web run build</pre>
+<p>The first installs the tools the screens are built with; the second builds them. You don't need to stop the app.</p>
+</body></html>
+"""
+
+
 def create_app(
     ws: Workspace,
     cfg: Config,
@@ -282,7 +298,7 @@ def create_app(
             return _error("not found", 404)
         index = dist / "index.html"
         if not index.exists():
-            return JSONResponse({"status": "running", "ui": "not built yet"})
+            return HTMLResponse(NOT_BUILT_PAGE, headers={"Cache-Control": "no-store"})
         candidate = (dist / path).resolve()
         if path and candidate.is_file() and candidate.is_relative_to(dist.resolve()) and candidate != index.resolve():
             return FileResponse(candidate)

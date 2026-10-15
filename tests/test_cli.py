@@ -150,13 +150,15 @@ def test_init_says_when_the_folder_will_be_emptied(tmp_path, capsys, monkeypatch
 def test_the_web_screens_notice_compares_the_build_with_the_sources(tmp_path):
     import os
 
-    from engine.cli import STALE_BUILD, web_build_notice
+    from engine.cli import NO_WEB_TOOLS, STALE_BUILD, web_build_notice
 
     assert web_build_notice(tmp_path) is None  # no web sources here: nothing to compare
     src = tmp_path / "web" / "src"
     src.mkdir(parents=True)
     page = src / "App.tsx"
     page.write_text("x")
+    assert web_build_notice(tmp_path) == NO_WEB_TOOLS  # never built, and the web tools aren't installed either
+    (tmp_path / "web" / "node_modules").mkdir()
     assert web_build_notice(tmp_path) == STALE_BUILD  # never built
     built = tmp_path / "web" / "dist" / "index.html"
     built.parent.mkdir(parents=True)

@@ -101,3 +101,15 @@ def test_the_ui_gets_a_base_for_the_configured_path_and_a_strict_policy(tmp_path
         assert c.get(f"{prefix}/api/nothing-here").status_code == 404
         refused = TestClient(app).get(f"{prefix}/")
         assert refused.status_code == 401 and "frame-ancestors 'none'" in refused.headers["content-security-policy"]
+
+
+def test_a_copy_whose_screens_are_not_built_shows_a_page_saying_how_to_build_them(tmp_path, demo):
+    """A fresh copy of the code has no built screens: the browser gets a page in words with the two steps, never raw
+    data."""
+    ws = init_workspace(tmp_path / "ws", template=demo, git=False)
+    cfg = load_config(ws.config_dir, env={})
+    app = create_app(ws, cfg, TOKEN, ui_dist=tmp_path / "no-ui", start_worker=False)
+    page = TestClient(app, headers={"Authorization": f"Bearer {TOKEN}"}).get("/")
+    assert page.status_code == 200 and page.headers["content-type"].startswith("text/html")
+    assert "npm --prefix web install" in page.text and "npm --prefix web run build" in page.text
+    assert '"ui"' not in page.text

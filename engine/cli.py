@@ -26,6 +26,10 @@ from engine.workspace import Workspace, WorkspaceError, init_workspace, resolve
 from engine.yaml_load import load_yaml
 
 STALE_BUILD = "The web screens are out of date. Run: npm --prefix web run build"
+NO_WEB_TOOLS = (
+    "The web screens aren't built in this copy, and their tools aren't installed. "
+    "Run: npm --prefix web install && npm --prefix web run build"
+)
 TEMP_FOLDER = "This folder is emptied when the computer restarts. Keep workspaces in your home folder."
 _TEMP_NAMES = ("/tmp", "/private/tmp")
 
@@ -42,7 +46,7 @@ def web_build_notice(root: Path) -> str | None:
         return None
     built = root / "web" / "dist" / "index.html"
     if not built.is_file():
-        return STALE_BUILD
+        return STALE_BUILD if (root / "web" / "node_modules").is_dir() else NO_WEB_TOOLS
     newest = max((f.stat().st_mtime for f in source.rglob("*") if f.is_file()), default=0.0)
     return STALE_BUILD if newest > built.stat().st_mtime else None
 
