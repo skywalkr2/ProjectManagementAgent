@@ -110,6 +110,12 @@ class FactOp(OpModel):
     said_by: str | None = Field(
         None, description="With basis said: who said it, by name or id, when the input names someone."
     )
+    event: Annotated[str | None, RefTo("event")] = Field(
+        None, description="The calendar entry it is for, when the input ties it to one."
+    )
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The series of a repeating meeting it is for; it sits on the next instance."
+    )
     reaches_children: bool = Field(
         False,
         description="True only for a fact about a project that holds for every project inside it too (a fact about a "
@@ -131,6 +137,9 @@ class EventAddOp(OpModel):
         None, description="The last day of a range (or the end time), in the same form as start; leave out for one day."
     )
     project: str | None = Field(None, description="Project id, if the entry belongs to one.")
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The id of the series this entry is an instance of, if any."
+    )
     evidence: EvidenceIn = Field(description="The exact words from the input that give the date.")
 
     @field_validator("start", "end")
@@ -144,14 +153,49 @@ class EventAddOp(OpModel):
         return canonical_time(text)
 
 
+class SeriesAddOp(OpModel):
+    """A meeting or check-in that repeats, when the input says so ("every Tuesday"). `events` names existing entries
+    that are instances of it. Never add one that is already in the lists. Evidence is required."""
+
+    op: Literal["series.add"]
+    title: str = Field(min_length=1, description="What the series is, in a few words.")
+    repeats: str | None = Field(None, description="How often, in the input's words.")
+    project: str | None = Field(None, description="Project id, if the series belongs to one.")
+    events: list[Annotated[str, RefTo("event")]] = Field(
+        default_factory=list, description="The ids of existing entries that are instances of it."
+    )
+    evidence: EvidenceIn = Field(description="The exact words from the input that say it repeats.")
+
+    def describe(self) -> str | None:
+        return f"Series {' '.join(self.title.split())[:60]}"
+
+
+class SeriesLinkOp(OpModel):
+    """Make an existing calendar entry an instance of a series, or take it out of its series (leave `series` out).
+    Evidence is required."""
+
+    op: Literal["series.link"]
+    event: Annotated[str, RefTo("event")] = Field(description="The id of the calendar entry.")
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The id of the series; leave out to take the entry out of its series."
+    )
+    evidence: EvidenceIn = Field(description="The exact words from the input that say so.")
+
+    def describe(self) -> str | None:
+        return f"Entry {self.event} " + (f"is part of {self.series}" if self.series else "leaves its series")
+
+
 class RecordSetOp(OpModel):
     """Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent
     (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id);
-    action text, due and notes; question title and text; person role, org and why_they_matter. The new value must
+    action text, due and notes; the entry (event) or series an action, question or fact belongs to (an id, or null);
+    question title and text; person role, org and why_they_matter. The new value must
     be valid for the field. Evidence is required for due, status, owners, target and owner."""
 
     op: Literal["record.set"]
-    kind: Literal["project", "action", "question", "person"] = Field(description="The kind of record to change.")
+    kind: Literal["project", "action", "question", "person", "fact"] = Field(
+        description="The kind of record to change."
+    )
     id: str = Field(description="The id of the record to change.")
     field: str = Field(description="The field to set; only the fields listed for this kind are allowed.")
     value: Any = Field(description="The new value, in the field's own type; a date is written YYYY-MM-DD.")
@@ -183,6 +227,12 @@ class ActionAddOp(OpModel):
     )
     due: date | None = Field(None, description="The day it is due, if one is stated.")
     project: str | None = Field(None, description="Project id, if the action belongs to one.")
+    event: Annotated[str | None, RefTo("event")] = Field(
+        None, description="The calendar entry it is for, when the input ties it to one."
+    )
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The series of a repeating meeting it is for; it sits on the next instance."
+    )
     evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
 
 
@@ -252,6 +302,12 @@ class QuestionAddOp(OpModel):
     text: str = Field("", description="The detail the reader needs to answer.")
     links: list[LinkIn] = Field(default_factory=list, description="Pages the reader can open to see what it is about.")
     project: str | None = Field(None, description="Project id, if the question is about one.")
+    event: Annotated[str | None, RefTo("event")] = Field(
+        None, description="The calendar entry it is for, when the input ties it to one."
+    )
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The series of a repeating meeting it is for; it sits on the next instance."
+    )
     kind: Literal["question", "decision"] = Field(
         "question",
         description="question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is "
@@ -837,6 +893,8 @@ Op = Annotated[
     NoteOp
     | FactOp
     | EventAddOp
+    | SeriesAddOp
+    | SeriesLinkOp
     | RecordSetOp
     | RecordLogOp
     | ActionAddOp
@@ -887,6 +945,8 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "note": NoteOp,
     "fact": FactOp,
     "event.add": EventAddOp,
+    "series.add": SeriesAddOp,
+    "series.link": SeriesLinkOp,
     "record.set": RecordSetOp,
     "record.log": RecordLogOp,
     "action.add": ActionAddOp,
@@ -978,6 +1038,8 @@ TIERS: dict[str, Tier] = (
 NEEDS_EVIDENCE = {
     "fact",
     "event.add",
+    "series.add",
+    "series.link",
     "action.add",
     "action.close",
     "action.hold",
@@ -991,13 +1053,14 @@ NEEDS_EVIDENCE = {
 #: Ops that need evidence from the assistant but not when the person makes them: their own act is not a claim from an
 #: input, so a person's action or screen may use them without a quote.
 EVIDENCE_UNLESS_PERSON = {"action.hold", "action.unhold", "action.drop", "question.drop"}
-EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner"}
+EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner", "event", "series"}
 
 #: Fields record.set may change, per kind.
 SETTABLE: dict[str, set[str]] = {
     "project": {"status", "phase", "target", "priority", "summary", "parent", "language", "owner"},
-    "action": {"text", "due", "notes"},
-    "question": {"title", "text"},
+    "action": {"text", "due", "notes", "event", "series"},
+    "question": {"title", "text", "event", "series"},
+    "fact": {"event", "series"},
     "person": {"role", "org", "why_they_matter"},
 }
 

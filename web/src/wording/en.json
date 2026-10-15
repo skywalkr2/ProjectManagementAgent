@@ -284,6 +284,8 @@
   "op.question.done": "Marked a question answered",
   "op.fact": "Recorded a fact",
   "op.event.add": "Added to the calendar",
+  "op.series.add": "Added a repeating entry to the calendar",
+  "op.series.link": "Made a calendar entry part of a series",
   "op.note": "Filed a note",
   "op.note.under": "Filed a note under {project}",
   "op.note.none": "Filed a note (no project)",

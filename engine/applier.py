@@ -17,6 +17,7 @@ from pydantic import ValidationError
 
 from engine import draft_checks, knowledge, learn, proposals, scope
 from engine import search as workspace_search
+from engine import series as series_module
 from engine.check_text import numbered_questions, quoted_passages, without_links, words_of
 from engine.cleaning import normalize
 from engine.config import Config, ConfigError, load_config
@@ -64,6 +65,8 @@ from engine.ops import (
     RoutingAddOp,
     RuleAddOp,
     RuleRetireOp,
+    SeriesAddOp,
+    SeriesLinkOp,
     SettingProposeOp,
     StageMoveOp,
     TextAcceptOp,
@@ -80,6 +83,7 @@ from engine.storage import Store, StoreError, WriteContext
 from engine.storage.store import Tx
 from engine.text_shape import error_problem, items_problem, text_problem
 from engine.titles import title_for
+from engine.today import zone
 from engine.workspace import Workspace
 
 Severity = Literal["refuse", "return", "hold", "warn"]
@@ -288,6 +292,23 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"there is no project {project}")
         if isinstance(op, EventAddOp) and (why := entry_problem(op.start, op.end)) is not None:
             refuse(i, "targets", f"calendar entry {op.title!r}: {why}")
+        if isinstance(op, EventAddOp) and op.series is not None and view.get("series", op.series) is None:
+            refuse(i, "targets", f"there is no series {op.series}")
+        if isinstance(op, (FactOp, ActionAddOp, QuestionAddOp)) and (
+            why := series_module.item_problem(view, op.event, op.series)
+        ):
+            refuse(i, "targets", why)
+        if isinstance(op, SeriesAddOp):
+            for entry in op.events:
+                found = view.get("event", entry)
+                if found is None:
+                    refuse(i, "targets", f"there is no calendar entry {entry}")
+                elif found.data.get("series"):
+                    refuse(i, "targets", f"calendar entry {entry} is already part of a series")
+            if len(set(op.events)) != len(op.events):
+                refuse(i, "targets", "a calendar entry is named twice in events")
+        if isinstance(op, SeriesLinkOp) and (why := series_module.link_problem(view, op.event, op.series)):
+            refuse(i, "targets", why)
         if isinstance(op, ActionCloseOp):
             target = view.get("action", op.id)
             if target is None:
@@ -363,6 +384,11 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 else:
                     if op.kind == "project" and op.field == "parent" and op.value is not None:
                         why = parent_problem(view, op.id, op.value)
+                        if why:
+                            refuse(i, "targets", why)
+                    if op.field in ("event", "series"):
+                        merged = {**target.data, op.field: op.value}
+                        why = series_module.item_problem(view, merged.get("event"), merged.get("series"))
                         if why:
                             refuse(i, "targets", why)
         if isinstance(op, PersonContactOp):
@@ -753,7 +779,7 @@ def _evidence(op: OpModel) -> EvidenceIn | None:
 
 
 def _projects_of(op: OpModel) -> list[str]:
-    if isinstance(op, (NoteOp, FactOp, EventAddOp, ActionAddOp, QuestionAddOp)) and op.project:
+    if isinstance(op, (NoteOp, FactOp, EventAddOp, SeriesAddOp, ActionAddOp, QuestionAddOp)) and op.project:
         return [op.project]
     if isinstance(op, (RecordLogOp, ProjectRoleOp)):
         return [op.project]
@@ -1513,6 +1539,8 @@ def _apply_op(
             "supersedes": op.supersedes,
             "basis": basis,
             "said_by": said_by,
+            "event": series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg)),
+            "series": op.series,
             "reaches_children": op.reaches_children,
         }
         made("fact", tx.create("fact", data, w).id)
@@ -1523,11 +1551,32 @@ def _apply_op(
             "start": op.start,
             "end": op.end,
             "project": op.project or _input_project(tx, ctx.inputs.request, source),
+            "series": op.series,
             "source": source,
             "evidence": ev,
             "trust": trust,
         }
         made("event", tx.create("event", data, w).id)
+    elif isinstance(op, SeriesAddOp):
+        ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
+        data = {
+            "title": op.title,
+            "project": op.project or _input_project(tx, ctx.inputs.request, source),
+            "repeats": " ".join(op.repeats.split()) if op.repeats else None,
+            "source": source,
+            "evidence": ev,
+            "trust": trust,
+        }
+        made_series = tx.create("series", data, w)
+        made("series", made_series.id)
+        for entry in op.events:
+            cur = tx.get("event", entry)
+            tx.update("event", entry, {"series": made_series.id}, w, read_version=cur.version)
+            made("event", entry)
+    elif isinstance(op, SeriesLinkOp):
+        cur = tx.get("event", op.event)
+        tx.update("event", op.event, {"series": op.series}, w, read_version=cur.version)
+        made("event", op.event)
     elif isinstance(op, RecordSetOp):
         cur = tx.get(op.kind, op.id)
         value = op.value
@@ -1537,7 +1586,10 @@ def _apply_op(
             value = resolve(tx, value, w)  # the assistant names an organization; people refer to it by id
         if w.actor != "pm" and model_for(op.kind).needs_person(op.field, value):
             raise NeedsPerson(f"only you can set {op.field} on a {op.kind}")
-        tx.update(op.kind, op.id, {op.field: value}, w, read_version=cur.version)
+        changes = {op.field: value}
+        if op.field == "series" and value is not None and cur.data.get("event") is None:
+            changes["event"] = series_module.placement(tx, None, value, today, zone(ctx.cfg))
+        tx.update(op.kind, op.id, changes, w, read_version=cur.version)
         made(op.kind, op.id)
     elif isinstance(op, ProjectRoleOp):
         cur = tx.get("project", op.project)
@@ -1560,6 +1612,8 @@ def _apply_op(
             "owners": owners,
             "due": op.due.isoformat() if op.due else None,
             "project": op.project,
+            "event": series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg)),
+            "series": op.series,
             "source": source,
             "evidence": ev,
             "status": "open" if owners else "held",
@@ -1611,6 +1665,8 @@ def _apply_op(
             "text": op.text,
             "links": [link.model_dump() for link in op.links],
             "projects": [op.project] if op.project else [],
+            "event": series_module.placement(tx, op.event, op.series, today, zone(ctx.cfg)),
+            "series": op.series,
             "kind": op.kind,
             "source": source,
             "matters_for": " ".join(op.matters_for.split()) if op.matters_for else None,

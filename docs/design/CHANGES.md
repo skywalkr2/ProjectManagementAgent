@@ -1026,6 +1026,13 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 77. Records name the entry or series they belong to (2026-10-16)
+
+| Where | Before | Now |
+|---|---|---|
+| Calendar (5.1, 6.7) | An entry stood alone; an action, question or fact couldn't name one | A `series` record (title, project, `repeats` in the person's words); an entry names its series (`event.series`); an action, a question and a fact name the entry or series they belong to. New ops `series.add` and `series.link`; `record.set` takes `event` and `series`. Built: `tests/test_series.py` |
+| Follow-on changes (6.7) | An item on a series had no instance to sit on | It sits on the series' next instance and the worker rolls an open action or question to the next one once a day, each move a ledger entry. The packet lists the series and entries to come with their ids; the notes prompt says when to name one. Not built: the one request on a move, and the agenda (the project management pack's) |
+
 ## 76. How a fact is known, "Not now", the floor, the catch-up's words and series facts (2026-10-15)
 
 | Where | Before | Now |

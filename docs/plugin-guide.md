@@ -1156,7 +1156,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 
 ### `action` (ACT-n)
 
-Something a person will do. Added by `action.add`, closed by `action.close`, dropped by `action.drop`; `record.set` changes text, due and notes, `action.hold` or the person puts it on hold and the person takes it off, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and who said it was done; dropping records why it is no longer needed and credits no one.
+Something a person will do. Added by `action.add`, closed by `action.close`, dropped by `action.drop`; `record.set` changes text, due, notes and the calendar entry or series it belongs to, `action.hold` or the person puts it on hold and the person takes it off, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and who said it was done; dropping records why it is no longer needed and credits no one.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1174,6 +1174,8 @@ Something a person will do. Added by `action.add`, closed by `action.close`, dro
 | `on_hold.since` | date | required | The day it was put on hold. |
 | `told` | dict[str, datetime.date] | `{}` | Who has been told about it: a person id mapped to the day they were told. |
 | `followed_up` | dict[str, list[datetime.date]] | `{}` | Who has been chased about it: a person id mapped to the days they were chased, oldest first. A chase is not a notice (`told`) and never closes the action. |
+| `event` | str \| None | `None` | The id of the calendar entry it belongs to (the instance it sits on, for a series). |
+| `series` | str \| None | `None` | The id of the series it belongs to; it sits on the series' next instance. |
 | `done_by` | list[str] | `[]` | The ids of the people who did the work, set when the action is closed. |
 | `reported_by` | str \| None | `None` | The id of the person who said it was done, set when the action is closed. |
 | `source` | str \| None | `None` | The id of the source it came from, if any. |
@@ -1195,6 +1197,8 @@ A question for a person; a decision is a question to the PM. Added by `question.
 | `links[].url` | str | required | The address to open. |
 | `kind` | Literal['question', 'decision', 'action-notice', 'routing', 'impact'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. action-notice: tells someone about an action. routing: asks the PM who or what something is. impact: asks another area's contact how a change affects them. |
 | `projects` | list[str] | `[]` | The ids of the projects it is about. |
+| `event` | str \| None | `None` | The id of the calendar entry it belongs to (the instance it sits on, for a series). |
+| `series` | str \| None | `None` | The id of the series it belongs to; it sits on the series' next instance. |
 | `batch` | Literal['now', 'later'] | `'now'` | Whether it is ready to go out now or waits for a later batch. |
 | `status` | Literal['open', 'sent', 'answered', 'dropped'] | `'open'` | open: not yet sent. sent: marked as sent, waiting for an answer. answered: closed with an answer. dropped: closed without one. |
 | `sent_at` | datetime.datetime \| None | `None` | When it was marked as sent. |
@@ -1302,7 +1306,7 @@ What the assistant proposed for one request, how it was checked and what was app
 
 ### `fact` (FACT-n)
 
-Something recorded as true, with the words that show it. Added by `fact` and by `question.done`; never edited.
+Something recorded as true, with the words that show it. Added by `fact` and by `question.done`; never edited, except that `record.set` names the calendar entry or series it belongs to.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1318,6 +1322,8 @@ Something recorded as true, with the words that show it. Added by `fact` and by 
 | `supersedes` | str \| None | `None` | The id of the fact this one replaces. The older fact stays on record and is shown as replaced by this one. |
 | `basis` | Optional[Literal['person', 'inferred', 'said']] | `None` | Who the fact rests on. person: the person said it. inferred: the assistant worked it out, so it feeds the record only: it never closes anything, never changes a date, an owner or a routing, and never goes on anything others see. said: someone else said it (`said_by`). Empty for a fact recorded before this was kept. |
 | `said_by` | str \| None | `None` | The id of the person who said it, when `basis` is said and the input names them. |
+| `event` | str \| None | `None` | The id of the calendar entry it belongs to (the instance it sits on, for a series). |
+| `series` | str \| None | `None` | The id of the series it belongs to; it sits on the series' next instance. |
 | `reaches_children` | bool | `False` | True for a fact about a project that holds for the projects inside it too (a series' fact for each of its books): it goes into the packets of those projects as well. |
 
 ### `rule` (RULE-n)
@@ -1367,6 +1373,22 @@ Something dated in the app's own calendar: a day or a moment, or a range of days
 | `start` | str | required | When it starts: a day (2026-10-12) or a date-time (2026-10-12T09:30:00+01:00), in ISO 8601 text. A day means an all-day entry; a date-time with no offset is in the person's time zone. |
 | `end` | str \| None | `None` | When it ends, in the same forms. Set, it makes a range, and the last day or moment is included. |
 | `project` | str \| None | `None` | The id of the project it is about, if any. |
+| `series` | str \| None | `None` | The id of the series it is one instance of, if any. |
+| `source` | str \| None | `None` | The id of the source it came from, if any. |
+| `evidence` | Evidence \| None | see below | The words that justify it. |
+| `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
+| `evidence.quote` | str | required | The exact words, as they appear in that source. |
+| `trust` | Literal['trusted', 'untrusted'] | `'trusted'` | untrusted when it came from outside content. |
+
+### `series` (SER-n)
+
+A run of calendar entries that are the same thing again (a weekly meeting, a standing check-in). Each instance is its own calendar entry that names the series; the series holds what they share. Added by `series.add`; an entry joins by `series.link` or by naming it in `event.add`. An item on a series sits on its next instance.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `title` | str | required | What the series is, in a few words. |
+| `project` | str \| None | `None` | The id of the project it is about, if any. |
+| `repeats` | str \| None | `None` | How often it repeats, in the person's words (every Tuesday); never used to work out dates. |
 | `source` | str \| None | `None` | The id of the source it came from, if any. |
 | `evidence` | Evidence \| None | see below | The words that justify it. |
 | `evidence.source` | str | required | The id of the source the words come from, or "note" for the person's own note. |
@@ -1827,6 +1849,8 @@ A new action: something a person will do. Owners are people (name or id); leave 
 | `owners` | list[str] | `[]` | The people who do it, each by name or id; empty if nobody is named. A name that isn't one known person waits for the PM to say who. |
 | `due` | datetime.date \| None | `None` | The day it is due, if one is stated. |
 | `project` | str \| None | `None` | Project id, if the action belongs to one. |
+| `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
+| `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -1898,6 +1922,7 @@ A date or a range of dates the input gives for something (a delivery window, a d
 | `start` | str | required | The day it starts, written YYYY-MM-DD, or a date-time with its offset when the input gives a time. |
 | `end` | str \| None | `None` | The last day of a range (or the end time), in the same form as start; leave out for one day. |
 | `project` | str \| None | `None` | Project id, if the entry belongs to one. |
+| `series` | str \| None | `None` | The id of the series this entry is an instance of, if any. |
 | `evidence` | EvidenceIn | required | The exact words from the input that give the date. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
@@ -1917,6 +1942,8 @@ Record something the input states as true. Creates a fact record; evidence is re
 | `supersedes` | str \| None | `None` | The id of an existing fact this one replaces (the same thing, newer). The older fact stays on record. |
 | `basis` | Optional[Literal['inferred', 'said']] | `None` | Who the fact rests on, when it isn't what the input's origin says (leave it out then: the person's own note is the person's word, and content from outside is said by its sender). inferred: the input doesn't say this outright; you worked it out from the words you quote. said: someone else said it, named in said_by. |
 | `said_by` | str \| None | `None` | With basis said: who said it, by name or id, when the input names someone. |
+| `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
+| `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `reaches_children` | bool | `False` | True only for a fact about a project that holds for every project inside it too (a fact about a series that is true of each of its books); needs the project. Left false, it is about that project alone. |
 
 ### `file.add`
@@ -2161,6 +2188,8 @@ A question for a person, written for its reader. A decision is a question to who
 | `links[].label` | str | required | What the link is, in words for the reader. |
 | `links[].url` | str | required | The address to open; a question to someone else needs one the recipient can open. |
 | `project` | str \| None | `None` | Project id, if the question is about one. |
+| `event` | str \| None | `None` | The calendar entry it is for, when the input ties it to one. |
+| `series` | str \| None | `None` | The series of a repeating meeting it is for; it sits on the next instance. |
 | `kind` | Literal['question', 'decision'] | `'question'` | question: an ordinary question. decision: a choice for whoever decides, the PM when nobody is named. |
 | `matters_for` | str \| None | `None` | For a question to anyone but the PM: which of the PM's decisions, designs or dated items depends on the answer, by id or in words. Without one the question isn't asked: record it as a fact instead and say so in the change's note. |
 
@@ -2256,12 +2285,12 @@ Add a dated line to a project's update log. The line is dated the day it is appl
 
 ### `record.set`
 
-Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id); action text, due and notes; question title and text; person role, org and why_they_matter. The new value must be valid for the field. Evidence is required for due, status, owners, target and owner.
+Change one field of an existing record. Allowed fields: project status, phase, target, priority, summary, parent (the id of the project it belongs to), language (a tag such as en-US) and owner (a person's id); action text, due and notes; the entry (event) or series an action, question or fact belongs to (an id, or null); question title and text; person role, org and why_they_matter. The new value must be valid for the field. Evidence is required for due, status, owners, target and owner.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
-| `kind` | Literal['project', 'action', 'question', 'person'] | required | The kind of record to change. |
+| `kind` | Literal['project', 'action', 'question', 'person', 'fact'] | required | The kind of record to change. |
 | `id` | str | required | The id of the record to change. |
 | `field` | str | required | The field to set; only the fields listed for this kind are allowed. |
 | `value` | Any | required | The new value, in the field's own type; a date is written YYYY-MM-DD. |
@@ -2332,6 +2361,32 @@ Stop following an active rule; the record stays, marked retired. A system op.
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the rule, such as RULE-3. |
+
+### `series.add`
+
+A meeting or check-in that repeats, when the input says so ("every Tuesday"). `events` names existing entries that are instances of it. Never add one that is already in the lists. Evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `title` | str | required | What the series is, in a few words. |
+| `repeats` | str \| None | `None` | How often, in the input's words. |
+| `project` | str \| None | `None` | Project id, if the series belongs to one. |
+| `events` | list[Annotated[str, RefTo(kind='event')]] | `[]` | The ids of existing entries that are instances of it. |
+| `evidence` | EvidenceIn | required | The exact words from the input that say it repeats. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `series.link`
+
+Make an existing calendar entry an instance of a series, or take it out of its series (leave `series` out). Evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `event` | str | required | The id of the calendar entry. |
+| `series` | str \| None | `None` | The id of the series; leave out to take the entry out of its series. |
+| `evidence` | EvidenceIn | required | The exact words from the input that say so. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `setting.propose`
 

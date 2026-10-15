@@ -28,6 +28,8 @@ invariants:
       - note
       - fact
       - event.add
+      - series.add
+      - series.link
       - record.set
       - record.log
       - action.add
@@ -83,6 +85,8 @@ invariants:
     ops:
       - fact
       - event.add
+      - series.add
+      - series.link
       - action.add
       - action.close
       - action.hold

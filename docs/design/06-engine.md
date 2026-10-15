@@ -690,17 +690,37 @@ is per field across groups but all or nothing within a group:
 a system op, or otherwise needs a decision. Everything else is filed quietly (still findable). The change it came from closes as
 "no change needed" automatically, so the PM never clicks "Looks good" on nothing.
 
-**Follow-on changes** (functional designer's lessons from running, 2026-10-15; *not yet built*, roadmap L7). When the
+**Follow-on changes** (functional designer's lessons from running, 2026-10-15; roadmap L7). The links and the series
+below are **built**; the one request on a move is *not yet built*. When the
 person moves or retitles a dated record (a calendar entry's day or time, or a new day typed in its notes), or a fact is
 replaced, one save makes **one** request to the assistant listing what changed, never one per field. The request asks it
 to find what is tied to the record: records that name it or its old date, open actions linked to it or due before its
 new date that are to be settled there, and anything a record says will be covered there. Each is brought in line by the
 usual ops, with Undo. Links are stored when they are made (a record names the calendar entry it belongs to), so finding
-them doesn't rest on matching words; matching words is the fallback. A date-only move writes no history entry of its own;
+them doesn't rest on matching words; matching words is the fallback. **Built:** an action, a question and a fact have
+optional `event` and `series` fields, set by their add ops (`action.add`, `question.add`, `fact`) and by `record.set`, which
+refuses an entry that isn't an instance of the series named with it and needs the quoted words
+(`tests/test_series.py::test_actions_questions_and_facts_can_name_the_entry_or_series_they_belong_to`,
+`::test_an_item_naming_a_missing_entry_or_series_or_an_entry_of_another_series_is_refused`,
+`::test_record_set_names_or_clears_the_entry_or_series_of_an_action_a_question_and_a_fact`). The packet lists the series and
+the entries that haven't ended, with their ids, beside the open actions and questions, and says on each item what it
+belongs to (`::test_the_packet_lists_the_series_and_the_entries_to_come_and_what_each_item_belongs_to`); the notes prompt says
+when to name one (`::test_the_notes_prompt_says_when_to_tie_an_item_to_an_entry_or_a_series`). A date-only move writes no history entry of its own;
 marking a meeting done starts no run (its notes come in as their own input). The meeting's agenda and its items belong to
-the project management pack (6.24), which builds on these links. From the functional designer's answers (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7):
-- **A series:** an entry can be one instance of a series ("then every three days"). An item belongs to the series and
-  sits on its next instance; when an instance passes with the item unsettled, it rolls to the next one, never to nowhere.
+the project management pack (6.24), which builds on these links. From the functional designer's answers (functional designer's answers, 2026-10-15; roadmap L7):
+- **A series** (**built**): an entry can be one instance of a series ("then every three days"). A series is its own record
+  (`series`: title, project and `repeats`, how often in the person's words, which no date is worked out from); each instance
+  is a calendar entry that names it (`event.series`), added by `event.add`, `series.add` or `series.link`, with Undo. An
+  item belongs to the series and sits on its next instance (`engine/series.py`, `next_instance`: the first instance that has
+  not ended before today, in the person's days); when an instance passes with the item unsettled (an action not done or
+  dropped, a question not answered or dropped), it rolls to the next one, never to nowhere: with no later instance it stays
+  where it is. The worker does the roll once a day (`roll_series_if_due`), and each move is a ledger entry (`series.roll`,
+  by the engine) like any other change
+  (`tests/test_series.py::test_next_instance_is_the_first_one_that_has_not_ended_before_today`,
+  `::test_an_open_item_on_a_passed_instance_rolls_to_the_next_and_the_move_is_in_the_ledger`,
+  `::test_the_roll_leaves_settled_items_future_ones_facts_and_series_with_no_later_instance`,
+  `::test_the_worker_rolls_items_once_a_day_and_tells_the_screens`). Nothing makes the instances of a series: they are
+  entries the person or an input adds, so the series needs no recurrence rule.
 - **Who starts it:** the assistant's own move from an input ("Thursday's sync moves to Monday") starts the same run as the
   person's. The follow-on run's own changes never start another: one hop, no cascades.
 - **What applies at once:** changes to the person's own items and the agenda apply with Undo. Anything that already

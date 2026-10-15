@@ -58,6 +58,11 @@ How to answer:
 - A meeting invitation (a time, a place or a link to join, and who is invited) is an "event.add" for the meeting, under
   the project the input is about, with the start time as the input gives it and the same quoted words. Add an action
   only when the input also asks the PM to do something.
+- When an action, question or fact is for a meeting or other entry in the list of calendar entries and series ("add
+  this to the agenda for Tuesday's sync"), name it in "event"; for a meeting that repeats, name the series in "series"
+  instead: the item then sits on its next instance. Use only ids from that list. When the input says a meeting repeats
+  ("every Tuesday") and the list has no series for it, add one with "series.add", quoting the words. Never name an
+  entry or series the input only resembles, and never for an action's own due date.
 - A block marked author="you" is the PM's own edit, in a source they write in. When the change adds what an open action
   asks for, close that action with "action.close", quoting the added words; the change is the work. When it adds nothing
   an open action asks for, leave it alone: it is never news credited to someone else, and never ask the PM about their

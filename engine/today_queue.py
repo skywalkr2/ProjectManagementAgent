@@ -29,6 +29,8 @@ _OUTCOME = {
     "note": "notes",
     "fact": "recorded",
     "event.add": "recorded",
+    "series.add": "recorded",
+    "series.link": "recorded",
     "record.set": "recorded",
     "record.log": "recorded",
     "person.add": "people",

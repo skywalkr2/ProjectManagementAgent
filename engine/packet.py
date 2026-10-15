@@ -131,6 +131,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
             "# Practice\n" + _guidance(kind),
             _value_lists(store),
             learned.stable,
+            _calendar_section(store, cfg, today),
             "# Open actions\n" + _open_actions(store, people),
             "# Open questions\n" + _open_questions(store, people),
             "# People\n" + _people(store, cfg),
@@ -730,7 +731,7 @@ def _open_actions(store: Store, people: People) -> str:
         due = f"; due {d['due']}" if d.get("due") else ""
         hold = f"; on hold, waiting for {d['on_hold']['waiting_for']}" if d.get("on_hold") else ""
         project = f"[{d['project']}] " if d.get("project") else ""
-        lines.append(f"- {a.id} {project}{d['text']} (owners: {owners}{due}{hold})")
+        lines.append(f"- {a.id} {project}{d['text']} (owners: {owners}{due}{hold}{_belongs_to(d)})")
     return "\n".join(lines) or "(none)"
 
 
@@ -740,8 +741,41 @@ def _open_questions(store: Store, people: People) -> str:
         d = q.data
         if d["status"] in ("answered", "dropped"):
             continue
-        lines.append(f"- {q.id} to {people.name(d['to'])}: {d['title']}")
+        lines.append(f"- {q.id} to {people.name(d['to'])}: {d['title']}{_belongs_to(d, ' (', ')')}")
     return "\n".join(lines) or "(none)"
+
+
+def _belongs_to(data: dict, before: str = "", after: str = "") -> str:
+    """The calendar entry and series an action or question belongs to, as its list line says them; empty for neither."""
+    bits = [f"{label} {data[key]}" for key, label in (("event", "on entry"), ("series", "series")) if data.get(key)]
+    if not bits:
+        return ""
+    return f"{before}{'; ' if not before else ''}{', '.join(bits)}{after}"
+
+
+def _calendar_section(store: Store, cfg: Config, today: date) -> str:
+    """The series and the calendar entries that haven't ended, with their ids, so a run can tie an item to one by id;
+    empty when the workspace has none."""
+    from engine import series as series_module
+    from engine.today import zone
+
+    here = zone(cfg)
+    view = store.read()
+    lines = []
+    for found in view.list("series"):
+        d = found.data
+        coming = series_module.next_instance(view, found.id, today, here)
+        repeats = f", {d['repeats']}" if d.get("repeats") else ""
+        nxt = f"; next {coming.id} on {coming.data['start']}" if coming is not None else "; no later instance"
+        lines.append(f"- {found.id} series: {d['title']}{repeats}{nxt}")
+    for entry in view.list("event"):
+        days = series_module.span(entry.data, here)
+        if days is None or days[1] < today:
+            continue
+        d = entry.data
+        of = f"; series {d['series']}" if d.get("series") else ""
+        lines.append(f"- {entry.id} {d['title']} ({d['start']}{of})")
+    return "# Calendar entries and series\n" + "\n".join(lines) if lines else ""
 
 
 def _people(store: Store, cfg: Config) -> str:

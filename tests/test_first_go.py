@@ -46,7 +46,7 @@ def env(tmp_path):
     ws = init_workspace(tmp_path / "ws", template=DEMO_B, git=False)
     cfg = ws.config(env={})
     cfg.ai.budgets.first_go = True
-    _price(cfg, 10.0)
+    _price(cfg, 5.0)  # a price that keeps an ordinary run well under the confirm amount as the packet grows
     store = Store(ws.db_path)
     yield ws, cfg, store
     store.close()

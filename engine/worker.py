@@ -220,6 +220,7 @@ class Worker:
         self._jobs: threading.Thread | None = None
         self._switching: threading.Thread | None = None
         self._swept_on: date | None = None
+        self._rolled_on: date | None = None
         self._catch_up_queued = False
         self._synced_at: int | None = -1
         self._said_no_git = False
@@ -466,6 +467,21 @@ class Worker:
             self.events.changed()
         return expired
 
+    def roll_series_if_due(self) -> list[str]:
+        """Once a day, move each open item on a series from an instance that has passed to the series' next one
+        (design 6.7). Returns the ids of the items moved."""
+        from engine import series
+        from engine.today import zone
+
+        now = self.now()
+        here = zone(self.cfg)
+        today = now.astimezone(here).date()
+        if self._rolled_on == today:
+            return []
+        moved = series.roll_items(self.store, today, here, self.events.changed)
+        self._rolled_on = today
+        return moved
+
     def first_backup_soon(self) -> threading.Thread | None:
         """A backup folder was just chosen: when no backup has ever succeeded, make one now on its own thread, so the
         person isn't asked to back up right after choosing where. Uses the settings as the files hold them now, and
@@ -666,6 +682,10 @@ class Worker:
                 self.sweep_proposals_if_due()
             except Exception:  # the sweep runs again the next time round; nothing here may stop the thread
                 log.exception("expiring old proposals failed")
+            try:
+                self.roll_series_if_due()
+            except Exception:  # the roll runs again the next time round; nothing here may stop the thread
+                log.exception("moving items to the next instance of a series failed")
             self._read_now.wait(timeout=60)
             self._read_now.clear()
 

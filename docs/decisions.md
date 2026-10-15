@@ -3,6 +3,19 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: A series is a record of its own, and its instances are the entries that name it (phase L7)
+
+- **Decided (main session, for review):** a series holds a title, a project and `repeats`, the person's words for how
+  often; nothing works out dates from it. Each instance is a calendar entry that names the series, so the series needs no
+  recurrence rule. An item on a series sits on the first instance that has not ended before today; the worker moves an
+  open action or question to the next one once a day, and a fact never moves. With no later instance the item stays put.
+- **Why:** the design says an entry can be one instance of a series and an item rolls to the next one; it names no
+  recurrence fields. Generating instances is a calendar service's or a pack's business, and a rule here would be a second
+  source of dates beside the entries.
+- **Impact:** design 5.1 (`series`, and `event`/`series` on action, question, fact, `event.series`), 6.7 and CHANGES
+  section 77. New ops `series.add` and `series.link` (data tier, with Undo); `record.set` takes `event` and `series` on an
+  action, a question and a fact. No new setting. The agenda that uses it stays the project management pack's.
+
 ## 2026-10-16: A rule's check that fails on an output changes nothing yet
 
 - **Decided (main session):** a rule's check now runs on every output its scope covers and counts as applied whether it

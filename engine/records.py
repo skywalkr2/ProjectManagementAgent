@@ -370,9 +370,10 @@ class Project(Record):
 
 class Action(Record):
     """Something a person will do. Added by `action.add`, closed by `action.close`, dropped by `action.drop`;
-    `record.set` changes text, due and notes, `action.hold` or the person puts it on hold and the person takes it off,
-    and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and
-    who said it was done; dropping records why it is no longer needed and credits no one."""
+    `record.set` changes text, due, notes and the calendar entry or series it belongs to, `action.hold` or the person
+    puts it on hold and the person takes it off, and sending a notice marks who was told. A chase adds a day to
+    `followed_up`; closing records who did the work and who said it was done; dropping records why it is no longer
+    needed and credits no one."""
 
     record_kind: ClassVar[str] = "action"
     prefix: ClassVar[str] = "ACT"
@@ -404,6 +405,12 @@ class Action(Record):
         default_factory=dict,
         description="Who has been chased about it: a person id mapped to the days they were chased, oldest first. "
         "A chase is not a notice (`told`) and never closes the action.",
+    )
+    event: Annotated[str | None, RefTo("event")] = Field(
+        None, description="The id of the calendar entry it belongs to (the instance it sits on, for a series)."
+    )
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The id of the series it belongs to; it sits on the series' next instance."
     )
     done_by: list[str] = Field(
         default_factory=list, description="The ids of the people who did the work, set when the action is closed."
@@ -442,6 +449,12 @@ class Question(Record):
         ),
     )
     projects: list[str] = Field(default_factory=list, description="The ids of the projects it is about.")
+    event: Annotated[str | None, RefTo("event")] = Field(
+        None, description="The id of the calendar entry it belongs to (the instance it sits on, for a series)."
+    )
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The id of the series it belongs to; it sits on the series' next instance."
+    )
     batch: Literal["now", "later"] = Field(
         "now", description="Whether it is ready to go out now or waits for a later batch."
     )
@@ -1018,7 +1031,8 @@ class Changeset(Record):
 
 
 class Fact(Record):
-    """Something recorded as true, with the words that show it. Added by `fact` and by `question.done`; never edited."""
+    """Something recorded as true, with the words that show it. Added by `fact` and by `question.done`; never
+    edited, except that `record.set` names the calendar entry or series it belongs to."""
 
     record_kind: ClassVar[str] = "fact"
     prefix: ClassVar[str] = "FACT"
@@ -1051,6 +1065,12 @@ class Fact(Record):
     )
     said_by: Annotated[str | None, RefTo("person")] = Field(
         None, description="The id of the person who said it, when `basis` is said and the input names them."
+    )
+    event: Annotated[str | None, RefTo("event")] = Field(
+        None, description="The id of the calendar entry it belongs to (the instance it sits on, for a series)."
+    )
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The id of the series it belongs to; it sits on the series' next instance."
     )
     reaches_children: bool = Field(
         False,
@@ -1186,6 +1206,9 @@ class CalendarEntry(Record):
         description="When it ends, in the same forms. Set, it makes a range, and the last day or moment is included.",
     )
     project: str | None = Field(None, description="The id of the project it is about, if any.")
+    series: Annotated[str | None, RefTo("series")] = Field(
+        None, description="The id of the series it is one instance of, if any."
+    )
     source: str | None = Field(None, description="The id of the source it came from, if any.")
     evidence: Evidence | None = Field(None, description="The words that justify it.")
     trust: Literal["trusted", "untrusted"] = Field(
@@ -1199,6 +1222,28 @@ class CalendarEntry(Record):
         self.start = canonical_time(self.start)
         self.end = canonical_time(self.end) if self.end is not None else None
         return self
+
+
+class Series(Record):
+    """A run of calendar entries that are the same thing again (a weekly meeting, a standing check-in). Each instance
+    is its own calendar entry that names the series; the series holds what they share. Added by `series.add`; an entry
+    joins by `series.link` or by naming it in `event.add`. An item on a series sits on its next instance."""
+
+    record_kind: ClassVar[str] = "series"
+    prefix: ClassVar[str] = "SER"
+    record_label: ClassVar[str] = "series of calendar entries"
+    layout: ClassVar[str | None] = "calendar/{id}"
+
+    title: str = Field(min_length=1, description="What the series is, in a few words.")
+    project: str | None = Field(None, description="The id of the project it is about, if any.")
+    repeats: str | None = Field(
+        None, description="How often it repeats, in the person's words (every Tuesday); never used to work out dates."
+    )
+    source: str | None = Field(None, description="The id of the source it came from, if any.")
+    evidence: Evidence | None = Field(None, description="The words that justify it.")
+    trust: Literal["trusted", "untrusted"] = Field(
+        "trusted", description="untrusted when it came from outside content."
+    )
 
 
 def entry_time(value: str) -> date | datetime:
@@ -1585,6 +1630,7 @@ REGISTRY: dict[str, type[Record]] = {
         Fact,
         Rule,
         CalendarEntry,
+        Series,
         Note,
         Lesson,
         GlossaryEntry,
@@ -1636,13 +1682,21 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
     "project": [("owner", "person"), ("parent", "project"), ("roles[].person", "person")],
     "action": [
         ("project", "project"),
+        ("event", "event"),
+        ("series", "series"),
         ("owners[].person", "person"),
         ("owners[].team", "team"),
         ("done_by[]", "person"),
         ("reported_by", "person"),
         ("source", "source"),
     ],
-    "question": [("to", "person"), ("projects[]", "project"), ("source", "source")],
+    "question": [
+        ("to", "person"),
+        ("projects[]", "project"),
+        ("event", "event"),
+        ("series", "series"),
+        ("source", "source"),
+    ],
     "source": [("projects[]", "project"), ("author", "person")],
     "request": [
         ("source", "source"),
@@ -1654,7 +1708,14 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("project", "project"),
     ],
     "changeset": [("request", "request"), ("run", "run")],
-    "fact": [("project", "project"), ("source", "source"), ("supersedes", "fact"), ("said_by", "person")],
+    "fact": [
+        ("project", "project"),
+        ("event", "event"),
+        ("series", "series"),
+        ("source", "source"),
+        ("supersedes", "fact"),
+        ("said_by", "person"),
+    ],
     "rule": [
         *MORE_EVIDENCE_REFERENCES,
         ("kept_by", "person"),
@@ -1663,7 +1724,8 @@ REFERENCES: dict[str, list[tuple[str, str]]] = {
         ("applies_to.except[]", "project"),
     ],
     "signal": [("run", "run"), ("changeset", "changeset")],
-    "event": [("project", "project"), ("source", "source")],
+    "event": [("project", "project"), ("series", "series"), ("source", "source")],
+    "series": [("project", "project"), ("source", "source")],
     "note": [("project", "project"), ("question", "question"), ("source", "source")],
     "lesson": [*KNOWLEDGE_REFERENCES, ("signal", "signal")],
     "glossary_entry": [*KNOWLEDGE_REFERENCES, ("project", "project")],

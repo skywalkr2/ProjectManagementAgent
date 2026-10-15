@@ -1448,8 +1448,20 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   anything that already reached someone gets a drafted correction to send. The assistant's own move from an input
   starts it too; its own changes never start another (one hop), with a test. *Today:* an entry's edit records an
   `edited` signal only; `supersedes` exists, and nothing follows on.
-- [ ] **Records can name the calendar entry, or the series, they belong to**; an item on a series sits on its next
-  instance and rolls to the next one when an instance passes with it unsettled. *Today:* no links and no series.
+- [x] **Records can name the calendar entry, or the series, they belong to**; an item on a series sits on its next
+  instance and rolls to the next one when an instance passes with it unsettled. Built (the core's part; the agenda
+  that uses it is the project management pack's, phase P): `series` record, `event.series`, `event` and `series` on an
+  action, a question and a fact, the ops `series.add` and `series.link`, `engine/series.py` and the worker's daily roll.
+  `tests/test_series.py`: `test_series_add_makes_the_series_links_its_entries_and_undo_unlinks_them`,
+  `test_series_link_joins_and_leaves_a_series_and_an_entry_is_in_one_series_at_most`,
+  `test_actions_questions_and_facts_can_name_the_entry_or_series_they_belong_to`,
+  `test_an_item_that_names_only_a_series_sits_on_its_next_instance`,
+  `test_record_set_names_or_clears_the_entry_or_series_of_an_action_a_question_and_a_fact`,
+  `test_next_instance_is_the_first_one_that_has_not_ended_before_today`,
+  `test_an_open_item_on_a_passed_instance_rolls_to_the_next_and_the_move_is_in_the_ledger`,
+  `test_the_worker_rolls_items_once_a_day_and_tells_the_screens`,
+  `test_the_notes_prompt_says_when_to_tie_an_item_to_an_entry_or_a_series` and
+  `test_a_workspace_with_a_series_and_items_on_it_round_trips_through_the_export`.
 - [x] **A follow-up goes to whoever made the claim or owns the thing**; when neither is clear, a question to the person
   about who to ask, never a person known only from a passing mention. Built:
   `test_the_prompt_says_a_follow_up_goes_to_the_claims_maker_or_owner_and_otherwise_asks_who`,
