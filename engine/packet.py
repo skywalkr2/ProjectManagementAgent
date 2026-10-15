@@ -778,7 +778,8 @@ def _calendar_section(store: Store, cfg: Config, today: date) -> str:
             continue
         d = entry.data
         of = f"; series {d['series']}" if d.get("series") else ""
-        lines.append(f"- {entry.id} {d['title']} ({d['start']}{of})")
+        until = f" to {d['end']}" if d.get("end") else ""
+        lines.append(f"- {entry.id} {d['title']} ({d['start']}{until}{of})")
     return "# Calendar entries and series\n" + "\n".join(lines) if lines else ""
 
 

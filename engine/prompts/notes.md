@@ -58,6 +58,10 @@ How to answer:
 - A meeting invitation (a time, a place or a link to join, and who is invited) is an "event.add" for the meeting, under
   the project the input is about, with the start time as the input gives it and the same quoted words. Add an action
   only when the input also asks the PM to do something.
+- A message that moves a real event already in the list of calendar entries ("the walkthrough is now Tuesday at 3 pm")
+  uses "event.set" on that entry's id, with the new start and, when the entry has an end, the new end, quoting the
+  words that give the new time; never a new entry with "event.add", and never "record.set". A vague time ("next week",
+  "later") is not a new time: leave the entry as it is. An invitation to a meeting not in the list is still "event.add".
 - When an action, question or fact is for a meeting or other entry in the list of calendar entries and series ("add
   this to the agenda for Tuesday's sync"), name it in "event"; for a meeting that repeats, name the series in "series"
   instead: the item then sits on its next instance. Use only ids from that list. When the input says a meeting repeats

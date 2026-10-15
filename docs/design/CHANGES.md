@@ -1026,6 +1026,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 79. The assistant moves a calendar entry from an input (2026-10-16)
+
+| Where | Before | Now |
+|---|---|---|
+| Calendar entries (6.7) | No op the assistant may use changed an entry's day or time; only the person's edit started the follow-on run | `event.set` (data tier, evidence required, Undo) changes an entry's `start` and/or `end`, is offered to reading notes, and its save starts the follow-on run. Built: `tests/test_event_set.py`, golden case `moved-meeting-moves-its-entry`. A move a connected calendar's sync writes still starts nothing (a sync writes `snapshot` records with no changeset) |
+
 ## 78. A follow-on run asks; it never changes an action's date (2026-10-16)
 
 | Where | Before | Now |

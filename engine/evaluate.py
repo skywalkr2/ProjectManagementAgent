@@ -675,6 +675,14 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
             and entry.get("person") == e.get("person", entry.get("person"))
             and bool(entry.get("negative")) == bool(e.get("negative", False))
         )
+    if op == "event.set":
+        entry = store.read().get("event", o["op"]["id"])
+        return bool(
+            o["op"]["id"] == e["id"]
+            and entry is not None
+            and ("start" not in e or _same_time(entry.data["start"], e["start"]))
+            and ("end" not in e or _same_time(entry.data.get("end"), e["end"]))
+        )
     if op == "event.add":
         entry = _record(store, o, "event")
         return bool(

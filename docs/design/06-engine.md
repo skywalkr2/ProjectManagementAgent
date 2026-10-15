@@ -554,6 +554,11 @@ How each is recorded (decided 2026-10-15; *being built, L3b*):
   active confirmed glossary entry (wording in `language.messages`) and recording `held_declined`. **Built:**
   `tests/test_next_steps.py`.
 
+`event.set` (data tier, offered to reading notes) moves an entry already in the calendar: a new `start`, a new `end` or
+both, with the input's words as evidence (required), refused alone when the entry doesn't exist or the end would come
+before the start, and undone like any change. A message that moves a real event uses it on the entry's id, never a second
+entry. **Built:** `tests/test_event_set.py`, the golden case `moved-meeting-moves-its-entry`.
+
 `event.add` (data tier, offered to reading notes) adds a calendar entry to the app's own calendar: a title, a start (a
 day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, and
 evidence, which is required. **Calendar entries are for real events only** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): meetings, launches, delivery
@@ -753,9 +758,11 @@ the project management pack (6.24), which builds on these links. From the functi
   `test_an_action_due_between_the_old_and_new_day_gets_a_question_to_its_owner_that_waits_and_undoes`,
   `test_a_moved_entry_that_carried_more_than_a_dated_action_asks_the_person_whether_the_plan_holds`; replay
   `moving-an-entry-asks-about-the-actions-tied-to-it`).
-  *Not built:* the assistant's own move of an entry's day (no op changes an entry's day; the trigger fires on any change
-  to the fields), a correction for an action's notice with no link to carry (it becomes a note), and a move written by a
-  connected calendar's sync.
+  **The assistant's own move of an entry** (**built**): `event.set` changes a calendar entry's `start` and/or `end` from an
+  input (data tier, evidence required, Undo; offered to reading notes, not to the follow-on run), and its save starts the
+  run like the person's edit (`tests/test_event_set.py::test_the_assistants_move_from_an_input_queues_one_follow_on_request_for_the_save`).
+  *Not built:* a correction for an action's notice with no link to carry (it becomes a note), and a move written by a
+  connected calendar's sync (a sync writes `snapshot` records with no changeset; see the roadmap's L7 item).
 - **What applies at once:** changes to the person's own items and the agenda apply with Undo. Anything that already
   reached someone (a question or a notice sent that named the old date) gets a drafted correction to send, not a silent
   edit.

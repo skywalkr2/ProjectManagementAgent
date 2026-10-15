@@ -1,0 +1,40 @@
+id: moved-meeting-moves-its-entry
+title: A message that moves a real event moves its calendar entry, never a new one
+skills: [dates]
+received: '2026-10-14'
+project: PRJ-1
+given:
+- kind: event
+  id: EVT-1
+  fields:
+    title: Launch reading walkthrough
+    start: '2026-11-16T14:00:00+00:00'
+    end: '2026-11-16T15:00:00+00:00'
+    project: PRJ-1
+    trust: trusted
+pasted: 'From: Maya Lindqvist (Corner Lamp Books)
+
+  Subject: Moved: launch reading walkthrough
+
+
+  The launch reading walkthrough has moved to Tuesday, November 17, 3:00 pm to 4:00 pm UTC, still at the shop.
+
+
+  Maya'
+expect:
+- op: event.set
+  id: EVT-1
+  start: '2026-11-17T15:00:00+00:00'
+  end: '2026-11-17T16:00:00+00:00'
+forbid:
+- op: event.add
+- op: record.set
+stub_answer:
+  summary: The walkthrough moved to Nov 17, 3 pm to 4 pm.
+  ops:
+  - op: event.set
+    id: EVT-1
+    start: '2026-11-17T15:00:00+00:00'
+    end: '2026-11-17T16:00:00+00:00'
+    evidence:
+      quote: The launch reading walkthrough has moved to Tuesday, November 17, 3:00 pm to 4:00 pm UTC

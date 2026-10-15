@@ -40,6 +40,7 @@ from engine.ops import (
     AnswerOp,
     ChangesetIn,
     EventAddOp,
+    EventSetOp,
     EvidenceIn,
     FactOp,
     FileAddOp,
@@ -295,6 +296,12 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             refuse(i, "targets", f"calendar entry {op.title!r}: {why}")
         if isinstance(op, EventAddOp) and op.series is not None and view.get("series", op.series) is None:
             refuse(i, "targets", f"there is no series {op.series}")
+        if isinstance(op, EventSetOp):
+            entry = view.get("event", op.id)
+            if entry is None:
+                refuse(i, "targets", f"there is no calendar entry {op.id}")
+            elif (why := entry_problem(op.start or entry.data["start"], op.end or entry.data.get("end"))) is not None:
+                refuse(i, "targets", f"calendar entry {op.id}: {why}")
         if isinstance(op, (FactOp, ActionAddOp, QuestionAddOp)) and (
             why := series_module.item_problem(view, op.event, op.series)
         ):
@@ -1577,6 +1584,11 @@ def _apply_op(
             "trust": trust,
         }
         made("event", tx.create("event", data, w).id)
+    elif isinstance(op, EventSetOp):
+        cur = tx.get("event", op.id)
+        moved = {k: v for k, v in (("start", op.start), ("end", op.end)) if v is not None}
+        tx.update("event", op.id, moved, w, read_version=cur.version)
+        made("event", op.id)
     elif isinstance(op, SeriesAddOp):
         ev = {"source": w.evidence["source"] or source or "note", "quote": op.evidence.quote}
         data = {

@@ -3,6 +3,15 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: A calendar sync reaches the follow-on run through reading; asking for a team waits for the scope resolver
+
+- **Found:** a connected calendar's sync writes its changes as inputs (snapshots), not as calendar entries, and the
+  scope check that would need a person's team is a pure check with no place to ask.
+- **Decided (main session):** no separate sync trigger: reading the synced change moves the app's entry with
+  `event.set`, and that save starts the follow-on run like any move. "Which team is <name> on?" moves to phase E with
+  the scope resolver, which is where a team is needed and where asking has a home.
+- **Impact:** the L7 item is closed; a phase E item; the "Who owes what" item keeps its words part as built.
+
 ## 2026-10-16: A decided action's date is never changed automatically; a moved plan is checked with the person
 
 - **Decided (owner):** "No it should not automatically move - the model should ask the appropriate party if it should

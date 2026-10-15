@@ -1487,16 +1487,27 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   `::test_what_already_reached_someone_gets_a_drafted_correction_that_waits_and_is_not_edited`,
   `::test_a_question_goes_only_where_a_tied_item_reached_or_the_action_or_plan_asks_and_no_action_changes` and
   `tests/test_replays.py::test_every_replay_passes_with_the_stand_in[moving-an-entry-asks-about-the-actions-tied-to-it]`.
-  **Left:** (1) the assistant's own move of a calendar entry from an input: no op the assistant may use changes an
-  entry's day (`record.set` doesn't take `event`; `event.add` makes entries), so only the person's edit of an entry
-  starts the run today; waits for the owner's decision on an `event.set` op (the trigger already fires on any change
-  to those fields); (2) a correction to someone an action told has no link to carry (a question to someone else
+  **Left:** (1) done: the assistant's own move of an entry is `event.set` (next item); (2) a correction to someone an action told has no link to carry (a question to someone else
   needs one), so the run leaves a note instead when the item's project has none; whether a correction is exempt from
   the link rule is the owner's call; (3) a move that a connected calendar's sync makes (not the person, not an input)
   starts nothing.
-- [ ] **The assistant moves an entry from an input** (`event.set`: start or end, data tier, evidence, Undo), which
-  starts the follow-on run; **a calendar sync's move starts it too** (decisions, 2026-10-16). *Today:* only the person's
-  edit of an entry starts it.
+- [x] **The assistant moves an entry from an input** (`event.set`: start or end, data tier, evidence, Undo), which
+  starts the follow-on run; **a calendar sync's move starts it too** (decisions, 2026-10-16). Built (the assistant's
+  move): `event.set` on a calendar entry's `start` and/or `end`, offered to reading notes (not to the follow-on run),
+  with the prompt line and the entry's end in the packet. `tests/test_event_set.py`:
+  `test_event_set_is_a_data_op_that_needs_evidence_and_names_what_moves`,
+  `test_reading_notes_is_offered_event_set_and_the_follow_on_run_is_not`,
+  `test_the_assistant_moves_an_entrys_start_and_end_and_undo_puts_them_back`,
+  `test_a_move_of_the_start_alone_leaves_the_end_and_a_move_that_ends_before_it_starts_is_refused`,
+  `test_a_missing_entry_words_not_in_the_input_and_no_evidence_are_refused`,
+  `test_the_assistants_move_from_an_input_queues_one_follow_on_request_for_the_save`,
+  `test_a_refused_move_changes_nothing_and_queues_nothing`,
+  `test_the_packet_lists_an_entrys_end_with_its_start_so_a_move_can_name_both`,
+  `test_the_notes_prompt_says_a_message_that_moves_an_event_uses_event_set_on_its_entry` and
+  `test_the_golden_case_for_a_moved_meeting_passes_with_its_ideal_answer_and_fails_on_a_second_entry` (golden case
+  `moved-meeting-moves-its-entry`, demo-b, skills `dates`). A connected calendar's move needs no trigger of its own: a sync
+  writes the change as an input (a snapshot), reading it moves the entry with `event.set`, and that save starts the
+  follow-on run (decisions, 2026-10-16).
 - [x] **Records can name the calendar entry, or the series, they belong to**; an item on a series sits on its next
   instance and rolls to the next one when an instance passes with it unsettled. Built (the core's part; the agenda
   that uses it is the project management pack's, phase P): `series` record, `event.series`, `event` and `series` on an
@@ -1542,9 +1553,9 @@ Learning and scope (answers 3 to 7, 14, 22, 23):
   person's own words. Built: `tests/test_proposals.py`:
   `test_search_flags_an_input_whose_proposal_was_discarded_but_not_one_kept_or_set_aside`,
   `test_a_routing_that_matches_a_discarded_proposal_is_refused_unless_it_rests_on_the_persons_words`.
-- [ ] **Who owes what**: a request addressed to the person ("you", "your team", "can you", "please send", their name with a
-  request verb) replaces "we", "us", "our" in `language.owed_words`; a person with no team is asked about once.
-  Built (the words; the question for a person with no team is **not built**, see below): the we-words no longer count,
+- [x] **Who owes what**: a request addressed to the person ("you", "your team", "can you", "please send", their name with a
+  request verb) replaces "we", "us", "our" in `language.owed_words`. Asking once for a person with no team moved to phase
+  E with the scope resolver (decisions, 2026-10-16). Built: the we-words no longer count,
   `language.owed_words` is `you`, `your`, `please send`, `me`, and the person's or their team's name counts only when a
   word of the new `language.request_words` follows it. `tests/test_scope_slice.py`:
   `test_a_quote_that_addresses_the_person_is_one_the_person_owes`,
@@ -2079,6 +2090,9 @@ time, nothing went out without approval, a backup succeeded, and the repeat-corr
 ## Phase E: the rest of version 1
 
 Order by what protects real data first, then by what the packs ask for:
+- [ ] **"Which team is <name> on?" asked once**, with the scope resolver (moved from L7, decisions 2026-10-16): when the
+  resolver needs a team the person on file doesn't have, one question to the person, never repeated for them; the
+  answer sets the team with Undo. *Today:* a person with no team counts as outside the tracked area.
 - [ ] **A rule's check that fails on an output** runs before the change applies: one return to the assistant with the
   rule's guidance, then a hold for the person when the output reaches someone, as lints do (decisions, 2026-10-16).
   *Today:* checks run after the change applies and a failure only counts.

@@ -31,8 +31,9 @@ from zoneinfo import ZoneInfo
 from engine.storage.store import WriteContext
 
 TASK = "follow-on"
-#: The kinds of change whose entries can be a move: a person's edit, the assistant's `record.set` and a new fact.
-MOVE_OPS = ("record.set", "record.edit", "fact")
+#: The kinds of change whose entries can be a move: a person's edit, the assistant's `record.set` and `event.set`, and a
+#: new fact.
+MOVE_OPS = ("record.set", "record.edit", "event.set", "fact")
 #: The dated fields of each record kind whose change is a move.
 DATED = {"event": ("start", "end"), "action": ("due",)}
 

@@ -153,6 +153,47 @@ class EventAddOp(OpModel):
         return canonical_time(text)
 
 
+class EventSetOp(OpModel):
+    """Move a calendar entry that is in the list: a new start, a new end, or both, when the input says that real event
+    now happens at another time ("the walkthrough moved to Tuesday at 3 pm"). Never add a second entry for it. Leave out
+    what doesn't change. A new time as the input states it; a vague time ("next week", "later") is not one. Evidence is
+    required."""
+
+    op: Literal["event.set"]
+    id: Annotated[str, RefTo("event")] = Field(description="The id of the calendar entry that moves.")
+    start: str | None = Field(
+        None,
+        description="The new start, written YYYY-MM-DD, or a date-time with its offset when the input gives a time; "
+        "leave out when the start doesn't change.",
+    )
+    end: str | None = Field(
+        None,
+        description="The new end (the last day or moment), in the same form as start; leave out when the end doesn't "
+        "change.",
+    )
+    evidence: EvidenceIn = Field(description="The exact words from the input that give the new time.")
+
+    @field_validator("start", "end")
+    @classmethod
+    def _readable(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        text = value.strip()
+        if (why := entry_problem(text, None)) is not None:
+            raise ValueError(why)
+        return canonical_time(text)
+
+    @model_validator(mode="after")
+    def _moves_something(self) -> EventSetOp:
+        if self.start is None and self.end is None:
+            raise ValueError("give the new start, the new end or both")
+        return self
+
+    def describe(self) -> str | None:
+        parts = [f"starts {self.start}" if self.start else None, f"ends {self.end}" if self.end else None]
+        return f"Entry {self.id} " + " and ".join(p for p in parts if p)
+
+
 class SeriesAddOp(OpModel):
     """A meeting or check-in that repeats, when the input says so ("every Tuesday"). `events` names existing entries
     that are instances of it. Never add one that is already in the lists. Evidence is required."""
@@ -893,6 +934,7 @@ Op = Annotated[
     NoteOp
     | FactOp
     | EventAddOp
+    | EventSetOp
     | SeriesAddOp
     | SeriesLinkOp
     | RecordSetOp
@@ -945,6 +987,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "note": NoteOp,
     "fact": FactOp,
     "event.add": EventAddOp,
+    "event.set": EventSetOp,
     "series.add": SeriesAddOp,
     "series.link": SeriesLinkOp,
     "record.set": RecordSetOp,
@@ -1038,6 +1081,7 @@ TIERS: dict[str, Tier] = (
 NEEDS_EVIDENCE = {
     "fact",
     "event.add",
+    "event.set",
     "series.add",
     "series.link",
     "action.add",

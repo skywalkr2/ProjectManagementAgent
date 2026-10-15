@@ -1926,6 +1926,19 @@ A date or a range of dates the input gives for something (a delivery window, a d
 | `evidence` | EvidenceIn | required | The exact words from the input that give the date. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
+### `event.set`
+
+Move a calendar entry that is in the list: a new start, a new end, or both, when the input says that real event now happens at another time ("the walkthrough moved to Tuesday at 3 pm"). Never add a second entry for it. Leave out what doesn't change. A new time as the input states it; a vague time ("next week", "later") is not one. Evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the calendar entry that moves. |
+| `start` | str \| None | `None` | The new start, written YYYY-MM-DD, or a date-time with its offset when the input gives a time; leave out when the start doesn't change. |
+| `end` | str \| None | `None` | The new end (the last day or moment), in the same form as start; leave out when the end doesn't change. |
+| `evidence` | EvidenceIn | required | The exact words from the input that give the new time. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
 ### `fact`
 
 Record something the input states as true. Creates a fact record; evidence is required.
