@@ -832,7 +832,7 @@ def cmd_takeover(args: argparse.Namespace) -> int:
 
 def cmd_ai(args: argparse.Namespace) -> int:
     from engine.ai.checked import remember
-    from engine.ai.smoke import lift_pauses, record, smoke_test
+    from engine.ai.smoke import lift_pauses, record, smoke_test, tier_summary
 
     ws = resolve(args.workspace)
     cfg = ws.config()
@@ -849,9 +849,9 @@ def cmd_ai(args: argparse.Namespace) -> int:
     record(ws, results)
     remember(ws, cfg, results)
     lift_pauses(ws, results)
-    failed = [r for r in results if r.main and not r.ok]
-    print("All tiers answered." if not failed else f"{len(failed)} tier(s) can't run; fix ai.yaml and test again.")
-    return 1 if failed else 0
+    lines, every = tier_summary(results)
+    print("\n".join(lines))
+    return 0 if every else 1
 
 
 def cmd_backup(args: argparse.Namespace) -> int:

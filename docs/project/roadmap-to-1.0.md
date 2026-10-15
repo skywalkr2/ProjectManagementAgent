@@ -70,7 +70,8 @@ uv run cockpit evaluate --from workspaces/demo-a -w ~/cockpit-exit --account "<t
 uv run cockpit evaluate --pairs --from workspaces/demo-b -w ~/cockpit-exit --account "<the account used for O2>" --runs 3 --json > ~/after-pairs.json
 uv run cockpit evaluate --pairs --from workspaces/demo-a -w ~/cockpit-exit --account "<the account used for O2>" --runs 3 --json > ~/after-pairs-harder.json
 ```
-- **First:** `ai test` should say ok for every tier; stop there if one fails. Paste the lines exactly as written: a
+- **First:** `ai test` should end with every tier able to run, on its main account or a backup that stands in; stop
+  there if a tier can't run. Paste the lines exactly as written: a
   `<…>` placeholder or a trailing `# note` breaks the whole paste in zsh.
 - **Cost:** about 430 small runs in all on the one account: 81 and 60 for the two sets (27 and 20 cases × 3), and
   about 280 for the pairs (30 pairs and the day-30 scenario, each about three calls, × 3). On a subscription agent it is

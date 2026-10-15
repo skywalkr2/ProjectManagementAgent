@@ -136,6 +136,28 @@ PROBLEMS = {
 }
 
 
+def tier_summary(results: list[SmokeResult]) -> tuple[list[str], bool]:
+    """What the test means for each kind of work, one line per tier whose main account failed, and whether every tier
+    can run: a tier whose main account failed still runs when a backup passed every part of its check."""
+    lines, every = [], True
+    for tier in dict.fromkeys(r.tier for r in results):
+        mine = [r for r in results if r.tier == tier]
+        if all(r.ok for r in mine if r.main):
+            continue
+        backups: dict[str, bool] = {}
+        for r in mine:
+            if not r.main:
+                ref = r.ref or r.account.split(" ", 1)[0]
+                backups[ref] = backups.get(ref, True) and r.ok
+        standing = next((ref for ref, ok in backups.items() if ok), None)
+        if standing is not None:
+            lines.append(f"{tier}: the main account didn't answer; {standing} stands in until it does.")
+        else:
+            every = False
+            lines.append(f"{tier} can't run: no account for it answered. See the lines above, then test again.")
+    return (lines or ["All tiers answered."]), every
+
+
 def _problem(err: AiError) -> str:
     """A failed test call in plain words: what it means, the account's own words for it, and what to do."""
     reason = provider_reason(err.detail)
