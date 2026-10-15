@@ -84,8 +84,9 @@ uv run cockpit evaluate --pairs --from workspaces/demo-a -w ~/cockpit-exit --acc
   account's monthly quota ran out during the pairs, so both pair sets run again at `4b672f6` (a spent plan is now read
   as one, and the pairs check learning rather than wording), on the backup account the owner set for the rest of the
   month (owner, 2026-10-15: the main account first, a low-cost API model as its checked backup); the report names it.
-  The owner's `cockpit-after` copy now follows the branch (at `fd30934`, whose engine, prompts and cases are those of
-  `4b672f6`), and the two pair commands above run with `--account` set to the backup's name as `ai test` shows it.
+  The owner's `cockpit-after` copy now follows the branch, and the two pair commands above run there with `--account` set
+  to the backup's name as `ai test` shows it, after the fix that shows the `"op"` field in the op reference (the backup's
+  account check failed without it; decisions, 2026-10-15).
 - **Keep the computer awake:** start each command with `caffeinate -i` on a Mac. A run frozen by sleep can take many
   minutes to recover, since each call waits up to 90 seconds before giving up.
 - **Then:** send the four files (in your home folder) to the session. It checks them for account names or addresses, writes the comparison

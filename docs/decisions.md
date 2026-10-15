@@ -3,6 +3,16 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The op reference shows the "op" field every op carries
+
+- **Found (owner's account check of a low-cost backup model):** the learning round-trip failed with "op 0 has no "op"
+  field". Only the notes prompt said that each op names itself in an `"op"` field; the learning, reply, ask and check
+  prompts and the op reference never did, so a model that didn't guess the shape failed the check, and in real runs
+  needed a fix round.
+- **Decided:** the op reference opens with the shape, with an example from its own list, so every task kind (core and
+  plugin) shows it; the check's prompt shows it in its example. Test: `tests/test_op_reference.py`.
+- **Impact:** the two pair sets of O3 run at this commit; the reference's first line changed once for every packet.
+
 ## 2026-10-15: Adding an AI account from Settings stays in Settings
 
 - **Decided (owner):** "Add an account" in Settings opens only the AI account form, in place; it never sends the person

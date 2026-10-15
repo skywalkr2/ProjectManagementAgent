@@ -1101,11 +1101,17 @@ def _shape(annotation: Any, depth: int = 0) -> str | None:
 
 def reference_for(op_names: list[str], registry: dict | None = None, invariants: dict | None = None) -> str:
     """A readable op reference for the prompt: each op, what it's for and its fields, with the one-line constraint of
-    each invariant that applies to it under it. Constraints that apply to every op follow the list once."""
+    each invariant that applies to it under it. Constraints that apply to every op follow the list once. It opens with
+    the shape every op takes, since the reference is all a model sees of it and no prompt may be relied on to say so."""
     from engine import invariants as shipped
 
     known = invariants if invariants is not None else shipped.load()
     lines = []
+    if op_names:
+        lines.append(
+            'Each op is one JSON object: an "op" field naming it, beside its fields, for example '
+            f'{{"op": "{op_names[0]}", ...}}.'
+        )
     for name in op_names:
         model = (registry or OP_MODELS)[name]
         fields = []
