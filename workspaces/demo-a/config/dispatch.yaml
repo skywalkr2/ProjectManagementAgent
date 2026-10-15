@@ -31,6 +31,9 @@ knowledge:
   learn: true
   learn_every_minutes: 30
   learn_input_chars: 6000
+  follow_on: true
+  follow_on_max_tied: 20
+  follow_on_match: 0.67
   check_on_switch: true
   learn_later_inputs: 5
   new_terms_per_input: 3

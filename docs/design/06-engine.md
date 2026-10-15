@@ -690,8 +690,8 @@ is per field across groups but all or nothing within a group:
 a system op, or otherwise needs a decision. Everything else is filed quietly (still findable). The change it came from closes as
 "no change needed" automatically, so the PM never clicks "Looks good" on nothing.
 
-**Follow-on changes** (functional designer's lessons from running, 2026-10-15; roadmap L7). The links and the series
-below are **built**; the one request on a move is *not yet built*. When the
+**Follow-on changes** (functional designer's lessons from running, 2026-10-15; roadmap L7). The links, the series and the
+one request on a move are **built** (what is left is listed at the end of this part). When the
 person moves or retitles a dated record (a calendar entry's day or time, or a new day typed in its notes), or a fact is
 replaced, one save makes **one** request to the assistant listing what changed, never one per field. The request asks it
 to find what is tied to the record: records that name it or its old date, open actions linked to it or due before its
@@ -723,6 +723,26 @@ the project management pack (6.24), which builds on these links. From the functi
   entries the person or an input adds, so the series needs no recurrence rule.
 - **Who starts it:** the assistant's own move from an input ("Thursday's sync moves to Monday") starts the same run as the
   person's. The follow-on run's own changes never start another: one hop, no cascades.
+- **The run** (**built**, `engine/follow_on.py`; task kind `follow-on`, prompt `follow-on.md`, playbook `follow-on`): a save
+  that changes a calendar entry's `start` or `end`, moves an action's `due` from one day to another, or adds a fact that
+  `supersedes` another queues one request in the same transaction (`Store.transaction`, like learning), whatever the
+  number of records or fields in the save; the request's `follows` names the change, and what moved is read back from
+  the change's ledger entries. An undo, the series roll, a first due day, a time that stays on its day and a save the
+  follow-on run's own request made queue nothing; `dispatch.knowledge.follow_on` turns it off. The run reads the moved
+  records before and after and the records tied to them, **found by code**: those that name the entry or its series,
+  then open actions and questions on the same project whose words give the old day (`language.date_patterns`) or share
+  `dispatch.knowledge.follow_on_match` of a replaced fact's words, at most `follow_on_max_tied`; each is shown as it is
+  now with why it is tied and the people it already reached (those an action's notice told or a chase followed up, the
+  person a sent question went to). It gets the knowledge section like every task kind and logs it. It may only
+  `record.set` the day or words of a tied action no one was told about (applied, with Undo), `question.add` a correction
+  for a person a tied item already reached (open, so it waits for the person; nothing is sent) and `note`; the applier's
+  `follow-on-reach` check refuses anything else, and the packet marks every record as outside content. A request whose
+  move was undone or changed again before it runs is closed without a call
+  (`tests/test_follow_on.py`, listed in the roadmap's L7 item; replay `moving-an-entry-moves-the-action-tied-to-it`).
+  *Not built:* the assistant's own move of an entry's day (no op changes an entry's day; the trigger fires on any change
+  to the fields), the tied candidates "due before the new day and settled there" and "said to be covered there", a
+  correction for an action's notice with no link to carry (it becomes a note), and a move written by a connected
+  calendar's sync.
 - **What applies at once:** changes to the person's own items and the agenda apply with Undo. Anything that already
   reached someone (a question or a notice sent that named the old date) gets a drafted correction to send, not a silent
   edit.

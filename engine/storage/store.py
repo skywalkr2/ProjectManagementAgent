@@ -138,10 +138,15 @@ class Store:
             try:
                 yield tx
                 cfg = getattr(getattr(self, "plugins", None), "cfg", None)
-                if tx.person_edits and cfg is not None:
-                    from engine import learn
+                if cfg is not None:
+                    if tx.person_edits:
+                        from engine import learn
 
-                    learn.record_edits(tx, cfg, self.clock())
+                        learn.record_edits(tx, cfg, self.clock())
+                    if tx.pending:
+                        from engine import follow_on
+
+                        follow_on.queue(tx, cfg, self.clock())
             except BaseException:
                 self._conn.execute("ROLLBACK")
                 raise
@@ -296,6 +301,11 @@ class Tx:
             sql += " WHERE kind=?" + (" AND record_id=?" if record_id else "")
             args = [kind] + ([record_id] if record_id else [])
         rows = self._c.execute(sql + " ORDER BY seq", args).fetchall()
+        return [_ledger_row(r) for r in rows]
+
+    def changes_of(self, changeset: str) -> list[dict[str, Any]]:
+        """The ledger entries a change wrote, oldest first."""
+        rows = self._c.execute("SELECT * FROM ledger WHERE changeset=? ORDER BY seq", (changeset,)).fetchall()
         return [_ledger_row(r) for r in rows]
 
     def creations(self, kind: str) -> dict[str, tuple[str | None, str | None]]:

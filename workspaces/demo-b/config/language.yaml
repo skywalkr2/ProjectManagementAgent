@@ -7,6 +7,8 @@ rule_report_phrases: [from now on, going forward, from here on, in future, shoul
 new_term_patterns: ['\b[A-Z]{2,}[0-9]*\b', '\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b']
 # Everyday abbreviations that match those patterns and are never suggested.
 new_term_ignore: [OK, FYI, ASAP, TBD, TBC, EOD, ETA, AM, PM, RE, FW, CC, BCC, NB, PS, URGENT, NOTE, UPDATE, REMINDER]
+# How a day is written in running text ({iso}, {day}, {month}, {year} stand for the day looked for): records whose words match a moved date's old day are tied to the move.
+date_patterns: ['{iso}', '\b{day}(?:st|nd|rd|th)?\s+(?:of\s+)?{month}\b', '\b{month}\.?\s+{day}(?:st|nd|rd|th)?\b', '\bthe\s+{day}(?:st|nd|rd|th)\b']
 never_shown: []
 # The words that mean the person themselves.
 self_words: [me, myself, I]

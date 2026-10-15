@@ -22,6 +22,7 @@ REAL_MISSES = (
     "moved-decision-stays-a-decision",
     "already-asked-files-the-question-as-sent",
     "a-moved-date-sent-back-leaves-no-calendar-entry",
+    "moving-an-entry-moves-the-action-tied-to-it",
 )
 
 
@@ -128,6 +129,36 @@ def test_a_mark_as_asked_that_changes_nothing_fails(monkeypatch):
     monkeypatch.setattr(pairs, "apply_as_person", lambda *a, **k: "CS-none")
     result = run(DEMO_A, "already-asked-files-the-question-as-sent")
     assert not result.passed and any("question(" in m for m in result.missing)
+
+
+def test_a_move_that_queues_no_follow_on_run_fails(monkeypatch):
+    from engine import follow_on
+
+    monkeypatch.setattr(follow_on, "queue", lambda *a, **k: None)
+    result = run(DEMO_A, "moving-an-entry-moves-the-action-tied-to-it")
+    assert not result.passed and any("0 follow-on runs" in p for p in problems(result))
+
+
+def test_a_follow_on_run_that_brings_nothing_in_line_fails_and_so_does_one_whose_change_cannot_be_undone(monkeypatch):
+    case = "moving-an-entry-moves-the-action-tied-to-it"
+    nothing = edited(monkeypatch, DEMO_B, case, lambda r: r["ideal"]["follow_on"].update(ops=[]))
+    assert not nothing.passed and any(m.startswith("action(") for m in nothing.missing)
+    monkeypatch.undo()
+    from engine import applier
+
+    monkeypatch.setattr(applier, "undo", lambda *a, **k: None)
+    kept = run(DEMO_B, case)
+    assert not kept.passed and any("left the end state in place" in p for p in problems(kept))
+
+
+def test_a_replay_that_expects_a_follow_on_run_carries_its_answer_and_an_edit_names_what_it_changes():
+    with pytest.raises(ValueError, match="an edit names the record"):
+        pairs._check_correction("replay x action", {"kind": "changed", "id": "EVT-1"})
+    replay = next(r for r in load_replays(DEMO_A) if r["id"] == "moving-an-entry-moves-the-action-tied-to-it")
+    assert replay["expect_follow_on"] is True
+    replay["ideal"] = {}
+    with pytest.raises(ValueError, match="carries ideal.follow_on"):
+        replays._check_replay(DEMO_A, replay)
 
 
 # ---- how the end state is scored -----------------------------------------------------------------------------------

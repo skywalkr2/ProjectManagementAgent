@@ -124,6 +124,12 @@ def sort_mail(request: str) -> dict[str, Any]:
     return {"answers": [{"id": name, "answer": "work"} for name in re.findall(r'"id": "(m\d+)"', request)]}
 
 
+def follow_on() -> dict[str, Any]:
+    """A follow-on run's answer: nothing is changed, because a plain rule can't judge what a moved date means for the
+    records tied to it."""
+    return {"summary": "Nothing tied needed a change.", "ops": []}
+
+
 def learn(request: str) -> dict[str, Any]:
     """A learning run's answer: the one lesson the account check's correction teaches, and nothing for any other."""
     if learning_check.CHECK_REQUEST not in request:

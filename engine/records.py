@@ -936,7 +936,9 @@ class Request(Record):
         "cause the screen can offer an action for; for one queued, the time it is waiting for.",
     )
     follows: str | None = Field(
-        None, description="The change (a changeset id) whose event a plugin answered with this work, if any."
+        None,
+        description="The change (a changeset id) whose event a plugin answered with this work, or whose moved date or "
+        "replaced fact a follow-on run answers, if any.",
     )
     sensitivity: Literal["open", "internal", "restricted"] | None = Field(
         None, description="How sensitive the person said what they handed in is; it only ever raises the level."

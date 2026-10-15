@@ -1446,8 +1446,43 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   (records naming the entry or its old date, open actions linked to it or due before the new date that are settled there,
   anything said to be covered there) and brings each in line. Changes to the person's own items apply with Undo;
   anything that already reached someone gets a drafted correction to send. The assistant's own move from an input
-  starts it too; its own changes never start another (one hop), with a test. *Today:* an entry's edit records an
-  `edited` signal only; `supersedes` exists, and nothing follows on.
+  starts it too; its own changes never start another (one hop), with a test. **Built (the core's part, not ticked:
+  see what is left):** the task kind `follow-on` (`engine/follow_on.py`, prompt `engine/prompts/follow-on.md`, guidance in
+  the playbook, the knowledge section and log like every kind) and its request, queued in the transaction of the save that
+  moved a calendar entry's `start` or `end`, an action's `due` (from a day to another) or added a fact that `supersedes`
+  one, by the person's edit or the assistant's change from an input: one request per save, `follows` naming the change,
+  what moved read back from its ledger entries; a change the follow-on run itself applies queues none (one hop). The
+  tied records are found by code (`tied_records`): items that name the entry or its series, then open items on the same
+  project whose words give the old day (the configured `language.date_patterns`) or repeat the replaced fact
+  (`dispatch.knowledge.follow_on_match`), at most `follow_on_max_tied`, each shown as it is now with why it is tied and
+  who it already reached. The answer may only `record.set` the day or words of a tied action nobody was told about (with
+  Undo), draft a `question.add` correction for someone a tied item already reached (it waits; nothing is sent) and
+  `note`; the applier refuses the rest (`follow-on-reach`). A move undone or changed again before the run closes the
+  request without a call. One replay in each demo workspace, `moving-an-entry-moves-the-action-tied-to-it`, with Undo.
+  Tests: `tests/test_follow_on.py::test_the_persons_edit_of_an_entrys_day_queues_one_request_naming_the_change`,
+  `::test_one_save_that_moves_several_records_queues_one_request_listing_them_all`,
+  `::test_the_assistants_move_of_an_actions_due_day_from_an_input_queues_one_request`,
+  `::test_a_replaced_fact_queues_one_request_whoever_replaces_it`,
+  `::test_a_save_that_moves_no_date_queues_nothing`, `::test_an_undo_of_a_move_and_the_series_roll_are_not_moves`,
+  `::test_the_follow_on_runs_own_changes_start_no_other_run`,
+  `::test_a_move_applied_for_a_follow_on_request_starts_none_whatever_applies_it`,
+  `::test_items_naming_the_entry_or_its_series_are_tied_first_then_those_citing_the_old_day`,
+  `::test_a_replaced_fact_ties_items_that_repeat_it_and_ignores_the_fact_itself_and_the_replaced_ones`,
+  `::test_the_packet_shows_the_move_the_tied_records_as_they_are_now_who_they_reached_and_the_knowledge`,
+  `::test_a_run_writes_its_knowledge_log_and_the_kind_declares_the_ops_it_may_use`,
+  `::test_a_change_to_the_persons_own_action_applies_with_undo`,
+  `::test_what_already_reached_someone_gets_a_drafted_correction_that_waits_and_is_not_edited`,
+  `::test_a_correction_goes_only_to_someone_a_tied_item_reached_and_only_tied_actions_change` and
+  `tests/test_replays.py::test_every_replay_passes_with_the_stand_in[moving-an-entry-moves-the-action-tied-to-it]`.
+  **Left:** (1) the assistant's own move of a calendar entry from an input: no op the assistant may use changes an
+  entry's day (`record.set` doesn't take `event`; `event.add` makes entries), so only the person's edit of an entry
+  starts the run today; waits for the owner's decision on an `event.set` op (the trigger already fires on any change
+  to those fields); (2) candidates the roadmap names that code does not find: open actions due before the new day "that
+  are settled there" and records "said to be covered there" (the model is not shown them; deciding them needs words
+  the design doesn't give); (3) a correction to someone an action told has no link to carry (a question to someone else
+  needs one), so the run leaves a note instead when the item's project has none; whether a correction is exempt from
+  the link rule is the owner's call; (4) a move that a connected calendar's sync makes (not the person, not an input)
+  starts nothing.
 - [x] **Records can name the calendar entry, or the series, they belong to**; an item on a series sits on its next
   instance and rolls to the next one when an instance passes with it unsettled. Built (the core's part; the agenda
   that uses it is the project management pack's, phase P): `series` record, `event.series`, `event` and `series` on an

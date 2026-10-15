@@ -277,7 +277,8 @@ def test_a_note_with_a_link_and_a_new_date_comes_back_as_a_fact_and_a_moved_date
     on = c["typed_on"]
     set_responder(lambda task: json.dumps(c["stub_answer"]))
     r = client.post(f"{base}/followups/{on['person']}/actions/{on['id']}/finished", json={"note": c["note"]})
-    assert worker.run_pending() == 1
+    assert worker.run_pending() == 2  # the note's run, then the follow-on run its moved date queued (design 6.7)
+    assert len([q for q in store.read().list("request") if q.data["task"] == "follow-on"]) == 1
     request = store.read().get("request", r.json()["request"]).data
     changeset = store.read().get("changeset", request["changeset"]).data
     assert changeset["trust"] == "trusted" and [o["status"] for o in changeset["ops"]] == ["applied", "applied"]

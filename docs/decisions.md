@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: The follow-on run (phase L7)
+
+- **Decided (main session, for review):** one request per save, queued in the save's own transaction like learning, for a
+  moved entry day, an action's moved due day or a replaced fact; the tied records are found by code and the run may only
+  change the day or words of an action nobody was told about, draft a correction for someone already reached, or note.
+- **Impact:** four new config keys, `dispatch.knowledge.follow_on`,
+  `follow_on_max_tied`, `follow_on_match` and `language.date_patterns`, one task kind `follow-on` and one refusal check,
+  all inside L7's follow-on item (design 6.7, 4.25; CHANGES section 77); no scope moves. Open for the owner: an op that
+  moves a calendar entry (so the assistant's own move starts the run), and whether a correction about an action's
+  notice is exempt from the link a question to someone else needs.
+
+
 ## 2026-10-16: A series is a record of its own, and its instances are the entries that name it (phase L7)
 
 - **Decided (main session, for review):** a series holds a title, a project and `repeats`, the person's words for how

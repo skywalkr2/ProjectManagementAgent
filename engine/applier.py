@@ -148,6 +148,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
     problems += _learning_reach(cs, ctx)
+    problems += _follow_on_reach(cs, ctx)
     view = ctx.store.read()
     plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
@@ -1243,6 +1244,25 @@ def _learning_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:
         Problem("learning-reach", "refuse", i, why)
         for i, op in enumerate(cs.ops)
         if (why := learn.reach_misses_correction(view, request.data, op)) is not None
+    ]
+
+
+def _follow_on_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A follow-on answer's op that reaches past what it may change is refused, so it gets a fix round: a change to a
+    record that isn't tied to the move, to anything but an action's day or words, or to an action someone was already
+    told about, and a correction for someone no tied item reached."""
+    from engine import follow_on
+
+    if origin_of(ctx).get("task") != follow_on.TASK:
+        return []
+    view = ctx.store.read()
+    request = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    if request is None:
+        return []
+    return [
+        Problem("follow-on-reach", "refuse", i, why)
+        for i, op in enumerate(cs.ops)
+        if (why := follow_on.reach_problem(view, ctx.cfg, request.data, op, ctx.people)) is not None
     ]
 
 

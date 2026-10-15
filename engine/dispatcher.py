@@ -11,7 +11,7 @@ from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
 
-from engine import learn, new_terms, quality
+from engine import follow_on, learn, new_terms, quality
 from engine import search as workspace_search
 from engine.ai.pauses import when_text
 from engine.ai.router import (
@@ -130,6 +130,9 @@ def process(
         return None  # a try is only run while its request is open: not applied, finished or replaced
     if learn.is_learning(req.data["task"]) and (why := learn.skip_reason(store, cfg, req.data)) is not None:
         learn.close(store, request_id, why)  # nothing to learn from any more: no packet, no estimate, no call
+        return None
+    if req.data["task"] == follow_on.TASK and (why := follow_on.skip_reason(store, cfg, req.data)) is not None:
+        follow_on.close(store, request_id, why)  # the move is gone or stands no more: no packet, no estimate, no call
         return None
     if req.data.get("approval") == "required":
         from engine.stages import wording
@@ -365,6 +368,8 @@ def process(
     _set(store, request_id, state="review", waiting=None, changeset=cs_id)
     if learn.is_learning(kind.name):
         learn.finish(store, request_id, cs_id)
+    if kind.name == follow_on.TASK:
+        follow_on.finish(store, request_id, cs_id)
     if kind.name == "notes" and learns:
         new_terms.scan(store, cfg, request_id, f"{packet.raw_input}\n{packet.note}", now, trust=trust)
     if _applied_something(store, cs_id):

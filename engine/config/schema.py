@@ -893,6 +893,28 @@ class KnowledgeSettings(ConfigModel):
         description="The most characters of an earlier input that the assistant is shown when it learns from a "
         "correction. Longer inputs are cut and say so.",
     )
+    follow_on: bool = Field(
+        True,
+        description="Whether a save that moves a dated record (a calendar entry's day or time, an action's due day) or "
+        "replaces a fact makes one request to the assistant to bring what is tied to it in line. Changes to your own "
+        "items apply with Undo; anything someone was already sent gets a drafted correction that waits for you. Off: "
+        "nothing follows a move.",
+    )
+    follow_on_max_tied: int = Field(
+        20,
+        ge=1,
+        le=200,
+        description="The most records tied to a moved date or a replaced fact that one follow-on request shows the "
+        "assistant: those that name the entry first, then those whose words give the old day or repeat the replaced "
+        "fact.",
+    )
+    follow_on_match: float = Field(
+        0.67,
+        gt=0,
+        le=1,
+        description="How much of a replaced fact's words another item on the same project must share for it to count "
+        "as repeating the fact, compared word by word with plurals folded. 1 means every word.",
+    )
     check_on_switch: bool = Field(
         True,
         description="Offer to check the assistant's work on the new choice, with its cost shown first, whenever you "
@@ -1221,6 +1243,14 @@ DEFAULT_VERSION_PATTERNS = [
     r"\b\d{1,3}\.\d{1,3}\.\d{1,3}(?:\.\d{1,5})?\b",
     r"(?i)\b(?:version|ver\.?|release|build)\s+\d+(?:\.\d+)*\b",
 ]
+#: How a day is written in running text, as patterns with {iso}, {day}, {month} (the month's full or short name) and
+#: {year} filled in for the day being looked for.
+DEFAULT_DATE_PATTERNS = [
+    r"{iso}",
+    r"\b{day}(?:st|nd|rd|th)?\s+(?:of\s+)?{month}\b",
+    r"\b{month}\.?\s+{day}(?:st|nd|rd|th)?\b",
+    r"\bthe\s+{day}(?:st|nd|rd|th)\b",
+]
 DEFAULT_FINDINGS_WORDS = [
     *("found", "finding", "findings", "discovered", "discrepancy", "discrepancies"),
     *("inconsistency", "inconsistencies", "mismatch", "turns out"),
@@ -1323,6 +1353,13 @@ class LanguageFile(FileModel):
         "changed or when. A version that is part of a name the workspace knows (a glossary term, a project, an "
         "organization or a team) passes.",
     )
+    date_patterns: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_DATE_PATTERNS),
+        description="Patterns (regular expressions) for how a day is written in running text, with {iso} (2026-10-22), "
+        "{day}, {month} (the month's full or short name) and {year} standing for the day being looked for. When a "
+        "date moves, records on the same project whose words match the old day are brought to the assistant as "
+        "tied to it. Case is ignored.",
+    )
     findings_words: list[str] = Field(
         default_factory=lambda: list(DEFAULT_FINDINGS_WORDS),
         description="Words that show a project's summary holds findings instead of its status (a discrepancy found, "
@@ -1357,6 +1394,19 @@ class LanguageFile(FileModel):
                 re.compile(pattern)
             except re.error as exc:
                 raise ValueError(f"{pattern!r} is not a regular expression: {exc}") from exc
+        return value
+
+    @field_validator("date_patterns")
+    @classmethod
+    def _date_patterns_compile(cls, value: list[str]) -> list[str]:
+        for pattern in value:
+            filled = pattern
+            for name, sample in (("iso", "2026-01-02"), ("day", "2"), ("month", "January"), ("year", "2026")):
+                filled = filled.replace("{" + name + "}", sample)
+            try:
+                re.compile(filled)
+            except re.error as exc:
+                raise ValueError(f"{pattern!r} is not a date pattern: {exc}") from exc
         return value
 
 

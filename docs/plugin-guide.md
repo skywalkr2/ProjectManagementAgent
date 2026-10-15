@@ -1266,7 +1266,7 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `cause.tier` | str \| None | `None` | For paused: the tier whose work waits. |
 | `cause.until` | datetime.datetime \| None | `None` | For paused, retry and offline: when the request runs again by itself. |
 | `cause.since` | datetime.datetime \| None | `None` | For offline: when the request first found no network. |
-| `follows` | str \| None | `None` | The change (a changeset id) whose event a plugin answered with this work, if any. |
+| `follows` | str \| None | `None` | The change (a changeset id) whose event a plugin answered with this work, or whose moved date or replaced fact a follow-on run answers, if any. |
 | `sensitivity` | Optional[Literal['open', 'internal', 'restricted']] | `None` | How sensitive the person said what they handed in is; it only ever raises the level. |
 | `part` | dict[str, Any] \| None | `None` | The part of a long text the work is about: {first, last} paragraphs (by number) an anchored draft revises or other work reads, or {after} a draft adds new text after (0: at the start; "end": at the end); with the {base} version number they refer to. |
 | `project` | str \| None | `None` | The project the person said a hand-in is about, if they did. |

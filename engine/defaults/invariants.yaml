@@ -161,6 +161,13 @@ invariants:
       What is learned from a correction must reach the work that was corrected. Leave applies_to.task_kinds empty
       unless it holds for some kinds of work and not others, and when you name any, include the one the request says
       was corrected.
+  follow-on-reach:
+    ops: [record.set, question.add]
+    line: A run that follows a moved date changes only the day or words of a tied action nobody was told about, and drafts corrections only for people a tied item already reached.
+    seed: >-
+      When a date moves or a fact is replaced, change only an action listed as tied to it, only its due day or its
+      words, and never one that already reached someone. For anything that reached someone, draft a short question to
+      that person saying what changed, and never edit it behind their back.
   rule-not-report:
     ops: [report.draft]
     line: A report to the maintainers that is really a standing rule for the assistant is refused; propose it as a rule.

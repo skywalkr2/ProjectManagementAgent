@@ -797,6 +797,9 @@ knowledge:
   search_results: 20           # results per search
   learn: on                    # on or off; corrections with the person's words are learned from at once either way when on
   learn_every_minutes: 30      # how often silent corrections (undo, edited follow-up, pulled back) are learned from
+  follow_on: true              # a moved date or a replaced fact makes one request that brings tied records in line (6.7)
+  follow_on_max_tied: 20       # the most tied records one such request shows the assistant
+  follow_on_match: 0.67        # how much of a replaced fact's words another item must share to count as repeating it
   proposals_expire_days: 14    # unreviewed proposals from inputs expire after this, counted on the next day's card
   unused_days: 60              # an active entry that matched nothing for this long is offered for retirement
   check_on_switch: true        # offer the learning fixture pairs, with their cost, when a tier's account or model changes
@@ -804,6 +807,10 @@ knowledge:
   discards_hold_days: 90       # a proposal close to one the person discarded this recently is not shown again
   min_corrections_per_week: 10 # a task kind's week counts in the learning rates only with at least this many corrections
 ```
+
+`language.date_patterns` (4.x, `config/language.yaml`) lists how a day is written in running text, with `{iso}`, `{day}`,
+`{month}` and `{year}` standing for the day looked for; the follow-on run uses it to find records that give a moved
+entry's old day. Its own task kind, `follow-on`, is set in `ai.yaml` like any other.
 
 Learning has two task kinds, so their tiers and budgets are set in `ai.yaml` like any other (4.8). `learn-correction` writes
 lessons and rules and defaults to the stronger tier. Learning from inputs is part of an input's own run (reading notes), so it uses that run's tier.

@@ -44,6 +44,9 @@ NOTES_ONLY = frozenset({"project.add", "project.role", "person.contact"})
 ASK_OPS = ("answer", "setting.propose", "report.draft")
 #: What learning from a correction may propose (design 6.22): one entry to keep, or a change to a lesson that should
 #: have caught the mistake. None of these depends on the account that runs it.
+#: What a follow-on run may do (engine/follow_on.py): change an action's day or words, draft a correction for someone an
+#: item already reached, and leave a note.
+FOLLOW_ON_OPS = ("record.set", "question.add", "note")
 LEARN_OPS = ("lesson.add", "lesson.update", "glossary.add", "routing.add", "style.add", "rule.add")
 
 
@@ -136,6 +139,16 @@ TASKS: dict[str, TaskKind] = {
         label="Learning from a correction",
         defaults={"tier": "deep", "max_output": 2000, "expected_output": 400},
         max_ops=1,
+    ),
+    # One run when a dated record moves or a fact is replaced (design 6.7, follow-on changes): it brings the records
+    # tied to the move in line and drafts a correction for anyone already reached (engine/follow_on.py).
+    "follow-on": TaskKind(
+        name="follow-on",
+        ops=FOLLOW_ON_OPS,
+        prompt="follow-on",
+        playbook="follow-on",
+        label="Bringing tied items in line",
+        defaults={"max_output": 3000, "expected_output": 500},
     ),
 }
 

@@ -21,10 +21,11 @@ A pair is a file in a workspace's `pairs/` folder. It runs in a fresh copy of th
       then: [{received, <input keys>, answer: {...}, label}]    # more inputs after it, with fixed answers
       correction:             # what the person does, through the same code the screens use
         kind: sent_back | undone | answered | moved | dropped | picked_owner | not_a_project | part_of |
-              new_person | set_aside | asked
+              new_person | set_aside | asked | changed
         note: ...             # the person's words; of: <label> (default: the first input's change)
-        # moved/picked_owner/answered/dropped/asked name a record: id or @action, @question, @event, @fact,
-        # @held_question (the first one the input's change made); person / into / form / as the kind needs
+        # moved/picked_owner/answered/dropped/asked/changed name a record: id or @action, @question, @event, @fact,
+        # @held_question (the first one the input's change made); person / into / form / as the kind needs;
+        # changed also gives `fields`, the person's own new values for it (a calendar entry's day, an action's due)
       expect_proposal: none | [{op, text_has, person, team, topic_has, negative, term, audience, origin, trust,
                                 projects, scope, optional}]
                               # a `text_has` / `topic_has` word with `|` is met by any one of its alternatives
@@ -67,7 +68,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from engine import knowledge, learn
+from engine import follow_on, knowledge, learn
 from engine.ai.adapters import make_adapter
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
@@ -122,6 +123,7 @@ CORRECTIONS = (
     "new_person",
     "set_aside",
     "asked",
+    "changed",
 )
 #: The corrections that act on an earlier change, so they need one to exist.
 CHANGE_CORRECTIONS = frozenset({"sent_back", "undone", "not_a_project", "part_of", "set_aside"})
@@ -207,6 +209,8 @@ def _check_scoring(where: str, spec: dict[str, Any]) -> None:
 def _check_correction(where: str, spec: Any) -> None:
     if not isinstance(spec, dict) or spec.get("kind") not in CORRECTIONS:
         raise ValueError(f"{where}: a correction is one of {', '.join(CORRECTIONS)}")
+    if spec["kind"] == "changed" and not (spec.get("id") and isinstance(spec.get("fields"), dict) and spec["fields"]):
+        raise ValueError(f"{where}: an edit names the record (id) and the new values (fields)")
 
 
 def _fixed_answer(first: Mapping[str, Any]) -> Any:
@@ -488,6 +492,19 @@ class _Play:
             elif kind == "new_person":
                 form = NewPersonForm(**spec["form"])
                 add_new_person(self.store, cfg, self.ws, ref("id"), form, now=when)
+            elif kind == "changed":
+                record_id = ref("id")
+                record_kind = learn.kind_of_id(REGISTRY, record_id)
+                found = self.store.read().get(record_kind, record_id) if record_kind else None
+                if found is None:
+                    raise _Stop(f"there is no record {record_id} to edit")
+                op = {
+                    "op": "record.edit",
+                    "record": {"kind": record_kind, "id": record_id},
+                    "fields": spec["fields"],
+                    "read_version": found.version,
+                }
+                apply_as_person(self.store, cfg, [op], "Changed on screen")
             elif kind == "set_aside":
                 request = self.store.read().get("changeset", cs).data["request"]
                 self._set_aside(request)
@@ -510,6 +527,19 @@ class _Play:
                 continue
             self.process(request.id, answer, live=True)
             ran.append(request.id)
+        return ran
+
+    def follow_ons(self) -> set[str]:
+        """The ids of the follow-on requests there are."""
+        return {r.id for r in self.store.read().list("request") if r.data["task"] == follow_on.TASK}
+
+    def follow_on_from(self, before: set[str], answer: Mapping[str, Any] | None) -> list[str]:
+        """Let the assistant run each follow-on request that was queued since `before`, as the worker does. Returns
+        the requests run."""
+        ran = []
+        for request_id in sorted(self.follow_ons() - before):
+            self.process(request_id, answer, live=True)
+            ran.append(request_id)
         return ran
 
     def entries(self) -> dict[str, Any]:

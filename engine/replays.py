@@ -13,6 +13,8 @@ A replay is a file in a workspace's `replays/` folder. It runs in a fresh copy o
     action:                   # what the person does, through the code the screens use: the same keys as a pair's
       kind: ...               # `correction` (engine/pairs.py)
     expect_learning: true | false   # true: the action must queue a learning run; false: none may be queued
+    expect_follow_on: true | false  # true: the action must queue one follow-on run (design 6.7); false: none
+    expect_undo: true               # with a follow-on run: undoing its change takes back the expected end state
     expect_records: [{kind, id, where: {field: value}, text_has: [words], count}]
                               # the end state: some record of the kind has each field as given (and the words in its
                               # text, title, term, meaning or note); `count` is how many (default: at least one)
@@ -20,9 +22,11 @@ A replay is a file in a workspace's `replays/` folder. It runs in a fresh copy o
     expect_signals: [kind]    # each kind of signal the action must have recorded
     ideal:
       learn: {...}            # the learning run's answer, for the stand-in
+      follow_on: {...}        # the follow-on run's answer, for the stand-in
 
-`cockpit evaluate --replays` runs each replay N times. The setup inputs are fixed answers; a learning run the action
-queues is the account's (with the stand-in, it answers from `ideal`). The report is the same as the golden set's.
+`cockpit evaluate --replays` runs each replay N times. The setup inputs are fixed answers; a learning or follow-on run
+the action queues is the account's (with the stand-in, it answers from `ideal`). The report is the same as the golden
+set's.
 """
 
 from __future__ import annotations
@@ -100,6 +104,13 @@ def _check_replay(template: Path, replay: dict[str, Any]) -> None:
         raise ValueError(f"{where}: expect_signals is a list of signal kinds")
     if replay.get("expect_learning") and not isinstance((replay.get("ideal") or {}).get("learn"), dict):
         raise ValueError(f"{where}: a replay that expects learning carries ideal.learn")
+    for key in ("expect_follow_on", "expect_undo"):
+        if not isinstance(replay.get(key, False), bool):
+            raise ValueError(f"{where}: {key} is true or false")
+    if replay.get("expect_follow_on") and not isinstance((replay.get("ideal") or {}).get("follow_on"), dict):
+        raise ValueError(f"{where}: a replay that expects a follow-on run carries ideal.follow_on")
+    if replay.get("expect_undo") and not replay.get("expect_follow_on"):
+        raise ValueError(f"{where}: expect_undo needs expect_follow_on")
 
 
 def _matches(spec: Mapping[str, Any], stored: Any) -> bool:
@@ -134,6 +145,18 @@ def end_state_problems(store: Any, replay: Mapping[str, Any]) -> tuple[list[str]
         if any(_matches(spec, s) for s in view.list(spec["kind"]))
     ]
     return missing, forbidden
+
+
+def _undo_problems(store: Any, replay: Mapping[str, Any], request_id: str) -> list[str]:
+    """What is wrong with undoing a follow-on run: it made no change, or undoing it leaves the end state in place."""
+    from engine.applier import undo
+
+    changeset = store.read().get("request", request_id).data.get("changeset")
+    if changeset is None:
+        return ["the follow-on run made no change to undo"]
+    undo(store, changeset)
+    still, _ = end_state_problems(store, replay)
+    return [] if still else ["undoing the follow-on run's change left the end state in place"]
 
 
 def _run_replay(
@@ -185,6 +208,7 @@ def _play_replay(
             if step.get("label"):
                 play.labels[step["label"]] = done.changeset
         play.at(replay)  # the day it starts: the person's action comes after it and after every setup input
+        followed_before = play.follow_ons()
         signals = play.correct(replay["action"])
         queued = play.learn_from(signals, (replay.get("ideal") or {}).get("learn"))
         request = queued[0] if queued else None
@@ -193,9 +217,17 @@ def _play_replay(
             problems.append("learning was queued for an action that teaches nothing")
         if expected and not queued:
             problems.append("the action queued no learning")
+        followed = play.follow_on_from(followed_before, (replay.get("ideal") or {}).get("follow_on"))
+        wanted = replay.get("expect_follow_on")
+        if wanted is False and followed:
+            problems.append("a follow-on run was queued for an action that moves nothing")
+        if wanted and len(followed) != 1:
+            problems.append(f"the action queued {len(followed)} follow-on runs, not one")
         found, found_forbidden = end_state_problems(play.store, replay)
         missing += found
         forbidden += found_forbidden
+        if replay.get("expect_undo") and len(followed) == 1:
+            problems += _undo_problems(play.store, replay, followed[0])
     except _Stop as err:
         if request is not None and play.refused(request):
             return result(False, error=str(err), not_run=True, out_of_quota=play.spent(request))
