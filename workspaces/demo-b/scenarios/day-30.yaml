@@ -1,0 +1,215 @@
+id: day-30
+title: The same mail on day 1 and after a month of history, which routes the question and reads the term differently
+# What the month has to change, written before the scenario is run: with the routing entry and the term kept, the
+# question about reviewers goes to Ines Duarte instead of Maya Okafor, and the action says the second printing where day 1
+# says Marlow. Nothing else may differ: the unrelated mail, the re-saved file and the moved meeting leave no trace in the
+# answer.
+input:
+  received: '2026-11-12'
+  project: PRJ-1
+  pasted: |-
+    From: Maya Lindqvist
+
+    Which reviewers are getting advance copies? Also, Marlow is booked for the 24th, so please confirm the final files for it by the 20th.
+history:
+- input:
+    received: '2026-10-12'
+    project: PRJ-1
+    pasted: |-
+      From: Theo Brandt
+
+      Not me, ask Ines Duarte. She owns the advance-copy reviewer list and I only hear about it afterwards.
+    answer:
+      summary: Theo passed the reviewer list on to Ines.
+      topic: the advance-copy reviewer list
+      ops:
+      - op: routing.add
+        text: Questions about the advance-copy reviewer list go to Ines Duarte.
+        topic: advance-copy reviewer list
+        person: PER-5
+        applies_to: {scope: projects, projects: [PRJ-1]}
+        evidence:
+          quote: Not me, ask Ines Duarte. She owns the advance-copy reviewer list
+      - op: routing.add
+        text: Theo Brandt does not answer questions about the advance-copy reviewer list.
+        topic: advance-copy reviewer list
+        person: PER-3
+        negative: true
+        applies_to: {scope: projects, projects: [PRJ-1]}
+        evidence:
+          quote: I only hear about it afterwards
+- keep_all: true
+- input:
+    received: '2026-10-14'
+    pasted: |-
+      From: Corner Lamp Books newsletter
+
+      Autumn window displays are up, and the shop is open late on Thursdays.
+    answer:
+      summary: A shop newsletter; nothing to record.
+      ops: []
+- input:
+    received: '2026-10-16'
+    project: PRJ-1
+    pasted: |-
+      From: Sam Rivera
+
+      Marlow is booked for the 3rd. Please confirm the final files for it by the 28th.
+    answer:
+      summary: Sam wants the final files confirmed for the visit.
+      ops:
+      - op: action.add
+        text: Confirm the final files for the Marlow visit
+        owners: [Avery Lane]
+        due: '2026-10-28'
+        project: PRJ-1
+        evidence:
+          quote: Please confirm the final files for it by the 28th
+- correct:
+    kind: sent_back
+    note: Marlow is our name for the second printing at Harrowgate, not a visit.
+  learn:
+    summary: Marlow is the second printing.
+    topic: the Marlow term
+    ops:
+    - op: glossary.add
+      text: 'Marlow: the second printing at Harrowgate'
+      term: Marlow
+      meaning: the second printing at Harrowgate
+      confidence: confirmed
+      evidence:
+        quote: Marlow is our name for the second printing
+  keep: true
+- input:
+    received: '2026-10-19'
+    project: PRJ-1
+    watched:
+      title: Launch plan
+      change: changed
+      author: Maya Okafor
+    pasted: |-
+      Launch plan
+
+      The reading is at the bookshop. Same text as last week, saved again.
+    answer:
+      summary: The file was saved again with the same words.
+      ops: []
+- input:
+    received: '2026-10-24'
+    project: PRJ-1
+    pasted: |-
+      From: Maya Lindqvist
+
+      You are invited to the shop walkthrough on Wednesday, October 28 at 2:00 pm UTC.
+    answer:
+      summary: A walkthrough on October 28.
+      ops:
+      - op: event.add
+        title: Shop walkthrough
+        start: '2026-10-28T14:00:00+00:00'
+        project: PRJ-1
+        evidence:
+          quote: shop walkthrough on Wednesday, October 28 at 2:00 pm UTC
+- input:
+    received: '2026-10-27'
+    project: PRJ-1
+    pasted: |-
+      From: Maya Lindqvist
+
+      The shop walkthrough moved to Thursday, October 29 at 3:00 pm UTC.
+    answer:
+      summary: The walkthrough moved to October 29.
+      ops:
+      - op: event.add
+        title: Shop walkthrough, moved
+        start: '2026-10-29T15:00:00+00:00'
+        project: PRJ-1
+        evidence:
+          quote: shop walkthrough moved to Thursday, October 29 at 3:00 pm UTC
+- input:
+    received: '2026-11-03'
+    pasted: |-
+      From: Harrowgate Print Works
+
+      Our holiday paper range is in. Ask for a sample book.
+    answer:
+      summary: A supplier promotion; nothing to record.
+      ops: []
+day1:
+  expect:
+  - op: question.add
+    to: PER-2
+    kind: question
+  - op: action.add
+    text_has: [Marlow]
+    owners: [PER-1]
+    due: '2026-11-20'
+  forbid:
+  - op: question.add
+    to: PER-5
+day30:
+  expect:
+  - op: question.add
+    to: PER-5
+    kind: question
+  - op: action.add
+    text_has: [second printing]
+    owners: [PER-1]
+    due: '2026-11-20'
+  forbid:
+  - op: question.add
+    to: PER-2
+  packet_has: [Who answers what, advance-copy reviewer list, second printing]
+differences:
+- day: 1
+  expect: {op: question.add, to: PER-2}
+  why: Without the routing entry the question goes to the editor.
+- day: 30
+  expect: {op: question.add, to: PER-5}
+  why: The kept routing entry sends questions about the reviewer list to the publicist.
+- day: 30
+  expect: {op: action.add, text_has: [second printing]}
+  why: The kept term makes the action say the second printing.
+ideal:
+  day1:
+    summary: Asked the editor about reviewers; confirm the files for Marlow.
+    topic: advance copies
+    ops:
+    - op: question.add
+      to: PER-2
+      kind: question
+      title: Which reviewers are getting advance copies?
+      text: The bookshop wants to know.
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The date the advance copies go out
+      project: PRJ-1
+    - op: action.add
+      text: Confirm the final files for Marlow
+      owners: [Avery Lane]
+      due: '2026-11-20'
+      project: PRJ-1
+      evidence:
+        quote: please confirm the final files for it by the 20th
+  day30:
+    summary: Asked the publicist about reviewers; confirm the files for the second printing.
+    topic: advance copies
+    ops:
+    - op: question.add
+      to: PER-5
+      kind: question
+      title: Which reviewers are getting advance copies?
+      text: The bookshop wants to know.
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The date the advance copies go out
+      project: PRJ-1
+    - op: action.add
+      text: Confirm the final files for the second printing
+      owners: [Avery Lane]
+      due: '2026-11-20'
+      project: PRJ-1
+      evidence:
+        quote: please confirm the final files for it by the 20th

@@ -1,0 +1,49 @@
+id: premise
+title: A request names items that aren't in the records; the person is asked, and no report is drafted
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  note: Close the actions for the poster proofs and the bookmark order, they are both done.
+  wrong:
+    summary: There is no way to close items that don't exist; drafted a report.
+    ops:
+    - op: report.draft
+      title: Close actions that are not recorded
+      text: The person asked to close two actions, but no records exist for them, so nothing can be closed.
+  correction:
+    kind: sent_back
+    note: Those two items were never recorded. Ask me which items I meant instead of drafting a report.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [ask]
+  keep: true
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  note: Mark the banner order as done.
+  expect:
+  - op: question.add
+    to: PER-1
+  forbid:
+  - op: report.draft
+  - op: action.close
+  packet_has: [Ask the person]
+ideal:
+  learn:
+    summary: Items that aren't recorded are asked about.
+    topic: items that do not exist
+    ops:
+    - op: lesson.add
+      text: Ask the person which items they meant when a request names ones that aren't in the records; never draft a report for it.
+      guard: Check each named item against the records; if one is missing, ask the person.
+      evidence:
+        quote: Ask me which items I meant instead of drafting a report
+  later:
+    summary: There is no banner order in the records; asking which one was meant.
+    topic: banner order
+    ops:
+    - op: question.add
+      to: me
+      kind: question
+      title: I have no action for a banner order. Did you mean another one, or should I add it as done?
+      project: PRJ-1

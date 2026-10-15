@@ -1,0 +1,82 @@
+id: moving-fact
+title: A date that moves twice across three inputs, and the next input uses the latest
+first:
+  received: '2026-10-01'
+  project: PRJ-1
+  pasted: |-
+    From: Jun Park
+
+    Proof copies will ship on November 5.
+  fixed:
+    summary: Proof copies ship Nov 5.
+    ops:
+    - op: fact
+      text: Proof copies ship on November 5.
+      project: PRJ-1
+      key: true
+      evidence:
+        quote: Proof copies will ship on November 5
+  then:
+  - received: '2026-10-08'
+    project: PRJ-1
+    pasted: |-
+      From: Jun Park
+
+      Proof copies now ship on November 9.
+    answer:
+      summary: Proof copies moved to Nov 9.
+      ops:
+      - op: fact
+        text: Proof copies ship on November 9.
+        project: PRJ-1
+        key: true
+        supersedes: FACT-1
+        evidence:
+          quote: Proof copies now ship on November 9
+  - received: '2026-10-14'
+    project: PRJ-1
+    pasted: |-
+      From: Jun Park
+
+      Proof copies now ship on November 12.
+    answer:
+      summary: Proof copies moved to Nov 12.
+      ops:
+      - op: fact
+        text: Proof copies ship on November 12.
+        project: PRJ-1
+        key: true
+        supersedes: FACT-2
+        evidence:
+          quote: Proof copies now ship on November 12
+  expect_proposal: none
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    From: Maya Lindqvist
+
+    When will the proof copies reach you? I would like to tell the shop.
+  expect:
+  - op: action.add
+    text_has: [proof copies, November 12]
+    owners: [PER-1]
+  forbid:
+  - op: action.add
+    text_has: [November 5]
+  - op: action.add
+    text_has: [November 9]
+  - op: question.add
+  packet_has: [November 12]
+  packet_lacks: [November 5, November 9]
+ideal:
+  later:
+    summary: Tell the shop the proof copies ship November 12.
+    topic: proof copy dates
+    ops:
+    - op: action.add
+      text: Tell Corner Lamp Books the proof copies ship on November 12
+      owners: [Avery Lane]
+      project: PRJ-1
+      evidence:
+        quote: When will the proof copies reach you? I would like to tell the shop

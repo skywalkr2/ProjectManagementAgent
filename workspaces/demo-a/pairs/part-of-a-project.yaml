@@ -1,0 +1,63 @@
+id: part-of-a-project
+title: Words taken for a new project are filed under an existing one, and the next mention goes there with no question
+first:
+  received: '2026-10-09'
+  pasted: |-
+    From: Odile Fenwick
+
+    We are starting the Route Optimizer Pilot next month. Odile will draft the pilot plan by the 30th.
+  wrong:
+    summary: A plan for a pilot that isn't a project here yet; the project is proposed.
+    ops:
+    - op: action.add
+      text: Draft the pilot plan
+      owners: [Odile Fenwick]
+      due: '2026-10-30'
+      evidence:
+        quote: Odile will draft the pilot plan by the 30th
+    - op: project.add
+      name: Route Optimizer Pilot
+      evidence:
+        quote: starting the Route Optimizer Pilot next month
+  correction:
+    kind: part_of
+    into: PRJ-1
+  # The button's own entry is the person's words, so it is active at once and nothing waits for Keep.
+  allow_active: true
+  expect_proposal:
+  - op: glossary.add
+    term: Route Optimizer Pilot
+    status: active
+    origin: person
+    text_has: [name for Route Optimizer Rollout]
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    From: Odile Fenwick
+
+    The Route Optimizer Pilot demo is next week. Odile will book the room by the 25th.
+  expect:
+  - op: action.add
+    text_has: [book the room]
+    owners: [PER-2]
+    due: '2026-10-25'
+  forbid:
+  - op: project.add
+  packet_has: ["Route Optimizer Pilot: A name for Route Optimizer Rollout."]
+ideal:
+  learn:
+    summary: Nothing to generalize.
+    topic: a name for an existing project
+    ops: []
+  later:
+    summary: Odile books the room by the 25th.
+    topic: pilot demo room
+    ops:
+    - op: action.add
+      text: Book the room for the pilot demo
+      owners: [Odile Fenwick]
+      due: '2026-10-25'
+      project: PRJ-1
+      evidence:
+        quote: Odile will book the room by the 25th

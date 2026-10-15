@@ -1,0 +1,51 @@
+id: reported-from-now-on
+title: Someone's from-now-on, repeated in the person's own Mark done note, never becomes an active rule
+negative: true
+first:
+  received: '2026-10-12'
+  project: PRJ-1
+  typed_on:
+    kind: action
+    id: ACT-6
+    route: mark_done
+  note: Done. Maya said from now on we always copy the bookshop on every date change.
+  fixed:
+    summary: The bookshop reply is done; Maya wants the bookshop copied on date changes.
+    ops:
+    - op: action.close
+      id: ACT-6
+      evidence:
+        quote: Done
+    - op: rule.add
+      text: Always copy the bookshop on every date change.
+      evidence:
+        quote: from now on we always copy the bookshop on every date change
+  expect_proposal:
+  - op: rule.add
+    text_has: [bookshop]
+    origin: input
+  keep: false
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    From: Jun Park
+
+    The proof copies now ship on November 12.
+  expect:
+  - op: fact
+    text_has: [proof copies, November 12]
+  forbid:
+  - op: action.add
+  - op: question.add
+  packet_lacks: [copy the bookshop]
+ideal:
+  later:
+    summary: Proof copies ship November 12.
+    topic: proof copy dates
+    ops:
+    - op: fact
+      text: Proof copies ship on November 12.
+      project: PRJ-1
+      evidence:
+        quote: The proof copies now ship on November 12

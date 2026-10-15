@@ -1,0 +1,61 @@
+id: other-project
+title: A lesson for one project does not change the output for another project
+negative: true
+first:
+  received: '2026-10-09'
+  project: PRJ-2
+  pasted: |-
+    From: Ines Albescu
+
+    The reconciliation test results are in the shared folder. Someone on our side should share them with the group.
+  wrong:
+    summary: Odile shares the reconciliation test results.
+    ops:
+    - op: action.add
+      text: Share the reconciliation test results with the group
+      owners: [Odile Fenwick]
+      project: PRJ-2
+      evidence:
+        quote: Someone on our side should share them with the group
+  correction:
+    kind: sent_back
+    note: On the Invoice Engine Migration the test results are shared by me, never by Odile.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [test results]
+    projects: [PRJ-2]
+  keep: true
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    From: Tobias Wren
+
+    The load-test results are ready. Someone on our side should share them with the group.
+  # The lesson is for the other project, so this one is read as it would have been before.
+  expect:
+  - op: action.add
+    text_has: [load-test results]
+    owners: [PER-2]
+  packet_lacks: [test results are shared by]
+ideal:
+  learn:
+    summary: On the migration, test results are shared by Rafael.
+    topic: who shares test results
+    ops:
+    - op: lesson.add
+      text: On the Invoice Engine Migration, the test results are shared by Rafael Quist, not by Odile Fenwick.
+      guard: On this project, an action to share test results is for Rafael Quist.
+      applies_to: {scope: projects, projects: [PRJ-2]}
+      evidence:
+        quote: On the Invoice Engine Migration the test results are shared by me
+  later:
+    summary: Odile shares the load-test results.
+    topic: load-test results
+    ops:
+    - op: action.add
+      text: Share the load-test results with the group
+      owners: [Odile Fenwick]
+      project: PRJ-1
+      evidence:
+        quote: Someone on our side should share them with the group

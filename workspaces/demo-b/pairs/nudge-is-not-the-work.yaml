@@ -1,0 +1,48 @@
+id: nudge-is-not-the-work
+title: A follow-up that is not completion; a later input does not credit the owner with the work
+first:
+  received: '2026-10-12'
+  project: PRJ-1
+  typed_on:
+    kind: action
+    id: ACT-1
+    route: followed_up
+    person: PER-4
+  note: Asked Sam about the interior file. He says he is on it.
+  wrong:
+    summary: Sam is on the interior file; closed it.
+    ops:
+    - op: action.close
+      id: ACT-1
+      evidence:
+        quote: He says he is on it
+  correction:
+    kind: undone
+  expect_proposal:
+  - op: lesson.add
+    text_has: [follow]
+  keep: true
+later:
+  received: '2026-10-14'
+  project: PRJ-1
+  pasted: |-
+    From: Sam Rivera
+
+    Thanks for checking in. I am working on the interior file and will send it to the printer tomorrow.
+  forbid:
+  - op: action.close
+  packet_has: [not completion]
+ideal:
+  learn:
+    summary: A follow-up does not finish the work.
+    topic: follow-ups and completion
+    ops:
+    - op: lesson.add
+      text: Following up on an action is not completion; keep it open until someone reports the work done.
+      guard: Close an action only when the input says the work itself is finished, never on a follow-up or a promise.
+      evidence:
+        quote: He says he is on it
+  later:
+    summary: Sam says he is working on it; nothing is finished yet.
+    topic: interior file
+    ops: []

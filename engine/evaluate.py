@@ -13,6 +13,8 @@ held op (`held: <op>`, with `text_has` words in its fields) or a held "who is th
 hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person listed under
 `injected`. The report says which accounts ran, the version of each command-line agent, and whether every tier ran on
 one account.
+
+Learning pairs and the day-30 scenario are run the same way, by `engine/pairs.py`, which documents their format.
 """
 
 from __future__ import annotations
@@ -67,6 +69,8 @@ class RunResult:
     got: list[str] = field(default_factory=list)  # what the model produced, shown when the case fails
     not_run: bool = False  # the account wouldn't take the call (rate limit, quota); says nothing about the model
     accounts: list[str] = field(default_factory=list)  # provider/model of every call the case made
+    given: list[str] = field(default_factory=list)  # a pair's later run: what it was given from what was learned
+    negative: bool = False  # a pair whose later output must not change
 
 
 @dataclass
@@ -118,6 +122,9 @@ class Report:
             got = next((r.got for r in rows if not r.passed and r.got), None)
             if got:
                 lines.append("        got: " + "; ".join(got))
+            given = next((r.given for r in rows if r.given), None)
+            if given:
+                lines.append("        later run was given: " + "; ".join(given))
         cost = sum(r.cost_usd for r in self.results)
         skipped = self.not_run()
         tail = f"   not run: {skipped} (the account refused the calls; run again later)" if skipped else ""

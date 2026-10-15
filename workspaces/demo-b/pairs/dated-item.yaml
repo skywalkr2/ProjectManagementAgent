@@ -1,0 +1,70 @@
+id: dated-item
+title: A delivery window read from the wrong dates is corrected, and the next order mail is read the corrected way
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: orders@shop.example.com
+    Subject: Your order has shipped
+
+    Order confirmed October 9. Delivery window: October 27 to October 30.
+  wrong:
+    summary: The order arrives from October 9.
+    ops:
+    - op: event.add
+      title: Order delivered
+      start: '2026-10-09'
+      end: '2026-10-27'
+      project: PRJ-1
+      evidence:
+        quote: 'Order confirmed October 9. Delivery window: October 27 to October 30'
+  correction:
+    kind: sent_back
+    note: The window is October 27 to October 30. The order date is not part of it.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [window]
+  keep: true
+later:
+  received: '2026-10-21'
+  project: PRJ-1
+  pasted: |-
+    From: orders@shop.example.com
+    Subject: Your order has shipped
+
+    Order confirmed October 21. Delivery window: November 10 to November 13.
+  expect:
+  - op: event.add
+    text_has: [deliver]
+    start: '2026-11-10'
+    end: '2026-11-13'
+  # The fact beside the calendar entry is what the delivery-window golden case allows too.
+  allow:
+  - fact
+  packet_has: [delivery window]
+ideal:
+  learn:
+    summary: A delivery window runs from its first date to its last.
+    topic: delivery windows
+    ops:
+    - op: lesson.add
+      text: A delivery window in an order mail runs from the first date it names to the last; the order date is never its start.
+      guard: Start the calendar entry on the window's first date and end it on its last date, ignoring the order date.
+      evidence:
+        quote: The window is October 27 to October 30
+  later:
+    summary: The order arrives November 10 to 13.
+    topic: order delivery
+    ops:
+    - op: event.add
+      title: Order delivered
+      start: '2026-11-10'
+      end: '2026-11-13'
+      project: PRJ-1
+      evidence:
+        quote: 'Delivery window: November 10 to November 13'
+    - op: fact
+      text: The order is expected to be delivered between Nov 10 and Nov 13.
+      project: PRJ-1
+      evidence:
+        quote: 'Delivery window: November 10 to November 13'

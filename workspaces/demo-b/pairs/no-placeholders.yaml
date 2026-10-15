@@ -1,0 +1,70 @@
+id: no-placeholders
+title: An unknown date is left blank and asked of whoever owns it, never invented
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: Ines Duarte
+
+    We need a speaker for the launch reading. Nobody has picked a date for it yet.
+  wrong:
+    summary: Book a speaker for the reading.
+    ops:
+    - op: action.add
+      text: Book a speaker for the launch reading
+      owners: [Ines Duarte]
+      due: '2026-10-30'
+      project: PRJ-1
+      evidence:
+        quote: We need a speaker for the launch reading
+  correction:
+    kind: sent_back
+    note: Nobody gave a date, so you made one up. Leave the due date empty and ask Ines when the reading is.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [date]
+  keep: true
+later:
+  received: '2026-10-21'
+  project: PRJ-1
+  pasted: |-
+    From: Ines Duarte
+
+    We also need a photographer for the launch reading. The date has not been set.
+  expect:
+  - op: action.add
+    text_has: [photographer]
+    owners: [PER-5]
+    due: null
+  - op: question.add
+    to: PER-5
+  packet_has: [leave the due date empty]
+ideal:
+  learn:
+    summary: Never invent a date.
+    topic: dates nobody gave
+    ops:
+    - op: lesson.add
+      text: When no date is given, leave the due date empty and ask whoever owns the date; never invent one.
+      guard: A due date needs a date in the input. Without one, leave the due date empty and ask the owner of the date.
+      evidence:
+        quote: Leave the due date empty and ask Ines when the reading is
+  later:
+    summary: A photographer is needed; the date is not set, so it is asked.
+    topic: launch reading photographer
+    ops:
+    - op: action.add
+      text: Book a photographer for the launch reading
+      owners: [Ines Duarte]
+      project: PRJ-1
+      evidence:
+        quote: We also need a photographer for the launch reading
+    - op: question.add
+      to: PER-5
+      title: When is the launch reading?
+      text: The date has not been set, so the photographer can't be booked for it yet.
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The date the photographer is booked for
+      project: PRJ-1

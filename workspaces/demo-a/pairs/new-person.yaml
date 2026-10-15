@@ -1,0 +1,59 @@
+id: new-person
+title: A name nobody knows is added as a new person once, and the next input names them with no question
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: Odile Fenwick
+
+    Marta Quill will send the cut-over notice to the carriers by the 28th.
+  wrong:
+    summary: Marta sends the cut-over notice by the 28th.
+    ops:
+    - op: action.add
+      text: Send the cut-over notice to the carriers
+      owners: [Marta Quill]
+      due: '2026-10-28'
+      project: PRJ-1
+      evidence:
+        quote: Marta Quill will send the cut-over notice to the carriers by the 28th
+  correction:
+    kind: new_person
+    id: '@held_question'
+    form:
+      full_name: Marta Quill
+      role: Carrier liaison
+  # The person record and the held action are the person's own act, not something that waits for Keep.
+  allow_active: true
+  expect_proposal: none
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    From: Odile Fenwick
+
+    Marta Quill will send Rafael the carrier survey by the 30th.
+  expect:
+  - op: action.add
+    text_has: [carrier survey]
+    owners: [PER-7]
+    due: '2026-10-30'
+  forbid:
+  - new_person: true
+  packet_has: [Marta Quill]
+ideal:
+  learn:
+    summary: Nothing to generalize.
+    topic: a new person
+    ops: []
+  later:
+    summary: Marta sends the carrier survey by the 30th.
+    topic: carrier survey
+    ops:
+    - op: action.add
+      text: Send the carrier survey
+      owners: [Marta Quill]
+      due: '2026-10-30'
+      project: PRJ-1
+      evidence:
+        quote: Marta Quill will send Rafael the carrier survey by the 30th

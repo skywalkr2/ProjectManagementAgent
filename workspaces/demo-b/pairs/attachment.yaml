@@ -1,0 +1,81 @@
+id: attachment
+title: The fact needed is in an attached presentation; it is read, and nobody is asked to paste it
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: Maya Okafor
+
+    The schedule deck is attached. Please add the key dates to the plan.
+  attached:
+  - kind: presentation
+    name: schedule.pptx
+    title: Launch schedule
+    body: The launch reading is on November 14 at the bookshop.
+  wrong:
+    summary: The deck wasn't read; asked Maya for the dates.
+    ops:
+    - op: question.add
+      to: PER-2
+      title: What are the key dates?
+      text: Could you paste the key dates from the deck?
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The launch schedule
+      project: PRJ-1
+      evidence:
+        quote: Please add the key dates to the plan
+  correction:
+    kind: sent_back
+    note: The dates are in the attached presentation. Read the attachment instead of asking for the dates to be pasted.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [attach]
+  keep: true
+later:
+  received: '2026-10-21'
+  project: PRJ-1
+  pasted: |-
+    From: Maya Okafor
+
+    The production deck is attached. Please add the file dates to the plan.
+  attached:
+  - kind: presentation
+    name: production.pptx
+    title: Production schedule
+    body: The cover files are due on October 30.
+  expect:
+  - op: fact
+    text_has: [cover files, October 30]
+  # The calendar entry beside a dated fact is what the notes prompt asks for.
+  allow:
+  - event.add
+  forbid:
+  - op: question.add
+  packet_has: ["Attached file: production.pptx", "The cover files are due on October 30", attach]
+ideal:
+  learn:
+    summary: Read attachments before asking.
+    topic: attached files
+    ops:
+    - op: lesson.add
+      text: When a mail has an attached file, read its text first; never ask the sender to paste what the attachment holds.
+      guard: Look in the attached file's text for what is needed before asking anyone.
+      evidence:
+        quote: Read the attachment instead of asking for the dates to be pasted
+  later:
+    summary: The cover files are due October 30, from the attached deck.
+    topic: production dates
+    ops:
+    - op: fact
+      text: The cover files are due on October 30.
+      project: PRJ-1
+      evidence:
+        quote: The cover files are due on October 30
+    - op: event.add
+      title: Cover files due
+      start: '2026-10-30'
+      project: PRJ-1
+      evidence:
+        quote: The cover files are due on October 30

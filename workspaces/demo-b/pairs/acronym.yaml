@@ -1,0 +1,62 @@
+id: acronym
+title: A term nobody explained is read the wrong way, corrected once, and read right the next time
+first:
+  received: '2026-10-08'
+  project: PRJ-1
+  pasted: |-
+    From: Sam Rivera
+
+    Marlow is booked for the 3rd. Please confirm the final files for it by the 28th.
+  wrong:
+    summary: Sam wants the final files confirmed for the visit.
+    ops:
+    - op: action.add
+      text: Confirm the final files for the Marlow visit
+      owners: [Avery Lane]
+      due: '2026-10-28'
+      project: PRJ-1
+      evidence:
+        quote: Please confirm the final files for it by the 28th
+  correction:
+    kind: sent_back
+    note: Marlow is our name for the second printing at Harrowgate, not a visit.
+  expect_proposal:
+  - op: glossary.add
+    term: Marlow
+    text_has: [second printing]
+  keep: true
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    From: Sam Rivera
+
+    Marlow for the paperback is booked for the 12th. Please confirm the final files for it by the 6th.
+  expect:
+  - op: action.add
+    text_has: [second printing]
+    owners: [PER-1]
+    due: '2026-11-06'
+  packet_has: [Marlow, second printing]
+ideal:
+  learn:
+    summary: Marlow is the second printing.
+    topic: the Marlow term
+    ops:
+    - op: glossary.add
+      text: 'Marlow: the second printing at Harrowgate'
+      term: Marlow
+      meaning: the second printing at Harrowgate
+      confidence: confirmed
+      evidence:
+        quote: Marlow is our name for the second printing
+  later:
+    summary: Confirm the final files for the second printing by the 6th.
+    ops:
+    - op: action.add
+      text: Confirm the final files for the second printing of the paperback
+      owners: [Avery Lane]
+      due: '2026-11-06'
+      project: PRJ-1
+      evidence:
+        quote: Please confirm the final files for it by the 6th

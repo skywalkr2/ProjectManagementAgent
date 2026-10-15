@@ -221,6 +221,11 @@ def _parser() -> argparse.ArgumentParser:
     sp.add_argument("--runs", type=int, help="runs per case (default: ai.evaluation.runs)")
     sp.add_argument("--case", action="append", dest="only", help="run only this case (repeatable)")
     sp.add_argument("--stub", action="store_true", help="answer each case ideally; checks the cases, not a model")
+    sp.add_argument(
+        "--pairs",
+        action="store_true",
+        help="run the learning pairs and the day-30 scenario (in pairs/ and scenarios/) instead of the golden cases",
+    )
     sp.add_argument("--json", action="store_true", help="print the report as JSON")
     sp.set_defaults(func=cmd_evaluate)
 
@@ -871,15 +876,17 @@ def _eval_progress(result, done: int, total: int) -> None:
 def cmd_evaluate(args: argparse.Namespace) -> int:
     from engine.config import load_config
     from engine.evaluate import evaluate
+    from engine.pairs import evaluate_pairs
 
     workspace = args.workspace.expanduser() if args.workspace else None
     template = args.template or workspace
     if template is None:
         print("cockpit: say which cases to run: --workspace <your workspace> or --from <a workspace>.", file=sys.stderr)
         return 1
-    if not (template / "evals").is_dir():
+    folder = "pairs" if args.pairs else "evals"
+    if not (template / folder).is_dir():
         print(
-            f"cockpit: {template} has no evals/ folder. Add --from with a workspace that has one, "
+            f"cockpit: {template} has no {folder}/ folder. Add --from with a workspace that has one, "
             "for example the fictional workspaces/demo-b in the repository.",
             file=sys.stderr,
         )
@@ -892,7 +899,7 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
             config_dir = Path(tmp)
             shutil.copyfile(args.ai_config, config_dir / "ai.yaml")
         settings = load_config(config_dir, env={}).ai.evaluation
-    report = evaluate(
+    report = (evaluate_pairs if args.pairs else evaluate)(
         template,
         account=args.account,
         runs=args.runs or settings.runs,

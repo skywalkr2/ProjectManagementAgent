@@ -1,0 +1,45 @@
+id: set-aside
+title: Mail the person sets aside as not work teaches nothing
+negative: true
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: Ines Duarte
+
+    Dinner on Friday? I booked the corner table for eight.
+  fixed:
+    summary: A dinner on Friday.
+    ops:
+    - op: note
+      text: Dinner on Friday at eight, corner table.
+      project: PRJ-1
+  correction:
+    kind: set_aside
+  expect_learning: false
+  expect_proposal: none
+later:
+  received: '2026-10-14'
+  project: PRJ-1
+  pasted: |-
+    From: Ines Duarte
+
+    The back-cover copy is agreed. I will send it to the printer by the 16th.
+  expect:
+  - op: action.add
+    text_has: [back-cover copy]
+    owners: [PER-5]
+    due: '2026-10-16'
+  packet_lacks: ["# Lessons", Dinner]
+ideal:
+  later:
+    summary: Ines sends the back-cover copy by the 16th.
+    topic: back-cover copy
+    ops:
+    - op: action.add
+      text: Send the back-cover copy to the printer
+      owners: [Ines Duarte]
+      due: '2026-10-16'
+      project: PRJ-1
+      evidence:
+        quote: I will send it to the printer by the 16th

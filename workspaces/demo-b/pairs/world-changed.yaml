@@ -1,0 +1,70 @@
+id: world-changed
+title: The person moved a due date because a later mail moved it, so nothing is learned
+negative: true
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: Ines Duarte
+
+    I will send the review copy list to the printer by the 16th.
+  fixed:
+    summary: Ines will send the review copy list by the 16th.
+    ops:
+    - op: action.add
+      text: Send the review copy list to the printer
+      owners: [Ines Duarte]
+      due: '2026-10-16'
+      project: PRJ-1
+      evidence:
+        quote: I will send the review copy list to the printer by the 16th
+  then:
+  - received: '2026-10-12'
+    project: PRJ-1
+    pasted: |-
+      From: Jun Park
+
+      The printer moved the review copy deadline to the 23rd.
+    answer:
+      summary: The printer moved the deadline to the 23rd.
+      ops:
+      - op: record.set
+        kind: action
+        id: ACT-7
+        field: due
+        value: '2026-10-23'
+        evidence:
+          quote: The printer moved the review copy deadline to the 23rd
+  correction:
+    kind: undone
+  expect_proposal: none
+  keep: false
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    From: Ines Duarte
+
+    I will send the reviewer labels to the printer by the 27th.
+  expect:
+  - op: action.add
+    text_has: [reviewer labels]
+    owners: [PER-5]
+    due: '2026-10-27'
+  packet_lacks: ["# Lessons"]
+ideal:
+  learn:
+    summary: Nothing to generalize.
+    topic: a moved deadline
+    ops: []
+  later:
+    summary: Ines will send the reviewer labels by the 27th.
+    topic: reviewer labels
+    ops:
+    - op: action.add
+      text: Send the reviewer labels to the printer
+      owners: [Ines Duarte]
+      due: '2026-10-27'
+      project: PRJ-1
+      evidence:
+        quote: I will send the reviewer labels to the printer by the 27th

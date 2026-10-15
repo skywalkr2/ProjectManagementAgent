@@ -1,0 +1,65 @@
+id: another-teams-rows-naming-ours
+title: A row of another team that does name our work still gets its question
+negative: true
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    Status rows for the week:
+    - Carrier Experience: portal wireframes slip to October 30.
+    - Architecture Office: the load-test plan review is on track.
+  wrong:
+    summary: A question about the wireframe slip.
+    ops:
+    - op: question.add
+      to: PER-1
+      kind: question
+      title: Should we ask Carrier Experience how the wireframe slip affects the cut-over?
+      text: Their row says the portal wireframes slip to October 30.
+      project: PRJ-1
+  correction:
+    kind: answered
+    id: '@question'
+    note: No. That row is the Carrier Experience team's own work and does not name ours. Rows scoped to another team get no impact question unless they name our work.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [another team]
+  keep: true
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    Status rows for the week:
+    - Carrier Experience: the rate import slips to November 2, which moves the Architecture Office load-test review.
+  expect:
+  - op: question.add
+    to: PER-1
+  # The fact beside the question records what the row said.
+  allow:
+  - fact
+  packet_has: [another team]
+ideal:
+  learn:
+    summary: Another team's rows get no impact question.
+    topic: rows scoped to another team
+    ops:
+    - op: lesson.add
+      text: Rows scoped to another team get no impact question unless they name our work.
+      guard: Ask an impact question about a row only when the row names the person's own team or work.
+      evidence:
+        quote: Rows scoped to another team get no impact question unless they name our work
+  later:
+    summary: The slip names our review, so it is asked about.
+    topic: weekly status rows
+    ops:
+    - op: question.add
+      to: me
+      kind: question
+      title: Does the rate import slip move our load-test review?
+      text: Their row says the slip to November 2 moves the Architecture Office load-test review.
+      project: PRJ-1
+    - op: fact
+      text: Carrier Experience says the rate import slips to November 2, which moves the load-test review.
+      project: PRJ-1
+      evidence:
+        quote: the rate import slips to November 2, which moves the Architecture Office load-test review

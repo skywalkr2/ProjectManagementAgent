@@ -1,0 +1,85 @@
+id: same-batch
+title: Two inputs about the same thing made two questions; the next two make one
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: Jun Park
+
+    Do you want foil stamping on the hardcover spine? We need to know by Friday.
+  wrong:
+    summary: A decision on foil stamping.
+    ops:
+    - op: question.add
+      to: PER-1
+      kind: decision
+      title: Foil stamping on the hardcover spine?
+      text: The printer needs an answer by Friday.
+      project: PRJ-1
+  then:
+  - received: '2026-10-09'
+    project: PRJ-1
+    pasted: |-
+      From: Theo Brandt
+
+      Foil on the spine means I need to change the cover file. Are we doing the foil or not?
+    answer:
+      summary: Another decision on the foil.
+      ops:
+      - op: question.add
+        to: PER-1
+        kind: decision
+        title: Are we doing the foil on the spine?
+        text: The cover file changes if the answer is yes.
+        project: PRJ-1
+  correction:
+    kind: dropped
+    id: Q-4
+    note: This is the same question as the one about foil stamping that is already open.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [already open]
+  keep: true
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    From: Jun Park
+
+    Do you want a ribbon marker in the hardcover? We need to know by Thursday.
+  expect:
+  - op: question.add
+    to: PER-1
+    kind: decision
+    text_has: []
+  then:
+  - received: '2026-10-20'
+    project: PRJ-1
+    pasted: |-
+      From: Sam Rivera
+
+      The ribbon marker changes the endpaper layout. Are we adding the ribbon or not?
+  packet_has: [already open]
+ideal:
+  learn:
+    summary: Two inputs about one decision are one question.
+    topic: the same question twice
+    ops:
+    - op: lesson.add
+      text: When a second input raises a question that is already open, ask it once and note the second input on that question.
+      guard: Before asking, check the open questions; do not add one that says the same thing.
+      evidence:
+        quote: the same question as the one about foil stamping that is already open
+  later:
+  - summary: A decision on the ribbon marker.
+    topic: ribbon marker
+    ops:
+    - op: question.add
+      to: PER-1
+      kind: decision
+      title: Ribbon marker in the hardcover?
+      text: The printer needs an answer by Thursday.
+      project: PRJ-1
+  - summary: The same ribbon decision is already open, so nothing new was asked.
+    topic: ribbon marker
+    ops: []

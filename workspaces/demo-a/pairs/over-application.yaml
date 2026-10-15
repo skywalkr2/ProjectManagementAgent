@@ -1,0 +1,69 @@
+id: over-application
+title: A routing entry for who answers questions about one topic does not change who owns actions about it
+negative: true
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: Kofi Mensah-Hale
+
+    The load-test plan needs a second reviewer before the December freeze.
+  wrong:
+    summary: A question about the load-test plan.
+    ops:
+    - op: question.add
+      to: PER-3
+      kind: question
+      title: Who will be the second reviewer of the load-test plan?
+      text: The plan needs a second reviewer before the December freeze.
+      links:
+      - label: Rollout status page
+        url: https://wiki.example.com/pages/1201
+      matters_for: The December freeze date
+      project: PRJ-1
+      evidence:
+        quote: The load-test plan needs a second reviewer
+  correction:
+    kind: moved
+    id: '@question'
+    person: PER-2
+  expect_proposal:
+  - op: routing.add
+    topic_has: [load-test]
+    person: PER-2
+  keep: true
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    From: Odile Fenwick
+
+    I have asked Rafael Quist to finish the load-test plan review by the 24th.
+  # The entry is about who answers questions, so the action keeps the owner the input names.
+  expect:
+  - op: action.add
+    text_has: [load-test plan review]
+    owners: [PER-1]
+    due: '2026-10-24'
+  packet_has: [Who answers what, load-test]
+ideal:
+  learn:
+    summary: Questions about the load-test plan go to Odile.
+    topic: who answers load-test plan questions
+    ops:
+    - op: routing.add
+      text: Questions about the load-test plan go to Odile Fenwick.
+      topic: load-test plan questions
+      person: PER-2
+      applies_to: {scope: projects, projects: [PRJ-1], records: [question.to]}
+  later:
+    summary: Rafael finishes the load-test plan review by the 24th.
+    topic: load-test plan review
+    ops:
+    - op: action.add
+      text: Finish the load-test plan review
+      owners: [Rafael Quist]
+      due: '2026-10-24'
+      project: PRJ-1
+      evidence:
+        quote: I have asked Rafael Quist to finish the load-test plan review by the 24th

@@ -1,0 +1,77 @@
+id: role-becomes-run
+title: After the person runs a project, another team's defect that blocks its launch gives an action and a fact, not a parked note
+first:
+  project: PRJ-3
+  before:
+  - received: '2026-10-08'
+    project: PRJ-3
+    note: I'm running the Carrier Portal Refresh now.
+    answer:
+      summary: Rafael runs the Carrier Portal Refresh from now on.
+      ops:
+      - op: project.role
+        project: PRJ-3
+        person: PER-1
+        role: run
+        evidence:
+          quote: I'm running the Carrier Portal Refresh now
+  received: '2026-10-09'
+  pasted: |-
+    From: Lena Voss-Duarte
+
+    A defect in the carrier address lookup blocks the portal launch on November 3.
+  wrong:
+    summary: A defect in the address lookup, kept as a note.
+    ops:
+    - op: note
+      text: Lena reports a defect in the carrier address lookup that blocks the November 3 launch.
+      project: PRJ-3
+  correction:
+    kind: sent_back
+    note: I run this project now. A defect from another team that blocks our launch is an action for me and a fact, not a parked note.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [blocks]
+  keep: true
+later:
+  received: '2026-10-20'
+  project: PRJ-3
+  pasted: |-
+    From: Lena Voss-Duarte
+
+    The rate import fails in testing, which blocks the portal launch.
+  expect:
+  - op: action.add
+    text_has: [rate import]
+    owners: [PER-1]
+  - op: fact
+    text_has: [rate import]
+  forbid:
+  - op: note
+  packet_has: [launch]
+ideal:
+  learn:
+    summary: A blocking defect on a run project is an action and a fact.
+    topic: defects that block a launch
+    ops:
+    - op: lesson.add
+      text: On a project the person runs, another team's defect that blocks the launch is an action for the person and a fact, never only a note.
+      guard: When an input says something blocks a launch of a project the person runs, add an action for the person and record the fact.
+      applies_to: {scope: projects, projects: [PRJ-3]}
+      evidence:
+        quote: A defect from another team that blocks our launch is an action for me and a fact
+  later:
+    summary: The rate import blocks the launch; an action and a fact.
+    topic: the rate import defect
+    ops:
+    - op: action.add
+      text: Get the rate import defect fixed, because it blocks the portal launch
+      owners: [Rafael Quist]
+      project: PRJ-3
+      evidence:
+        quote: The rate import fails in testing, which blocks the portal launch
+    - op: fact
+      text: The rate import fails in testing and blocks the portal launch.
+      project: PRJ-3
+      evidence:
+        quote: The rate import fails in testing, which blocks the portal launch

@@ -1,0 +1,72 @@
+id: look-it-up
+title: A date the recorded facts already hold is asked of a person once, and used the next time
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  given:
+  - kind: fact
+    id: FACT-90
+    fields:
+      text: The printer's published schedule lists the cover proofs shipping on October 30.
+      project: PRJ-1
+      as_of: '2026-10-01'
+      key: true
+  pasted: |-
+    From: Jun Park
+
+    The cover proofs are in production. We will confirm the ship date soon.
+  wrong:
+    summary: Asked Jun when the cover proofs ship.
+    ops:
+    - op: question.add
+      to: PER-6
+      title: When will the cover proofs ship?
+      text: The cover proofs are in production and no date was given.
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The date the cover proofs reach the designer
+      project: PRJ-1
+      evidence:
+        quote: We will confirm the ship date soon
+  correction:
+    kind: sent_back
+    note: The printer's published schedule already lists the cover proofs shipping on October 30. Look in the recorded facts before asking anyone for a date.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [recorded facts]
+  keep: true
+later:
+  received: '2026-10-21'
+  project: PRJ-1
+  pasted: |-
+    From: Maya Lindqvist
+
+    Do you know when the cover proofs will ship? The shop is planning its window around them.
+  expect:
+  - op: action.add
+    text_has: [cover proofs, October 30]
+    owners: [PER-1]
+  forbid:
+  - op: question.add
+  packet_has: [recorded facts, October 30]
+ideal:
+  learn:
+    summary: A date the facts hold is used, not asked.
+    topic: dates in the recorded facts
+    ops:
+    - op: lesson.add
+      text: When the recorded facts already hold a date, use it instead of asking anyone for it.
+      guard: Before asking for a date, look for it in the project's recorded facts; ask only when none holds it.
+      evidence:
+        quote: Look in the recorded facts before asking anyone for a date
+  later:
+    summary: Tell the shop the cover proofs ship on October 30, from the recorded schedule.
+    topic: cover proof dates
+    ops:
+    - op: action.add
+      text: Tell Corner Lamp Books the cover proofs ship on October 30
+      owners: [Avery Lane]
+      project: PRJ-1
+      evidence:
+        quote: Do you know when the cover proofs will ship

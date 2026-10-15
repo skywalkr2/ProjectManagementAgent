@@ -1,0 +1,69 @@
+id: out-of-scope
+title: An action for another team on a project the person only watches is corrected to observe only, and the next mail gives a fact
+first:
+  received: '2026-10-09'
+  project: PRJ-3
+  pasted: |-
+    From: Lena Voss-Duarte
+
+    I will send the portal wireframes to the vendor by the 22nd.
+  wrong:
+    summary: Lena sends the wireframes by the 22nd.
+    ops:
+    - op: action.add
+      text: Send the portal wireframes to the vendor
+      owners: [Lena Voss-Duarte]
+      due: '2026-10-22'
+      project: PRJ-3
+      evidence:
+        quote: I will send the portal wireframes to the vendor by the 22nd
+  correction:
+    kind: sent_back
+    note: I only watch the Carrier Portal Refresh. Record what Lena says as a fact; don't make an action for her.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [fact]
+    projects: [PRJ-3]
+  keep: true
+later:
+  received: '2026-10-20'
+  project: PRJ-3
+  pasted: |-
+    From: Lena Voss-Duarte
+
+    I will send the vendor brief to the vendor by the 29th.
+  expect:
+  - op: fact
+    text_has: [vendor brief]
+  # The dated entry beside a fact is what the notes prompt asks for.
+  allow:
+  - event.add
+  forbid:
+  - op: action.add
+  packet_has: [only watch]
+ideal:
+  learn:
+    summary: Watched projects get facts.
+    topic: a project the person watches
+    ops:
+    - op: lesson.add
+      text: On the Carrier Portal Refresh the person only watches, record what others say they will do as a fact; never make an action for them.
+      guard: On a watched project, an item for someone else is a fact.
+      applies_to: {scope: projects, projects: [PRJ-3]}
+      evidence:
+        quote: I only watch the Carrier Portal Refresh
+  later:
+    summary: Lena will send the vendor brief by the 29th.
+    topic: vendor brief
+    ops:
+    - op: fact
+      text: Lena Voss-Duarte will send the vendor brief to the vendor by October 29.
+      project: PRJ-3
+      evidence:
+        quote: I will send the vendor brief to the vendor by the 29th
+    - op: event.add
+      title: Vendor brief due to the vendor
+      start: '2026-10-29'
+      project: PRJ-3
+      evidence:
+        quote: I will send the vendor brief to the vendor by the 29th

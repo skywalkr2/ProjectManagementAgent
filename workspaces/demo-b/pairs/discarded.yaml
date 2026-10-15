@@ -1,0 +1,70 @@
+id: discarded
+title: A proposal the person discarded does not come back from the next input that mentions it
+negative: true
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: Theo Brandt
+
+    Not me, ask Ines Duarte. She owns the advance-copy reviewer list and I only hear about it afterwards.
+  expect_proposal:
+  - op: routing.add
+    topic_has: [reviewer]
+    person: PER-5
+  - op: routing.add
+    topic_has: [reviewer]
+    person: PER-3
+    negative: true
+  keep: discard
+later:
+  received: '2026-10-14'
+  project: PRJ-1
+  pasted: |-
+    From: Theo Brandt
+
+    Not me, ask Ines Duarte. She owns the advance-copy reviewer list. The cover finish is soft-touch.
+  expect:
+  - op: fact
+    text_has: [soft-touch]
+  # The repeated proposal is saved as a discarded entry nobody sees, so the op still counts as applied.
+  allow:
+  - routing.add
+  expect_proposal: none
+  packet_lacks: [Who answers what]
+ideal:
+  first:
+    summary: Theo passed the reviewer list on to Ines.
+    topic: the advance-copy reviewer list
+    ops:
+    - op: routing.add
+      text: Questions about the advance-copy reviewer list go to Ines Duarte.
+      topic: advance-copy reviewer list
+      person: PER-5
+      applies_to: {scope: projects, projects: [PRJ-1]}
+      evidence:
+        quote: Not me, ask Ines Duarte. She owns the advance-copy reviewer list
+    - op: routing.add
+      text: Theo Brandt does not answer questions about the advance-copy reviewer list.
+      topic: advance-copy reviewer list
+      person: PER-3
+      negative: true
+      applies_to: {scope: projects, projects: [PRJ-1]}
+      evidence:
+        quote: I only hear about it afterwards
+  later:
+    summary: The cover finish is soft-touch; the reviewer list passed on again.
+    topic: cover finish
+    ops:
+    - op: routing.add
+      text: Questions about the advance-copy reviewer list go to Ines Duarte.
+      topic: advance-copy reviewer list
+      person: PER-5
+      applies_to: {scope: projects, projects: [PRJ-1]}
+      evidence:
+        quote: Not me, ask Ines Duarte. She owns the advance-copy reviewer list
+    - op: fact
+      text: The cover finish is soft-touch.
+      project: PRJ-1
+      evidence:
+        quote: The cover finish is soft-touch

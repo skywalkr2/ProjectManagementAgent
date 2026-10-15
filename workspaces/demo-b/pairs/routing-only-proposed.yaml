@@ -1,0 +1,72 @@
+id: routing-only-proposed
+title: A routing entry that is only proposed, from a pasted reply, changes nothing
+negative: true
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    From: Theo Brandt
+
+    Not me, ask Ines Duarte. She owns the advance-copy reviewer list and I only hear about it afterwards.
+  expect_proposal:
+  - op: routing.add
+    topic_has: [reviewer]
+    person: PER-5
+    origin: input
+    trust: untrusted
+  - op: routing.add
+    topic_has: [reviewer]
+    person: PER-3
+    negative: true
+    origin: input
+    trust: untrusted
+  keep: false
+later:
+  received: '2026-10-21'
+  project: PRJ-1
+  pasted: |-
+    From: Maya Lindqvist
+
+    Which reviewers are getting advance copies? We want to avoid sending the same people a second copy.
+  # The question goes where it would have gone before: nothing was kept, so the proposal is not in the packet.
+  expect:
+  - op: question.add
+    to: PER-2
+  forbid:
+  - op: question.add
+    to: PER-5
+  packet_lacks: [Who answers what, reviewer list]
+ideal:
+  first:
+    summary: Theo passed the reviewer list on to Ines.
+    topic: the advance-copy reviewer list
+    ops:
+    - op: routing.add
+      text: Questions about the advance-copy reviewer list go to Ines Duarte.
+      topic: advance-copy reviewer list
+      person: PER-5
+      applies_to: {scope: projects, projects: [PRJ-1]}
+      evidence:
+        quote: Not me, ask Ines Duarte. She owns the advance-copy reviewer list
+    - op: routing.add
+      text: Theo Brandt does not answer questions about the advance-copy reviewer list.
+      topic: advance-copy reviewer list
+      person: PER-3
+      negative: true
+      applies_to: {scope: projects, projects: [PRJ-1]}
+      evidence:
+        quote: I only hear about it afterwards
+  later:
+    summary: Asked Maya Okafor which reviewers get advance copies.
+    topic: advance copies
+    ops:
+    - op: question.add
+      to: PER-2
+      kind: question
+      title: Which reviewers are getting advance copies?
+      text: The bookshop wants to avoid sending anyone a second copy.
+      links:
+      - label: Book page
+        url: https://books.example.org/salt-orchard
+      matters_for: The date the advance copies go out
+      project: PRJ-1

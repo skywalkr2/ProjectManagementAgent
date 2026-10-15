@@ -1,0 +1,58 @@
+id: another-teams-rows
+title: Feedback on a question is kept as the general case, and another team's row later gets no impact question
+first:
+  received: '2026-10-09'
+  project: PRJ-1
+  pasted: |-
+    Status rows for the week:
+    - Carrier Experience: portal wireframes slip to October 30.
+    - Architecture Office: the load-test plan review is on track.
+  wrong:
+    summary: A question about the wireframe slip.
+    ops:
+    - op: question.add
+      to: PER-1
+      kind: question
+      title: Should we ask Carrier Experience how the wireframe slip affects the cut-over?
+      text: Their row says the portal wireframes slip to October 30.
+      project: PRJ-1
+  correction:
+    kind: answered
+    id: '@question'
+    note: No. That row is the Carrier Experience team's own work and does not name ours. Rows scoped to another team get no impact question unless they name our work.
+  expect_proposal:
+  - op: lesson.add
+    text_has: [another team]
+  keep: true
+later:
+  received: '2026-10-20'
+  project: PRJ-1
+  pasted: |-
+    Status rows for the week:
+    - Carrier Experience: the rate import slips to November 2.
+    - Architecture Office: the load-test plan review is on track.
+  expect:
+  - op: fact
+    text_has: [rate import]
+  forbid:
+  - op: question.add
+  packet_has: [another team]
+ideal:
+  learn:
+    summary: Another team's rows get no impact question.
+    topic: rows scoped to another team
+    ops:
+    - op: lesson.add
+      text: Rows scoped to another team get no impact question unless they name our work.
+      guard: Ask an impact question about a row only when the row names the person's own team or work.
+      evidence:
+        quote: Rows scoped to another team get no impact question unless they name our work
+  later:
+    summary: The rate import slips to November 2; recorded as a fact.
+    topic: weekly status rows
+    ops:
+    - op: fact
+      text: Carrier Experience says the rate import slips to November 2.
+      project: PRJ-1
+      evidence:
+        quote: 'Carrier Experience: the rate import slips to November 2'
