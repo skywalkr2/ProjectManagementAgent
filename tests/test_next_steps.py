@@ -23,9 +23,11 @@ from engine.intake import hand_in
 from engine.next_steps import (
     NewPersonForm,
     add_new_person,
+    add_project,
     file_under,
     new_person_prefill,
     not_a_project,
+    unfile_missing,
 )
 from engine.packet import build
 from engine.storage import Store, StoreError, WriteContext
@@ -412,6 +414,73 @@ def test_a_project_from_an_input_waits_and_from_the_persons_own_note_applies(env
     assert [p for p in store.read().list("project") if p.data["name"] == NEW_PROJECT]
     assert undo(store, cs_id, [3]).restored == [3]
     assert data(store, "changeset", own_cs)["status"] == "applied"
+
+
+def test_add_files_the_unfiled_work_under_the_new_project_and_undo_takes_the_project_and_the_filing_away(env):
+    ws, cfg, store = env
+    cs_id = project_run(env)
+    note_id, action_id, other_id = (outcomes(store, cs_id)[i]["records"][0]["id"] for i in range(3))
+    project_id = add_project(store, cfg, cs_id, 3, ws=ws, now=NOW)
+    assert data(store, "project", project_id)["name"] == NEW_PROJECT
+    assert data(store, "note", note_id)["project"] == project_id
+    assert data(store, "action", action_id)["project"] == project_id
+    assert data(store, "action", other_id)["project"] == PROJECT["id"]  # it named a project already
+    assert outcomes(store, cs_id)[3]["status"] == "applied"
+    assert undo(store, cs_id, [3]).restored == [3]
+    assert not [p for p in store.read().list("project") if p.data["name"] == NEW_PROJECT]
+    assert not data(store, "note", note_id).get("project") and not data(store, "action", action_id).get("project")
+    assert data(store, "action", other_id)["project"] == PROJECT["id"]
+
+
+def test_add_also_files_the_held_ops_that_have_not_made_their_records_yet(env):
+    ws, cfg, store = env
+    answers(
+        {"op": "project.add", "name": NEW_PROJECT},
+        {
+            "op": "action.add",
+            "text": "Book the venue",
+            "owners": [STRANGER],
+            "evidence": {"quote": f"{STRANGER} will book the venue"},
+        },
+    )
+    cs_id = run(env, RAW)
+    project_id = add_project(store, cfg, cs_id, 0, ws=ws, now=NOW)
+    release(store, cfg, cs_id, 1, person=PEOPLE[1]["id"], ws=ws)
+    made = outcomes(store, cs_id)[1]["records"][0]["id"]
+    assert data(store, "action", made)["project"] == project_id
+
+
+def test_undoing_add_takes_the_project_off_the_held_ops_it_was_filed_on(env):
+    ws, cfg, store = env
+    answers(
+        {"op": "project.add", "name": NEW_PROJECT},
+        {
+            "op": "action.add",
+            "text": "Book the venue",
+            "owners": [STRANGER],
+            "evidence": {"quote": f"{STRANGER} will book the venue"},
+        },
+    )
+    cs_id = run(env, RAW)
+    add_project(store, cfg, cs_id, 0, ws=ws, now=NOW)
+    assert outcomes(store, cs_id)[1]["op"]["project"]
+    assert undo(store, cs_id, [0]).restored == [0]
+    unfile_missing(store, cs_id)
+    assert not outcomes(store, cs_id)[1]["op"].get("project")
+    release(store, cfg, cs_id, 1, person=PEOPLE[1]["id"], ws=ws)
+    made = outcomes(store, cs_id)[1]["records"][0]["id"]
+    assert not data(store, "action", made).get("project")
+
+
+def test_the_release_route_adds_a_held_project_and_files_the_work(api):
+    client, store, ws, cfg = api
+    cs_id = project_run((ws, cfg, store))
+    note_id = outcomes(store, cs_id)[0]["records"][0]["id"]
+    assert client.post(f"/api/changesets/{cs_id}/ops/3/release", json={}).status_code == 200
+    (added,) = [p for p in store.read().list("project") if p.data["name"] == NEW_PROJECT]
+    assert data(store, "note", note_id)["project"] == added.id
+    assert client.post(f"/api/changesets/{cs_id}/undo", json={"ops": [3]}).status_code == 200
+    assert not data(store, "note", note_id).get("project")
 
 
 def test_part_of_files_the_work_under_the_project_keeps_a_confirmed_entry_records_a_signal_and_undo_restores_it(env):

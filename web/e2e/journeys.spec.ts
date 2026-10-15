@@ -192,6 +192,194 @@ test.describe.serial("journeys", () => {
     await visit(page);
   });
 
+  test("J7. The obvious next steps from what came in: each button makes its record, and Undo takes it back", async ({
+    page,
+  }) => {
+    test.setTimeout(240_000);
+    collectProblems(page, problems);
+    await page.goto(`?token=${info.token}`);
+    await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
+    const toasts = page.getByRole("region", { name: "Notifications" });
+    const undo = () => toasts.getByRole("button", { name: "Undo" }).last().click();
+    const json = async <T>(path: string): Promise<T> => {
+      const response = await page.request.get(path);
+      expect(response.status(), path).toBe(200);
+      return (await response.json()) as T;
+    };
+    // What the fake AI service answers with when no stand-in rule makes the thing being tried: the next request that
+    // holds these words.
+    const script = async (when: string, ops: object[]) => {
+      const sent = await fetch(`${FAKE}/__e2e/script`, {
+        method: "POST",
+        body: JSON.stringify({ when, answer: { summary: "Read by the journey's script.", ops } }),
+      });
+      expect(sent.ok).toBe(true);
+    };
+    // I hand in someone else's words, and the assistant's review of them opens on Today.
+    const handIn = async (text: string, firstLine: string) => {
+      await page.getByRole("link", { name: /^Today/ }).first().click();
+      await page.getByRole("button", { name: "Hand something in" }).first().click();
+      await page.getByLabel("Paste or type it here").fill(text);
+      await page.getByRole("button", { name: "Hand in", exact: true }).click();
+      const row = page.locator("li.line", { hasText: firstLine });
+      await expect(row.locator(".kind").first()).toHaveText(/Review/i, { timeout: 30_000 });
+      const expander = row.locator(".expander").first();
+      if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
+      return row;
+    };
+    type Person = { id: string; name: string };
+    const people = async () => (await json<Person[]>("api/people")).map((p) => p.name);
+    const actionsOf = async () =>
+      (await json<{ person: string; actions: { id: string; text: string; project_name: string | null }[] }[]>("api/followups")).flatMap(
+        (s) => s.actions.map((a) => ({ ...a, person: s.person })),
+      );
+    const me = info.people[0];
+    const [, first, newcomer] = info.people;
+    const [base] = info.projects;
+    const [festival, party, tour, retreat] = ["festival", "party", "tour", "retreat"].map((w) => `${base} ${w}`);
+
+    // 1. Add a new person. A name nobody has on file is one question; the form starts from the name as written, with
+    // the cursor in its first field. Adding sends the waiting action to them. Undo takes the person and the action
+    // back (the question stays answered), so it is tried on one newcomer and the other is kept.
+    let row = page.locator("li.line");
+    const addNewcomer = async (name: string, keep: boolean) => {
+      const sentence = `${name} will confirm the catering menu by 2026-11-20.`;
+      row = await handIn(sentence, sentence);
+      await expect(row.getByRole("combobox", { name: `Who is “${name}”?` })).toBeVisible();
+      await row.getByRole("button", { name: "Add a new person" }).click();
+      const form = row.getByRole("form", { name: "New person" });
+      await expect(form.getByLabel("Full name", { exact: true })).toBeFocused();
+      await expect(form.getByLabel("Full name", { exact: true })).toHaveValue(name);
+      await visit(page);
+      await form.getByRole("button", { name: "Add and use" }).click();
+      await expect(toasts).toContainText(`Added ${name}. What waited on the name went ahead.`);
+      expect(await people()).toContain(name);
+      const waiting = async () => (await actionsOf()).filter((a) => a.text.startsWith("Confirm the catering menu"));
+      const owned = async () => (await json<Person[]>("api/people")).find((p) => p.name === name)?.id;
+      expect((await waiting()).map((a) => a.person)).toContain(await owned());
+      if (keep) return;
+      const before = (await waiting()).length;
+      await undo();
+      await expect.poll(async () => (await people()).includes(name)).toBe(false);
+      expect((await waiting()).length).toBe(before - 1);
+    };
+    await addNewcomer(first, false);
+    await addNewcomer(newcomer, true);
+    const added = (await json<Person[]>("api/people")).find((p) => p.name === newcomer)!;
+
+    // 2. A contact detail found in what came in always waits; confirming it sets it on the person, and Undo takes it away.
+    const reach = "555 0142";
+    const direct = `Note from ${newcomer}: my direct line is ${reach}.`;
+    await script("my direct line is", [
+      { op: "person.contact", person: added.id, kind: "phone", value: reach, evidence: { quote: `my direct line is ${reach}` } },
+    ]);
+    row = await handIn(direct, direct);
+    const reached = async () => JSON.stringify((await json<{ details: object }>(`api/record-pages/${added.id}?kind=person`)).details);
+    expect(await reached()).not.toContain(reach);
+    await row.getByRole("button", { name: "Do it anyway" }).click();
+    await expect(toasts).toContainText("Done.");
+    expect(await reached()).toContain(reach);
+    await undo();
+    await expect.poll(reached).not.toContain(reach);
+
+    // 3. A project it hasn't heard of. Add makes the project and files what the same input made with no project under it;
+    // Undo takes both back.
+    const plans = `The ${festival} and the ${retreat} need plans. Remember to review each plan.`;
+    await script("need plans", [
+      { op: "note", text: "The plans are due soon." },
+      { op: "action.add", text: "Review each plan", owners: [me], evidence: { quote: "Remember to review each plan" } },
+      { op: "project.add", name: retreat, evidence: { quote: `the ${retreat} need plans` } },
+      { op: "project.add", name: festival, evidence: { quote: `The ${festival}` } },
+    ]);
+    row = await handIn(plans, plans);
+    const projectNamed = async (name: string) => (await json<{ id: string; name: string }[]>("api/projects")).find((p) => p.name === name);
+    const filed = async () => ({
+      note: (await json<{ text: string; project_name: string | null }[]>("api/notes")).find((n) => n.text === "The plans are due soon.")?.project_name || null,
+      action: (await actionsOf()).find((a) => a.text.startsWith("Review each plan"))?.project_name || null,
+    });
+    expect(await filed()).toEqual({ note: null, action: null });
+    const proposal = (name: string) => row.locator("li.child", { hasText: `Add a project “${name}”?` });
+    await proposal(retreat).getByRole("button", { name: "Add", exact: true }).click();
+    await expect(toasts).toContainText(`Added the project ${retreat}.`);
+    expect(await filed()).toEqual({ note: retreat, action: retreat });
+    await undo();
+    await expect.poll(async () => await projectNamed(retreat)).toBeUndefined();
+    expect(await filed()).toEqual({ note: null, action: null });
+    await proposal(festival).getByRole("button", { name: "Add", exact: true }).click();
+    await expect(toasts).toContainText(`Added the project ${festival}.`);
+    expect(await filed()).toEqual({ note: festival, action: festival });
+    await visit(page);
+
+    // 4. It's part of: the work of that input goes under the project I pick, the words are kept as a name for it, and Undo
+    // brings the proposal back.
+    const meeting = `Plans for the ${party} are due by Friday.`;
+    await script("are due by Friday", [
+      { op: "note", text: "The party plans are due Friday." },
+      { op: "project.add", name: party, evidence: { quote: `Plans for the ${party}` } },
+    ]);
+    row = await handIn(meeting, meeting);
+    const partyNote = async () =>
+      (await json<{ text: string; project_name: string | null }[]>("api/notes")).find((n) => n.text === "The party plans are due Friday.")?.project_name || null;
+    for (const keep of [false, true]) {
+      await row.locator("li.child", { hasText: `Add a project “${party}”?` }).getByRole("button", { name: `More actions for ${party}` }).click();
+      await page.getByRole("menuitem", { name: "It's part of…" }).click();
+      await row.getByLabel(`“${party}” is part of`).selectOption({ label: festival });
+      await row.getByRole("button", { name: "File it there" }).click();
+      await expect(toasts).toContainText(`Filed under ${festival}. “${party}” is kept as a name for it.`);
+      expect(await partyNote()).toBe(festival);
+      expect(await projectNamed(party)).toBeUndefined();
+      if (keep) break;
+      await undo();
+      await expect.poll(partyNote).toBeNull();
+      await expect(row.locator("li.child", { hasText: `Add a project “${party}”?` })).toBeVisible();
+    }
+
+    // 5. Not a project: nothing is filed anywhere and no project is made; the words are kept as not one; Undo brings it back.
+    const trip = `Everyone is looking forward to the ${tour}.`;
+    await script("is looking forward", [
+      { op: "note", text: "Looking forward to it." },
+      { op: "project.add", name: tour, evidence: { quote: `looking forward to the ${tour}` } },
+    ]);
+    row = await handIn(trip, trip);
+    const tourProposal = row.locator("li.child", { hasText: `Add a project “${tour}”?` });
+    for (const keep of [false, true]) {
+      await tourProposal.getByRole("button", { name: `More actions for ${tour}` }).click();
+      await page.getByRole("menuitem", { name: "Not a project" }).click();
+      await expect(toasts).toContainText(`“${tour}” is kept as not a project.`);
+      expect(await projectNamed(tour)).toBeUndefined();
+      if (keep) break;
+      await undo();
+      await expect(tourProposal).toBeVisible();
+    }
+
+    // 6. Drop, on an action that is no longer needed: it asks why, leaves the list at once, and Undo puts it back.
+    const agenda = "I will print the agenda.";
+    row = await handIn(agenda, agenda);
+    const todo = page.locator("li", { has: page.getByRole("button", { name: "Mark done: Print the agenda." }) });
+    await expect(todo).toHaveCount(1, { timeout: 20_000 });
+    await todo.getByRole("button", { name: "More actions for Print the agenda." }).click();
+    await page.getByRole("menuitem", { name: "Drop" }).click();
+    await page.getByLabel("Why isn't it needed?").fill("The printer sends it.");
+    await page.getByRole("button", { name: "Drop it" }).click();
+    await expect(toasts).toContainText("Dropped.");
+    expect((await actionsOf()).filter((a) => a.text === "Print the agenda.")).toHaveLength(0);
+    await undo();
+    await expect.poll(async () => (await actionsOf()).filter((a) => a.text === "Print the agenda.").length).toBe(1);
+
+    // 7. Add to the nearest action: a new action with no owner that nearly repeats one I have is added to that one, and Undo
+    // gives it back as a question about who owns it.
+    const again = "Somebody should print the agenda.";
+    await script("Somebody should print", [{ op: "action.add", text: "Print the agenda.", owners: [], evidence: { quote: again } }]);
+    row = await handIn(again, again);
+    await expect(row.getByText("Who owns this?")).toBeVisible();
+    await row.getByRole("button", { name: "Add to “Print the agenda.”" }).click();
+    await expect(toasts).toContainText("Added to Print the agenda.");
+    expect((await actionsOf()).filter((a) => a.text === "Print the agenda.")).toHaveLength(1);
+    await undo();
+    await expect(row.getByText("Who owns this?")).toBeVisible();
+    await visit(page);
+  });
+
   test("J4. An add-on from the list: I install it, restart, turn it on, restart, open its screen, then turn it off and remove it", async ({
     page,
   }) => {

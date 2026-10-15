@@ -10,7 +10,8 @@ Each service is a list of routes under its own prefix, added to `SERVICES` (plai
   model. Every chat request is recorded.
 - `/__e2e/...` are the helpers the browser tests read: what the AI service was asked, the people in the fictional
   workspace to write notes about, a folder the app may read as a source (and a route that puts a file in it), what the
-  sign-in service was asked, and the token the app was started with.
+  sign-in service was asked, and the token the app was started with. A test may also script one answer: the next
+  request that holds the given words gets that answer instead of the stand-in's (for what no stand-in rule produces).
 
 With `--https-port` the process also answers over HTTPS, with a certificate from a throwaway authority made at start
 (`tests.fake_tls`; the app is told to trust it with `SSL_CERT_FILE`). `SECURE_SERVICES` are those:
@@ -75,6 +76,7 @@ class State:
     def __init__(self, folder: Path):
         self.folder = folder
         self.chats: list[dict] = []
+        self.scripted: list[dict] = []  # answers waiting for a request that holds their words: {"when", "answer"}
         self.https_base = ""
         self.assets = folder / "services"
         self.catalog_text = ""
@@ -121,6 +123,15 @@ def is_check(user: str) -> bool:
     return "Reply with exactly" in user or learning_check.CHECK_REQUEST in user
 
 
+def scripted_answer(state: State, user: str) -> str | None:
+    """The answer a test scripted for a request holding its words, used once; None when none applies."""
+    for entry in state.scripted:
+        if entry["when"] in user:
+            state.scripted.remove(entry)
+            return json.dumps(entry["answer"])
+    return None
+
+
 def answer_to(system: str, user: str) -> str:
     """The text a model would send back for this packet, from the stand-in's rules."""
     if "Reply with exactly this JSON" in user:
@@ -163,7 +174,7 @@ def ai_routes(state: State) -> list[Route]:
                 "input": first[:200],
             }
         )
-        text = answer_to(system, user)
+        text = (None if is_check(user) else scripted_answer(state, user)) or answer_to(system, user)
         usage = {"prompt_tokens": max(1, len(system + user) // 4), "completion_tokens": max(1, len(text) // 4)}
         return JSONResponse(
             {
@@ -279,6 +290,11 @@ def unauthorized() -> JSONResponse:
 def people() -> list[str]:
     """The names in the fictional workspace the journeys use: the first is the person at the keyboard."""
     return [p["full_name"] for p in fixture_records(DEMO_B, "person")]
+
+
+def projects() -> list[str]:
+    """The project names in the fictional workspace, for a test that needs a name no fresh workspace holds."""
+    return [p["name"] for p in fixture_records(DEMO_B, "project")]
 
 
 def address_of(name: str) -> str:
@@ -534,7 +550,13 @@ SOURCE_FILE = "folder-note.txt"
 def helper_routes(state: State, base: str) -> list[Route]:
     async def info(_request: Request) -> JSONResponse:
         return JSONResponse(
-            {**state.info(), "ai_base_url": f"{base}/ai/v1", "people": people(), "https_base": state.https_base}
+            {
+                **state.info(),
+                "ai_base_url": f"{base}/ai/v1",
+                "people": people(),
+                "projects": projects(),
+                "https_base": state.https_base,
+            }
         )
 
     async def requests(_request: Request) -> JSONResponse:
@@ -580,8 +602,15 @@ def helper_routes(state: State, base: str) -> list[Route]:
         (folder / SOURCE_FILE).write_text(str(body["text"]), encoding="utf-8")
         return JSONResponse({"file": SOURCE_FILE})
 
+    async def script(request: Request) -> JSONResponse:
+        """The next request holding `when` is answered with `answer`, once."""
+        body = await request.json()
+        state.scripted.append({"when": str(body["when"]), "answer": body["answer"]})
+        return JSONResponse({"waiting": len(state.scripted)})
+
     return [
         Route("/__e2e/info", info),
+        Route("/__e2e/script", script, methods=["POST"]),
         Route("/__e2e/ai-requests", requests),
         Route("/__e2e/sign-in", sign_in),
         Route("/__e2e/source-file", put_source_file, methods=["POST"]),

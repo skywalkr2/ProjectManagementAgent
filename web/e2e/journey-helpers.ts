@@ -13,6 +13,7 @@ export interface Info {
   token: string;
   ai_base_url: string;
   people: string[];
+  projects: string[];
   backup_folder: string;
   source_folder: string;
   workspace: string;

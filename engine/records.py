@@ -470,7 +470,11 @@ class Watched(BaseModel):
     key: str = Field(description="The item's key within that source.")
     change: Literal["new", "changed", "removed"] = Field(description="What happened to the item.")
     author: str | None = Field(None, description="Who changed it last, as the source says.")
-    by_us: bool = Field(False, description="The author is one of the workspace's own accounts.")
+    by_us: bool = Field(False, description="The author is one of the names the app publishes under.")
+    by_you: bool = Field(False, description="The change is the person's own work, from their source or their names.")
+    credited_to: str | None = Field(
+        None, description="The person or team the source names as the author of all it holds, as an id."
+    )
 
 
 class Source(Record):

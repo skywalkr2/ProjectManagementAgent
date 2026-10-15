@@ -529,6 +529,21 @@ def _change(cfg: Any, source: Any, item: SourceItem, change: str, old: str | Non
     }
 
 
+def _named_in(name: str | None, accounts: Any) -> bool:
+    """Whether a name an item's author is given by is one of these account names, ignoring case and spacing."""
+    return bool(name) and " ".join(name.split()).lower() in {" ".join(a.split()).lower() for a in accounts}
+
+
+def is_own_work(cfg: Any, source: Any, item: SourceItem) -> bool:
+    """Whether a change is the person's own work: the source is the person's (its author is the person's id), or the
+    change was made under one of the names the person uses. The app's own names are kept apart, so what the app
+    published never reads as the person's edit."""
+    person = cfg.workspace.user.person
+    if person and source.author == person:
+        return True
+    return _named_in(item.author, cfg.workspace.user.accounts)
+
+
 def _hand_in(
     ws: Any,
     store: Any,
@@ -551,7 +566,8 @@ def _hand_in(
         text = "\n\nThen:\n\n".join([*earlier, text])
     digest = _keep_text(ws, text)
     received = item.message.received if item.message is not None and item.message.received else None
-    by_us = bool(item.author) and item.author.strip().lower() in {a.lower() for a in cfg.workspace.our_accounts}
+    by_you = is_own_work(cfg, source, item)
+    by_us = not by_you and _named_in(item.author, cfg.workspace.our_accounts)
     record = tx.create(
         "source",
         {
@@ -569,6 +585,8 @@ def _hand_in(
                 "change": change,
                 "author": item.author,
                 "by_us": by_us,
+                "by_you": by_you,
+                "credited_to": source.author,
             },
         },
         ctx,

@@ -104,6 +104,7 @@ function open(
     "GET watch/kinds": () => KINDS,
     "GET settings": () => stored(sources.map((s) => ({ id: s.id, settings: { path: `${s.id}-folder` } }))),
     "GET projects": () => [],
+    "GET watch/authors": () => [],
     ...extra,
   });
   const onAsk = vi.fn();
@@ -333,6 +334,7 @@ describe("adding a source", () => {
       label: "Work calendar",
       every_minutes: 15,
       project: "p1",
+      author: null,
       // Only what differs from the defaults is sent, and dotted keys become nested values.
       settings: { address: "env:WORK_ADDRESS", options: { depth: 3 } },
       fingerprint: "fp-1",
@@ -439,10 +441,41 @@ describe("a source's menu", () => {
     expect(body(calls, "POST watch/sources/a")).toEqual({
       label: "Renamed",
       every_minutes: 240,
+      author: null,
       settings: { path: "docs", patterns: ["*.md"] },
       fingerprint: "fp-1",
     });
     expect(await screen.findByText("Saved Renamed.")).toBeInTheDocument();
+  });
+
+  test("a source's author is picked from a list of the person, colleagues and teams, and saved with the source", async () => {
+    const user = userEvent.setup();
+    const authors: S["WatchAuthorOption"][] = [
+      { id: "p1", name: "Casey Example", kind: "you" },
+      { id: "p2", name: "Robin Example", kind: "person" },
+      { id: "t1", name: "Design team", kind: "team" },
+    ];
+    const { calls } = open([source("a", { connector: "folder", author: "p2", author_name: "Robin Example" })], [], {
+      "GET watch/authors": () => authors,
+      "GET settings": () => stored(items("folder")),
+      "POST watch/sources/a": () => SAVED([{ id: "a" }], [{ id: "a" }]),
+    });
+    expect(within(await row("Source a")).getByText(/Written by Robin Example/)).toBeInTheDocument();
+    await choose(user, "Source a", "Change");
+    const form = await screen.findByRole("form", { name: "Change Source a" });
+    const pick = await within(form).findByLabelText("Whose work it holds");
+    expect(pick).toHaveValue("p2");
+    expect(within(pick).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Different people",
+      "Casey Example (you)",
+      "Robin Example",
+      "Design team",
+    ]);
+    await user.selectOptions(pick, "p1");
+    await waitFor(() => expect(within(form).getByLabelText("About path")).toHaveValue("inbox"));
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(body(calls, "POST watch/sources/a")).toBeDefined());
+    expect(body(calls, "POST watch/sources/a")).toMatchObject({ author: "p1" });
   });
 
   test("when the saved settings don't hold the source's own, only its name and schedule can change", async () => {
@@ -457,7 +490,7 @@ describe("a source's menu", () => {
     await user.selectOptions(within(form).getByLabelText("How often to read"), "60");
     await user.click(within(form).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(body(calls, "POST watch/sources/a")).toBeDefined());
-    expect(body(calls, "POST watch/sources/a")).toEqual({ label: "Source a", every_minutes: 60, fingerprint: "fp-1" });
+    expect(body(calls, "POST watch/sources/a")).toEqual({ label: "Source a", every_minutes: 60, author: null, fingerprint: "fp-1" });
   });
 
   test("Turn off acts at once, reads back with Undo, and a source that is off offers Turn on", async () => {

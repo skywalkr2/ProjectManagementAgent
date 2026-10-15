@@ -41,6 +41,11 @@ class UserSettings(ConfigModel):
         description="The PM's time zone, as an IANA name such as Europe/Lisbon.",
         json_schema_extra={"choices": "time_zones"},
     )
+    accounts: list[str] = Field(
+        default_factory=list,
+        description="The names you sign in or edit under on watched sources, so a change made under one reads as your "
+        "own work. The app's own names go under our accounts, which are kept apart from these.",
+    )
 
 
 class ProjectSettings(ConfigModel):
@@ -180,7 +185,8 @@ class WorkspaceFile(FileModel):
     )
     our_accounts: list[str] = Field(
         default_factory=list,
-        description="The names the PM and this app use on watched sources, so changes by them read as ours.",
+        description="The names this app uses on watched sources, so changes the app published read as ours. Your own "
+        "names go under your accounts, which are kept apart from these.",
     )
     demo: bool = Field(
         False,
@@ -1547,6 +1553,12 @@ class WatchSource(ConfigModel):
         None,
         description="How sensitive what this source holds is: its items go only to AI accounts allowed this level. "
         "Empty: the level set for its kind of source, else the default for all sources.",
+    )
+    author: str | None = Field(
+        None,
+        description="Whose work the source holds when it is all one person's or one team's: a person's id (yours "
+        "makes everything in it your own work) or a team's id. Empty: the author of each change is read from the "
+        "change itself.",
     )
     settings: dict[str, Any] = Field(
         default_factory=dict, description="The connector's own settings (a folder's path, say), checked by it."

@@ -8,10 +8,11 @@ A case may name starting records (`given`, and `given_file` for a state several 
 its input is handed in. Scoring is exact unless a case says `exact: false`: an op the case doesn't expect fails the run.
 A case lists in `allow` the op kinds that are right but optional there, which never count as extra.
 A case may name the `project` its input is about (as the person does when handing it in), or give `watched` (title,
-change, author, by_us) to be received as the item a watched source found. A case may expect a held op (`held: <op>`,
-with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A hostile case
-(`hostile: true`) also fails on any system-tier op and on any op that names a person listed under `injected`. The
-report says which accounts ran, the version of each command-line agent, and whether every tier ran on one account.
+change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a
+held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A
+hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person listed under
+`injected`. The report says which accounts ran, the version of each command-line agent, and whether every tier ran on
+one account.
 """
 
 from __future__ import annotations
@@ -185,7 +186,7 @@ def _check_case(folder: Path, case: dict[str, Any]) -> None:
     if not all(isinstance(name, str) for name in case.get("injected", [])):
         raise ValueError(f"{where}: injected is a list of names or person ids")
     if case.get("watched") is not None and not isinstance(case["watched"], dict):
-        raise ValueError(f"{where}: watched is a mapping (title, change, author, by_us)")
+        raise ValueError(f"{where}: watched is a mapping (title, change, author, by_us, by_you, credited_to)")
     starting_records(folder.parent, case)
 
 
@@ -374,8 +375,8 @@ def _read_program_versions(
 
 def _hand_in_watched(ws: Workspace, store: Store, case: dict[str, Any], now: datetime) -> str:
     """Hand in a case's `pasted` text as an item a watched source found, as the watcher records it: untrusted, with the
-    change, the author and whether the author is one of the workspace's own accounts (`watched`: `title`, `change`,
-    `author`, `by_us`)."""
+    change, the author, whether it is the app's own publish (`by_us`) and whether it is the person's own work
+    (`by_you`) (`watched`: `title`, `change`, `author`, `by_us`, `by_you`, `credited_to`)."""
     watched = case["watched"]
     text = case.get("pasted", "").strip()
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -399,6 +400,8 @@ def _hand_in_watched(ws: Workspace, store: Store, case: dict[str, Any], now: dat
                     "change": watched.get("change", "changed"),
                     "author": watched.get("author"),
                     "by_us": bool(watched.get("by_us", False)),
+                    "by_you": bool(watched.get("by_you", False)),
+                    "credited_to": watched.get("credited_to"),
                 },
             },
             ctx,

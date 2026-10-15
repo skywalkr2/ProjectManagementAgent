@@ -2012,6 +2012,8 @@ class WatchSourceView(BaseModel):
     )
     enabled: bool
     every_minutes: int
+    author: str | None = Field(None, description="The person or team whose work all it holds is, as an id.")
+    author_name: str | None = Field(None, description="Their name, for showing; empty when none is set or it is gone.")
     items: int = Field(description="Items it held at the last read.")
     last: WatchRunView | None = None
     read_at: str | None = Field(
@@ -2019,6 +2021,14 @@ class WatchSourceView(BaseModel):
     )
     failures: int = Field(0, description="Failed reads in a row.")
     problem: ScreenText | None = Field(None, description="Why it can't be read, and what to do, while it fails.")
+
+
+class WatchAuthorOption(BaseModel):
+    """Someone a source can be credited to: the person themselves, a colleague or a team."""
+
+    id: str
+    name: str
+    kind: Literal["you", "person", "team"]
 
 
 class AutoClosedView(BaseModel):
@@ -2371,6 +2381,7 @@ class WatchSourceIn(BaseModel):
     label: str = ""
     every_minutes: int = Field(60, ge=5)
     project: str | None = None
+    author: str | None = Field(None, description="A person's or team's id, from GET /api/watch/authors.")
     settings: dict[str, Any] = Field(default_factory=dict, description="Its settings, by field (nested as objects).")
     fingerprint: str
 
@@ -2381,6 +2392,9 @@ class WatchSourceChange(BaseModel):
     label: str | None = None
     every_minutes: int | None = Field(None, ge=5)
     enabled: bool | None = None
+    author: str | None = Field(
+        None, description="A person's or team's id, from GET /api/watch/authors; empty, when sent, clears it."
+    )
     settings: dict[str, Any] | None = None
     fingerprint: str
 

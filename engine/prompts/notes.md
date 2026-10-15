@@ -52,9 +52,12 @@ How to answer:
 - A meeting invitation (a time, a place or a link to join, and who is invited) is an "event.add" for the meeting, under
   the project the input is about, with the start time as the input gives it and the same quoted words. Add an action
   only when the input also asks the PM to do something.
-- A block marked by_us="yes" is a change made by one of the PM's own accounts, in a source they write in. When the
-  change adds what an open action asks for, close that action with "action.close", quoting the added words; the change
-  is the work. When it adds nothing an open action asks for, leave it alone: never ask the PM about their own edit.
+- A block marked author="you" is the PM's own edit, in a source they write in. When the change adds what an open action
+  asks for, close that action with "action.close", quoting the added words; the change is the work. When it adds nothing
+  an open action asks for, leave it alone: it is never news credited to someone else, and never ask the PM about their
+  own edit. A block marked author with a name is work the source credits to that person or team. A block marked
+  by_us="yes" is a change the app published itself: it confirms what was sent, so leave it alone; it is not the PM's
+  edit and closes no action.
 - When the input or the PM's note says the PM already sent something and doesn't say to whom ("I sent the brief"),
   don't name a recipient, and never pick the nearest name in the input. Add a question to the PM with "kind":
   "decision" and the title "Who did you send this to?", saying what was sent; nothing else is recorded about the

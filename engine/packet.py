@@ -173,13 +173,31 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
             request_parts.append(f"<note {_note_attributes(store, cfg, src, saved)}>\n{cleaned.text}\n</note>")
         else:
             watched = (saved.data.get("watched") or {}) if saved is not None else {}
-            by_us = ' by_us="yes"' if watched.get("by_us") else ""
-            request_parts.append(f'<untrusted source="{src}"{by_us}>\n{cleaned.text}\n</untrusted>')
+            marks = _watched_marks(store, watched)
+            request_parts.append(f'<untrusted source="{src}"{marks}>\n{cleaned.text}\n</untrusted>')
     request = "\n\n".join(request_parts)
     task = replace(_task(cfg, store, kind, instructions, stable, request), knowledge=learned.log.model_dump())
     return Packet(
         task, raw, cleaned, note, too_long=len(cleaned.text) > cfg.dispatch.max_input_chars, knowledge=learned.log
     )
+
+
+def _watched_marks(store: Store, watched: dict) -> str:
+    """What the app itself knows about who made a watched change, as attributes of its outside-content block: the
+    person's own work is `author="you"`; a source that names a colleague or a team credits it to them by name; and a
+    change the app published itself is `by_us="yes"`. The block stays outside content, whatever the marks say."""
+    marks = ""
+    if watched.get("by_you"):
+        marks += ' author="you"'
+    elif watched.get("credited_to"):
+        view = store.read()
+        record = view.get("person", watched["credited_to"]) or view.get("team", watched["credited_to"])
+        name = (record.data.get("full_name") or record.data.get("name")) if record is not None else None
+        if name:
+            marks += ' author="{}"'.format(" ".join(str(name).replace('"', "").split()))
+    if watched.get("by_us"):
+        marks += ' by_us="yes"'
+    return marks
 
 
 @dataclass(frozen=True)

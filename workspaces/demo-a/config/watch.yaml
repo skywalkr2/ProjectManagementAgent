@@ -4,6 +4,7 @@ sources:
   - id: inbox
     connector: folder
     label: Inbox folder
+    author: PER-1         # everything in it is the person's own work; a team id works too
     every_minutes: 30
     first_run: baseline   # the first read only notes what is there
     report_removed: false

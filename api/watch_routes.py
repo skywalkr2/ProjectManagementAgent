@@ -16,6 +16,7 @@ from api.schemas import (
     SetAsideIn,
     SetAsideView,
     UnconfirmIn,
+    WatchAuthorOption,
     WatchRunView,
     WatchSourceView,
 )
@@ -39,6 +40,13 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         except ConfigError:
             return cfg
 
+    def author_names() -> dict[str, str]:
+        view = store.read()
+        return {
+            **{p.id: p.data["full_name"] for p in view.list("person")},
+            **{t.id: t.data["name"] for t in view.list("team")},
+        }
+
     def view(source: object) -> WatchSourceView:
         known = watch.connectors(store)
         connector = known.get(source.connector)
@@ -58,6 +66,8 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             reads=reads(source.connector, declared_reads(known)),
             enabled=source.enabled,
             every_minutes=source.every_minutes,
+            author=source.author,
+            author_name=author_names().get(source.author or ""),
             items=len(items),
             last=WatchRunView(
                 **{k: last.data.get(k) for k in ("outcome", "error_kind", "error", "new", "changed", "removed")},
@@ -70,6 +80,22 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             failures=failures,
             problem=problem,
         )
+
+    @r.get("/watch/authors")
+    def authors() -> list[WatchAuthorOption]:
+        """Who a source can be credited to: the person themselves first, then colleagues, then teams."""
+        me = cfg.workspace.user.person
+        view = store.read()
+        people = sorted(
+            (p for p in view.list("person") if p.data.get("status", "active") == "active"),
+            key=lambda p: p.data["full_name"].lower(),
+        )
+        teams = sorted(view.list("team"), key=lambda t: t.data["name"].lower())
+        return [
+            *[WatchAuthorOption(id=p.id, name=p.data["full_name"], kind="you") for p in people if p.id == me],
+            *[WatchAuthorOption(id=p.id, name=p.data["full_name"], kind="person") for p in people if p.id != me],
+            *[WatchAuthorOption(id=t.id, name=t.data["name"], kind="team") for t in teams],
+        ]
 
     @r.get("/watch")
     def sources() -> list[WatchSourceView]:

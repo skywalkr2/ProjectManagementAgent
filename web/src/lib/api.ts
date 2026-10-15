@@ -56,6 +56,7 @@ export const api = {
 
   watchSources: () => call<S["WatchSourceView"][]>("GET", "watch"),
   watchKinds: () => call<S["WatchKindView"][]>("GET", "watch/kinds"),
+  watchAuthors: () => call<S["WatchAuthorOption"][]>("GET", "watch/authors"),
   addSource: (body: S["WatchSourceIn"]) => call<S["SettingsSaved"]>("POST", "watch/sources", body),
   changeSource: (src: string, body: S["WatchSourceChange"]) =>
     call<S["SettingsSaved"]>("POST", `watch/sources/${id(src)}`, body),

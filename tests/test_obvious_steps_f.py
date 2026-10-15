@@ -36,6 +36,7 @@ PEOPLE = fixture_records(DEMO_B, "person")
 TYPESETTER = next(p for p in PEOPLE if p.get("role") == "Typesetter")
 NAME = TYPESETTER["full_name"]
 FIRST, LAST = NAME.split()[0], NAME.split()[-1]
+NAME_ID = TYPESETTER["id"]
 ALIASED = next(p for p in PEOPLE if p.get("aliases"))
 RAW = "The proof sign-off came through this morning, so the printer can go ahead."
 QUOTE = "The proof sign-off came through this morning"
@@ -146,24 +147,31 @@ def watched_case(**watched):
     }
 
 
-def test_a_watched_change_by_one_of_the_persons_own_accounts_is_marked_in_the_packet(env):
+def test_a_watched_change_is_marked_in_the_packet_as_the_persons_own_work_or_the_apps_own_publish(env):
     ws, cfg, store = env
-    mine = _hand_in_watched(ws, store, watched_case(by_us=True, author="somebody"), NOW)
-    theirs = _hand_in_watched(ws, store, watched_case(by_us=False, author="somebody"), NOW)
+    mine = _hand_in_watched(ws, store, watched_case(by_you=True, author="somebody"), NOW)
+    app = _hand_in_watched(ws, store, watched_case(by_us=True, author="somebody"), NOW)
+    theirs = _hand_in_watched(ws, store, watched_case(author="somebody"), NOW)
+    credited = _hand_in_watched(ws, store, watched_case(credited_to=NAME_ID, author="somebody"), NOW)
     pasted = hand_in(ws, store, pasted="Back-cover copy: approved", now=NOW).request
     marked = build(ws, store, cfg, mine, NOW.date()).task.request
-    assert '<untrusted source="SRC-' in marked and ' by_us="yes">' in marked
+    assert '<untrusted source="SRC-' in marked and ' author="you">' in marked and "by_us" not in marked
+    published = build(ws, store, cfg, app, NOW.date()).task.request
+    assert ' by_us="yes">' in published and "author=" not in published
     assert "by_us" not in build(ws, store, cfg, theirs, NOW.date()).task.request
-    assert "by_us" not in build(ws, store, cfg, pasted, NOW.date()).task.request
+    assert f' author="{NAME}">' in build(ws, store, cfg, credited, NOW.date()).task.request
+    for plain in (theirs, pasted):
+        assert "author=" not in build(ws, store, cfg, plain, NOW.date()).task.request
     # The mark is made by the app from the source's own record; it is still outside content, never an instruction.
     assert "<untrusted" in marked and "<note" not in marked
 
 
-def test_the_prompt_tells_the_assistant_what_the_mark_means(env):
+def test_the_prompt_tells_the_assistant_what_the_marks_mean(env):
     ws, cfg, store = env
     handed = hand_in(ws, store, pasted=RAW, now=NOW)
     instructions = build(ws, store, cfg, handed.request, NOW.date()).task.instructions
-    assert 'by_us="yes"' in instructions and "action.close" in instructions and "action.unhold" in instructions
+    assert 'author="you"' in instructions and "action.close" in instructions and "action.unhold" in instructions
+    assert 'by_us="yes"' in instructions
 
 
 # ---- a recipient is never guessed ------------------------------------------------------------------------------------

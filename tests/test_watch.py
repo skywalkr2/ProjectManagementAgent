@@ -316,6 +316,83 @@ def test_changes_by_our_own_accounts_and_scratch_files_are_closed(tmp_path):
         store.close()
 
 
+def my_id():
+    """The person running the fictional workspace, from its settings."""
+    return load_config(DEMO_B / "config", env={}).workspace.user.person
+
+
+def watched_of(tmp_path, items, *, source=None, accounts=None, ours=None):
+    """Read a source once and return the `watched` marks of each item it handed in, by item key, with the packet each
+    was given, under the named accounts. `source` adds to the source's own entry."""
+    from engine.packet import build
+    from engine.storage import Store
+    from engine.watch import refresh
+
+    ws, cfg, store = make(tmp_path, [{**fake(items), **(source or {})}])
+    store.close()
+    settings = yaml.safe_load((ws.config_dir / "workspace.yaml").read_text())
+    settings["our_accounts"] = ours or []
+    settings["user"]["accounts"] = accounts or []
+    (ws.config_dir / "workspace.yaml").write_text(yaml.safe_dump(settings))
+    cfg = load_config(ws.config_dir, env={})
+    store = Store(ws.db_path, cfg=cfg)
+    try:
+        found = {}
+        for request_id in refresh(ws, store, cfg, "s", NOW).new:
+            record = store.read().get("source", store.read().get("request", request_id).data["source"])
+            packet = build(ws, store, cfg, request_id, NOW.date()).task.request
+            found[record.data["watched"]["key"]] = (record.data["watched"], packet)
+        return cfg, found
+    finally:
+        store.close()
+
+
+def test_a_source_that_names_the_person_as_its_author_holds_their_own_work(tmp_path):
+    items = [{"key": "a", "title": "Plan", "text": "First line.", "author": "someone else"}]
+    me = my_id()
+    _, found = watched_of(tmp_path, items, source={"author": me})
+    marks, packet = found["a"]
+    assert marks["by_you"] and not marks["by_us"] and marks["credited_to"] == me
+    assert ' author="you"' in packet and "by_us" not in packet
+
+
+def test_a_change_made_under_one_of_the_persons_names_is_theirs_and_the_apps_own_names_are_kept_apart(tmp_path):
+    items = [
+        {"key": "mine", "title": "Mine", "text": "One.", "author": "Casey  Example"},
+        {"key": "app", "title": "Published", "text": "Two.", "author": "Cockpit Assistant"},
+        {"key": "both", "title": "Both", "text": "Three.", "author": "Shared Name"},
+        {"key": "other", "title": "Other", "text": "Four.", "author": "A Colleague"},
+    ]
+    _, found = watched_of(
+        tmp_path, items, accounts=["casey example", "Shared Name"], ours=["Cockpit Assistant", "Shared Name"]
+    )
+    flags = {key: (marks["by_you"], marks["by_us"]) for key, (marks, _) in found.items()}
+    assert flags == {"mine": (True, False), "app": (False, True), "both": (True, False), "other": (False, False)}
+    assert ' author="you"' in found["mine"][1] and 'by_us="yes"' not in found["mine"][1]
+    assert 'by_us="yes"' in found["app"][1] and 'author="you"' not in found["app"][1]
+    assert "author=" not in found["other"][1] and "by_us" not in found["other"][1]
+
+
+def test_a_source_that_names_a_colleague_or_a_team_credits_its_changes_to_them_by_name(tmp_path):
+    from tests.conftest import fixture_records
+
+    person = next(p for p in fixture_records(DEMO_B, "person") if p["id"] != my_id())
+    team = fixture_records(DEMO_B, "team")[0]
+    items = [{"key": "a", "title": "Plan", "text": "First line.", "author": "any"}]
+    for owner, name in ((person["id"], person["full_name"]), (team["id"], team["name"])):
+        _, found = watched_of(tmp_path / owner, items, source={"author": owner})
+        marks, packet = found["a"]
+        assert not marks["by_you"] and marks["credited_to"] == owner
+        assert f' author="{name}"' in packet
+
+
+def test_a_source_names_no_author_by_default(tmp_path):
+    items = [{"key": "a", "title": "Plan", "text": "First line."}]
+    _, found = watched_of(tmp_path, items)
+    marks, packet = found["a"]
+    assert marks["credited_to"] is None and not marks["by_you"] and "author=" not in packet
+
+
 def test_a_newer_change_folds_in_the_older_one_still_waiting(tmp_path):
     from engine.watch import refresh
 

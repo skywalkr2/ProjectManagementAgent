@@ -178,6 +178,8 @@ from engine.followups import (
 from engine.intake import IntakeError, hand_in, note_as_input, source_text
 from engine.made import made_by
 from engine.names import People
+from engine.next_steps import add_project as add_held_project
+from engine.next_steps import unfile_missing
 from engine.ops import StageMoveOp
 from engine.origin import origins
 from engine.owners import suggest_owner
@@ -1359,6 +1361,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def undo(cs_id: str, body: UndoChoice) -> UndoReport:
         need("changeset", cs_id)
         report = guard(lambda: undo_changeset(store, cs_id, body.ops))
+        if report.restored:
+            guard(lambda: unfile_missing(store, cs_id))
         changed()
         return UndoReport(restored=report.restored, skipped=report.skipped)
 
@@ -1373,7 +1377,11 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     @r.post("/changesets/{cs_id}/ops/{index}/release")
     def release_op(cs_id: str, index: int, body: PersonChoice) -> Ok:
         need("changeset", cs_id)
-        guard(lambda: release(store, cfg, cs_id, index, person=body.person, ws=ws))
+        held = store.read().get("changeset", cs_id).data["ops"]
+        if 0 <= index < len(held) and held[index]["op"].get("op") == "project.add" and held[index]["status"] == "held":
+            guard(lambda: add_held_project(store, cfg, cs_id, index, ws=ws))
+        else:
+            guard(lambda: release(store, cfg, cs_id, index, person=body.person, ws=ws))
         changed()
         return Ok(ok=cs_id)
 

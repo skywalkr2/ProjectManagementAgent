@@ -12174,6 +12174,35 @@
         "title": "WalkthroughView",
         "type": "object"
       },
+      "WatchAuthorOption": {
+        "description": "Someone a source can be credited to: the person themselves, a colleague or a team.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "you",
+              "person",
+              "team"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind"
+        ],
+        "title": "WatchAuthorOption",
+        "type": "object"
+      },
       "WatchKindView": {
         "description": "A kind of source the assistant can keep reading, with the form its settings take.",
         "properties": {
@@ -12301,6 +12330,18 @@
       "WatchSourceChange": {
         "additionalProperties": false,
         "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A person's or team's id, from GET /api/watch/authors; empty, when sent, clears it.",
+            "title": "Author"
+          },
           "enabled": {
             "anyOf": [
               {
@@ -12361,6 +12402,18 @@
       "WatchSourceIn": {
         "additionalProperties": false,
         "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A person's or team's id, from GET /api/watch/authors.",
+            "title": "Author"
+          },
           "connector": {
             "description": "The kind of source, from GET /api/watch/kinds.",
             "title": "Connector",
@@ -12409,6 +12462,30 @@
       "WatchSourceView": {
         "description": "One place the assistant keeps reading, from watch.yaml, with its last read.",
         "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person or team whose work all it holds is, as an id.",
+            "title": "Author"
+          },
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Their name, for showing; empty when none is set or it is gone.",
+            "title": "Author Name"
+          },
           "connector": {
             "title": "Connector",
             "type": "string"
@@ -19819,6 +19896,29 @@
           }
         },
         "summary": "Sources"
+      }
+    },
+    "/api/watch/authors": {
+      "get": {
+        "description": "Who a source can be credited to: the person themselves first, then colleagues, then teams.",
+        "operationId": "authors_api_watch_authors_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/WatchAuthorOption"
+                  },
+                  "title": "Response Authors Api Watch Authors Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Authors"
       }
     },
     "/api/watch/kinds": {

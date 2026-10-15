@@ -211,3 +211,25 @@ def test_the_ai_service_passes_the_account_checks_learning_call_and_counts_it_as
     answer = client.post("/ai/v1/chat/completions", json=sent).json()["choices"][0]["message"]["content"]
     assert learning_check.problem(answer, None) is None
     assert state.chats[-1]["smoke"]
+
+
+def test_a_scripted_answer_goes_to_the_next_request_holding_its_words_once_and_never_to_an_account_check(tmp_path):
+    from engine.ai import learning_check
+
+    state = State(tmp_path)
+    client = TestClient(build_app(state, 0))
+    scripted = {"summary": "Scripted.", "ops": []}
+    assert client.post("/__e2e/script", json={"when": "a marked line", "answer": scripted}).json() == {"waiting": 1}
+
+    def ask(text: str) -> dict:
+        sent = {"messages": [{"role": "system", "content": "s"}, {"role": "user", "content": text}]}
+        return json.loads(client.post("/ai/v1/chat/completions", json=sent).json()["choices"][0]["message"]["content"])
+
+    assert ask("<note>\nSomething else.\n</note>") != scripted
+    task = learning_check.task(None)
+    check = {"messages": [{"role": "user", "content": task.request + " a marked line"}]}
+    assert client.post("/ai/v1/chat/completions", json=check).status_code == 200
+    assert state.scripted
+    assert ask("<note>\nHas a marked line in it.\n</note>") == scripted
+    assert ask("<note>\nHas a marked line in it.\n</note>") != scripted
+    assert state.scripted == []

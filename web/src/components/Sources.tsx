@@ -247,7 +247,11 @@ function SourceRow(props: {
     { id: "remove", label: t("sources.remove"), run: remove },
   ];
 
-  const facts = [source.connector_label || t("sources.kind_none"), tn("sources.items", source.items)];
+  const facts = [
+    source.connector_label || t("sources.kind_none"),
+    tn("sources.items", source.items),
+    ...(source.author_name ? [t("sources.written_by", { name: source.author_name })] : []),
+  ];
   const schedule = [
     source.enabled ? tn("sources.read_every", source.every_minutes) : t("sources.off"),
     source.read_at ? t("sources.last_read", { when: lastWhen }) : t("sources.never"),
@@ -303,6 +307,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
 
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled: !adding });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects, enabled: adding });
+  const authors = useQuery({ queryKey: ["watch-authors"], queryFn: api.watchAuthors });
 
   const available = (props.kinds ?? []).filter((k) => mode.type !== "add" || !mode.plugin || k.plugin === mode.plugin);
   const [picked, setPicked] = useState<string | null>(null);
@@ -312,6 +317,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [label, setLabel] = useState(source?.label ?? "");
   const [every, setEvery] = useState(String(source?.every_minutes ?? 60));
   const [project, setProject] = useState("");
+  const [author, setAuthor] = useState(source?.author ?? "");
   const [edits, setEdits] = useState<Record<string, Draft>>({});
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
@@ -365,6 +371,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           label: name,
           every_minutes: minutes,
           project: project || null,
+          author: author || null,
           settings: nest(values),
           fingerprint: fp,
         });
@@ -373,6 +380,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
         const saved = await api.changeSource(mode.source.id, {
           ...(name ? { label: name } : {}),
           every_minutes: minutes,
+          author: author || null,
           ...(items.length > 0 ? { settings: nest(values) } : {}),
           fingerprint: fp,
         });
@@ -485,6 +493,27 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+          {(authors.data?.length ?? 0) > 0 && (
+            <div className="field">
+              <label htmlFor={`${base}-author`}>{t("sources.field.author")}</label>
+              <select
+                id={`${base}-author`}
+                value={author}
+                aria-describedby={`${base}-author-hint`}
+                onChange={(e) => setAuthor(e.target.value)}
+              >
+                <option value="">{t("sources.field.no_author")}</option>
+                {(authors.data ?? []).map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.kind === "you" ? t("sources.field.author_you", { name: a.name }) : a.name}
+                  </option>
+                ))}
+              </select>
+              <p className="hint" id={`${base}-author-hint`}>
+                {t("sources.field.author_hint")}
+              </p>
             </div>
           )}
           {waitingForSettings && <p className="hint">{t("loading")}</p>}

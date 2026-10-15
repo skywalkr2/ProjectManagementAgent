@@ -4,6 +4,7 @@ name: Lantern House
 assistant_name: Quill
 user:
   person: PER-1
+  accounts: [PM account]   # names the person edits under on watched sources, kept apart from our_accounts
   timezone: America/New_York
 owner_format: "{full_name}"
 language: en-US
@@ -30,5 +31,5 @@ plugins:
   failures_before_off: 3   # a plugin call may fail this many times in a row before the plugin is turned off
   catalog: {enabled: true, shipped_feed: true, feeds: [], refresh_hours: 24, release_tokens: {}}   # where Add-ons finds packs
   secrets: {}   # e.g. {mail-plugin: {token: env:MAIL_TOKEN}}: references only, never the secret
-our_accounts: [Cockpit assistant]   # names this app and the PM use on watched sources
+our_accounts: [Cockpit assistant]   # names this app publishes under on watched sources
 demo: true   # made-up example data: the screens say so

@@ -403,6 +403,12 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 status_code=400, detail=f"{'.'.join(map(str, first['loc'])) or 'settings'}: {first['msg']}"
             ) from None
 
+    def checked_author(author: str) -> str:
+        view = store.read()
+        if view.get("person", author) is None and view.get("team", author) is None:
+            raise HTTPException(status_code=400, detail="Choose a person or a team from the list.")
+        return author
+
     @r.post("/watch/sources")
     def watch_add(body: WatchSourceIn) -> SettingsSaved:
         """Start reading a new source, with Undo. Its id comes from its label."""
@@ -422,6 +428,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         }
         if body.project:
             new["project"] = body.project
+        if body.author:
+            new["author"] = checked_author(body.author)
         done = saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
         worker.read_sources_now()  # its first read happens now, not at the next minute's check
         return done
@@ -439,6 +447,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             value = getattr(body, key)
             if value is not None:
                 found[key] = value
+        if "author" in body.model_fields_set:
+            found["author"] = checked_author(body.author) if body.author else None
         return saved(save({"watch.sources": sources}, [], body.fingerprint, allow=("watch.sources",)))
 
     @r.post("/watch/sources/{source_id}/remove")

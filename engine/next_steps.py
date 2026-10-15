@@ -209,6 +209,72 @@ def _held_project(store: Store, changeset_id: str, index: int) -> tuple[Any, dic
     return cs, outcome
 
 
+def add_project(
+    store: Store,
+    cfg: Config,
+    changeset_id: str,
+    index: int,
+    *,
+    ws: Workspace | None = None,
+    now: datetime | None = None,
+) -> str:
+    """Add the held project, and put the work of the same change that has no project under it, as one change with
+    Undo: the records the change made and the held ops that will make some. Undoing the held item takes the project and
+    the filing away together. Returns the new project's id. Nothing is kept when the filing can't be done."""
+    _held_project(store, changeset_id, index)
+    release(store, cfg, changeset_id, index, now=now, ws=ws)
+    cs = store.read().get("changeset", changeset_id)
+    outcome = cs.data["ops"][index] if cs is not None else None
+    project_id = next((r["id"] for r in (outcome or {}).get("records", []) if r["kind"] == "project"), None)
+    if outcome is None or outcome["status"] != "applied" or project_id is None:
+        raise StoreError("the project wasn't added")
+    try:
+        with store.transaction() as tx:
+            current = tx.get("changeset", changeset_id)
+            outcomes = copy.deepcopy(current.data["ops"])
+            w = WriteContext("pm", "trusted", f"project.add#{index}", changeset_id, current.data["request"])
+            _file_work(tx, outcomes, index, changeset_id, project_id, w, [])
+            if outcomes != current.data["ops"]:
+                # The held ops are filed in the change's own list, which Undo rewrites itself, so that write is
+                # kept apart from the group Undo reverts.
+                tx.update(
+                    "changeset",
+                    changeset_id,
+                    {"ops": outcomes},
+                    WriteContext("pm", "trusted", "changeset.release"),
+                    read_version=current.version,
+                )
+    except StoreError:
+        undo(store, changeset_id, [index])
+        raise
+    return project_id
+
+
+def unfile_missing(store: Store, changeset_id: str) -> None:
+    """Take a project off the held ops of a change when that project is gone (an Undo took it away), so the ops go
+    ahead later with no project instead of naming one that isn't there."""
+    cs = store.read().get("changeset", changeset_id)
+    if cs is None:
+        return
+    outcomes = copy.deepcopy(cs.data["ops"])
+    changed = False
+    for outcome in outcomes:
+        project = outcome["op"].get("project")
+        if outcome["status"] == "held" and project and store.read().get("project", project) is None:
+            outcome["op"].pop("project")
+            changed = True
+    if changed:
+        with store.transaction() as tx:
+            current = tx.get("changeset", changeset_id)
+            tx.update(
+                "changeset",
+                changeset_id,
+                {"ops": outcomes},
+                WriteContext("pm", "trusted", "changeset.release"),
+                read_version=current.version,
+            )
+
+
 def file_under(
     store: Store, cfg: Config, changeset_id: str, index: int, into: str, *, now: datetime | None = None
 ) -> str:
@@ -327,6 +393,11 @@ def _set_aside(store: Store, cfg: Config, changeset_id: str, index: int, into: s
     return cs_id
 
 
+def _unfiled(op: dict[str, Any]) -> bool:
+    """Whether a held op will make a record that belongs under a project and names none."""
+    return op.get("op") in _FILED_OPS and not op.get("project")
+
+
 def _file_work(
     tx: Any,
     outcomes: list[dict[str, Any]],
@@ -342,9 +413,8 @@ def _file_work(
         if outcome["index"] == skip:
             continue
         if outcome["status"] == "held":
-            op = outcome["op"]
-            if op.get("op") in _FILED_OPS and not op.get("project"):
-                op["project"] = into
+            if _unfiled(outcome["op"]):
+                outcome["op"]["project"] = into
             continue
         if outcome["status"] != "applied":
             continue

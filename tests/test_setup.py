@@ -822,6 +822,50 @@ def test_a_source_is_added_changed_and_removed_from_the_screens_without_a_restar
     assert c.post(f"{api}/watch/sources/nothing/remove", json={"fingerprint": "x"}).status_code == 404
 
 
+def test_a_source_names_its_author_from_the_list_of_the_person_colleagues_and_teams(tmp_path):
+    from tests.conftest import DEMO_B, fixture_records
+
+    ws, cfg, store = make(tmp_path)
+    c, api = client(ws, cfg, store)
+    me = cfg.workspace.user.person
+    colleague = next(p for p in fixture_records(DEMO_B, "person") if p["id"] != me)
+    team = fixture_records(DEMO_B, "team")[0]
+    options = c.get(f"{api}/watch/authors").json()
+    assert options[0]["id"] == me and options[0]["kind"] == "you"
+    assert {o["id"]: o["kind"] for o in options}[colleague["id"]] == "person"
+    assert {o["id"]: o["kind"] for o in options}[team["id"]] == "team"
+    kind = next(
+        k
+        for k in c.get(f"{api}/watch/kinds").json()
+        if k["plugin"] is None and any(i["key"] == "path" for i in k["items"])
+    )
+    folder = tmp_path / "inbox"
+    folder.mkdir()
+    body = {"connector": kind["name"], "label": "Notes", "settings": {"path": str(folder)}}
+    fingerprint = c.get(f"{api}/settings").json()["fingerprint"]
+    refused = c.post(f"{api}/watch/sources", json={**body, "author": "PER-9999", "fingerprint": fingerprint})
+    assert refused.status_code == 400
+    added = c.post(f"{api}/watch/sources", json={**body, "author": me, "fingerprint": fingerprint})
+    assert added.status_code == 200, added.text
+    listed = {s["id"]: s for s in c.get(f"{api}/watch").json()}
+    assert listed["notes"]["author"] == me and listed["notes"]["author_name"]
+    assert next(s for s in load_config(ws.config_dir, env={}).watch.sources if s.id == "notes").author == me
+    moved = c.post(
+        f"{api}/watch/sources/notes", json={"author": team["id"], "fingerprint": added.json()["fingerprint"]}
+    )
+    assert moved.status_code == 200
+    assert {s["id"]: s for s in c.get(f"{api}/watch").json()}["notes"]["author_name"] == team["name"]
+    untouched = c.post(
+        f"{api}/watch/sources/notes", json={"every_minutes": 30, "fingerprint": moved.json()["fingerprint"]}
+    )
+    assert {s["id"]: s for s in c.get(f"{api}/watch").json()}["notes"]["author"] == team["id"]
+    cleared = c.post(
+        f"{api}/watch/sources/notes", json={"author": None, "fingerprint": untouched.json()["fingerprint"]}
+    )
+    assert cleared.status_code == 200
+    assert {s["id"]: s for s in c.get(f"{api}/watch").json()}["notes"]["author"] is None
+
+
 def test_an_add_on_turned_on_shows_as_on_and_one_left_off_stops_the_step_asking(tmp_path):
     from engine import setup
 

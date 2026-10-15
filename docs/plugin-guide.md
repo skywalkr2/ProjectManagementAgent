@@ -1219,7 +1219,9 @@ One input the workspace received, such as pasted text; the text is kept by its h
 | `watched.key` | str | required | The item's key within that source. |
 | `watched.change` | Literal['new', 'changed', 'removed'] | required | What happened to the item. |
 | `watched.author` | str \| None | `None` | Who changed it last, as the source says. |
-| `watched.by_us` | bool | `False` | The author is one of the workspace's own accounts. |
+| `watched.by_us` | bool | `False` | The author is one of the names the app publishes under. |
+| `watched.by_you` | bool | `False` | The change is the person's own work, from their source or their names. |
+| `watched.credited_to` | str \| None | `None` | The person or team the source names as the author of all it holds, as an id. |
 | `excerpts` | Literal['allowed', 'never'] | `'allowed'` | never: the person allows using this source but never quoting it beyond a word or two; checks that compare drafts with sources apply a stricter limit to it. Set by the person only. |
 | `sensitivity` | Literal['open', 'internal', 'restricted'] | `'internal'` | Its data level, how sensitive its text is: it goes only to AI accounts allowed this level. From the person's choice when they handed it in, or the watched source's setting. Only the person changes it. |
 
