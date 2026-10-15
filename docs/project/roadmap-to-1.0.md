@@ -73,6 +73,12 @@ uv run cockpit evaluate --pairs --from workspaces/demo-a -w ~/cockpit-exit --acc
   cases plus the ones added since (those have no "before" number). A pair passes only when the later input comes out
   right with the correction not repeated, and a negative pair passes only when its later input is unchanged. A pair
   that fails names what the later run was given, so a gap in learning shows which knowledge didn't reach it.
+- **Found by the first set (2026-10-15):** 32 of 81 as first scored; most failures were cases that lagged the calendar
+  entry the prompt asks for, one was an app bug (entry times kept as written) and a few were real misses. All handled
+  in `c6d467c` (decisions, 2026-10-15). After the four reports, a short rerun at `c6d467c` of the cases those fixes touch:
+  `git worktree add ../cockpit-fix c6d467c`, then `uv sync` and `uv run cockpit evaluate --from workspaces/demo-b -w
+  ~/cockpit-exit --account "<the account used for O2>" --runs 3 --case invitation-event --case they-finished-note
+  --case date-change --case colon-in-title --case own-edit-closes-action --json > ~/after-fixes.json` (15 small runs).
 - **Then:** send the four files (in your home folder) to the session. It checks them for account names or addresses, writes the comparison
   with O1 and O2 in `docs/project/evals/`, and turns any failing pair into a fix with its test before real use starts.
   After that, `git worktree remove ../cockpit-after`.
