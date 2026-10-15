@@ -1150,16 +1150,36 @@ catalog where it publishes one, otherwise from the adapter's defaults and `price
 describe is treated as having no optional capabilities until the PM says otherwise or an evaluation shows them. New models show
 up through the catalog, with no code change.
 
-**What a model can do, measured** (owner, 2026-10-15; *designed, not yet built*; roadmap L7 step 1, L-more step 2).
-Capabilities above are features a catalog states. Whether a model *does* the work well is measured: every golden case and
-learning pair names the skills it proves (`skills:`, from a list the core ships as data and packs extend: using a term,
-following routing, using a lesson, dates, owners, not repeating a question, and so on), and each evaluation run adds to a
-**capability matrix**: model (with its agent program's version) × skill → pass rate, runs and date, kept in the
-workspace. Settings shows it per account in plain words, marking the skills below `ai.skills.min_score`. Then each task
-kind declares the skills it needs, and the router sends work to the first model in the tier order whose measured
-score holds for all of them, else the next deeper tier, saying so on the run. A skill never measured is unknown, never
-assumed; the switch check (6.22) measures it. This adds to escalation on failed checks and never replaces it: a model's
-own confidence still counts for nothing.
+**What a model can do, measured: the capability matrix** (owner, 2026-10-15: "very full featured … not just in claude
+but all the others"; *designed, not yet built*; roadmap L7 step 1, C0 step 2). Capabilities above are features a catalog
+states. Whether a model *does* a kind of work well is measured, the same way for every account the product supports:
+native vendor APIs, OpenAI-compatible endpoints (local servers included), aggregators and command-line agents. Nothing is
+assumed from a vendor's or model's name, and no vendor or model name appears outside adapters, `config/ai.yaml` and
+evaluation reports.
+- **Skills.** A skill is one thing a run can get right or wrong: using a term, following routing, using a lesson, dates,
+  owners, not repeating a question, evidence, structured answers, refusing injected instructions, and so on. The core
+  ships the list as data; a pack adds its own (drafting in a voice, checking a manuscript's continuity). Every golden
+  case, learning pair and pack case names the skills it proves (`skills:`); the self-check fails a case without one.
+- **The matrix.** Each evaluation run adds to it: model (the account's model id, and a command-line agent's program
+  version) × skill → passes, runs, the last date, and the cost of a passing run (price × tokens, from the run's usage).
+  It is kept in the workspace, exported with it, and never sent anywhere. A measurement goes stale when the model id or
+  program version changes, after `ai.skills.stale_days`, or when the cases that measured it change; stale is shown and
+  counts as unknown for routing.
+- **Measuring.** `cockpit evaluate` and the switch check (6.22) fill it; Settings offers "Measure" per account with its
+  estimate first (spending is the person's choice, 6.16), and only on cases for the data levels the account is allowed.
+  Real use adds evidence too: a correction of a run counts against that model for the skills the correction's kind
+  touches, shown apart from the measured cases (6.20).
+- **Seeing it.** Settings shows accounts × skills as a grid in plain words: pass rate, how many runs, how old, and cost
+  per passing run; skills below `ai.skills.min_score` are marked, unknown is said as unknown, never colour alone. The
+  model's own name is never shown, only the account and the short model name the person chose.
+- **Using it.** Each task kind, the core's and a pack's, declares the skills it needs. The router picks, among the
+  accounts allowed for the data level, the cheapest model whose measured score holds for every needed skill; a task kind
+  can say it needs the stronger tier regardless. When none measures well enough it takes the tier's configured model and
+  says on the run which skill was unmeasured or low. Fallbacks keep their rules (only checked accounts, 6.16), and
+  escalation on failed checks stays: a model's own confidence still counts for nothing.
+- **Telling the person.** When the matrix shows a cheaper model is as good for some work, or the configured one is
+  below the score for a skill a task kind needs, Today gets one line to decide ("Use <account> for everyday work: it
+  scores the same at a third of the cost"). Nothing switches on its own.
 
 **Adding an account** (Settings, AI): pick the kind, by name, from a list the app ships as data (`catalog/ai-endpoints.yaml`:
 services, local servers and the common command-line agents, each agent with its command, the program's own options that keep

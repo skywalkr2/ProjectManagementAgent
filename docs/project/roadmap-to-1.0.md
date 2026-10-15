@@ -1360,7 +1360,7 @@ L6. **The rules that bite in the first week of real use** (design 8.8).
   ("checked" means it came from the input, a record or a configured source; nothing is fetched).
 
 L7. **Lessons from running, and the designer's answers, 2026-10-15** (the functional designer's eight lessons and their
-answers to the round of 2026-10-15; owner: built after the "after" run (O3) and before phase B; about 4 sessions). Design
+answers to the round of 2026-10-15; owner: built after the "after" run (O3) and before phase B; about 5.5 sessions with the capability matrix, step 1). Design
 6.6, 6.7 "Follow-on changes", 6.8, 6.16, 6.18, 6.19, 6.21, 6.22. What the code does today is said for each.
 
 First, what the pairs on the backup model found (O3; decisions, 2026-10-15, "What the pairs on the backup model
@@ -1452,11 +1452,13 @@ Proving it (lesson 2; answers 2, 21):
 - [ ] **Extras weighed and tracked**: missing and forbidden stay exact; a fact or note is free, an internal action or
   entry costs a little, anything reaching another person fails; extras per run reported over time. *Today:* any extra
   not in `allow` fails the run.
-- [ ] **The capability matrix, step 1** (owner, 2026-10-15; design 6.16 "What a model can do, measured"): every golden
-  case and pair names the skills it proves (`skills:`, from a shipped list: using a term, following routing, using a
-  lesson, dates, owners, not repeating a question, …); `cockpit evaluate` adds each run to a matrix of model × skill
-  (pass rate, runs, date, program version), kept in the workspace; Settings shows it per account, in plain words, with
-  the skills below `ai.skills.min_score` marked. *Today:* reports are files, read by hand.
+- [ ] **The capability matrix, step 1: measured and shown** (owner, 2026-10-15; design 6.16 "the capability matrix";
+  about 1.5 sessions): the shipped skills list (data, packs extend it); `skills:` on every golden case, pair and pack case,
+  required by the self-check; `cockpit evaluate` and the switch check add each run to the matrix (model and program
+  version × skill: passes, runs, date, cost per passing run), kept in the workspace and exported; staleness (model id,
+  program version, `ai.skills.stale_days`, changed cases); Settings shows the grid per account in plain words with
+  "Measure" (estimate first); proved on every adapter kind with the fake services (native API, OpenAI-compatible,
+  aggregator, command-line agent). *Today:* reports are files read by hand.
 - [ ] **A superseded attempt leaves nothing running** (lesson 7): a test of the exact sequence. *Today:* the exclusive
   write lock and `retire_earlier_attempts` hold it; Undo already skips a change whose records changed since (lesson 8).
 
@@ -1655,6 +1657,17 @@ packs are phase P, after it.
 - **the pack learns too:** a correction in the pack's own work produces a proposal, and a later similar input comes out
   right. This proves the plugin API call in L2 carries the knowledge to packs.
 
+C0. **The capability matrix, step 2: work goes to a model that can do it** (owner, 2026-10-15; design 6.16; about 1.5
+sessions; first in phase C because the writing pack is the first use where model choice per kind of work matters most):
+- [ ] task kinds, the core's and a pack's, declare the skills they need (plugin API: `task_kind(skills=...)` and `skills:`
+  on a pack's cases), and the guide says so once it is built;
+- [ ] the router picks the cheapest allowed model whose measured scores hold for every needed skill, across accounts,
+  within the data level and the fallback rules; unknown or stale counts as not measured, and the run says which skill
+  decided;
+- [ ] corrections in real use count against the model for the skills they touch, shown apart from measured cases;
+- [ ] Today's one line when the matrix shows a cheaper model is as good, or the configured one is low for a needed
+  skill; nothing switches on its own.
+
 C1. **The writing pack, installed and reviewed.**
 - [ ] **A pack's own libraries install from the screen** (round 35, moved from phase A): a release names every package it
   needs with checksums. Install shows what will be added, refuses conflicts with the app's own, and Remove takes out only
@@ -1821,10 +1834,6 @@ private repository and builder like the other packs, and works with the project 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
 After the packs, beside real use (owner, 2026-10-12). None of it is needed for the loop to work. Each item has its own test.
-- [ ] **The capability matrix, step 2: work goes to a model that can do it** (owner, 2026-10-15; design 6.16): each task
-  kind declares the skills it needs; the router skips a model whose measured score for one of them is below
-  `ai.skills.min_score` and takes the next deeper tier, saying so on the run; a skill never measured counts as unknown,
-  not as passed, and the switch check measures it. Escalation on failed checks stays as it is.
 - [ ] **The style pair** (moved from L4): once a task kind drafts for an audience, style notes reach its packet, and a
   learning pair proves a sent version's changes (names replaced with roles, a promise cut) carry to the next draft.
 - [ ] **Loading a shared lessons file** (moved from L4, with Take my lessons): the injected-import pair runs through the

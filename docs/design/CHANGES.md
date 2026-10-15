@@ -1030,7 +1030,7 @@ yet follow, that it is *designed*, with its phase.
 
 | Where | Before | Now |
 |---|---|---|
-| AI accounts (6.16) | Capabilities are stated features from a catalog | Also skills measured per model by the evaluations, shown per account, and later used to route work to a model that can do it. Not yet built: L7 step 1, L-more step 2 |
+| AI accounts (6.16) | Capabilities are stated features from a catalog | Also skills measured per model for every kind of account (native, OpenAI-compatible, aggregator, command-line agent): a skills list packs extend, a matrix with staleness and cost per passing run, a grid in Settings, routing to the cheapest model that measures well enough, and a Today line to decide. Not yet built: L7 step 1, C0 step 2 |
 
 ## 73. What the pairs on the backup model found (2026-10-15)
 

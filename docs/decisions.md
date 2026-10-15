@@ -12,8 +12,13 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   Not vendor-specific: it is measured per model and program version, never assumed from a name.
 - **Why:** the backup model's pairs showed it reads and stores knowledge but often doesn't use it (a term, routing),
   while the stronger account did; today that lives only in a report read by hand.
-- **Impact:** step 1 (skills on cases, the matrix from `cockpit evaluate`, shown in Settings) joins L7's evaluation
-  items, about half a session; step 2 (routing by measured skill) goes to L-more, after the packs.
+- **Widened (owner):** "this capability needs to be very full featured. not just in claude but all the others": every
+  kind of account the product supports, measured the same way; skills packs extend; staleness; cost per passing run;
+  evidence from real corrections; routing across accounts to the cheapest model that measures well enough; a Today
+  line to decide, never a silent switch (design 6.16).
+- **Impact:** step 1 (measured and shown, every adapter kind) joins L7, about 1.5 sessions, so L7 is about 5.5;
+  step 2 (routing, task kinds' skills in the plugin API, real-use evidence, the Today line) opens phase C as C0, about
+  1.5 sessions, because the writing pack is where model choice per kind of work matters most.
 
 ## 2026-10-15: The failing pairs again, after the fix wave
 
