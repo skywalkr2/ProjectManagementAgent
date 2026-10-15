@@ -65,21 +65,6 @@ def test_an_op_kind_the_case_allows_is_never_counted_as_extra(monkeypatch):
     assert not other.passed and other.extra == ["fact() applied"]
 
 
-_MONTHS = "jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec"
-_DAYS = "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
-#: Words that give a date for something: an ISO day, a month and day either way round, or "by"/"next" a weekday.
-_A_DATE = re.compile(
-    rf"\b\d{{4}}-\d{{2}}-\d{{2}}\b|\b(?:{_MONTHS})[a-z]*\.? \d{{1,2}}\b|\b\d{{1,2}} (?:{_MONTHS})|"
-    rf"\bthe \d{{1,2}}(?:st|nd|rd|th)\b|\btomorrow\b|\bby (?:{_DAYS}|end of (?:the )?week)\b|\bnext (?:{_DAYS}|week)\b",
-    re.IGNORECASE,
-)
-
-
-def _names_an_entry(case) -> bool:
-    kinds = [k for e in [*case.get("expect", []), *case.get("forbid", [])] if "op" in e for k in ev._kinds(e)]
-    return "event.add" in kinds or "event.add" in case.get("allow", [])
-
-
 def _scored_stages(template):
     """Every input a model's answer is scored on: each case, each pair's later input (and its first, when that is the
     account's own run), and each scenario's two days."""
@@ -96,15 +81,29 @@ def _scored_stages(template):
             yield f"{scenario['id']} {day}", {**scenario.get("input", {}), **scenario[day]}
 
 
+def _ops(stage, key) -> list[tuple[list[str], dict]]:
+    return [(ev._kinds(e), e) for e in stage.get(key, []) if "op" in e]
+
+
+def _expects_a_due_date(stage) -> bool:
+    return any(
+        ("action.add" in kinds and e.get("due")) or ("record.set" in kinds and e.get("field") == "due")
+        for kinds, e in _ops(stage, "expect")
+    )
+
+
 @pytest.mark.parametrize("template", [DEMO_A, DEMO_B], ids=["demo-a", "demo-b"])
-def test_every_scored_input_that_gives_a_date_says_what_happens_to_the_calendar_entry_the_prompt_asks_for(template):
-    """The notes prompt asks for a calendar entry beside anything the input dates. A case, pair or scenario that neither
-    expects, allows nor forbids one fails a model for following the prompt, which the ideal answers never show."""
-    unsaid = []
-    for name, spec in _scored_stages(template):
-        text = " ".join(str(spec.get(key) or "") for key in ("pasted", "note"))
-        if _A_DATE.search(text) and not _names_an_entry(spec):
-            unsaid.append(name)
+def test_a_scored_input_whose_date_is_an_actions_own_forbids_a_calendar_entry(template):
+    """A calendar entry is for a real event. A stage that expects an action with a due date, or a new due date for an
+    open action, forbids an entry, so a model that adds one for the action's own date is scored down, unless the same
+    input also names a real event, which the stage then expects or allows (with its reason beside the allow)."""
+    unsaid = [
+        name
+        for name, stage in _scored_stages(template)
+        if _expects_a_due_date(stage)
+        and not any("event.add" in kinds for kinds, _ in _ops(stage, "expect") + _ops(stage, "forbid"))
+        and "event.add" not in (stage.get("allow") or [])
+    ]
     assert unsaid == []
 
 

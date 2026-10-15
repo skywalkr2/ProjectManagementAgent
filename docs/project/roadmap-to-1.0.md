@@ -1387,11 +1387,12 @@ found"), each with its test:
   its later run (21 of 21). Owed: the pairs on the main account when its monthly allowance resets.
 
 Calendar entries and dates (answers 10, 11, 13):
-- [ ] **Entries for real events only**: meetings, launches, delivery windows, appointments; never for an action's own due
+- [x] **Entries for real events only**: meetings, launches, delivery windows, appointments; never for an action's own due
   date. A new date for an open action is one `record.set` on its due, with no fact and no history entry. Changed in one
   commit with the notes prompt, the golden cases, the pairs and the check that guards them, which is turned round to fail
-  an entry made for an action's own date. *Today:* the prompt asks for an entry beside any dated fact or action, and the
-  check fails a dated input that has none.
+  an entry made for an action's own date. Built:
+  `test_a_scored_input_whose_date_is_an_actions_own_forbids_a_calendar_entry`; the notes prompt, cases and pairs changed
+  together.
 - [ ] **Only the named action moves**; a dependent move waits for a recorded dependency (phase P). *Today:* the prompt says
   so (`b136c7d`).
 - [ ] **Terms by audience**: the person's own list keeps their shorthand with the meaning beside it the first time; what

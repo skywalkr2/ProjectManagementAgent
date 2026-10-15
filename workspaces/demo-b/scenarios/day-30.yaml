@@ -136,7 +136,7 @@ history:
       summary: A supplier promotion; nothing to record.
       ops: []
 day1:
-  allow: [event.add]  # the calendar entry the prompt asks for beside a dated item
+  allow: [event.add]  # the press booking is a real event
   expect:
   - op: question.add
     to: PER-2
@@ -149,7 +149,7 @@ day1:
   - op: question.add
     to: PER-5
 day30:
-  allow: [event.add]  # the calendar entry the prompt asks for beside a dated item
+  allow: [event.add]  # the press booking is a real event
   expect:
   - op: question.add
     to: PER-5

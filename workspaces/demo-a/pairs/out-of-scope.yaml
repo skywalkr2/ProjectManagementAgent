@@ -35,11 +35,9 @@ later:
   expect:
   - op: fact
     text_has: [vendor brief]
-  # The dated entry beside a fact is what the notes prompt asks for.
-  allow:
-  - event.add
   forbid:
   - op: action.add
+  - op: event.add
   packet_has: [only watch]
 ideal:
   learn:
@@ -58,12 +56,6 @@ ideal:
     ops:
     - op: fact
       text: Lena Voss-Duarte will send the vendor brief to the vendor by October 29.
-      project: PRJ-3
-      evidence:
-        quote: I will send the vendor brief to the vendor by the 29th
-    - op: event.add
-      title: Vendor brief due to the vendor
-      start: '2026-10-29'
       project: PRJ-3
       evidence:
         quote: I will send the vendor brief to the vendor by the 29th

@@ -48,11 +48,9 @@ later:
   expect:
   - op: fact
     text_has: [cover files, October 30]
-  # The calendar entry beside a dated fact is what the notes prompt asks for.
-  allow:
-  - event.add
   forbid:
   - op: question.add
+  - op: event.add
   packet_has: ["Attached file: production.pptx", "The cover files are due on October 30", attach]
 ideal:
   learn:
@@ -70,12 +68,6 @@ ideal:
     ops:
     - op: fact
       text: The cover files are due on October 30.
-      project: PRJ-1
-      evidence:
-        quote: The cover files are due on October 30
-    - op: event.add
-      title: Cover files due
-      start: '2026-10-30'
       project: PRJ-1
       evidence:
         quote: The cover files are due on October 30

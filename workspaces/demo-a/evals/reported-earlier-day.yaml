@@ -7,8 +7,8 @@ expect:
   text_has:
   - price list
   as_of: '2026-10-12'
-allow:
-- event.add
+forbid:
+- op: event.add
 stub_answer:
   summary: Ines confirmed the price list on Monday.
   ops:

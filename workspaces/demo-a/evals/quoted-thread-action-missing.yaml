@@ -20,9 +20,7 @@ forbid:
 - op: action.add
   text_has:
   - notice
-# The notes prompt asks for a calendar entry beside a dated action, so one may appear here.
-allow:
-- event.add
+- op: event.add
 stub_answer:
   summary: Tobias's new date for the rollback options.
   ops:

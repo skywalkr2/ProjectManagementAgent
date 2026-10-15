@@ -9,8 +9,8 @@ expect:
 - op: question.add
   to: PER-1
   kind: decision
-allow:
-- event.add
+forbid:
+- op: event.add
 stub_answer:
   summary: 'A decision for you: the reading time.'
   ops:

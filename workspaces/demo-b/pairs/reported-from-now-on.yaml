@@ -26,7 +26,7 @@ first:
     origin: input
   keep: false
 later:
-  allow: [event.add]  # the calendar entry the prompt asks for beside a dated item
+  allow: [event.add]  # the proof copies shipping on a day is a real event, so an entry may appear beside the fact
   received: '2026-10-20'
   project: PRJ-1
   pasted: |-

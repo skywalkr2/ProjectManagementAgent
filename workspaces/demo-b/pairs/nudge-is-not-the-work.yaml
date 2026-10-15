@@ -31,7 +31,8 @@ later:
     Thanks for checking in. I am working on the interior file and will send it to the printer tomorrow.
   forbid:
   - op: action.close
-  allow: [record.set, event.add]  # Sam's own new day for the interior file moves its due date, with its calendar entry
+  - op: event.add
+  allow: [record.set]  # Sam's own new day for the interior file moves its due date
   packet_has: ['# Lessons']  # the lesson is the model's own wording, so the check is that it reaches the packet
 ideal:
   learn:

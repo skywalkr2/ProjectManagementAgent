@@ -15,8 +15,7 @@ expect:
   options: 2
 forbid:
 - new_person: true
-allow:
-- event.add
+- op: event.add
 stub_answer:
   summary: One action; the owner's name matches neither known person.
   ops:

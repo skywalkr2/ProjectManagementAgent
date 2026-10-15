@@ -31,7 +31,7 @@ first:
     origin: person
     text_has: [name for Route Optimizer Rollout]
 later:
-  allow: [event.add, fact]  # the calendar entry the prompt asks for beside a dated item; a fact of what the mail states, as the golden cases allow
+  allow: [fact]  # a fact of what the mail states, as the golden cases allow
   received: '2026-10-20'
   project: PRJ-1
   pasted: |-
@@ -45,6 +45,7 @@ later:
     due: '2026-10-25'
   forbid:
   - op: project.add
+  - op: event.add
   packet_has: ["Route Optimizer Pilot: A name for Route Optimizer Rollout."]
 ideal:
   learn:

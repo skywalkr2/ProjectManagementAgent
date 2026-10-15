@@ -27,7 +27,6 @@ first:
   allow_active: true
   expect_proposal: none
 later:
-  allow: [event.add]  # the calendar entry the prompt asks for beside a dated item
   received: '2026-10-20'
   project: PRJ-1
   pasted: |-
@@ -41,6 +40,7 @@ later:
     due: '2026-10-30'
   forbid:
   - new_person: true
+  - op: event.add
   packet_has: [Marta Quill]
 ideal:
   learn:

@@ -30,7 +30,7 @@ first:
     origin: person
     text_has: [not a project]
 later:
-  allow: [event.add, fact]  # the calendar entry the prompt asks for beside a dated item; a fact of what the mail states
+  allow: [fact]  # a fact of what the mail states
   received: '2026-10-20'
   pasted: |-
     From: Odile Fenwick
@@ -43,6 +43,7 @@ later:
     due: '2026-10-25'
   forbid:
   - op: project.add
+  - op: event.add
   packet_has: ["Depot Scanner Pilot: Not a project."]
 ideal:
   learn:

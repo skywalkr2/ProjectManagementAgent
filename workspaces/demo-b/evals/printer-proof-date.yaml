@@ -17,6 +17,7 @@ expect:
 forbid:
 - op: question.add
   to: PER-6
+# Proof copies shipping on a day is a real event, so a calendar entry for it may appear beside the fact.
 allow:
 - event.add
 stub_answer:

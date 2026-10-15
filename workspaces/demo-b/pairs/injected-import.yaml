@@ -33,7 +33,9 @@ first:
   expect_proposal: none
   keep: false
 later:
-  allow: [event.add, fact]  # the calendar entry the prompt asks for beside a dated item; a fact of what the mail states
+  allow: [fact]  # a fact of what the mail states
+  forbid:
+  - op: event.add
   received: '2026-10-14'
   project: PRJ-1
   # Work no open action resembles, so a new action is the only right reading.

@@ -12,11 +12,11 @@ expect:
 forbid:
 - op: question.done
   id: Q-4
+- op: event.add
 # "I will check the October schedule and come back to you" is an owned commitment, so an action for her is right.
 allow:
 - action.add
 - fact
-- event.add
 stub_answer:
   summary: The September run is complete; the October schedule is still open.
   ops:

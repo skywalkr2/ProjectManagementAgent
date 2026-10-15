@@ -25,9 +25,7 @@ expect:
   value: '2026-10-22'
 forbid:
 - op: action.add
-# The notes prompt asks for a calendar entry beside a dated action, so one may appear here.
-allow:
-- event.add
+- op: event.add
 stub_answer:
   summary: Tobias moved the rollback options to Oct 22.
   ops:

@@ -26,7 +26,7 @@ first:
     text_has: [second printing]
   keep: true
 later:
-  allow: [event.add, fact]  # the calendar entry the prompt asks for beside a dated item; a fact of what the mail states, as the golden cases allow
+  allow: [fact, event.add]  # a fact of what the mail states, as the golden cases allow; the press booking is a real event
   received: '2026-10-20'
   project: PRJ-1
   pasted: |-

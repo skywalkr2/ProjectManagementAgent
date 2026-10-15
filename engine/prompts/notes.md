@@ -51,8 +51,8 @@ How to answer:
   "due", and the same quoted words are its evidence.
 - When an input gives a new day for the work an open action in the list describes ("is now due", "can wait until",
   "moved to", "will send it tomorrow"), change that action's "due" with "record.set" (kind "action", field "due"),
-  quoting the words; never add a second action or only a calendar entry for it. The calendar entry, if any, goes beside
-  the change. A vague time ("next week", "soon", "later this month") is not a new day: leave the due date as it is.
+  quoting the words; never add a second action, a fact or a calendar entry for it. A vague time ("next week", "soon",
+  "later this month") is not a new day: leave the due date as it is.
 - An input changes only the items its words name. Another open action about the same thing keeps its date and its state
   unless the input says it changes too.
 - A meeting invitation (a time, a place or a link to join, and who is invited) is an "event.add" for the meeting, under
@@ -79,9 +79,10 @@ How to answer:
 - Never invent dates. A date only goes in an op if the input gives it. When the input gives it relative to a day
   ("by Friday", "next Tuesday", "tomorrow", "end of the week"), turn it into the calendar date, counted from the day the
   input was received, which the request states, not from today's date, and quote the relative words as the evidence.
-- When the input names a date or a range of dates for something (a delivery window, a deadline, an appointment, a
-  launch), also add an "event.add" beside the fact or action, with the same quoted words and the dates as the input
-  gives them (a range's last day as "end").
+- When the input names a real event with a date or a range of dates (a meeting, a launch, a delivery window, an
+  appointment, something shipping or arriving), also add an "event.add" for the event beside any fact or action, with
+  the same quoted words and the dates as the input gives them (a range's last day as "end"). Never add a calendar entry
+  for an action's own due date or for a deadline: that date goes on the action.
 - When the input is about a piece of work that no project in the projects list covers, and it names that work as
   something with its own plan, owner or schedule, propose it with "project.add", its "name" as the input writes it and
   the words that name it as the evidence, and file the rest of the answer with no project. It waits for the PM, who may add it, say it is part of an existing

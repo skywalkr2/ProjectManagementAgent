@@ -34,7 +34,7 @@ later:
   expect:
   - op: question.add
     to: PER-1
-  # The fact beside the question records what the row said.
+  # The fact beside the question records what the row said; the import's new day is a dated event, so an entry may appear.
   allow: [fact, event.add]
   packet_has: ['# Lessons']  # the lesson is the model's own wording, so the check is that it reaches the packet
 ideal:

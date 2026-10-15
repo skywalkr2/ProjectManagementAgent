@@ -8,10 +8,10 @@ pasted: |-
 forbid:
 - op: action.close
 - op: record.set
-# Recording that the review is planned for next week, and its week on the calendar, change no date and close nothing.
+- op: event.add
+# Recording that the review is planned for next week changes no date and closes nothing; no day is given, so no calendar entry.
 allow:
 - fact
-- event.add
 stub_answer:
   summary: Kofi will get to the review next week; no date was given, so nothing changes.
   ops: []

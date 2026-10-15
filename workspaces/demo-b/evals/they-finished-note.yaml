@@ -20,8 +20,7 @@ expect:
 forbid:
 - op: question.add
 - new_person: true
-allow:
-- event.add
+- op: event.add
 stub_answer:
   summary: The back-cover copy is final, and the approval moved to Oct 20.
   ops:

@@ -8,8 +8,7 @@ pasted: |-
   Just to confirm: I am still sending the carrier cut-over notice by Oct 21.
 forbid:
 - op: action.add
-allow:
-- event.add
+- op: event.add
 stub_answer:
   summary: That is the open action for the carrier cut-over notice; nothing to add.
   ops: []

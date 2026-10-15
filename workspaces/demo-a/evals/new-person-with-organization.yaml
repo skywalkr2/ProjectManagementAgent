@@ -16,8 +16,8 @@ expect:
   count: 1
 forbid:
 - new_person: true
+- op: event.add
 allow:
-- event.add
 - fact
 stub_answer:
   summary: One action for a person the workspace doesn't know, with the person and their organization proposed.
