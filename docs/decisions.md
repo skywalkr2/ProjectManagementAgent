@@ -3,6 +3,22 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: A decided action's date is never changed automatically; a moved plan is checked with the person
+
+- **Decided (owner):** "No it should not automatically move - the model should ask the appropriate party if it should
+  change dates. typically we dont change action items after they are decided - and especially not utomatically." And:
+  "If the model sees the discussion is > than a action item with due date this is a good reason to ask the user to
+  validate the plan."
+- **What it means:** a follow-on run never changes an action's due date or wording. For each tied action whose date the
+  move affects (linked, citing the old day, or due between the old and new day), it asks the right person whether the
+  date should change: the action's owner, or whoever decides, the person when nobody is named (design 6.8). When the
+  moved meeting or replaced fact carried more than a dated action (a topic said to be covered there, a plan, a set of
+  items), it asks the person to confirm the plan still holds. Agenda items with no due date of their own still sit on
+  the meeting's next instance (placement, not a date change). Drafted corrections for what already reached someone stay.
+- **Kind:** a standing rule of the core's (design 6.7, the follow-on run), not a setting.
+- **Impact:** the follow-on run's `record.set` on actions is removed; questions replace it; the "two candidate kinds"
+  open point is closed by this rule; L7.
+
 ## 2026-10-16: The follow-on run's open points
 
 - **Decided (main session, from design 6.7 "the assistant's own move from an input starts it too"):** an `event.set`
@@ -10,9 +26,8 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   the follow-on run like the person's edit; a move a connected calendar's sync writes starts one too, since a real
   meeting moved. A drafted correction keeps the rule that a question to someone carries a link they can open; with
   none, the run leaves a note for the person instead.
-- **Left for the owner:** the two candidate kinds the design names without words to find them by ("open actions due
-  before the new day that are settled there", "anything said to be covered there"); until decided they are not
-  looked for.
+- **Settled by the owner (next entry above):** the two candidate kinds the design named are not moved; the run asks
+  about them instead.
 - **Impact:** two L7 items (below the follow-on item); design 6.7 unchanged in substance.
 
 ## 2026-10-16: The follow-on run (phase L7)
