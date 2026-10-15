@@ -1365,13 +1365,16 @@ answers to the round of 2026-10-15; owner: built after the "after" run (O3) and 
 
 First, what the pairs on the backup model found (O3; decisions, 2026-10-15, "What the pairs on the backup model
 found"), each with its test:
-- [ ] **A reach names only what exists**: `applies_to.task_kinds` and `records` take only the kinds of work and record
+- [x] **A reach names only what exists**: `applies_to.task_kinds` and `records` take only the kinds of work and record
   types the workspace has (plugins' included), refused otherwise with the list; the op reference shows the choices.
-  *Today:* any words are kept, and a lesson naming a kind of work that doesn't exist applies nowhere, silently.
-- [ ] **Routing reaches an input about its topic** when they share most of the topic's words, matched on stems.
-  *Today:* every word of the topic must appear exactly.
-- [ ] **One proposal per correction**: a learning answer with more than one goes back once with that reason. *Today:*
-  the prompt asks for at most one; nothing checks it.
+  Built: `test_a_reach_names_only_kinds_of_work_and_record_types_there_are_and_says_which_there_are`,
+  `test_a_reach_lists_the_kinds_of_work_and_record_types_it_may_name`.
+- [x] **Routing reaches an input about its topic** when they share most of the topic's words (`knowledge.routing_match`),
+  plurals and hyphens folded. Built:
+  `test_a_routing_topic_reaches_an_input_sharing_most_of_its_words_with_plurals_and_hyphens_folded`.
+- [x] **One piece of learning per correction**: "Not a project" and "It's part of" keep the person's entry and queue no
+  learning run (the learning answer's own one-op limit already held). Built:
+  `test_the_persons_answer_is_the_one_thing_the_correction_teaches_so_no_learning_run_is_queued`.
 - [ ] **The pair report says what was kept** (text and reach) beside what the later run was given.
 - [ ] **The pairs match the design**: a fact of what the mail states is allowed where the golden cases allow it, and
   lesson wording is checked by stems with alternatives, each with a comment.

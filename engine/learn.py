@@ -157,10 +157,11 @@ def on_signal(tx: Any, cfg: Any, signal_id: str, now: datetime) -> str | None:
     """Queue the learning for a correction that was just recorded, inside the transaction that recorded it. One that
     needs no wait is queued to run now. A silent one is queued with the time of the next batch as the reason it
     waits. Nothing is queued when learning is off, for a kind of signal that doesn't teach, for one already queued,
-    or for mail set aside as not work. Returns the request id."""
+    for one whose own answer already recorded what it teaches (one correction, one piece of learning), or for mail set
+    aside as not work. Returns the request id."""
     knowledge = cfg.dispatch.knowledge
     found = tx.get("signal", signal_id)
-    if not knowledge.learn or found is None or found.data["kind"] not in TEACHES:
+    if not knowledge.learn or found is None or found.data["kind"] not in TEACHES or found.data.get("learned"):
         return None
     if learn_request(tx, signal_id) is not None or _names_set_aside(tx, found.data):
         return None
@@ -212,6 +213,8 @@ def skip_reason(store: Any, cfg: Any, request: Mapping[str, Any]) -> str | None:
         return "That work keeps its own lessons, so nothing is learned from it here."
     if _names_set_aside(view, signal.data):
         return "Mail set aside as not work is never learned from."
+    if signal.data.get("learned"):
+        return "The person's own answer already recorded what this teaches."
     return None
 
 
@@ -415,7 +418,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
     from engine.dispatcher import _data_level
     from engine.knowledge_section import all_guidance
     from engine.names import People
-    from engine.ops import reference_for
+    from engine.ops import reach_choices, reference_for
     from engine.packet import Packet, PacketRefused, _guidance, _people, _projects, _task
     from engine.prompts import render
     from engine.set_aside import learnable
@@ -433,7 +436,7 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
     stable = "\n\n".join(
         part
         for part in (
-            "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
+            "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops, reach=reach_choices(store.plugins)),
             "# Practice\n" + _guidance(kind),
             guidance_text,
             "# People\n" + _people(store, cfg),

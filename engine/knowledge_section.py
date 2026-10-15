@@ -237,9 +237,34 @@ def _uses(term: str, text: str) -> bool:
     return bool(term.strip()) and re.search(rf"(?<!\w){re.escape(term.strip())}(?!\w)", text, re.IGNORECASE) is not None
 
 
+_PART = re.compile(r"[A-Za-z0-9]+")
+
+
+def _stem(word: str) -> str:
+    """A word with its plural folded, so "reviewers" and "copies" match "reviewer" and "copy"."""
+    w = word.lower()
+    if w.endswith("ies") and len(w) > 4:
+        return w[:-3] + "y"
+    if w.endswith("s") and not w.endswith(("ss", "us", "is")) and len(w) > 4:
+        return w[:-1]
+    return w
+
+
 def _overlap_words(text: str) -> set[str]:
-    """The words and ids of a text worth matching on: ids and long words, lower case."""
-    return {w.lower() for w in _WORD.findall(text) if len(w) >= 4 or any(c.isdigit() for c in w)}
+    """The words and ids of a text worth matching on, lower case: ids whole, and long words split at hyphens with their
+    plurals folded."""
+    found: set[str] = set()
+    for token in _WORD.findall(text):
+        if any(c.isdigit() for c in token):
+            found.add(token.lower())
+        found |= {_stem(part) for part in _PART.findall(token) if len(part) >= 4}
+    return found
+
+
+def topic_share(topic: str, text: str) -> float:
+    """How much of a topic's words a text holds, from 0 to 1 (0 for a topic with no words worth matching)."""
+    wanted = _overlap_words(topic)
+    return len(wanted & _overlap_words(text)) / len(wanted) if wanted else 0.0
 
 
 def per_input_section(
@@ -305,14 +330,13 @@ def per_input_section(
         scope = _scope(entry)
         if not passes(entry, scope):
             continue
-        topic = _overlap_words(entry.data.get("topic") or "")
         about_input = (
             entry.data.get("person") in people_set
             or (entry.data.get("team") is not None and entry.data["team"] in teams)
             or (scope.scope == "projects" and bool(set(scope.projects) & scoped))
             # an input about the entry's topic, whoever it names: who to ask is what the run needs to know
             or _uses(entry.data.get("topic") or "", text)
-            or bool(topic and topic <= _overlap_words(text))
+            or topic_share(entry.data.get("topic") or "", text) >= settings.routing_match
         )
         if about_input:
             routing.append((entry, _entry_line(entry)))

@@ -354,7 +354,8 @@ def _set_aside(store: Store, cfg: Config, changeset_id: str, index: int, into: s
             hold_days=cfg.dispatch.knowledge.discards_hold_days,
             alike=cfg.dispatch.knowledge.discard_similarity,
         )
-        touched += knowledge.apply(tx, entry, w, standing)
+        made = knowledge.apply(tx, entry, w, standing)
+        touched += made
         learn.record(
             tx,
             cfg,
@@ -364,6 +365,8 @@ def _set_aside(store: Store, cfg: Config, changeset_id: str, index: int, into: s
                 "changeset": changeset_id,
                 "run": cs.data.get("run"),
                 "note": f"part of {into}: {name}" if into else f"not a project: {name}",
+                # The person's answer is itself what this correction teaches, so no learning run proposes more.
+                "learned": [m["id"] for m in made],
                 "at": now.isoformat(),
             },
             WriteContext(actor="pm", trust="trusted", op="held_declined"),

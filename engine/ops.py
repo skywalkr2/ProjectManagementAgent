@@ -1099,10 +1099,49 @@ def _shape(annotation: Any, depth: int = 0) -> str | None:
     return None
 
 
-def reference_for(op_names: list[str], registry: dict | None = None, invariants: dict | None = None) -> str:
+def reach_choices(plugins: Any = None) -> dict[str, list[str]]:
+    """The values a reach (`applies_to`) may name: the kinds of work and the record types there are, the plugins' own
+    included when `plugins` (the workspace's plugin host) is given."""
+    from engine.records import REGISTRY
+    from engine.tasks import TASKS
+
+    tasks = plugins.tasks if plugins is not None else TASKS
+    records = plugins.records if plugins is not None else REGISTRY
+    return {"task_kinds": sorted(tasks), "records": sorted(records)}
+
+
+def reach_problem(scope: Any, choices: dict[str, list[str]], records: dict[str, Any] | None = None) -> str | None:
+    """Why a reach names something that doesn't exist, or None: each task kind must be a kind of work there is, and
+    each record target a record type there is, or `type.field` with a field of that type. A reach that named something
+    else would apply nowhere, silently."""
+    if scope is None:
+        return None
+    unknown = [t for t in scope.task_kinds if t not in choices["task_kinds"]]
+    if unknown:
+        return f"{', '.join(unknown)} isn't a kind of work; applies_to.task_kinds takes only these: " + ", ".join(
+            choices["task_kinds"]
+        )
+    for target in scope.records:
+        kind, _, field = target.partition(".")
+        model = (records or {}).get(kind)
+        if kind not in choices["records"]:
+            return f"{kind} isn't a record type; applies_to.records takes only these: " + ", ".join(choices["records"])
+        if field and model is not None and field not in getattr(model, "model_fields", {}):
+            return f"{kind} has no field {field}"
+    return None
+
+
+def reference_for(
+    op_names: list[str],
+    registry: dict | None = None,
+    invariants: dict | None = None,
+    reach: dict[str, list[str]] | None = None,
+) -> str:
     """A readable op reference for the prompt: each op, what it's for and its fields, with the one-line constraint of
     each invariant that applies to it under it. Constraints that apply to every op follow the list once. It opens with
-    the shape every op takes, since the reference is all a model sees of it and no prompt may be relied on to say so."""
+    the shape every op takes, since the reference is all a model sees of it and no prompt may be relied on to say so.
+    When an op has a reach (`applies_to`), the values it may name follow the list: `reach` (from `reach_choices`), else
+    the core's own."""
     from engine import invariants as shipped
 
     known = invariants if invariants is not None else shipped.load()
@@ -1122,6 +1161,16 @@ def reference_for(op_names: list[str], registry: dict | None = None, invariants:
         doc = (model.__doc__ or "").strip()
         lines.append(f'- "{name}": {doc} Fields: {", ".join(fields)}.')
         lines += [f"  Always checked: {line}" for line in shipped.lines_for(name, known)]
+    models = [(registry or OP_MODELS)[name] for name in op_names]
+    if any("applies_to" in m.model_fields for m in models):
+        values = reach or reach_choices()
+        lines.append(
+            "In applies_to, task_kinds name kinds of work, only these: "
+            + ", ".join(values["task_kinds"])
+            + "; records name record types, only these: "
+            + ", ".join(values["records"])
+            + "."
+        )
     if op_names:
         lines += [f"Every op is checked: {line}" for line in shipped.lines_for_every_op(known)]
     return "\n".join(lines)

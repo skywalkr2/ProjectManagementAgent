@@ -12,6 +12,7 @@ cleaning:
 knowledge:
   glossary_all_below: 150
   facts_budget: 4000
+  routing_match: 0.67
   stable_budget: 8000
   search_rounds: 2
   search_results: 20

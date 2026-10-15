@@ -320,8 +320,9 @@ facts with 6.18 and 6.19.
   - **every** open action and open question, with ids, in a compact one-line form, not only the related ones, so the AI can
     close what the input completed anywhere;
   - the playbook entries for this task kind (3.8), then the knowledge section (6.22): every active rule, the active lessons
-    whose target matches, the glossary (all of it while small), routing for the people and projects in the input, and style
-    notes for the recipient of an outward draft;
+    whose target matches, the glossary (all of it while small), routing for the people and projects in the input or
+    whose topic the input is about (it shares `knowledge.routing_match` of the topic's words, plurals and hyphens
+    folded), and style notes for the recipient of an outward draft;
   - the facts of the projects the input touches, ranked (key facts, overlap with the input, newest) and cut at a budget, with
     what was left out said (6.22);
   - the area each related person and item is in, with each domain's contact (6.18), and looked-up facts (6.19);
@@ -1643,7 +1644,10 @@ rules as records are separate L1 items, not built here.
 - **Scopes with exclusions.** `applies_to` is the shape rules use (`task_kinds`, `records`, `filter`) plus `projects`,
   `people`, `scope` and `except`. `scope` is `workspace` (everywhere, less the projects in `except`: a rule that holds
   everywhere but one program needs no copy on every other project) or `projects` (only those listed; naming projects
-  without a scope means this). It is stored and shown with the key `except`. Built:
+  without a scope means this). It is stored and shown with the key `except`. `task_kinds` and `records` name only kinds
+  of work and record types the workspace has (plugins' included; a record target may be `type.field`): anything else is
+  refused with the list, and the op reference lists them, since a reach naming something that doesn't exist would apply
+  nowhere, silently. Built: `test_a_reach_names_only_kinds_of_work_and_record_types_there_are_and_says_which_there_are`,
   `test_naming_projects_makes_the_scope_those_projects_and_except_is_its_own_key`,
   `test_everywhere_except_a_project_round_trips_through_the_record_the_api_and_the_export`.
 - **The ops** `lesson.add`, `lesson.update`, `glossary.add`, `glossary.update`, `routing.add`, `style.add` and
@@ -1811,7 +1815,7 @@ A bad result can then be traced to knowledge that was missing (not in the packet
 went against it). The repeat-correction signal (6.20) is computed from this log.
 
 **Every correction proposes one piece of learning.** When a signal is recorded (sent back, undone, dropped, reworded, pulled
-back, draft edited, held op declined, or the person's answer to a question the assistant asked them), a small `learn` task runs. Its packet holds:
+back, draft edited, held op declined, or the person's answer to a question the assistant asked them), a small `learn` task runs, unless the person's own answer already recorded what it teaches ("Not a project" and "It's part of" keep their glossary entry, which the correction names as `learned`). Its packet holds:
 - the item;
 - the assistant's original output;
 - the correction: the note, what was undone, or the text as edited or sent;

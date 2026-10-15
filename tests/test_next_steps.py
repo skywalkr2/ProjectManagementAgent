@@ -550,6 +550,23 @@ def test_not_a_project_sets_the_proposal_aside_keeps_an_entry_saying_so_records_
     assert [g for g in store.read().list("glossary_entry") if g.data["term"] == NEW_PROJECT] == []
 
 
+@pytest.mark.parametrize("answer", ["not_a_project", "part_of"])
+def test_the_persons_answer_is_the_one_thing_the_correction_teaches_so_no_learning_run_is_queued(env, answer):
+    from engine.learn import learn_request
+
+    ws, cfg, store = env
+    cs_id = project_run(env)
+    if answer == "part_of":
+        file_under(store, cfg, cs_id, 3, PROJECT["id"], now=NOW)
+    else:
+        not_a_project(store, cfg, cs_id, 3, now=NOW)
+    view = store.read()
+    (signal,) = [s for s in view.list("signal") if s.data["kind"] == "held_declined"]
+    (entry,) = [g for g in view.list("glossary_entry") if g.data["term"] == NEW_PROJECT]
+    assert signal.data["learned"] == [entry.id]
+    assert learn_request(view, signal.id) is None
+
+
 def test_only_a_project_that_is_still_held_can_be_filed_or_set_aside(env):
     ws, cfg, store = env
     cs_id = project_run(env)

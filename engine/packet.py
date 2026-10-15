@@ -20,7 +20,7 @@ from engine.knowledge_section import per_input_section, stable_section, with_anc
 from engine.learn import is_learning
 from engine.learning import offered_ops, request_learns
 from engine.names import People
-from engine.ops import reference_for, schema_for
+from engine.ops import reach_choices, reference_for, schema_for
 from engine.playbook import guidance
 from engine.prompts import render
 from engine.records import Rule, RunKnowledge
@@ -126,7 +126,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
     stable = "\n\n".join(
         part
         for part in (
-            "# Op reference\n" + reference_for(list(offered), store.plugins.ops),
+            "# Op reference\n" + reference_for(list(offered), store.plugins.ops, reach=reach_choices(store.plugins)),
             "# Records you may name\n" + candidates if candidates else "",
             "# Practice\n" + _guidance(kind),
             _value_lists(store),
@@ -447,7 +447,7 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
     instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
     stable = "\n\n".join(
         (
-            "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
+            "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops, reach=reach_choices(store.plugins)),
             "# What this install can do\n" + install,
             "# Settings\n" + configured,
             *((learned.stable,) if learned.stable else ()),
@@ -553,7 +553,9 @@ def _plugin_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: 
     instructions = render(kind.prompt, {"assistant_name": cfg.workspace.assistant_name}, ws.root, kind.prompt_file)
     drafting = kind.output == "draft"
     stable_parts = [
-        "" if drafting else "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops),
+        ""
+        if drafting
+        else "# Op reference\n" + reference_for(list(kind.ops), store.plugins.ops, reach=reach_choices(store.plugins)),
         "# Practice\n" + _guidance(kind),
         f"Write in {view.language(target)}: its spelling, punctuation and date style." if target is not None else "",
         REFERENCE_RULE if any(p.reference_only for p in every) else "",

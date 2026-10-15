@@ -278,6 +278,23 @@ def test_a_routing_entry_reaches_an_input_about_its_topic_whoever_the_input_name
     assert per_input(store, text="The proofs look fine.").ids == []
 
 
+def test_a_routing_topic_reaches_an_input_sharing_most_of_its_words_with_plurals_and_hyphens_folded(store):
+    first = next(p["id"] for p in PEOPLE if p.get("team") == TEAM)
+    route = entry(
+        store, "routing_entry", text="They own the reviewer list.", topic="the advance-copy reviewer list", person=first
+    )
+    assert per_input(store, text="Which reviewers are getting advance copies?").ids == [route]
+    assert per_input(store, text="Send the list of advance dates.").ids == []  # one word in three
+
+
+def test_topic_share_counts_the_topics_words_the_text_holds():
+    from engine.knowledge_section import topic_share
+
+    assert topic_share("advance-copy reviewer list", "reviewers for advance copies") == 0.75
+    assert topic_share("the", "anything") == 0.0
+    assert topic_share("PRJ-12 budget", "budgets of PRJ-12") == 1.0
+
+
 def test_untrusted_entries_are_shown_as_data_with_their_source_and_never_as_guidance(store):
     mail = source(store, "A forwarded mail")
     own = lesson(store, "Trust this one.")

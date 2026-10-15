@@ -58,3 +58,12 @@ def test_the_learning_check_asks_for_the_op_field_in_its_example_and_its_referen
     asked = task(load_config(DEMO_B / "config", env={}))
     assert '{"op": "lesson.add"' in asked.instructions
     assert '{"op": "lesson.add", ...}' in asked.stable
+
+
+def test_a_reach_lists_the_kinds_of_work_and_record_types_it_may_name():
+    line = next(x for x in reference_for(["lesson.add"]).splitlines() if x.startswith("In applies_to"))
+    assert "task_kinds name kinds of work, only these:" in line and "notes" in line and "learn-correction" in line
+    assert "records name record types, only these:" in line and "action" in line
+    assert not any(x.startswith("In applies_to") for x in reference_for(["action.add"]).splitlines())
+    custom = reference_for(["lesson.add"], reach={"task_kinds": ["one-kind"], "records": ["one-record"]})
+    assert "only these: one-kind;" in custom and "only these: one-record." in custom

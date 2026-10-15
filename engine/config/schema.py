@@ -768,6 +768,13 @@ class KnowledgeSettings(ConfigModel):
         le=100000,
         description="Characters of ranked facts per input. The rest are counted, said in the packet, and searchable.",
     )
+    routing_match: float = Field(
+        0.67,
+        gt=0,
+        le=1,
+        description="How much of a routing entry's topic an input's words must share for the entry to go with it, "
+        'compared word by word with plurals folded ("reviewers" matches "reviewer"). 1 means every word.',
+    )
     stable_budget: int = Field(
         8000,
         ge=500,

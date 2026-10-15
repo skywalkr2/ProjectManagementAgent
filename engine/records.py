@@ -1512,6 +1512,11 @@ class Signal(Record):
         None, description="The id of the changeset the correction is about, when there is one."
     )
     note: str | None = Field(None, description="What the person said or changed, if anything.")
+    learned: list[str] = Field(
+        default_factory=list,
+        description='The knowledge entries the person\'s own answer made (a glossary entry from "Not a project", for '
+        "example): what this correction teaches is already recorded, so no learning run is queued for it.",
+    )
     at: datetime = Field(description="When the correction was made.")
 
 

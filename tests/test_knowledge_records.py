@@ -356,6 +356,20 @@ def test_what_an_op_names_must_exist_and_the_scope_must_hold_together(app):
     assert apply(store, cfg, [ok], origin="pm")[1] == ["applied"]
 
 
+def test_a_reach_names_only_kinds_of_work_and_record_types_there_are_and_says_which_there_are(app):
+    _, store, cfg, _ = app
+    for bad, why in [
+        ({**LESSON, "applies_to": {"task_kinds": ["calendar entries"]}}, "calendar entries isn't a kind of work"),
+        ({**LESSON, "applies_to": {"records": ["delivery"]}}, "delivery isn't a record type"),
+        ({**LESSON, "applies_to": {"records": ["action.colour"]}}, "action has no field colour"),
+    ]:
+        cs_id, statuses = apply(store, cfg, [bad], origin="pm")
+        assert statuses == ["refused"] and why in reasons(store, cs_id)[0], (bad, reasons(store, cs_id))
+    assert "notes" in reasons(store, apply(store, cfg, [{**LESSON, "applies_to": {"task_kinds": ["y"]}}])[0])[0]
+    good = {**LESSON, "applies_to": {"task_kinds": ["notes"], "records": ["action", "action.due"]}}
+    assert apply(store, cfg, [good], origin="pm")[1] == ["applied"]
+
+
 def test_undo_of_each_op_takes_the_change_back(app):
     _, store, cfg, _ = app
     cs_id, statuses = apply(store, cfg, [LESSON], origin="pm")

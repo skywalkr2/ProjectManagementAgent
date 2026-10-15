@@ -12,7 +12,9 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
     doesn't exist applies nowhere, silently; and a routing entry reaches an input only when every word of its topic
     appears there exactly, so "the advance-copy reviewer list" misses "Which reviewers are getting advance copies?"
     unless the model also scoped it to the project. The ideal answers pass only because they scope it.
-  - **Two proposals from one correction** (a term and a lesson), though the learning prompt allows at most one.
+  - **Two pieces of learning from one correction:** "Not a project" and "It's part of" keep the person's own glossary
+    entry and also queued a learning run, which proposed a broader lesson. (The learning answer's own limit of one op
+    holds; the second piece came from the run itself.)
   - **Pairs stricter than the design:** a fact of what the mail states beside the expected op, and lesson wording
     checks ("complet", "already open") where the model said "finished" or "open questions".
   - **The model's own misses**, kept as the evaluation's signal: a missing owner (held for "Pick an owner", as it
@@ -22,7 +24,7 @@ Dated entries: what was decided, who decided, why. Newest first. Decisions about
   - a reach names only kinds of work and record types that exist, refused otherwise with the list, and the op
     reference shows the choices;
   - a routing entry reaches an input whose words share most of its topic, matched on word stems;
-  - a learning answer with more than one proposal goes back once with that reason (a check, 6.7);
+  - a correction whose answer already recorded its learning queues no learning run;
   - the pair report says what was kept, its text and reach, so a failure to reach shows why;
   - the pairs allow a fact of what the mail states where the golden cases do, and check a lesson by meaning-bearing
     stems with alternatives, each with a comment.

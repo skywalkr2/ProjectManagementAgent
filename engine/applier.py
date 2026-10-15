@@ -70,6 +70,8 @@ from engine.ops import (
     TextDraftOp,
     TextEditOp,
     TextProposeOp,
+    reach_choices,
+    reach_problem,
 )
 from engine.plugin_api import NeedsPerson
 from engine.records import entry_problem, model_for
@@ -141,6 +143,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
     view = ctx.store.read()
+    plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
     known_actions = view.list("action")
     similarity = ctx.cfg.checks.tuning.near_duplicate_action.similarity
@@ -225,6 +228,9 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             if why:
                 refuse(i, "targets", why)
         if name in KNOWLEDGE_OPS and (why := knowledge.problem(view, op)) is not None:
+            refuse(i, "targets", why)
+        reach = getattr(op, "applies_to", None)
+        if reach is not None and (why := reach_problem(reach, reach_choices(plugins), plugins.records)) is not None:
             refuse(i, "targets", why)
         if isinstance(op, ReportDraftOp) and learn.rule_in_report(ctx.cfg, op.title, op.text) is not None:
             refuse(

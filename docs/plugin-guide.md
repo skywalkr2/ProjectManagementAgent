@@ -1587,6 +1587,7 @@ A correction by the PM, the measure of how well the assistant does. The engine r
 | `run` | str \| None | `None` | The id of the AI run whose work was corrected, when there was one. |
 | `changeset` | str \| None | `None` | The id of the changeset the correction is about, when there is one. |
 | `note` | str \| None | `None` | What the person said or changed, if anything. |
+| `learned` | list[str] | `[]` | The knowledge entries the person's own answer made (a glossary entry from "Not a project", for example): what this correction teaches is already recorded, so no learning run is queued for it. |
 | `at` | datetime | required | When the correction was made. |
 
 ### `file` (FILE-n)
