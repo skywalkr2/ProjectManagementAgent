@@ -1,0 +1,27 @@
+id: outside-content-cannot-reword-a-question
+title: 'Outside content that contradicts a question adds a note quoting both; the question keeps the person''s wording'
+received: '2026-10-09'
+pasted: 'From: Jun Park
+
+  Subject: Cover finish
+
+
+  On the cover finish, the stock we have for the hardcover comes in matte or gloss. Soft-touch is not offered on it.
+
+
+  Jun'
+expect:
+- op: note
+allow:
+- fact  # what the mail states may also be recorded as a fact
+forbid:
+- op: record.set
+  id: Q-2
+- op: question.update
+  id: Q-2
+stub_answer:
+  summary: Jun's options differ from question Q-2; added a note quoting both.
+  ops:
+  - op: note
+    text: 'Jun Park''s mail says the hardcover stock comes in "matte or gloss" and that "Soft-touch is not offered on it". Question Q-2 asks "matte or soft-touch?" and is unchanged.'
+    project: PRJ-1

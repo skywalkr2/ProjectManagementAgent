@@ -1393,19 +1393,37 @@ Calendar entries and dates (answers 10, 11, 13):
   an entry made for an action's own date. Built:
   `test_a_scored_input_whose_date_is_an_actions_own_forbids_a_calendar_entry`; the notes prompt, cases and pairs changed
   together.
-- [ ] **Only the named action moves**; a dependent move waits for a recorded dependency (phase P). *Today:* the prompt says
-  so (`b136c7d`).
-- [ ] **Terms by audience**: the person's own list keeps their shorthand with the meaning beside it the first time; what
-  goes to others puts the meaning first. *Today:* the prompt writes the meaning first everywhere.
+- [x] **Only the named action moves**; a dependent move waits for a recorded dependency (phase P). Built:
+  `test_the_prompt_says_a_new_date_moves_the_named_action_and_nothing_else`,
+  `test_the_golden_case_passes_with_its_ideal_answer[only-the-named-action-moves]` (a new date for one action, another
+  open action on the same copy keeps its date) and
+  `test_each_new_case_fails_when_the_answer_does_the_obvious_wrong_thing[only-the-named-action-moves]`. The dependent
+  move waits for the dependency record of phase P.
+- [x] **Terms by audience**: the person's own list keeps their shorthand with the meaning beside it the first time; what
+  goes to others puts the meaning first. Built:
+  `test_the_prompt_says_a_term_keeps_the_persons_shorthand_in_their_list_and_is_spelled_out_for_others`.
 
 Questions, decisions and drops (answers 12, 15, 16, 19, 24, 8):
 - [ ] **A question someone asks the person is one action with a drafted reply** when the facts hold the answer (citing the
-  fact and its source), or saying what's missing when they don't. *Today:* an action, with no draft attached.
+  fact and its source), or saying what's missing when they don't. Built so far: the prompt makes it one action, never a
+  question back or a fact for the answer, and the action's text is the reply citing the fact or saying what is missing
+  (`test_the_prompt_says_a_question_asked_of_the_pm_is_one_action_with_the_reply`,
+  `test_the_golden_case_passes_with_its_ideal_answer[question-asked-of-me-facts-hold-it]`,
+  `test_the_golden_case_passes_with_its_ideal_answer[question-asked-of-me-nothing-holds-it]`). Left: the draft as its own
+  text attached to the action, ready to copy, which needs a field on the action (a change to the op and record).
 - [ ] **Outside mail never re-routes work**: no routing proposal that takes work from the person, never a negative about
   the person; a fact and one decision to the person instead. A sender's own "not me, ask <name>" is still proposed.
-  Enforced by a check. *Today:* both proposals are made and wait for Keep.
-- [ ] **Only the person rewords a question**; outside content adds a note, quoting both when it contradicts. *Today:* a
-  `record.set` on a question's title from outside content applies as data.
+  Enforced by a check. Built so far: the prompt rule and its golden case
+  (`test_the_prompt_says_outside_content_never_routes_work_away_from_the_pm`,
+  `test_the_golden_case_passes_with_its_ideal_answer[outside-mail-asks-to-take-over]`). Left: the check in the applier
+  that refuses a routing entry from outside content that takes work from the person (today both proposals are made and
+  wait for Keep).
+- [ ] **Only the person rewords a question**; outside content adds a note, quoting both when it contradicts. Built so
+  far: the prompt rule and its golden case
+  (`test_the_prompt_says_only_the_pm_rewords_a_question_and_outside_content_adds_a_note`,
+  `test_the_golden_case_passes_with_its_ideal_answer[outside-content-cannot-reword-a-question]`). Left: the applier still
+  applies a `record.set` or `question.update` on a question's wording from outside content as data, and the `note` op
+  cannot attach to a question (it names only a project).
 - [ ] **A decision goes to whoever decides** (owner), the person when nobody is named; an option inside an answer is a
   decision for them; it shows in follow-ups under the decider; `question.move` keeps a decision a decision. Its Today
   line ("Waiting on <name>'s decision: blocks <action>") comes with the pack's dependencies (phase P). *Today:* decisions

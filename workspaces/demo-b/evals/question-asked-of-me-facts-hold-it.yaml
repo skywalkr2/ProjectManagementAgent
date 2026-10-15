@@ -1,0 +1,41 @@
+id: question-asked-of-me-facts-hold-it
+title: 'A question someone asks the person is one action with the reply, when a recorded fact holds the answer'
+received: '2026-10-09'
+given:
+- kind: fact
+  id: FACT-91
+  fields:
+    text: The printer's published schedule lists the interior proofs shipping on November 3.
+    project: PRJ-1
+    as_of: '2026-10-01'
+    key: true
+pasted: 'From: Maya Lindqvist
+
+  Subject: Interior proofs
+
+
+  Can you tell me when the interior proofs will ship? The shop is planning its window around them.
+
+
+  Maya'
+expect:
+- op: action.add
+  text_has:
+  - interior proofs
+  - November 3
+  owners:
+  - PER-1
+# The answer is in the reply the action carries: no question back to the person, and no fact made of the answer.
+forbid:
+- op: question.add
+- op: fact
+stub_answer:
+  summary: Tell the shop the interior proofs ship on November 3, from the recorded printer schedule.
+  ops:
+  - op: action.add
+    text: Tell Corner Lamp Books the interior proofs ship on November 3 (FACT-91, the printer's published schedule)
+    owners:
+    - Avery Lane
+    project: PRJ-1
+    evidence:
+      quote: Can you tell me when the interior proofs will ship

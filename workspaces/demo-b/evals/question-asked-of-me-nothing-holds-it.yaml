@@ -1,0 +1,31 @@
+id: question-asked-of-me-nothing-holds-it
+title: 'A question someone asks the person is one action to reply, saying what is missing, when no fact holds the answer'
+received: '2026-10-09'
+pasted: 'From: Maya Lindqvist
+
+  Subject: Paperback
+
+
+  Do you know when the paperback edition will be out? We would like to put it in the shop window.
+
+
+  Maya'
+expect:
+- op: action.add
+  text_has:
+  - paperback
+  owners:
+  - PER-1
+forbid:
+- op: question.add
+- op: fact
+stub_answer:
+  summary: Reply to the shop about the paperback date; no recorded fact gives one.
+  ops:
+  - op: action.add
+    text: 'Reply to Corner Lamp Books about the paperback edition: no recorded fact gives its date'
+    owners:
+    - Avery Lane
+    project: PRJ-1
+    evidence:
+      quote: Do you know when the paperback edition will be out

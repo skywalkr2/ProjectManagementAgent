@@ -1,0 +1,24 @@
+id: only-the-named-action-moves
+title: 'A new date moves the one action it names; another open action on the same thing keeps its date'
+received: '2026-10-09'
+pasted: 'Jacket update: the approval of the back-cover copy can wait until Monday Oct 19.'
+expect:
+- op: record.set
+  id: ACT-5
+  field: due
+  value: '2026-10-19'
+# ACT-2 (agreeing on the wording) is about the same copy but the input does not name it; its date stays.
+forbid:
+- op: record.set
+  id: ACT-2
+- op: event.add
+stub_answer:
+  summary: The approval of the back-cover copy moved to Oct 19.
+  ops:
+  - op: record.set
+    kind: action
+    id: ACT-5
+    field: due
+    value: '2026-10-19'
+    evidence:
+      quote: the approval of the back-cover copy can wait until Monday Oct 19
