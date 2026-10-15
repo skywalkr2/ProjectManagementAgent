@@ -48,13 +48,13 @@ blocks; everything else goes ahead without it.
 |---|---|---|---|---|
 | O1 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-agent.json`: 42 of 42 passed on the owner's one account, a command-line agent). **The "before" run of the golden set** on real models: today's 14 cases × 3 runs, on a low-cost and a stronger account, with today's scoring. Steps below. | The owner's computer, with their AI accounts | Only L4's last step: the "after" report and its comparison with this one. That report also has to exist before real use starts. | All of phase A, and L-core's code, including the harder set itself. The run is pinned to commit `802538e`, so changing the cases, the scoring or the packet afterwards doesn't spoil it. |
 | O2 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-harder-agent.json`: 30 of 48 as scored at `feb6b3f`, 48 of 48 once six cases were corrected; every failure was an extra op the case hadn't allowed). **The harder set's "before" run** (the original designer's L1 check-in, 2026-10-14): the harder set (below, "L1b") on the owner's account, 3 runs per case, pinned to the commit that adds it, which is the last commit before any L2 code. The report records the agent's program version, and says plainly when every tier ran on the same account, so the run says nothing about a low-cost tier against a stronger one. Steps below, once the set lands. | The owner's computer, with their AI accounts | L4's comparison, which rests on this set. | L2's build: the run is pinned, so it can be made any time; L2 code only lands after the pinned commit. |
-| O3 | **The "after" run** (L4's last step): the golden set, the harder set and the learning pairs on the owner's account, 3 runs per case, pinned to commit `786563c` (the last L-core code). Compared case by case with O1 and O2. Steps below. | The owner's computer, with the account used for O1 and O2 | Real use: the comparison has to exist before it starts. | Phase B, which goes ahead meanwhile. |
+| O3 | **The "after" run** (L4's last step): the golden set, the harder set and the learning pairs on the owner's account, 3 runs per case, pinned to commit `69285f2` (the last L-core code, with the fix for the learning check that the first attempt found). Compared case by case with O1 and O2. Steps below. | The owner's computer, with the account used for O1 and O2 | Real use: the comparison has to exist before it starts. | Phase B, which goes ahead meanwhile. |
 
-**O3 steps** (pinned to commit `786563c`, phase L-core's last code). In the owner's copy of the repository, on their
+**O3 steps** (pinned to commit `69285f2`, phase L-core's last code; the first attempt at `786563c` stopped at the account check, whose learning round-trip refused an answer that filled in the correction a lesson comes from, which is the app's to set). In the owner's copy of the repository, on their
 own computer, on the workspace and account used for O2:
 ```
 git fetch origin claude/tender-tesla-16a8ob
-git worktree add ../cockpit-after 786563c
+git worktree add ../cockpit-after 69285f2
 cd ../cockpit-after
 uv sync
 uv run cockpit ai test -w ~/cockpit-exit
