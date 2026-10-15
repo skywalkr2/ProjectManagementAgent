@@ -3,6 +3,7 @@ lines, and the harder set in the fictional workplace workspace. Names, ids and q
 
 import json
 import re
+import shutil
 import sys
 from collections import Counter
 from types import SimpleNamespace
@@ -14,7 +15,7 @@ import engine.evaluate as ev
 from engine.evaluate import Report, RunResult, evaluate, load_cases, starting_records
 from engine.storage import Store
 from engine.workspace import init_workspace
-from tests.conftest import DEMO_A, DEMO_B
+from tests.conftest import DEMO_A, DEMO_B, fixture_records
 
 LOAD_CASES = ev.load_cases
 
@@ -44,25 +45,120 @@ def fact_op(case, text="Something else was recorded."):
 # ---- exact scoring ---------------------------------------------------------------------------------------------------
 
 
-def test_an_op_the_case_does_not_expect_fails_the_run_unless_the_case_says_exact_false(monkeypatch):
+def pm_id(template):
+    return yaml.safe_load((template / "config" / "workspace.yaml").read_text())["user"]["person"]
+
+
+def someone_else(template):
+    return next(p["id"] for p in fixture_records(template, "person") if p["id"] != pm_id(template))
+
+
+def internal_op(case, template, text="Check the proof with the printer"):
+    """An action for the person: an extra that stays inside the workspace."""
+    name = next(p["full_name"] for p in fixture_records(template, "person") if p["id"] == pm_id(template))
+    return {"op": "action.add", "text": text, "owners": [name], "evidence": {"quote": quote_of(case)}}
+
+
+def question_op(to, title="Which printer?"):
+    links = next(q["links"] for q in fixture_records(DEMO_B, "question") if q.get("links"))
+    return {"op": "question.add", "to": to, "title": title, "links": links, "matters_for": "ACT-1"}
+
+
+def with_allowance(template, tmp_path, value):
+    """A copy of the fictional workspace whose evaluation allows extras up to `value`."""
+    copy = tmp_path / template.name
+    shutil.copytree(template, copy)
+    ai = copy / "config" / "ai.yaml"
+    ai.write_text(re.sub(r"extra_allowance: [\d.]+", f"extra_allowance: {value}", ai.read_text()))
+    return copy
+
+
+def test_an_op_the_case_does_not_expect_is_listed_and_a_case_can_relax_exact(monkeypatch):
     case = case_of(DEMO_B, "close-action")
     assert "exact" not in case, "exact is the default"
     assert run_edited(monkeypatch, DEMO_B, case["id"]).passed
     extra = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=with_ops(case, fact_op(case)))
-    assert not extra.passed and extra.extra == ["fact() applied"] and not extra.missing and not extra.forbidden
+    assert extra.passed and extra.extra == ["fact() applied"] and not extra.missing and not extra.forbidden
     relaxed = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=with_ops(case, fact_op(case)), exact=False)
-    assert relaxed.passed and relaxed.extra == []
+    assert relaxed.passed and relaxed.extra == [] and relaxed.extra_weight == 0.0
 
 
-def test_an_op_kind_the_case_allows_is_never_counted_as_extra(monkeypatch):
+def test_an_extra_fact_is_free_and_an_extra_internal_op_costs_a_little(monkeypatch):
     case = case_of(DEMO_B, "close-action")
-    allowed = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=with_ops(case, fact_op(case)), allow=["fact"])
-    assert allowed.passed and allowed.extra == []
-    note = {"op": "note", "text": "Nothing else."}
-    other = run_edited(
-        monkeypatch, DEMO_B, case["id"], stub_answer=with_ops(case, fact_op(case), note), allow=["event.add"]
+    fact = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=with_ops(case, fact_op(case), fact_op(case, "Two")))
+    assert fact.passed and len(fact.extra) == 2 and fact.extra_weight == 0.0
+    one = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=with_ops(case, internal_op(case, DEMO_B)))
+    assert one.passed and one.extra_weight == ev.INTERNAL_EXTRA_WEIGHT and len(one.extra) == 1
+    both = with_ops(case, internal_op(case, DEMO_B), fact_op(case))
+    assert run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=both).extra_weight == ev.INTERNAL_EXTRA_WEIGHT
+
+
+def test_the_weighed_extras_must_stay_within_the_allowance(monkeypatch):
+    case = case_of(DEMO_B, "close-action")
+    twice = with_ops(case, internal_op(case, DEMO_B), internal_op(case, DEMO_B, "Ask the printer for a proof"))
+    two = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=twice)
+    assert two.passed and two.extra_weight == 2 * ev.INTERNAL_EXTRA_WEIGHT  # exactly the default allowance of 1.0
+    thrice = with_ops(case, *(internal_op(case, DEMO_B, f"Send proof {n} to the printer") for n in "abc"))
+    three = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=thrice)
+    assert not three.passed and three.extra_weight == 3 * ev.INTERNAL_EXTRA_WEIGHT
+    assert not three.missing and not three.forbidden
+
+
+@pytest.mark.parametrize(("allowance", "passes"), [(0, False), (1.0, True)])
+def test_the_extra_allowance_is_a_setting(monkeypatch, tmp_path, allowance, passes):
+    case = case_of(DEMO_B, "close-action")
+    template = with_allowance(DEMO_B, tmp_path, allowance)
+    one = with_ops(case, internal_op(case, DEMO_B))
+    assert run_edited(monkeypatch, template, case["id"], stub_answer=one).passed is passes
+    free = with_ops(case, fact_op(case))
+    assert run_edited(monkeypatch, template, case["id"], stub_answer=free).passed, "a fact is free at any allowance"
+
+
+def test_an_extra_that_reaches_another_person_fails_whatever_the_allowance(monkeypatch, tmp_path):
+    case = case_of(DEMO_B, "close-action")
+    template = with_allowance(DEMO_B, tmp_path, 20)
+    to_me = with_ops(case, question_op(pm_id(DEMO_B)))
+    assert run_edited(monkeypatch, template, case["id"], stub_answer=to_me).passed
+    to_them = with_ops(case, question_op(someone_else(DEMO_B)))
+    result = run_edited(monkeypatch, template, case["id"], stub_answer=to_them)
+    assert not result.passed and len(result.extra) == 1 and result.extra[0].startswith("question.add")
+    assert not result.missing and not result.forbidden
+
+
+def test_an_extra_op_in_the_outbound_tier_reaches_another_person():
+    class Plugins:
+        tiers = {"outbound-thing": "outbound", "action.add": "data"}
+
+    store = SimpleNamespace(plugins=Plugins())
+    outbound = {"op": {"op": "outbound-thing"}, "status": "applied"}
+    assert ev._reaches_another(outbound, store, None)
+    assert not ev._reaches_another({"op": {"op": "action.add"}, "status": "applied"}, store, None)
+
+
+def test_the_extras_of_a_run_are_within_the_allowance_only_when_none_reaches_anyone_and_the_weight_fits():
+    assert ev.Extras([], 0.0, False).within(0)
+    assert ev.Extras(["a"], 1.0, False).within(1.0) and not ev.Extras(["a"], 1.5, False).within(1.0)
+    assert not ev.Extras(["a"], 0.5, True).within(100)
+
+
+def test_the_report_shows_what_the_extras_weigh_and_the_json_keeps_it():
+    report = Report(
+        "a", 1, [RunResult("c", 1, True, extra=["action.add() applied"], extra_weight=1.0), RunResult("c", 2, True)]
     )
-    assert not other.passed and other.extra == ["fact() applied"]
+    assert "extras weigh 0.5 on average, 1.0 at most" in report.text()
+    assert json.loads(report.as_json())["results"][0]["extra_weight"] == 1.0
+    assert "extras weigh" not in Report("a", 1, [RunResult("c", 1, True)]).text()
+
+
+def test_an_op_kind_the_case_allows_weighs_nothing(monkeypatch, tmp_path):
+    case = case_of(DEMO_B, "close-action")
+    template = with_allowance(DEMO_B, tmp_path, 0)
+    stub = with_ops(case, internal_op(case, DEMO_B))
+    allowed = run_edited(monkeypatch, template, case["id"], stub_answer=stub, allow=["action.add"])
+    assert allowed.passed and allowed.extra == [] and allowed.extra_weight == 0.0
+    note = {"op": "note", "text": "Nothing else."}
+    other = run_edited(monkeypatch, template, case["id"], stub_answer=with_ops(case, fact_op(case), note), allow=["x"])
+    assert other.passed and other.extra == ["fact() applied"]
 
 
 def _scored_stages(template):
@@ -136,7 +232,7 @@ def test_each_expected_op_accounts_for_one_produced_op_so_a_duplicate_is_extra(m
     case = case_of(DEMO_B, "printer-proof-date")
     twice = with_ops(case, {**case["stub_answer"]["ops"][0], "text": case["stub_answer"]["ops"][0]["text"] + " Again."})
     result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=twice)
-    assert not result.passed and result.extra == ["fact(project=PRJ-1) applied"]
+    assert result.extra == ["fact(project=PRJ-1) applied"] and result.extra_weight == 0.0
 
 
 def test_a_held_op_is_extra_unless_the_case_expects_something_held(monkeypatch):
@@ -144,8 +240,8 @@ def test_a_held_op_is_extra_unless_the_case_expects_something_held(monkeypatch):
     close = case_of(DEMO_B, "close-action")
     stray = {**unknown["stub_answer"]["ops"][0], "evidence": {"quote": quote_of(close)}}
     result = run_edited(monkeypatch, DEMO_B, close["id"], stub_answer=with_ops(close, stray))
-    assert not result.passed and len(result.extra) == 1 and result.extra[0].endswith("held")
-    assert run_edited(monkeypatch, DEMO_B, unknown["id"]).passed, "a case that expects a held question allows it"
+    assert len(result.extra) == 1 and result.extra[0].endswith("held") and result.extra_weight == 0.5
+    assert run_edited(monkeypatch, DEMO_B, unknown["id"]).extra == [], "a case that expects a held action allows it"
 
 
 def test_forbid_can_name_an_id_and_only_that_id_is_forbidden(monkeypatch):

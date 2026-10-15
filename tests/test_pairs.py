@@ -6,6 +6,8 @@ themselves.
 
 import json
 import re
+import shutil
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -122,6 +124,37 @@ def test_a_proposal_that_is_not_the_expected_one_fails_the_first_half(monkeypatc
 
     result = edited(monkeypatch, DEMO_B, "acronym", other)
     assert not result.passed and any(m.startswith("first: no proposal like") for m in result.missing)
+
+
+def test_an_extra_entry_or_op_in_a_pair_is_weighed_instead_of_failing_it(monkeypatch):
+    result = edited(monkeypatch, DEMO_B, "acronym", lambda pair: pair["first"].update(expect_proposal=[]))
+    assert result.passed and result.extra_weight == 0.5
+    assert len(result.extra) == 1 and result.extra[0].startswith("first: unexpected glossary")
+    later = edited(monkeypatch, DEMO_B, "acronym", lambda pair: pair["later"].pop("allow"))
+    assert (
+        later.passed and later.extra and later.extra_weight == 0.5 * sum(not e.startswith("fact") for e in later.extra)
+    )
+
+
+def test_a_pair_fails_when_its_extras_outweigh_the_allowance(monkeypatch, tmp_path):
+    copy = tmp_path / "ws"
+    shutil.copytree(DEMO_B, copy)
+    ai = copy / "config" / "ai.yaml"
+    ai.write_text(re.sub(r"extra_allowance: [\d.]+", "extra_allowance: 0", ai.read_text()))
+    result = edited(monkeypatch, copy, "acronym", lambda pair: pair["first"].update(expect_proposal=[]))
+    assert not result.passed and result.extra_weight == 0.5 and not result.missing and not result.forbidden
+
+
+def test_an_unexpected_entry_goes_to_the_extras_when_they_are_asked_for_and_to_the_problems_otherwise():
+    entry = SimpleNamespace(
+        id="X-1", kind="lesson", data={"text": "Something", "status": "proposed", "origin": "own", "trust": "trusted"}
+    )
+    extra: list[str] = []
+    assert pairs._proposal_findings("later", [], [entry], extra) == [] and len(extra) == 1
+    assert len(pairs._proposal_findings("later", [], [entry])) == 1
+    assert len(pairs._proposal_findings("later", "none", [entry], extra)) == 1, "none stays a problem"
+    joined = pairs._joined(pairs.Extras(["a"], 0.5, False), pairs.Extras(["b"], 0.0, True), extra[:1])
+    assert joined.lines == ["a", "b", extra[0]] and joined.weight == 1.0 and joined.reaches
 
 
 def test_something_active_that_the_person_did_not_keep_fails_unless_their_own_act_made_it(monkeypatch):

@@ -287,8 +287,8 @@ def test_another_teams_action_is_returned_then_held_and_never_applied(env):
     assert with_no_project == ["held"]  # on any project, or none
 
 
-@pytest.mark.parametrize("words", ["we", "us", "our", "me"])
-def test_an_action_whose_quote_says_we_us_our_or_me_is_one_the_person_owes(env, words):
+@pytest.mark.parametrize("words", ["you", "your team", "me", "please send it to the printer"])
+def test_a_quote_that_addresses_the_person_is_one_the_person_owes(env, words):
     _, cfg, store = env
     them = outsider(cfg)
     quote = f"{them['full_name']} will send {words} the revised plan by Oct 20"
@@ -297,16 +297,42 @@ def test_an_action_whose_quote_says_we_us_our_or_me_is_one_the_person_owes(env, 
     assert result == ["applied"]
 
 
-def test_a_quote_that_names_the_person_or_their_team_is_one_the_person_owes(env):
+@pytest.mark.parametrize("words", ["we", "us", "our"])
+def test_the_we_words_are_the_senders_own_team_and_are_not_owed_by_the_person(env, words):
+    _, cfg, store = env
+    them = outsider(cfg)
+    quote = f"{them['full_name']} and {words} will send the revised plan by Oct 20, our own copy first"
+    assert problems(env, action(cfg, them, quote, PLAIN), quote, "other-team-item")
+
+
+def test_a_request_addressed_by_name_is_owed_but_a_bare_name_only_says_who_it_is_for(env):
     _, cfg, store = env
     them = outsider(cfg)
     first = pm_record(cfg)["full_name"].split()[0]
+    for addressed in (
+        f"{first}, can you send the revised plan by Oct 20",
+        f"{first}: please send the revised plan by Oct 20",
+        f"{pm_record(cfg)['full_name']} needs to send the revised plan by Oct 20",
+        f"{team_name(cfg)} will send the revised plan by Oct 20",
+    ):
+        quote = f"{them['full_name']} says {addressed}"
+        assert not problems(env, action(cfg, them, quote, PLAIN), quote, "other-team-item"), addressed
     for names in (pm_record(cfg)["full_name"], first, team_name(cfg)):
         quote = f"{them['full_name']} will send the revised plan to {names} by Oct 20"
-        assert not problems(env, action(cfg, them, quote, PLAIN), quote, "other-team-item")
+        assert problems(env, action(cfg, them, quote, PLAIN), quote, "other-team-item"), names
     # a word that only contains one of the words doesn't count
     quote = f"{them['full_name']} will send the revised plan to the usual contact by Oct 20"
     assert problems(env, action(cfg, them, quote, PLAIN), quote, "other-team-item")
+
+
+def test_the_words_of_a_request_by_name_are_a_setting(env):
+    _, cfg, store = env
+    them = outsider(cfg)
+    first = pm_record(cfg)["full_name"].split()[0]
+    quote = f"{them['full_name']} asks {first} quux send the revised plan by Oct 20"
+    assert problems(env, action(cfg, them, quote, PLAIN), quote, "other-team-item")
+    cfg.language.request_words = ["quux"]
+    assert not problems(env, action(cfg, them, quote, PLAIN), quote, "other-team-item")
 
 
 def test_an_action_with_an_owner_on_the_persons_team_is_not_another_teams_item(env):
@@ -357,10 +383,12 @@ def test_the_scope_lints_and_the_owed_words_have_defaults_and_demo_values_in_bot
     from tests.conftest import DEMO_B
 
     assert ChecksFile().lints["watched-project"] == "return" and ChecksFile().lints["other-team-item"] == "return"
-    assert LanguageFile().owed_words == ["we", "us", "our", "me"]
+    assert LanguageFile().owed_words == ["you", "your", "please send", "me"]
+    assert "can" in LanguageFile().request_words
     for template in (DEMO_A, DEMO_B):
         assert "watched-project: return" in (template / "config" / "checks.yaml").read_text()
         assert "owed_words:" in (template / "config" / "language.yaml").read_text()
+        assert "request_words:" in (template / "config" / "language.yaml").read_text()
         assert next(p for p in fixture_records(template, "person") if p["id"] == "PER-1").get("team")
 
 

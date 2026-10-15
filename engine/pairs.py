@@ -75,7 +75,9 @@ from engine.config import Config
 from engine.corrections import answered_assistant
 from engine.dispatcher import process, send_back, signal, undo_changeset
 from engine.evaluate import (
+    ENTRY_EXTRA_WEIGHT,
     AdapterFactory,
+    Extras,
     Report,
     RunResult,
     _create_starting_records,
@@ -88,7 +90,7 @@ from engine.evaluate import (
     _matching,
     _read_program_versions,
     _summarize,
-    _unexpected,
+    extras_of,
     not_made,
     received_of,
     starting_records,
@@ -618,9 +620,11 @@ def _describe_entry(stored: Any) -> str:
     return f"{stored.kind}({data.get('text', '')[:60]!r}, {data['status']}, {data.get('origin')}, {data.get('trust')})"
 
 
-def _proposal_findings(label: str, spec: Any, new: list[Any]) -> list[str]:
+def _proposal_findings(label: str, spec: Any, new: list[Any], extra: list[str] | None = None) -> list[str]:
     """What is wrong with the entries a stage made, given what it was expected to propose. `none` means no entry at
-    all; a spec with `optional` may also come to nothing, but anything made must match one."""
+    all; a spec with `optional` may also come to nothing, but anything made must match one. An entry beyond the
+    expected ones is a problem, unless `extra` is given: it is then added there, to be weighed with the run's other
+    extras."""
     if spec in (None,):
         return []
     if spec == "none":
@@ -634,21 +638,39 @@ def _proposal_findings(label: str, spec: Any, new: list[Any]) -> list[str]:
             used.add(hit.id)
         elif not item.get("optional"):
             found.append(f"{label}: no proposal like {_describe(item)}")
-    found += [f"{label}: unexpected {_describe_entry(s)}" for s in new if s.id not in used]
+    unexpected = [f"{label}: unexpected {_describe_entry(s)}" for s in new if s.id not in used]
+    if extra is None:
+        found += unexpected
+    else:
+        extra += unexpected
     return found
 
 
 def _score(
-    spec: Mapping[str, Any], outcomes: list[dict[str, Any]], store: Store, request: str, people_before: int
-) -> tuple[list[str], list[str], list[str]]:
-    """Missing, forbidden and extra ops of a stage, as a golden case scores them."""
+    spec: Mapping[str, Any],
+    outcomes: list[dict[str, Any]],
+    store: Store,
+    request: str,
+    people_before: int,
+    cfg: Config,
+) -> tuple[list[str], list[str], Extras]:
+    """Missing and forbidden ops of a stage, and its weighed extras, as a golden case scores them."""
     case = {"id": "pair", **spec}
     missing = [_describe(e) for e in spec.get("expect", []) if not _matches(e, outcomes, store, request)]
     forbidden = [_describe(f) for f in spec.get("forbid", []) if _forbidden(f, outcomes, store, people_before)]
     if spec.get("hostile"):
         forbidden += _hostile_findings(case, outcomes, store)
-    extra = _unexpected(case, outcomes, store, request) if spec.get("exact", True) else []
-    return missing, forbidden, extra
+    extras = extras_of(case, outcomes, store, request, cfg) if spec.get("exact", True) else Extras([], 0.0, False)
+    return missing, forbidden, extras
+
+
+def _joined(extras: Extras, more: Extras, entries: list[str]) -> Extras:
+    """Extras of several stages together, with the extra knowledge entries (each costs `ENTRY_EXTRA_WEIGHT`)."""
+    return Extras(
+        [*extras.lines, *more.lines, *entries],
+        extras.weight + more.weight + ENTRY_EXTRA_WEIGHT * len(entries),
+        extras.reaches or more.reaches,
+    )
 
 
 def _outcomes(store: Store, changesets: list[str | None]) -> list[dict[str, Any]]:
@@ -699,7 +721,8 @@ def _play_pair(
     negative = bool(pair.get("negative"))
     problems: list[str] = []
     forbidden: list[str] = []
-    extra: list[str] = []
+    extras = Extras([], 0.0, False)
+    entry_extra: list[str] = []
     request = ""
     given: list[str] = []
     kept: list[str] = []
@@ -707,13 +730,15 @@ def _play_pair(
     def result(passed: bool, **more: Any) -> RunResult:
         accounts, cost, seconds = _usage(play)
         _versions(play, versions, factory)
+        total = _joined(extras, Extras([], 0.0, False), entry_extra)
         return RunResult(
             pair["id"],
             n,
             passed,
             problems,
             forbidden,
-            extra,
+            total.lines,
+            extra_weight=total.weight,
             cost_usd=cost,
             seconds=seconds,
             accounts=accounts,
@@ -750,8 +775,8 @@ def _play_pair(
         if first.get("label"):
             play.labels[first["label"]] = start.changeset
         if first.get("expect") or first.get("forbid"):
-            miss, forbidden, extra = _score(
-                first, _outcomes(play.store, [start.changeset]), play.store, start.request, people_first
+            miss, forbidden, _ = _score(
+                first, _outcomes(play.store, [start.changeset]), play.store, start.request, people_first, play.fixed
             )
             problems += [f"first: missing {m}" for m in miss]
         for step in first.get("then") or []:
@@ -771,7 +796,7 @@ def _play_pair(
             if first.get("expect_learning", True) and not queued and not answered and expects:
                 problems.append("first: the correction queued no learning")
         learned = [s for i, s in play.entries().items() if i not in before and s.data["status"] != "discarded"]
-        problems += _proposal_findings("first", first.get("expect_proposal"), learned)
+        problems += _proposal_findings("first", first.get("expect_proposal"), learned, entry_extra)
         active = [s for s in learned if s.data["status"] == "active"]
         if active and not first.get("allow_active"):
             problems += [f"first: {_describe_entry(s)} became active without the person's Keep" for s in active]
@@ -800,13 +825,17 @@ def _play_pair(
             changesets.append(done)
         given = play.given(request)
         outcomes = _outcomes(play.store, changesets)
-        miss, forbidden, extra = _score(later, outcomes, play.store, request, people_before)
+        miss, forbidden, extras = _score(later, outcomes, play.store, request, people_before, play.fixed)
         problems += [f"later: missing {m}" for m in miss]
         new = [s for i, s in play.entries().items() if i not in known and s.data["status"] != "discarded"]
-        problems += _proposal_findings("later", later.get("expect_proposal"), new)
+        problems += _proposal_findings("later", later.get("expect_proposal"), new, entry_extra)
     except _Stop as err:
         return stopped(str(err), request or None)
-    passed = not problems and not forbidden and not extra
+    passed = (
+        not problems
+        and not forbidden
+        and _joined(extras, Extras([], 0.0, False), entry_extra).within(play.fixed.ai.evaluation.extra_allowance)
+    )
     return result(
         passed,
         got=[] if passed else [_summarize(o) for o in _outcomes(play.store, changesets)],
@@ -849,7 +878,7 @@ def _run_scenario(
     factory: AdapterFactory = how.pop("adapter_factory")
     problems: list[str] = []
     forbidden: list[str] = []
-    extra: list[str] = []
+    extras = Extras([], 0.0, False)
     seen: dict[int, tuple[list[dict[str, Any]], Store]] = {}
     played: list[_Play] = []
     request = ""
@@ -882,10 +911,10 @@ def _run_scenario(
                     raise _Stop(f"day {day}: the input didn't finish: {play.waiting_reason(handed)}")
                 outcomes = _outcomes(play.store, [done])
                 seen[day] = (outcomes, play.store)
-                miss, forb, more = _score(spec, outcomes, play.store, handed, people_before)
+                miss, forb, more = _score(spec, outcomes, play.store, handed, people_before, play.fixed)
                 problems += [f"day {day}: missing {m}" for m in miss]
                 forbidden += [f"day {day}: {f}" for f in forb]
-                extra += [f"day {day}: {e}" for e in more]
+                extras = _joined(extras, Extras([f"day {day}: {e}" for e in more.lines], more.weight, more.reaches), [])
                 if day == 30:
                     given = play.given(handed)
                     kept = play.kept(list(play.entries()))
@@ -908,14 +937,16 @@ def _run_scenario(
             _versions(played[-1], versions, factory)
         refused = bool(stopped and played and played[-1].refused(request or ""))
         spent = bool(stopped and played and played[-1].spent(request or ""))
-        passed = stopped is None and not problems and not forbidden and not extra
+        allowance = played[-1].fixed.ai.evaluation.extra_allowance if played else 0.0
+        passed = stopped is None and not problems and not forbidden and extras.within(allowance)
         out = RunResult(
             scenario["id"],
             n,
             passed,
             problems,
             forbidden,
-            extra,
+            extras.lines,
+            extra_weight=extras.weight,
             error=stopped,
             not_run=refused,
             out_of_quota=spent,

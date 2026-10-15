@@ -135,19 +135,29 @@ def is_reported(source: Mapping[str, Any] | None) -> bool:
     return source is not None and (bool(source.get("reported")) or is_reported_note(source.get("kind")))
 
 
+def _words(words: list[str]) -> str:
+    return "|".join(re.escape(w) for w in words)
+
+
 def repeats_someone(text: str, speech: ReportedSpeech) -> bool:
-    """Whether a note repeats someone else's words: a speaker other than the person followed by a word of speech, or
-    a passage in quotation marks of at least the configured length."""
+    """Whether a note repeats someone else's words: a speaker other than the person next to a word of speech (before
+    it, or after a leading word such as "per"), a passage in quotation marks of at least the configured length, or a
+    chat pasted in. A speech word followed by a request to the person ("<name> asked me to ...") is not."""
+    own = {w.casefold() for w in speech.own_speakers}
     if speech.verbs:
-        verbs = "|".join(re.escape(v) for v in speech.verbs)
-        own = {w.casefold() for w in speech.own_speakers}
-        for found in re.finditer(rf"(?i)\b([^\W\d_][\w'’.-]*)\s+(?:{verbs})\b", text):
-            if found.group(1).casefold() not in own:
-                return True
+        asked = f"(?!\\s+(?:{_words(speech.request_words)})\\b)" if speech.request_words else ""
+        pattern = rf"(?i)\b([^\W\d_][\w'’.-]*)\s+(?:{_words(speech.verbs)})\b{asked}"
+        if any(found.group(1).casefold() not in own for found in re.finditer(pattern, text)):
+            return True
+    if speech.lead_words:
+        pattern = rf"(?i:\b(?:{_words(speech.lead_words)}))\s+([^\W\d_a-z][\w'’.-]*)"
+        if any(found.group(1).casefold() not in own for found in re.finditer(pattern, text)):
+            return True
     for quoted in re.finditer(r'"([^"]+)"|“([^”]+)”', text):
         if len((quoted.group(1) or quoted.group(2)).split()) >= speech.quote_min_words:
             return True
-    return False
+    chat = [re.compile(p, re.MULTILINE) for p in speech.chat_line_patterns]
+    return sum(1 for p in chat for _ in p.finditer(text)) >= speech.chat_min_lines
 
 
 _LINK = re.compile(r"(?i)(?:[a-z][a-z0-9+.-]*://|www\.)\S+|\b[\w-]+(?:\.[\w-]+)+/\S*")

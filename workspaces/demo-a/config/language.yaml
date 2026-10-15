@@ -10,8 +10,11 @@ new_term_ignore: [OK, FYI, ASAP, TBD, TBC, EOD, ETA, AM, PM, RE, FW, CC, BCC, NB
 never_shown: []
 # The words that mean the person themselves.
 self_words: [me, myself, I]
-# Words in an action's quoted words that show the person owes it something when everyone it is for is on another team.
-owed_words: [we, us, our, me]
+# Words in an action's quoted words that show the person owes it something when everyone it is for is on another team:
+# a request addressed to them.
+owed_words: [you, your, please send, me]
+# Words that, right after the person's name or their team's, make the words a request addressed to them.
+request_words: [can, could, will, would, please, need to, needs to, should, must]
 # Lines an item's title is never taken from: greetings, quoted headers, sign-offs.
 title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to|cc|sent|date|subject)\s*:', '(thanks|best|regards|cheers)\b[ ,!.]*$', '-{2,}|>']
 # Notes under this many words with no link are bare confirmations and stay with the change.
@@ -27,9 +30,15 @@ made_phrases: [drafted, wrote up, write-up, writeup, created a draft, made a dra
 # Everyday words that never belong to a person's name at the edge of a capitalized phrase (see the unverified-name check).
 name_skip_words: [the, a, an, this, that, these, those, our, your, my, his, her, their, its, hi, hello, hey, dear, thanks, thank, please, also, and, but, so, if, when, as, for, to, from, with, "on", in, at, by, of, is, are, was, were, we, i, it, do]
 reported_speech:
-  verbs: [said, says, confirmed, confirms, told, wrote, writes, asked, wants]
+  verbs: [said, says, confirmed, confirms, told, wrote, writes, asked, wants, mentioned, replied, responded, noted, commented, pinged]
+  lead_words: [per, according to]
   own_speakers: [I, we]
+  request_words: [me to, us to]
   quote_min_words: 3
+  chat_line_patterns:
+    - '^\s*[\[(]?\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AaPp][Mm])?(?:,\s?[\d/.-]{6,10})?[^\w\n:]{0,4}[^\W\d_][\w''’. -]{0,40}:\s+\S'
+    - '^\s*[^\W\d_][\w''’.-]*(?:\s+[^\W\d_][\w''’.-]*){0,2}\s+[\[(]?\d{1,2}:\d{2}(?::\d{2})?\s?[AaPp][Mm][\])]?\s*$'
+  chat_min_lines: 2
 messages:
   greeting: "Hi {first_name},"
   actions_heading: "Action items with you:"

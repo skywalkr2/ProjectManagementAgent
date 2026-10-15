@@ -31,11 +31,10 @@ def role_of(view: Any, project_id: str | None, person_id: str | None) -> str:
     return DEFAULT_ROLE
 
 
-def findings(
-    op: OpModel, view: Any, people: Any, owed_words: list[str], project_id: str | None
-) -> list[tuple[str, str]]:
+def findings(op: OpModel, view: Any, people: Any, language: Any, project_id: str | None) -> list[tuple[str, str]]:
     """The scope checks an op fails, each as (check name, message in plain words). Only an action or a question for
-    someone else is looked at; facts, notes and calendar entries never are."""
+    someone else is looked at; facts, notes and calendar entries never are. `language` is the workspace's wording
+    settings, which say what shows the person owes an item something."""
     pm = people.pm
     if pm is None or not isinstance(op, (ActionAddOp, QuestionAddOp)):
         return []
@@ -54,7 +53,7 @@ def findings(
                 f"you only watch {name}, so {noun} for someone else isn't made there: record it as a fact",
             )
         ]
-    if isinstance(op, ActionAddOp) and _another_teams(op, view, people) and not _owed(op, view, people, owed_words):
+    if isinstance(op, ActionAddOp) and _another_teams(op, view, people) and not _owed(op, view, people, language):
         return [
             (
                 "other-team-item",
@@ -87,9 +86,12 @@ def _another_teams(op: ActionAddOp, view: Any, people: Any) -> bool:
     return all(r.status == "ok" and r.person is not None and not _inside(view, people, team, r.person) for r in owners)
 
 
-def _owed(op: ActionAddOp, view: Any, people: Any, owed_words: list[str]) -> bool:
-    """Whether the words an action quotes name the person or their team, or say the person owes it something."""
+def _owed(op: ActionAddOp, view: Any, people: Any, language: Any) -> bool:
+    """Whether the words an action quotes are a request addressed to the person: a word of `owed_words`, or the
+    person's name or their team's followed by a request word."""
     quote = op.evidence.quote
+    if any(_has_word(quote, word) for word in language.owed_words if word):
+        return True
     pm = people.records.get(people.pm, {})
     names = [pm.get("full_name"), pm.get("first_name"), *(pm.get("aliases") or [])]
     full = (pm.get("full_name") or "").split()
@@ -98,7 +100,16 @@ def _owed(op: ActionAddOp, view: Any, people: Any, owed_words: list[str]) -> boo
     team = view.get("team", team_id) if team_id else None
     if team is not None:
         names += [team.data.get("name"), *(team.data.get("aliases") or [])]
-    return any(_has_word(quote, word) for word in [*names, *owed_words] if word)
+    return any(_addressed(quote, name, language.request_words) for name in names if name)
+
+
+def _addressed(quote: str, name: str, request_words: list[str]) -> bool:
+    """Whether a request word comes right after the name, with at most a comma, colon or dash between."""
+    words = "|".join(re.escape(w.strip()) for w in request_words if w.strip())
+    if not words:
+        return False
+    pattern = r"(?<!\w)" + re.escape(name.strip()) + rf"\s*[,:;-]?\s*(?:{words})(?!\w)"
+    return re.search(pattern, quote, re.IGNORECASE) is not None
 
 
 def _has_word(text: str, word: str) -> bool:

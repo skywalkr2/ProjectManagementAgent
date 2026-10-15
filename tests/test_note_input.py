@@ -10,6 +10,7 @@ import json
 from datetime import date
 
 import pytest
+import yaml
 from fastapi.testclient import TestClient
 
 from api.app import create_app
@@ -19,7 +20,7 @@ from engine.intake import NOTE_ROUTES, REPORTED_ROUTES, is_bare_confirmation, is
 from engine.names import People
 from engine.packet import build
 from engine.workspace import init_workspace
-from tests.conftest import DEMO_B, fixture_records, without_first_go
+from tests.conftest import DEMO_A, DEMO_B, fixture_records, without_first_go
 
 TOKEN = "note-token"
 
@@ -451,6 +452,63 @@ def test_a_note_repeating_what_someone_said_or_quoting_them_is_recognized():
     assert not repeats_someone('Done, the "Ready" column is cleared.', speech)
     assert not repeats_someone(LONG, speech)
     assert not repeats_someone(f"{first} said so.", ReportedSpeech(verbs=[], quote_min_words=50))
+
+
+def test_the_added_speech_words_and_the_words_before_a_speaker_mark_reported_speech():
+    from engine.config.schema import ReportedSpeech
+    from engine.intake import repeats_someone
+
+    speech = ReportedSpeech()
+    first = fixture_records(DEMO_B, "person")[1]["full_name"].split()[0]
+    for verb in ("mentioned", "replied", "responded", "noted", "commented", "pinged"):
+        assert repeats_someone(f"Done. {first} {verb} that the venue is the 14th.", speech), verb
+        assert not repeats_someone(f"Done. I {verb} that the venue is the 14th.", speech), verb
+    assert repeats_someone(f"Per {first}, the venue is the 14th.", speech)
+    assert repeats_someone(f"The venue is the 14th, according to {first}.", speech)
+    assert not repeats_someone("Done, about two per week and according to the plan.", speech)
+    assert not repeats_someone("Done, according to me the venue is the 14th.", speech)
+    assert not repeats_someone(f"Per {first}", ReportedSpeech(lead_words=[], verbs=[], quote_min_words=50))
+
+
+def test_i_told_a_name_and_a_name_asking_me_to_are_not_reported_content():
+    from engine.config.schema import ReportedSpeech
+    from engine.intake import repeats_someone
+
+    speech = ReportedSpeech()
+    first = fixture_records(DEMO_B, "person")[1]["full_name"].split()[0]
+    assert not repeats_someone(f"I told {first} the file went to the printer.", speech)
+    assert not repeats_someone(f"{first} asked me to send the file to the printer.", speech)
+    assert not repeats_someone(f"{first} wants me to send the file; {first} told us to wait.", speech)
+    assert repeats_someone(f"{first} asked whether the file went to the printer.", speech)
+    assert repeats_someone(f"{first} asked me to send it and said the venue is booked.", speech)
+    assert repeats_someone(f"{first} asked me to send it.", ReportedSpeech(request_words=[])), "the words are a setting"
+
+
+def test_a_pasted_chat_is_reported_as_a_whole():
+    from engine.config.schema import ReportedSpeech
+    from engine.intake import repeats_someone
+
+    speech = ReportedSpeech()
+    people = [p["full_name"].split()[0] for p in fixture_records(DEMO_B, "person")[1:3]]
+    timed = f"[10:32] {people[0]}: the file went out\n[10:35] {people[1]}: great, thanks\nSo the file is done."
+    assert repeats_someone(timed, speech)
+    twelve_hour = f"{people[0]}  10:32 AM\nthe file went out\n{people[1]}  10:35 AM\ngreat\n"
+    assert repeats_someone(twelve_hour, speech)
+    assert not repeats_someone(f"[10:32] {people[0]}: the file went out", speech), "one line is not a chat"
+    assert repeats_someone(f"[10:32] {people[0]}: the file went out", ReportedSpeech(chat_min_lines=1))
+    assert not repeats_someone(timed, ReportedSpeech(chat_line_patterns=[]))
+    assert not repeats_someone("Meeting at 10:32\nThen lunch at 12:15\n", speech)
+
+
+def test_the_reported_speech_words_have_defaults_and_demo_values_in_both_workspaces():
+    from engine.config.schema import ReportedSpeech
+
+    default = ReportedSpeech()
+    assert {"mentioned", "replied", "responded", "noted", "commented", "pinged"} <= set(default.verbs)
+    assert default.lead_words == ["per", "according to"]
+    for template in (DEMO_A, DEMO_B):
+        shown = yaml.safe_load((template / "config" / "language.yaml").read_text())["reported_speech"]
+        assert ReportedSpeech(**shown) == default, template.name
 
 
 def test_a_rule_from_someone_else_repeated_in_a_mark_done_note_waits_for_the_person(api):

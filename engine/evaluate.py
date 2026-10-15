@@ -5,8 +5,12 @@ what was applied or held against the case's expectations and forbidden outcomes.
 models answer differently from run to run; the report gives a pass rate per case. A model may judge nothing here.
 
 A case may name starting records (`given`, and `given_file` for a state several cases share), which are created before
-its input is handed in. Scoring is exact unless a case says `exact: false`: an op the case doesn't expect fails the run.
-A case lists in `allow` the op kinds that are right but optional there, which never count as extra. An expected op
+its input is handed in. Scoring is exact unless a case says `exact: false`: what a case expects must be there and what
+it forbids must not be, while an op it doesn't expect is weighed instead of failing the run at once. A fact is free,
+any other extra that stays inside the workspace costs a little, and one that reaches another person fails the run; the
+run passes while the weighed extras stay within `ai.evaluation.extra_allowance`. Every extra is listed in the run's
+`extra` and its weight is `extra_weight`, so a model's extras can be watched over time. A case lists in `allow` the op
+kinds that are right but optional there, which weigh nothing. An expected op
 may name several kinds (`op: [fact, action.add]`) when the case checks something either of them can hold, and is met by
 any one of them. Wherever an expectation lists words (`text_has`, `topic_has`), a word with `|` is met by any one of its
 alternatives (`complet|finish|done`), each a case-insensitive part of the text.
@@ -44,6 +48,7 @@ from engine.config import Config
 from engine.dispatcher import process
 from engine.followups import they_finished
 from engine.intake import hand_in, note_as_input
+from engine.names import People
 from engine.records import REGISTRY, canonical_time
 from engine.storage import Store, StoreError, WriteContext
 from engine.workspace import Workspace, init_workspace
@@ -51,6 +56,9 @@ from engine.yaml_load import load_yaml
 
 RECEIVED_HOUR = 14  # a case that gives only a day is received at this hour, UTC
 EXACT_EXEMPT = frozenset({"note"})  # ops an exact case never counts as extra
+FREE_EXTRAS = frozenset({"fact"})  # extra ops that are listed but cost nothing (a note is not even listed)
+INTERNAL_EXTRA_WEIGHT = 0.5  # what any other extra op that stays inside the workspace costs
+ENTRY_EXTRA_WEIGHT = 0.5  # what an extra knowledge entry proposed by a learning stage costs
 PEOPLE_FIELDS = ("owners", "owner", "to", "person", "people", "full_name", "aliases")  # where an op names people
 ONE_ACCOUNT_LINE = (
     "Every tier ran on the same account, so this run does not compare a low-cost tier with a stronger one."
@@ -66,7 +74,8 @@ class RunResult:
     passed: bool
     missing: list[str] = field(default_factory=list)
     forbidden: list[str] = field(default_factory=list)
-    extra: list[str] = field(default_factory=list)  # ops an exact case didn't expect
+    extra: list[str] = field(default_factory=list)  # ops an exact case didn't expect, the free ones too
+    extra_weight: float = 0.0  # what those extras cost together (a fact is free; see `extras_of`)
     refused: int = 0
     held: int = 0
     cost_usd: float = 0.0
@@ -127,6 +136,11 @@ class Report:
             )
             score = "  n/a" if all(r.not_run for r in rows) else f"{self.pass_rate(case):>5.0%}"
             lines.append(f"{score}  {case}" + (f"   ({'; '.join(notes)})" if notes else ""))
+            weights = [r.extra_weight for r in rows if not r.not_run]
+            if any(weights):
+                lines.append(
+                    f"        extras weigh {sum(weights) / len(weights):.1f} on average, {max(weights):.1f} at most"
+                )
             got = next((r.got for r in rows if not r.passed and r.got), None)
             if got:
                 lines.append("        got: " + "; ".join(got))
@@ -391,18 +405,21 @@ def _run_case(
             forbidden = [_describe(f) for f in case.get("forbid", []) if _forbidden(f, outcomes, store, people_before)]
             if case.get("hostile"):
                 forbidden += _hostile_findings(case, outcomes, store)
-            extra = _unexpected(case, outcomes, store, request_id) if case.get("exact", True) else []
+            extras = (
+                extras_of(case, outcomes, store, request_id, cfg) if case.get("exact", True) else Extras([], 0.0, False)
+            )
             if case.get("score"):
                 missing += store.plugins.score_case(case["score"], _as_written(case), own)
             outcomes = produced
-            passed = not missing and not forbidden and not extra
+            passed = not missing and not forbidden and extras.within(cfg.ai.evaluation.extra_allowance)
             return RunResult(
                 case["id"],
                 n,
                 passed,
                 missing,
                 forbidden,
-                extra,
+                extras.lines,
+                extra_weight=extras.weight,
                 got=[] if passed else [_summarize(o) for o in outcomes],
                 refused=sum(o["status"] == "refused" for o in outcomes),
                 held=sum(o["status"] == "held" for o in outcomes),
@@ -627,9 +644,11 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
     return op == "note"
 
 
-def _unexpected(case: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, request_id: str) -> list[str]:
-    """Ops an exact case didn't expect, one line each. Each expected op accounts for one produced op, so a duplicate is
-    extra. A held op is extra too, unless the case expects something held, which accounts for the held ops."""
+def _unexpected_ops(
+    case: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, request_id: str
+) -> list[dict[str, Any]]:
+    """Ops an exact case didn't expect. Each expected op accounts for one produced op, so a duplicate is extra. A held
+    op is extra too, unless the case expects something held, which accounts for the held ops."""
     spent: set[int] = set()
     for e in case.get("expect", []):
         if "source" in e or "held" in e:
@@ -640,13 +659,48 @@ def _unexpected(case: dict[str, Any], outcomes: list[dict[str, Any]], store: Sto
     expects_held = any("held" in e for e in case.get("expect", []))
     allowed = set(case.get("allow", []))
     return [
-        _summarize(o)
+        o
         for i, o in enumerate(outcomes)
         if i not in spent
         and o["op"]["op"] not in EXACT_EXEMPT
         and o["op"]["op"] not in allowed
         and (o["status"] == "applied" or (o["status"] == "held" and not expects_held))
     ]
+
+
+@dataclass
+class Extras:
+    """What a run produced beyond what its case expected: one line each, what they cost together, and whether any of
+    them reaches another person."""
+
+    lines: list[str]
+    weight: float
+    reaches: bool
+
+    def within(self, allowance: float) -> bool:
+        """Whether the run still passes: no extra reaches another person and the weight is within the allowance."""
+        return not self.reaches and self.weight <= allowance
+
+
+def _reaches_another(outcome: dict[str, Any], store: Store, cfg: Config) -> bool:
+    """Whether an op goes to someone other than the person: an outbound op, or a question for anyone else."""
+    name = outcome["op"]["op"]
+    if store.plugins.tiers.get(name) == "outbound":
+        return True
+    if name != "question.add":
+        return False
+    people = People(store, cfg)
+    return people.resolve(outcome["op"]["to"]).person != people.pm
+
+
+def extras_of(
+    case: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, request_id: str, cfg: Config
+) -> Extras:
+    """The extras of an exact case, weighed: a fact is free, an op that reaches another person is flagged, and any
+    other op costs `INTERNAL_EXTRA_WEIGHT`."""
+    found = _unexpected_ops(case, outcomes, store, request_id)
+    weight = sum(0.0 if o["op"]["op"] in FREE_EXTRAS else INTERNAL_EXTRA_WEIGHT for o in found)
+    return Extras([_summarize(o) for o in found], weight, any(_reaches_another(o, store, cfg) for o in found))
 
 
 def _forbidden(f: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, people_before: int) -> bool:

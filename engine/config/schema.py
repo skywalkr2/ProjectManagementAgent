@@ -601,6 +601,15 @@ class Price(ConfigModel):
 class EvaluationSettings(ConfigModel):
     runs: int = Field(3, ge=1, description="How many times each evaluation case runs.")
     min_score: float = Field(0.9, ge=0, le=1, description="Pass rate a model needs to be approved for a tier.")
+    extra_allowance: float = Field(
+        1.0,
+        ge=0,
+        le=20,
+        description="How much an evaluation run may do beyond what its case expects and still pass. A fact the case "
+        "didn't expect costs nothing, any other extra change that stays with the person costs 0.5, and anything that "
+        "reaches another person fails the run whatever this is. A run passes while its extras together cost no "
+        "more than this; 0 means no extra change at all, as before.",
+    )
 
 
 def _default_tiers() -> dict[str, TierSettings]:
@@ -1110,24 +1119,62 @@ class MessageSettings(ConfigModel):
 
 
 DEFAULT_SELF_WORDS = ("me", "myself", "I")
-DEFAULT_OWED_WORDS = ("we", "us", "our", "me")
+DEFAULT_OWED_WORDS = ("you", "your", "please send", "me")
+DEFAULT_REQUEST_WORDS = ("can", "could", "will", "would", "please", "need to", "needs to", "should", "must")
+
+
+DEFAULT_CHAT_LINE_PATTERNS = (
+    # a time, then who wrote it and a colon: "[10:32] Name: ...", "10:32 - Name: ..."
+    r"^\s*[\[(]?\d{1,2}:\d{2}(?::\d{2})?(?:\s?[AaPp][Mm])?(?:,\s?[\d/.-]{6,10})?"
+    r"[^\w\n:]{0,4}[^\W\d_][\w'’. -]{0,40}:\s+\S",
+    # who wrote it, then the time with am or pm, alone on the line: "Name  10:32 AM"
+    r"^\s*[^\W\d_][\w'’.-]*(?:\s+[^\W\d_][\w'’.-]*){0,2}\s+[\[(]?\d{1,2}:\d{2}(?::\d{2})?\s?[AaPp][Mm][\])]?\s*$",
+)
 
 
 class ReportedSpeech(ConfigModel):
     verbs: list[str] = Field(
-        default_factory=lambda: ["said", "says", "confirmed", "confirms", "told", "wrote", "writes", "asked", "wants"],
+        default_factory=lambda: [
+            *("said", "says", "confirmed", "confirms", "told", "wrote", "writes", "asked", "wants"),
+            *("mentioned", "replied", "responded", "noted", "commented", "pinged"),
+        ],
         description="Words that, after a name or other speaker, mark a note as repeating someone else's words: "
         '"<name> said ...". Matched as whole words, ignoring case.',
     )
+    lead_words: list[str] = Field(
+        default_factory=lambda: ["per", "according to"],
+        description="Words that, before a name or other speaker, mark a note as repeating someone else's words: "
+        '"per <name> ...". The speaker has to start with a capital letter, so "per week" is not a speaker. Matched '
+        "as whole words, ignoring case.",
+    )
     own_speakers: list[str] = Field(
         default_factory=lambda: ["I", "we"],
-        description='Speakers that are the person themselves, so "I said" stays the person\'s own words.',
+        description='Speakers that are the person themselves, so "I said" and "I told <name>" stay the person\'s own '
+        "words.",
+    )
+    request_words: list[str] = Field(
+        default_factory=lambda: ["me to", "us to"],
+        description="Words that, right after one of the speech words, mean the speaker is asking the person to do "
+        'something: "<name> asked me to ..." is a request to the person, not content they report. Matched as whole '
+        "words, ignoring case.",
     )
     quote_min_words: int = Field(
         3,
         ge=1,
         le=50,
         description="Text in quotation marks with at least this many words is someone else's words.",
+    )
+    chat_line_patterns: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_CHAT_LINE_PATTERNS),
+        description="Patterns (regular expressions, matched at the start of a line) for a line of a pasted chat: a "
+        "time and the name of who wrote it. A note with enough such lines is a chat pasted in, which is someone "
+        "else's words as a whole.",
+    )
+    chat_min_lines: int = Field(
+        2,
+        ge=1,
+        le=20,
+        description="How many lines that look like a chat make a note a pasted chat, reported as a whole.",
     )
 
 
@@ -1171,8 +1218,15 @@ class LanguageFile(FileModel):
     owed_words: list[str] = Field(
         default_factory=lambda: list(DEFAULT_OWED_WORDS),
         description="Words that, in the quoted words of an action for someone on another team, show the person owes "
-        "it something, such as we will send it or they need it from us. Without one of them, or the person's or their "
-        "team's name, such an action is recorded as a fact instead. Matched as whole words, ignoring case.",
+        'it something: a request addressed to them, such as "can you send it" or "please send the plan". Without '
+        "one of them, or the person's or their team's name followed by a request word, such an action is recorded as "
+        "a fact instead. Matched as whole words, ignoring case.",
+    )
+    request_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_REQUEST_WORDS),
+        description="Words that, right after the person's name or their team's (a comma or colon may come between), "
+        'make the words a request addressed to them: "<name>, can you ..." or "<team> will need ...". A name with '
+        "none of them after it only says who something is for. Matched as whole words, ignoring case.",
     )
     blocked_phrases: list[str] = Field(
         default_factory=lambda: ["confirm", "check whether", "check if", "TBD?"],

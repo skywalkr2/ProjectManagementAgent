@@ -6,7 +6,7 @@ pasted: 'From: Theo Brandt
   Subject: Spine
 
 
-  I''ll send the corrected spine file to us by Tuesday.
+  I''ll send the corrected spine file to you by Tuesday.
 
 
   Theo'
@@ -29,4 +29,4 @@ stub_answer:
     due: '2026-10-13'
     project: PRJ-1
     evidence:
-      quote: I'll send the corrected spine file to us by Tuesday
+      quote: I'll send the corrected spine file to you by Tuesday

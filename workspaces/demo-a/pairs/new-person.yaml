@@ -32,7 +32,7 @@ later:
   pasted: |-
     From: Odile Fenwick
 
-    Marta Quill will send Rafael the carrier survey by the 30th.
+    Marta Quill will send you the carrier survey by the 30th.
   expect:
   - op: action.add
     text_has: [carrier survey]
@@ -57,4 +57,4 @@ ideal:
       due: '2026-10-30'
       project: PRJ-1
       evidence:
-        quote: Marta Quill will send Rafael the carrier survey by the 30th
+        quote: Marta Quill will send you the carrier survey by the 30th

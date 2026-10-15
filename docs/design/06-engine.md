@@ -286,10 +286,13 @@ original designer's L1 check-in, 2026-10-14; built): a note on the person's own 
 said / says / confirmed …", or a passage in quotation marks; the words are the setting `language.reported_speech`) is
 reported content too. Its source is marked `reported` and its author stays the person who typed it; facts and dates from it
 apply, and a system op from it is held. Built: `tests/test_note_input.py::test_a_rule_from_someone_else_repeated_in_a_mark_done_note_waits_for_the_person`.
-**More reported speech, and two that aren't** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): "per", "according to", "mentioned", "replied", "responded",
-"noted", "commented" and "pinged" join the words; a pasted chat (or a screenshot of one) is reported content as a whole.
-"I told <name> …" is the person's own report of what they did, and "<name> asked me to …" is a request to the person (an
-action), never a rule; neither counts as reported content. Knowledge proposals (lessons, glossary entries, routing
+**More reported speech, and two that aren't** (functional designer's answers, 2026-10-15; built, roadmap L7): "mentioned", "replied", "responded",
+"noted", "commented" and "pinged" join the speech words (`language.reported_speech.verbs`), and "per" and "according to"
+(`lead_words`, which come before the speaker, who starts with a capital letter) mark reported speech too; a pasted chat
+is reported content as a whole (lines of a time and a name, `chat_line_patterns`, at least `chat_min_lines` of them; a
+screenshot of one is not read). "I told <name> …" is the person's own report of what they did, and "<name> asked me to …"
+is a request to the person (an action, `request_words`), never a rule; neither counts as reported content. Built:
+`tests/test_note_input.py::test_a_pasted_chat_is_reported_as_a_whole`. Knowledge proposals (lessons, glossary entries, routing
 entries, style notes, rules) are system-tier ops when they are added (L1), so they wait for Keep and are never active at
 once from reported content; the learning pair that proves it is added in L4. **Undo** of the button's change does not
 take the input back: the words stay saved and the queued work stays; what the assistant makes of it is a changeset the
@@ -1470,10 +1473,14 @@ uses (an edit, a move, a button), and the expected end state, scored on the reco
 Replays run in a throwaway copy, never the person's workspace, since Undo rightly refuses to roll back a record that has
 changed since. Replayed misses are a third set beside the golden and harder sets.
 
-**Extras are weighed and tracked** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7). Missing and forbidden ops stay exact. An op a case didn't expect is weighed
-by its reach: a fact or a note is free; an internal action or a calendar entry costs a little; anything that reaches
-another person (a question, a notice, a history entry on a page others read) fails the run. Each report gives the extras
-per run as their own number, kept over time, so a case's `allow` list can't hide a trend.
+**Extras are weighed and tracked** (functional designer's answers, 2026-10-15; built, roadmap L7). Missing and forbidden ops stay exact. An op a case didn't expect is weighed
+by its reach: a fact is free (a note is never counted); any other extra that stays inside the workspace (an action, a calendar entry, a question to the person, an extra
+knowledge entry from a learning stage) costs 0.5; anything that reaches another person (a question to someone else, an
+op of the outbound tier) fails the run. A run passes when nothing is missing or forbidden, no extra reaches another person
+and the extras together cost no more than `ai.evaluation.extra_allowance` (default 1.0). An op kind a case lists in
+`allow` weighs nothing. Each run carries its extras and their weight (`extra_weight`), shown in the report text and kept
+in the report's JSON, so a case's `allow` list can't hide a trend. *Not built:* a view of the weight across saved reports.
+Built: `tests/test_evaluate_harness.py::test_the_weighed_extras_must_stay_within_the_allowance`.
 
 ## 6.17 Periodic jobs (later)
 
@@ -1509,11 +1516,12 @@ check-up and the UI all ask it; no other part of the product decides scope on it
   the lints `watched-project` and `other-team-item` (default `return`; returned once, then held and never applied even
   when the item reaches no one); "the person owes it" when the quote names the person or their team or holds a word in
   `language.owed_words`; the person's own note is exempt from both; the packet's project list says the person's part
-  when it isn't "run". **Built:** `tests/test_scope_slice.py`. **Who owes what, revised** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): "we", "us"
+  when it isn't "run". **Built:** `tests/test_scope_slice.py`. **Who owes what, revised** (functional designer's answers, 2026-10-15; the words are built, roadmap L7): "we", "us"
 and "our" are usually the sender's own team committing to something, which is not owed to the person; what is owed is a
-request addressed to them ("you", "your team", "can you", "please send", or their name with a request verb), in
-`language.owed_words`. A person with no team still counts as outside, and is asked about once ("Which team is <name>
-on?") rather than guessed.
+request addressed to them ("you", "your team", "please send", in `language.owed_words`, or their name or their team's
+followed by a request word, `language.request_words`). Built: `tests/test_scope_slice.py::test_a_quote_that_addresses_the_person_is_one_the_person_owes`.
+*Not built:* a person with no team still counts as outside, and is to be asked about once ("Which team is <name>
+on?") rather than guessed; today nothing is asked.
 
 ## 6.19 Facts and lookups
 

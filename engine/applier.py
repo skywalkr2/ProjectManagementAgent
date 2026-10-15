@@ -450,7 +450,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     op,
                     view,
                     ctx.people,
-                    ctx.cfg.language.owed_words,
+                    ctx.cfg.language,
                     (_projects_of(op) or [about_project])[0],
                 ):
                     lint(i, found_name, found)

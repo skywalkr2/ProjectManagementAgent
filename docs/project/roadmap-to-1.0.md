@@ -373,7 +373,7 @@ real use starts. The rest (L-more) comes after the packs.
   - [x] Another team's item, on any project, is a fact unless the input says the person owes them something: an action
     whose owners are all outside the person's team is returned once to be recorded as a fact, unless its evidence shows
     the person owes it. Built: `tests/test_scope_slice.py::test_another_teams_action_is_returned_then_held_and_never_applied`,
-    `tests/test_scope_slice.py::test_an_action_whose_quote_says_we_us_our_or_me_is_one_the_person_owes`. The person's own note is exempt
+    `tests/test_scope_slice.py::test_a_quote_that_addresses_the_person_is_one_the_person_owes`. The person's own note is exempt
     from both checks: `tests/test_scope_slice.py::test_the_persons_own_note_decides_what_they_track_and_the_scope_checks_read_only_what_came_in`.
   - [x] Its test is the person's path: a watched project's mail gives facts only; the role changed to run, the same mail
     gives a risk and an action. Built: `tests/test_scope_slice.py::test_a_watched_projects_mail_gives_facts_only_and_after_the_role_becomes_run_the_same_mail_gives_an_action`.
@@ -984,7 +984,7 @@ before any L2 code.
   which the other tests and the browser tests read. Exact scoring is the default, a case can start from given records,
   and hostile cases fail on any system op or any op naming the injected person. Built:
   `tests/test_followups_backup_eval.py::test_every_case_passes_with_its_ideal_answer` (both sets), and in
-  `tests/test_evaluate_harness.py`: `test_an_op_the_case_does_not_expect_fails_the_run_unless_the_case_says_exact_false`,
+  `tests/test_evaluate_harness.py`: `test_an_op_the_case_does_not_expect_is_listed_and_a_case_can_relax_exact`,
   `test_starting_records_exist_before_the_input_is_handed_in`,
   `test_the_busy_portfolio_has_about_twenty_projects_fifty_open_actions_and_near_namesakes`,
   `test_a_hostile_case_fails_on_any_system_op_whatever_became_of_it`,
@@ -1453,9 +1453,24 @@ Learning and scope (answers 3 to 7, 14, 22, 23):
   unflagged.
 - [ ] **Who owes what**: a request addressed to the person ("you", "your team", "can you", "please send", their name with a
   request verb) replaces "we", "us", "our" in `language.owed_words`; a person with no team is asked about once.
-  *Today:* the we-words count as owed.
-- [ ] **Reported speech**: "per", "according to", "mentioned", "replied", "responded", "noted", "commented", "pinged"
+  Built (the words; the question for a person with no team is **not built**, see below): the we-words no longer count,
+  `language.owed_words` is `you`, `your`, `please send`, `me`, and the person's or their team's name counts only when a
+  word of the new `language.request_words` follows it. `tests/test_scope_slice.py`:
+  `test_a_quote_that_addresses_the_person_is_one_the_person_owes`,
+  `test_the_we_words_are_the_senders_own_team_and_are_not_owed_by_the_person`,
+  `test_a_request_addressed_by_name_is_owed_but_a_bare_name_only_says_who_it_is_for`,
+  `test_the_words_of_a_request_by_name_are_a_setting`,
+  `test_the_scope_lints_and_the_owed_words_have_defaults_and_demo_values_in_both_workspaces`. *Left:* "Which team is
+  <name> on?" asked once of a person with no team (today such a person counts as outside, and nothing is asked).
+- [x] **Reported speech**: "per", "according to", "mentioned", "replied", "responded", "noted", "commented", "pinged"
   join the words; a pasted chat is reported as a whole; "I told <name>" and "<name> asked me to" are not reported content.
+  Built: the speech words are in `language.reported_speech.verbs`, "per" and "according to" in the new `lead_words` (they
+  come before the speaker), the requests to the person in `request_words`, and a pasted chat is recognized by
+  `chat_line_patterns` and `chat_min_lines`. `tests/test_note_input.py`:
+  `test_the_added_speech_words_and_the_words_before_a_speaker_mark_reported_speech`,
+  `test_i_told_a_name_and_a_name_asking_me_to_are_not_reported_content`,
+  `test_a_pasted_chat_is_reported_as_a_whole`,
+  `test_the_reported_speech_words_have_defaults_and_demo_values_in_both_workspaces`.
 - [ ] **Checks run on every output** a rule's scope covers, so a checked rule counts as applied each time it holds.
   *Today:* stage checks run only on stage moves.
 - [ ] **"Not now"** on the rules review line, starting its week; **a floor** of 3 identical refusals in a week brings a
@@ -1465,9 +1480,18 @@ Learning and scope (answers 3 to 7, 14, 22, 23):
 Proving it (lesson 2; answers 2, 21):
 - [ ] **Replay cases**: start from the person's own action through the screen's entry point and score the records' end
   state; one per real miss above, as a third set. *Today:* cases and pairs start from an input.
-- [ ] **Extras weighed and tracked**: missing and forbidden stay exact; a fact or note is free, an internal action or
-  entry costs a little, anything reaching another person fails; extras per run reported over time. *Today:* any extra
-  not in `allow` fails the run.
+- [x] **Extras weighed and tracked**: missing and forbidden stay exact; a fact or note is free, an internal action or
+  entry costs a little, anything reaching another person fails; extras per run reported over time. Built: a run passes
+  when nothing is missing or forbidden, no extra reaches another person, and the weighed extras are within
+  `ai.evaluation.extra_allowance` (default 1.0; a fact or note 0, any other internal extra or an extra knowledge entry
+  0.5); `RunResult.extra_weight` and a line in the report text and JSON. `tests/test_evaluate_harness.py`:
+  `test_an_op_the_case_does_not_expect_is_listed_and_a_case_can_relax_exact`,
+  `test_an_extra_fact_is_free_and_an_extra_internal_op_costs_a_little`,
+  `test_the_weighed_extras_must_stay_within_the_allowance`, `test_the_extra_allowance_is_a_setting`,
+  `test_an_extra_that_reaches_another_person_fails_whatever_the_allowance`,
+  `test_an_op_kind_the_case_allows_weighs_nothing`, `test_the_report_shows_what_the_extras_weigh_and_the_json_keeps_it`;
+  `tests/test_pairs.py`: `test_an_extra_entry_or_op_in_a_pair_is_weighed_instead_of_failing_it`,
+  `test_a_pair_fails_when_its_extras_outweigh_the_allowance`.
 - [x] **An evaluation run ends with its own failure summary** (O3 took about six hours, much of it copying commands and
   reports between the owner's computer and the session): `cockpit evaluate` prints each failing run in one compact line
   (missing, extra, kept, given) and writes them beside the report, and `--case-failed <report>` re-runs only what failed
