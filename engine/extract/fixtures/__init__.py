@@ -42,17 +42,24 @@ def zipped(parts: dict[str, str]) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
         for name, body in parts.items():
-            archive.writestr(name, body)
+            archive.writestr(_entry(name), body)
     return buffer.getvalue()
 
 
 def _zip(parts: dict[str, str]) -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
-        archive.writestr("[Content_Types].xml", _TYPES)
+        archive.writestr(_entry("[Content_Types].xml"), _TYPES)
         for name, body in parts.items():
-            archive.writestr(name, '<?xml version="1.0" encoding="UTF-8"?>' + body)
+            archive.writestr(_entry(name), '<?xml version="1.0" encoding="UTF-8"?>' + body)
     return buffer.getvalue()
+
+
+def _entry(name: str) -> zipfile.ZipInfo:
+    """An entry with a fixed time, so the same parts always make the same bytes."""
+    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    return info
 
 
 def _rels(*entries: tuple[str, str, str]) -> str:

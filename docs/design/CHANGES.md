@@ -1002,6 +1002,14 @@ yet follow, that it is *designed*, with its phase.
 | Watched sources (6.10, 4.1) | The person's edits and the app's publishes were both `by_us` | `workspace.user.accounts` and a source's `author`; the packet marks `author="you"` or the credited name, and `by_us` only for the app |
 | Journeys | No journey for the next-step buttons | J7 presses each one and checks Undo |
 
+## 67. One account is the usual case; expiring keys; failed calls (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Routing (6.16) | A paused routine tier only waited | Today asks before using another tier's account until the reset (`ai.borrow_other_tier`). Built: `tests/test_borrow_other_tier.py` |
+| Keys (6.16, 4.8) | No end date | `credential_expires` on an account, the service-given end of a sign-in, and a Today line `ai.credential_warn_days` before, naming every place the key is used. Built: `tests/test_credential_expiry.py` |
+| Screens (7.x) | A failed read could show as empty | Today's cards, a source's row, Check now and the add-ons list say what failed and what to do |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

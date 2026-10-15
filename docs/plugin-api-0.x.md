@@ -10,6 +10,12 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.77 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.
+
+- A request paused for an account's limit names the `tier` in its `cause`.
+
 ## What 0.3.76 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.

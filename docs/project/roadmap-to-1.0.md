@@ -329,11 +329,14 @@ real use starts. The rest (L-more) comes after the packs.
   - [x] Its test is the person's path: a watched project's mail gives facts only; the role changed to run, the same mail
     gives a risk and an action. Built: `tests/test_scope_slice.py::test_a_watched_projects_mail_gives_facts_only_and_after_the_role_becomes_run_the_same_mail_gives_an_action`.
 - **From the original designer's lessons of 2026-10-14**, small and needed in the first week:
-  - [ ] **A failed call never looks like an empty result** (lesson 7): wherever a list comes from a call (a connector, an
+  - [x] **A failed call never looks like an empty result** (lesson 7): wherever a list comes from a call (a connector, an
     account, a dry run), a failure shows its reason where the person is looking ("the service refused the sign-in: renew
-    it in Settings"), never "0 items".
-  - [ ] **Credentials with a known lifetime carry their expiry date**, and a Today line lands a week before (a setting),
-    listing every place the same credential is stored (lesson 7).
+    it in Settings"), never "0 items". Built: Today's calendar and mail cards, the source row, the Check now toast and the
+    add-ons list (`web/src/components/TodayBoard.test.tsx`, `web/src/components/Sources.test.tsx`,
+    `web/src/components/Addons.test.tsx`, `tests/test_today_dashboard.py`).
+  - [x] **Credentials with a known lifetime carry their expiry date**, and a Today line lands a week before (a setting),
+    listing every place the same credential is stored (lesson 7). Built: `tests/test_credential_expiry.py::test_a_key_ending_within_the_warning_days_is_a_line_naming_every_place_the_same_key_is_used`,
+    `tests/test_credential_expiry.py::test_the_end_the_service_gives_a_sign_in_is_kept_and_a_renewal_that_sends_no_new_credential_keeps_it`.
   - [x] **What a change made is linked where the person looks** (lessons of 2026-10-14 afternoon, lesson 1): every draft,
     write-up or file a change makes for the person shows as a "Made:" link on the change's card without opening its
     details, with what it is for ("internal minutes, not ready to send"); the request's result links the first one. A
@@ -362,12 +365,14 @@ real use starts. The rest (L-more) comes after the packs.
   that is built and says so on Today with the time
   (`tests/test_silent_stops.py::test_a_paused_account_is_a_risk_line_with_the_time_and_the_count_waiting`). With a second
   account on another tier, the higher-cost one is never used for routine work without asking:
-  - [ ] when the routine tier's accounts are all paused and another tier's account is free, Today asks "Use <account>
+  - [x] when the routine tier's accounts are all paused and another tier's account is free, Today asks "Use <account>
     for routine work until <account>'s limit resets at <time>?", with the estimate; yes lasts until the reset, no keeps
     the work waiting. The setting `ai.borrow_other_tier` (ask, never; default ask) keeps the choice the person's. Its test
     is the person's path: a paused routine account, the question on Today, the work done on the other account after yes,
-    and back on the routine account after the reset.
-  - [ ] **GitHub Models as another API option** (owner, 2026-10-14): GitHub's model service is OpenAI-compatible and has a
+    and back on the routine account after the reset. Built: `tests/test_borrow_other_tier.py::test_a_paused_routine_account_asks_first_then_the_work_runs_on_the_other_account_until_the_reset`,
+    `tests/test_borrow_other_tier.py::test_never_does_not_ask_and_refuses_an_answer`.
+  - [ ] **GitHub Models as another API option** (owner, 2026-10-14; *not built*: the service's own documentation, checked
+    2026-10-15, says it was retired on 2026-07-30, so the owner decides what replaces it): GitHub's model service is OpenAI-compatible and has a
     free, rate-limited tier used with a GitHub token, so it can be a free second account beside a command-line agent.
     It is settings, not code: an account choice in setup that fills in the service's address, asks for the token as an
     `env:` or `file:` reference, lists its models from the adapter, and smoke-tests every tier. Before it is offered for
