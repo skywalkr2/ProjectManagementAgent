@@ -222,8 +222,10 @@ def proposal_rules(
 
 def _knows_more(new: dict[str, Any], old: dict[str, Any]) -> bool:
     """Whether a glossary proposal gives a meaning for a term the entry it duplicates only knows to be unknown."""
-    return old.get("confidence") == "unknown" and new.get("confidence") not in (None, "unknown") and bool(
-        new.get("meaning")
+    return (
+        old.get("confidence") == "unknown"
+        and new.get("confidence") not in (None, "unknown")
+        and bool(new.get("meaning"))
     )
 
 
