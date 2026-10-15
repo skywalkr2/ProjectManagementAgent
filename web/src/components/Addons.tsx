@@ -216,7 +216,10 @@ function Available(props: { view: S["PacksView"] }) {
     : view.feeds.length === 0
       ? t("addons.no_catalog")
       : view.available.length === 0
-        ? t("addons.no_packs")
+        ? // A catalog that couldn't be read is not an empty one: say so, and the reason is listed below.
+          view.feeds.every((feed) => feed.error)
+          ? t("addons.no_packs_failed")
+          : t("addons.no_packs")
         : null;
   return (
     <div className="addons-body">

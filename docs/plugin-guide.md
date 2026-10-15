@@ -1253,6 +1253,7 @@ A unit of work for the assistant. The engine creates it when something is handed
 | `cause.level` | Optional[Literal['open', 'internal', 'restricted']] | `None` | For data_level: the data level of the material. |
 | `cause.accounts` | list[str] | `[]` | For data_level: the accounts ("provider/model") that would take the material if allowed its level, in the order the tier tries them. |
 | `cause.account` | str \| None | `None` | For paused: the account whose limit resets first. |
+| `cause.tier` | str \| None | `None` | For paused: the tier whose work waits. |
 | `cause.until` | datetime.datetime \| None | `None` | For paused, retry and offline: when the request runs again by itself. |
 | `cause.since` | datetime.datetime \| None | `None` | For offline: when the request first found no network. |
 | `follows` | str \| None | `None` | The change (a changeset id) whose event a plugin answered with this work, if any. |

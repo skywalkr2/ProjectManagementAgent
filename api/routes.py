@@ -565,18 +565,28 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         from engine import today, watch
 
         read = failed = busy = handed = 0
+        problems: list[str] = []
         for source in [s for s in cfg.watch.sources if s.enabled]:
+            name = source.label or source.id
             try:
                 result = watch.refresh(ws, store, cfg, source.id)
             except Exception:  # one source's failure must not stop the rest
                 log.exception("reading a source failed")
                 failed += 1
+                problems.append(f"{name} couldn't be read just now. It is tried again by itself.")
                 continue
             if result.outcome == "busy":
                 busy += 1
                 continue
             if result.outcome in ("failed", "offline", "throttled"):
                 failed += 1
+                why = watch.problem_text(store, source.id)
+                if result.outcome == "failed" and why:
+                    problems.append(f"{name} can't be read: {why}")
+                elif result.outcome == "offline":
+                    problems.append(f"{name} wasn't read: there is no network connection. It is tried again by itself.")
+                else:
+                    problems.append(f"{name} couldn't be read just now. It is tried again by itself.")
             else:
                 read += 1
             handed += len(result.new) + len(result.changed) + len(result.removed)
@@ -592,6 +602,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             sources_read=read,
             sources_failed=failed,
             sources_busy=busy,
+            problems=problems,
         )
 
     @r.get("/today/queue")

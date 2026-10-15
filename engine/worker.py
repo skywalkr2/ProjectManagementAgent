@@ -116,6 +116,26 @@ def release_paused(store: Store) -> int:
     return released
 
 
+def release_waiting(store: Store, tier: str) -> int:
+    """Let the requests of one tier that wait for an account's limit to reset try again at once, without lifting any
+    pause: used when the person says another account may take the work meanwhile. Returns how many were let go."""
+    ctx = WriteContext(actor="engine", trust="trusted", op="worker.release")
+    released = 0
+    with store.transaction() as tx:
+        for r in tx.list("request"):
+            cause = r.data.get("cause") or {}
+            if r.data["state"] == "queued" and cause.get("kind") == "paused" and cause.get("tier") == tier:
+                tx.update(
+                    "request",
+                    r.id,
+                    {"cause": None, "waiting": "With the assistant, next in line"},
+                    ctx,
+                    read_version=r.version,
+                )
+                released += 1
+    return released
+
+
 def requeue_interrupted(store: Store) -> tuple[list[str], list[str]]:
     """Put back the requests a stop left running: with the app closed nothing is running them. Each goes back in the
     queue with a note saying why. One found running after it was already put back once waits for the person instead

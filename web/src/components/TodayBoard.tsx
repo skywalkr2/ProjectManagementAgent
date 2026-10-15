@@ -7,7 +7,7 @@ import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
 import { firstGoOf } from "../lib/first-go";
 import { useSetAside } from "../lib/set-aside";
-import { anyReading, latestRead } from "../lib/sources";
+import { anyReading, failedReads, latestRead, readProblem } from "../lib/sources";
 import type { View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { useChangeThis } from "./ChangeThis";
@@ -116,13 +116,34 @@ function Failed(props: { text: string; retry: () => void }) {
 
 /** What an empty card says about its sources: a button to connect one while none is set up or reading, otherwise when the
  * sources were last read, so an empty card is known to be up to date rather than unconnected. */
-function useSourceState(onAdd: (() => void) | undefined, label: string): { button?: { label: string; run: () => void }; note?: string } {
+function useSourceState(
+  onAdd: (() => void) | undefined,
+  label: string,
+  kind: "mail" | "calendar",
+): { button?: { label: string; run: () => void }; note?: string; problems: string[] } {
   const { t } = useWords();
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
-  if (!watch.data) return {};
-  if (!anyReading(watch.data)) return onAdd ? { button: { label, run: onAdd } } : {};
+  if (!watch.data) return { problems: [] };
+  if (!anyReading(watch.data)) return onAdd ? { button: { label, run: onAdd }, problems: [] } : { problems: [] };
+  // A source that couldn't be read is said so, with why and what to do, and never leaves the card looking up to date.
+  const problems = failedReads(watch.data, kind).map((source) => readProblem(source, t));
+  if (problems.length > 0) return { problems };
   const last = latestRead(watch.data);
-  return { note: last ? t("today.checked", { when: when(last) }) : t("today.not_checked") };
+  return { note: last ? t("today.checked", { when: when(last) }) : t("today.not_checked"), problems };
+}
+
+/** What a source that couldn't be read says, one line each. */
+function SourceProblems(props: { problems: string[] }) {
+  if (props.problems.length === 0) return null;
+  return (
+    <ul className="plain-list" data-source-problems="">
+      {props.problems.map((problem) => (
+        <li key={problem} className="problem-note" role="alert">
+          {problem}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /** Source names are only worth showing when rows come from more than one source. */
@@ -182,7 +203,7 @@ function whenText(event: Event, date: string, t: T): string {
 
 function AgendaColumn(props: { onAddSource?: () => void }) {
   const { t, tn } = useWords();
-  const sourceState = useSourceState(props.onAddSource, t("today.agenda.connect"));
+  const sourceState = useSourceState(props.onAddSource, t("today.agenda.connect"), "calendar");
   const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
   const now = useNow();
   const today = localDate(now);
@@ -201,7 +222,14 @@ function AgendaColumn(props: { onAddSource?: () => void }) {
       ) : agenda.isError ? (
         <Failed text={t("today.agenda.load_failed")} retry={() => void agenda.refetch()} />
       ) : groups.length === 0 ? (
-        <Empty text={t("today.agenda.empty")} note={sourceState.note} button={sourceState.button} />
+        sourceState.problems.length > 0 ? (
+          <div className="tb-empty">
+            <p>{t("today.agenda.not_read")}</p>
+            <SourceProblems problems={sourceState.problems} />
+          </div>
+        ) : (
+          <Empty text={t("today.agenda.empty")} note={sourceState.note} button={sourceState.button} />
+        )
       ) : (
         groups.map((group) => {
           const headId = `agenda-day-${group.date}`;
@@ -415,7 +443,11 @@ function NeedsColumn(props: { onOpenRecord?: (kind: string, id: string) => void;
 /** What a check says in a toast: what arrived, then any source that couldn't be read or was already being read. */
 function checkedText(result: S["InboxCheckView"], t: T, tn: ReturnType<typeof useWords>["tn"]): string {
   const parts = [result.new_items > 0 ? tn("today.arrived.check_new", result.new_items) : t("today.arrived.check_none")];
-  if (result.sources_failed > 0) parts.push(tn("today.arrived.check_failed", result.sources_failed));
+  // A source that couldn't be read says why and what to do, not only that it failed.
+  if (result.sources_failed > 0) {
+    const problems = result.problems ?? [];
+    parts.push(...(problems.length > 0 ? problems.map((p) => p.replace(/\.$/, "")) : [tn("today.arrived.check_failed", result.sources_failed)]));
+  }
   if (result.sources_busy > 0) parts.push(tn("today.arrived.check_busy", result.sources_busy));
   return parts.join(". ") + (parts.length > 1 ? "." : "");
 }
@@ -462,7 +494,7 @@ function CheckNow() {
 
 function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () => void }) {
   const { t, tn } = useWords();
-  const sourceState = useSourceState(props.onAddSource, t("today.arrived.connect"));
+  const sourceState = useSourceState(props.onAddSource, t("today.arrived.connect"), "mail");
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
   const arrived = useQuery({ queryKey: ["today", "arrived"], queryFn: api.arrived });
   const now = useNow();
@@ -508,7 +540,14 @@ function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () =
       ) : arrived.isError ? (
         <Failed text={t("today.arrived.load_failed")} retry={() => void arrived.refetch()} />
       ) : items.length === 0 ? (
-        <Empty text={t("today.arrived.empty")} note={sourceState.note} button={sourceState.button} />
+        sourceState.problems.length > 0 ? (
+          <div className="tb-empty">
+            <p>{t("today.arrived.not_read")}</p>
+            <SourceProblems problems={sourceState.problems} />
+          </div>
+        ) : (
+          <Empty text={t("today.arrived.empty")} note={sourceState.note} button={sourceState.button} />
+        )
       ) : (
         <ul className="tb-list">
           {items.map((message, i) => {

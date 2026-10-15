@@ -495,6 +495,12 @@ class ProviderSettings(ConfigModel):
     agent: AgentSettings | None = Field(
         None, description="For a command-line agent account: how to start it, pass the packet and read its answer."
     )
+    credential_expires: date | None = Field(
+        None,
+        description="The day this account's key stops working, when the service gives one. Today says so ahead of "
+        "that day (see how many days ahead in the AI settings), naming every place the same key is used. Empty: "
+        "the key has no known end.",
+    )
     accepted_unchecked: bool = Field(
         False,
         description="Accept this account as a fallback for a kind of work without its connection check. An account "
@@ -658,6 +664,19 @@ class AiFile(FileModel):
     routing: list[RouteRule] = Field(
         default_factory=list,
         description="Rules checked in order before a call that send some requests to another tier; first match wins.",
+    )
+    borrow_other_tier: Literal["ask", "never"] = Field(
+        "ask",
+        description="When every account a kind of work can use is waiting for its usage limit to reset and an account "
+        "set up for another kind of work is free: ask means Today asks whether to use it until the reset (nothing "
+        "is borrowed without a yes); never means the work always waits.",
+    )
+    credential_warn_days: int = Field(
+        7,
+        ge=0,
+        le=365,
+        description="How many days before a key or sign-in with a known end date stops working Today says so, naming "
+        "everywhere the same key is used.",
     )
     content_levels: dict[str, str] = Field(
         default_factory=dict,

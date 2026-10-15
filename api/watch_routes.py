@@ -54,10 +54,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         read = watch.last_read(store, source.id)
         failures = watch.failures_in_a_row(store, source.id)
         items = [s for s in store.read().find("snapshot", {"source": source.id}) if not s.data["gone"]]
-        problem = None
-        if last is not None and last.data["outcome"] == "failed":
-            kind = last.data.get("error_kind") or ""
-            problem = f"{last.data.get('error') or kind}. {watch.WHAT_TO_DO.get(kind, '')}".strip()
+        problem = watch.problem_text(store, source.id)
         return WatchSourceView(
             id=source.id,
             label=source.label or source.id,

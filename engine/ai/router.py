@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from engine.ai.adapters import Adapter, make_adapter
+from engine.ai.borrow import Borrowed, borrowed_path, chain
 from engine.ai.catalog import Catalogs
 from engine.ai.pauses import Pauses, pauses_path, waiting_text
 from engine.ai.task import AiError, AiResult, AiTask, ModelInfo
@@ -51,12 +52,14 @@ class NoProvider(Exception):
 
 class AccountPaused(NoProvider):
     """Every account that could take the work is paused until a usage limit resets. `account` is the one that resets
-    first and `until` when; the message is what the work waits on, in plain words."""
+    first and `until` when; `tier` is the tier whose work waits; the message is what the work waits on, in plain
+    words."""
 
-    def __init__(self, account: str, until: datetime, message: str):
+    def __init__(self, account: str, until: datetime, message: str, tier: str = ""):
         super().__init__(message)
         self.account = account
         self.until = until
+        self.tier = tier
 
 
 class NetworkOffline(AiError):
@@ -216,6 +219,7 @@ class Router:
         self.adapter_factory = adapter_factory
         self.now = now
         self.pauses = Pauses(pauses_path(store), now)
+        self.borrowed = Borrowed(borrowed_path(store), now)
 
     def _unchecked(self) -> frozenset[tuple[str, str]]:
         """The backup accounts that can't stand in yet, as (tier, "provider/model"): not checked for that tier's work
@@ -295,11 +299,61 @@ class Router:
             return result, choice, run_id
         if paused and len(paused) == len(options):
             account, until = min(paused.items(), key=lambda item: item[1])
-            raise AccountPaused(account, until, waiting_text(self.cfg, account, until, self.now()))
+            lent = self._lent(options[0].tier, independent) if use is None else None
+            if lent is not None:
+                # The person said yes to using another tier's account until the limit resets.
+                try:
+                    return self.call(
+                        task,
+                        request_id=request_id,
+                        data_level=data_level,
+                        tier=tier,
+                        use=lent,
+                        content=content,
+                        offline_known=offline_known,
+                    )
+                except NoProvider:
+                    pass
+                except AiError as err:
+                    if err.kind not in FALLBACK_ON:
+                        raise
+            raise AccountPaused(
+                account, until, waiting_text(self.cfg, account, until, self.now()), tier=options[0].tier
+            )
         assert last is not None
         if offline and offline + len(paused) == len(options):
             raise NetworkOffline(last.detail)
         raise last
+
+    def _lent(self, tier: str, independent: Independence | None = None) -> str | None:
+        """The account of another tier the person said yes to for this tier's work, while that answer counts and the
+        account is still free, still another tier's and fit for a check's independence; None otherwise."""
+        ref = self.borrowed.lent(tier)
+        if ref is None:
+            return None
+        provider = ref.partition("/")[0]
+        own = {r.partition("/")[0] for r in chain(self.cfg, tier)}
+        elsewhere = any(ref in chain(self.cfg, other) for other in self.cfg.ai.tiers if other != tier)
+        if provider in own or not elsewhere or self.pauses.until(provider) is not None:
+            return None
+        if independent is not None and provider in independent.avoid and not independent.same_account:
+            return None
+        return ref
+
+    def _first_choice(
+        self, task: AiTask, options: list[Choice], data_level: str, independent: Independence | None
+    ) -> Choice:
+        """The account a request would use first: the first that fits, or the account lent for the tier while every
+        one of its own accounts is paused."""
+        fitting = self._that_fit(task, list(options))
+        if all(self.pauses.until(c.provider) is not None for c in fitting):
+            lent = self._lent(options[0].tier, independent)
+            if lent is not None:
+                try:
+                    return choices(self.cfg, task.kind, data_level, tier=options[0].tier, use=lent)[0]
+                except NoProvider:
+                    pass
+        return fitting[0]
 
     def _pause_until(self, err: AiError, last_in_line: bool) -> datetime | None:
         """When a failed call's account can be used again, if the failure is a usage limit with a reset to wait for:
@@ -385,7 +439,7 @@ class Router:
                 independent=independent,
                 unchecked=self._unchecked(),
             )
-            choice = self._that_fit(task, list(options))[0]
+            choice = self._first_choice(task, options, data_level, independent)
         except NoProvider:
             return None
         info = self.model_info(choice)

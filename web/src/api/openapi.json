@@ -708,6 +708,19 @@
             ],
             "title": "Base Url"
           },
+          "credential_expires": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day its key stops working, when the service gives one.",
+            "title": "Credential Expires"
+          },
           "endpoint": {
             "anyOf": [
               {
@@ -791,6 +804,31 @@
         "additionalProperties": false,
         "description": "A change to an existing account: a new key, other models, or the work it does.",
         "properties": {
+          "clear_credential_expires": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Forget the end date of its key (it has none, or is renewed).",
+            "title": "Clear Credential Expires"
+          },
+          "credential_expires": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day its key stops working, when the service gives one.",
+            "title": "Credential Expires"
+          },
           "fingerprint": {
             "title": "Fingerprint",
             "type": "string"
@@ -867,6 +905,19 @@
             ],
             "title": "Base Url"
           },
+          "credential_expires": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day its key stops working, when one was entered; Today says so ahead of it.",
+            "title": "Credential Expires"
+          },
           "has_key": {
             "description": "A key or a reference to one is set.",
             "title": "Has Key",
@@ -936,6 +987,54 @@
           "has_key"
         ],
         "title": "AiAccountView",
+        "type": "object"
+      },
+      "AiBorrowAnswer": {
+        "additionalProperties": false,
+        "description": "The person's answer to the question of using another kind of work's account while the work's own are paused.",
+        "properties": {
+          "account": {
+            "description": "The account the question offered (the line's `account`).",
+            "title": "Account",
+            "type": "string"
+          },
+          "model": {
+            "description": "Its model's short name (the line's `model`).",
+            "title": "Model",
+            "type": "string"
+          },
+          "tier": {
+            "description": "The tier whose work waits (the line's `tier`).",
+            "title": "Tier",
+            "type": "string"
+          },
+          "use": {
+            "description": "True: use it until the paused account's limit resets. False: keep the work waiting.",
+            "title": "Use",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "tier",
+          "account",
+          "model",
+          "use"
+        ],
+        "title": "AiBorrowAnswer",
+        "type": "object"
+      },
+      "AiBorrowed": {
+        "properties": {
+          "released": {
+            "description": "How many waiting requests were let go to run on the account at once.",
+            "title": "Released",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "released"
+        ],
+        "title": "AiBorrowed",
         "type": "object"
       },
       "AiModelView": {
@@ -4089,6 +4188,14 @@
             "description": "Everything the sources handed in during this read (new, changed or gone), wherever it shows: in Came in or only in What changed.",
             "title": "New Items",
             "type": "integer"
+          },
+          "problems": {
+            "description": "One sentence for each source that couldn't be read this time: why, and what to do.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
           },
           "set_aside": {
             "default": 0,
@@ -8390,7 +8497,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `extractor` is a kind of file that isn't being read\n(`file_kind`, and `text` says why), which clears once a file of that kind reads well.",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `extractor` is a kind of file that isn't being read\n(`file_kind`, and `text` says why), which clears once a file of that kind reads well.",
         "properties": {
           "account": {
             "anyOf": [
@@ -8437,6 +8544,34 @@
           "count": {
             "title": "Count",
             "type": "integer"
+          },
+          "credential_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "account",
+                  "sign_in"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a credential line: an AI account's key or an add-on's sign-in.",
+            "title": "Credential Kind"
+          },
+          "credential_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "For a credential line: the account's short name or the sign-in's name.",
+            "title": "Credential Name"
           },
           "days": {
             "anyOf": [
@@ -8528,9 +8663,11 @@
               "handover",
               "failed",
               "paused",
+              "borrow",
               "offline",
               "overdue",
               "account_check",
+              "credential",
               "extractor",
               "review",
               "rule_review",
@@ -8628,6 +8765,14 @@
               }
             ],
             "title": "Person Name"
+          },
+          "places": {
+            "description": "For a credential line: every place the same credential is used, in plain words.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Places",
+            "type": "array"
           },
           "project": {
             "anyOf": [
@@ -13200,6 +13345,45 @@
           }
         },
         "summary": "Ai Account Test"
+      }
+    },
+    "/api/ai/borrow": {
+      "post": {
+        "description": "Answer the question of using another kind of work's account until the paused account's limit resets. A yes\nlets the waiting work run on that account at once and lasts until the reset; a no keeps it waiting.",
+        "operationId": "ai_borrow_api_ai_borrow_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiBorrowAnswer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiBorrowed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Borrow"
       }
     },
     "/api/ai/endpoints": {

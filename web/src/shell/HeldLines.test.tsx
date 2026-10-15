@@ -259,3 +259,113 @@ test("a kind of file an add-on named itself is shown as the add-on called it", a
   show([line("extractor", { key: "extractor:Drawings", file_kind: "Drawings", text: "it stopped" })]);
   expect(await screen.findByRole("region", { name: "Reading files" })).toHaveTextContent("Reading Drawings isn't working: it stopped");
 });
+
+const borrow = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("borrow", {
+    key: "borrow:routine",
+    group: "decide",
+    account: "second",
+    model: "default",
+    tier: "routine",
+    text: "main",
+    until: `${localDate(new Date())}T15:30:00-05:00`,
+    count: 2,
+    estimate_usd: 0.31,
+    ...over,
+  });
+
+test("borrowing another kind of work's account is a question with the account, the reset time and the estimate", async () => {
+  show([borrow()]);
+  const row = await screen.findByRole("region", { name: "Account choice" });
+  expect(row).toHaveTextContent(/Use second for routine work until main's limit resets at 3:30\s?PM\?/);
+  expect(row).toHaveTextContent("It would take the 2 items waiting, for About $0.31 together. Nothing is used until you say yes.");
+  expect(row.textContent).not.toMatch(/tier|fallback/i);
+});
+
+test("an account with no price says it would use the plan's allowance", async () => {
+  show([borrow({ estimate_usd: null, unpriced: 2, count: 1, tier: "other-kind" })]);
+  const row = await screen.findByRole("region", { name: "Account choice" });
+  expect(row).toHaveTextContent("for this kind of work until main's limit resets");
+  expect(row).toHaveTextContent("It would take the 1 item waiting, from that account's allowance.");
+});
+
+test("yes sends the answer with the account the question offered, and nothing is sent before the click", async () => {
+  const user = userEvent.setup();
+  let answered = false;
+  const calls = show([], {
+    "GET today/queue": () => (answered ? [] : [borrow()]),
+    "POST ai/borrow": () => {
+      answered = true;
+      return { released: 2 };
+    },
+  }).calls;
+  const row = await screen.findByRole("region", { name: "Account choice" });
+  expect(calls.some((c) => c.route === "POST ai/borrow")).toBe(false);
+  await user.click(within(row).getByRole("button", { name: "Use second for routine work until the reset" }));
+  await waitFor(() => expect(calls.filter((c) => c.route === "POST ai/borrow")).toHaveLength(1));
+  expect(calls.find((c) => c.route === "POST ai/borrow")?.body).toEqual({ tier: "routine", account: "second", model: "default", use: true });
+  expect(await screen.findByText(/second is doing the waiting work until/)).toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Account choice" })).toBeNull());
+});
+
+test("no keeps the work waiting and sends the answer as a no", async () => {
+  const user = userEvent.setup();
+  let answered = false;
+  const calls = show([], {
+    "GET today/queue": () => (answered ? [] : [borrow()]),
+    "POST ai/borrow": () => {
+      answered = true;
+      return { released: 0 };
+    },
+  }).calls;
+  const row = await screen.findByRole("region", { name: "Account choice" });
+  await user.click(within(row).getByRole("button", { name: "No, wait" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST ai/borrow")?.body).toEqual({ tier: "routine", account: "second", model: "default", use: false }));
+  expect(await screen.findByText("The work keeps waiting for main.")).toBeInTheDocument();
+});
+
+const credential = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("credential", {
+    key: "credential:account:main",
+    credential_kind: "account",
+    credential_name: "main",
+    due: "2027-01-31",
+    waiting_days: 5,
+    places: ["the AI account main", "the AI account backup", "the key that locks the backups"],
+    ...over,
+  });
+
+test("a key about to end is a line that starts with renewing it and names every other place it is used", async () => {
+  const user = userEvent.setup();
+  const { onOpenAiAccounts } = show([credential()]);
+  const row = await screen.findByRole("region", { name: "Key ending" });
+  expect(row).toHaveTextContent(/Renew the key of the AI account main before .*31/);
+  expect(row).toHaveTextContent("The same key is used in these places too, so renew it in each:");
+  const places = within(row).getAllByRole("listitem").map((i) => i.textContent);
+  expect(places).toEqual(["the AI account backup", "the key that locks the backups"]);
+  await user.click(within(row).getByRole("button", { name: "AI accounts" }));
+  expect(onOpenAiAccounts).toHaveBeenCalledTimes(1);
+});
+
+test("a key used in one place only says so, and one that has already ended says when it stopped", async () => {
+  show([credential({ places: ["the AI account main"], waiting_days: -2 })]);
+  const row = await screen.findByRole("region", { name: "Key ending" });
+  expect(row).toHaveTextContent(/Renew the key of the AI account main: it stopped working on .*31/);
+  expect(row).toHaveTextContent("This key is used in no other place.");
+  expect(within(row).queryAllByRole("listitem")).toHaveLength(0);
+});
+
+test("a sign-in about to end offers to sign in again, and names what reads through it", async () => {
+  const user = userEvent.setup();
+  const assign = vi.fn();
+  vi.stubGlobal("location", { ...window.location, assign });
+  const calls = show([credential({ key: "credential:sign_in:p/s", credential_kind: "sign_in", credential_name: "p/s", places: ["the Mail sign-in", "the source Inbox"] })], {
+    "POST sign-ins/p/s/start": () => ({ url: "about:blank#signin" }),
+  }).calls;
+  const row = await screen.findByRole("region", { name: "Key ending" });
+  expect(row).toHaveTextContent(/Sign in again to renew the Mail sign-in before .*31/);
+  expect(within(row).getAllByRole("listitem").map((i) => i.textContent)).toEqual(["the source Inbox"]);
+  await user.click(within(row).getByRole("button", { name: "Sign in again" }));
+  await waitFor(() => expect(assign).toHaveBeenCalledWith("about:blank#signin"));
+  expect(calls.some((c) => c.route === "POST sign-ins/p/s/start")).toBe(true);
+});

@@ -50,11 +50,17 @@ class Line:
     `estimate_usd` and `unpriced` how many have none), refused, restart (work held until the person restarts the app:
     `count` is how many requests wait), handover (the synced folder can't be used until the person settles it: `state`
     is diverged, chosen or elsewhere and `text` the other computer), failed,
-    paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), offline (work
+    paused (an AI account waiting for its usage limit to reset: `account`, `until` and `count` waiting), borrow (a
+    question: every account a kind of work can use is paused, so may another kind of work's free `account` (with its
+    `model`) take that work, the `tier`'s, until `until`, when the paused account `text` resets? `count` waiting items
+    it would take, their `estimate_usd` together and `unpriced` how many have no price), offline (work
     that has waited for the network longer than the configured time: `count` waiting and `waiting_since`, when the
     oldest began), overdue, account_check (an AI account in a fallback chain that can't stand in yet: its `account`, the
     `tier` whose chain it is in, its `model`, and `check_failed` when its last check failed rather than it never having
     been checked),
+    credential (a key or sign-in that stops working on `due`, or already has: `credential_kind` is account or
+    sign_in, `credential_name` its name, `waiting_days` the days left, below zero once it has passed, and `places`
+    every place the same credential is used),
     review, rule_review (standing rules to look over: `count` flagged as never applying in `days`, their ids in `rules`,
     the always-sent section's `stable_size` against its `stable_budget`, and `moved` rules sent only with the runs they
     cover), learned (proposals of what the assistant learned from inputs and from the person's corrections, to look
@@ -104,6 +110,9 @@ class Line:
     model: str | None = None
     check_failed: bool | None = None
     file_kind: str | None = None
+    credential_kind: str | None = None
+    credential_name: str | None = None
+    places: list[str] = field(default_factory=list)
     since: str = ""
 
 
@@ -334,6 +343,11 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 )
             )
 
+    # Decide: every account a kind of work can use is paused and another kind of work's account is free: ask before
+    # borrowing it, once for the pause. Nothing is borrowed without the person's yes.
+    if cfg.ai.borrow_other_tier == "ask":
+        lines.extend(_borrow_questions(ws, store, cfg, now, requests))
+
     # Risk: work that has waited for the network longer than the configured time, as one line.
     from engine.dispatcher import OFFLINE_WAITING, is_waiting_for_network
 
@@ -367,6 +381,24 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 tier=found.tier,
                 model=found.model,
                 check_failed=found.failed,
+            )
+        )
+
+    # Risk: a key or sign-in with a known end that is near or past, with every place the same one is used.
+    from engine.credentials import expiring
+
+    for found in expiring(ws, cfg, store, now):
+        lines.append(
+            Line(
+                key=f"credential:{found.kind}:{found.name}",
+                group="risk",
+                kind="credential",
+                credential_kind=found.kind,
+                credential_name=found.name,
+                due=found.ends.isoformat(),
+                waiting_days=found.days_left,
+                places=found.places,
+                since=found.ends.isoformat(),
             )
         )
 
@@ -523,7 +555,90 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
     return sorted(lines, key=_rank)
 
 
+def _borrow_questions(ws: Any, store: Any, cfg: Any, now: datetime, requests: dict[str, Any]) -> list[Line]:
+    """One question per tier whose work waits on paused accounts while an account of another tier is free to take it
+    and the person has not answered for this pause: which account, how many waiting items it would take, what they
+    would cost together there and when the paused account's limit resets."""
+    import os
+
+    from engine.ai.borrow import Borrowed, borrowed_path, lendable
+    from engine.ai.checked import cannot_stand_in
+    from engine.ai.pauses import Pauses, pauses_path
+    from engine.ai.router import Router
+    from engine.dispatcher import _data_level, estimate_request
+
+    paused = Pauses(pauses_path(store), lambda: now).active()
+    waiting: dict[str, list[Any]] = {}
+    for req in requests.values():
+        cause = req.data.get("cause") or {}
+        if (
+            req.data.get("state") == "queued"
+            and not req.data.get("dismissed")
+            and cause.get("kind") == "paused"
+            and cause.get("tier")
+            and cause.get("account") in paused
+        ):
+            waiting.setdefault(cause["tier"], []).append(req)
+    if not waiting:
+        return []
+    answers = Borrowed(borrowed_path(store), lambda: now)
+    unchecked = {(s.tier, s.ref) for s in cannot_stand_in(ws, cfg)}
+    router = Router(cfg, store, env=os.environ, now=lambda: now)
+    found: list[Line] = []
+    for tier, reqs in sorted(waiting.items()):
+        if answers.get(tier) is not None or tier not in cfg.ai.tiers:
+            continue
+        offered = lendable(cfg, tier, [_data_level(store, r.data) for r in reqs], set(paused), unchecked)
+        if offered is None:
+            continue
+        ref, _ = offered
+        provider, _, model = ref.partition("/")
+        takes = [r for r in reqs if _fits(cfg, provider, _data_level(store, r.data))]
+        priced: list[float] = []
+        # An estimate builds the request's packet, so it is kept with the store for as long as the request, its
+        # price and the account stay as they are.
+        kept: dict[tuple[str, int, str, str], float | None] = store.__dict__.setdefault("_borrow_estimates", {})
+        for req in takes:
+            key = (req.id, req.version, ref, repr(cfg.ai.prices.get(ref)))
+            if key not in kept:
+                if len(kept) > 2000:
+                    kept.clear()
+                try:
+                    kept[key] = estimate_request(ws, store, cfg, router, req.id, now, use=ref)
+                except Exception:
+                    kept[key] = None
+            if kept[key] is not None:
+                priced.append(kept[key])
+        first = min(reqs, key=lambda r: (r.data.get("cause") or {}).get("until") or "")
+        cause = first.data.get("cause") or {}
+        found.append(
+            Line(
+                key=f"borrow:{tier}",
+                group="decide",
+                kind="borrow",
+                count=len(takes),
+                text=cause.get("account"),
+                account=provider,
+                model=model,
+                tier=tier,
+                until=paused[cause["account"]].isoformat(),
+                estimate_usd=round(sum(priced), 4) if priced else None,
+                unpriced=len(takes) - len(priced),
+                since=paused[cause["account"]].isoformat(),
+            )
+        )
+    return found
+
+
+def _fits(cfg: Any, provider: str, level: str) -> bool:
+    """Whether an account may see material at a data level."""
+    from engine.ai.router import LEVELS
+
+    return LEVELS.index(level) <= max(LEVELS.index(lv) for lv in cfg.ai.providers[provider].allowed_data)
+
+
 _KIND_ORDER = {
+    "borrow": 1,
     "handover": -3,
     "restart": -2,
     "first_go": -1,
@@ -540,6 +655,7 @@ _KIND_ORDER = {
     "offline": 1,
     "overdue": 2,
     "account_check": 1,
+    "credential": 1,
     "extractor": 1,
     "review": 0,
     "rule_review": 1,

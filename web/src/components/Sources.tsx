@@ -247,11 +247,12 @@ function SourceRow(props: {
     { id: "remove", label: t("sources.remove"), run: remove },
   ];
 
+  // Until a read has worked there is no count to give: "0 items" would say it was read and found nothing.
   const facts = [
     source.connector_label || t("sources.kind_none"),
-    tn("sources.items", source.items),
+    source.read_at ? tn("sources.items", source.items) : "",
     ...(source.author_name ? [t("sources.written_by", { name: source.author_name })] : []),
-  ];
+  ].filter(Boolean);
   const schedule = [
     source.enabled ? tn("sources.read_every", source.every_minutes) : t("sources.off"),
     source.read_at ? t("sources.last_read", { when: lastWhen }) : t("sources.never"),

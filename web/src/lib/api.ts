@@ -347,6 +347,10 @@ export const api = {
     return call<S["AiTestResult"][]>("POST", `ai/accounts/${id(name)}/test${text ? `?${text}` : ""}`);
   },
 
+  /** The answer to the question of using another kind of work's account while the work's own is paused: yes runs the
+   * waiting work on it until the reset, no keeps it waiting. */
+  borrowAccount: (body: S["AiBorrowAnswer"]) => call<S["AiBorrowed"]>("POST", "ai/borrow", body),
+
   knowledge: () => call<S["KnowledgeView"][]>("GET", "knowledge"),
   knowledgeRules: () => call<S["RuleView"][]>("GET", "knowledge/rules"),
   ruleReview: () => call<S["RuleReviewView"]>("GET", "knowledge/rules/review"),

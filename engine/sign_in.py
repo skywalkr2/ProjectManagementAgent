@@ -221,7 +221,9 @@ def pending_sign_in(state: str) -> SignIn | None:
     return pending.sign_in if pending else None
 
 
-def _tokens(response: Any, now: float, keep_refresh: str | None = None) -> dict[str, Any]:
+def _tokens(
+    response: Any, now: float, keep_refresh: str | None = None, keep_expires: float | None = None
+) -> dict[str, Any]:
     try:
         body = response.json()
     except ValueError:
@@ -229,10 +231,19 @@ def _tokens(response: Any, now: float, keep_refresh: str | None = None) -> dict[
     token = body.get("access_token") if isinstance(body, dict) else None
     if not token:
         raise SignInError("The service didn't grant access.")
+    # When the service says how long the renewal credential lasts, the day it ends is kept so Today can say so ahead
+    # of it; a renewal that gives no new credential keeps the end of the one it renews.
+    lasts = body.get("refresh_token_expires_in")
+    ends = (
+        now + float(lasts)
+        if isinstance(lasts, (int, float)) and lasts > 0
+        else (None if body.get("refresh_token") else keep_expires)
+    )
     return {
         "access_token": token,
         "expires_at": now + float(body.get("expires_in") or 3600),
         "refresh_token": body.get("refresh_token") or keep_refresh,
+        "refresh_expires_at": ends,
         "scope": body.get("scope"),
         "signed_in_at": now,
     }
@@ -295,7 +306,9 @@ def access_token(
 
     try:
         response = web.post(sign_in.token_url, data=form)
-        renewed = _tokens(response, now, keep_refresh=tokens["refresh_token"])
+        renewed = _tokens(
+            response, now, keep_refresh=tokens["refresh_token"], keep_expires=tokens.get("refresh_expires_at")
+        )
     except (ConnectorError, SignInError) as err:
         if isinstance(err, ConnectorError) and err.kind not in ("auth", "no_access"):
             raise  # the service is failing or out of reach: try again later, the sign-in still stands

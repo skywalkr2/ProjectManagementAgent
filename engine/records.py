@@ -871,6 +871,7 @@ class StopCause(BaseModel):
         "level, in the order the tier tries them.",
     )
     account: str | None = Field(None, description="For paused: the account whose limit resets first.")
+    tier: str | None = Field(None, description="For paused: the tier whose work waits.")
     until: datetime | None = Field(
         None, description="For paused, retry and offline: when the request runs again by itself."
     )
@@ -878,9 +879,9 @@ class StopCause(BaseModel):
 
     @model_serializer(mode="wrap")
     def _leave_out_unset_times(self, handler: Any) -> dict[str, Any]:
-        """The account and the times are written only for the causes that have them."""
+        """The account, the tier and the times are written only for the causes that have them."""
         data = handler(self)
-        for key in ("account", "until", "since"):
+        for key in ("account", "tier", "until", "since"):
             if data.get(key) is None:
                 data.pop(key, None)
         return data

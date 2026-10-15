@@ -338,6 +338,18 @@ test("a catalog with no packs says none are listed yet", async () => {
   expect(screen.getByText(`${HOST} · read`, { exact: false })).toBeInTheDocument();
 });
 
+test("a catalog that couldn't be read is not described as having no packs, and says why", async () => {
+  open(view({ feeds: [feed({ error: "couldn't read it (outage): the host is down", read_at: null })] }));
+  expect(await screen.findByText("The catalog couldn't be read, so no packs are listed. The reason is below; refresh it once that is fixed.")).toBeInTheDocument();
+  expect(screen.queryByText("No packs are listed yet.")).toBeNull();
+  expect(screen.getByText("This catalog couldn't be read: couldn't read it (outage): the host is down")).toBeInTheDocument();
+});
+
+test("with one catalog read and another failing, the list is still just empty", async () => {
+  open(view({ feeds: [feed(), feed({ domain: "other.example.com", error: "it isn't a catalog file" })] }));
+  expect(await screen.findByText("No packs are listed yet.")).toBeInTheDocument();
+});
+
 test("each catalog shows its domain and when it was read, an error in words, and its notes behind a disclosure", async () => {
   const { user } = open(
     view({

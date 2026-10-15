@@ -175,6 +175,23 @@ test("a source that has never been read says how often it will be", async () => 
   expect(await row("Source a")).toHaveTextContent("Read every minute · Not read yet");
 });
 
+test("a source whose reads have all failed gives no item count, since 0 items would say it was read and found nothing", async () => {
+  open([
+    source("broken", {
+      items: 0,
+      last: run({ outcome: "failed", error: "refused" }),
+      read_at: null,
+      failures: 1,
+      problem: "It can't be read: refused. Sign in again.",
+    }),
+  ]);
+  const item = await row("Source broken");
+  expect(item).toHaveTextContent("A folder");
+  expect(item).not.toHaveTextContent(/\d+ items?/);
+  expect(item).toHaveTextContent("Couldn't be read");
+  expect(within(item).getByText("It can't be read: refused. Sign in again.")).toBeInTheDocument();
+});
+
 test("a failing source's problem is announced when the screen opens, and not again on a refresh", async () => {
   let sources = [source("a", { last: run({ outcome: "failed" }), failures: 1, problem: "Can't reach it." })];
   fakeApi({

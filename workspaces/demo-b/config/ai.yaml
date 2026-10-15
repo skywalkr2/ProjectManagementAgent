@@ -13,6 +13,7 @@ providers:
   #   base_url: https://api.deepseek.com/v1
   #   auth: env:LOWCOST_AI_KEY
   #   models: {small: deepseek-chat}
+  #   credential_expires: 2027-01-31   # the day its key stops working, if the service says
   #   allowed_data: [open, internal]
   #   content_levels: []
   # router:
@@ -58,6 +59,8 @@ prices: {}   # price per model, for models a catalog doesn't price, e.g.:
 evaluation: {runs: 3, min_score: 0.9}
 rate_limits: {tries: 3, max_wait_seconds: 30, pause_seconds: 600}
 catalog_refresh_hours: 24
+borrow_other_tier: ask      # ask: Today asks before another kind of work's account fills in for a paused one; never: the work waits
+credential_warn_days: 7     # Today says this many days before a key or sign-in with a known end date stops working
 content_levels:
   mature: Sex or graphic violence in the story.
 routing:

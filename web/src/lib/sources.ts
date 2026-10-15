@@ -18,3 +18,17 @@ export function latestRead(sources: Source[]): string | null {
   }
   return best?.iso ?? null;
 }
+
+type T = (key: string, vars?: Record<string, string | number>) => string;
+
+/** The sources of one kind of content that are on and whose latest try didn't read them (it failed, or it found no
+ * network), so a card built from them never reads as empty when it is really unread. */
+export const failedReads = (sources: Source[], kind: "mail" | "calendar"): Source[] =>
+  sources.filter((s) => s.enabled && (s.reads ?? []).includes(kind) && (s.last?.outcome === "failed" || s.last?.outcome === "offline"));
+
+/** Why a source wasn't read and what to do, in words: the engine's own sentence for a failure, or that there was no
+ * network. */
+export function readProblem(source: Source, t: T): string {
+  if (source.last?.outcome === "offline") return t("sources.read_offline", { label: source.label });
+  return source.problem || source.last?.error || t("sources.read_failed", { label: source.label });
+}

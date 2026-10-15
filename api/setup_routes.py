@@ -13,6 +13,8 @@ from api.schemas import (
     AiAccountAdd,
     AiAccountChange,
     AiAccountView,
+    AiBorrowAnswer,
+    AiBorrowed,
     AiModelsAsk,
     AiModelsView,
     AiModelView,
@@ -597,6 +599,7 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                     has_key=bool(p.auth),
                     key_state=state,
                     key_where=where,
+                    credential_expires=p.credential_expires,
                 )
             )
         return found
@@ -643,6 +646,11 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 raise HTTPException(status_code=400, detail=str(err)) from None
         elif body.key_ref:
             changes[f"ai.providers.{name}.auth"] = body.key_ref.strip()
+        reset: list[str] = []
+        if body.credential_expires is not None:
+            changes[f"ai.providers.{name}.credential_expires"] = body.credential_expires.isoformat()
+        elif body.clear_credential_expires:
+            reset.append(f"ai.providers.{name}.credential_expires")
         models = body.models if body.models is not None else dict(provider.models)
         if body.models is not None:
             if not body.models:
@@ -652,9 +660,9 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             if short not in models:
                 raise HTTPException(status_code=400, detail=f"{short} isn't one of this account's models.")
             changes[f"ai.tiers.{tier}.use"] = f"{name}/{short}"
-        if not changes:
+        if not changes and not reset:
             raise HTTPException(status_code=400, detail="Nothing to change.")
-        return saved(save(changes, [], body.fingerprint, allow=("ai.providers.", "ai.tiers.")))
+        return saved(save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers.")))
 
     @r.post("/requests/{request_id}/allow-data")
     def request_allow_data(request_id: str) -> DataLevelAllowed:
@@ -750,6 +758,8 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             provider["auth"] = kept
         elif body.key_ref:
             provider["auth"] = body.key_ref.strip()
+        if body.credential_expires is not None:
+            provider["credential_expires"] = body.credential_expires.isoformat()
         first = next(iter(models))
         changes: dict[str, Any] = {f"ai.providers.{body.name}": provider}
         for tier in body.use_for:
@@ -822,6 +832,21 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             if problem is None and models:
                 found.append(LocalServerView(endpoint=kind["id"], name=kind["name"], models=[m for m, _ in models]))
         return found
+
+    @r.post("/ai/borrow")
+    def ai_borrow(body: AiBorrowAnswer) -> AiBorrowed:
+        """Answer the question of using another kind of work's account until the paused account's limit resets. A yes
+        lets the waiting work run on that account at once and lasts until the reset; a no keeps it waiting."""
+        from engine.ai.borrow import BorrowError, answer
+
+        try:
+            released = answer(ws, store, current(), body.tier, f"{body.account}/{body.model}", body.use, worker.now())
+        except BorrowError as err:
+            raise HTTPException(status_code=409, detail=str(err)) from None
+        if released:
+            worker.poke()
+        events.changed()
+        return AiBorrowed(released=released)
 
     @r.post("/ai/test")
     def ai_test() -> list[AiTestResult]:

@@ -8,9 +8,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
-import { wallWhen } from "../lib/dates";
+import { day, wallWhen } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useRestart, useRestartText } from "../lib/restart";
+import { useStartSignIn } from "../lib/sign-in-start";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
 import { Pill } from "../ui/Pill";
@@ -18,7 +19,7 @@ import styles from "./HeldLines.module.css";
 
 type Line = S["QueueLineView"];
 
-const SHOWN: Line["kind"][] = ["restart", "paused", "offline", "handover", "account_check", "extractor", "rule_review", "catch_up_go"];
+const SHOWN: Line["kind"][] = ["restart", "paused", "borrow", "credential", "offline", "handover", "account_check", "extractor", "rule_review", "catch_up_go"];
 
 export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
   const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
@@ -31,6 +32,10 @@ export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover:
           <RestartLine key={line.key} line={line} />
         ) : line.kind === "handover" ? (
           <HandoverLine key={line.key} line={line} onOpen={props.onOpenHandover} />
+        ) : line.kind === "borrow" ? (
+          <BorrowLine key={line.key} line={line} />
+        ) : line.kind === "credential" ? (
+          <CredentialLine key={line.key} line={line} onOpenAiAccounts={props.onOpenAiAccounts} />
         ) : line.kind === "offline" ? (
           <OfflineLine key={line.key} line={line} />
         ) : line.kind === "account_check" ? (
@@ -91,6 +96,98 @@ function PausedLine(props: { line: Line; onOpenAiAccounts: () => void }) {
         <Button size="sm" variant="primary" onClick={props.onOpenAiAccounts}>
           {t("queue.paused.open")}
         </Button>
+      </div>
+    </section>
+  );
+}
+
+/** Every account a kind of work can use is waiting for its limit to reset and another kind of work's account is free:
+ * the question says which, until when and what it would cost, and nothing is borrowed until the person says yes. */
+function BorrowLine(props: { line: Line }) {
+  const { t, tn, has } = useWords();
+  const act = useAct();
+  const estimate = useEstimate();
+  const [busy, setBusy] = useState<"yes" | "no" | null>(null);
+  const { line } = props;
+  const account = line.account ?? "";
+  const paused = line.text ?? "";
+  const time = line.until ? wallWhen(line.until) : "";
+  const work = t(has(`queue.borrow.work.${line.tier}`) ? `queue.borrow.work.${line.tier}` : "queue.borrow.work.other");
+  const cost = line.estimate_usd == null ? null : estimate(line.estimate_usd);
+  const sub =
+    cost === null
+      ? tn("queue.borrow.unpriced", line.count)
+      : line.unpriced > 0
+        ? tn("queue.borrow.mixed", line.count, { cost })
+        : tn("queue.borrow.priced", line.count, { cost });
+  const answer = async (use: boolean) => {
+    setBusy(use ? "yes" : "no");
+    await act(
+      () => api.borrowAccount({ tier: line.tier ?? "", account, model: line.model ?? "", use }),
+      () => ({ message: use ? t("queue.borrow.yes_toast", { account, time }) : t("queue.borrow.no_toast", { paused }) }),
+    );
+    setBusy(null);
+  };
+  return (
+    <section className={styles.line} aria-label={t("queue.borrow.label")} data-queue-line="borrow">
+      <Pill tone="warn">{t("queue.borrow.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t("queue.borrow", { account, work, paused, time })}</p>
+        <p className={styles.sub}>{sub}</p>
+      </div>
+      <div className={styles.actions}>
+        <Button size="sm" variant="primary" loading={busy === "yes"} disabled={busy !== null} aria-label={t("queue.borrow.yes_named", { account, work })} onClick={() => void answer(true)}>
+          {t("queue.borrow.yes")}
+        </Button>
+        <Button size="sm" variant="secondary" loading={busy === "no"} disabled={busy !== null} onClick={() => void answer(false)}>
+          {t("queue.borrow.no")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/** A key or sign-in that stops working on a known day, or already has: what to renew and by when, every place the same
+ * credential is used, and the one button that starts renewing it. The line is gone once the new end date is set or the
+ * sign-in is made again. */
+function CredentialLine(props: { line: Line; onOpenAiAccounts: () => void }) {
+  const { t } = useWords();
+  const { line } = props;
+  const [first = "", ...others] = line.places ?? [];
+  const signIn = line.credential_kind === "sign_in";
+  const past = (line.waiting_days ?? 0) < 0;
+  const date = line.due ? day(line.due) : "";
+  const { start, busy, problem } = useStartSignIn(line.credential_name ?? "");
+  const text = t(`queue.credential.${signIn ? "sign_in" : "account"}.${past ? "past" : "soon"}`, { thing: first, date });
+  return (
+    <section className={styles.line} aria-label={t("queue.credential.label")} data-queue-line="credential">
+      <Pill tone="warn">{t("queue.credential.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{text}</p>
+        {others.length > 0 ? (
+          <>
+            <p className={styles.sub}>{t("queue.credential.also")}</p>
+            <ul className={styles.places}>
+              {others.map((place) => (
+                <li key={place}>{place}</li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <p className={styles.sub}>{t("queue.credential.only")}</p>
+        )}
+        {problem && <p className="problem-note">{problem}</p>}
+      </div>
+      <div className={styles.actions}>
+        {signIn ? (
+          <Button size="sm" variant="primary" loading={busy} onClick={() => void start()}>
+            {t("queue.credential.sign_in")}
+          </Button>
+        ) : (
+          <Button size="sm" variant="primary" onClick={props.onOpenAiAccounts}>
+            {t("queue.credential.open")}
+          </Button>
+        )}
       </div>
     </section>
   );

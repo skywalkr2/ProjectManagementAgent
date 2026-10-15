@@ -71,7 +71,7 @@ test("one row per account: its service, a plain key status and one primary actio
   // A kind the list doesn't know leaves just the account's own name.
   expect(await row("odd")).not.toHaveTextContent("Service:");
   await user.click(within(main).getByRole("button", { name: "More actions for main" }));
-  expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toEqual(["Replace key", "Change models", "Remove"]);
+  expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toEqual(["Replace key", "Set when the key ends", "Change models", "Remove"]);
 });
 
 test("no accounts says so, and a list that didn't load says so quietly", async () => {
@@ -209,6 +209,53 @@ test("on a hosted app Replace key asks where the key is and sends a reference", 
   await user.type(await screen.findByLabelText("Where the key is"), "env:MODEL_KEY");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/spare")?.body).toEqual({ fingerprint: "fp-1", key_ref: "env:MODEL_KEY" }));
+});
+
+test("an account whose key has an end date says so, and Set when the key ends sends the day", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET ai/accounts": () => [account("spare", { has_key: false }), account("dated", { credential_expires: "2027-01-31" })],
+    "GET ai/endpoints": () => KINDS,
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "GET setup": () => ({ steps: [], finished: false, local: true }),
+    "POST ai/accounts/spare": () => SAVED,
+    "POST ai/accounts/dated": () => SAVED,
+  });
+  open();
+  expect(await row("dated")).toHaveTextContent(/Its key stops working on .*31/);
+  expect(await row("spare")).not.toHaveTextContent("stops working");
+  await menu(user, "spare", "Set when the key ends");
+  const field = await screen.findByLabelText(/The day this key stops working/);
+  expect(field).toHaveAttribute("type", "date");
+  await user.type(field, "2027-02-15");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/spare")?.body).toEqual({ fingerprint: "fp-1", credential_expires: "2027-02-15" }));
+  await menu(user, "dated", "Set when the key ends");
+  await user.clear(await screen.findByLabelText(/The day this key stops working/));
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/dated")?.body).toEqual({ fingerprint: "fp-1", clear_credential_expires: true }));
+});
+
+test("replacing the key takes the date typed with it, and drops the old key's date when none is typed", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET ai/accounts": () => [account("spare", { has_key: false }), account("dated", { credential_expires: "2027-01-31" })],
+    "GET ai/endpoints": () => KINDS,
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "GET setup": () => ({ steps: [], finished: false, local: true }),
+    "POST ai/accounts/spare": () => SAVED,
+    "POST ai/accounts/dated": () => SAVED,
+  });
+  open();
+  await menu(user, "spare", "Replace key");
+  await user.type(await screen.findByLabelText("New key"), "fresh");
+  await user.type(screen.getByLabelText(/The day this key stops working/), "2027-03-01");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/spare")?.body).toEqual({ fingerprint: "fp-1", key: "fresh", credential_expires: "2027-03-01" }));
+  await menu(user, "dated", "Replace key");
+  await user.type(await screen.findByLabelText("New key"), "newer");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST ai/accounts/dated")?.body).toEqual({ fingerprint: "fp-1", key: "newer", clear_credential_expires: true }));
 });
 
 test("Change models edits the ids it has, can add one for harder work, and Cancel changes nothing", async () => {

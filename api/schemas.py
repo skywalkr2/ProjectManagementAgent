@@ -1244,10 +1244,15 @@ class QueueLineView(BaseModel):
     """One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`
     is work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is
     POST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`
-    waiting), after which the work runs again by itself; `offline` is work that has waited for the network longer than
+    waiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account
+    (`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,
+    when that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is
+    POST /api/ai/borrow); `offline` is work that has waited for the network longer than
     the configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;
     `catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,
-    `unpriced`; the go is POST /api/knowledge/catch-up/go); `extractor` is a kind of file that isn't being read
+    `unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on
+    `due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and
+    `places`, everywhere the same credential is used); `extractor` is a kind of file that isn't being read
     (`file_kind`, and `text` says why), which clears once a file of that kind reads well."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
@@ -1266,9 +1271,11 @@ class QueueLineView(BaseModel):
         "handover",
         "failed",
         "paused",
+        "borrow",
         "offline",
         "overdue",
         "account_check",
+        "credential",
         "extractor",
         "review",
         "rule_review",
@@ -1361,6 +1368,16 @@ class QueueLineView(BaseModel):
         description="For an extractor line: the kind of file that isn't being read (document, spreadsheet, "
         "presentation, pdf or text), or the label an add-on gave its own kind. `text` says why.",
     )
+    credential_kind: Literal["account", "sign_in"] | None = Field(
+        None, description="For a credential line: an AI account's key or an add-on's sign-in."
+    )
+    credential_name: str | None = Field(
+        None, description="For a credential line: the account's short name or the sign-in's name."
+    )
+    places: list[str] = Field(
+        default_factory=list,
+        description="For a credential line: every place the same credential is used, in plain words.",
+    )
     tier: str | None = Field(
         None, description="For an account_check line: the tier whose fallback chain holds the account."
     )
@@ -1413,6 +1430,10 @@ class InboxCheckView(InboxView):
     sources_read: int = Field(description="How many sources were read.")
     sources_failed: int = Field(description="Sources that could not be read this time; their problem shows on Sources.")
     sources_busy: int = Field(description="Sources that were already being read, so this read left them alone.")
+    problems: list[ScreenText] = Field(
+        default_factory=list,
+        description="One sentence for each source that couldn't be read this time: why, and what to do.",
+    )
 
 
 class TodayLineView(BaseModel):
@@ -1850,6 +1871,9 @@ class AiAccountView(BaseModel):
     key_where: ScreenText | None = Field(
         None, description="Where a missing key is looked for, in plain words; never a key."
     )
+    credential_expires: date | None = Field(
+        None, description="The day its key stops working, when one was entered; Today says so ahead of it."
+    )
 
 
 class AiAccountChange(BaseModel):
@@ -1859,9 +1883,30 @@ class AiAccountChange(BaseModel):
 
     key: str | None = Field(None, description="A new pasted key; kept on this computer.")
     key_ref: str | None = Field(None, description="Or where the key is now: env:NAME or file:/path.")
+    credential_expires: date | None = Field(
+        None, description="The day its key stops working, when the service gives one."
+    )
+    clear_credential_expires: bool | None = Field(
+        None, description="Forget the end date of its key (it has none, or is renewed)."
+    )
     models: dict[str, str] | None = Field(None, description="Its models, replacing the ones it has.")
     use: dict[str, str] = Field(default_factory=dict, description="Tiers to one of its models by short name.")
     fingerprint: str
+
+
+class AiBorrowAnswer(BaseModel):
+    """The person's answer to the question of using another kind of work's account while the work's own are paused."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    tier: str = Field(description="The tier whose work waits (the line's `tier`).")
+    account: str = Field(description="The account the question offered (the line's `account`).")
+    model: str = Field(description="Its model's short name (the line's `model`).")
+    use: bool = Field(description="True: use it until the paused account's limit resets. False: keep the work waiting.")
+
+
+class AiBorrowed(BaseModel):
+    released: int = Field(description="How many waiting requests were let go to run on the account at once.")
 
 
 class AiModelsAsk(BaseModel):
@@ -1908,6 +1953,9 @@ class AiAccountAdd(BaseModel):
     base_url: str | None = None
     key: str | None = Field(None, description="A key pasted on the screen; kept in this computer's private folder.")
     key_ref: str | None = Field(None, description="Or a reference: env:NAME or file:/path.")
+    credential_expires: date | None = Field(
+        None, description="The day its key stops working, when the service gives one."
+    )
     models: dict[str, str] = Field(description="Short names for the account's models, to their ids.")
     allowed_data: list[Literal["open", "internal", "restricted"]] = Field(default_factory=lambda: ["open"])
     agent: dict[str, Any] | None = Field(None, description="For a command-line agent: its `agent` settings.")

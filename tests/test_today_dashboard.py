@@ -171,6 +171,9 @@ def test_check_now_reads_every_source_and_one_that_fails_never_stops_the_rest(tm
     body = done.json()
     assert [a["sender"] for a in body["items"]] == ["E", "F"]
     assert (body["new_items"], body["sources_read"], body["sources_failed"], body["sources_busy"]) == (2, 2, 1, 0)
+    # The source that failed says why and what to do, not only that one failed.
+    assert len(body["problems"]) == 1
+    assert body["problems"][0].startswith("Broken can't be read: ") and "Sign in to it again" in body["problems"][0]
     assert body["items"] == c.get(f"{api}/today/arrived").json()["items"]  # the same list the card shows
     by_id = {s["id"]: s for s in c.get(f"{api}/watch").json()}
     assert by_id["broken"]["last"]["outcome"] == "failed" and by_id["broken"]["problem"]  # shown on the source

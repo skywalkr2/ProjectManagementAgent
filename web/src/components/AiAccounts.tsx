@@ -5,6 +5,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
+import { day } from "../lib/dates";
 import { problemText } from "../lib/problem";
 import { asReference } from "../lib/secret-ref";
 import { useAfterSave } from "../lib/settings-save";
@@ -15,7 +16,7 @@ import { Icon } from "../ui/Icon";
 
 type Account = S["AiAccountView"];
 type Kind = S["EndpointView"];
-type Mode = "key" | "models" | null;
+type Mode = "key" | "models" | "expires" | null;
 
 /** The short model name that stands for the everyday work, and the one added for harder work. */
 const EVERYDAY = "everyday";
@@ -79,6 +80,7 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<S["AiTestResult"] | null>(null);
   const [key, setKey] = useState("");
+  const [ends, setEnds] = useState("");
   const [models, setModels] = useState<Record<string, string>>({});
   const [harder, setHarder] = useState("");
   const testButton = useRef<HTMLButtonElement>(null);
@@ -102,6 +104,7 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
   const open = (next: Exclude<Mode, null>) => {
     setProblem("");
     setKey("");
+    setEnds(next === "expires" ? (account.credential_expires ?? "") : "");
     setHarder("");
     setModels({ ...account.models });
     setMode(next);
@@ -142,13 +145,25 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
     const pasted = key.trim();
     if (!pasted) return;
     const done = await save(
-      (fingerprint) => api.changeAccount(account.name, props.local ? { fingerprint, key: pasted } : { fingerprint, key_ref: asReference(pasted) }),
+      (fingerprint) => {
+        // A new key has its own end date: the one typed, else none is known, so the old key's date is dropped.
+        const dates = ends ? { credential_expires: ends } : account.credential_expires ? { clear_credential_expires: true } : {};
+        return api.changeAccount(account.name, props.local ? { fingerprint, key: pasted, ...dates } : { fingerprint, key_ref: asReference(pasted), ...dates });
+      },
       t("ai_accounts.key_replaced", { name: account.name }),
     );
     if (done) {
       setKey("");
       close();
     }
+  };
+
+  const saveEnds = async () => {
+    const done = await save(
+      (fingerprint) => api.changeAccount(account.name, ends ? { fingerprint, credential_expires: ends } : { fingerprint, clear_credential_expires: true }),
+      t(ends ? "ai_accounts.key_ends_saved" : "ai_accounts.key_ends_cleared", { name: account.name, date: ends ? day(ends) : "" }),
+    );
+    if (done) close();
   };
 
   const changeModels = async () => {
@@ -194,6 +209,7 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
       ? [{ id: "use", label: t("ai_accounts.use_for_work"), run: useForWork, disabled: busy }]
       : []),
     { id: "key", label: t("ai_accounts.replace_key"), run: () => open("key") },
+    { id: "expires", label: t("ai_accounts.key_ends_set"), run: () => open("expires") },
     { id: "models", label: t("ai_accounts.change_models"), run: () => open("models") },
     { id: "remove", label: t("ai_accounts.remove"), run: remove },
   ];
@@ -223,6 +239,30 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
             {status}
           </span>
           <span className="sub">{doing}</span>
+          {account.credential_expires && <span className="sub">{t("ai_accounts.key_ends", { date: day(account.credential_expires) })}</span>}
+          {mode === "expires" && (
+            <form
+              className="field"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void saveEnds();
+              }}
+            >
+              <label htmlFor={`${base}-ends`}>{t("ai_accounts.key_ends_label")}</label>
+              <input id={`${base}-ends`} ref={firstField} type="date" value={ends} onChange={(e) => setEnds(e.target.value)} aria-describedby={`${base}-ends-hint`} />
+              <p className="hint" id={`${base}-ends-hint`}>
+                {t("ai_accounts.key_ends_hint")}
+              </p>
+              <div className="row-end">
+                <button type="button" className="btn quiet" disabled={busy} onClick={close}>
+                  {t("ai_accounts.cancel")}
+                </button>
+                <button type="submit" className="btn primary" disabled={busy || ends === (account.credential_expires ?? "")}>
+                  {t(busy ? "ai_accounts.saving" : "ai_accounts.save")}
+                </button>
+              </div>
+            </form>
+          )}
           {mode === "key" && (
             <form
               className="field"
@@ -246,6 +286,8 @@ function AccountRow(props: { account: Account; kind: Kind | undefined; local: bo
               <p className="hint" id={`${base}-key-hint`}>
                 {t(props.local ? "ai_accounts.new_key_hint" : "welcome.ai.key_where_hint")}
               </p>
+              <label htmlFor={`${base}-key-ends`}>{t("ai_accounts.key_ends_label")}</label>
+              <input id={`${base}-key-ends`} type="date" value={ends} onChange={(e) => setEnds(e.target.value)} />
               <div className="row-end">
                 <button type="button" className="btn quiet" disabled={busy} onClick={close}>
                   {t("ai_accounts.cancel")}

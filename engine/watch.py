@@ -68,6 +68,15 @@ def last_run(store: Any, source: str) -> Any | None:
     return runs[-1] if runs else None
 
 
+def problem_text(store: Any, source: str) -> str | None:
+    """Why the latest try at a source failed and what to do about it, in plain words; None when it didn't fail."""
+    last = last_run(store, source)
+    if last is None or last.data["outcome"] != "failed":
+        return None
+    kind = last.data.get("error_kind") or ""
+    return f"{last.data.get('error') or kind}. {WHAT_TO_DO.get(kind, '')}".strip()
+
+
 def last_read(store: Any, source: str) -> Any | None:
     """The latest run that actually read the source (not one that found no network or failed)."""
     runs = [r for r in store.read().find("watch_run", {"source": source}) if r.data["outcome"] in ("ok", "baseline")]

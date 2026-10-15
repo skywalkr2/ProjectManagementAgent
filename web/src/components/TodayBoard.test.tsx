@@ -383,7 +383,7 @@ test("a column that can't load says so and offers Try again without hiding the o
 });
 
 function checked(over: Partial<S["InboxCheckView"]> = {}): S["InboxCheckView"] {
-  return { ...inbox, new_items: 0, sources_read: 1, sources_failed: 0, sources_busy: 0, ...over };
+  return { ...inbox, new_items: 0, sources_read: 1, sources_failed: 0, sources_busy: 0, problems: [], ...over };
 }
 
 test("Check now reads the sources, shows the new list at once and says what arrived", async () => {
@@ -493,4 +493,63 @@ test("what is being learned from a change asked for on a to-do shows on that row
   const col = await column("To do");
   const row = (await within(col).findByText("Approve the proof")).closest("li")!;
   expect(await within(row).findByRole("status")).toHaveTextContent("Learning from this…");
+});
+
+const unread = (id: string, reads: S["WatchSourceView"]["reads"], outcome: "failed" | "offline", over: Partial<S["WatchSourceView"]> = {}) =>
+  watched(id, {
+    reads,
+    last: { outcome, started_at: at(TODAY, 11, 45), new: 0, changed: 0, removed: 0 },
+    read_at: null,
+    failures: 1,
+    ...over,
+  });
+
+test("an empty calendar card says the calendar couldn't be read, with why and what to do, never that it is empty or checked", async () => {
+  open({
+    ...EMPTY,
+    "GET watch": () => [
+      unread("cal", ["calendar"], "failed", {
+        label: "Work calendar",
+        problem: "Work calendar can't be read: the service refused the sign-in. Sign in to it again, then it is read on its next turn.",
+      }),
+      watched("mail", { reads: ["mail"] }),
+    ],
+  });
+  const col = await column("Agenda");
+  expect(await within(col).findByText("Your calendar couldn't be read, so this list may be missing events.")).toBeInTheDocument();
+  expect(within(col).getByRole("alert")).toHaveTextContent("the service refused the sign-in. Sign in to it again");
+  expect(within(col).queryByText("Nothing on your calendar for the next few days.")).toBeNull();
+  expect(within(col).queryByText(/^Checked /)).toBeNull();
+  // The mail card has no unread source of its own: it says what it always says.
+  expect(await within(await column("Came in")).findByText("No mail has come in lately.")).toBeInTheDocument();
+});
+
+test("an empty mail card says the mailbox wasn't read when there was no network, and the calendar card is unaffected", async () => {
+  open({
+    ...EMPTY,
+    "GET watch": () => [unread("mail", ["mail"], "offline", { label: "Work mail" }), watched("cal", { reads: ["calendar"] })],
+  });
+  const col = await column("Came in");
+  expect(await within(col).findByText("Your mail couldn't be read, so this list may be missing messages.")).toBeInTheDocument();
+  expect(within(col).getByRole("alert")).toHaveTextContent("Work mail wasn't read: there is no network connection. It is tried again by itself.");
+  expect(within(col).queryByText("No mail has come in lately.")).toBeNull();
+  expect(await within(await column("Agenda")).findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
+});
+
+test("a source of a kind with no unread source never changes the empty card, and a source that is off is not reported", async () => {
+  open({ ...EMPTY, "GET watch": () => [unread("cal", ["calendar"], "failed", { enabled: false }), watched("b", { reads: ["calendar"] })] });
+  expect(await screen.findByText("Nothing on your calendar for the next few days.")).toBeInTheDocument();
+});
+
+test("Check now says which source couldn't be read and why, in place of only a count", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  open({
+    "GET watch": () => [watched("a"), watched("b")],
+    "POST today/arrived/check": () =>
+      checked({ sources_failed: 1, problems: ["Source b can't be read: the service refused the sign-in. Sign in to it again, then it is read on its next turn."] }),
+  });
+  await user.click(await within(await column("Came in")).findByRole("button", { name: "Check now" }));
+  expect(
+    await screen.findByText("Nothing new. Source b can't be read: the service refused the sign-in. Sign in to it again, then it is read on its next turn."),
+  ).toBeInTheDocument();
 });

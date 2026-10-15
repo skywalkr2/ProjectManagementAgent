@@ -437,7 +437,13 @@ def ops_for_level(store: Store, ops: tuple[str, ...], level: str) -> tuple[str, 
 
 
 def estimate_request(
-    ws: Workspace, store: Store, cfg: Config, router: Router, request_id: str, now: datetime | None = None
+    ws: Workspace,
+    store: Store,
+    cfg: Config,
+    router: Router,
+    request_id: str,
+    now: datetime | None = None,
+    use: str | None = None,
 ) -> float | None:
     """What a queued request would cost to run, priced as `process` prices it: from its packet, on the account its tier
     would use. None when the packet can't be built, no account takes the work, or the price isn't known."""
@@ -464,7 +470,7 @@ def estimate_request(
         packet.task,
         tier=tier,
         data_level=level,
-        use=req.data.get("use"),
+        use=use or req.data.get("use"),
         content=content_levels(store, req.data),
         independent=independence(store, cfg, req.data),
     )
@@ -574,7 +580,7 @@ def _call(
             offline_known=offline_known,
         )
     except AccountPaused as err:
-        cause = {"kind": "paused", "account": err.account, "until": err.until.isoformat()}
+        cause = {"kind": "paused", "account": err.account, "until": err.until.isoformat(), "tier": err.tier or None}
         out.stop, out.cause = str(err), cause
     except NetworkOffline:
         # No account could be reached at all: the work waits for the network, which is no failure and no try.
