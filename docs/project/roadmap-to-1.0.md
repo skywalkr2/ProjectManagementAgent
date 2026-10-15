@@ -1257,13 +1257,19 @@ L4. **Proving it** (from the design author's review of this plan).
   check shown on Today with Switch back.
 
 L5. **Reading what arrives, and protecting what is learned.**
-- [ ] Text extractors in the core: documents, spreadsheets, presentations and PDFs, so mail attachments are read. The
+- [x] Text extractors in the core: documents, spreadsheets, presentations and PDFs, so mail attachments are read. The
   extractor extension point for plugins, and a connector item that carries files, so mail add-ons hand attachments to the
-  core instead of reading only their names.
-- [ ] **Each extractor tests itself at startup** on a small fixture file, and a failing one is a Today line (lessons of
+  core instead of reading only their names. Built: `tests/test_extractors.py::test_a_mail_attachments_text_is_in_the_packet_as_outside_content`,
+  `tests/test_extractors.py::test_a_plugin_reader_is_used_before_the_cores_and_declining_falls_back_to_it`,
+  `tests/test_extractors.py::test_a_type_nothing_reads_is_flagged_to_the_person_once`.
+- [x] **Each extractor tests itself at startup** on a small fixture file, and a failing one is a Today line (lessons of
   2026-10-14, lesson 8). A watched file with no text is an issue about the extractor, never a question asking the person
-  for the text. Prefer readers that need nothing installed.
-- [ ] Encryption for backups that leave the person's control (`backups.encrypt`).
+  for the text. Prefer readers that need nothing installed. Built: `tests/test_extractors.py::test_the_worker_checks_the_readers_when_it_starts`,
+  `tests/test_extractors.py::test_a_failing_reader_is_a_line_on_today_and_the_line_goes_when_it_works`,
+  `tests/test_extractors.py::test_a_watched_file_with_no_text_is_an_issue_about_its_reader_never_a_question`.
+- [x] Encryption for backups that leave the person's control (`backups.encrypt`). Built: `tests/test_backup_encryption.py::test_every_file_of_an_encrypted_copy_is_sealed`,
+  `tests/test_backup_encryption.py::test_a_wrong_key_is_refused_plainly_and_nothing_is_written`,
+  `tests/test_backup_encryption.py::test_the_command_restores_with_a_key_reference_and_refuses_without_or_with_a_wrong_one`.
 
 L6. **The rules that bite in the first week of real use** (design 8.8).
 - [ ] Quotes only from verbatim sources, with a paraphrase labeled as one; no unattributed lines.

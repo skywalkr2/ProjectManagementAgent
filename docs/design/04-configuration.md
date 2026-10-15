@@ -553,9 +553,15 @@ Built keys:
     backup has succeeded, a mark in the header says "No off-device backup is set up" or that the last try failed; afterwards
     it shows the age of the last one, and "overdue" past twice `every_hours` (11.1).
 
+`backups.encrypt` (**built**, L5; `tests/test_backup_encryption.py::test_every_file_of_an_encrypted_copy_is_sealed`): an `env:` or `file:` key reference; when set, every backup copy is sealed (AES-GCM in
+chunks, a key derived per backup, each chunk bound to its path and place), `cockpit restore --backup` asks for the key and
+refuses a wrong one before writing anything, and the backup line says the backup is encrypted. A lost key means a backup
+that can't be read, and the description says so. File names and the folder layout are not hidden.
+`files.read_max_mb` (25) and `files.read_max_chars` (30000): the largest file read as text, and how much of its text a
+packet carries.
+
 Designed, not yet built: `path` (where the workspace lives; today it is the `--workspace` folder or `COCKPIT_WORKSPACE`),
-`sources_store` (an object store), `backups.encrypt` (a key reference for any target outside the PM's control; phase L,
-6.22), `sync.layout`
+`sources_store` (an object store), `sync.layout`
 (`by_project` is the only layout today), `sync.sources` (include, encrypt above a data level, or exclude above one; sources and files now carry a data level, but the setting is not built, so every source is copied) and `sync.outputs_folder` (fixed as `outputs` today), and
 `retention`: per source kind and restriction level, how long raw text is kept after its facts are recorded, and
 `forget_person` behavior (delete or anonymize free text that names them, repoint their records to "former contact"). The

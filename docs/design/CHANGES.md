@@ -970,6 +970,14 @@ yet follow, that it is *designed*, with its phase.
 | Calendar (6.7) | An entry had a project only if the assistant named one | It takes the request's or the source's project |
 | Evaluation (6.16) | No way to expect a held op, a project or a watched item | `held: <op>`, `project`, `watched` in a case; seven new golden cases. Built: `tests/test_next_steps.py`, `tests/test_obvious_steps_f.py` |
 
+## 63. L5: reading attachments and documents, and encrypted backups (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Files (6.2) | Only text files were read; attachments were names | Documents, spreadsheets, presentations and PDFs read as text, attachments included, each reader checked at startup; an unsupported type asked about once |
+| Extension points (3.3) | No text extractor | `registrar.extractor`, `ItemFile` on a connector's item, `view.file_text` |
+| Backups (4.15, 12.1) | Not encrypted | `storage.backups.encrypt` seals every copy; restore asks for the key. Built: `tests/test_extractors.py`, `tests/test_backup_encryption.py` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

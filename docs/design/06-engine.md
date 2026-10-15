@@ -63,10 +63,16 @@ secrets its manifest declares (references in `workspace.plugins.secrets`, or val
 refreshed token), and a current sign-in token when it asks for one. Bundled plugins may not import network modules; the scan
 enforces it.
 
-Files are read as text by the text extractors (3.3; *designed, not yet built*, roadmap phase L, 6.22): the core ships extractors for documents, spreadsheets (cells and
+Files are read as text by the text extractors (3.3; **built**, L5: `engine/extract/`, `tests/test_extractors.py`): the core ships extractors for documents, spreadsheets (cells and
 their comments), presentations (slide text, tables and speaker notes) and PDFs, and plugins add others. Packets carry the
 extracted text, so a run never asks the PM to paste what is already in a file it can read. A file type with no extractor is
-flagged to the PM once, as unsupported, not request by request.
+flagged to the PM once, as unsupported, not request by request. *As built:* documents, spreadsheets and presentations are
+read from their zipped XML with the standard library and PDFs with `pypdf`; a file that can't be read gives a reason,
+never empty text; the text is cut at `storage.files.read_max_chars` with a mark, and a file over `read_max_mb` is named as
+not read. A connector's item carries files (`ItemFile`) and the core appends each one's text to the item, inside its
+outside-content block. Each core reader checks itself at startup on a generated file; a failing reader, or a real file
+it couldn't read, is a Today line that clears when a later file of that kind reads. An unsupported type is one question
+to the person, which they can drop, filed once per media type (not a Today line: the person has nothing to do).
 
 ## 6.3 Channels (outputs)
 
