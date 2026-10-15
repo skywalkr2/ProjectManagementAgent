@@ -34,6 +34,7 @@ export function project(id: string, name: string): S["ProjectView"] {
     group: null,
     language: "en-US",
     language_own: false,
+    role: "run",
     open_actions: 0,
     open_questions: 0,
     owner: null,

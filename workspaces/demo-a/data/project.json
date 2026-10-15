@@ -26,6 +26,12 @@
     "id": "PRJ-3",
     "name": "Carrier Portal Refresh",
     "owner": "PER-6",
+    "roles": [
+      {
+        "person": "PER-1",
+        "role": "watch"
+      }
+    ],
     "status": "Not started"
   }
 ]

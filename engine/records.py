@@ -222,6 +222,22 @@ class Owner(BaseModel):
     team: str | None = Field(None, description="The id of the team the person acts for here, if any.")
 
 
+#: The parts a person can have on a project: they run it, design for it, or only watch it.
+PROJECT_ROLES = ("run", "design", "watch")
+
+
+class ProjectRole(BaseModel):
+    """What one person's part in a project is. A person with no entry runs the project."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    person: Annotated[str, RefTo("person")] = Field(description="The id of the person the role is for.")
+    role: Literal["run", "design", "watch"] = Field(
+        description="run: they run it. design: they design for it. watch: they only watch it, so the assistant "
+        "records facts about it and makes no actions or questions for other people."
+    )
+
+
 class OnHold(BaseModel):
     """What an action waits for before it can go on. Set and cleared by the person; an action on hold is never due,
     overdue or chased."""
@@ -298,8 +314,8 @@ class Team(Record):
 class Project(Record):
     """A piece of work being run, possibly inside another (a book in its series). `project.add` starts one;
     `record.set` changes status, phase, target, priority, summary, parent and language; `record.log` adds to its log;
-    the person edits the rest in the app, and only the person sets its content levels, budget and priority (the
-    assistant's `record.set` of the priority waits for the person)."""
+    `project.role` sets a person's part in it; the person edits the rest in the app, and only the person sets its
+    content levels, budget and priority (the assistant's `record.set` of the priority waits for the person)."""
 
     record_kind: ClassVar[str] = "project"
     prefix: ClassVar[str] = "PRJ"
@@ -344,6 +360,11 @@ class Project(Record):
     )
     log: list[LogEntry] = Field(
         default_factory=list, description="The update log, oldest first; `record.log` adds a line dated that day."
+    )
+    roles: list[ProjectRole] = Field(
+        default_factory=list,
+        description="Each person's part in the project (run, design or watch); `project.role` sets one. A person "
+        "with no entry runs it.",
     )
 
 
@@ -1568,7 +1589,7 @@ KNOWLEDGE_REFERENCES: list[tuple[str, str]] = [
 REFERENCES: dict[str, list[tuple[str, str]]] = {
     "person": [("team", "team"), ("org", "organization")],
     "team": [("members[]", "person")],
-    "project": [("owner", "person"), ("parent", "project")],
+    "project": [("owner", "person"), ("parent", "project"), ("roles[].person", "person")],
     "action": [
         ("project", "project"),
         ("owners[].person", "person"),

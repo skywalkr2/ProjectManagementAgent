@@ -134,7 +134,7 @@ def build(ws: Workspace, store: Store, cfg: Config, request_id: str, today: date
             "# Open actions\n" + _open_actions(store, people),
             "# Open questions\n" + _open_questions(store, people),
             "# People\n" + _people(store, cfg),
-            "# Projects\n" + _projects(store),
+            "# Projects\n" + _projects(store, people.pm),
         )
         if part.strip()
     )
@@ -416,7 +416,7 @@ def _ask_packet(ws: Workspace, store: Store, cfg: Config, req: Stored, kind: Tas
             "# Open actions\n" + _open_actions(store, people),
             "# Open questions\n" + _open_questions(store, people),
             "# People\n" + _people(store, cfg),
-            "# Projects\n" + _projects(store),
+            "# Projects\n" + _projects(store, people.pm),
         )
         if part.strip()
     )
@@ -768,10 +768,19 @@ def _value_lists(store: Store) -> str:
     )
 
 
-def _projects(store: Store) -> str:
+def _projects(store: Store, pm: str | None = None) -> str:
+    """The projects, each with its links and, when it isn't one the person runs, the person's part in it, so a project
+    they only watch gets facts, not actions or questions to others, from the first answer."""
+    from engine.scope import DEFAULT_ROLE, role_of
+
+    view = store.read()
     lines = []
-    for p in store.read().list("project"):
+    for p in view.list("project"):
         d = p.data
         links = "; ".join(f"{link['label']}: {link['url']}" for link in d.get("links", []))
-        lines.append(f"- {p.id} | {d['name']}" + (f" | links: {links}" if links else ""))
+        role = role_of(view, p.id, pm)
+        part = f" | the person's part: {role}" + (" (record facts only)" if role == "watch" else "")
+        lines.append(
+            f"- {p.id} | {d['name']}" + (f" | links: {links}" if links else "") + (part if role != DEFAULT_ROLE else "")
+        )
     return "\n".join(lines) or "(none)"

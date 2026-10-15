@@ -6,11 +6,11 @@ pasted: 'Production check-in, Oct 8
 
   Interior: last typo pass done.
 
-  Jacket: Theo will send two spine options by Friday Oct 16.
+  Jacket: Theo will send us two spine options by Friday Oct 16.
 
   Publicity: Ines to draft the launch announcement by Oct 20.
 
-  Print: Sam and Theo to agree the trim size with the printer by Oct 13.'
+  Print: Sam and Theo to agree our trim size with the printer by Oct 13.'
 expect:
 - op: action.add
   owners:
@@ -41,7 +41,7 @@ stub_answer:
     due: '2026-10-16'
     project: PRJ-1
     evidence:
-      quote: Theo will send two spine options by Friday Oct 16
+      quote: Theo will send us two spine options by Friday Oct 16
   - op: action.add
     text: Draft the launch announcement
     owners:
@@ -58,4 +58,4 @@ stub_answer:
     due: '2026-10-13'
     project: PRJ-1
     evidence:
-      quote: Sam and Theo to agree the trim size with the printer by Oct 13
+      quote: Sam and Theo to agree our trim size with the printer by Oct 13

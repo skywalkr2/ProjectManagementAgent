@@ -72,8 +72,8 @@ def read(env, pasted: str, answer: dict, *, at: datetime = NOW) -> tuple:
 
 
 def interior(env) -> tuple[str, str, str]:
-    """An original run that made one action for the typesetter. Returns its changeset, the action and the input."""
-    setter = person("Typesetter")
+    """An original run that made one action for a teammate. Returns its changeset, the action and the input."""
+    setter = person("Editor")
     words = f"{setter['full_name']} will send the final interior file to the printer by the 16th."
     _, cs_id = read(
         env,

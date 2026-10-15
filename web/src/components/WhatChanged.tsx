@@ -495,6 +495,7 @@ function metaLine(op: S["OpView"], t: T): string {
   if (m.due) bits.push(t("op.meta.due", { date: day(m.due) }));
   if (m.project && op.op !== "note") bits.push(m.project);
   if (m.field) bits.push(t("op.meta.set", { field: m.field, value: String(m.value ?? "") }));
+  if (m.role) bits.push(t("op.meta.role", { role: t(`role.${m.role}`) }));
   return bits.join(" · ");
 }
 

@@ -4,7 +4,7 @@ received: '2026-10-14'
 pasted: |-
   From: Kofi Mensah-Hale
 
-  I'll send the hardware sizing numbers once the vendor quote lands, probably in a few weeks.
+  I'll send our team the hardware sizing numbers once the vendor quote lands, probably in a few weeks.
 expect:
 - op: action.add
   owners:
@@ -21,4 +21,4 @@ stub_answer:
     - Kofi Mensah-Hale
     project: PRJ-1
     evidence:
-      quote: I'll send the hardware sizing numbers once the vendor quote lands
+      quote: I'll send our team the hardware sizing numbers once the vendor quote lands

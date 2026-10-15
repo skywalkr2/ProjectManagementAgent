@@ -44,6 +44,7 @@ invariants:
       - list.merge
       - mail.restore
       - project.add
+      - project.role
       - person.contact
       - record.edit
       - text.edit
@@ -90,6 +91,7 @@ invariants:
       - question.drop
       - question.done
       - person.contact
+      - project.role
       - record.set
       - answer
     line: Needs the exact words from the input that justify it; a quote that isn't in the input is refused.

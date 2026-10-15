@@ -422,6 +422,26 @@ class ProjectAddOp(OpModel):
         return f"Start the project {self.name}"
 
 
+class ProjectRoleOp(OpModel):
+    """Set a person's part in a project: they run it, design for it, or only watch it. Propose it when the input
+    says who runs, designs or watches a project now ("I'm running it now", "they want me to take it over"). A system
+    op: from the assistant it waits for the person, who may set it on the project's own page. Evidence is required."""
+
+    op: Literal["project.role"] = "project.role"
+    project: str = Field(description="The id of the project the role is on.")
+    person: str = Field(description="The person whose part it is, by name or id.")
+    role: Literal["run", "design", "watch"] = Field(
+        description="run: they run it. design: they design for it. watch: they only watch it, so only facts are "
+        "recorded about it."
+    )
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that say it; required unless the person makes it."
+    )
+
+    def describe(self) -> str | None:
+        return "Set a role on a project"
+
+
 class RecordEditOp(OpModel):
     """The person's own change to fields of any record (core or a plugin's), such as an edit made to the record's
     file in the synced folder: it waits for the person's review there, and applies as theirs. Long text, the stage,
@@ -814,6 +834,7 @@ Op = Annotated[
     | RecordDeleteOp
     | FileAddOp
     | ProjectAddOp
+    | ProjectRoleOp
     | RecordEditOp
     | TextEditOp
     | TextProposeOp
@@ -863,6 +884,7 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "record.delete": RecordDeleteOp,
     "file.add": FileAddOp,
     "project.add": ProjectAddOp,
+    "project.role": ProjectRoleOp,
     "record.edit": RecordEditOp,
     "text.edit": TextEditOp,
     "text.propose": TextProposeOp,
@@ -918,6 +940,7 @@ TIERS: dict[str, Tier] = (
     | {
         "record.delete": "system",
         "project.add": "system",
+        "project.role": "system",
         "list.add": "system",
         "list.rename": "system",
         "list.merge": "system",
@@ -941,6 +964,7 @@ NEEDS_EVIDENCE = {
     "question.drop",
     "question.done",
     "person.contact",
+    "project.role",
 }
 #: Ops that need evidence from the assistant but not when the person makes them: their own act is not a claim from an
 #: input, so a person's action or screen may use them without a quote.

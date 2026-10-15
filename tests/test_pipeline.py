@@ -70,7 +70,7 @@ def outcomes(store, cs_id):
 
 def test_actions_get_people_by_id_and_keep_their_evidence(env):
     _, _, store = env
-    setter = person("Typesetter")
+    setter = person("Editor")
     pasted = f"Interior: {setter['full_name']} to send the final interior file to the printer by the 16th."
     answers(
         {

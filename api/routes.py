@@ -95,6 +95,7 @@ from api.schemas import (
     PluginStatusView,
     ProjectIn,
     ProjectPatch,
+    ProjectRoleIn,
     ProjectView,
     ProposedFile,
     ProposedOp,
@@ -1728,6 +1729,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
     def projects() -> list[ProjectView]:
         from engine.projects import language_for, spent_on
         from engine.record_page import counts
+        from engine.scope import role_of
 
         names = People(store, cfg)
         view = store.read()
@@ -1737,6 +1739,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 parent=p.data.get("parent"),
                 language=language_for(view, cfg.workspace.language, p),
                 language_own=bool(p.data.get("language")),
+                role=role_of(view, p.id, names.pm),
                 content_levels=p.data.get("content_levels") or [],
                 budget_usd=p.data.get("budget_usd"),
                 spent_usd=round(spent_on(store, p.id), 4),
@@ -1795,6 +1798,20 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
         guard(lambda: _edit_on_screen(store, cfg, "project", prj, changes))
         changed()
         return Ok(ok=prj)
+
+    @r.post("/projects/{prj}/role")
+    def set_project_role(prj: str, body: ProjectRoleIn) -> Applied:
+        """The person's own part in a project, with Undo."""
+        from engine.applier import apply_as_person
+
+        need("project", prj)
+        person = cfg.workspace.user.person
+        if person is None:
+            raise HTTPException(status_code=409, detail="Say who you are before setting your part in a project.")
+        op = {"op": "project.role", "project": prj, "person": person, "role": body.role}
+        cs_id = guard(lambda: apply_as_person(store, cfg, [op], "Set a role on screen"))
+        changed()
+        return Applied(changeset=cs_id)
 
     @r.post("/projects/{prj}/remove")
     def remove_project(prj: str) -> Ok:
@@ -1978,6 +1995,8 @@ def _op_view(
         meta["value"] = op["value"]
     if op["op"] == "project.add":
         meta["name"] = op["name"]
+    if op["op"] == "project.role":
+        meta["role"] = op["role"]
     evidence = op.get("evidence")
     return OpView(
         index=o["index"],

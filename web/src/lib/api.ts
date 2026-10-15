@@ -180,6 +180,9 @@ export const api = {
   restorePerson: (p: string) => call<S["Ok"]>("POST", `people/${id(p)}/restore`),
   addProject: (body: S["ProjectIn"]) => call<S["Created"]>("POST", "projects", body),
   editProject: (p: string, body: S["ProjectPatch"]) => call<S["Ok"]>("POST", `projects/${id(p)}`, body),
+  /** The person's own part in a project (run, design or watch), with Undo through the change it returns. */
+  setProjectRole: (p: string, role: S["ProjectRoleIn"]["role"]) =>
+    call<S["Applied"]>("POST", `projects/${id(p)}/role`, { role }),
   removeProject: (p: string) => call<S["Ok"]>("POST", `projects/${id(p)}/remove`),
   restoreProject: (p: string) => call<S["Ok"]>("POST", `projects/${id(p)}/restore`),
 

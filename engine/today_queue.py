@@ -33,6 +33,7 @@ _OUTCOME = {
     "record.log": "recorded",
     "person.add": "people",
     "project.add": "projects",
+    "project.role": "recorded",
     "text.draft": "drafts",
     "report.draft": "drafts",
     "text.propose": "drafts",

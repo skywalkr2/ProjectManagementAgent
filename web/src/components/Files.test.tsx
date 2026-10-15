@@ -35,6 +35,7 @@ const project: S["ProjectView"] = {
   summary: null,
   language: "en-US",
   language_own: false,
+  role: "run",
   spent_usd: 0,
   open_actions: 0,
   open_questions: 0,

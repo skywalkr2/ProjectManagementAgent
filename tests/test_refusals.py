@@ -243,7 +243,7 @@ def test_the_refusals_setting_has_its_defaults_and_both_demo_workspaces_set_it()
 
 def test_the_second_input_of_a_batch_sees_the_action_the_first_one_created(env):
     ws, cfg, store = env
-    setter = person("Typesetter")
+    setter = person("Editor")
     quote = "to send the sample chapter to the reviewers by the 16th"
     action_text = "Send the sample chapter to the reviewers"
     seen = []

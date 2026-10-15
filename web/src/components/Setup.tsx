@@ -29,6 +29,10 @@ const PROJECT_LISTS = {
   priority: "project-priority",
 } as const;
 
+/** The parts a person can have in a project, as the pick list offers them. */
+const ROLES = ["run", "design", "watch"] as const;
+type Role = (typeof ROLES)[number];
+
 const list = (text: string) =>
   text
     .split(",")
@@ -456,6 +460,7 @@ function ProjectRow(props: { project: S["ProjectView"]; projects: S["ProjectView
     p.priority ? t("setup.priority_is", { priority: p.priority }) : "",
     p.target ? t("setup.target_on", { date: day(p.target) }) : "",
     p.owner_name ? t("setup.owned_by", { name: p.owner_name }) : "",
+    p.role !== "run" ? t("setup.role_is", { role: t(`role.${p.role}_short`) }) : "",
     parent ? t("setup.inside_of", { name: parent.name }) : "",
     p.language_own ? t("setup.language_is", { language: p.language }) : "",
     p.budget_usd != null ? t("setup.budget_is", { amount: total(p.budget_usd) }) : "",
@@ -528,6 +533,7 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
   const [parent, setParent] = useState(p?.parent ?? "");
   const [language, setLanguage] = useState(p?.language_own ? p.language : "");
   const [budget, setBudget] = useState(p?.budget_usd != null ? String(p.budget_usd) : "");
+  const [role, setRole] = useState<Role>(p?.role ?? "run");
   const key = p?.id ?? "new";
   const others = props.projects.filter((x) => x.id !== p?.id);
   // An empty language means it follows the project it is inside, so that one's language is what the box suggests.
@@ -547,25 +553,41 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
       owner: owner || null,
       summary: summary.trim() || null,
     };
+    const before = p && {
+      parent: p.parent ?? null,
+      language: p.language_own ? p.language : null,
+      budget_usd: p.budget_usd ?? null,
+      name: p.name,
+      status: p.status,
+      phase: p.phase,
+      group: p.group,
+      priority: p.priority ?? null,
+      target: p.target,
+      owner: p.owner,
+      summary: p.summary,
+    };
+    if (p && role !== p.role) {
+      await act(
+        () => api.setProjectRole(p.id, role),
+        (applied) => ({
+          message: t("toast.role_set", { name: p.name, role: t(`role.${role}`) }),
+          undo: async () => {
+            const report = await api.undo(applied.changeset);
+            if (!report.restored.length) throw new Error("not undone");
+          },
+        }),
+      );
+      if (JSON.stringify(body) === JSON.stringify(before)) {
+        props.onDone();
+        return;
+      }
+    }
     const done = p
       ? await act(
           () => api.editProject(p.id, body),
           () => ({
             message: t("toast.saved", { name: body.name }),
-            undo: () =>
-              api.editProject(p.id, {
-                name: p.name,
-                status: p.status,
-                phase: p.phase,
-                group: p.group,
-                priority: p.priority ?? null,
-                target: p.target,
-                owner: p.owner,
-                summary: p.summary,
-                parent: p.parent ?? null,
-                language: p.language_own ? p.language : null,
-                budget_usd: p.budget_usd ?? null,
-              }),
+            undo: () => api.editProject(p.id, before!),
           }),
         )
       : await act(
@@ -611,6 +633,20 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
         suggested={[]}
         people={(people.data ?? []).filter((x) => x.status === "active")}
       />
+      {p && (
+        <div className="field">
+          <label htmlFor={`jo-${key}`}>
+            {t("setup.my_role")} <span className="hint">{t("setup.my_role_hint")}</span>
+          </label>
+          <select id={`jo-${key}`} value={role} onChange={(e) => setRole(e.target.value as Role)}>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {t(`role.${r}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="field">
         <label htmlFor={`jw-${key}`}>{t("setup.inside")}</label>
         <select id={`jw-${key}`} value={parent} onChange={(e) => setParent(e.target.value)}>

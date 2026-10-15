@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine import draft_checks, knowledge, learn
+from engine import draft_checks, knowledge, learn, scope
 from engine import search as workspace_search
 from engine.check_text import numbered_questions, quoted_passages, without_links, words_of
 from engine.cleaning import normalize
@@ -49,6 +49,7 @@ from engine.ops import (
     PersonAddOp,
     PersonContactOp,
     ProjectAddOp,
+    ProjectRoleOp,
     QuestionAddOp,
     QuestionDoneOp,
     QuestionDropOp,
@@ -336,6 +337,10 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     refuse(i, "targets", f"{child} can't go inside a project that is inside it")
             if len(set(op.children)) != len(op.children):
                 refuse(i, "targets", "a project is named twice in children")
+        if isinstance(op, ProjectRoleOp):
+            who = ctx.people.resolve(op.person)
+            if who.status != "ok":
+                refuse(i, "targets", f"{op.person} isn't one known person, so a role can't be set for them")
         # a question or report from a run that never searched: is it already answered by what the workspace knows?
         if (
             name in workspace_search.ASKING_OPS
@@ -409,6 +414,16 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             )
         if ctx.actor != "pm":
             problems += first_week.problems(i, op, lints)
+            # The person's own note decides what they track; the scope checks read what came in.
+            if not _from_pm(view, ctx):
+                for found_name, found in scope.findings(
+                    op,
+                    view,
+                    ctx.people,
+                    ctx.cfg.language.owed_words,
+                    (_projects_of(op) or [about_project])[0],
+                ):
+                    lint(i, found_name, found)
         # plugins' lints: soft checks on the assistant's proposals (never the person's own changes), with the
         # severity the workspace sets, or sets for this project's work (never a refusal by default)
         if ctx.actor != "pm":
@@ -600,7 +615,7 @@ def _evidence(op: OpModel) -> EvidenceIn | None:
 def _projects_of(op: OpModel) -> list[str]:
     if isinstance(op, (NoteOp, FactOp, EventAddOp, ActionAddOp, QuestionAddOp)) and op.project:
         return [op.project]
-    if isinstance(op, RecordLogOp):
+    if isinstance(op, (RecordLogOp, ProjectRoleOp)):
         return [op.project]
     return []
 
@@ -894,7 +909,7 @@ def apply_changeset(
                 if any(p.severity == "refuse" for p in mine):
                     outcome.status = "refused"
                     outcome.reason = "; ".join(p.message for p in mine if p.severity == "refuse")
-                elif any(p.severity == "hold" for p in mine) or _returned_to_someone_else(op, mine, ctx):
+                elif any(p.severity == "hold" for p in mine) or _held_after_return(op, mine, ctx):
                     outcome.status = "held"
                     outcome.reason = "; ".join(p.message for p in mine if p.severity in ("hold", "return"))
                 else:
@@ -991,8 +1006,11 @@ def _reaches_someone_else(op: OpModel, ctx: Context) -> bool:
     return False
 
 
-def _returned_to_someone_else(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
-    return any(p.severity == "return" for p in mine) and _reaches_someone_else(op, ctx)
+def _held_after_return(op: OpModel, mine: list[Problem], ctx: Context) -> bool:
+    """Whether a lint still returned after the fix round holds the op: one that reaches someone else, or one of the
+    scope checks, which hold whoever the item reaches."""
+    returned = [p for p in mine if p.severity == "return"]
+    return bool(returned) and (_reaches_someone_else(op, ctx) or any(p.check in scope.HELD_LINTS for p in returned))
 
 
 def _needs_person_choice(op: OpModel, ctx: Context) -> str | None:
@@ -1356,6 +1374,14 @@ def _apply_op(
             raise NeedsPerson(f"only you can set {op.field} on a {op.kind}")
         tx.update(op.kind, op.id, {op.field: value}, w, read_version=cur.version)
         made(op.kind, op.id)
+    elif isinstance(op, ProjectRoleOp):
+        cur = tx.get("project", op.project)
+        who = ctx.people.resolve(op.person).person
+        roles = [r for r in cur.data.get("roles", []) if r.get("person") != who]
+        tx.update(
+            "project", op.project, {"roles": [*roles, {"person": who, "role": op.role}]}, w, read_version=cur.version
+        )
+        made("project", op.project)
     elif isinstance(op, RecordLogOp):
         cur = tx.get("project", op.project)
         log = [*cur.data.get("log", []), {"on": today.isoformat(), "text": op.text}]

@@ -5519,6 +5519,18 @@
             ],
             "title": "Project"
           },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The part in a project that the op sets: run, design or watch.",
+            "title": "Role"
+          },
           "to": {
             "anyOf": [
               {
@@ -7367,6 +7379,27 @@
         "title": "ProjectPatch",
         "type": "object"
       },
+      "ProjectRoleIn": {
+        "additionalProperties": false,
+        "description": "The person's own part in a project.",
+        "properties": {
+          "role": {
+            "description": "run, design or watch.",
+            "enum": [
+              "run",
+              "design",
+              "watch"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "ProjectRoleIn",
+        "type": "object"
+      },
       "ProjectView": {
         "properties": {
           "budget_usd": {
@@ -7495,6 +7528,17 @@
               }
             ],
             "title": "Priority"
+          },
+          "role": {
+            "default": "run",
+            "description": "The person's part in the project; a project with no role for them is one they run.",
+            "enum": [
+              "run",
+              "design",
+              "watch"
+            ],
+            "title": "Role",
+            "type": "string"
           },
           "spent_usd": {
             "default": 0.0,
@@ -16769,6 +16813,56 @@
           }
         },
         "summary": "Restore Project"
+      }
+    },
+    "/api/projects/{prj}/role": {
+      "post": {
+        "description": "The person's own part in a project, with Undo.",
+        "operationId": "set_project_role_api_projects__prj__role_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "prj",
+            "required": true,
+            "schema": {
+              "title": "Prj",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectRoleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Set Project Role"
       }
     },
     "/api/quality": {

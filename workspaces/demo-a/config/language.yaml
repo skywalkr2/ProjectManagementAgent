@@ -10,6 +10,8 @@ new_term_ignore: [OK, FYI, ASAP, TBD, TBC, EOD, ETA, AM, PM, RE, FW, CC, BCC, NB
 never_shown: []
 # The words that mean the person themselves.
 self_words: [me, myself, I]
+# Words in an action's quoted words that show the person owes it something when everyone it is for is on another team.
+owed_words: [we, us, our, me]
 # Lines an item's title is never taken from: greetings, quoted headers, sign-offs.
 title_skip: ['(hi|hello|hey|dear|good (morning|afternoon|evening))\b', '(from|to|cc|sent|date|subject)\s*:', '(thanks|best|regards|cheers)\b[ ,!.]*$', '-{2,}|>']
 # Notes under this many words with no link are bare confirmations and stay with the change.

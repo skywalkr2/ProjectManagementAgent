@@ -6,7 +6,7 @@ pasted: 'From: Theo Brandt
   Subject: Spine
 
 
-  I''ll send the corrected spine file to Sam by Tuesday.
+  I''ll send the corrected spine file to us by Tuesday.
 
 
   Theo'
@@ -21,10 +21,10 @@ stub_answer:
   summary: Theo will send the corrected spine file by Tuesday.
   ops:
   - op: action.add
-    text: Send the corrected spine file to Sam Rivera
+    text: Send the corrected spine file
     owners:
     - Theo Brandt
     due: '2026-10-13'
     project: PRJ-1
     evidence:
-      quote: I'll send the corrected spine file to Sam by Tuesday
+      quote: I'll send the corrected spine file to us by Tuesday

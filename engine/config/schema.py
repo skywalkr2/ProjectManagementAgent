@@ -909,6 +909,8 @@ def _default_lints() -> dict[str, Severity]:
         "version-number": "return",
         "summary-is-status": "return",
         "unlinked-made": "return",
+        "watched-project": "return",
+        "other-team-item": "return",
     }
 
 
@@ -1070,6 +1072,7 @@ class MessageSettings(ConfigModel):
 
 
 DEFAULT_SELF_WORDS = ("me", "myself", "I")
+DEFAULT_OWED_WORDS = ("we", "us", "our", "me")
 
 
 class ReportedSpeech(ConfigModel):
@@ -1126,6 +1129,12 @@ class LanguageFile(FileModel):
         default_factory=lambda: list(DEFAULT_SELF_WORDS),
         description='The words the language uses for the person themselves ("assign it to me"). A name written as one '
         "of these means the person, whatever case it is in.",
+    )
+    owed_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_OWED_WORDS),
+        description="Words that, in the quoted words of an action for someone on another team, show the person owes "
+        "it something, such as we will send it or they need it from us. Without one of them, or the person's or their "
+        "team's name, such an action is recorded as a fact instead. Matched as whole words, ignoring case.",
     )
     blocked_phrases: list[str] = Field(
         default_factory=lambda: ["confirm", "check whether", "check if", "TBD?"],

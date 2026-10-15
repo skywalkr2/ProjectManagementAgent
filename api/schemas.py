@@ -371,6 +371,7 @@ class OpMeta(BaseModel):
     field: str | None = None
     value: Any = None
     name: str | None = Field(None, description="The name of what the op proposes to add, such as a project.")
+    role: str | None = Field(None, description="The part in a project that the op sets: run, design or watch.")
 
 
 class OpView(BaseModel):
@@ -666,6 +667,9 @@ class ProjectView(BaseModel):
     parent: str | None = Field(None, description="The project this one belongs to.")
     language: str = Field("en-US", description="The language work on it is written in, its own or inherited.")
     language_own: bool = Field(False, description="Whether the language is set on this project rather than inherited.")
+    role: Literal["run", "design", "watch"] = Field(
+        "run", description="The person's part in the project; a project with no role for them is one they run."
+    )
     content_levels: list[str] = Field(default_factory=list)
     budget_usd: float | None = None
     spent_usd: float = Field(0.0, description="What AI work on it and everything in it has cost.")
@@ -713,6 +717,13 @@ class ProjectPatch(BaseModel):
     target: str | None = None
     owner: str | None = None
     summary: str | None = None
+
+
+class ProjectRoleIn(BaseModel):
+    """The person's own part in a project."""
+
+    model_config = ConfigDict(extra="forbid")
+    role: Literal["run", "design", "watch"] = Field(description="run, design or watch.")
 
 
 class Created(BaseModel):

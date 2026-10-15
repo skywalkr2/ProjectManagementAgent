@@ -9,7 +9,7 @@ pasted: 'From: Avery Lane
   Subject: Launch reading
 
 
-  Maya will send the guest list for the launch reading by Nov 20.'
+  Maya will send us the guest list for the launch reading by Nov 20.'
 expect:
 - op: action.add
   owners:
@@ -27,4 +27,4 @@ stub_answer:
     due: '2026-11-20'
     project: PRJ-1
     evidence:
-      quote: Maya will send the guest list for the launch reading by Nov 20
+      quote: Maya will send us the guest list for the launch reading by Nov 20

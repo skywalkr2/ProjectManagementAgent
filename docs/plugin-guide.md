@@ -1121,7 +1121,7 @@ A group of people. The person edits it in the app; no core op changes it.
 
 ### `project` (PRJ-n)
 
-A piece of work being run, possibly inside another (a book in its series). `project.add` starts one; `record.set` changes status, phase, target, priority, summary, parent and language; `record.log` adds to its log; the person edits the rest in the app, and only the person sets its content levels, budget and priority (the assistant's `record.set` of the priority waits for the person).
+A piece of work being run, possibly inside another (a book in its series). `project.add` starts one; `record.set` changes status, phase, target, priority, summary, parent and language; `record.log` adds to its log; `project.role` sets a person's part in it; the person edits the rest in the app, and only the person sets its content levels, budget and priority (the assistant's `record.set` of the priority waits for the person).
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1144,6 +1144,9 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 | `log` | list[LogEntry] | `[]` | The update log, oldest first; `record.log` adds a line dated that day. |
 | `log[].on` | date | required | The day the line was added. |
 | `log[].text` | str | required | What the line says. |
+| `roles` | list[ProjectRole] | `[]` | Each person's part in the project (run, design or watch); `project.role` sets one. A person with no entry runs it. |
+| `roles[].person` | str | required | The id of the person the role is for. |
+| `roles[].role` | Literal['run', 'design', 'watch'] | required | run: they run it. design: they design for it. watch: they only watch it, so the assistant records facts about it and makes no actions or questions for other people. |
 
 ### `action` (ACT-n)
 
@@ -2111,6 +2114,19 @@ Start a new project, optionally inside another (a book in its series). A system 
 | `language` | str \| None | `None` | Its language tag, if it differs from its parent's or the workspace's. |
 | `children` | list[str] | `[]` | Ids of existing projects to move inside the new one (books into a new series), in the same op. |
 | `evidence` | EvidenceIn \| None | see below | The exact words from the input that name the project, when an input is where it came from. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `project.role`
+
+Set a person's part in a project: they run it, design for it, or only watch it. Propose it when the input says who runs, designs or watches a project now ("I'm running it now", "they want me to take it over"). A system op: from the assistant it waits for the person, who may set it on the project's own page. Evidence is required.
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `project` | str | required | The id of the project the role is on. |
+| `person` | str | required | The person whose part it is, by name or id. |
+| `role` | Literal['run', 'design', 'watch'] | required | run: they run it. design: they design for it. watch: they only watch it, so only facts are recorded about it. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that say it; required unless the person makes it. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `question.add`

@@ -18,6 +18,7 @@ const project = (id: string, name: string): S["ProjectView"] => ({
   summary: null,
   language: "en-US",
   language_own: false,
+  role: "run",
   spent_usd: 0,
   open_actions: 0,
   open_questions: 0,
@@ -409,6 +410,40 @@ test("the project form offers Inside (never itself), Language with the inherited
   await user.click(within(row).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-2")).toBe(true));
   expect(calls.find((c) => c.route === "POST projects/PRJ-2")?.body).toMatchObject({ parent: null, language: "en-AU", budget_usd: 120.5 });
+});
+
+test("a project's row says when the person only watches it, and the form's Your role list changes it with Undo", async () => {
+  const user = userEvent.setup();
+  const calls = others({
+    "GET projects": () => [withDetails("PRJ-1", "Watched one", { role: "watch" }), withDetails("PRJ-2", "Run one")],
+    "GET sync": () => syncView({ folder: "" }),
+    "GET jobs": () => [],
+    "POST projects/PRJ-1": () => ({ ok: "PRJ-1" }),
+    "POST projects/PRJ-1/role": () => ({ changeset: "CS-1" }),
+    "POST changesets/CS-1/undo": () => ({ restored: ["PRJ-1"], skipped: [] }),
+  });
+  renderApp(<Setup />);
+  const watched = (await screen.findByText("Watched one")).closest("li")!;
+  expect(watched).toHaveTextContent("you only watch it");
+  expect(screen.getByText("Run one").closest("li")).not.toHaveTextContent("you ");
+  await user.click(within(watched).getByRole("button", { name: "Edit" }));
+  const role = within(watched).getByRole("combobox", { name: /Your role/ });
+  expect(within(role).getAllByRole("option").map((o) => o.textContent)).toEqual(["Run it", "Design for it", "Only watch it"]);
+  expect(role).toHaveValue("watch");
+  await user.selectOptions(role, "run");
+  await user.click(within(watched).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-1/role")).toBe(true));
+  expect(calls.find((c) => c.route === "POST projects/PRJ-1/role")?.body).toEqual({ role: "run" });
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-1/undo")).toBe(true));
+});
+
+test("a project that is being added has no role to pick", async () => {
+  const user = userEvent.setup();
+  others({ "GET projects": () => [], "GET sync": () => syncView({ folder: "" }), "GET jobs": () => [] });
+  renderApp(<Setup />);
+  await user.click(await screen.findByRole("button", { name: "Add a project" }));
+  expect(screen.queryByRole("combobox", { name: /Your role/ })).toBeNull();
 });
 
 test("an empty language and budget are sent as nothing, so the project inherits and has no cap", async () => {

@@ -78,6 +78,13 @@ How to answer:
   the words that name it as the evidence, and file the rest of the answer with no project. It waits for the PM, who may add it, say it is part of an existing
   project, or say it is not a project at all. Never propose a project for a topic, a task, a product feature or a
   passing mention, and never when a project in the list already goes by that name.
+- When the input says who runs, designs or only watches a project in the projects list now ("I'm running it now", "they
+  want me to PM it", "I'm just keeping an eye on it"), propose it with "project.role": the project's id, the person
+  (the PM's id for "I" and "me"), the "role" ("run", "design" or "watch") and the words that say it as the evidence. It
+  takes effect from the PM's own note at once and waits for the PM from anything else. On a project the PM only
+  watches, record what happens as facts; an action or a question for someone else is sent back to be recorded as a
+  fact. The same goes for an action whose owners are all on another team, unless the quoted words show the PM or the
+  PM's team owes it.
 - When an input's signature or body gives a way to reach a person who is in the people directory (a phone number, an
   address, an email address), propose it with "person.contact": the person's id, the "kind" (one of: {{contact_kinds}}),
   the "value" exactly as written, and the words as the evidence. Propose one only for a detail the person's record
