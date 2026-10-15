@@ -80,6 +80,10 @@ uv run cockpit evaluate --pairs --from workspaces/demo-a -w ~/cockpit-exit --acc
   cases plus the ones added since (those have no "before" number). A pair passes only when the later input comes out
   right with the correction not repeated, and a negative pair passes only when its later input is unchanged. A pair
   that fails names what the later run was given, so a gap in learning shows which knowledge didn't reach it.
+- **Status, 2026-10-15:** the golden and harder sets ran at `b136c7d` (73 of 81, 55 of 57; `evals/README.md`). The
+  account's monthly quota ran out during the pairs, so both pair sets run again at `4b672f6` (a spent plan is now read
+  as one, and the pairs check learning rather than wording), on the backup account the owner set for the rest of the
+  month (owner, 2026-10-15: the main account first, a low-cost API model as its checked backup); the report names it.
 - **Keep the computer awake:** start each command with `caffeinate -i` on a Mac. A run frozen by sleep can take many
   minutes to recover, since each call waits up to 90 seconds before giving up.
 - **Then:** send the four files (in your home folder) to the session. It checks them for account names or addresses, writes the comparison
