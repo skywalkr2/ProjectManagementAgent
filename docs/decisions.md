@@ -3,6 +3,32 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: What the pairs on the backup model found
+
+- **Found (O3, both pair sets on the low-cost backup model, `2bcff12`):** imprint 23 of 63, workplace 9 of 30. Read case
+  by case against the code:
+  - **Kept knowledge that never reached the later run** (`given` empty after a kept proposal). Two causes in the code:
+    a reach (`applies_to`) takes any words as task kinds and record types, so a lesson naming a kind of work that
+    doesn't exist applies nowhere, silently; and a routing entry reaches an input only when every word of its topic
+    appears there exactly, so "the advance-copy reviewer list" misses "Which reviewers are getting advance copies?"
+    unless the model also scoped it to the project. The ideal answers pass only because they scope it.
+  - **Two proposals from one correction** (a term and a lesson), though the learning prompt allows at most one.
+  - **Pairs stricter than the design:** a fact of what the mail states beside the expected op, and lesson wording
+    checks ("complet", "already open") where the model said "finished" or "open questions".
+  - **The model's own misses**, kept as the evaluation's signal: a missing owner (held for "Pick an owner", as it
+    should be), no action where one was due, a routing proposal too broad, routing learned as a fact.
+- **Decided (main session, under the owner's rule that each failing pair becomes a fix with its test before real
+  use):**
+  - a reach names only kinds of work and record types that exist, refused otherwise with the list, and the op
+    reference shows the choices;
+  - a routing entry reaches an input whose words share most of its topic, matched on word stems;
+  - a learning answer with more than one proposal goes back once with that reason (a check, 6.7);
+  - the pair report says what was kept, its text and reach, so a failure to reach shows why;
+  - the pairs allow a fact of what the mail states where the golden cases do, and check a lesson by meaning-bearing
+    stems with alternatives, each with a comment.
+- **Impact:** a short fix wave before L7's own work (roadmap, L7); then the owner runs only the failing pairs again on
+  the same account. Design 6.6 and 6.22 say how routing and a reach are matched.
+
 ## 2026-10-15: The op reference shows the "op" field every op carries
 
 - **Found (owner's account check of a low-cost backup model):** the learning round-trip failed with "op 0 has no "op"

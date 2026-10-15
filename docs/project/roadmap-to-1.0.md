@@ -1363,6 +1363,20 @@ L7. **Lessons from running, and the designer's answers, 2026-10-15** (the functi
 answers to the round of 2026-10-15; owner: built after the "after" run (O3) and before phase B; about 4 sessions). Design
 6.6, 6.7 "Follow-on changes", 6.8, 6.16, 6.18, 6.19, 6.21, 6.22. What the code does today is said for each.
 
+First, what the pairs on the backup model found (O3; decisions, 2026-10-15, "What the pairs on the backup model
+found"), each with its test:
+- [ ] **A reach names only what exists**: `applies_to.task_kinds` and `records` take only the kinds of work and record
+  types the workspace has (plugins' included), refused otherwise with the list; the op reference shows the choices.
+  *Today:* any words are kept, and a lesson naming a kind of work that doesn't exist applies nowhere, silently.
+- [ ] **Routing reaches an input about its topic** when they share most of the topic's words, matched on stems.
+  *Today:* every word of the topic must appear exactly.
+- [ ] **One proposal per correction**: a learning answer with more than one goes back once with that reason. *Today:*
+  the prompt asks for at most one; nothing checks it.
+- [ ] **The pair report says what was kept** (text and reach) beside what the later run was given.
+- [ ] **The pairs match the design**: a fact of what the mail states is allowed where the golden cases allow it, and
+  lesson wording is checked by stems with alternatives, each with a comment.
+- [ ] **The owner runs the failing pairs again** on the same account (`--case` for each), and the results are compared.
+
 Calendar entries and dates (answers 10, 11, 13):
 - [ ] **Entries for real events only**: meetings, launches, delivery windows, appointments; never for an action's own due
   date. A new date for an open action is one `record.set` on its due, with no fact and no history entry. Changed in one
