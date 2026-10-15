@@ -20,7 +20,7 @@ first:
     kind: undone
   expect_proposal:
   - op: lesson.add
-    text_has: [complet]  # completion or complete, however the lesson words it
+    text_has: [complet|finish|done]  # completion or complete, however the lesson words it
   keep: true
 later:
   received: '2026-10-14'

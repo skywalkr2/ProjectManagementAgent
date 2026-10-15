@@ -26,6 +26,8 @@ A pair is a file in a workspace's `pairs/` folder. It runs in a fresh copy of th
         # (the first one the input's change made); person / into / form / as the kind needs
       expect_proposal: none | [{op, text_has, person, team, topic_has, negative, term, audience, origin, trust,
                                 projects, scope, optional}]
+                              # a `text_has` / `topic_has` word with `|` is met by any one of its alternatives
+                              # (`complet|finish|done`), each a case-insensitive part of the text
       keep: true | false | discard   # what the person does with each proposal: Keep, nothing, Discard
       allow_active: true      # only when the person's own act makes something active at once (comment why)
       expect_learning: false  # no learning request may be queued
@@ -41,8 +43,9 @@ A pair is a file in a workspace's `pairs/` folder. It runs in a fresh copy of th
 
 `cockpit evaluate --pairs` runs each pair N times on the person's account. The first input's mistake and the setup
 inputs are fixed answers; the learning run, the later input and a proposal from an input are the account's. The report
-gives the pass rate per pair, the account, the agent's program version and what the later run was given from what was
-learned. With the stub, each stage answers from `ideal`, so every pair runs in the test suite.
+gives the pass rate per pair, the account, the agent's program version, what the harness kept after the learning
+stage (each entry with where it reaches) and what the later run was given from what was learned. With the stub, each
+stage answers from `ideal`, so every pair runs in the test suite.
 
 A scenario (a file in `scenarios/`) is one input against the workspace as it is (day 1) and against it after a month
 of history (day 30): `history` is a list of steps (`input` with a fixed answer, `correct` with its `learn` answer and
@@ -79,6 +82,7 @@ from engine.evaluate import (
     _describe,
     _forbidden,
     _hand_in_case,
+    _has_words,
     _hostile_findings,
     _matches,
     _matching,
@@ -527,6 +531,20 @@ class _Play:
         built = build(self.ws, self.store, self.live, request, self.now.date())
         return built.task.stable + "\n" + built.task.request
 
+    def kept(self, ids: list[str]) -> list[str]:
+        """The entries of these ids that are active (kept), one line each: id, text and where it reaches."""
+        view = self.store.read()
+        lines = []
+        for entry_id in dict.fromkeys(ids):
+            kind = knowledge.kind_of(entry_id) or "rule"
+            found = view.get(kind, entry_id)
+            if found is None or found.data["status"] != "active":
+                continue
+            data = found.data
+            text = data.get("text") or " ".join(str(data.get(k, "")) for k in ("term", "meaning")).strip()
+            lines.append(f"{entry_id}: {text} (reach: {_reach(data.get('applies_to'))})".strip())
+        return lines
+
     def given(self, request: str) -> list[str]:
         """What the runs of a request were given from what was learned, one line per entry."""
         view = self.store.read()
@@ -561,7 +579,7 @@ def _with_files(text: str, attached: list[dict[str, Any]]) -> str:
 
 
 def _has(text: str, words: list[str]) -> bool:
-    return all(w.lower() in text.lower() for w in words)
+    return _has_words(text, words)
 
 
 def _entry_matches(spec: Mapping[str, Any], stored: Any) -> bool:
@@ -582,6 +600,17 @@ def _entry_matches(spec: Mapping[str, Any], stored: Any) -> bool:
     if "scope" in spec and target.get("scope", "workspace") != spec["scope"]:
         return False
     return "projects" not in spec or sorted(target.get("projects") or []) == sorted(spec["projects"])
+
+
+def _reach(applies_to: Mapping[str, Any] | None) -> str:
+    """Where an entry reaches, compactly: `everywhere` when nothing narrows it, else its non-empty parts."""
+    parts = []
+    for key, value in (applies_to or {}).items():
+        if value in (None, "", [], {}) or (key == "scope" and value == "workspace"):
+            continue
+        shown = ", ".join(str(v) for v in value) if isinstance(value, list | tuple) else str(value)
+        parts.append(f"{key}={shown}")
+    return "; ".join(parts) or "everywhere"
 
 
 def _describe_entry(stored: Any) -> str:
@@ -673,6 +702,7 @@ def _play_pair(
     extra: list[str] = []
     request = ""
     given: list[str] = []
+    kept: list[str] = []
 
     def result(passed: bool, **more: Any) -> RunResult:
         accounts, cost, seconds = _usage(play)
@@ -688,6 +718,7 @@ def _play_pair(
             seconds=seconds,
             accounts=accounts,
             given=given,
+            kept=kept,
             negative=negative,
             **more,
         )
@@ -734,7 +765,10 @@ def _play_pair(
             queued = play.learn_from(signals, ideal.get("learn"))
             if first.get("expect_learning", True) is False and queued:
                 problems.append("first: learning was queued for a correction that teaches nothing")
-            if first.get("expect_learning", True) and not queued and first.get("expect_proposal") not in (None, "none"):
+            # An answer that recorded its own learning ("Not a project") is the one piece; no run is queued for it.
+            answered = any((play.store.read().get("signal", sid).data.get("learned")) for sid in signals)
+            expects = first.get("expect_proposal") not in (None, "none")
+            if first.get("expect_learning", True) and not queued and not answered and expects:
                 problems.append("first: the correction queued no learning")
         learned = [s for i, s in play.entries().items() if i not in before and s.data["status"] != "discarded"]
         problems += _proposal_findings("first", first.get("expect_proposal"), learned)
@@ -742,6 +776,7 @@ def _play_pair(
         if active and not first.get("allow_active"):
             problems += [f"first: {_describe_entry(s)} became active without the person's Keep" for s in active]
         play.decide([s.id for s in learned], first.get("keep", False))
+        kept = play.kept([s.id for s in learned])
 
         # (b) the later input
         steps = [later, *(later.get("then") or [])]
@@ -819,6 +854,7 @@ def _run_scenario(
     played: list[_Play] = []
     request = ""
     given: list[str] = []
+    kept: list[str] = []
     stopped: str | None = None
     with tempfile.TemporaryDirectory() as tmp:
         try:
@@ -852,6 +888,7 @@ def _run_scenario(
                 extra += [f"day {day}: {e}" for e in more]
                 if day == 30:
                     given = play.given(handed)
+                    kept = play.kept(list(play.entries()))
             for diff in scenario["differences"]:
                 here, other = (1, 30) if diff["day"] == 1 else (30, 1)
                 on_here = bool(_matching(diff["expect"], *seen[here]))
@@ -886,6 +923,7 @@ def _run_scenario(
             seconds=seconds,
             accounts=sorted(set(accounts)),
             given=given,
+            kept=kept,
             got=[] if passed else [_summarize(o) for o in seen.get(30, ([], None))[0]],
         )
         for play in played:

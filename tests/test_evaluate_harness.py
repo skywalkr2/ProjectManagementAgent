@@ -385,3 +385,24 @@ def test_a_run_through_a_command_line_agent_records_its_version_and_account(tmp_
     assert data["program_versions"] == {"agent": "agent 4.5.6"} and data["one_account"] is True
     assert data["accounts"] == ["agent/agent-model"]
     assert "Agent program version (agent): agent 4.5.6" in report.text()
+
+
+# ---- word alternatives and what a pair kept --------------------------------------------------------------------------
+
+
+def test_a_word_with_a_bar_is_met_by_any_one_of_its_alternatives():
+    assert ev._has_words("The work is Finished.", ["complet|finish|done"])
+    assert ev._has_words("A follow-up is not completion", ["complet|finish|done", "FOLLOW"])
+    assert not ev._has_words("Nothing relevant here", ["complet|finish|done"])
+    assert not ev._has_words("It is done", ["complet|finish|done", "follow|nudge"])
+    assert ev._has_words("plain words", ["plain", "words"]), "an entry without a bar is matched as it always was"
+
+
+def test_a_pair_run_says_what_the_harness_kept_and_the_report_prints_it():
+    from engine.pairs import evaluate_pairs
+
+    report = evaluate_pairs(DEMO_B, stub=True, runs=1, env={}, only=["acronym"])
+    kept = report.results[0].kept
+    assert kept and kept[0].startswith("GLOSS-1:") and "(reach:" in kept[0]
+    assert any(line.strip().startswith("kept: GLOSS-1:") for line in report.text().splitlines())
+    assert "GLOSS-1:" in json.loads(report.as_json())["results"][0]["kept"][0]

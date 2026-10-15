@@ -8,7 +8,8 @@ A case may name starting records (`given`, and `given_file` for a state several 
 its input is handed in. Scoring is exact unless a case says `exact: false`: an op the case doesn't expect fails the run.
 A case lists in `allow` the op kinds that are right but optional there, which never count as extra. An expected op
 may name several kinds (`op: [fact, action.add]`) when the case checks something either of them can hold, and is met by
-any one of them.
+any one of them. Wherever an expectation lists words (`text_has`, `topic_has`), a word with `|` is met by any one of its
+alternatives (`complet|finish|done`), each a case-insensitive part of the text.
 A case may name the `project` its input is about (as the person does when handing it in), or give `watched` (title,
 change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a
 held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A
@@ -76,6 +77,7 @@ class RunResult:
     out_of_quota: bool = False  # the account's plan was used up, so the runs after this one are not made
     accounts: list[str] = field(default_factory=list)  # provider/model of every call the case made
     given: list[str] = field(default_factory=list)  # a pair's later run: what it was given from what was learned
+    kept: list[str] = field(default_factory=list)  # a pair: the knowledge entries kept after the learning stage
     negative: bool = False  # a pair whose later output must not change
 
 
@@ -131,6 +133,9 @@ class Report:
             given = next((r.given for r in rows if r.given), None)
             if given:
                 lines.append("        later run was given: " + "; ".join(given))
+            kept = next((r.kept for r in rows if r.kept), None)
+            if kept:
+                lines.append("        kept: " + "; ".join(kept))
         cost = sum(r.cost_usd for r in self.results)
         skipped = self.not_run()
         tail = f"   not run: {skipped} (the account refused the calls; run again later)" if skipped else ""
@@ -512,7 +517,10 @@ def _record(store: Store, outcome: dict[str, Any], kind: str) -> dict[str, Any] 
 
 
 def _has_words(text: str, words: list[str]) -> bool:
-    return all(w.lower() in text.lower() for w in words)
+    """Whether every entry of `words` is in the text, ignoring case. An entry with `|` is met by any one of its
+    alternatives (`complet|finish|done`), for wording a model may choose among."""
+    lowered = text.lower()
+    return all(any(alt.lower() in lowered for alt in w.split("|")) for w in words)
 
 
 def _matches(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store, request_id: str = "") -> bool:

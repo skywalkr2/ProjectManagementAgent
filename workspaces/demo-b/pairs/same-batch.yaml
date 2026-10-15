@@ -38,7 +38,7 @@ first:
     note: This is the same question as the one about foil stamping that is already open.
   expect_proposal:
   - op: lesson.add
-    text_has: [already open]
+    text_has: [already open|open question|already asked|same question]
   keep: true
 later:
   allow: [event.add, fact]  # the calendar entry the prompt asks for beside a dated item; a fact of what the mail states
@@ -60,7 +60,7 @@ later:
       From: Sam Rivera
 
       The ribbon marker changes the endpaper layout. Are we adding the ribbon or not?
-  packet_has: [already open]
+  packet_has: ['# Lessons']  # the lesson is the model's own wording, so the check is that it reaches the packet
 ideal:
   learn:
     summary: Two inputs about one decision are one question.

@@ -1375,9 +1375,11 @@ found"), each with its test:
 - [x] **One piece of learning per correction**: "Not a project" and "It's part of" keep the person's entry and queue no
   learning run (the learning answer's own one-op limit already held). Built:
   `test_the_persons_answer_is_the_one_thing_the_correction_teaches_so_no_learning_run_is_queued`.
-- [ ] **The pair report says what was kept** (text and reach) beside what the later run was given.
-- [ ] **The pairs match the design**: a fact of what the mail states is allowed where the golden cases allow it, and
-  lesson wording is checked by stems with alternatives, each with a comment.
+- [x] **The pair report says what was kept** (text and reach) beside what the later run was given. Built:
+  `test_a_pair_run_says_what_the_harness_kept_and_the_report_prints_it`.
+- [x] **The pairs match the design**: a fact of what the mail states is allowed where the golden cases allow it, and
+  lesson wording is checked by stems with alternatives (`a|b`), each with a comment. Built:
+  `test_a_word_with_a_bar_is_met_by_any_one_of_its_alternatives`; both pair sets pass with their ideal answers.
 - [ ] **The owner runs the failing pairs again** on the same account (`--case` for each), and the results are compared.
 
 Calendar entries and dates (answers 10, 11, 13):
