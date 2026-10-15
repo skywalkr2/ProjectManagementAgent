@@ -28,6 +28,7 @@ A case, pair and scenario name the skills they prove (`skills:`, ids from `engin
 added to the capability matrix for every skill its case names (`engine/ai/matrix.py`).
 
 Learning pairs and the day-30 scenario are run the same way, by `engine/pairs.py`, which documents their format.
+Replays of real misses start from the person's own action and score the records' end state (`engine/replays.py`).
 """
 
 from __future__ import annotations

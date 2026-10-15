@@ -1,0 +1,16 @@
+id: already-asked-files-the-question-as-sent
+title: A question the person already asked themselves is filed as sent, with no second copy and no learning
+skills: [no-repeat-question]
+received: '2026-10-09'
+action:
+  kind: asked
+  id: Q-1
+expect_learning: false
+expect_records:
+- kind: question
+  id: Q-1
+  where: {status: sent, to: PER-2}
+  count: 1
+forbid_records:
+- kind: question
+  where: {status: open, to: PER-2}

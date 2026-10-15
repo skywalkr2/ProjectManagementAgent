@@ -1485,11 +1485,19 @@ none is, the request goes to the PM instead. Secrets come from secret references
 **Naming.** The assistant's display name is configuration and is the only name people see; vendor and model names appear only in
 `config/ai.yaml`, the adapters, the usage reports and the evaluation reports.
 
-**Replaying the real event** (functional designer's lessons from running, 2026-10-15; *not yet built*, roadmap L7). Every
+**Replaying the real event** (functional designer's lessons from running, 2026-10-15; built, roadmap L7). Every
 real miss becomes a replayable case: the starting records, the person's action through the same entry point the screen
 uses (an edit, a move, a button), and the expected end state, scored on the records as they end up as well as on the ops.
 Replays run in a throwaway copy, never the person's workspace, since Undo rightly refuses to roll back a record that has
-changed since. Replayed misses are a third set beside the golden and harder sets.
+changed since. Replayed misses are a third set beside the golden and harder sets. *As built* (`engine/replays.py`, which
+documents the file format): a replay is a file in a workspace's `replays/` folder with its `skills:`, starting records,
+setup inputs with fixed answers, the person's `action` (the same keys and the same code as a pair's correction,
+`engine/pairs.py`), and the end state it expects: records that must be there (with exact counts), records that must not,
+and signals the action must have recorded. A learning run the action queues is the account's (the stand-in answers from
+`ideal`). `cockpit evaluate --replays` runs the set and adds it to the capability matrix as its own set. The shipped
+replays are one per real miss: "Not a project" and "It's part of" each keep the person's own entry and queue no learning
+run, a moved decision stays a decision, a question marked as already asked is filed as sent, and a calendar entry sent
+back is undone with the work queued again. **Built:** `tests/test_replays.py`.
 
 **Extras are weighed and tracked** (functional designer's answers, 2026-10-15; built, roadmap L7). Missing and forbidden ops stay exact. An op a case didn't expect is weighed
 by its reach: a fact is free (a note is never counted); any other extra that stays inside the workspace (an action, a calendar entry, a question to the person, an extra
@@ -1849,8 +1857,14 @@ names it; otherwise as **present**. Both are checked without asking the model; t
 as a hint on the evidence line and is never counted. A rule present but not applied for `knowledge.rule_review_days` (30)
 is offered for review on the weekly card, most-present first, with Keep (resets the clock), Narrow and Retire. A rule
 enforced by a code check or an invariant is never flagged: the check holds it whether or not anything triggers.
-**Checks on every output** (functional designer's answers, 2026-10-15; *not yet built*, roadmap L7): a rule with a check runs it on every run's output in its scope before the
-changeset applies, not only on stage moves, so a checked rule counts as applied each time it holds.
+**Checks on every output** (functional designer's answers, 2026-10-15; built, roadmap L7): a rule with a check runs it on every run's output in its scope, not only
+on stage moves, so a checked rule counts as applied each time. *As built* (`engine/rule_use.py::record_applied`, `engine/stages.py::output_check_ran`): once a
+run's changeset is applied, each active rule the run was given that names a code check has the check run on every record the changeset's applied ops wrote
+(as the records are then) that the rule's scope covers (`task_kinds` names the run's kind of work or is empty, `records` and `filter` take in the record, the
+same test a stage entry uses), and the rule is counted as applied on the run's knowledge log whether the check held or not (6.22: "passing or refusing"). A
+rule whose scope covers nothing the output wrote stays present. A failing check changes nothing yet; it counts as applied, as the design above says (decisions, 2026-10-16). Running it
+before the change applies, with one return to the assistant and then a hold for the person when the output reaches
+someone, as lints do, is phase E. **Built:** `tests/test_rule_output_checks.py`.
 
 **Search before asking.** A run that needs more than its packet holds asks for it with a `search` request: words, ids, a
 project, which kinds (facts, past inputs, records, knowledge). It is not a live tool call, so it works on every kind of AI

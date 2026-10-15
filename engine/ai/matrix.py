@@ -39,7 +39,8 @@ VERSION_SECONDS = 600
 
 
 def case_set_key(kind: str, template: str) -> str:
-    """The name a set of cases is kept under: its kind (`cases` or `pairs`) and the workspace folder it came from."""
+    """The name a set of cases is kept under: its kind (`cases`, `pairs` or `replays`) and the workspace folder it
+    came from."""
     return f"{kind}:{template}"
 
 
@@ -238,8 +239,9 @@ def _skills_of(template: Path, kind: str) -> dict[str, list[str]] | None:
     names; None when they don't load. Kept until one of the files changes, since reading them all takes a moment."""
     from engine.evaluate import load_cases
     from engine.pairs import load_pairs, load_scenarios
+    from engine.replays import load_replays
 
-    folders = ("evals",) if kind == "cases" else ("pairs", "scenarios")
+    folders = {"cases": ("evals",), "pairs": ("pairs", "scenarios"), "replays": ("replays",)}[kind]
     signature = tuple(
         (str(p), p.stat().st_mtime_ns, p.stat().st_size) for f in folders for p in sorted((template / f).glob("*.yaml"))
     )
@@ -247,7 +249,11 @@ def _skills_of(template: Path, kind: str) -> dict[str, list[str]] | None:
     if held is not None and held[0] == signature:
         return held[1]
     try:
-        items = load_cases(template) if kind == "cases" else [*load_pairs(template), *load_scenarios(template)]
+        items = {
+            "cases": lambda: load_cases(template),
+            "pairs": lambda: [*load_pairs(template), *load_scenarios(template)],
+            "replays": lambda: load_replays(template),
+        }[kind]()
     except (ValueError, OSError):
         return None
     found = {c["id"]: list(c.get("skills") or []) for c in items}
@@ -257,8 +263,8 @@ def _skills_of(template: Path, kind: str) -> dict[str, list[str]] | None:
 
 def case_sets(template: Path, packs_of: Path | None = None) -> dict[str, dict[str, str]]:
     """The hashes of the cases that name each skill, for a workspace's golden cases (with the cases of the plugins
-    enabled in `packs_of`) and for its learning pairs and scenarios, as `case_set_key` names them. A set that doesn't
-    load says nothing."""
+    enabled in `packs_of`), for its learning pairs and scenarios and for its replays, as `case_set_key` names them. A
+    set that doesn't load says nothing."""
     from engine.evaluate import load_pack_cases
 
     found: dict[str, dict[str, str]] = {}
@@ -273,4 +279,7 @@ def case_sets(template: Path, packs_of: Path | None = None) -> dict[str, dict[st
     paired = _skills_of(template, "pairs")
     if paired is not None:
         found[case_set_key("pairs", template.name)] = set_hashes(paired)
+    replayed = _skills_of(template, "replays")
+    if replayed:
+        found[case_set_key("replays", template.name)] = set_hashes(replayed)
     return found

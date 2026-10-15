@@ -21,10 +21,10 @@ A pair is a file in a workspace's `pairs/` folder. It runs in a fresh copy of th
       then: [{received, <input keys>, answer: {...}, label}]    # more inputs after it, with fixed answers
       correction:             # what the person does, through the same code the screens use
         kind: sent_back | undone | answered | moved | dropped | picked_owner | not_a_project | part_of |
-              new_person | set_aside
+              new_person | set_aside | asked
         note: ...             # the person's words; of: <label> (default: the first input's change)
-        # moved/picked_owner/answered/dropped name a record: id or @action, @question, @event, @fact, @held_question
-        # (the first one the input's change made); person / into / form / as the kind needs
+        # moved/picked_owner/answered/dropped/asked name a record: id or @action, @question, @event, @fact,
+        # @held_question (the first one the input's change made); person / into / form / as the kind needs
       expect_proposal: none | [{op, text_has, person, team, topic_has, negative, term, audience, origin, trust,
                                 projects, scope, optional}]
                               # a `text_has` / `topic_has` word with `|` is met by any one of its alternatives
@@ -121,7 +121,10 @@ CORRECTIONS = (
     "part_of",
     "new_person",
     "set_aside",
+    "asked",
 )
+#: The corrections that act on an earlier change, so they need one to exist.
+CHANGE_CORRECTIONS = frozenset({"sent_back", "undone", "not_a_project", "part_of", "set_aside"})
 KEEPS = (True, False, "discard")
 INPUT_KEYS = ("received", "pasted", "note", "project", "typed_on", "watched", "attached", "label")
 _PERSON = WriteContext(actor="pm", trust="trusted", op="pair.person")
@@ -449,8 +452,10 @@ class _Play:
     def correct(self, spec: Mapping[str, Any]) -> list[str]:
         """Make a correction as the person would, through the code the screens use. Returns the signals it recorded."""
         before = {s.id for s in self.store.read().list("signal")}
-        cs = self.changeset_of(spec.get("of"))
-        cfg, kind, note = self.fixed, spec["kind"], spec.get("note") or ""
+        kind = spec["kind"]
+        needs = kind in CHANGE_CORRECTIONS or spec.get("of") or self.first_changeset
+        cs = self.changeset_of(spec.get("of")) if needs else None
+        cfg, note = self.fixed, spec.get("note") or ""
         when = self.tick()
         ref = lambda key: self.ref(spec.get(key), cs)  # noqa: E731
         try:
@@ -468,6 +473,9 @@ class _Play:
                     [{"op": "question.move", "id": ref("id"), "to": ref("person")}],
                     "Asked someone else",
                 )
+            elif kind == "asked":
+                op = {"op": "question.mark_sent", "id": ref("id")}
+                apply_as_person(self.store, cfg, [op], "Marked a question as sent")
             elif kind == "dropped":
                 op = "question.drop" if str(ref("id")).startswith("Q-") else "action.drop"
                 apply_as_person(self.store, cfg, [{"op": op, "id": ref("id"), "reason": note}], "Dropped")

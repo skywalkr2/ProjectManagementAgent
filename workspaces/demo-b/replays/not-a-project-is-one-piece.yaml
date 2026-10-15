@@ -1,0 +1,37 @@
+id: not-a-project-is-one-piece
+title: Marking words as not a project keeps the person's own entry and queues no learning run of its own
+skills: [use-lesson]
+received: '2026-10-09'
+setup:
+- received: '2026-10-09'
+  pasted: |-
+    From: Maya Okafor
+
+    We are starting the Harbor Reading Series next month. Sam Rivera will draft the schedule by the 30th.
+  answer:
+    summary: A schedule for a series that isn't a project here yet; the project is proposed.
+    ops:
+    - op: action.add
+      text: Draft the schedule
+      owners: [Sam Rivera]
+      due: '2026-10-30'
+      evidence:
+        quote: Sam Rivera will draft the schedule by the 30th
+    - op: project.add
+      name: Harbor Reading Series
+      evidence:
+        quote: starting the Harbor Reading Series next month
+action:
+  kind: not_a_project
+expect_learning: false
+expect_signals: [held_declined]
+expect_records:
+- kind: glossary_entry
+  where: {term: Harbor Reading Series, status: active, origin: person}
+  text_has: [not a project]
+  count: 1
+forbid_records:
+- kind: project
+  where: {name: Harbor Reading Series}
+- kind: lesson
+- kind: routing_entry

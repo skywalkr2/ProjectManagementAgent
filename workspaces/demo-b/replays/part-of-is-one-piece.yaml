@@ -1,0 +1,38 @@
+id: part-of-is-one-piece
+title: Filing a found project under an existing one keeps the work and one entry naming it, with no learning run of its own
+skills: [use-lesson]
+received: '2026-10-09'
+setup:
+- received: '2026-10-09'
+  pasted: |-
+    From: Maya Okafor
+
+    The Hardcover Foil Run starts next week. Sam Rivera will draft the run plan by the 30th.
+  answer:
+    summary: A plan for a print run that is proposed as a project of its own.
+    ops:
+    - op: action.add
+      text: Draft the run plan
+      owners: [Sam Rivera]
+      due: '2026-10-30'
+      evidence:
+        quote: Sam Rivera will draft the run plan by the 30th
+    - op: project.add
+      name: Hardcover Foil Run
+      evidence:
+        quote: The Hardcover Foil Run starts next week
+action:
+  kind: part_of
+  into: PRJ-1
+expect_learning: false
+expect_signals: [held_declined]
+expect_records:
+- kind: glossary_entry
+  where: {term: Hardcover Foil Run, status: active, origin: person}
+  text_has: [The Salt Orchard launch]
+  count: 1
+forbid_records:
+- kind: project
+  where: {name: Hardcover Foil Run}
+- kind: lesson
+- kind: routing_entry

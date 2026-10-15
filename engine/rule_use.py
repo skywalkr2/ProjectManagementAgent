@@ -1,7 +1,8 @@
 """Whether a standing rule applied to a run, or was only present (design 6.22).
 
 A run's knowledge log lists the rules it was given. Each is **applied** when the run's changeset has an op of a kind the
-rule constrains or sets a field it constrains, when the check the rule names ran on the output, or when a later
+rule constrains or sets a field it constrains, when the check the rule names ran on the output (it runs on every
+output the rule's scope covers, holding or not), or when a later
 correction names the rule; otherwise it is **present**. All of this is decided from records and never by asking the
 model, and the model's own claim that it followed a rule is never counted.
 """
@@ -11,7 +12,9 @@ from __future__ import annotations
 from collections.abc import Collection, Iterable
 from typing import Any
 
+from engine.config.schema import RuleScope
 from engine.records import Rule
+from engine.stages import output_check_ran
 from engine.storage import WriteContext
 
 _ENGINE = WriteContext(actor="engine", trust="trusted", op="run.knowledge")
@@ -58,23 +61,51 @@ def _mark(tx: Any, run_id: str, rule_ids: Iterable[str]) -> list[str]:
     return fresh
 
 
+def _written(view: Any, changeset: Any) -> list[Any]:
+    """The records a changeset's applied ops wrote, as they are now. A record that is gone is left out."""
+    seen: dict[tuple[str, str], Any] = {}
+    for outcome in changeset.data.get("ops", []):
+        if outcome.get("status") != "applied":
+            continue
+        for ref in outcome.get("records") or []:
+            key = (ref.get("kind", ""), ref.get("id", ""))
+            if key not in seen and key[0] and key[1]:
+                found = view.get(*key)
+                seen[key] = found if found is not None and not found.deleted else None
+    return [r for r in seen.values() if r is not None]
+
+
 def record_applied(store: Any, run_id: str, changeset_id: str, checks_ran: Collection[str] = ()) -> list[str]:
     """After a run's changeset is applied: mark each rule the run was given that its ops, or a check that ran on its
-    output, show applied. `checks_ran` is the names of the checks that ran on the output; no check runs on a run's
-    output today, so callers leave it empty. Returns the rule ids marked."""
+    output, show applied. A rule's code check runs on the records the changeset wrote when the rule's scope covers
+    them (engine/stages.py), and the rule counts as applied whether the check held or not. `checks_ran` adds names
+    of checks a caller knows ran on the output. Returns the rule ids marked."""
+    view = store.read()
+    run, changeset = view.get("run", run_id), view.get("changeset", changeset_id)
+    if run is None or changeset is None or not run.data.get("knowledge"):
+        return []
+    ops = [o.get("op") or {} for o in changeset.data.get("ops", [])]
+    request = view.get("request", changeset.data.get("request") or "")
+    task = request.data.get("task") if request is not None else None
+    written = None
+    shown = []
+    for rule_id in run.data["knowledge"].get("given", []):
+        if not rule_id.startswith(f"{Rule.prefix}-"):
+            continue
+        rule = view.get("rule", rule_id)
+        if rule is None or rule.data.get("status") != "active":
+            continue
+        ran = set(checks_ran)
+        if rule.data.get("check") and rule.data["check"] not in ran:
+            written = _written(view, changeset) if written is None else written
+            scope = RuleScope.model_validate(
+                {k: v for k, v in (rule.data.get("applies_to") or {}).items() if k in RuleScope.model_fields}
+            )
+            if output_check_ran(store, rule.data["check"], scope, task, written, view):
+                ran.add(rule.data["check"])
+        if applied_by(rule, ops, ran):
+            shown.append(rule_id)
     with store.transaction() as tx:
-        run = tx.get("run", run_id)
-        changeset = tx.get("changeset", changeset_id)
-        if run is None or changeset is None or not run.data.get("knowledge"):
-            return []
-        ops = [o.get("op") or {} for o in changeset.data.get("ops", [])]
-        shown = []
-        for rule_id in run.data["knowledge"].get("given", []):
-            if not rule_id.startswith(f"{Rule.prefix}-"):
-                continue
-            rule = tx.get("rule", rule_id)
-            if rule is not None and applied_by(rule, ops, checks_ran):
-                shown.append(rule_id)
         return _mark(tx, run_id, shown)
 
 

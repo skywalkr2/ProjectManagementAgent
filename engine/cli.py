@@ -237,6 +237,11 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="run the learning pairs and the day-30 scenario (in pairs/ and scenarios/) instead of the golden cases",
     )
+    sp.add_argument(
+        "--replays",
+        action="store_true",
+        help="run the replayed misses (in replays/): the person's own action, scored on the records it leaves",
+    )
     sp.add_argument("--json", action="store_true", help="print the report as JSON")
     sp.add_argument(
         "--out",
@@ -940,8 +945,12 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
     from engine.config import load_config
     from engine.evaluate import Report, evaluate
     from engine.pairs import evaluate_pairs
+    from engine.replays import evaluate_replays
     from engine.state_file import write_whole
 
+    if args.pairs and args.replays:
+        print("cockpit: choose --pairs or --replays, not both.", file=sys.stderr)
+        return 1
     if args.case_failed:
         failed_cases, reason = _failed_cases_of(args.case_failed.expanduser())
         if reason:
@@ -953,7 +962,7 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
     if template is None:
         print("cockpit: say which cases to run: --workspace <your workspace> or --from <a workspace>.", file=sys.stderr)
         return 1
-    folder = "pairs" if args.pairs else "evals"
+    folder = "pairs" if args.pairs else "replays" if args.replays else "evals"
     if not (template / folder).is_dir():
         print(
             f"cockpit: {template} has no {folder}/ folder. Add --from with a workspace that has one, "
@@ -969,8 +978,8 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
             config_dir = Path(tmp)
             shutil.copyfile(args.ai_config, config_dir / "ai.yaml")
         settings = load_config(config_dir, env={}).ai.evaluation
-    # A plugin's own cases come with the golden set; the learning pairs are the core's.
-    how = {} if args.pairs else {"packs_of": workspace}
+    # A plugin's own cases come with the golden set; the learning pairs and the replays are the core's.
+    how = {} if args.pairs or args.replays else {"packs_of": workspace}
     out = args.out.expanduser() if args.out else None
     runs = args.runs or settings.runs
     done: list[Any] = []
@@ -981,7 +990,8 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
             done.append(result)
             write_whole(out, Report(args.account or "configured", runs, done).as_json())
 
-    report = (evaluate_pairs if args.pairs else evaluate)(
+    run_set = evaluate_pairs if args.pairs else evaluate_replays if args.replays else evaluate
+    report = run_set(
         template,
         account=args.account,
         runs=runs,

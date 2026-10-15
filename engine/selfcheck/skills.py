@@ -1,8 +1,8 @@
 """The skills check: every evaluation case, learning pair and scenario the product ships names the skills it proves
 (design 6.16, "What a model can do, measured"), and every name is on the skills list.
 
-It reads the fictional workspaces' `evals/`, `pairs/` and `scenarios/` folders and the evaluation cases of the bundled
-plugins. A case with no `skills:` or an unknown skill id is a finding; a file that doesn't load is one too.
+It reads the fictional workspaces' `evals/`, `pairs/`, `scenarios/` and `replays/` folders and the evaluation cases of
+the bundled plugins. A case with no `skills:` or an unknown skill id is a finding; a file that doesn't load is one too.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from engine.selfcheck.scans import REPO, Finding
 from engine.skills import check_named
 from engine.yaml_load import load_yaml
 
-FOLDERS = ("evals", "pairs", "scenarios")
+FOLDERS = ("evals", "pairs", "scenarios", "replays")
 
 
 def _cases(folder: Path) -> list[tuple[Path, Any]]:

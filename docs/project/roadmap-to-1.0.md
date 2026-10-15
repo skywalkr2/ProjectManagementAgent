@@ -1501,8 +1501,19 @@ Learning and scope (answers 3 to 7, 14, 22, 23):
   `test_i_told_a_name_and_a_name_asking_me_to_are_not_reported_content`,
   `test_a_pasted_chat_is_reported_as_a_whole`,
   `test_the_reported_speech_words_have_defaults_and_demo_values_in_both_workspaces`.
-- [ ] **Checks run on every output** a rule's scope covers, so a checked rule counts as applied each time it holds.
-  *Today:* stage checks run only on stage moves.
+- [x] **Checks run on every output** a rule's scope covers, so a checked rule counts as applied each time it holds.
+  Built: after a run's changeset is applied, each active rule the run was given that names a code check has it run on the
+  records the changeset wrote that the rule's scope covers (`task_kinds`, `records`, `filter`), and counts as applied
+  whether the check held or not (design 6.22: "passing or refusing"). `tests/test_rule_output_checks.py`:
+  `test_a_rule_whose_check_holds_on_the_output_it_covers_counts_as_applied`,
+  `test_a_check_that_fails_on_the_output_still_counts_the_rule_as_applied`,
+  `test_a_rule_stays_present_when_its_scope_does_not_cover_what_the_output_wrote`,
+  `test_a_scope_naming_the_task_kind_and_the_filter_of_the_output_is_covered`,
+  `test_nothing_runs_for_an_output_that_wrote_nothing_or_ops_that_were_not_applied`,
+  `test_a_retired_rule_and_a_rule_the_run_was_not_given_are_not_marked`,
+  `test_a_record_the_output_wrote_that_is_gone_is_left_out`,
+  `test_a_check_that_is_unavailable_does_not_break_the_marking`. A failing check changes nothing yet (decisions, 2026-10-16;
+  the return-then-hold behavior is in phase E).
 - [x] **"Not now"** on the rules review line, starting its week; **a floor** of 3 identical refusals in a week brings a
   check's guidance in whatever the share; **the catch-up** learns from the correction with the person's own words first;
   **a series fact**: a parent project's fact marked to reach its children. Built: `tests/test_rule_review.py`:
@@ -1519,8 +1530,17 @@ Learning and scope (answers 3 to 7, 14, 22, 23):
   `tests/test_fact_basis.py::test_a_fact_marked_to_reach_the_projects_inside_its_own_is_kept_so_and_needs_its_project`.
 
 Proving it (lesson 2; answers 2, 21):
-- [ ] **Replay cases**: start from the person's own action through the screen's entry point and score the records' end
-  state; one per real miss above, as a third set. *Today:* cases and pairs start from an input.
+- [x] **Replay cases**: start from the person's own action through the screen's entry point and score the records' end
+  state; one per real miss above, as a third set. Built: `replays/` in both fictional workspaces, loaded and scored by
+  `cockpit evaluate --replays` (`engine/replays.py`, reusing the pairs' correction code), each with `skills:`; one per
+  real miss that has a person's action: "Not a project" and "It's part of" are one piece of learning, a moved decision
+  stays a decision, a question already asked is filed as sent, a calendar entry for an action's own date is sent back.
+  `tests/test_replays.py`: `test_every_replay_passes_with_the_stand_in` (both workspaces),
+  `test_a_replay_acts_through_the_entry_point_the_screen_uses`,
+  `test_marking_not_a_project_that_also_learns_a_lesson_of_its_own_fails`,
+  `test_a_send_back_that_leaves_the_calendar_entry_in_place_fails`, `test_a_mark_as_asked_that_changes_nothing_fails`,
+  `test_the_command_runs_the_replays_and_adds_them_to_the_matrix`. Not replayed: the other real misses (the model's own
+  misses, the reach and routing fixes) start from an input, not a person's action, and stay in the golden set and pairs.
 - [x] **Extras weighed and tracked**: missing and forbidden stay exact; a fact or note is free, an internal action or
   entry costs a little, anything reaching another person fails; extras per run reported over time. Built: a run passes
   when nothing is missing or forbidden, no extra reaches another person, and the weighed extras are within
@@ -1998,6 +2018,9 @@ time, nothing went out without approval, a backup succeeded, and the repeat-corr
 ## Phase E: the rest of version 1
 
 Order by what protects real data first, then by what the packs ask for:
+- [ ] **A rule's check that fails on an output** runs before the change applies: one return to the assistant with the
+  rule's guidance, then a hold for the person when the output reaches someone, as lints do (decisions, 2026-10-16).
+  *Today:* checks run after the change applies and a failure only counts.
 - [ ] **The governor:** stale-item sweeps, outage handling, `sync.sources` (sources above a level encrypted or left out of the synced folder), the scheduled export with its remote; restore to a point in
   time (a single record comes in phase L).
   Outage handling includes a draft cut off at the output limit whose continuation call finds no network: today it is

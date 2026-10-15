@@ -1,0 +1,49 @@
+id: a-moved-date-sent-back-leaves-no-calendar-entry
+title: A calendar entry made for an action's own new date, sent back, is undone, the work is queued again with the note, and a lesson is proposed
+skills: [dates, use-lesson]
+received: '2026-10-14'
+setup:
+- received: '2026-10-14'
+  project: PRJ-1
+  pasted: |-
+    From: Sam Rivera
+
+    The final interior file will go to the printer on the 21st instead of the 16th.
+  answer:
+    summary: The interior file is now due at the printer on the 21st, as a calendar entry.
+    ops:
+    - op: event.add
+      title: Final interior file to the printer
+      start: '2026-10-21'
+      project: PRJ-1
+      evidence:
+        quote: The final interior file will go to the printer on the 21st instead of the 16th
+action:
+  kind: sent_back
+  note: The 21st is only the new due date of sending the file. Change the action's due date and make no calendar entry.
+expect_learning: true
+expect_signals: [sent_back]
+expect_records:
+- kind: request
+  where: {state: queued, task: notes}
+  text_has: [Sent back by the PM, new due date]
+  count: 1
+- kind: lesson
+  where: {status: proposed}
+  text_has: [due date]
+- kind: action
+  id: ACT-1
+  where: {due: '2026-10-16'}
+forbid_records:
+- kind: event
+  text_has: [printer]
+ideal:
+  learn:
+    summary: A new date for an open action changes its due date.
+    topic: a new date for an open action
+    ops:
+    - op: lesson.add
+      text: A new date for an open action is that action's new due date, never a calendar entry.
+      guard: When an input gives a new date for an action that is open, change the action's due date and add no calendar entry.
+      evidence:
+        quote: The 21st is only the new due date of sending the file

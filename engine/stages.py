@@ -13,6 +13,28 @@ def wording(cfg, key):
     return cfg.stages.wording.get(key, STAGE_WORDING[key])
 
 
+def covers(scope, record):
+    """Whether a rule's record scope (`records` and `filter`) takes in the record; an empty `records` takes in all."""
+    return not (
+        scope.records
+        and not any(record.kind == target or target.startswith(record.kind + ".") for target in scope.records)
+    ) and all(record.data.get(key) == value for key, value in scope.filter.items())
+
+
+def output_check_ran(store, check_id, scope, task, records, view=None):
+    """Whether a rule's code check ran on a run's output: the rule's scope names the task kind (or all) and takes in
+    at least one of the records the output wrote. The check runs on each such record, and the rule counts as having
+    applied whether it held or not; what a failing check does to the output is not decided here."""
+    if scope.task_kinds and task not in scope.task_kinds:
+        return False
+    ran = False
+    for record in records:
+        if covers(scope, record):
+            store.plugins.stage_check(check_id, record, view)
+            ran = True
+    return ran
+
+
 def entry_check(store, check_id, record, view=None):
     cfg = store.plugins.cfg
     source = view if view is not None else store.read()
@@ -21,11 +43,7 @@ def entry_check(store, check_id, record, view=None):
         if check_id in rule_names(source):
             return StageCheckResult(False, wording(cfg, "rule_inactive"))
         return store.plugins.stage_check(check_id, record, view)
-    scope = rule.applies_to
-    if (
-        scope.records
-        and not any(record.kind == target or target.startswith(record.kind + ".") for target in scope.records)
-    ) or any(record.data.get(key) != value for key, value in scope.filter.items()):
+    if not covers(rule.applies_to, record):
         return StageCheckResult(False, wording(cfg, "rule_scope"))
     if rule.check is None:
         return StageCheckResult(False, wording(cfg, "rule_prose"))

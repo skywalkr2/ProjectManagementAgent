@@ -3,6 +3,14 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: A rule's check that fails on an output changes nothing yet
+
+- **Decided (main session):** a rule's check now runs on every output its scope covers and counts as applied whether it
+  holds or fails (design 6.22). A failure doesn't hold or refuse the output yet.
+- **Why:** turning failures into a return and a hold needs the check to run before the change applies, the same path
+  lints take; that belongs with the rest of version 1, not with L7's counting.
+- **Impact:** a phase E item; design 6.22 and the L7 item say so.
+
 ## 2026-10-16: What "three ops the assistant may propose" means in the code
 
 - **Found:** bringing back a set-aside item (`mail.restore`) and merging or retiring a list value (`list.merge`,

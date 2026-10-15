@@ -1,0 +1,23 @@
+id: moved-decision-stays-a-decision
+title: A decision moved to someone else stays a decision, is open for them, and the move is recorded as a routing
+skills: [follow-routing]
+received: '2026-10-09'
+action:
+  kind: moved
+  id: Q-2
+  person: PER-2
+expect_learning: true
+expect_signals: [routed]
+expect_records:
+- kind: question
+  id: Q-2
+  where: {kind: decision, to: PER-2, status: open}
+  count: 1
+forbid_records:
+- kind: question
+  where: {kind: question, title: "Route Optimizer Rollout: move the cut-over to the January window?"}
+ideal:
+  learn:
+    summary: Nothing to generalize.
+    topic: who decides the cut-over window
+    ops: []
