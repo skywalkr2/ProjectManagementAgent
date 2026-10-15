@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: The follow-on run's open points
+
+- **Decided (main session, from design 6.7 "the assistant's own move from an input starts it too"):** an `event.set`
+  op lets the assistant move an entry's start or end from an input (data tier, evidence required, Undo), which starts
+  the follow-on run like the person's edit; a move a connected calendar's sync writes starts one too, since a real
+  meeting moved. A drafted correction keeps the rule that a question to someone carries a link they can open; with
+  none, the run leaves a note for the person instead.
+- **Left for the owner:** the two candidate kinds the design names without words to find them by ("open actions due
+  before the new day that are settled there", "anything said to be covered there"); until decided they are not
+  looked for.
+- **Impact:** two L7 items (below the follow-on item); design 6.7 unchanged in substance.
+
 ## 2026-10-16: The follow-on run (phase L7)
 
 - **Decided (main session, for review):** one request per save, queued in the save's own transaction like learning, for a

@@ -1483,6 +1483,9 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   needs one), so the run leaves a note instead when the item's project has none; whether a correction is exempt from
   the link rule is the owner's call; (4) a move that a connected calendar's sync makes (not the person, not an input)
   starts nothing.
+- [ ] **The assistant moves an entry from an input** (`event.set`: start or end, data tier, evidence, Undo), which
+  starts the follow-on run; **a calendar sync's move starts it too** (decisions, 2026-10-16). *Today:* only the person's
+  edit of an entry starts it.
 - [x] **Records can name the calendar entry, or the series, they belong to**; an item on a series sits on its next
   instance and rolls to the next one when an instance passes with it unsettled. Built (the core's part; the agenda
   that uses it is the project management pack's, phase P): `series` record, `event.series`, `event` and `series` on an
