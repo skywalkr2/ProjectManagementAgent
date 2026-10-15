@@ -6,6 +6,7 @@ Each type has a kind (its table name in exports) and an id prefix. Plugins add r
 
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Annotated, Any, ClassVar, Literal
@@ -122,6 +123,13 @@ MAX_REF_DEPTH = 6
 
 
 def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> list[tuple[str, str]]:
+    """The reference paths of a model, worked out once per model class (they depend only on the class) and copied for
+    each caller. See `_ref_fields`."""
+    return list(_ref_fields(model, _prefix, _depth))
+
+
+@functools.cache
+def _ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> tuple[tuple[str, str], ...]:
     """References are honored (checked on write, guarded on delete, rendered as names) up to MAX_REF_DEPTH levels into
     a record: its own fields, models in them, and models in those, and so on.
 
@@ -174,8 +182,8 @@ def ref_fields(model: type[BaseModel], _prefix: str = "", _depth: int = 0) -> li
         ]
         if _depth < MAX_REF_DEPTH - 1:
             for inner, many in nested(info.annotation):
-                found += ref_fields(inner, f"{path}[]." if many else f"{path}.", _depth + 1)
-    return found
+                found += _ref_fields(inner, f"{path}[]." if many else f"{path}.", _depth + 1)
+    return tuple(found)
 
 
 class Link(BaseModel):
