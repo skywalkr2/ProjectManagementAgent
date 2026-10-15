@@ -3,6 +3,13 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The writing pack is finished before any other pack starts
+
+**Decided by:** the owner (asked directly after the writing pack's builder passed it on). **What:** phase C is now the
+writing pack alone, with what it needs from the core (C1, C4), and its own exit test; the project management and
+publishing packs (C2, C3) and the hand-offs between packs move to a new phase P after it, before the owner's sign-off
+(D). Both packs stay in 1.0. **Impact:** roadmap phases C and P; the plugin API table. No change to scope.
+
 ## 2026-10-15: L5, what the extractors and backup encryption use
 
 **Decided by:** the technical PM, before building L5 (the owner: finish the L phases, then the UI). **What:** documents,

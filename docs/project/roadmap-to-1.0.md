@@ -32,7 +32,9 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
   - Moved out of L3: the learning pairs and the switch check (L4), and a project's "what the assistant knows" and
     "Overlaps with" (phase B).
 - **Next:** L3b (the obvious next step from what came in), L4 (proving it, with the owner's "after" run), L5, L6, then
-  the "Ready for real use" items still open (the scope slice and the rest), after which real use starts. Phase B follows.
+  the "Ready for real use" items still open (the scope slice and the rest), after which real use starts. Phase B follows,
+  then phase C (the writing pack, finished completely first; owner, 2026-10-15), then phase P (the project management and
+  publishing packs), then the owner's sign-off (D).
 - **Plugin API:** 0.3.70 (see the table below).
 
 ## Owner actions on the critical path
@@ -96,7 +98,7 @@ Within 0.3 every change is additive: a pack built for an earlier 0.3 version kee
 | L-core: L4 | Packs' own evaluation cases (`provides.evals`) and domain scorers (`registrar.scorer`) | 0.3.x | No |
 | L-core: L5 | The text-extractor extension point; a connector item that carries files (mail attachments) | 0.3.x | No |
 | B | Nothing planned: panels, Today lines and jobs keep their contract through the redesign | none | No |
-| C1 to C3 | What the packs' builders ask for, answered in the weekly round (round 39: a conversation on a record, context-sized task kinds, data-form previews, a pack's value on a request, computed-column headings); interfaces between packs (such as `pm/schedule@1`) belong to the packs | 0.3.x | No |
+| C1, then P (C2, C3) | What the packs' builders ask for, answered in the weekly round (round 39: a conversation on a record, context-sized task kinds, data-form previews, a pack's value on a request, computed-column headings); interfaces between packs (such as `pm/schedule@1`) belong to the packs | 0.3.x | No |
 | C4 | The publisher and the file channel for a pack's outputs, fact lookups from configured sources, and a kind of author for edits made outside the app in a shared folder. Whether a pack's "send" changes shape is decided here; if it does, this is 0.4 | 0.3.x or 0.4 | Only if 0.4, announced a round ahead |
 | D | Frozen: no new names, only fixes, anything deprecated removed | 0.9 | Removals only, listed a round ahead |
 | Publish 1.0 | 1.0 once the writing pack and the project management pack run on it unchanged through phase D's week of real use | 1.0 | No |
@@ -624,7 +626,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
     `test_a_date_time_with_its_zone_is_written_in_the_persons_zone_and_format`,
     `test_text_without_a_complete_timestamp_is_left_as_it_is`.
 - [x] **A dated item becomes a calendar entry** (owner, 2026-10-13; design 1, 6.7, 7.7). The app's own calendar is a core
-  concept that the PM pack (phase C) builds on, so its records are designed for both. When an input that isn't set aside
+  concept that the PM pack (phase P) builds on, so its records are designed for both. When an input that isn't set aside
   names a date or a date range for something (a delivery window, a deadline, an appointment), the assistant records a
   calendar entry in the app's own calendar, with its date or range and the quoted words, beside the fact it records.
   The agenda shows these entries next to the connected calendars' events. Nothing is written to the person's calendar
@@ -1423,16 +1425,16 @@ From the original designer's lessons of 2026-10-14:
 
 The journey tests from A3 run against the new screens as they land.
 
-## Phase C: the packs in the owner's workspace (about 9 sessions)
+## Phase C: the writing pack in the owner's workspace
+
+Re-sequenced on 2026-10-15 (the owner: the writing pack is finished completely before any other pack starts). Phase C is
+the writing pack and what it needs from the core; the project management and publishing packs and the hand-offs between
+packs are phase P, after it.
 
 **Exit test:** in the owner's own workspace:
-- the writing pack takes a fictional manuscript from import to a built PDF and EPUB the owner approves;
-- the project management pack holds the project's plan and builds a schedule from it, and the schedule shows what is
-  late or at risk;
-- the publishing pack starts a launch for the book, with its plan in the schedule, a listing sheet and prices;
-- the hand-offs between the packs work, and each pack also works alone;
-- **the packs learn too:** a correction in a pack's own work produces a proposal, and a later similar input in that pack
-  comes out right. This proves the plugin API call in L2 carries the knowledge to packs.
+- the writing pack takes a fictional manuscript from import to a built PDF and EPUB the owner approves, working alone;
+- **the pack learns too:** a correction in the pack's own work produces a proposal, and a later similar input comes out
+  right. This proves the plugin API call in L2 carries the knowledge to packs.
 
 C1. **The writing pack, installed and reviewed.**
 - [ ] **A pack's own libraries install from the screen** (round 35, moved from phase A): a release names every package it
@@ -1445,6 +1447,59 @@ C1. **The writing pack, installed and reviewed.**
 - [ ] A host-side review of the pack: what it registers and reaches, its rules, and its tests run against this host.
   It is checked on 2026-10-12 to load and register on plugin API 0.3.55.
 - [ ] The owner's walkthrough on a fictional book, with what to change written down.
+
+C4. **What the packs need from the core.**
+- [ ] **The publisher and the file channel.** Approved files are saved or shared after the person approves the exact
+  content. Waiting to go out lists them, with a diff where it applies.
+- [ ] **Writing into a shared file someone else uses** (the original designer's lessons from running, 2026-10-13): write only the target cells or parts and copy every other
+  part byte for byte, with a test that validations, conditional formats and formulas survive; "is it open?" checks for a
+  process holding the file, not only a lock file (autosave on a synced cloud file leaves none); when it is open, hold the
+  change and retry on a timer, then after writing wait for the sync to settle, re-read, and rewrite once if it was
+  overwritten; after a few tries, go to the person once. Text written into someone else's table stays short and
+  scannable (a key, a status word, a few words), explanations go in the assistant's own notes, and a cell where nothing
+  was found stays blank.
+- [ ] **Fact lookups** (6.19): published dates are looked up from the configured sources, never asked.
+- [ ] Anything else either pack's builder asks for, answered in one weekly round.
+- [ ] **Round 39 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
+  - 190, **a conversation on a record**: a thread kept on the record, opened from any screen with that record as its
+    context, each message a request of a task kind the pack names, replies with citations, kept-or-dropped changes,
+    queued work with its estimate, and questions answered by replying; it uses L2's bounded search. It is designed with
+    Ask as a side pane (phase B) and built after L2, since it needs the search round; the design answer goes in the round.
+  - 191, a task kind that declares the context it needs, so a run goes only to a model whose window fits, the estimate
+    names it, and a run that fits nowhere says so before anything is sent (provider layer, 6.16).
+  - 187, a preview beside a data form, run again after each save, read only, as the person.
+  - 188, a small pack-defined value on a request, never shown, returned to the run.
+  - 189, a computed panel column headed from the pack's wording.
+- [ ] **Round 41 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
+  - 193, a task kind whose `on` names several record kinds, the packet told which one it got;
+  - 194, `$new:<n>` in a proposal for the record an earlier op creates, resolved by the applier in order, and refused
+    with the reason when the person drops op n (applier work: the main session's);
+  - 195, a `show_for`-style predicate on a person action, given the view and the target, quick and deterministic.
+- [ ] **Round 42 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
+  - 196, a task kind's declared tier holds over its role's tier (or is marked required), `ai.tasks.<kind>.tier` still
+    overriding both; with 191's declared context need;
+  - 197, `RefTo(..., blocks_delete=False)` for a reference that is history, left dangling and shown as removed.
+- [ ] **Round 44 from the writing pack's builder** (received 2026-10-13; answered in the weekly round): 199, a request's
+  part carrying a small pack-defined address for work on a record or file that isn't long text (with 188); 200, a record
+  type saying where it is written, apart from a field named `project` (or the guide naming the rule); 201, the test
+  kit's `ActionResult.apply` taking the requests to keep too.
+- [ ] **Round 45** (received 2026-10-13): 202 answered at once from the code (a superseded request's `state` is set to
+  done in the same change that sets `superseded_by`); 203, a stable code on the core's failures for packs' tests, and
+  the guide saying the wording is not the contract, answered in the weekly round.
+- [ ] **Round 46** (received 2026-10-13; answered in the weekly round): 204, `where` and `start_where` reading a field
+  through a reference (with 195); 205, a request in a proposal `about` an existing record an item's op changes, dropped
+  with it (with 194); 206, the guide saying a request waiting for the go is `needs_you` with approval `required`.
+
+## Phase P: the project management and publishing packs (after the writing pack)
+
+Moved out of phase C on 2026-10-15, in the same order the owner set: started once the writing pack is complete. The
+writing pack's hand-offs to these packs are built here, when the packs exist (open promise P12, round 50).
+
+**Exit test:** in the owner's own workspace:
+- the project management pack holds the project's plan and builds a schedule from it, and the schedule shows what is
+  late or at risk;
+- the publishing pack starts a launch for the book, with its plan in the schedule, a listing sheet and prices;
+- the hand-offs between the packs work, and each pack also works alone.
 
 C2. **The project management pack: started** (owner, 2026-10-12). This is an AI project manager that knows what is
 being done, builds schedules and tracks action items.
@@ -1531,48 +1586,6 @@ the project management pack's first version.
 C3b. **A sales support pack** (owner, 2026-10-13): for a family member's sales job. Waiting on its functional
 requirements from its user; nothing is designed or scheduled before they arrive. When they do, it gets its own
 private repository and builder like the other packs, and works with the project management pack through interfaces.
-
-C4. **What the packs need from the core.**
-- [ ] **The publisher and the file channel.** Approved files are saved or shared after the person approves the exact
-  content. Waiting to go out lists them, with a diff where it applies.
-- [ ] **Writing into a shared file someone else uses** (the original designer's lessons from running, 2026-10-13): write only the target cells or parts and copy every other
-  part byte for byte, with a test that validations, conditional formats and formulas survive; "is it open?" checks for a
-  process holding the file, not only a lock file (autosave on a synced cloud file leaves none); when it is open, hold the
-  change and retry on a timer, then after writing wait for the sync to settle, re-read, and rewrite once if it was
-  overwritten; after a few tries, go to the person once. Text written into someone else's table stays short and
-  scannable (a key, a status word, a few words), explanations go in the assistant's own notes, and a cell where nothing
-  was found stays blank.
-- [ ] **Fact lookups** (6.19): published dates are looked up from the configured sources, never asked.
-- [ ] Anything else either pack's builder asks for, answered in one weekly round.
-- [ ] **Round 39 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
-  - 190, **a conversation on a record**: a thread kept on the record, opened from any screen with that record as its
-    context, each message a request of a task kind the pack names, replies with citations, kept-or-dropped changes,
-    queued work with its estimate, and questions answered by replying; it uses L2's bounded search. It is designed with
-    Ask as a side pane (phase B) and built after L2, since it needs the search round; the design answer goes in the round.
-  - 191, a task kind that declares the context it needs, so a run goes only to a model whose window fits, the estimate
-    names it, and a run that fits nowhere says so before anything is sent (provider layer, 6.16).
-  - 187, a preview beside a data form, run again after each save, read only, as the person.
-  - 188, a small pack-defined value on a request, never shown, returned to the run.
-  - 189, a computed panel column headed from the pack's wording.
-- [ ] **Round 41 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
-  - 193, a task kind whose `on` names several record kinds, the packet told which one it got;
-  - 194, `$new:<n>` in a proposal for the record an earlier op creates, resolved by the applier in order, and refused
-    with the reason when the person drops op n (applier work: the main session's);
-  - 195, a `show_for`-style predicate on a person action, given the view and the target, quick and deterministic.
-- [ ] **Round 42 from the writing pack's builder** (received 2026-10-13; answered in the weekly round, after L0):
-  - 196, a task kind's declared tier holds over its role's tier (or is marked required), `ai.tasks.<kind>.tier` still
-    overriding both; with 191's declared context need;
-  - 197, `RefTo(..., blocks_delete=False)` for a reference that is history, left dangling and shown as removed.
-- [ ] **Round 44 from the writing pack's builder** (received 2026-10-13; answered in the weekly round): 199, a request's
-  part carrying a small pack-defined address for work on a record or file that isn't long text (with 188); 200, a record
-  type saying where it is written, apart from a field named `project` (or the guide naming the rule); 201, the test
-  kit's `ActionResult.apply` taking the requests to keep too.
-- [ ] **Round 45** (received 2026-10-13): 202 answered at once from the code (a superseded request's `state` is set to
-  done in the same change that sets `superseded_by`); 203, a stable code on the core's failures for packs' tests, and
-  the guide saying the wording is not the contract, answered in the weekly round.
-- [ ] **Round 46** (received 2026-10-13; answered in the weekly round): 204, `where` and `start_where` reading a field
-  through a reference (with 195); 205, a request in a proposal `about` an existing record an item's op changes, dropped
-  with it (with 194); 206, the guide saying a request waiting for the go is `needs_you` with approval `required`.
 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
