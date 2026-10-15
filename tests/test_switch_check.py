@@ -321,3 +321,30 @@ def test_the_check_runs_the_learning_pairs_with_the_cases_and_prices_them(env, m
     price, count = REAL_ESTIMATE(cfg, ws, "acct/m")
     every = len(pairs.load_pairs(switch_check._template())) + len(pairs.load_scenarios(switch_check._template()))
     assert count == 10 + every and price == pytest.approx(1.0 + 0.1 * switch_check.PAIR_CALLS * every)
+
+
+def test_the_check_adds_its_runs_to_the_capability_matrix_for_the_cases_and_the_pairs_apart(env, monkeypatch):
+    import json
+
+    import engine.pairs as pairs
+    from engine.ai import matrix
+    from engine.evaluate import RunResult
+    from engine.skills import skills as skill_list
+
+    ws = env[0]
+    cfg = load_config(ws.config_dir, env={})
+    one, two = [s.id for s in skill_list()][:2]
+    ref = "acct/model-a"
+    cases = Report(
+        ref, 1, [RunResult("case-a", 1, True, models=[ref])], case_set={"case-a": [one]}, kind="cases", template="x"
+    )
+    learning = Report(
+        ref, 1, [RunResult("pair-b", 1, False, models=[ref])], case_set={"pair-b": [two]}, kind="pairs", template="x"
+    )
+    monkeypatch.setattr(ev, "evaluate", lambda *a, **k: cases)
+    monkeypatch.setattr(pairs, "evaluate_pairs", lambda *a, **k: learning)
+    assert not (ws.private_dir / matrix.MATRIX_FILE).exists()
+    switch_check.evaluate_on(ref, cfg, ws, {})
+    stored = json.loads((ws.private_dir / matrix.MATRIX_FILE).read_text())["models"][ref]
+    assert (stored[one]["runs"], stored[one]["passes"]) == (1, 1) and set(stored[one]["sets"]) == {"cases:x"}
+    assert (stored[two]["runs"], stored[two]["passes"]) == (1, 0) and set(stored[two]["sets"]) == {"pairs:x"}

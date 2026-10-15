@@ -18,6 +18,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
+from engine import proposals
 from engine.ai.router import LEVELS
 from engine.cleaning import normalize
 from engine.knowledge import KINDS as KNOWLEDGE_KINDS
@@ -75,6 +76,7 @@ class Hit:
     untrusted: bool = False  # it came from an outside input
     replaced_by: str | None = None  # for a fact a later one replaced, the newest fact that replaced it
     replaced_text: str | None = None
+    discarded: str | None = None  # for an input whose proposal the person discarded: what was discarded, and the day
 
 
 @dataclass
@@ -89,6 +91,7 @@ class _Doc:
     level: str
     replaced_by: str | None = None
     replaced_text: str | None = None
+    discarded: str | None = None
     words: set[str] = field(default_factory=set)
 
 
@@ -248,6 +251,7 @@ def _passages(text: str) -> list[str]:
 def _input_docs(ws: Workspace, store: Store, view: Any, exclude: Iterable[str]) -> list[_Doc]:
     skip = set(exclude)
     sources = sorted((s for s in view.list("source") if s.id not in skip), key=lambda s: s.data["received_at"])
+    discards = proposals.discarded_inputs(view)
     docs = []
     for source in sources[-MAX_INPUTS:]:
         path = ws.sources_dir / f"{source.data['content_hash']}.txt"
@@ -255,6 +259,10 @@ def _input_docs(ws: Workspace, store: Store, view: Any, exclude: Iterable[str]) 
             continue
         level = _highest(source.data.get("sensitivity", "internal"))
         projects = source.data.get("projects") or []
+        discarded = None
+        if source.id in discards:
+            kind, day = discards[source.id]
+            discarded = f"{proposals.DISCARDED_WORDS[kind]} proposal discarded on {day.date().isoformat()}"
         for passage in _passages(path.read_text(encoding="utf-8")):
             docs.append(
                 _Doc(
@@ -266,6 +274,7 @@ def _input_docs(ws: Workspace, store: Store, view: Any, exclude: Iterable[str]) 
                     projects[0] if projects else None,
                     source.data["trust"] != "trusted",
                     level,
+                    discarded=discarded,
                 )
             )
     return docs
@@ -319,6 +328,7 @@ def _rank(docs: list[_Doc], query: Query, subject: str | None = None) -> list[Hi
                 doc.untrusted,
                 doc.replaced_by,
                 doc.replaced_text,
+                doc.discarded,
             )
         )
     order = {kind: n for n, kind in enumerate(KINDS)}
@@ -393,6 +403,8 @@ def render(hits: list[Hit], query: Query, number: int, left: int) -> str:
         body = f"{label}: {hit.text}"
         if hit.replaced_by:
             body += f" Replaced by {hit.replaced_by}: {hit.replaced_text}"
+        if hit.discarded:
+            body += f" ({hit.discarded})"
         lines.append(f'- <untrusted source="{hit.id}">{body}</untrusted>' if hit.untrusted else f"- {body}")
     lines.append(
         f"You may search {left} more time{'s' if left != 1 else ''}, or answer."

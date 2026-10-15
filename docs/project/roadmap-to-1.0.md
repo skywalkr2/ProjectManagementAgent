@@ -1425,8 +1425,11 @@ Questions, decisions and drops (answers 12, 15, 16, 19, 24, 8):
   decision for them; it shows in follow-ups under the decider; `question.move` keeps a decision a decision. Its Today
   line ("Waiting on <name>'s decision: blocks <action>") comes with the pack's dependencies (phase P). *Today:* decisions
   go only to the person, and moving one makes it an ordinary question.
-- [ ] **A drop by the assistant** applies with Undo, except an item that already reached someone, which waits for a look.
-  *Today:* every drop applies with Undo.
+- [x] **A drop by the assistant** applies with Undo, except an item that already reached someone (a question marked
+  sent, an action someone was told about or chased for), which waits for the person's look with a plain reason; the
+  person's own drop, and one they confirm, apply. Built: `tests/test_hold_drop_fold.py`:
+  `test_the_assistants_drop_of_a_sent_question_waits_for_a_look_and_one_not_sent_applies`,
+  `test_the_assistants_drop_of_an_action_someone_was_told_about_or_chased_for_waits_for_a_look`.
 - [ ] **Three ops the assistant may propose**, each with Undo: bring back a set-aside item, remove or merge a list row
   that was never a project, mark a question as already asked. *Today:* all three exist as the person's own ops only.
 
@@ -1448,9 +1451,13 @@ Follow-on changes and how a fact is known (lessons 1, 3, 4; answers 17, 18):
   says who made each part. *Today:* a fact carries its source and trust only.
 
 Learning and scope (answers 3 to 7, 14, 22, 23):
-- [ ] **Discarded means don't act on it**: search flags an input whose proposal was discarded, and a check refuses
-  routing that matches a discarded proposal unless the person's own words support it. *Today:* search returns it
-  unflagged.
+- [x] **Discarded means don't act on it**: search flags an input whose proposal the person discarded ("routing proposal
+  discarded on <day>"; not one kept, set aside "just this time" or held back as close to an earlier discard), and the
+  invariant `discarded-routing` refuses a `routing.add` that names the same person or team, says the same, and whose
+  topic shares at least `knowledge.routing_match` of its words with a discarded routing proposal, unless the input is the
+  person's own words. Built: `tests/test_proposals.py`:
+  `test_search_flags_an_input_whose_proposal_was_discarded_but_not_one_kept_or_set_aside`,
+  `test_a_routing_that_matches_a_discarded_proposal_is_refused_unless_it_rests_on_the_persons_words`.
 - [ ] **Who owes what**: a request addressed to the person ("you", "your team", "can you", "please send", their name with a
   request verb) replaces "we", "us", "our" in `language.owed_words`; a person with no team is asked about once.
   Built (the words; the question for a person with no team is **not built**, see below): the we-words no longer count,
@@ -1516,13 +1523,20 @@ Proving it (lesson 2; answers 2, 21):
   `test_the_route_reports_pass_rate_runs_age_cost_and_the_flags` (`tests/test_capability_matrix.py`),
   `AiAccounts.test.tsx` ("What it can do lists each skill in words"). *Today:* reports are files read by hand.
 - [ ] **The capability matrix, step 1, what is left:** "Measure" per account with its estimate first, only on cases for
-  the data levels the account allows; the matrix exported with the workspace (today it is in the private folder, like
-  the connection checks, and a backup doesn't carry it); the "every adapter kind" proof with each kind's own fake
-  service (today one test records results for a model of each kind and shows they are kept apart); a test of its own
-  that the switch check adds its runs (`evaluate_on` does record them).
+  the data levels the account allows (the matrix stays out of backups, like the connection checks: decisions,
+  2026-10-16); the "every adapter
+  kind" proof with each kind's own fake service (today one test records results for a model of each kind and shows
+  they are kept apart). Built: the switch check adds its runs to the matrix,
+  `test_the_check_adds_its_runs_to_the_capability_matrix_for_the_cases_and_the_pairs_apart` (`tests/test_switch_check.py`).
 
-- [ ] **A superseded attempt leaves nothing running** (lesson 7): a test of the exact sequence. *Today:* the exclusive
-  write lock and `retire_earlier_attempts` hold it; Undo already skips a change whose records changed since (lesson 8).
+- [x] **A superseded attempt leaves nothing running** (lesson 7): a test of the exact sequence: an attempt is out with
+  the assistant, a later attempt at the same request applies and retires it, and the first one's good answer then comes
+  back: nothing of it is written, no try is queued, no line stands for it. The exclusive write lock and
+  `retire_earlier_attempts` hold it; Undo already skips a change whose records changed since (lesson 8). Built:
+  `test_a_late_answer_for_a_superseded_attempt_is_not_applied_and_leaves_nothing_queued`, with the existing
+  `test_a_queued_automatic_try_for_a_request_that_has_since_applied_does_not_run`,
+  `test_a_fix_round_for_a_request_retired_meanwhile_does_not_run` and
+  `test_a_retired_request_is_not_stopped_again_by_a_late_failure` (`tests/test_attempts_retire.py`).
 
 ## Phase B: finish the UI/UX redesign (about 4 sessions)
 

@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine import draft_checks, knowledge, learn, scope
+from engine import draft_checks, knowledge, learn, proposals, scope
 from engine import search as workspace_search
 from engine.check_text import numbered_questions, quoted_passages, without_links, words_of
 from engine.cleaning import normalize
@@ -253,6 +253,22 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                     'ask the person one decision; a sender\'s own "not me, ask someone else" is the only routing it '
                     "may propose",
                 )
+        if isinstance(op, RoutingAddOp) and not (ctx.actor == "pm" or ctx.confirmed_by_pm or _from_pm(view, ctx)):
+            discarded = proposals.discarded_routing(
+                view,
+                op.topic,
+                op.person,
+                op.team,
+                op.negative,
+                ctx.cfg.dispatch.knowledge.routing_match,
+            )
+            if discarded is not None:
+                refuse(
+                    i,
+                    "discarded-routing",
+                    f"you discarded {discarded[0].id}, which says the same, on {discarded[1].date().isoformat()}; "
+                    "only your own words bring it back",
+                )
         reach = getattr(op, "applies_to", None)
         if reach is not None and (why := reach_problem(reach, reach_choices(plugins), plugins.records)) is not None:
             refuse(i, "targets", why)
@@ -285,6 +301,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", why)
             elif evidence is not None and not _shares_words(evidence.quote, view.get("action", op.id).data["text"]):
                 lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
+            if isinstance(op, ActionDropOp) and not why and _waits_for_a_look(view, ctx, "action", op.id):
+                problems.append(Problem("reached-confirm", "hold", i, REACHED_WAITS))
         if isinstance(op, ActionUnholdOp):
             why = action_unhold_problem(view, op)
             if why:
@@ -305,6 +323,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             why = question_correction_problem(ctx, view, op)
             if why:
                 refuse(i, "targets", why)
+            elif isinstance(op, QuestionDropOp) and _waits_for_a_look(view, ctx, "question", op.id):
+                problems.append(Problem("reached-confirm", "hold", i, REACHED_WAITS))
         if isinstance(op, ListMergeOp):
             from engine import lists
 
@@ -497,7 +517,26 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
 
 #: Why a contact detail or a project the assistant found waits, as the held line says it.
 CONTACT_WAITS = "A way to reach someone waits for your confirmation."
+REACHED_WAITS = "Someone has already been sent this: look at it before dropping it."
 PROJECT_WAITS = "A project the workspace doesn't have yet: add it, or say where this belongs?"
+
+
+def reached_someone(record: Any) -> bool:
+    """Whether an action or question already reached another person: a question marked as sent, or an action someone
+    was told about or chased for."""
+    data = record.data
+    if record.kind == "question":
+        return data.get("status") == "sent" or bool(data.get("sent_at"))
+    return bool(data.get("told") or data.get("followed_up"))
+
+
+def _waits_for_a_look(view: Any, ctx: Context, kind: str, record_id: str) -> bool:
+    """Whether a drop of this record waits for the person: it was not made by the person (or confirmed by them) and the
+    record already reached someone, who may still be waiting on it."""
+    if ctx.actor == "pm" or ctx.confirmed_by_pm:
+        return False
+    found = view.get(kind, record_id)
+    return found is not None and reached_someone(found)
 
 
 def contact_problem(view: Any, cfg: Config, op: PersonContactOp) -> str | None:

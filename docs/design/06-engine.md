@@ -835,6 +835,10 @@ is marked *designed*, with the phase.
   <action>, due Fri"), which needs the dependency the project management pack records (6.23).
 - **A drop by the assistant** applies with Undo and shows on the review card; an item that already reached someone (a
   sent question, a notice) waits for the person's look instead, since the other side may still be waiting on it.
+  **Built:** a question marked sent, and an action someone was told about or chased for, are held with a plain reason
+  (check `reached-confirm`); the person's own drop and one they confirm apply
+  (`tests/test_hold_drop_fold.py::test_the_assistants_drop_of_a_sent_question_waits_for_a_look_and_one_not_sent_applies`,
+  `::test_the_assistants_drop_of_an_action_someone_was_told_about_or_chased_for_waits_for_a_look`).
 - **Three more ops the assistant may propose,** each with Undo: bring back a set-aside item, remove or merge a list row
   that was never a project, and mark a question as already asked ("I asked them in chat").
 
@@ -1171,8 +1175,9 @@ evaluation reports.
 - **The matrix.** Each evaluation run adds to it: model (the account's model id as its tier was set up, and a
   command-line agent's program version) × skill → passes, runs, the last date, and the cost of a passing run (price ×
   tokens, from the run's usage; a run on two accounts counts for both, its cost divided). It is kept in the workspace's
-  private folder (`ai-skills.json`, `engine/ai/matrix.py`) and never sent anywhere; *exporting it with the workspace is
-  not built yet*. A measurement goes stale when the program version changes, after `ai.skills.stale_days`, or when
+  private folder (`ai-skills.json`, `engine/ai/matrix.py`), beside the connection checks, and never sent anywhere. Like
+  them it is not part of a backup: it measures the accounts on this computer, and a restored workspace starts it empty
+  until Measure or an evaluation fills it again (decisions, 2026-10-16). A measurement goes stale when the program version changes, after `ai.skills.stale_days`, or when
   the cases that measured it change (a hash of the case ids that name the skill, kept for the golden cases and for the
   pairs of each fictional workspace); a changed model id is a different row, so it starts unmeasured. Stale is shown and
   counts as unknown for routing, and the next run recorded over a stale entry starts it again rather than mixing in
@@ -1849,7 +1854,11 @@ brings the guidance in whatever the share, since a rare kind of work never reach
   finish decisions. Keep them with you, or change?"). A sender's own "not me, ask <name>" is still proposed as routing.
 - **Discarded means don't act on it.** Search still returns an input whose proposal was discarded, flagged ("routing
   proposal discarded on <day>"), and a check refuses routing that matches a discarded proposal unless the person's own
-  words support it.
+  words support it. **Built:** only a discard the person made counts (not "just this time", not one held back as close
+  to an earlier discard); a routing matches when it names the same person or team, says the same (who does, or doesn't,
+  answer) and its topic shares at least `knowledge.routing_match` of the discarded topic's words; the invariant is
+  `discarded-routing` (`tests/test_proposals.py::test_search_flags_an_input_whose_proposal_was_discarded_but_not_one_kept_or_set_aside`,
+  `::test_a_routing_that_matches_a_discarded_proposal_is_refused_unless_it_rests_on_the_persons_words`).
 - **The catch-up learns from the person's words** when a kind's corrections hold some, else from the newest.
 - **A fact for a whole series.** A fact on a parent project can be marked as applying to its children, and then reaches
   their runs; other facts stay with their exact project.

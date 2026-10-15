@@ -1026,6 +1026,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 75. Three checks the designer's answers asked for, and two tests (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Drops (6.8) | Every drop by the assistant applied | A drop of a question marked sent, or of an action someone was told about or chased for, is held for the person's look with a plain reason; the person's own drop and one they confirm apply. Built: `test_hold_drop_fold.py` |
+| Discarded proposals (6.22) | Search returned an input unflagged; routing could be proposed again | Search flags an input whose proposal the person discarded; the invariant `discarded-routing` refuses a routing that matches a discarded routing proposal unless it rests on the person's own words. Built: `test_proposals.py` |
+| Retiring attempts (6.7) | The late answer of a retired attempt was untested | A test of the whole sequence. Built: `test_attempts_retire.py` |
+| Capability matrix (6.16) | The switch check's runs were not tested | A test that it adds them. Built: `test_switch_check.py` |
+
 ## 74. A capability matrix (2026-10-15)
 
 | Where | Before | Now |

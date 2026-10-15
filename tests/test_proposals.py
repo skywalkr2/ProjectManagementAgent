@@ -14,18 +14,23 @@ from fastapi.testclient import TestClient
 
 from api.app import create_app
 from engine import catch_up, proposals
+from engine import search as workspace_search
 from engine.dispatcher import signal
+from engine.intake import hand_in
 from engine.knowledge_section import stable_section
-from engine.workspace import init_workspace
-from tests.conftest import DEMO_B
+from engine.workspace import Workspace, init_workspace
+from tests.conftest import DEMO_B, fixture_records
 from tests.test_knowledge_records import (
     NOW,
+    OTHER,
     PM,
     PROJECT,
+    TEAM,
     apply,
     lesson_saying,
     person_adds,
     proposal,
+    reasons,
     request,
     second_project,
     signals,
@@ -294,6 +299,88 @@ def test_just_this_time_records_its_signal_discards_and_the_repeat_is_marked(app
     assert marks[again] == 0
     # Only a proposal can be set aside this way.
     assert post(client, person_adds(store, cfg, lesson_saying("Active one.")), "just-this-time").status_code == 409
+
+
+# ---- a discarded proposal means don't act on it ---------------------------------------------------------------
+
+TOPIC = "Cover finish decisions"
+THIRD = next(p["id"] for p in fixture_records(DEMO_B, "person") if p["id"] not in (PM, OTHER))
+NOW_DT = datetime.fromisoformat(NOW)
+
+
+def routing_op(topic=TOPIC, person=OTHER, **more):
+    return {"op": "routing.add", "text": "Ask them about it.", "topic": topic, "person": person, **more}
+
+
+def from_a_saved_input(ws, store, cfg, words, op):
+    """Hand in an input that can be searched and propose `op` from it. Returns the input and the proposal."""
+    source_id = hand_in(ws, store, pasted=words, now=NOW_DT).source
+    cs_id, statuses = apply(store, cfg, [op], origin="input", trust="untrusted", source_id=source_id, raw=words)
+    assert statuses == ["applied"]
+    return source_id, store.read().get("changeset", cs_id).data["ops"][0]["records"][0]["id"]
+
+
+def search_inputs(ws, store, words):
+    query = workspace_search.Query(words=words, kinds=("inputs",))
+    return {h.id: h for h in workspace_search.search(ws, store, query, limit=10)}, query
+
+
+def test_search_flags_an_input_whose_proposal_was_discarded_but_not_one_kept_or_set_aside(app):
+    client, store, cfg, tmp_path = app
+    ws = Workspace(tmp_path / "ws")
+    gone, gone_entry = from_a_saved_input(
+        ws, store, cfg, "Cover finish questions go to them, says the note.", routing_op()
+    )
+    aside, aside_entry = from_a_saved_input(
+        ws,
+        store,
+        cfg,
+        "Cover finish questions also go to them, says another note.",
+        routing_op("Cover finish approvals"),
+    )
+    plain, _ = from_a_saved_input(ws, store, cfg, "Cover finish questions are still open, says a third note.", RULE)
+    discarded = post(client, gone_entry, "discard")
+    assert discarded.status_code == 200
+    assert post(client, aside_entry, "just-this-time").status_code == 200
+    day = signals(store, "discarded")[0].data["at"][:10]
+    hits, query = search_inputs(ws, store, "cover finish questions")
+    assert hits[gone].discarded == f"routing proposal discarded on {day}"
+    assert hits[aside].discarded is None and hits[plain].discarded is None
+    assert f"(routing proposal discarded on {day})" in workspace_search.render([hits[gone]], query, 1, 1)
+    assert "discarded" not in workspace_search.render([hits[aside], hits[plain]], query, 1, 1)
+    # Undoing the discard takes the flag away with it.
+    undone = client.post(f"/api/changesets/{discarded.json()['changeset']}/undo", json={})
+    assert undone.status_code == 200
+    assert search_inputs(ws, store, "cover finish questions")[0][gone].discarded is None
+
+
+def test_a_routing_that_matches_a_discarded_proposal_is_refused_unless_it_rests_on_the_persons_words(app):
+    client, store, cfg, _ = app
+    first = proposal(store, cfg, routing_op())
+    assert post(client, first, "discard").status_code == 200
+
+    def again(op, **how):
+        return apply(store, cfg, [op], **{"origin": "input", "trust": "untrusted", "source_id": source(store), **how})
+
+    cs_id, statuses = again(routing_op("Cover finish decision approvals"))  # the same topic, plurals folded
+    assert statuses == ["refused"]
+    assert first in reasons(store, cs_id)[0] and "own words" in reasons(store, cs_id)[0]
+    for other in (
+        routing_op("Print schedule dates"),  # another topic
+        routing_op(person=THIRD),  # another person
+        routing_op(negative=True),  # the opposite statement
+        {**routing_op(), "person": None, "team": TEAM},  # another who
+    ):
+        assert again(other)[1] == ["applied"], other
+    assert again(routing_op("Cover finish decision approvals"), origin="pm", trust="trusted")[1] == ["applied"]
+    assert again(routing_op(), actor="pm", origin="pm", trust="trusted")[1] == ["applied"]
+    # A proposal the person only set aside "just this time" is not a no.
+    aside = proposal(store, cfg, routing_op("Schedule sign-off requests"))
+    assert post(client, aside, "just-this-time").status_code == 200
+    assert again(routing_op("Schedule sign-off requests"))[1] == ["applied"]
+    # The setting decides how much of the topic must match.
+    cfg.dispatch.knowledge.routing_match = 1.0
+    assert again(routing_op("Cover finish approvals"))[1] == ["applied"]
 
 
 # ---- one line for everything learned ----------------------------------------

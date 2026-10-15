@@ -220,3 +220,33 @@ def test_a_retired_request_is_not_stopped_again_by_a_late_failure(env):  # noqa:
     needs_you(store, handed.request, "Something went wrong.")
     assert store.read().get("request", handed.request).data["state"] == "done"
     assert lines_of(env, {handed.request}) == []
+
+
+def test_a_late_answer_for_a_superseded_attempt_is_not_applied_and_leaves_nothing_queued(env):  # noqa: F811
+    """The whole sequence: an attempt is out with the assistant, a later attempt at the same request applies and retires
+    it, and then the first attempt's own good answer comes back. Nothing of it is written, nothing for it is queued, and
+    no line stands for it; what the later attempt applied is the only change."""
+    ws, _, store = env
+    first = hand_in(ws, store, note="Keep something.", pasted="", now=NOW)
+    second = a_request_redoing(env, first.request)
+    asked = []
+
+    def responder(task):
+        asked.append(task)
+        if len(asked) == 1:  # while the first attempt's call is out, the later one runs and applies
+            set_responder(lambda inner: json.dumps(APPLYING))
+            assert process_again(env, second) is not None
+            set_responder(responder)
+        return json.dumps(APPLYING_OTHER)  # a good answer, but for an attempt that no longer stands
+
+    set_responder(responder)
+    assert process_again(env, first.request) is None
+    request = store.read().get("request", first.request).data
+    assert request["state"] == "done" and request["superseded_by"] == second
+    assert request["cause"] is None and request["waiting"] is None and not request.get("changeset")
+    assert [c.data["request"] for c in store.read().list("changeset")] == [second]
+    assert [q for q in store.read().list("question") if q.data["title"] == APPLYING_OTHER["ops"][0]["title"]] == []
+    assert len(store.read().list("note")) == 1
+    assert lines_of(env, {first.request}) == []
+    assert process_again(env, first.request) is None  # and a try queued for it afterwards does not run
+    assert len(asked) == 1

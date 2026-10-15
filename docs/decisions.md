@@ -3,6 +3,14 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: The capability matrix stays out of backups
+
+- **Decided (main session):** the matrix stays in the workspace's private folder beside the connection checks, and like
+  them is not part of a backup; a restored workspace starts it empty until Measure or an evaluation fills it.
+- **Why:** it measures the accounts on one computer, the private folder is never backed up (Part 7), and re-measuring
+  costs little next to carrying one private file through backups.
+- **Impact:** design 6.16 says so; the step-1 leftovers are only Measure and the per-kind fake services.
+
 ## 2026-10-15: A capability matrix: which model can do which work, measured
 
 - **Decided (owner):** "when we defined limits we need to start building capability matrixes so we know based on a

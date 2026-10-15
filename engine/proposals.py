@@ -153,6 +153,53 @@ def near_discard(view: Any, kind: str, data: dict[str, Any], now: datetime, days
     return None
 
 
+#: How a discarded proposal's kind reads in the note beside an input it came from.
+DISCARDED_WORDS = {"lesson": "lesson", "glossary_entry": "glossary", "routing_entry": "routing", "style_note": "style"}
+
+
+def discarded_inputs(view: Any) -> dict[str, tuple[str, datetime]]:
+    """For each input whose proposal the person discarded (and said no to: not "just this time", not one held back as
+    close to an earlier discard), the kind of proposal and the latest day it was discarded. An input is named by its
+    proposal's evidence: the source itself, or the request whose work made it."""
+    decided = _decisions(view)
+    found: dict[str, tuple[str, datetime]] = {}
+    for kind in knowledge.KINDS:
+        for stored in view.list(kind):
+            last = decided.get(stored.id)
+            if stored.data.get("status") != "discarded" or last is None or last[0] != "discarded":
+                continue
+            for evidence in (stored.data.get("evidence"), *(stored.data.get("more_evidence") or [])):
+                source = (evidence or {}).get("source")
+                if source is None and (evidence or {}).get("request"):
+                    request = view.get("request", evidence["request"])
+                    source = request.data.get("source") if request is not None else None
+                if source is not None and (source not in found or found[source][1] < last[1]):
+                    found[source] = (kind, last[1])
+    return found
+
+
+def discarded_routing(
+    view: Any, topic: str, person: str | None, team: str | None, negative: bool, share: float
+) -> tuple[Any, datetime] | None:
+    """The routing proposal the person discarded that this routing matches, with the day, if any: it names the same
+    person or team, says the same thing (who does, or doesn't, answer), and its topic shares at least `share` of its
+    words with this one (`knowledge_section.topic_share`). The latest such discard when there are several."""
+    from engine.knowledge_section import topic_share
+
+    decided = _decisions(view)
+    found: tuple[Any, datetime] | None = None
+    for stored in view.list("routing_entry"):
+        d = stored.data
+        last = decided.get(stored.id)
+        if d.get("status") != "discarded" or last is None or last[0] != "discarded":
+            continue
+        same_who = (person is not None and d.get("person") == person) or (team is not None and d.get("team") == team)
+        says_the_same = same_who and bool(d.get("negative")) == negative and topic_share(d["topic"], topic) >= share
+        if says_the_same and (found is None or found[1] < last[1]):
+            found = (stored, last[1])
+    return found
+
+
 def just_this_time_before(view: Any, kind: str, data: dict[str, Any], *, own_id: str | None = None) -> int:
     """How many entries about the same thing (same kind, same normalized subject) the person set aside with "just
     this time" before this one, so a repeat of the same correction counts toward a later proposal."""

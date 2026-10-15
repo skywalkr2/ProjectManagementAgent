@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 from api.app import create_app
 from engine.ai.adapters.stub import set_responder
 from engine.ai.router import Router
-from engine.applier import apply_as_person, fold_unowned, pick_owner, undo
+from engine.applier import REACHED_WAITS, apply_as_person, fold_unowned, pick_owner, undo
 from engine.corrections import request_change
 from engine.dispatcher import process, undo_changeset
 from engine.followups import put_on_hold, sections
@@ -249,6 +249,60 @@ def test_the_assistants_question_drop_needs_evidence_and_records_no_signal_while
     apply_as_person(store, cfg, [{"op": "question.drop", "id": other, "reason": "Not needed"}], "Drop")
     (signal,) = signals(store, "dropped")
     assert signal["refs"] == [other] and signal["run"] == theirs_run
+
+
+# ---- a drop of something that already reached someone ---------------------------------------------------------------
+
+
+def test_the_assistants_drop_of_a_sent_question_waits_for_a_look_and_one_not_sent_applies(env):
+    _, cfg, store = env
+    _, _, sent = asked_by_a_run(env, decision_op(cfg))
+    _, _, unsent = asked_by_a_run(env, decision_op(cfg, title="Which paper for the jacket?"))
+    with store.transaction() as tx:
+        current = tx.get("question", sent)
+        tx.update("question", sent, {"status": "sent", "sent_at": NOW.isoformat()}, _TEST, read_version=current.version)
+    drop = {
+        "op": "question.drop",
+        "reason": "The input says it is settled.",
+        "evidence": {"quote": "forget the old question"},
+    }
+    cs_id, result = from_input(store, cfg, [{**drop, "id": sent}, {**drop, "id": unsent}])
+    assert result == ["held", "applied"]
+    held = store.read().get("changeset", cs_id).data["ops"][0]
+    assert held["reason"] == REACHED_WAITS and data(store, "question", sent)["status"] == "sent"
+    assert data(store, "question", unsent)["status"] == "dropped"
+    # The person's own drop, and the assistant's once the person confirmed it, apply.
+    _, confirmed = apply(
+        store,
+        cfg,
+        [{**drop, "id": sent}],
+        origin="input",
+        trust="untrusted",
+        source_id=source(store),
+        raw=RAW,
+        confirmed=True,
+    )
+    assert confirmed == ["applied"] and data(store, "question", sent)["status"] == "dropped"
+
+
+def test_the_assistants_drop_of_an_action_someone_was_told_about_or_chased_for_waits_for_a_look(env):
+    _, cfg, store = env
+    told, chased, untouched = [a["id"] for a in OPEN[:3]]
+    someone = other_of(cfg)
+    with store.transaction() as tx:
+        for action_id, field, value in (
+            (told, "told", {someone: NOW.date().isoformat()}),
+            (chased, "followed_up", {someone: [NOW.date().isoformat()]}),
+        ):
+            current = tx.get("action", action_id)
+            tx.update("action", action_id, {field: value}, _TEST, read_version=current.version)
+    ops = [drop_op(action_id) for action_id in (told, chased, untouched)]
+    cs_id, result = from_input(store, cfg, ops)
+    assert result == ["held", "held", "applied"]
+    assert all(REACHED_WAITS in o["reason"] for o in store.read().get("changeset", cs_id).data["ops"][:2])
+    assert [data(store, "action", a)["status"] for a in (told, chased, untouched)] == ["open", "open", "dropped"]
+    apply_as_person(store, cfg, [{"op": "action.drop", "id": told, "reason": "Not needed"}], "Drop")
+    assert data(store, "action", told)["status"] == "dropped"
 
 
 # ---- reading notes --------------------------------------------------------------------------------------------------
