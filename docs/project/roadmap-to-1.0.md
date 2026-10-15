@@ -1001,7 +1001,7 @@ From the original designer's lessons of 2026-10-14:
   `tests/test_corrections.py::test_change_this_route_queues_the_request_and_names_the_signal`). Left: the note box on each
   row (the screens), and an op for the assistant to put an action on hold or drop an item (a note asking for either gets an
   answer that says it can't). *Built in L3 (engine and API):* `POST /api/items/{kind}/{id}/change` for the five kinds, with its signal and request (`tests/test_corrections.py`). *Built in L3 wave 3B (screens):* the note box in the menu of an action (Follow-ups, Today's to-do), a question or decision, a calendar entry of the app's own, and a fact's page, with the toast saying the assistant will look at it (`web/src/components/ChangeThis.test.tsx`, `web/src/components/TodayBoard.test.tsx`). The assistant's hold and drop: `tests/test_hold_drop_fold.py::test_reading_notes_is_offered_the_three_ops_and_a_change_this_note_for_a_hold_is_done_not_refused`, `tests/test_hold_drop_fold.py::test_action_drop_is_never_done_or_credited_records_no_signal_and_undo_opens_it_again`.
-- [ ] **The missing-op list** (lesson 2, design 6.13): every "no op can do this" in a run's result and every hand fix of
+- [x] **The missing-op list** (lesson 2, design 6.13): every "no op can do this" in a run's result and every hand fix of
   the assistant's work, listed weekly on Quality, each becoming an op with its check and Undo or a recorded "the person
   does this". Checked against the code (2026-10-14), of the designer's six hand fixes: adding a person and logging a
   lesson have ops (`person.add`, `lesson.add`); a project's role, bringing back something set aside as an op the
@@ -1012,8 +1012,9 @@ From the original designer's lessons of 2026-10-14:
   `tests/test_corrections.py::test_list_merge_moves_every_record_to_the_other_value_and_undo_puts_both_back`,
   `tests/test_corrections.py::test_mark_sent_records_the_day_undo_makes_it_open_and_it_is_not_a_correction`). The weekly list is
   built as data (`missing` on each changeset, grouped by wording in `GET /api/quality`:
-  `tests/test_quality.py::test_what_runs_lacked_is_grouped_by_wording_with_counts_week_by_week`). Left: a project's role
-  (with the scope slice), the list's screen on Quality (phase B), and the "the person does this" decisions.
+  `tests/test_quality.py::test_what_runs_lacked_is_grouped_by_wording_with_counts_week_by_week`). Moved: a project's role
+  to the scope slice ("Ready for real use"), the list's screen to phase B (Quality), and the "the person does this" calls
+  to the original designer (`designer-questions.md`, question 8).
 - [x] **"Just this time" beside Keep on the Learned line** (the original designer's mockup review, 2026-10-14, design 7.18):
   the signal is recorded, nothing is proposed, and a repeat of the same correction counts toward a later proposal. A lesson
   is about what was corrected (an action's owner teaches who does the work, not where questions go). One Today line for
@@ -1265,6 +1266,8 @@ From L3 (design 7.18):
 - [ ] A project's "what the assistant knows" section on its page: sources and the last input, facts with source and date,
   glossary terms used there (confirmed, assumed, unknown), who answers what, and what is still unknown with its question.
 - [ ] "Overlaps with …" on the Learned line, linking the entry a proposal would merge with.
+- [ ] The Quality screen (6.20): the knowledge-used and repeat-correction rates and the weekly missing-op list, from
+  `GET /api/quality` (built in L3).
 
 From the original designer's lessons of 2026-10-14:
 - [ ] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.6 and 7.7): a project
