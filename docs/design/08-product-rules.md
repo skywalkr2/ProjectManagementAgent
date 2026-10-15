@@ -213,3 +213,7 @@ rules that bite first are not the workplace ones:
 
 Scope, schedule lookups and dependencies wait for the workplace and project management packs.
 
+**As built (L6, 2026-10-15):** the lints `unverified-quote` (questions to people; default `return`), `unverified-name`
+(questions to someone else; `warn`), `unknown-link` (questions and drafts; `return`), `version-number`,
+`summary-is-status` and `unlinked-made` (`return`), with their word lists in `language.*`; `Person.name_verified`; and
+`made` on a change's view, shown as "Made:" links. Built: `tests/test_first_week_lints.py`.

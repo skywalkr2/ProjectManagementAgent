@@ -978,6 +978,14 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No text extractor | `registrar.extractor`, `ItemFile` on a connector's item, `view.file_text` |
 | Backups (4.15, 12.1) | Not encrypted | `storage.backups.encrypt` seals every copy; restore asks for the key. Built: `tests/test_extractors.py`, `tests/test_backup_encryption.py` |
 
+## 64. L6 and the first-week lints (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Rules (8.8) | Designed | `unverified-quote` (questions only), `unverified-name`, `unknown-link`, `version-number`, `summary-is-status`, `unlinked-made`; `Person.name_verified`. Built: `tests/test_first_week_lints.py` |
+| Change cards (7.7) | What a change made was inside its details | "Made:" links on the row (`made` on the change view) |
+| Uploads (6.2) | A file sent with no type was refused as binary | Its name gives the type; a text type only when the bytes are text. Built: `tests/test_files.py::test_a_file_sent_with_no_type_or_a_generic_one_takes_the_type_its_name_gives` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

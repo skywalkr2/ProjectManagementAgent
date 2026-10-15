@@ -2210,8 +2210,11 @@ class _FirstWeek:
         body = "\n".join(t for t in texts if t)
         inputs = self.ctx.inputs
         quotes = _quotes_in(op, self.ctx)
+        # Quotation marks in long text are often the work itself (dialogue in a story), so only what the assistant asks
+        # of someone is held to verbatim quotes.
+        checked = body if isinstance(op, QuestionAddOp) else ""
         for passage in draft_checks.unverified_quotes(
-            body, [inputs.raw_input, inputs.note, *quotes], cfg.checks.tuning.unverified_quote.min_words
+            checked, [inputs.raw_input, inputs.note, *quotes], cfg.checks.tuning.unverified_quote.min_words
         ):
             add(
                 "unverified-quote",

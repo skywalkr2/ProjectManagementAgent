@@ -3,6 +3,12 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The quote check is for what the assistant asks of people, not long text
+
+**Decided by:** the technical PM, merging L6. **What:** `unverified-quote` checks questions only; quotation marks in long
+text are often the work itself (a story's dialogue), so a draft is never returned for them. The link check still covers
+drafts. `summary_max_lines` lives under `workspace.project`. **Impact:** design 8.8; roadmap L6. No change to scope.
+
 ## 2026-10-15: The writing pack is finished before any other pack starts
 
 **Decided by:** the owner (asked directly after the writing pack's builder passed it on). **What:** phase C is now the

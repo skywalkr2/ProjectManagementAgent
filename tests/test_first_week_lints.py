@@ -157,7 +157,7 @@ def test_an_unverified_quote_holds_a_question_to_someone_else_and_only_records_o
     assert own == ["applied"]
 
 
-def test_a_draft_is_checked_for_quotes_and_links_but_does_not_go_to_anyone_by_itself(env):
+def test_a_draft_is_checked_for_links_but_not_quotes_and_does_not_go_to_anyone_by_itself(env):
     _, cfg, store = env
     view = store.read()
     ctx = Context(
@@ -174,7 +174,9 @@ def test_a_draft_is_checked_for_quotes_and_links_but_does_not_go_to_anyone_by_it
     )
     op = TextDraftOp(record=RecordRef(kind="project", id=PROJECT["id"]), field="summary", text=text)
     names = [p.check for p in _FirstWeek(ctx, view).problems(0, op, cfg.checks.lints)]
-    assert names == ["unverified-quote", "unknown-link"]  # a version or a name matters in what is sent to someone
+    # Quotation marks in long text may be the work itself (dialogue), and a version or a name matters only in what is
+    # sent to someone.
+    assert names == ["unknown-link"]
 
 
 # ---- names spelled from a primary source -----------------------------------------------------------------------------

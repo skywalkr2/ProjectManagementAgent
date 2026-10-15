@@ -329,20 +329,25 @@ real use starts. The rest (L-more) comes after the packs.
     it in Settings"), never "0 items".
   - [ ] **Credentials with a known lifetime carry their expiry date**, and a Today line lands a week before (a setting),
     listing every place the same credential is stored (lesson 7).
-  - [ ] **What a change made is linked where the person looks** (lessons of 2026-10-14 afternoon, lesson 1): every draft,
+  - [x] **What a change made is linked where the person looks** (lessons of 2026-10-14 afternoon, lesson 1): every draft,
     write-up or file a change makes for the person shows as a "Made:" link on the change's card without opening its
     details, with what it is for ("internal minutes, not ready to send"); the request's result links the first one. A
-    result that names something made without a link gets the lint `unlinked-made` (default `return`).
-  - [ ] **A project's summary is status, not findings** (afternoon lesson 5): a line budget (a setting) and a lint on the
+    result that names something made without a link gets the lint `unlinked-made` (default `return`). Built:
+    `tests/test_first_week_lints.py::test_the_change_view_gives_what_the_change_made`, `tests/test_first_week_lints.py::test_a_summary_that_says_it_made_something_the_change_does_not_hold_is_returned`,
+    `web/src/components/WhatChangedMade.test.tsx`. A plugin-supplied purpose ("internal minutes, not ready to send") isn't
+    carried yet; the label is the record it is for.
+  - [x] **A project's summary is status, not findings** (afternoon lesson 5): a line budget (a setting) and a lint on the
     summary field; findings go to facts. Placing a sentence by audience on published pages is the publisher's and the
-    project management pack's (C2, C4), using the data levels the core already has.
+    project management pack's (C2, C4), using the data levels the core already has. Built:
+    `tests/test_first_week_lints.py::test_a_summary_longer_than_the_setting_or_holding_findings_is_returned`.
   - [ ] **A watched source can name its author** (afternoon lesson 7): the person, a named colleague or a team, set on the
     source in the watch settings. The person's own edits are their own work: never news credited to others, never
     questions back to them. Closing the action an edit fulfills is L3b's.
-  - [ ] **No tool version numbers in messages to people** (lesson 9): a lint (default `return`) on questions and drafts
+  - [x] **No tool version numbers in messages to people** (lesson 9): a lint (default `return`) on questions and drafts
     that go to someone else, with the version patterns in settings: name the page, link it, say what changed or when. A
     version that is part of a product's own name passes. The lint is the core's; a connector pack ships the patterns for
-    its own pages.
+    its own pages. Built: `tests/test_first_week_lints.py::test_a_version_number_in_a_message_to_someone_else_is_returned`,
+    `tests/test_first_week_lints.py::test_a_version_inside_a_name_the_workspace_knows_passes`.
 - **One account is the usual case; a second is offered, never assumed** (the original designer's L1 check-in and the
   owner's answer, 2026-10-14). Most people have one AI account, so a usage limit means the work waits for the reset:
   that is built and says so on Today with the time
@@ -1272,9 +1277,12 @@ L5. **Reading what arrives, and protecting what is learned.**
   `tests/test_backup_encryption.py::test_the_command_restores_with_a_key_reference_and_refuses_without_or_with_a_wrong_one`.
 
 L6. **The rules that bite in the first week of real use** (design 8.8).
-- [ ] Quotes only from verbatim sources, with a paraphrase labeled as one; no unattributed lines.
-- [ ] Names spelled from a primary source, with unverified spellings marked (`person.verified`).
-- [ ] Every link checked before it is shown.
+- [x] Quotes only from verbatim sources, with a paraphrase labeled as one; no unattributed lines. Built: `tests/test_first_week_lints.py::test_words_in_quotation_marks_that_are_not_in_the_input_are_returned`
+  (questions only: quotation marks in long text are often the work itself, such as dialogue).
+- [x] Names spelled from a primary source, with unverified spellings marked (`person.verified`, as built `name_verified`). Built: `tests/test_first_week_lints.py::test_a_name_is_verified_when_the_person_gave_it`,
+  `tests/test_first_week_lints.py::test_a_name_no_person_goes_by_is_a_warning_on_a_question_to_someone_else`.
+- [x] Every link checked before it is shown. Built: `tests/test_first_week_lints.py::test_a_link_nothing_holds_is_returned_and_one_the_input_a_record_or_a_source_holds_passes`
+  ("checked" means it came from the input, a record or a configured source; nothing is fetched).
 
 ## Phase B: finish the UI/UX redesign (about 4 sessions)
 
