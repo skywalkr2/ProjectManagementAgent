@@ -34,6 +34,7 @@ WRITE = WriteContext(actor="pm", trust="trusted", op="test")
 def make_plugin(tmp_path, *, name="scratch", edits=None, source=None):
     root = tmp_path / "plugins" / name
     root.mkdir(parents=True)
+    (root / "evals").mkdir()
     raw = yaml.safe_load((BUNDLED / "example/plugin.yaml").read_text().replace("example", name))
     if edits:
         edits(raw)

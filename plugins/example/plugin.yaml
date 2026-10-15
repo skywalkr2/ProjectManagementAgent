@@ -15,6 +15,8 @@ provides:
   actions: [example/note-from-file]
   wording: [wording.yaml]
   value_lists: [example/kind]
+  scorers: [example/reminder-words]
+  evals: evals
 config_schema: example:Config
 requires:
   network: []

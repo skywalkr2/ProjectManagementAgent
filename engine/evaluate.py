@@ -11,7 +11,10 @@ A case may name the `project` its input is about (as the person does when handin
 change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a
 held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A
 hostile case (`hostile: true`) also fails on any system-tier op and on any op that names a person listed under
-`injected`. The report says which accounts ran, the version of each command-line agent, and whether every tier ran on
+`injected`. A plugin's own cases (`provides.evals`, in this same format, ids `<plugin>/<name>`) run too, for each
+plugin enabled in the workspace being evaluated: such a case may name a task kind of the plugin (`task`) and a scorer
+of the plugin (`score`) that judges the plugin's own ops, while the core's exact matching scores everything else.
+The report says which accounts ran, the version of each command-line agent, and whether every tier ran on
 one account.
 
 Learning pairs and the day-30 scenario are run the same way, by `engine/pairs.py`, which documents their format.
@@ -192,6 +195,8 @@ def _check_case(folder: Path, case: dict[str, Any]) -> None:
         raise ValueError(f"{where}: injected names people only a hostile case checks; add hostile: true")
     if not all(isinstance(name, str) for name in case.get("injected", [])):
         raise ValueError(f"{where}: injected is a list of names or person ids")
+    if case.get("score") is not None and not case.get("_pack"):
+        raise ValueError(f"{where}: score names a plugin's scorer, which only the plugin's own cases use")
     if case.get("watched") is not None and not isinstance(case["watched"], dict):
         raise ValueError(f"{where}: watched is a mapping (title, change, author, by_us, by_you, credited_to)")
     starting_records(folder.parent, case)
@@ -204,7 +209,8 @@ def starting_records(template: Path, case: dict[str, Any]) -> list[dict[str, Any
     records: list[dict[str, Any]] = []
     name = case.get("given_file")
     if name:
-        path = template / "evals" / str(name)
+        folder = Path(case["_pack"]["folder"]) if case.get("_pack") else template / "evals"
+        path = folder / str(name)
         if not path.is_file():
             raise ValueError(f"{where}: given_file {name} isn't in the evals folder")
         shared = load_yaml(path.read_text(encoding="utf-8"))
@@ -248,14 +254,17 @@ def evaluate(
     progress: Callable[[RunResult, int, int], None] | None = None,
     notice: Callable[[str], None] | None = None,
     adapter_factory: AdapterFactory = make_adapter,
+    packs_of: Path | None = None,
 ) -> Report:
     """Run every case (or `only` these) `runs` times. With `stub`, the stand-in AI gives each case's ideal answer, which
     checks the cases and the pipeline rather than a model. `ai_config` replaces the fixture's AI setup with another
-    workspace's `ai.yaml`, so the PM's own accounts run against the fictional cases."""
+    workspace's `ai.yaml`, so the PM's own accounts run against the fictional cases. The cases of the plugins enabled
+    in `packs_of` (default: the template) run after the core's."""
     env = os.environ if env is None else env
     results: list[RunResult] = []
     versions: dict[str, str | None] = {}
-    cases = [c for c in load_cases(template) if not only or c["id"] in only]
+    found = [*load_cases(template), *load_pack_cases(packs_of or template)]
+    cases = [c for c in found if not only or c["id"] in only]
     total = len(cases) * runs
     for case in cases:
         for n in range(1, runs + 1):
@@ -319,8 +328,10 @@ def _run_case(
             set_responder(lambda task, answer=case["stub_answer"]: json.dumps(answer))
         elif account:
             flags |= {"ai.tiers.routine.use": account, "ai.tiers.routine.fallback": []}
+        if case.get("_pack"):
+            flags |= _enable_pack(ws, template, case["_pack"])
         cfg = ws.config(env={}, flags=flags)
-        store = Store(ws.db_path)
+        store = Store(ws.db_path, cfg=cfg if case.get("_pack") else None)
         try:
             records = starting_records(template, case)
             if records:
@@ -342,12 +353,16 @@ def _run_case(
                 return RunResult(
                     case["id"], n, False, error=why, cost_usd=cost, seconds=seconds, not_run=refused, accounts=accounts
                 )
-            outcomes = store.read().get("changeset", cs_id).data["ops"]
+            produced = store.read().get("changeset", cs_id).data["ops"]
+            case, outcomes, own = _without_own_ops(case, produced)
             missing = [_describe(e) for e in case.get("expect", []) if not _matches(e, outcomes, store, request_id)]
             forbidden = [_describe(f) for f in case.get("forbid", []) if _forbidden(f, outcomes, store, people_before)]
             if case.get("hostile"):
                 forbidden += _hostile_findings(case, outcomes, store)
             extra = _unexpected(case, outcomes, store, request_id) if case.get("exact", True) else []
+            if case.get("score"):
+                missing += store.plugins.score_case(case["score"], _as_written(case), own)
+            outcomes = produced
             passed = not missing and not forbidden and not extra
             return RunResult(
                 case["id"],
@@ -436,9 +451,12 @@ def _hand_in_case(ws: Workspace, store: Store, cfg: Config, case: dict[str, Any]
     if on is None and case.get("watched") is not None:
         return _hand_in_watched(ws, store, case, now)
     if on is None:
-        return hand_in(
+        request = hand_in(
             ws, store, note=case.get("note", ""), pasted=case.get("pasted", ""), now=now, project=case.get("project")
         ).request
+        if case.get("task"):
+            _set_task(store, case, request)
+        return request
     if on["route"] == "they_finished":
         they_finished(store, cfg, on["id"], on["person"])
     item = (on["kind"], on["id"])
@@ -648,3 +666,115 @@ def _summarize(outcome: dict[str, Any]) -> str:
 
 def _describe(item: dict[str, Any]) -> str:
     return ", ".join(f"{k}={v}" for k, v in item.items())
+
+
+# ---- a plugin's own cases and scorers --------------------------------------------------------------------------------
+
+
+def load_pack_cases(workspace: Path) -> list[dict[str, Any]]:
+    """The evaluation cases of every plugin enabled in a workspace that names a folder of them (`provides.evals`), in
+    the core's format. Each case's id is `<plugin>/<name>`, it may name a task kind (`task`) and a scorer (`score`) of
+    its own plugin, and it is marked with where it came from. A plugin's case that expects or forbids one of its own
+    ops must name a scorer, since the core's matching can't judge them."""
+    from engine.config import ConfigError, load_config
+    from engine.plugin_manifest import plugin_paths, read_manifest
+
+    try:
+        enabled = list(load_config(workspace / "config", env={}).workspace.plugins.enabled)
+    except (ConfigError, OSError):
+        return []
+    found: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for name, path in plugin_paths(workspace / "config", enabled):
+        try:
+            manifest = read_manifest(path)
+        except (ValueError, OSError):
+            continue
+        if not manifest.provides.evals:
+            continue
+        folder = path.parent / manifest.provides.evals
+        local = path.parent.parent == workspace / "plugins"
+        mark = {
+            "plugin": name,
+            "folder": str(folder),
+            "scorers": list(manifest.provides.scorers),
+            "needs": [name, *(d.name for d in manifest.depends_on)],
+            "local": str(path.parent) if local else None,
+        }
+        for file in sorted(folder.glob("*.yaml")):
+            loaded = load_yaml(file.read_text(encoding="utf-8"))
+            if isinstance(loaded, list):
+                continue  # a shared starting state, named by a case's `given_file`
+            case = {**loaded, "_pack": mark}
+            _check_pack_case(name, mark, case)
+            received_of(case)
+            _check_case(folder, case)
+            if case["id"] in seen:
+                raise ValueError(f"case {case['id']} is in more than one evaluation folder")
+            seen.add(case["id"])
+            found.append(case)
+    return found
+
+
+def _check_pack_case(plugin: str, mark: dict[str, Any], case: dict[str, Any]) -> None:
+    where = f"case {case.get('id')}"
+    if not re.fullmatch(re.escape(plugin) + r"/[a-z][a-z0-9_.-]*", str(case.get("id", ""))):
+        raise ValueError(f"{where}: a plugin's case id is {plugin}/<name>")
+    score = case.get("score")
+    if score is not None and score not in mark["scorers"]:
+        raise ValueError(f"{where}: score {score} isn't a scorer the plugin lists in provides.scorers")
+    prefix = plugin + "/"
+    own = [e for key in ("expect", "forbid") for e in case.get(key, []) if str(e.get("op", "")).startswith(prefix)]
+    if own and not score:
+        raise ValueError(f"{where}: it expects or forbids an op of the plugin, which needs score: <scorer>")
+    if case.get("task") is not None and not str(case["task"]).startswith(prefix):
+        raise ValueError(f"{where}: task names a task kind of the plugin ({prefix}<name>)")
+
+
+def _without_own_ops(
+    case: dict[str, Any], outcomes: list[dict[str, Any]]
+) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]]:
+    """For a case that names a scorer: the case without the expectations about the plugin's own ops, the produced ops
+    that are not the plugin's own (the core's matching scores those), and the plugin's own ops (the scorer judges
+    them). Any other case is returned whole."""
+    pack = case.get("_pack")
+    if not pack or not case.get("score"):
+        return case, outcomes, []
+    prefix = pack["plugin"] + "/"
+
+    def own(op: dict[str, Any]) -> bool:
+        return str(op.get("op", "")).startswith(prefix)
+
+    trimmed = {k: [e for e in case.get(k, []) if not own(e)] for k in ("expect", "forbid") if k in case}
+    return (
+        {**case, **trimmed},
+        [o for o in outcomes if not own(o["op"])],
+        [o for o in outcomes if own(o["op"])],
+    )
+
+
+def _as_written(case: dict[str, Any]) -> dict[str, Any]:
+    """A case as its file says it, without what the harness added."""
+    return {k: v for k, v in case.items() if not k.startswith("_")}
+
+
+def _enable_pack(ws: Workspace, template: Path, pack: dict[str, Any]) -> dict[str, Any]:
+    """What a plugin's case needs in its fresh workspace: the plugin (and those it depends on) enabled, and a plugin
+    that lives in the evaluated workspace's own plugins folder copied in beside the others."""
+    if pack.get("local"):
+        target = ws.root / "plugins" / Path(pack["local"]).name
+        if not target.exists():
+            shutil.copytree(pack["local"], target)
+    from engine.config import load_config
+
+    enabled = list(load_config(ws.config_dir, env={}).workspace.plugins.enabled)
+    return {"workspace.plugins.enabled": list(dict.fromkeys([*enabled, *pack["needs"]]))}
+
+
+def _set_task(store: Store, case: dict[str, Any], request_id: str) -> None:
+    """Make the request a case's handed-in input starts the kind of work the case names (a plugin's own)."""
+    if case["task"] not in store.plugins.tasks:
+        raise ValueError(f"case {case['id']}: there is no task kind {case['task']} (is its plugin running?)")
+    request = store.read().get("request", request_id)
+    with store.transaction(notify=False) as tx:
+        tx.update("request", request_id, {"task": case["task"]}, _STARTING, read_version=request.version)

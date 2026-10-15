@@ -296,7 +296,7 @@ class PluginWorkspace:
     def registered(self, plugin: str | None = None) -> dict[str, dict[str, Any]]:
         """What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ...,
         "triage_matchers", "setup_steps", "actions", "tasks", "ops", "records", "panels", "today", "jobs",
-        "stage_checks", "file_kinds", "lints", "extractors"}. Empty kinds are left out. A started plugin only."""
+        "stage_checks", "file_kinds", "lints", "extractors", "scorers"}. Empty kinds are left out. A started plugin only."""
         from types import MappingProxyType
 
         registrar = self.store.plugins.registrars.get(plugin or self.plugins[0])
@@ -318,6 +318,7 @@ class PluginWorkspace:
             ("file_kinds", "file_kinds"),
             ("lints", "lints"),
             ("extractors", "extractors"),
+            ("scorers", "scorers"),
         )
         found = {}
         for label, attribute in kinds:

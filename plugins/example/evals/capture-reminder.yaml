@@ -1,0 +1,12 @@
+id: example/capture-reminder
+title: A spoken reminder is captured with the words that matter
+received: '2026-10-14'
+task: example/capture
+note: Remind me to call the printer about the proof before Friday.
+score: example/reminder-words
+words: [printer, proof]
+stub_answer:
+  summary: One reminder to record.
+  ops:
+  - op: example/reminder.add
+    text: Call the printer about the proof before Friday

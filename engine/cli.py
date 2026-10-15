@@ -906,6 +906,7 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
         stub=args.stub,
         only=args.only,
         ai_config=args.ai_config,
+        packs_of=workspace,
         progress=_eval_progress,
         notice=lambda line: print(line, file=sys.stderr, flush=True),
     )

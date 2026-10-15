@@ -143,6 +143,11 @@ class Provides(Strict):
         "before it is installed. A connector left out is told apart by its name.",
     )
     triage_matchers: list[str] = Field(default_factory=list, description="Rule kinds for triaging watched changes.")
+    scorers: list[str] = Field(
+        default_factory=list,
+        description="Deterministic scorers for what only the plugin can judge, which a case in its evaluation folder "
+        "names with `score:`.",
+    )
     value_lists: list[str] = Field(
         default_factory=list, description="Value lists the plugin's record fields take their values from."
     )
@@ -190,6 +195,11 @@ class Provides(Strict):
         return value
 
     playbook: str | None = Field(None, description="The plugin's own playbook. Not yet available.")
+    evals: str | None = Field(
+        None,
+        description="A folder beside plugin.yaml holding the plugin's own evaluation cases, in the core's format; "
+        "`cockpit evaluate` runs them while the plugin is enabled.",
+    )
     data: str | None = Field(
         None,
         description="A folder beside plugin.yaml holding the data files the plugin ships (templates, word lists); the "
@@ -263,6 +273,7 @@ class Manifest(Strict):
             "panels",
             "today",
             "jobs",
+            "scorers",
         )
         for category in categories:
             names = getattr(self.provides, category)
@@ -353,9 +364,9 @@ def shipped_plugins() -> set[str]:
     return {path.parent.name for path in root.glob("*/plugin.yaml")}
 
 
-def declared_plugins(config_dir: Path | None, enabled: list[str] | None):
-    """Read available declarations without executing plugin code: the enabled plugins', or with `enabled` None,
-    every installed plugin's."""
+def plugin_paths(config_dir: Path | None, enabled: list[str] | None):
+    """Where each available plugin's manifest is, as (name, path), without executing plugin code: the enabled
+    plugins', or with `enabled` None, every installed plugin's."""
     from importlib.metadata import entry_points
 
     roots = [Path(__file__).resolve().parents[1] / "plugins"]
@@ -367,8 +378,15 @@ def declared_plugins(config_dir: Path | None, enabled: list[str] | None):
             paths.append((ep.name, installed_manifest(ep)))
     for name, path in paths:
         if enabled is None or name in enabled:
-            try:
-                yield read_manifest(path)
-            except (ValueError, OSError):
-                # The host reports invalid plugins; stage references still fail closed.
-                continue
+            yield name, path
+
+
+def declared_plugins(config_dir: Path | None, enabled: list[str] | None):
+    """Read available declarations without executing plugin code: the enabled plugins', or with `enabled` None,
+    every installed plugin's."""
+    for _name, path in plugin_paths(config_dir, enabled):
+        try:
+            yield read_manifest(path)
+        except (ValueError, OSError):
+            # The host reports invalid plugins; stage references still fail closed.
+            continue

@@ -64,11 +64,13 @@ A plugin's manifest, `plugin.yaml`, beside its package. It is read and checked b
 | `provides.connectors` | list[str] | `[]` | Places the assistant can keep reading. |
 | `provides.connector_reads` | dict[str, Literal['mail', 'calendar']] | `{}` | What each of the plugin's connectors reads, by connector: mail or calendar. The setup walkthrough offers an add-on that signs in and reads mail or a calendar as a service to connect, also before it is installed. A connector left out is told apart by its name. |
 | `provides.triage_matchers` | list[str] | `[]` | Rule kinds for triaging watched changes. |
+| `provides.scorers` | list[str] | `[]` | Deterministic scorers for what only the plugin can judge, which a case in its evaluation folder names with `score:`. |
 | `provides.value_lists` | list[str] | `[]` | Value lists the plugin's record fields take their values from. |
 | `provides.sign_ins` | list[str] | `[]` | Sign-ins to a service, through its own sign-in page, as the person. |
 | `provides.help` | list[str] | `[]` | Help files the plugin ships (Markdown, one section per ## heading, paths relative to its manifest) that asking the assistant reads and cites, like the user guide. Only ## sections are read: text before the first ## heading is left out. |
 | `provides.wording` | list[str] | `[]` | Wording files the plugin ships (YAML maps from a wording key to its text, paths relative to its manifest): what the screens call the plugin's own kinds, e.g. stages.group.<plugin>/<kind>. Every key names something in the plugin's namespace; the workspace's ui.wording overrides any of them. |
 | `provides.playbook` | str \| None | `None` | The plugin's own playbook. Not yet available. |
+| `provides.evals` | str \| None | `None` | A folder beside plugin.yaml holding the plugin's own evaluation cases, in the core's format; `cockpit evaluate` runs them while the plugin is enabled. |
 | `provides.data` | str \| None | `None` | A folder beside plugin.yaml holding the data files the plugin ships (templates, word lists); the workspace overrides them in plugin-data/<plugin>/ and per project in plugin-data/<plugin>/projects/<id>/. |
 | `config_schema` | str | required | module:Class of the plugin's Settings subclass. |
 | `requires` | Requires | see below | What the plugin may reach and needs. |
@@ -218,6 +220,10 @@ The default pair: `default_client_id` alone is a public client (the service issu
 #### `registrar.triage_matcher(name: str, *, match: Callable) -> None`
 
 A rule kind for triage in `watch.yaml` (listed in `provides.triage_matchers`): `match(change, params) -> reason | None` closes a watched change before the assistant reads it when it returns a reason in plain words. `change` has source, key, title, change (new, changed or removed), author, before, now, added and removed and our_accounts; `params` are the rule's own. `before` is the text last read ("" for a new item) and `now` the text read this time ("" for a removed item, whose author is None). For a changed item, `added` and `removed` are the lines that appeared and disappeared (a line diff of `before` and `now`); for a new or removed item both are empty, so read `now` or `before`. For a mail item, `message` holds its details (sender, received, unread, bulk, categories, participants), and is None for anything else. Deterministic and quick; it never calls AI. The person sees what it closed and why, and can take a closer look.
+
+#### `registrar.scorer(name: str, fn: Callable) -> None`
+
+A deterministic scorer for what only this plugin can judge (listed in `provides.scorers`). A case in the folder `provides.evals` names (same format as the core's cases) uses it with `score: <plugin>/<name>`. `fn(case, produced, view) -> list[str]` gets the case as written (read the keys it wants checked from it), what the run produced as a list of `{"op": {...the op's fields}, "status": "applied" | "held" | "refused", "records": [{"kind", "id"}]}` for the plugin's own ops (ids starting `<plugin>/`), and a `ReadView` of the workspace the case ran in. It returns what is wrong in plain words: an empty list passes. The core's exact matching still scores every other op of the case, and ignores the plugin's own ops, so a case that expects or forbids one of them must name a scorer. Deterministic and quick; it never calls AI. One that raises fails its case only.
 
 #### `registrar.value_list(name: str, *, label: str, values: Sequence[str] = ()) -> None`
 
@@ -964,7 +970,7 @@ A plugin's status (the first plugin given, unless named), whether it started or 
 
 #### `ws.registered(plugin: str | None = None) -> dict[str, dict[str, Any]]`
 
-What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ..., "triage_matchers", "setup_steps", "actions", "tasks", "ops", "records", "panels", "today", "jobs", "stage_checks", "file_kinds", "lints", "extractors"}. Empty kinds are left out. A started plugin only.
+What a plugin registered, by kind, read-only: {"sign_ins": {name: its declaration}, "connectors": ..., "triage_matchers", "setup_steps", "actions", "tasks", "ops", "records", "panels", "today", "jobs", "stage_checks", "file_kinds", "lints", "extractors", "scorers"}. Empty kinds are left out. A started plugin only.
 
 #### `ws.save(path: str | Path) -> SavedWorkspace`
 

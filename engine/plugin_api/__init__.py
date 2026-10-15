@@ -1121,6 +1121,7 @@ class Registrar:
         self.setup_steps: dict[str, SetupStepRegistration] = {}
         self.connectors: dict[str, Any] = {}
         self.triage_matchers: dict[str, Callable] = {}
+        self.scorers: dict[str, Callable] = {}
         self.value_lists: dict[str, dict[str, Any]] = {}
         self.sign_ins: dict[str, Any] = {}
         self.interface_provisions: dict[str, InterfaceProvision] = {}
@@ -1936,6 +1937,21 @@ class Registrar:
         if name in self.triage_matchers or not callable(match):
             raise ValueError("duplicate triage matcher or invalid match function")
         self.triage_matchers[name] = match
+
+    def scorer(self, name: str, fn: Callable) -> None:
+        """A deterministic scorer for what only this plugin can judge (listed in `provides.scorers`). A case in the
+        folder `provides.evals` names (same format as the core's cases) uses it with `score: <plugin>/<name>`.
+        `fn(case, produced, view) -> list[str]` gets the case as written (read the keys it wants checked from it),
+        what the run produced as a list of `{"op": {...the op's fields}, "status": "applied" | "held" | "refused",
+        "records": [{"kind", "id"}]}` for the plugin's own ops (ids starting `<plugin>/`), and a `ReadView` of the
+        workspace the case ran in. It returns what is wrong in plain words: an empty list passes. The core's exact
+        matching still scores every other op of the case, and ignores the plugin's own ops, so a case that expects
+        or forbids one of them must name a scorer. Deterministic and quick; it never calls AI. One that raises fails
+        its case only."""
+        self._name(name)
+        if name in self.scorers or not callable(fn):
+            raise ValueError("duplicate scorer or invalid function")
+        self.scorers[name] = fn
 
     def value_list(self, name: str, *, label: str, values: Sequence[str] = ()) -> None:
         """A value list (listed in `provides.value_lists`): the values a field of the plugin's own record types may

@@ -111,6 +111,18 @@ def note_from_file(target, context: ActionContext, choices: dict) -> Proposal:
     )
 
 
+def reminder_words(case: dict, produced: list[dict], view: ReadView) -> list[str]:
+    """Scores a run that should have added a reminder: every word the case lists is in the reminders it added."""
+    added = [p for p in produced if p["status"] == "applied" and p["op"]["op"] == "example/reminder.add"]
+    if not added:
+        return ["no reminder was added"]
+    kept = {r.id: r.data["text"].lower() for r in view.list(Reminder.record_kind)}
+    texts = [kept[ref["id"]] for p in added for ref in p["records"] if ref["id"] in kept]
+    return [
+        f"no reminder mentions {word}" for word in case.get("words", []) if not any(word.lower() in t for t in texts)
+    ]
+
+
 def register(registrar: Registrar) -> None:
     registrar.value_list("example/kind", label=registrar.config.kinds_label, values=registrar.config.kinds)
     registrar.record_type(Reminder)
@@ -133,3 +145,4 @@ def register(registrar: Registrar) -> None:
         on="file",
         file_kinds=("attachment",),
     )
+    registrar.scorer("example/reminder-words", reminder_words)

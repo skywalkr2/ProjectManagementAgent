@@ -727,6 +727,25 @@ class PluginHost:
             for name, match in registrar.triage_matchers.items()
         }
 
+    def score_case(self, name: str, case: dict[str, Any], produced: list[dict[str, Any]]) -> list[str]:
+        """What a plugin's scorer finds wrong with the ops a case produced, in plain words; empty when it passes. A
+        scorer that raises, or answers with anything but a list of text, fails that case alone: nothing else is
+        touched and the plugin keeps running."""
+        plugin = name.split("/", 1)[0]
+        registrar = self.registrars.get(plugin)
+        if registrar is None or not self.active(plugin) or name not in registrar.scorers:
+            return [f"the scorer {name} isn't available"]
+        try:
+            found = registrar.scorers[name](
+                deepcopy(case), deepcopy(produced), self._with_files(ReadView(self.store.read(), plugin))
+            )
+            if not isinstance(found, list) or any(not isinstance(item, str) or not item.strip() for item in found):
+                raise ValueError("a scorer returns a list of problems in words")
+            return [" ".join(item.split()) for item in found]
+        except Exception as err:
+            log.warning("Plugin %s: scorer %s failed: %s", plugin, name, err)
+            return [f"the scorer {name} failed ({type(err).__name__})"]
+
     def run_matcher(self, name: str, match: Any, change: dict[str, Any], params: dict[str, Any]) -> str | None:
         """A plugin's matcher on one change; a failure counts as no match and is contained."""
         plugin = name.split("/", 1)[0]
@@ -1167,6 +1186,8 @@ class PluginHost:
                 )
             if manifest.provides.data and not (path.parent / manifest.provides.data).is_dir():
                 raise ValueError(f"the data folder {manifest.provides.data} that this add-on ships is missing")
+            if manifest.provides.evals and not (path.parent / manifest.provides.evals).is_dir():
+                raise ValueError(f"the evaluation folder {manifest.provides.evals} that this add-on ships is missing")
             for key in NOT_YET:
                 section, _, attribute = key.partition(".")
                 if getattr(getattr(manifest, section), attribute):
@@ -1371,6 +1392,7 @@ class PluginHost:
             ("setup_steps", registrar.setup_steps),
             ("connectors", registrar.connectors),
             ("triage_matchers", registrar.triage_matchers),
+            ("scorers", registrar.scorers),
             ("sign_ins", registrar.sign_ins),
             ("value_lists", registrar.value_lists),
             ("data_forms", registrar.data_forms),
