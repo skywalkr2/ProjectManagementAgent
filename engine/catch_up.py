@@ -24,20 +24,10 @@ from engine.records import REGISTRY
 from engine.state_file import changing, write_whole
 from engine.storage import StoreError, WriteContext
 
-#: The corrections a lesson can be learned from. Set aside mail, and what the person does to what was learned (keep,
-#: discard, retire, narrow, "just this time"), are not.
-LEARNED_FROM = (
-    "sent_back",
-    "undone",
-    "dropped",
-    "reworded",
-    "pulled_back",
-    "draft_edited",
-    "held_declined",
-    "routed",
-    "put_on_hold",
-    "taken_off_hold",
-)
+#: The corrections a lesson can be learned from: the kinds learning reads (`learn.TEACHES`), so the list and the runs
+#: never disagree. Set aside mail, putting an action on or off hold, and what the person does to what was learned (keep,
+#: discard, retire, narrow, "just this time") are not.
+LEARNED_FROM = learn.TEACHES
 
 _PREFIXES = {model.prefix: kind for kind, model in REGISTRY.items()}
 

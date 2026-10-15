@@ -26,8 +26,9 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
   - the measures: the knowledge-used and repeat-correction rates, the missing-op list, checked backup accounts;
   - the screens: the Learned line, the Review and catch-up lists, the Knowledge screen, the rules review, "Because you
     told me".
-  - **Left in L3** (now being built): queueing the catch-up's learning runs, skipping an unchecked backup account at run time, the send-back
-    packet carrying the item as it is now, and the reach in words on the Learned line.
+  - **L3's last items, built 2026-10-15:** the assistant's hold and drop, folding an unowned action, every correction
+    queueing its learning, the catch-up's learning runs behind one go, unchecked backups skipped at run time, the
+    send-back packet carrying each item as it is now, and the reach in words on the Learned line. **L3 is done.**
   - Moved out of L3: the learning pairs and the switch check (L4), and a project's "what the assistant knows" and
     "Overlaps with" (phase B).
 - **Next:** L3b (the obvious next step from what came in), L4 (proving it, with the owner's "after" run), L5, L6, then
@@ -989,7 +990,7 @@ From L1:
   Decided (2026-10-14): the ops a task kind may use never depend on the account; the assistant never writes files, only
   changesets, so a locked-down agent proposes knowledge like any account. The switch check's knowledge round-trip is
   built with the `learn` task kinds (L3) and is tested there. *Built in L3:* `tests/test_learn_correction.py::test_the_learning_proposal_applies_on_a_command_line_agent_account`, and the switch check's knowledge round-trip: `tests/test_quality.py::test_the_account_check_gives_every_account_one_learning_call_and_a_proposal_the_app_accepts_passes`, `tests/test_quality.py::test_a_command_line_agent_account_takes_the_learning_round_trip_too`, `tests/test_quality.py::test_the_learning_round_trip_fails_saying_which_part_failed`.
-- [ ] The exclusions of a scope, shown in words on the Learned line.
+- [x] The exclusions of a scope, shown in words on the Learned line. Built: `web/src/components/Learned.test.tsx::a reach that leaves projects out says which, by name`.
 From the original designer's lessons of 2026-10-14:
 - [x] **"Change this" on every row the assistant made** (lesson 4): action, question, decision, calendar entry and fact
   each have a note on their row. The assistant rewords, re-dates, puts on hold, turns it into another kind (an action
@@ -1064,7 +1065,7 @@ From the original designer's lessons of 2026-10-14:
   lesson should have caught it.
   - It runs at once when the person wrote something: a send-back note, or an answer to the assistant.
   - Silent corrections are batched, including the `edited` signal for the person's direct edits. Built: `tests/test_learn_correction.py::test_a_send_back_with_a_note_queues_one_learning_request_at_once_and_its_proposal_waits_for_keep`, `tests/test_learn_correction.py::test_silent_corrections_wait_for_the_next_batch_and_run_together`, `tests/test_learn_correction.py::test_more_than_one_proposal_refuses_the_whole_answer_and_asks_for_one`, `tests/test_learn_correction.py::test_nothing_to_generalize_makes_no_knowledge`, `tests/test_learn_correction.py::test_the_packet_holds_the_original_output_the_correction_and_the_given_knowledge_and_the_run_logs_it`.
-- [ ] **Questions can be corrected, and each correction is recorded** (design 6.8; found by the L0 audit): the question's
+- [x] **Questions can be corrected, and each correction is recorded** (design 6.8; found by the L0 audit): the question's
   own menu gets reword (`question.update`), reroute (`question.move`) and drop (`question.drop`, kept in a
   dropped-questions register with the reason), each person-only with Undo and each recording its signal (`reworded`,
   `dropped`, and a reroute); a send-back or correction runs a feedback task whose packet carries the current state of the
@@ -1078,8 +1079,8 @@ From the original designer's lessons of 2026-10-14:
   `tests/test_corrections.py::test_drop_keeps_the_question_with_its_reason_records_dropped_and_undo_opens_it_again`,
   `tests/test_corrections.py::test_an_edited_message_names_the_question_ids_and_the_run_that_wrote_them`). "Not me,
   ask X" is a routing proposal (`tests/test_learn_input.py::test_a_reply_that_says_not_me_ask_x_proposes_routing_and_leaves_the_question_open`).
-  Left: a send-back's packet stating the item's current state ("Change this" already carries it), and the menu on the
-  question's row (the screens').
+  A send-back's packet states each item as it is now: `tests/test_catch_up_learning.py::test_a_send_backs_packet_shows_each_item_the_work_touched_as_it_is_now_and_where_it_is`.
+  The question's menu: `web/src/components/ChangeThis.test.tsx`.
 - [x] Learning from a direct edit sees the inputs that came after the original run, and says "nothing to generalize"
   unless the edit contradicts the evidence the run had. Built: `tests/test_learn_correction.py::test_a_silent_corrections_packet_holds_the_inputs_that_arrived_after_the_original_run`.
 - [x] Learning from inputs (`learn-input`), with a rules-only scan for terms missing from the glossary: new terms, "not me,
@@ -1097,19 +1098,19 @@ From the original designer's lessons of 2026-10-14:
   kept content trusted and the source stays evidence; the packet never carries the source's words. Built: `tests/test_proposals.py::test_keeping_a_rule_proposal_makes_the_restatement_theirs_and_the_source_stays_outside_evidence`. *Built in L3 wave 3B:* Keep all on the Review list for glossary terms that carry the words they came from, and the source beside Keep marked "From outside" (`web/src/components/LearnedToday.test.tsx`, `web/src/components/Learned.test.tsx`). A fact is never a proposal, so Keep all has no facts to cover.
 - [x] The repeat-correction signal and the knowledge-used rate (`applied` on each changeset, checked against the knowledge
   log). Built (engine and `GET /api/quality`; the Quality screen is phase B's): `tests/test_quality.py::test_applied_ids_are_kept_only_when_the_run_was_given_them_and_the_rest_are_counted_and_missing_is_kept`, `tests/test_quality.py::test_the_knowledge_used_rate_counts_runs_given_something_and_only_those_that_made_a_changeset`, `tests/test_quality.py::test_a_correction_repeats_only_when_the_run_was_given_knowledge_whose_target_matched_the_corrected_item`, `tests/test_quality.py::test_a_week_has_a_rate_only_with_the_configured_number_of_corrections`.
-- [ ] The corrections recorded before this phase are learned from once, into one catch-up list, capped for one sitting
+- [x] The corrections recorded before this phase are learned from once, into one catch-up list, capped for one sitting
   (the original designer's L0 sign-off, 2026-10-13): at most 20 (a setting), ranked by how often the same kind of correction repeated; the rest expire with their
   count shown, as daily proposals do. *Built in L3p:* the selection, the ranking, the cap and the one-time start, the
   Today line and its route. Built: `tests/test_proposals.py::test_the_catch_up_list_caps_and_ranks_the_corrections_from_before_and_is_made_once`.
   *Built in L3 wave 3B:* the list's screen, with the count waiting and the kinds left out (`web/src/components/LearnedToday.test.tsx`).
-  *Left:* queueing the learning runs for the chosen kinds (`learn-correction`, which doesn't exist yet: `catch_up.waiting`
-  is what it reads).
+  The learning runs, one per kind, held behind one go with one total: `tests/test_catch_up_learning.py::test_the_catch_up_learning_is_queued_once_for_each_kind_and_held_for_one_go_with_one_total`,
+  `tests/test_catch_up_learning.py::test_the_go_route_starts_the_held_runs_and_today_has_one_line_for_them_and_the_changes_list_none`.
 - [x] **A correction fixes the class, not the instance** (the original designer's L0 sign-off, 2026-10-13): the learner's one proposal states the general case and its
   test (with evidence such as dates), and its learning pair checks the negative: a row that does name our work still
   gets its question. The learning prompt asks for the general case and its test, and one proposal per correction is
   enforced (`tests/test_learn_correction.py::test_more_than_one_proposal_refuses_the_whole_answer_and_asks_for_one`).
   Moved to L4: its learning pair with the negative (the fixture pairs).
-- [ ] Fallback chains hold only checked accounts, or ones the person accepted unchecked; the first run on a fallback account
+- [x] Fallback chains hold only checked accounts, or ones the person accepted unchecked; the first run on a fallback account
   is tagged on its cards. Built: the settings save refuses an unchecked account newly added to a chain, and the first run
   is tagged on its changeset (`tests/test_quality.py::test_an_unchecked_account_is_refused_from_a_chain_until_it_passes_for_that_tier_or_the_person_accepts_it`,
   `tests/test_quality.py::test_the_first_run_on_a_fallback_account_is_tagged_on_its_changeset_and_a_later_one_is_not`).
@@ -1118,7 +1119,8 @@ From the original designer's lessons of 2026-10-14:
   `tests/test_knowledge_screen.py::test_a_failed_check_has_a_line_that_says_so_even_for_an_accepted_account_and_goes_when_it_passes`,
   `web/src/shell/HeldLines.test.tsx::Check now runs the account's test for that work, and the line is gone once the queue no longer has it`).
   The tag on the cards, "First run on ..." (`web/src/components/WhatChangedLearning.test.tsx`, `tests/test_learned_lines.py::test_the_changes_view_carries_what_a_run_applied_and_the_account_it_first_ran_on`).
-  Left: the router still doesn't skip an unchecked account at run time.
+  The router skips an unchecked or failed backup at run time: `tests/test_catch_up_learning.py::test_the_router_skips_an_unchecked_or_failed_backup_and_takes_a_checked_or_accepted_one`,
+  `tests/test_catch_up_learning.py::test_when_skipping_an_unchecked_backup_leaves_no_account_the_run_waits_with_the_usual_stop_and_line`.
 - [x] On screen (7.18), the parts the loop can't be trusted without (built: `web/src/components/Learned.test.tsx`, `web/src/components/LearnedToday.test.tsx`, `web/src/components/WhatChangedLearning.test.tsx`; the failed switch check moved to L4):
   - the Learned line on the correction's card, with **Keep for: this project ▾**, defaulting to the narrowest target;
   - the knowledge each output applied, on its evidence line, with **This doesn't apply here** (narrow or retire);

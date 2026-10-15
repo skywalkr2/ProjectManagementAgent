@@ -1136,7 +1136,9 @@ A fallback is a switch nobody chose at that moment, so (6.22):
   newly added to a chain, in plain words. A hand-edited file is not refused, but every account in a chain that is neither
   checked for that tier nor accepted unchecked, or whose last check failed (accepted or not), is a Today line,
   "Check <account> before it stands in for <work>", whose Check now runs the account's test for that tier and goes when it
-  passes (`engine/ai/checked.py::cannot_stand_in`); the router still does not skip an unchecked account at run time.
+  passes (`engine/ai/checked.py::cannot_stand_in`). The router reads the same list at the moment of use and never falls
+  through to such an account; the person's own pick for a tier is never skipped, and when skipping leaves nothing the run
+  waits with the usual "no account" stop and its Today line. **Built:** `tests/test_catch_up_learning.py::test_the_router_skips_an_unchecked_or_failed_backup_and_takes_a_checked_or_accepted_one`.
   **Built:** `tests/test_quality.py::test_an_unchecked_account_is_refused_from_a_chain_until_it_passes_for_that_tier_or_the_person_accepts_it`,
   `tests/test_quality.py::test_the_learning_round_trip_fails_saying_which_part_failed`,
   `tests/test_knowledge_screen.py::test_an_unchecked_account_in_a_hand_edited_chain_has_a_line_until_its_check_passes`,
@@ -1767,7 +1769,15 @@ or work was handed over. Learning from that gives wrong lessons ("the assistant 
 Anything proposed after a repeat correction (a guard that already failed once) always runs on the stronger tier. Both kinds
 follow cost control (6.16), each with its own budget. Corrections recorded before this was built are learned from once,
 when it arrives, into **one catch-up list** ("Learned from earlier corrections: 23 to review"), not into dozens of correction
-cards on day one.
+cards on day one. *As built,* one learning run per kind of correction on the list (its newest correction that can still
+be learned from), queued once when the app starts; the runs wait together for one go, shown as one Today line with the
+count and the total (`POST /api/knowledge/catch-up/go`). Only the kinds learning reads (`learn.TEACHES`) are on the list:
+putting an action on or off hold is the person's own planning, not a correction of the assistant. **Built:**
+`tests/test_catch_up_learning.py::test_the_catch_up_learning_is_queued_once_for_each_kind_and_held_for_one_go_with_one_total`.
+
+**A send-back's redo sees the items as they are now:** its packet lists each record the sent-back work touched (up to
+12), as it is now, marked taken back, kept, or not applied, inside a block marked as records. **Built:**
+`tests/test_catch_up_learning.py::test_a_send_backs_packet_shows_each_item_the_work_touched_as_it_is_now_and_where_it_is`.
 
 **Learning from inputs too.** A rules-only scan (no AI) finds the terms in an input that look like acronyms or project
 names (`language.new_term_patterns`, less `language.new_term_ignore`) and are not in the glossary or among the

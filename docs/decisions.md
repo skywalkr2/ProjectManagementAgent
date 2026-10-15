@@ -3,6 +3,16 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The catch-up learns once per kind, behind one go; hold is not a correction
+
+**Decided by:** the technical PM, merging L3's last part. **What:** (1) the catch-up list queues one learning run per kind
+of correction, from its newest correction that can still be learned from, not one per correction: thirty repeated undos
+would otherwise be thirty runs on the stronger tier; (2) the runs wait together for one go, one Today line with the count
+and total, since no general batch go existed; (3) the list holds only the kinds learning reads, so putting an action on
+or off hold, the person's own planning, never waits there; (4) the router skips a backup account that isn't checked at the
+moment of use, never the person's own pick for the tier, and an unchecked backup is no longer offered in a data-level
+stop's account list. **Impact:** design 6.16, 6.22, 7.18; roadmap L3 (done). No change to scope.
+
 ## 2026-10-15: The assistant can hold and drop; an unowned action can be folded into the nearest one
 
 **Decided by:** the technical PM, closing L3. **What:** "Change this" told the assistant to put on hold or drop, but it

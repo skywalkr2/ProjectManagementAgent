@@ -948,6 +948,15 @@ yet follow, that it is *designed*, with its phase.
 | Signals (6.20) | Question corrections never queued learning | Every signal is written through `learn.record`, which queues learning |
 | Screens (7.18) | No Drop on an action | Drop with a reason and Undo on action rows; "Add to …" on the held item |
 
+## 61. L3 done: catch-up runs behind one go, unchecked backups skipped, the send-back packet, reach in words (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Catch-up (6.22) | The list was made but nothing learned from it | One learning run per kind, queued once, waiting for one go: the `catch_up_go` Today line and `POST /api/knowledge/catch-up/go`. Built: `tests/test_catch_up_learning.py` |
+| Fallback (6.16) | The router still tried an unchecked backup | Skipped at the moment of use; the person's own pick never is |
+| Send-back (6.8) | The redo's packet didn't show the items as they are now | Each touched record as it is now, marked taken back, kept or not applied |
+| Learned line (7.18) | Reach as a pick list only | The reach in words beside it, exclusions by name |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
