@@ -1484,6 +1484,11 @@ From the original designer's lessons of 2026-10-14:
   form (service, key, models, what it is for) inside Settings, never the setup guide. "What it is for" offers the
   assistant's work or a backup for it, so a backup is set in the same form (checked first, as "Use as backup" is).
   *Today:* it opens the setup guide at its AI step, and a backup is set afterwards from the account's row.
+- [ ] **The AI accounts flow as a whole** (owner, 2026-10-15: "a terrible UI flow"): one place for accounts in Settings, where
+  each row says plainly what it does now (does the work, backs it up, or nothing) and the one thing to do next. Removing
+  the account that does the work says in its toast that nothing does the work now and offers its backup or another
+  account in one click (never picked silently, 6.16), and Today carries the line until one is chosen. *Today:* removing
+  it leaves the work with no account, said only by the test lines in the guide.
 - [ ] **Setup guide** as steps | step.
 - [ ] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
