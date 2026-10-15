@@ -1452,6 +1452,10 @@ Proving it (lesson 2; answers 2, 21):
 - [ ] **Extras weighed and tracked**: missing and forbidden stay exact; a fact or note is free, an internal action or
   entry costs a little, anything reaching another person fails; extras per run reported over time. *Today:* any extra
   not in `allow` fails the run.
+- [ ] **An evaluation run ends with its own failure summary** (O3 took about six hours, much of it copying commands and
+  reports between the owner's computer and the session): `cockpit evaluate` prints each failing run in one compact line
+  (missing, extra, kept, given) and writes them beside the report, and `--case-failed <report>` re-runs only what failed
+  there. No pasted scripts, no quoting traps. *Today:* the owner pastes a script to read the report.
 - [ ] **The capability matrix, step 1: measured and shown** (owner, 2026-10-15; design 6.16 "the capability matrix";
   about 1.5 sessions): the shipped skills list (data, packs extend it); `skills:` on every golden case, pair and pack case,
   required by the self-check; `cockpit evaluate` and the switch check add each run to the matrix (model and program
