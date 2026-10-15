@@ -1521,6 +1521,10 @@ From the original designer's lessons of 2026-10-14:
   the account that does the work says in its toast that nothing does the work now and offers its backup or another
   account in one click (never picked silently, 6.16), and Today carries the line until one is chosen. *Today:* removing
   it leaves the work with no account, said only by the test lines in the guide.
+- [ ] **A backup uses the account's harder model for harder work** (owner, 2026-10-15: "if haiku is only so good for
+  certain tasks we can add sonnet for harder tasks"): adding a harder model to an account that is a backup offers to move
+  its harder-work backup to that model, checked first, in one click. *Today:* "Use as backup" puts the harder model in
+  only when the account has one at that moment; afterwards the harder work stays on the everyday model.
 - [ ] **Setup guide** as steps | step.
 - [ ] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
