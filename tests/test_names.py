@@ -354,6 +354,7 @@ def test_every_golden_case_carries_its_received_date_and_the_clock_freezes_there
         "load_cases",
         lambda t: [{**c, "received": "2026-10-06"} for c in original(t) if c["id"] == "relative-due-date"],
     )
+    monkeypatch.setattr(ev, "load_pack_cases", lambda w: [])
     ev.evaluate(DEMO_B, stub=True, env={})
     assert [n.date() for n in seen] == [date(2026, 10, 6)]
 

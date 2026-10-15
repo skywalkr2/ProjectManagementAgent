@@ -778,3 +778,62 @@ def _set_task(store: Store, case: dict[str, Any], request_id: str) -> None:
     request = store.read().get("request", request_id)
     with store.transaction(notify=False) as tx:
         tx.update("request", request_id, {"task": case["task"]}, _STARTING, read_version=request.version)
+
+
+# ---- what a run of the cases would cost, and what they are called ----------------------------------------------------
+
+#: How many cases are priced to estimate the whole set: the rest are taken to cost about as much as these on average.
+ESTIMATE_SAMPLE = 8
+
+
+def case_titles(template: Path, packs_of: Path | None = None) -> dict[str, str]:
+    """What each case is called on screen: its title, else its id."""
+    found = [*load_cases(template), *load_pack_cases(packs_of or template)]
+    return {c["id"]: str(c.get("title") or c["id"]) for c in found}
+
+
+def estimate_cases(
+    template: Path,
+    *,
+    account: str,
+    runs: int,
+    ai_config: Path | None = None,
+    packs_of: Path | None = None,
+    env: Mapping[str, str] | None = None,
+) -> tuple[float | None, int]:
+    """About what running every case `runs` times on an account would cost in USD, and how many cases that is. A few
+    evenly spread cases have their packets built and priced as a real run is; the rest are taken to cost the average of
+    those. None when the account's price isn't known or no case could be priced."""
+    from engine.dispatcher import estimate_request
+
+    env = os.environ if env is None else env
+    cases = [*load_cases(template), *load_pack_cases(packs_of or template)]
+    core = [c for c in cases if not c.get("_pack")]
+    step = max(1, len(core) // ESTIMATE_SAMPLE)
+    prices: list[float | None] = []
+    for case in core[::step][:ESTIMATE_SAMPLE]:
+        with tempfile.TemporaryDirectory() as tmp:
+            ws = init_workspace(Path(tmp) / "ws", template=template, git=False)
+            if ai_config is not None:
+                shutil.copyfile(ai_config, ws.config_dir / "ai.yaml")
+            flags: dict[str, Any] = {
+                "ai.tiers.routine.use": account,
+                "ai.tiers.routine.fallback": [],
+                "ai.budgets.first_go": False,
+            }
+            cfg = ws.config(env={}, flags=flags)
+            store = Store(ws.db_path)
+            try:
+                records = starting_records(template, case)
+                if records:
+                    _create_starting_records(store, case["id"], records)
+                now = received_of(case)
+                request = _hand_in_case(ws, store, cfg, case, now)
+                prices.append(estimate_request(ws, store, cfg, Router(cfg, store, env=env), request, now, use=account))
+            except (ValueError, StoreError):
+                continue
+            finally:
+                store.close()
+    if not prices or any(p is None for p in prices):
+        return None, len(cases)
+    return sum(p for p in prices if p is not None) / len(prices) * len(cases) * runs, len(cases)

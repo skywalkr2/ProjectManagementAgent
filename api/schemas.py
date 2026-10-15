@@ -1252,8 +1252,11 @@ class QueueLineView(BaseModel):
     `catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,
     `unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on
     `due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and
-    `places`, everywhere the same credential is used); `extractor` is a kind of file that isn't being read
-    (`file_kind`, and `text` says why), which clears once a file of that kind reads well."""
+    `places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model
+    whose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`
+    of what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST
+    /api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `extractor` is a kind of file that isn't
+    being read (`file_kind`, and `text` says why), which clears once a file of that kind reads well."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -1275,6 +1278,7 @@ class QueueLineView(BaseModel):
         "offline",
         "overdue",
         "account_check",
+        "switch_failed",
         "credential",
         "extractor",
         "review",
@@ -1379,7 +1383,13 @@ class QueueLineView(BaseModel):
         description="For a credential line: every place the same credential is used, in plain words.",
     )
     tier: str | None = Field(
-        None, description="For an account_check line: the tier whose fallback chain holds the account."
+        None,
+        description="For an account_check line: the tier whose fallback chain holds the account. For a switch_failed "
+        "line: the tier that was switched.",
+    )
+    names: list[str] = Field(
+        default_factory=list,
+        description="For a switch_failed line: what the check found didn't come out right, by name, the first few.",
     )
     model: str | None = Field(
         None, description="For an account_check line: the short name of the account's model in that chain."
@@ -1387,7 +1397,7 @@ class QueueLineView(BaseModel):
     check_failed: bool | None = Field(
         None,
         description="For an account_check line: true when the account's last check failed, false when it was never "
-        "checked for that work.",
+        "checked for that work. For a switch_failed line: true when the check couldn't finish.",
     )
     suggestion: OwnerSuggestionView | None = Field(
         None,
@@ -1892,6 +1902,26 @@ class AiAccountChange(BaseModel):
     models: dict[str, str] | None = Field(None, description="Its models, replacing the ones it has.")
     use: dict[str, str] = Field(default_factory=dict, description="Tiers to one of its models by short name.")
     fingerprint: str
+
+
+class AiSwitchEstimate(BaseModel):
+    """What the check that comes with a change of account or model would cost, and whether one is offered."""
+
+    offered: bool = Field(
+        description="Whether the change switches a tier's account or model while checks on a switch are on."
+    )
+    usd: float | None = Field(
+        None, description="About what the check would cost; none when the new choice has no known price."
+    )
+    cases: int = Field(0, description="How many cases the check runs, each `runs` times.")
+    runs: int = Field(0, description="How many times each case runs.")
+
+
+class AiSwitched(BaseModel):
+    saved: SettingsSaved = Field(description="What changed in the settings, for the read-back and Undo.")
+    checking: bool = Field(
+        description="A check of the new choice is running in the background; a failure comes to Today."
+    )
 
 
 class AiBorrowAnswer(BaseModel):

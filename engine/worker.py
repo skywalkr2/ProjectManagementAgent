@@ -34,8 +34,9 @@ ADD_ONS = "add-ons"
 #: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
 #: each request; where and how often backups go, for each backup; how often the readable export is written; the watched
 #: sources, for each read; whether and how corrections are learned from, for each correction and each learning run; the
-#: scan for new terms, for each input; how much of a file is read, for each file; the window and the smallest week of
-#: the quality figures, for each time they are asked for).
+#: scan for new terms, for each input; whether a switch of account is offered a check, for each switch; how much of a
+#: file is read, for each file; the window and the smallest week of the quality figures, for each time they are asked
+#: for).
 #: Any other change waits for a restart the person chooses.
 LIVE_KEYS = (
     "ai.",
@@ -57,6 +58,7 @@ LIVE_KEYS = (
     "dispatch.knowledge.learn",
     "dispatch.knowledge.learn_every_minutes",
     "dispatch.knowledge.learn_input_chars",
+    "dispatch.knowledge.check_on_switch",
     "dispatch.knowledge.learn_later_inputs",
     "dispatch.knowledge.new_terms_per_input",
     "dispatch.knowledge.quality_window_days",
@@ -216,6 +218,7 @@ class Worker:
         self._backups: threading.Thread | None = None
         self._sync: threading.Thread | None = None
         self._jobs: threading.Thread | None = None
+        self._switching: threading.Thread | None = None
         self._swept_on: date | None = None
         self._catch_up_queued = False
         self._synced_at: int | None = -1
@@ -319,6 +322,7 @@ class Worker:
         self._sync.start()
         self._jobs = threading.Thread(target=self._jobs_loop, name="cockpit-jobs", daemon=True)
         self._jobs.start()
+        self.check_switch_soon()
 
     def stop(self) -> None:
         self._stop.set()
@@ -489,6 +493,30 @@ class Worker:
         thread = threading.Thread(target=run, name="cockpit-first-backup", daemon=True)
         thread.start()
         return thread
+
+    def check_switch_soon(self) -> threading.Thread | None:
+        """Run the checks that come with a switch of account that are still waiting, on one thread of their own so a
+        long check never holds up other work. A check interrupted by a restart runs again from the start. Returns the
+        thread, or None when nothing waits; while one is running a new switch is picked up by it."""
+        from engine.ai import switch_check
+
+        if self._switching is not None and self._switching.is_alive():
+            return self._switching
+        if not switch_check.waiting(self.store):
+            return None
+
+        def run() -> None:
+            try:
+                while switch_check.waiting(self.store) and not self._stop.is_set():
+                    switch_check.run_waiting(self.ws, self.store, os.environ)
+                    self.events.changed()
+            except Exception:  # a check that can't run is kept as one that didn't finish; nothing here may stop the app
+                log.exception("the check after a switch failed")
+                self.events.changed()
+
+        self._switching = threading.Thread(target=run, name="cockpit-switch-check", daemon=True)
+        self._switching.start()
+        return self._switching
 
     def sync_if_changed(self) -> bool:
         """Write the synced folder when anything changed since it was last written, and keep this install's lease

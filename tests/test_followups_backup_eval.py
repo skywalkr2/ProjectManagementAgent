@@ -3,7 +3,7 @@ from datetime import UTC, date, datetime, timedelta
 import pytest
 
 from engine.backup import run_backup, state
-from engine.evaluate import evaluate, load_cases
+from engine.evaluate import evaluate, load_cases, load_pack_cases
 from engine.followups import FollowUpError, follow_up, mark_sent, sections, they_finished, undo_follow_up, unmark_sent
 from engine.storage import Store, WriteContext
 from engine.workspace import init_workspace
@@ -273,7 +273,7 @@ def test_every_case_passes_with_its_ideal_answer(template):
     report = evaluate(template, stub=True, runs=1, env={})
     failing = {r.case: r.missing + r.forbidden + r.extra + [r.error or ""] for r in report.results if not r.passed}
     assert failing == {}
-    assert len(report.cases()) == len(load_cases(template)) >= 10
+    assert len(report.cases()) == len(load_cases(template)) + len(load_pack_cases(template)) >= 10
 
 
 def test_a_wrong_answer_fails_the_case(monkeypatch):

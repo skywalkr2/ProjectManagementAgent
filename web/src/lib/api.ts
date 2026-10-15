@@ -334,6 +334,17 @@ export const api = {
   aiAccounts: () => call<S["AiAccountView"][]>("GET", "ai/accounts"),
   changeAccount: (name: string, body: S["AiAccountChange"]) =>
     call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}`, body),
+  /** What the check that comes with a change of account or model would cost, and whether one is offered at all. */
+  switchEstimate: (name: string, body: S["AiAccountChange"]) =>
+    call<S["AiSwitchEstimate"]>("POST", `ai/accounts/${id(name)}/switch-estimate`, body),
+  /** Makes the change and checks the new choice in the background; a failure comes to Today. */
+  switchAndCheck: (name: string, body: S["AiAccountChange"]) =>
+    call<S["AiSwitched"]>("POST", `ai/accounts/${id(name)}/switch-check`, body),
+  /** Puts a tier back as it was before the switch whose check didn't pass. */
+  switchBack: (tier: string, fingerprint: string) =>
+    call<S["SettingsSaved"]>("POST", `ai/switch/${id(tier)}/back`, { fingerprint } satisfies S["FingerprintIn"]),
+  /** Keeps a switch whose check didn't pass. */
+  keepSwitch: (tier: string) => call<S["Ok"]>("POST", `ai/switch/${id(tier)}/keep`),
   removeAccount: (name: string, fingerprint: string) =>
     call<S["SettingsSaved"]>("POST", `ai/accounts/${id(name)}/remove`, { fingerprint } satisfies S["FingerprintIn"]),
   testAi: () => call<S["AiTestResult"][]>("POST", "ai/test"),

@@ -369,3 +369,56 @@ test("a sign-in about to end offers to sign in again, and names what reads throu
   await waitFor(() => expect(assign).toHaveBeenCalledWith("about:blank#signin"));
   expect(calls.some((c) => c.route === "POST sign-ins/p/s/start")).toBe(true);
 });
+
+const switchFailed = (over: Partial<S["QueueLineView"]> = {}) =>
+  line("switch_failed", { key: "switch_failed:routine", account: "second", text: "first", tier: "routine", count: 2, names: ["A date in a pasted thread", "A reply that closes one question"], ...over });
+
+test("a failed switch check names the new and the earlier account, what didn't come out right, and the two ways forward", async () => {
+  show([switchFailed()]);
+  const row = await screen.findByRole("region", { name: "Switch check" });
+  expect(row).toHaveTextContent("Switch second back, or keep it, for everyday work");
+  expect(row).toHaveTextContent("The check after the switch found 2 cases that didn't come out right. The first:");
+  expect(within(row).getAllByRole("listitem").map((i) => i.textContent)).toEqual(["A date in a pasted thread", "A reply that closes one question"]);
+  expect(within(row).getAllByRole("button").map((b) => b.textContent)).toEqual(["Switch back", "Keep it"]);
+});
+
+test("Switch back puts the earlier choice back with the current settings and the line goes", async () => {
+  const user = userEvent.setup();
+  let lines = [switchFailed()];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "POST ai/switch/routine/back": () => {
+      lines = [];
+      return { changes: [], fingerprint: "fp-2", needs_restart: false };
+    },
+  });
+  await user.click(within(await screen.findByRole("region", { name: "Switch check" })).getByRole("button", { name: "Switch everyday work back to first" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST ai/switch/routine/back")?.body).toEqual({ fingerprint: "fp-1" }));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Switch check" })).toBeNull());
+  expect(await screen.findByText("everyday work is back with first.")).toBeInTheDocument();
+});
+
+test("Keep it leaves the switch and the line goes", async () => {
+  const user = userEvent.setup();
+  let lines = [switchFailed({ count: 1, names: ["A date in a pasted thread"] })];
+  const { calls } = show(lines, {
+    "GET today/queue": () => lines,
+    "POST ai/switch/routine/keep": () => {
+      lines = [];
+      return { ok: "routine" };
+    },
+  });
+  const row = await screen.findByRole("region", { name: "Switch check" });
+  expect(row).toHaveTextContent("The check after the switch found 1 case that didn't come out right:");
+  await user.click(within(row).getByRole("button", { name: "Keep second for everyday work" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST ai/switch/routine/keep")).toBe(true));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "Switch check" })).toBeNull());
+});
+
+test("a check that couldn't finish says so and names no cases", async () => {
+  show([switchFailed({ count: 0, names: [], check_failed: true })]);
+  const row = await screen.findByRole("region", { name: "Switch check" });
+  expect(row).toHaveTextContent("The check after the switch couldn't finish, so nothing shows the new choice works well.");
+  expect(within(row).queryAllByRole("listitem")).toHaveLength(0);
+});

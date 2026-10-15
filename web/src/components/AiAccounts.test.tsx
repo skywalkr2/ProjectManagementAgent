@@ -296,3 +296,91 @@ test("a refused change shows the server's words and keeps the form open", async 
   expect(await screen.findByRole("alert")).toHaveTextContent("Name at least one model the account uses.");
   expect(screen.getByLabelText("Model for harder work (optional)")).toHaveValue("model-y");
 });
+
+const OFFER = { offered: true, usd: 0.8, cases: 40, runs: 3 };
+
+test("an account that would take the work from another is offered Switch and check, with the cost first, and Switch without checking in its menu", async () => {
+  const user = userEvent.setup();
+  const calls = api({
+    "POST ai/accounts/spare/switch-estimate": () => OFFER,
+    "POST ai/accounts/spare/switch-check": () => ({ saved: SAVED, checking: true }),
+    "POST ai/accounts/spare": () => SAVED,
+  });
+  open();
+  const spare = await row("spare");
+  const primary = await within(spare).findByRole("button", { name: "Switch to spare and check it" });
+  expect(primary).toHaveTextContent("Switch and check (about $0.80)");
+  expect(within(spare).queryByRole("button", { name: "Test spare" })).toBeNull();
+  await user.click(within(spare).getByRole("button", { name: "More actions for spare" }));
+  expect((await screen.findAllByRole("menuitem")).map((i) => i.textContent)).toEqual([
+    "Switch without checking",
+    "Test",
+    "Replace key",
+    "Set when the key ends",
+    "Change models",
+    "Remove",
+  ]);
+  await user.keyboard("{Escape}");
+  await user.click(primary);
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST ai/accounts/spare/switch-check")?.body).toEqual({
+      fingerprint: "fp-1",
+      use: { routine: "everyday", deep: "everyday" },
+    }),
+  );
+  expect(await screen.findByText("Checking spare now. Today says if anything needs a look.")).toBeInTheDocument();
+  expect(calls.some((c) => c.route === "POST ai/accounts/spare")).toBe(false);
+});
+
+test("Switch without checking changes it at once, with the ordinary change and no check", async () => {
+  const user = userEvent.setup();
+  const calls = api({
+    "POST ai/accounts/spare/switch-estimate": () => OFFER,
+    "POST ai/accounts/spare": () => SAVED,
+  });
+  open();
+  await within(await row("spare")).findByRole("button", { name: "Switch to spare and check it" });
+  await menu(user, "spare", "Switch without checking");
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST ai/accounts/spare")?.body).toEqual({
+      fingerprint: "fp-1",
+      use: { routine: "everyday", deep: "everyday" },
+    }),
+  );
+  expect(calls.some((c) => c.route === "POST ai/accounts/spare/switch-check")).toBe(false);
+});
+
+test("with no price known the button says Switch and check and no amount; with checks off the row stays as it was", async () => {
+  api({ "POST ai/accounts/spare/switch-estimate": () => ({ ...OFFER, usd: null }) });
+  const view = open();
+  expect(await within(await row("spare")).findByRole("button", { name: "Switch to spare and check it" })).toHaveTextContent(/^Switch and check$/);
+  view.unmount();
+  api({ "POST ai/accounts/spare/switch-estimate": () => ({ offered: false, usd: null, cases: 0, runs: 0 }) });
+  open();
+  expect(await within(await row("spare")).findByRole("button", { name: "Test spare" })).toBeInTheDocument();
+  await userEvent.setup().click(within(await row("spare")).getByRole("button", { name: "More actions for spare" }));
+  expect((await screen.findAllByRole("menuitem"))[0]).toHaveTextContent("Use for the assistant's work");
+});
+
+test("changing the model of an account that does the work is a switch: the cost is on the primary button", async () => {
+  const user = userEvent.setup();
+  const calls = api({
+    "POST ai/accounts/main/switch-estimate": () => OFFER,
+    "POST ai/accounts/main/switch-check": () => ({ saved: SAVED, checking: true }),
+  });
+  open();
+  await menu(user, "main", "Change models");
+  const field = await screen.findByLabelText("Model for everyday work");
+  await user.clear(field);
+  await user.type(field, "model-z");
+  const go = await screen.findByRole("button", { name: "Switch and check (about $0.80)" });
+  expect(screen.getByRole("button", { name: "Switch without checking" })).toBeInTheDocument();
+  await user.click(go);
+  await waitFor(() =>
+    expect(calls.find((c) => c.route === "POST ai/accounts/main/switch-check")?.body).toEqual({
+      fingerprint: "fp-1",
+      models: { everyday: "model-z" },
+    }),
+  );
+  expect(await screen.findByText("Checking main now. Today says if anything needs a look.")).toBeInTheDocument();
+});

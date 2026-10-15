@@ -846,6 +846,12 @@ class KnowledgeSettings(ConfigModel):
         description="The most characters of an earlier input that the assistant is shown when it learns from a "
         "correction. Longer inputs are cut and say so.",
     )
+    check_on_switch: bool = Field(
+        True,
+        description="Offer to check the assistant's work on the new choice, with its cost shown first, whenever you "
+        "change the account or model that does a kind of work. A check that finds problems comes to Today with a way "
+        "to switch back.",
+    )
     new_terms_per_input: int = Field(
         3,
         ge=0,

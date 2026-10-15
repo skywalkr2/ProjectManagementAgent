@@ -18,6 +18,8 @@ from api.schemas import (
     AiModelsAsk,
     AiModelsView,
     AiModelView,
+    AiSwitched,
+    AiSwitchEstimate,
     AiTestResult,
     BackupFolderAdd,
     ConfirmDone,
@@ -628,9 +630,10 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
                 line.ok, line.detail = False, x.detail
         return [line]
 
-    @r.post("/ai/accounts/{name}")
-    def ai_account_change(name: str, body: AiAccountChange) -> SettingsSaved:
-        """Give an account a new key, other models or other work, with Undo."""
+    switch_estimates: dict[tuple[Any, ...], tuple[float | None, int]] = {}
+
+    def account_plan(name: str, body: AiAccountChange) -> tuple[dict[str, Any], list[str]]:
+        """The settings an account change writes and resets, refusing what can't be done."""
         provider = current().ai.providers.get(name)
         if provider is None:
             raise HTTPException(status_code=404, detail=f"There is no account called {name}.")
@@ -662,7 +665,106 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             changes[f"ai.tiers.{tier}.use"] = f"{name}/{short}"
         if not changes and not reset:
             raise HTTPException(status_code=400, detail="Nothing to change.")
-        return saved(save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers.")))
+        return changes, reset
+
+    def change_account(name: str, body: AiAccountChange, *, check: bool) -> tuple[SettingsSaved, bool]:
+        """Save an account change. When it switches a tier's account or model, the switch is kept, with a check to run
+        when asked for (and the setting for checks is on); any earlier entry of that tier is superseded. Returns what
+        was saved and whether a check was started."""
+        from engine.ai import switch_check
+
+        changes, reset = account_plan(name, body)
+        before = current()
+        done = save(changes, reset, body.fingerprint, allow=("ai.providers.", "ai.tiers."))
+        after = current()
+        found = switch_check.switches(before, after)
+        checking = check and after.dispatch.knowledge.check_on_switch
+        if found:
+            switch_check.begin(store, found, done.changes, check=checking)
+        return saved(done), bool(found) and checking
+
+    @r.post("/ai/accounts/{name}")
+    def ai_account_change(name: str, body: AiAccountChange) -> SettingsSaved:
+        """Give an account a new key, other models or other work, with Undo. A switch of a tier's account or model
+        made this way is made at once, without the check."""
+        return change_account(name, body, check=False)[0]
+
+    @r.post("/ai/accounts/{name}/switch-estimate")
+    def ai_switch_estimate(name: str, body: AiAccountChange) -> AiSwitchEstimate:
+        """What the check that comes with this change would cost, and whether one is offered: only a change that
+        switches a tier's account or model, while checks on a switch are on. Nothing is saved."""
+        import tempfile
+        from pathlib import Path
+
+        from engine.ai import switch_check
+        from engine.config.yaml_edit import set_key
+
+        changes, _reset = account_plan(name, body)
+        now = current()
+        if not now.dispatch.knowledge.check_on_switch:
+            return AiSwitchEstimate(offered=False)
+        try:
+            after = load_config(ws.config_dir, env=dict(os.environ), flags=dict(changes))
+        except ConfigError as err:
+            raise HTTPException(status_code=400, detail=err.plain) from None
+        found = switch_check.switches(now, after)
+        if not found:
+            return AiSwitchEstimate(offered=False)
+        text = (ws.config_dir / "ai.yaml").read_text(encoding="utf-8")
+        for key, value in changes.items():
+            if key.startswith("ai."):
+                text = set_key(text, key.split(".")[1:], value)
+        runs = after.ai.evaluation.runs
+        # Pricing builds a few packets, so the answer is kept for as long as the accounts file and the choices stay.
+        key = (text, tuple((x.tier, x.after) for x in found), runs)
+        if key not in switch_estimates:
+            total: float | None = 0.0
+            cases = 0
+            with tempfile.TemporaryDirectory() as tmp:
+                aside = Path(tmp) / "ai.yaml"
+                aside.write_text(text, encoding="utf-8")
+                for switch in found:
+                    usd, cases = switch_check.estimate(after, ws, switch.after, ai_config=aside)
+                    total = None if usd is None or total is None else total + usd
+            if len(switch_estimates) > 50:
+                switch_estimates.clear()
+            switch_estimates[key] = (total, cases)
+        usd, cases = switch_estimates[key]
+        return AiSwitchEstimate(offered=True, usd=usd, cases=cases, runs=runs)
+
+    @r.post("/ai/accounts/{name}/switch-check")
+    def ai_switch_check(name: str, body: AiAccountChange) -> AiSwitched:
+        """Make the change and check it: when it switches a tier's account or model, the golden cases and the add-ons'
+        own cases run on the new choice in the background, and a failure comes to Today with Switch back."""
+        done, started = change_account(name, body, check=True)
+        if started:
+            worker.check_switch_soon()
+        return AiSwitched(saved=done, checking=started)
+
+    @r.post("/ai/switch/{tier}/back")
+    def ai_switch_back(tier: str, body: FingerprintIn) -> SettingsSaved:
+        """Put a tier back as it was before the switch whose check didn't pass, with Undo."""
+        from engine.ai import switch_check
+
+        entry = switch_check.failed(store).get(tier)
+        if entry is None:
+            raise HTTPException(status_code=404, detail="There is no switch to go back on.")
+        restore = entry["restore"]
+        done = saved(save(restore["changes"], restore["reset"], body.fingerprint, allow=("ai.providers.", "ai.tiers.")))
+        switch_check.clear(store, tier)
+        events.changed()
+        return done
+
+    @r.post("/ai/switch/{tier}/keep")
+    def ai_switch_keep(tier: str) -> Ok:
+        """Keep a switch whose check didn't pass: the line goes."""
+        from engine.ai import switch_check
+
+        if switch_check.failed(store).get(tier) is None:
+            raise HTTPException(status_code=404, detail="There is no switch to keep.")
+        switch_check.clear(store, tier)
+        events.changed()
+        return Ok(ok=tier)
 
     @r.post("/requests/{request_id}/allow-data")
     def request_allow_data(request_id: str) -> DataLevelAllowed:

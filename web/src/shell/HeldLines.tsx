@@ -1,7 +1,8 @@
 // Today's lines for work that has stopped or that needs a look before it can go on (design 7.7, 8.5): work held until the
 // app restarts, an AI account paused until its usage limit resets, work waiting for the network, the synced folder that
 // can't be used until the person settles which copy to keep, a backup account that hasn't passed its check, a kind of
-// file that isn't being read, and the standing rules to look over.
+// file that isn't being read, the standing rules to look over, and a switch of account or model whose check found
+// problems.
 // Each is one row that says what to do first, with the one button that does it. The lines come from the Today queue; a
 // line is gone once its cause is, and only the person's own click ever restarts the app.
 import { useQuery } from "@tanstack/react-query";
@@ -11,6 +12,7 @@ import { useAct } from "../lib/act";
 import { day, wallWhen } from "../lib/dates";
 import { useEstimate } from "../lib/money";
 import { useRestart, useRestartText } from "../lib/restart";
+import { useFreshFingerprint } from "../lib/settings-save";
 import { useStartSignIn } from "../lib/sign-in-start";
 import { useWords } from "../lib/wording";
 import { Button } from "../ui/Button";
@@ -19,7 +21,7 @@ import styles from "./HeldLines.module.css";
 
 type Line = S["QueueLineView"];
 
-const SHOWN: Line["kind"][] = ["restart", "paused", "borrow", "credential", "offline", "handover", "account_check", "extractor", "rule_review", "catch_up_go"];
+const SHOWN: Line["kind"][] = ["restart", "paused", "borrow", "credential", "offline", "handover", "account_check", "switch_failed", "extractor", "rule_review", "catch_up_go"];
 
 export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
   const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
@@ -40,6 +42,8 @@ export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover:
           <OfflineLine key={line.key} line={line} />
         ) : line.kind === "account_check" ? (
           <AccountCheckLine key={line.key} line={line} />
+        ) : line.kind === "switch_failed" ? (
+          <SwitchFailedLine key={line.key} line={line} />
         ) : line.kind === "extractor" ? (
           <ExtractorLine key={line.key} line={line} />
         ) : line.kind === "rule_review" ? (
@@ -275,6 +279,62 @@ function AccountCheckLine(props: { line: Line }) {
       <div className={styles.actions}>
         <Button size="sm" variant="primary" loading={checking} aria-label={t("queue.account_check.run_named", { account, work })} onClick={() => void run()}>
           {t("queue.account_check.run")}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
+/** A switch of a kind of work's account or model whose check found problems, or couldn't finish: what didn't come out
+ * right, and the two ways forward. Switch back puts the earlier choice back at once, with Undo; Keep it leaves the
+ * switch. The line is gone once either is chosen. */
+function SwitchFailedLine(props: { line: Line }) {
+  const { t, tn, has } = useWords();
+  const act = useAct();
+  const fingerprint = useFreshFingerprint();
+  const [busy, setBusy] = useState<"back" | "keep" | null>(null);
+  const { line } = props;
+  const tier = line.tier ?? "";
+  const account = line.account ?? "";
+  const previous = line.text ?? "";
+  const work = t(has(`queue.switch_failed.work.${tier}`) ? `queue.switch_failed.work.${tier}` : "queue.switch_failed.work.other");
+  const names = line.names ?? [];
+  const back = async () => {
+    setBusy("back");
+    await act(
+      async () => api.switchBack(tier, await fingerprint()),
+      () => ({ message: t("queue.switch_failed.back_toast", { work, previous }) }),
+    );
+    setBusy(null);
+  };
+  const keep = async () => {
+    setBusy("keep");
+    await act(
+      () => api.keepSwitch(tier),
+      () => ({ message: t("queue.switch_failed.keep_toast", { account, work }) }),
+    );
+    setBusy(null);
+  };
+  return (
+    <section className={styles.line} aria-label={t("queue.switch_failed.label")} data-queue-line="switch_failed">
+      <Pill tone="warn">{t("queue.switch_failed.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t("queue.switch_failed", { account, work })}</p>
+        <p className={styles.sub}>{line.check_failed ? t("queue.switch_failed.sub_unfinished") : tn("queue.switch_failed.sub", line.count)}</p>
+        {names.length > 0 && (
+          <ul className={styles.places}>
+            {names.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className={styles.actions}>
+        <Button size="sm" variant="primary" loading={busy === "back"} disabled={busy !== null} aria-label={t("queue.switch_failed.back_named", { work, previous })} onClick={() => void back()}>
+          {t("queue.switch_failed.back")}
+        </Button>
+        <Button size="sm" variant="secondary" loading={busy === "keep"} disabled={busy !== null} aria-label={t("queue.switch_failed.keep_named", { account, work })} onClick={() => void keep()}>
+          {t("queue.switch_failed.keep")}
         </Button>
       </div>
     </section>

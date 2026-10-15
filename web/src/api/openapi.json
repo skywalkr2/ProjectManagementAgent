@@ -1195,6 +1195,64 @@
         "title": "AiState",
         "type": "object"
       },
+      "AiSwitchEstimate": {
+        "description": "What the check that comes with a change of account or model would cost, and whether one is offered.",
+        "properties": {
+          "cases": {
+            "default": 0,
+            "description": "How many cases the check runs, each `runs` times.",
+            "title": "Cases",
+            "type": "integer"
+          },
+          "offered": {
+            "description": "Whether the change switches a tier's account or model while checks on a switch are on.",
+            "title": "Offered",
+            "type": "boolean"
+          },
+          "runs": {
+            "default": 0,
+            "description": "How many times each case runs.",
+            "title": "Runs",
+            "type": "integer"
+          },
+          "usd": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "About what the check would cost; none when the new choice has no known price.",
+            "title": "Usd"
+          }
+        },
+        "required": [
+          "offered"
+        ],
+        "title": "AiSwitchEstimate",
+        "type": "object"
+      },
+      "AiSwitched": {
+        "properties": {
+          "checking": {
+            "description": "A check of the new choice is running in the background; a failure comes to Today.",
+            "title": "Checking",
+            "type": "boolean"
+          },
+          "saved": {
+            "$ref": "#/components/schemas/SettingsSaved",
+            "description": "What changed in the settings, for the read-back and Undo."
+          }
+        },
+        "required": [
+          "saved",
+          "checking"
+        ],
+        "title": "AiSwitched",
+        "type": "object"
+      },
       "AiTestResult": {
         "description": "One kind of work's account, tested: whether it answered, in plain words.",
         "properties": {
@@ -8497,7 +8555,7 @@
         "type": "object"
       },
       "QueueLineView": {
-        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `extractor` is a kind of file that isn't being read\n(`file_kind`, and `text` says why), which clears once a file of that kind reads well.",
+        "description": "One line of Today's queue (design 7.7), in rank order. The screen words it from `kind` and the counts. `restart`\nis work held until the person restarts the app (`count` waiting; the screen offers Restart now, which is\nPOST /api/restart); `paused` is an AI account waiting for its usage limit to reset (`account`, `until`, `count`\nwaiting), after which the work runs again by itself; `borrow` asks whether another kind of work's free account\n(`account`, `model`) may take the `tier`'s work that waits on the paused account named in `text`, until `until`,\nwhen that account's limit resets (`count` waiting items it would take, `estimate_usd`, `unpriced`; the answer is\nPOST /api/ai/borrow); `offline` is work that has waited for the network longer than\nthe configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;\n`catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,\n`unpriced`; the go is POST /api/knowledge/catch-up/go); `credential` is a key or sign-in that stops working on\n`due` or already has (`credential_kind`, `credential_name`, `waiting_days` left, below zero once past, and\n`places`, everywhere the same credential is used); `switch_failed` is a switch of the `tier`'s account or model\nwhose check found problems or couldn't finish (the new `account`, the earlier one in `text`, `count` and `names`\nof what didn't come out right, `check_failed` when it couldn't finish; Switch back is POST\n/api/ai/switch/{tier}/back and Keep it POST /api/ai/switch/{tier}/keep); `extractor` is a kind of file that isn't\nbeing read (`file_kind`, and `text` says why), which clears once a file of that kind reads well.",
         "properties": {
           "account": {
             "anyOf": [
@@ -8538,7 +8596,7 @@
                 "type": "null"
               }
             ],
-            "description": "For an account_check line: true when the account's last check failed, false when it was never checked for that work.",
+            "description": "For an account_check line: true when the account's last check failed, false when it was never checked for that work. For a switch_failed line: true when the check couldn't finish.",
             "title": "Check Failed"
           },
           "count": {
@@ -8667,6 +8725,7 @@
               "offline",
               "overdue",
               "account_check",
+              "switch_failed",
               "credential",
               "extractor",
               "review",
@@ -8714,6 +8773,14 @@
             ],
             "description": "For a rule_review line: how many rules the latest run had moved out of the always-sent part, so they go only to the runs they cover.",
             "title": "Moved"
+          },
+          "names": {
+            "description": "For a switch_failed line: what the check found didn't come out right, by name, the first few.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Names",
+            "type": "array"
           },
           "op": {
             "anyOf": [
@@ -8906,7 +8973,7 @@
                 "type": "null"
               }
             ],
-            "description": "For an account_check line: the tier whose fallback chain holds the account.",
+            "description": "For an account_check line: the tier whose fallback chain holds the account. For a switch_failed line: the tier that was switched.",
             "title": "Tier"
           },
           "title": {
@@ -13173,7 +13240,7 @@
     },
     "/api/ai/accounts/{name}": {
       "post": {
-        "description": "Give an account a new key, other models or other work, with Undo.",
+        "description": "Give an account a new key, other models or other work, with Undo. A switch of a tier's account or model\nmade this way is made at once, without the check.",
         "operationId": "ai_account_change_api_ai_accounts__name__post",
         "parameters": [
           {
@@ -13269,6 +13336,106 @@
           }
         },
         "summary": "Ai Account Remove"
+      }
+    },
+    "/api/ai/accounts/{name}/switch-check": {
+      "post": {
+        "description": "Make the change and check it: when it switches a tier's account or model, the golden cases and the add-ons'\nown cases run on the new choice in the background, and a failure comes to Today with Switch back.",
+        "operationId": "ai_switch_check_api_ai_accounts__name__switch_check_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAccountChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSwitched"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Switch Check"
+      }
+    },
+    "/api/ai/accounts/{name}/switch-estimate": {
+      "post": {
+        "description": "What the check that comes with this change would cost, and whether one is offered: only a change that\nswitches a tier's account or model, while checks on a switch are on. Nothing is saved.",
+        "operationId": "ai_switch_estimate_api_ai_accounts__name__switch_estimate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiAccountChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSwitchEstimate"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Switch Estimate"
       }
     },
     "/api/ai/accounts/{name}/test": {
@@ -13468,6 +13635,96 @@
           }
         },
         "summary": "Ai Models"
+      }
+    },
+    "/api/ai/switch/{tier}/back": {
+      "post": {
+        "description": "Put a tier back as it was before the switch whose check didn't pass, with Undo.",
+        "operationId": "ai_switch_back_api_ai_switch__tier__back_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tier",
+            "required": true,
+            "schema": {
+              "title": "Tier",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FingerprintIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Switch Back"
+      }
+    },
+    "/api/ai/switch/{tier}/keep": {
+      "post": {
+        "description": "Keep a switch whose check didn't pass: the line goes.",
+        "operationId": "ai_switch_keep_api_ai_switch__tier__keep_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tier",
+            "required": true,
+            "schema": {
+              "title": "Tier",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ai Switch Keep"
       }
     },
     "/api/ai/test": {

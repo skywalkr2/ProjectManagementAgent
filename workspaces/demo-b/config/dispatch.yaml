@@ -28,6 +28,7 @@ knowledge:
   learn: true
   learn_every_minutes: 30
   learn_input_chars: 6000
+  check_on_switch: true
   learn_later_inputs: 5
   new_terms_per_input: 3
   quality_window_days: 28

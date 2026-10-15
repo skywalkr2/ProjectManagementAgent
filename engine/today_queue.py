@@ -58,6 +58,9 @@ class Line:
     oldest began), overdue, account_check (an AI account in a fallback chain that can't stand in yet: its `account`, the
     `tier` whose chain it is in, its `model`, and `check_failed` when its last check failed rather than it never having
     been checked),
+    switch_failed (a switch of the `tier`'s account or model whose check found problems, or couldn't finish: the new
+    `account`, the earlier one in `text`, `count` cases that didn't come out right with the first of them in `names`,
+    and `check_failed` when the check couldn't finish),
     credential (a key or sign-in that stops working on `due`, or already has: `credential_kind` is account or
     sign_in, `credential_name` its name, `waiting_days` the days left, below zero once it has passed, and `places`
     every place the same credential is used),
@@ -113,6 +116,7 @@ class Line:
     credential_kind: str | None = None
     credential_name: str | None = None
     places: list[str] = field(default_factory=list)
+    names: list[str] = field(default_factory=list)
     since: str = ""
 
 
@@ -381,6 +385,26 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 tier=found.tier,
                 model=found.model,
                 check_failed=found.failed,
+            )
+        )
+
+    # Risk: a switch of account or model whose check found problems, or couldn't finish, until the person decides.
+    from engine.ai import switch_check
+
+    for tier, entry in sorted(switch_check.failed(store).items()):
+        names = list(entry.get("failed") or [])
+        lines.append(
+            Line(
+                key=f"switch_failed:{tier}",
+                group="risk",
+                kind="switch_failed",
+                count=len(names),
+                text=str(entry["before"]).partition("/")[0],
+                account=str(entry["after"]).partition("/")[0],
+                tier=tier,
+                names=names[: switch_check.NAMED],
+                check_failed=bool(entry.get("unfinished")),
+                since=str(entry.get("at") or ""),
             )
         )
 
@@ -655,6 +679,7 @@ _KIND_ORDER = {
     "offline": 1,
     "overdue": 2,
     "account_check": 1,
+    "switch_failed": 1,
     "credential": 1,
     "extractor": 1,
     "review": 0,
