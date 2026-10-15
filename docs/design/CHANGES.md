@@ -1026,6 +1026,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 78. A follow-on run asks; it never changes an action's date (2026-10-16)
+
+| Where | Before | Now |
+|---|---|---|
+| Follow-on runs (6.7) | The run moved the day or words of a tied action nobody was told about, with Undo | The run never changes an action's day or words (`record.set` is not one of its ops; the `follow-on-reach` check refuses it). For each tied action with a date the move may affect (on the entry, citing the old day, or due between the old and the new day, the new day included) it asks one `decision` question: the action's owner, or the person when the owner is the person or none, or when the project holds no link the owner could open (then the question says who to ask). When the moved entry or replaced fact carried more than one dated action (an agenda item, a question, a fact, an action with notes, or several actions), one `decision` question asks the person whether the plan still holds. Who is asked and which plans are asked about are decided by code and shown in the packet. Built: `tests/test_follow_on.py::test_no_due_or_text_change_ever_applies_from_a_follow_on_run`, `::test_an_action_due_between_the_old_and_the_new_day_is_tied_and_one_outside_it_is_not`, `::test_an_action_due_between_the_old_and_new_day_gets_a_question_to_its_owner_that_waits_and_undoes`, `::test_a_moved_entry_that_carried_more_than_a_dated_action_asks_the_person_whether_the_plan_holds` |
+
 ## 77. Records name the entry or series they belong to (2026-10-16)
 
 | Where | Before | Now |

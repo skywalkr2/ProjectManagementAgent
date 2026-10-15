@@ -5,8 +5,14 @@ A save that moves a calendar entry's start or end, moves an open action's due da
 assistant made it from an input. The request names the change in `follows`; what moved, before and after, is read back
 from the change's ledger entries. What is tied to the moved record is found here, by code, never by the model: items
 that name the calendar entry or its series, and items on the same project whose words give the old day or repeat the
-replaced fact. The run answers with changes to the person's own items (applied with Undo, like any change), a drafted
-correction for anyone an item already reached (it waits for the person and is never sent) and notes.
+replaced fact. The run answers with questions about what the move may have left out of line, a drafted correction
+for anyone an item already reached (it waits for the person and is never sent) and notes.
+
+A decided action's date or wording is never changed by the run. For each tied action whose date the move affects, it
+asks whoever decides (the action's owner, the person when nobody is named or no link can be carried to the owner)
+whether the date should change; when the moved entry or replaced fact carried more than one dated action (an agenda
+item, a question, a fact, notes, several actions), it asks the person to confirm the plan still holds. Which questions
+are needed, and to whom, is decided here by code; the run words them.
 
 One hop: what a follow-on run changes never starts another. Nothing here calls AI except the run itself.
 """
@@ -25,8 +31,6 @@ from zoneinfo import ZoneInfo
 from engine.storage.store import WriteContext
 
 TASK = "follow-on"
-#: The fields of an action a follow-on run may change.
-SETTABLE = {"action": ("due", "text")}
 #: The kinds of change whose entries can be a move: a person's edit, the assistant's `record.set` and a new fact.
 MOVE_OPS = ("record.set", "record.edit", "fact")
 #: The dated fields of each record kind whose change is a move.
@@ -60,6 +64,10 @@ class Tied:
     id: str
     data: Mapping[str, Any]
     why: list[str] = field(default_factory=list)
+    #: The ids of the moved records it is tied to.
+    by: list[str] = field(default_factory=list)
+    #: Whether its dated words (not only a link) tie it to the move.
+    cites: bool = False
 
 
 def is_move(kind: str, version: int, field_name: str | None, before: Any, after: Any, op: str) -> bool:
@@ -234,8 +242,9 @@ def reached(view: Any, kind: str, data: Mapping[str, Any]) -> list[str]:
 
 def tied_records(view: Any, cfg: Any, moves: list[Move]) -> list[Tied]:
     """The records tied to the moves, at most the configured number: those that name the moved entry or its series
-    first, then those on the moved record's project whose words give the old day (or repeat the replaced fact). Each
-    comes with why, once; the moved records themselves are never among them."""
+    first, then those on the moved record's project whose words give the old day (or repeat the replaced fact), then
+    open actions on an entry's project due between its old and new day (the new day included). Each comes with why,
+    once, and the moved records it is tied to; the moved records themselves are never among them."""
     from engine.knowledge_section import topic_share
     from engine.today import zone
 
@@ -251,41 +260,54 @@ def tied_records(view: Any, cfg: Any, moves: list[Move]) -> list[Tied]:
     ]
     found: dict[tuple[str, str], Tied] = {}
     linked: list[tuple[str, str]] = []
+    between: list[tuple[str, str]] = []
 
-    def add(kind: str, stored: Any, why: str, *, link: bool) -> None:
+    def add(
+        move: Move, kind: str, stored: Any, why: str, *, link: bool, cites: bool = False, late: bool = False
+    ) -> None:
         key = (kind, stored.id)
         if key not in found:
             found[key] = Tied(kind, stored.id, stored.data)
             if link:
                 linked.append(key)
-        if why not in found[key].why:
-            found[key].why.append(why)
+            elif late:
+                between.append(key)
+        tied = found[key]
+        if why not in tied.why:
+            tied.why.append(why)
+        if move.record not in tied.by:
+            tied.by.append(move.record)
+        tied.cites = tied.cites or cites
 
     for move in moves:
         entry = view.get(move.kind, move.record)
         if entry is None:
             continue
         old: list[date] = []
+        window: tuple[date, date] | None = None
         project = entry.data.get("project")
         series = entry.data.get("series") if move.kind == "event" else None
         if move.kind == "event":
             for kind, stored in items:
                 data = stored.data
                 if data.get("event") == entry.id:
-                    add(kind, stored, f"is on calendar entry {entry.id}", link=True)
+                    add(move, kind, stored, f"is on calendar entry {entry.id}", link=True)
                 elif series and data.get("series") == series and not data.get("event"):
-                    add(kind, stored, f"belongs to series {series}", link=True)
+                    add(move, kind, stored, f"belongs to series {series}", link=True)
         if move.kind in DATED:
             before, after = _day(move.before, here), _day(move.after, here)
             if before is not None and before != after:
                 old.append(before)
+                if move.kind == "event" and after is not None:
+                    window = (before, after)
         replaced = view.get("fact", move.after) if move.kind == "fact" else None
         if replaced is not None:
             project = project or replaced.data.get("project")
             for kind, stored in items:
                 data = stored.data
                 if replaced.data.get("event") and data.get("event") == replaced.data["event"] and kind != "fact":
-                    add(kind, stored, f"is on the same calendar entry as the replaced fact {replaced.id}", link=True)
+                    why = f"is on the same calendar entry as the replaced fact {replaced.id}"
+                    add(move, kind, stored, why, link=True)
         for kind, stored in items:
             data = stored.data
             if kind == "fact" or not _on_project(kind, data, project):
@@ -293,33 +315,98 @@ def tied_records(view: Any, cfg: Any, moves: list[Move]) -> list[Tied]:
             words = _words(kind, data)
             for day in old:
                 if any(rx.search(words) for rx in date_regexes(cfg.language.date_patterns, day)):
-                    add(kind, stored, f"its words give the old day, {day.isoformat()}", link=False)
+                    add(move, kind, stored, f"its words give the old day, {day.isoformat()}", link=False, cites=True)
             if replaced is not None and topic_share(replaced.data["text"], words) >= settings.follow_on_match:
-                add(kind, stored, f"its words repeat the replaced fact {replaced.id}", link=False)
-    ordered = [*linked, *(key for key in found if key not in linked)]
+                add(move, kind, stored, f"its words repeat the replaced fact {replaced.id}", link=False, cites=True)
+        if window is not None:
+            low, high = sorted(window)
+            for kind, stored in items:
+                due = _day(stored.data.get("due"), here) if kind == "action" else None
+                if due is None or not low <= due <= high or due == window[0]:
+                    continue
+                if _on_project(kind, stored.data, project):
+                    why = (
+                        f"is due {due.isoformat()}, between the old day {window[0].isoformat()} and the new day "
+                        f"{window[1].isoformat()}"
+                    )
+                    add(move, kind, stored, why, link=False, late=True)
+    ordered = [*linked, *(key for key in found if key not in linked and key not in between), *between]
     return [found[key] for key in ordered[: settings.follow_on_max_tied]]
 
 
+def asks_date(tied: Tied) -> bool:
+    """Whether a tied record is an action whose date the move may affect: it has a due day, or its words give the old
+    day. An agenda item with no day of its own is placed on the meeting's next instance, not asked about."""
+    return tied.kind == "action" and (bool(tied.data.get("due")) or tied.cites)
+
+
+def date_asker(view: Any, people: Any, data: Mapping[str, Any]) -> tuple[str | None, str | None]:
+    """Who a question about an action's date goes to, and the owner it stands in for. The action's first owner; the
+    person when the owner is the person or nobody is named; and the person, saying who to ask, when the owner would need
+    a link to what it is about and the project holds none they can open."""
+    from engine.applier import _openable
+
+    owners = [o["person"] for o in data.get("owners") or []]
+    first, pm = (owners[0] if owners else None), people.pm
+    if first is None or first == pm:
+        return pm, None
+    project = view.get("project", data["project"]) if data.get("project") else None
+    if pm is None or any(_openable(link["url"]) for link in (project.data.get("links") if project else None) or []):
+        return first, None
+    return pm, first
+
+
+def plans_to_confirm(moves: list[Move], tied: list[Tied]) -> list[tuple[Move, list[Tied]]]:
+    """The moved entries and replaced facts that carried more than one dated action: what is tied to them includes an
+    agenda item, a question, a fact, an action with notes, or several actions. Each comes with what is tied."""
+    found = []
+    for move in moves:
+        if move.kind not in ("event", "fact"):
+            continue
+        items = [t for t in tied if move.record in t.by]
+        more = len([t for t in items if t.kind == "action"]) > 1 or any(
+            t.kind != "action" or not t.data.get("due") or str(t.data.get("notes") or "").strip() for t in items
+        )
+        if more:
+            found.append((move, items))
+    return found
+
+
+def _names(text: str, record_id: str) -> bool:
+    """Whether a record id stands in the words, as a whole word."""
+    return re.search(rf"(?<![\w-]){re.escape(record_id)}(?![\w-])", text) is not None
+
+
 def reach_problem(view: Any, cfg: Any, request: Mapping[str, Any], op: Any, people: Any) -> str | None:
-    """Why an op of a follow-on answer can't stand, or None. It may change the day or words of an action tied to the
-    move that nobody was told about; it may draft a correction only for someone a tied item already reached; and a
-    note is always fine."""
-    moves = moves_of(view, request.get("follows"))
-    tied = {(t.kind, t.id): t for t in tied_records(view, cfg, moves)}
+    """Why an op of a follow-on answer can't stand, or None. It never changes an action's day or words; it may draft a
+    correction only for someone a tied item already reached, ask a tied action's owner (or the person) whether its
+    date should change, and ask the person whether a moved plan still holds; and a note is always fine."""
     name = getattr(op, "op", None)
     if name == "record.set":
-        target = tied.get((op.kind, op.id))
-        if target is None:
-            return f"{op.kind} {op.id} isn't tied to what moved, so this run doesn't change it"
-        if op.field not in SETTABLE.get(op.kind, ()):
-            return f"this run changes only the day or words of an action, not {op.kind}.{op.field}"
-        if reached(view, op.kind, target.data):
-            return f"{op.id} already reached someone: draft a correction for them instead of changing it"
-    elif name == "question.add":
-        recipients = {p for t in tied.values() for p in reached(view, t.kind, t.data)}
-        if people.resolve(op.to).person not in recipients:
-            return "a correction goes only to someone a tied item already reached"
-    return None
+        return (
+            f"a follow-on run never changes {op.kind} {op.id}'s {op.field}: ask whoever decides whether it should "
+            "change instead"
+        )
+    if name != "question.add":
+        return None
+    moves = moves_of(view, request.get("follows"))
+    tied = tied_records(view, cfg, moves)
+    to = people.resolve(op.to).person
+    if to in {p for t in tied for p in reached(view, t.kind, t.data)}:
+        return None
+    named = op.matters_for or ""
+    if op.kind == "decision":
+        for t in tied:
+            if asks_date(t) and _names(named, t.id) and to in (date_asker(view, people, t.data)[0], people.pm):
+                return None
+        if to == people.pm and any(_names(named, m.record) for m, _ in plans_to_confirm(moves, tied)):
+            return None
+    return (
+        "a question from this run is a correction to someone a tied item already reached, a decision asking the "
+        "person an action's date belongs to (or the person) whether it should change, with that action's id in "
+        "matters_for, or a decision for the person asking whether a moved plan still holds, with the moved record's id "
+        "in matters_for"
+    )
 
 
 # ---- the packet ------------------------------------------------------------------------------------------------------
@@ -346,6 +433,20 @@ def _line(view: Any, move: Move) -> str:
     return f"{head}: {move.field} was {move.before}, now {move.after}."
 
 
+def _ask_line(view: Any, people: Any, tied: Tied) -> str | None:
+    """Who to ask whether a tied action's date should change, in words, or None when the action has no date to ask
+    about."""
+    if not asks_date(tied):
+        return None
+    to, instead = date_asker(view, people, tied.data)
+    if to is None:
+        return None
+    who = f"{people.name(to)} ({to})"
+    if instead is None:
+        return who
+    return f"{who}, because no link can be given to {people.name(instead)} ({instead}); say that they are who to ask"
+
+
 def _shown(view: Any, people: Any, tied: Tied) -> dict[str, Any]:
     """A tied record as it is now, for the packet."""
     data = tied.data
@@ -357,6 +458,7 @@ def _shown(view: Any, people: Any, tied: Tied) -> dict[str, Any]:
             "status": data["status"],
             "owners": [people.name(o["person"]) for o in data.get("owners", [])],
             "notes": data.get("notes"),
+            "ask_whether_the_date_should_change": _ask_line(view, people, tied),
         }
     elif tied.kind == "question":
         shown |= {
@@ -374,6 +476,23 @@ def _shown(view: Any, people: Any, tied: Tied) -> dict[str, Any]:
     ids = reached(view, tied.kind, data)
     shown["already_reached"] = [f"{people.name(p)} ({p})" for p in ids] or "nobody"
     return {k: v for k, v in shown.items() if v not in (None, "", [])}
+
+
+def _plans(cfg: Any, moves: list[Move], tied: list[Tied]) -> str:
+    """The moved entries and replaced facts whose plan the person is asked to confirm, with what is tied to each, or
+    empty when no move carried more than one dated action."""
+    from engine.today import zone
+
+    here = zone(cfg)
+    lines = []
+    for move, items in plans_to_confirm(moves, tied):
+        day = _day(move.after, here) if move.kind == "event" else None
+        what = f"moved to {day.isoformat()}" if day else "replaced"
+        listed = ", ".join(f"{t.kind} {t.id}" for t in items)
+        lines.append(
+            f"- {move.kind} {move.record} {what}: ask the person whether the plan for it still holds. Tied: {listed}."
+        )
+    return "# Plans to confirm with the person\n" + "\n".join(lines) if lines else ""
 
 
 def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> Any:
@@ -422,11 +541,13 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
         if part.strip()
     )
     shown = json.dumps([_shown(view, people, t) for t in tied], ensure_ascii=False, indent=1) if tied else "(none)"
+    plans = _plans(cfg, moves, tied)
     parts = [
         f"Today is {today.isoformat()} ({today.strftime('%A')}).",
         learned.per_input,
         f'# What moved\n<untrusted source="records">\n{_marked(lines)}\n</untrusted>',
         f'# What is tied to it, as it is now\n<untrusted source="records">\n{_marked(shown)}\n</untrusted>',
+        plans,
     ]
     request = "\n\n".join(p for p in parts if p)
     task = replace(_task(cfg, store, kind, instructions, stable, request), knowledge=learned.log.model_dump())

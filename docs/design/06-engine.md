@@ -731,18 +731,31 @@ the project management pack (6.24), which builds on these links. From the functi
   follow-on run's own request made queue nothing; `dispatch.knowledge.follow_on` turns it off. The run reads the moved
   records before and after and the records tied to them, **found by code**: those that name the entry or its series,
   then open actions and questions on the same project whose words give the old day (`language.date_patterns`) or share
-  `dispatch.knowledge.follow_on_match` of a replaced fact's words, at most `follow_on_max_tied`; each is shown as it is
-  now with why it is tied and the people it already reached (those an action's notice told or a chase followed up, the
-  person a sent question went to). It gets the knowledge section like every task kind and logs it. It may only
-  `record.set` the day or words of a tied action no one was told about (applied, with Undo), `question.add` a correction
-  for a person a tied item already reached (open, so it waits for the person; nothing is sent) and `note`; the applier's
-  `follow-on-reach` check refuses anything else, and the packet marks every record as outside content. A request whose
-  move was undone or changed again before it runs is closed without a call
-  (`tests/test_follow_on.py`, listed in the roadmap's L7 item; replay `moving-an-entry-moves-the-action-tied-to-it`).
+  `dispatch.knowledge.follow_on_match` of a replaced fact's words, then, for a moved entry, open actions on its project
+  due between the old and the new day (the new day included), at most `follow_on_max_tied`; each is shown as it is now
+  with why it is tied and the people it already reached (those an action's notice told or a chase followed up, the
+  person a sent question went to). It gets the knowledge section like every task kind and logs it. **A decided
+  action's date or wording is never changed by the run** (decisions, 2026-10-16): `record.set` is not one of its ops and
+  the applier's `follow-on-reach` check refuses it. Instead, for each tied action with a date the move may affect (it
+  has a due day, or its words give the old day), the run adds one `question.add`, kind `decision`, asking whether the
+  date should change, with the move as context and as evidence. Code decides who is asked and shows it in the packet:
+  the action's first owner; the person when the owner is the person or nobody is named; and the person, saying who to
+  ask, when the owner would need a link to what it is about and the project holds none they can open (the link rule of
+  6.8). Agenda items with no due day of their own are not asked about: they sit on the meeting's next instance. When the
+  moved entry or replaced fact carried more than one dated action (what is tied to it includes an agenda item, a
+  question, a fact, an action with notes, or several actions), one more `decision` question goes to the person, naming
+  what is tied, asking whether the plan for it still holds. A drafted correction for someone a tied item already reached
+  stays as it was: a `question.add` to that person (open, so it waits for the person; nothing is sent). The run may
+  also `note`; the `follow-on-reach` check refuses any other question, and the packet marks every record as outside
+  content. A request whose move was undone or changed again before it runs is closed without a call
+  (`tests/test_follow_on.py`, listed in the roadmap's L7 item: `test_no_due_or_text_change_ever_applies_from_a_follow_on_run`,
+  `test_an_action_due_between_the_old_and_the_new_day_is_tied_and_one_outside_it_is_not`,
+  `test_an_action_due_between_the_old_and_new_day_gets_a_question_to_its_owner_that_waits_and_undoes`,
+  `test_a_moved_entry_that_carried_more_than_a_dated_action_asks_the_person_whether_the_plan_holds`; replay
+  `moving-an-entry-asks-about-the-actions-tied-to-it`).
   *Not built:* the assistant's own move of an entry's day (no op changes an entry's day; the trigger fires on any change
-  to the fields), the tied candidates "due before the new day and settled there" and "said to be covered there", a
-  correction for an action's notice with no link to carry (it becomes a note), and a move written by a connected
-  calendar's sync.
+  to the fields), a correction for an action's notice with no link to carry (it becomes a note), and a move written by a
+  connected calendar's sync.
 - **What applies at once:** changes to the person's own items and the agenda apply with Undo. Anything that already
   reached someone (a question or a notice sent that named the old date) gets a drafted correction to send, not a silent
   edit.
@@ -1637,7 +1650,7 @@ the mark on screen; the person's deduction recorded as theirs with its reason on
 note saying who made each part.
 
 **A correction, not a second fact.** An answer that contradicts a recorded fact replaces it (`supersedes`, which quotes
-the old fact), and the records that repeated the old fact are brought in line by a follow-on run (6.7). A follow-up
+the old fact), and the records that repeated the old fact are asked about by a follow-on run, which never edits them (6.7). A follow-up
 question goes to whoever made the claim or owns the thing it is about; when neither is clear, it is a question to the
 person about who to ask, never a guess from a passing mention. **Built:** the prompt rule and the golden cases
 `follow-up-goes-to-who-made-the-claim` and `follow-up-with-no-clear-owner-asks-who`

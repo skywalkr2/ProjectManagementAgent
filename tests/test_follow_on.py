@@ -1,6 +1,7 @@
 """The follow-on run (design 6.7, follow-on changes; roadmap L7): one request when a dated record moves or a fact is
 replaced, queued in the same transaction as the change; what is tied to the move is found by code; the run's own
-changes start no other run (one hop); changes to the person's own items apply with Undo and what already reached
+changes start no other run (one hop); it never changes an action's due day or words: it asks the action's owner (or the
+person) whether the date should change and asks the person whether a moved plan still holds, and what already reached
 someone gets a drafted correction that waits. Names and ids come from the fixtures; the AI is the stub."""
 
 from __future__ import annotations
@@ -126,6 +127,30 @@ def line(move: str) -> str:
     return f"{move} was {OLD}, now {NEW}"
 
 
+def ask_date(to: str, action: str, **fields) -> dict:
+    """A run's question to whoever decides whether an action's date should change."""
+    return {
+        "op": "question.add",
+        "kind": "decision",
+        "to": to,
+        "title": "Should the due day move with the sync?",
+        "text": f"The sync moved from {OLD} to {NEW}.",
+        "links": [{"label": PROJECT["links"][0]["label"], "url": PROJECT["links"][0]["url"]}],
+        "project": PROJECT["id"],
+        "matters_for": action,
+        **fields,
+    }
+
+
+def statuses_of(store, cs_id: str) -> list[str]:
+    return [o["status"] for o in store.read().get("changeset", cs_id).data["ops"]]
+
+
+def pm_of(env) -> str:
+    _, cfg, store = env
+    return People(store, cfg).pm
+
+
 def moved_entry(env):
     """An entry with an action on it and the person's move of the entry to a new day: the entry, the action, the
     queued request."""
@@ -228,26 +253,11 @@ def test_the_follow_on_runs_own_changes_start_no_other_run(env):
     ws, cfg, store = env
     entry, action, queued = moved_entry(env)
     packet = packets.build(ws, store, cfg, queued.id, TODAY)
-    quote = line("start")
-    assert quote in packet.raw_input
-    scripted(
-        {
-            "summary": "Moved the action with the entry.",
-            "ops": [
-                {
-                    "op": "record.set",
-                    "kind": "action",
-                    "id": action,
-                    "field": "due",
-                    "value": NEW,
-                    "evidence": {"quote": quote},
-                }
-            ],
-        }
-    )
+    assert line("start") in packet.raw_input
+    scripted({"summary": "Asked the owner.", "ops": [ask_date(OWNER, action)]})
     cs_id = run(env, queued.id)
-    assert store.read().get("action", action).data["due"] == NEW
-    assert len(follow_ons(store)) == 1  # the run's own move of a due day queued nothing
+    assert statuses_of(store, cs_id) == ["applied"]
+    assert len(follow_ons(store)) == 1  # the run's own questions queued no other run
     assert store.read().get("changeset", cs_id).data["request"] == queued.id
 
 
@@ -258,12 +268,22 @@ def test_a_move_the_person_makes_after_a_run_is_a_new_save_and_queues_again(env)
     assert len(follow_ons(store)) == 2
 
 
-def test_a_move_applied_for_a_follow_on_request_starts_none_whatever_applies_it(env):
+@pytest.mark.parametrize("how", ["run", "applier"])
+@pytest.mark.parametrize(("field", "value"), [("due", "2026-10-26"), ("text", "Review the final proof")])
+def test_no_due_or_text_change_ever_applies_from_a_follow_on_run(env, how, field, value):
     _, _, store = env
     entry, action, queued = moved_entry(env)
-    cs_id, _ = assistant_applies(env, moved_due(action, "2026-10-26"), request_id=queued.id)
+    op = {**moved_due(action)[0], "field": field, "value": value}
+    if how == "run":
+        scripted({"summary": "Moved it.", "ops": [op]})
+        cs_id = run(env, queued.id)
+    else:
+        cs_id, _ = assistant_applies(env, [op], request_id=queued.id)
+    (outcome,) = store.read().get("changeset", cs_id).data["ops"]
+    assert outcome["status"] == "refused" and "never changes" in outcome["reason"]
+    data = store.read().get("action", action).data
+    assert (str(data["due"]), data["text"]) == (OLD, "Review the proof")
     assert len(follow_ons(store)) == 1
-    assert store.read().get("changeset", cs_id).data["request"] == queued.id
 
 
 # ---- what is tied -------------------------------------------------------------------------------------------------
@@ -386,35 +406,184 @@ def test_a_run_writes_its_knowledge_log_and_the_kind_declares_the_ops_it_may_use
     run(env, queued.id)
     log = store.read().list("run")[-1].data["knowledge"]
     assert set(log) >= {"given", "stable_chars", "rules_present"}
-    assert task_kind(follow_on.TASK).ops == ("record.set", "question.add", "note")
+    assert task_kind(follow_on.TASK).ops == ("question.add", "note")
 
 
 # ---- results ------------------------------------------------------------------------------------------------------
 
 
-def test_a_change_to_the_persons_own_action_applies_with_undo(env):
+def test_an_action_due_between_the_old_and_the_new_day_is_tied_and_one_outside_it_is_not(env):
+    _, _, store = env
+    entry = make(store, "event")
+    inside = make(store, "action", text="Book the room", due="2026-10-23")
+    on_new = make(store, "action", text="Print the handouts", due=NEW)
+    on_old = make(store, "action", text="Collect the keys", due=OLD)
+    after = make(store, "action", text="Send the recap", due="2026-10-25")
+    other_project = make(store, "action", text="Order the lunch", due="2026-10-23", project=None)
+    done = make(store, "action", text="Pay the deposit", due="2026-10-23", status="done", done_by=[OWNER])
+    edit(env, "event", entry, start=NEW)
+    found = tied(env, follow_ons(store)[0].id)
+    assert set(found) == {f"action:{inside}", f"action:{on_new}"}
+    assert found[f"action:{inside}"] == [f"is due 2026-10-23, between the old day {OLD} and the new day {NEW}"]
+    assert not {f"action:{x}" for x in (on_old, after, other_project, done)} & set(found)
+
+
+def test_a_move_to_an_earlier_day_ties_the_actions_due_from_the_new_day_up_to_the_old_one(env):
+    _, _, store = env
+    entry = make(store, "event", start=NEW)
+    inside = make(store, "action", due="2026-10-23")
+    on_new = make(store, "action", due=OLD)
+    on_old = make(store, "action", due=NEW)
+    edit(env, "event", entry, start=OLD)
+    assert set(tied(env, follow_ons(store)[0].id)) == {f"action:{inside}", f"action:{on_new}"}
+    assert f"action:{on_old}" not in tied(env, follow_ons(store)[0].id)
+
+
+def test_an_action_due_between_the_old_and_new_day_gets_a_question_to_its_owner_that_waits_and_undoes(env):
     ws, cfg, store = env
-    entry, action, queued = moved_entry(env)
+    entry = make(store, "event")
+    between = make(store, "action", text="Book the room", due="2026-10-23")
+    edit(env, "event", entry, start=NEW)
+    (queued,) = follow_ons(store)
+    scripted({"summary": "Asked the owner.", "ops": [ask_date(OWNER, between)]})
+    cs_id = run(env, queued.id)
+    (outcome,) = store.read().get("changeset", cs_id).data["ops"]
+    assert outcome["status"] == "applied"
+    drafted = store.read().get("question", outcome["records"][0]["id"]).data
+    assert (drafted["to"], drafted["kind"], drafted["status"], drafted["matters_for"]) == (
+        OWNER,
+        "decision",
+        "open",
+        between,
+    )
+    action = store.read().get("action", between).data
+    assert (str(action["due"]), action["text"]) == ("2026-10-23", "Book the room")
+    assert store.read().get("request", queued.id).data["state"] == "review"
+    undo_changeset(store, cs_id)
+    assert store.read().get("question", outcome["records"][0]["id"]) is None
+
+
+def test_a_question_about_an_action_goes_to_its_owner_the_person_when_it_has_none_or_when_no_link_can_be_given(env):
+    ws, cfg, store = env
+    pm = pm_of(env)
+    entry = make(store, "event")
+    owned = make(store, "action", event=entry, due=OLD)
+    ownerless = make(store, "action", event=entry, due=OLD, owners=[], status="held")
+    persons = make(store, "action", event=entry, due=OLD, owners=[{"person": pm}])
+    edit(env, "event", entry, start=NEW)
+    (queued,) = follow_ons(store)
+    packet = packets.build(ws, store, cfg, queued.id, TODAY)
+    assert f"{People(store, cfg).name(OWNER)} ({OWNER})" in packet.raw_input
     scripted(
         {
-            "summary": "Moved the action with the entry.",
+            "summary": "Asked.",
             "ops": [
-                {
-                    "op": "record.set",
-                    "kind": "action",
-                    "id": action,
-                    "field": "due",
-                    "value": NEW,
-                    "evidence": {"quote": line("start")},
-                }
+                ask_date(OWNER, owned),
+                ask_date(pm, ownerless, links=[]),
+                ask_date(pm, persons, links=[]),
+                ask_date(ASKED, owned),  # not the owner: refused
             ],
         }
     )
     cs_id = run(env, queued.id)
-    assert [o["status"] for o in store.read().get("changeset", cs_id).data["ops"]] == ["applied"]
-    assert store.read().get("request", queued.id).data["state"] == "review"
-    undo_changeset(store, cs_id)
-    assert store.read().get("action", action).data["due"] == OLD
+    assert statuses_of(store, cs_id) == ["applied", "applied", "applied", "refused"]
+    # With no link the owner could open, the same question goes to the person, who is told who to ask.
+    with store.transaction() as tx:
+        tx.update(
+            "project",
+            PROJECT["id"],
+            {"links": []},
+            _PM,
+            read_version=store.read().get("project", PROJECT["id"]).version,
+        )
+    view = store.read()
+    people = People(store, cfg)
+    assert follow_on.date_asker(view, people, view.get("action", owned).data) == (pm, OWNER)
+    assert follow_on.date_asker(view, people, view.get("action", persons).data) == (pm, None)
+    assert follow_on.date_asker(view, people, view.get("action", ownerless).data) == (pm, None)
+    packet = packets.build(ws, store, cfg, queued.id, TODAY)
+    assert "are who to ask" in packet.raw_input
+
+
+def test_a_moved_entry_that_carried_more_than_a_dated_action_asks_the_person_whether_the_plan_holds(env):
+    ws, cfg, store = env
+    pm = pm_of(env)
+    entry = make(store, "event")
+    agenda = make(store, "action", text="Cover the freight plan", event=entry)
+    dated = make(store, "action", event=entry, due=OLD)
+    edit(env, "event", entry, start=NEW)
+    (queued,) = follow_ons(store)
+    packet = packets.build(ws, store, cfg, queued.id, TODAY)
+    assert (
+        "# Plans to confirm with the person" in packet.raw_input and f"event {entry} moved to {NEW}" in packet.raw_input
+    )
+    plan = {
+        "op": "question.add",
+        "kind": "decision",
+        "to": pm,
+        "title": f"Printer sync moved to {NEW}: does the plan for it still hold?",
+        "text": f"Tied to it: {agenda}, {dated}.",
+        "project": PROJECT["id"],
+        "matters_for": entry,
+    }
+    scripted(
+        {"summary": "Asked.", "ops": [plan, {**plan, "kind": "question"}, {**plan, "matters_for": "something else"}]}
+    )
+    cs_id = run(env, queued.id)
+    assert statuses_of(store, cs_id) == ["applied", "refused", "refused"]
+    asked = [q for q in store.read().list("question") if q.data["matters_for"] == entry]
+    assert [(q.data["to"], q.data["kind"], q.data["status"]) for q in asked] == [(pm, "decision", "open")]
+
+
+def test_a_moved_entry_with_one_dated_action_and_nothing_else_has_no_plan_to_confirm(env):
+    ws, cfg, store = env
+    pm = pm_of(env)
+    entry, action, queued = moved_entry(env)
+    packet = packets.build(ws, store, cfg, queued.id, TODAY)
+    assert "Plans to confirm" not in packet.raw_input
+    plan = {
+        "op": "question.add",
+        "kind": "decision",
+        "to": pm,
+        "title": "Printer sync moved: does the plan for it still hold?",
+        "matters_for": entry,
+    }
+    scripted({"summary": "Asked.", "ops": [plan]})
+    cs_id = run(env, queued.id)
+    assert statuses_of(store, cs_id) == ["refused"]
+
+
+def test_a_replaced_fact_with_several_tied_items_asks_the_person_whether_the_plan_holds(env):
+    ws, cfg, store = env
+    old = make(store, "fact", text="The press slot is booked for the third week of November")
+    first = make(store, "action", text="Confirm the press slot booked for the third week of November", due=NEW)
+    second = make(store, "question", title="Is the press slot booked for the third week of November?")
+    assistant_applies(
+        env,
+        [
+            {
+                "op": "fact",
+                "text": "The press slot is booked for the first week of December",
+                "project": PROJECT["id"],
+                "supersedes": old,
+                "evidence": {"quote": RAW},
+            }
+        ],
+    )
+    (queued,) = follow_ons(store)
+    new = follow_on.moves_of(store.read(), queued.data["follows"])[0].record
+    packet = packets.build(ws, store, cfg, queued.id, TODAY)
+    assert f"fact {new} replaced" in packet.raw_input and first in packet.raw_input and second in packet.raw_input
+    plan = {
+        "op": "question.add",
+        "kind": "decision",
+        "to": pm_of(env),
+        "title": "The press slot was replaced: does the plan for it still hold?",
+        "project": PROJECT["id"],
+        "matters_for": new,
+    }
+    scripted({"summary": "Asked.", "ops": [plan]})
+    assert statuses_of(store, run(env, queued.id)) == ["applied"]
 
 
 def test_what_already_reached_someone_gets_a_drafted_correction_that_waits_and_is_not_edited(env):
@@ -449,17 +618,17 @@ def test_what_already_reached_someone_gets_a_drafted_correction_that_waits_and_i
     )
     cs_id = run(env, queued.id)
     first, second = store.read().get("changeset", cs_id).data["ops"]
-    assert first["status"] == "refused" and "already reached someone" in first["reason"]
+    assert first["status"] == "refused" and "never changes" in first["reason"]
     assert second["status"] == "applied"
     assert store.read().get("action", told).data["due"] == OLD
     drafted = store.read().get("question", second["records"][0]["id"]).data
     assert (drafted["to"], drafted["status"], drafted["sent_at"]) == (TOLD, "open", None)
 
 
-def test_a_correction_goes_only_to_someone_a_tied_item_reached_and_only_tied_actions_change(env):
+def test_a_question_goes_only_where_a_tied_item_reached_or_the_action_or_plan_asks_and_no_action_changes(env):
     ws, cfg, store = env
     entry, action, queued = moved_entry(env)
-    stranger = make(store, "action", text="Collect the samples")
+    stranger = make(store, "action", text="Collect the samples", due=OLD)
     scripted(
         {
             "summary": "Too much.",
@@ -472,14 +641,8 @@ def test_a_correction_goes_only_to_someone_a_tied_item_reached_and_only_tied_act
                     "links": [{"label": "Page", "url": PROJECT["links"][0]["url"]}],
                     "matters_for": entry,
                 },
-                {
-                    "op": "record.set",
-                    "kind": "action",
-                    "id": stranger,
-                    "field": "due",
-                    "value": NEW,
-                    "evidence": {"quote": line("start")},
-                },
+                ask_date(OWNER, stranger),
+                ask_date(OWNER, action, kind="question"),
                 {"op": "record.set", "kind": "action", "id": action, "field": "notes", "value": "x"},
             ],
         }
@@ -487,10 +650,9 @@ def test_a_correction_goes_only_to_someone_a_tied_item_reached_and_only_tied_act
     cs_id = run(env, queued.id)
     outcomes = store.read().get("changeset", cs_id).data["ops"]
     reasons = [o.get("reason") or "" for o in outcomes]
-    assert [o["status"] for o in outcomes] == ["refused"] * 3
-    assert "someone a tied item already reached" in reasons[0]
-    assert "isn't tied to what moved" in reasons[1]
-    assert "only the day or words of an action" in reasons[2]
+    assert [o["status"] for o in outcomes] == ["refused"] * 4
+    assert all("a question from this run is" in r for r in reasons[:3])
+    assert "never changes" in reasons[3]
 
 
 def test_an_answer_with_no_change_finishes_the_request_and_a_move_undone_before_the_run_closes_it(env):

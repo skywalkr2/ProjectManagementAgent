@@ -163,10 +163,11 @@ invariants:
       was corrected.
   follow-on-reach:
     ops: [record.set, question.add]
-    line: A run that follows a moved date changes only the day or words of a tied action nobody was told about, and drafts corrections only for people a tied item already reached.
+    line: A run that follows a moved date never changes an action's day or words; it asks whoever decides, and drafts corrections only for people a tied item already reached.
     seed: >-
-      When a date moves or a fact is replaced, change only an action listed as tied to it, only its due day or its
-      words, and never one that already reached someone. For anything that reached someone, draft a short question to
+      When a date moves or a fact is replaced, never change an action's due day or its words: ask the action's owner,
+      or the person when nobody is named, whether the date should change, and ask the person whether the plan still
+      holds when more than a dated action was tied to it. For anything that reached someone, draft a short question to
       that person saying what changed, and never edit it behind their back.
   rule-not-report:
     ops: [report.draft]

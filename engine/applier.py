@@ -1248,9 +1248,9 @@ def _learning_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:
 
 
 def _follow_on_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:
-    """A follow-on answer's op that reaches past what it may change is refused, so it gets a fix round: a change to a
-    record that isn't tied to the move, to anything but an action's day or words, or to an action someone was already
-    told about, and a correction for someone no tied item reached."""
+    """A follow-on answer's op that reaches past what it may do is refused, so it gets a fix round: any change to an
+    action's day or words, and a question that is not a correction for someone a tied item reached, a decision about a
+    tied action's date for its owner (or the person), or the person's decision on a moved plan."""
     from engine import follow_on
 
     if origin_of(ctx).get("task") != follow_on.TASK:

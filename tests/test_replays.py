@@ -22,7 +22,7 @@ REAL_MISSES = (
     "moved-decision-stays-a-decision",
     "already-asked-files-the-question-as-sent",
     "a-moved-date-sent-back-leaves-no-calendar-entry",
-    "moving-an-entry-moves-the-action-tied-to-it",
+    "moving-an-entry-asks-about-the-actions-tied-to-it",
 )
 
 
@@ -135,14 +135,14 @@ def test_a_move_that_queues_no_follow_on_run_fails(monkeypatch):
     from engine import follow_on
 
     monkeypatch.setattr(follow_on, "queue", lambda *a, **k: None)
-    result = run(DEMO_A, "moving-an-entry-moves-the-action-tied-to-it")
+    result = run(DEMO_A, "moving-an-entry-asks-about-the-actions-tied-to-it")
     assert not result.passed and any("0 follow-on runs" in p for p in problems(result))
 
 
-def test_a_follow_on_run_that_brings_nothing_in_line_fails_and_so_does_one_whose_change_cannot_be_undone(monkeypatch):
-    case = "moving-an-entry-moves-the-action-tied-to-it"
+def test_a_follow_on_run_that_asks_nothing_fails_and_so_does_one_whose_question_cannot_be_undone(monkeypatch):
+    case = "moving-an-entry-asks-about-the-actions-tied-to-it"
     nothing = edited(monkeypatch, DEMO_B, case, lambda r: r["ideal"]["follow_on"].update(ops=[]))
-    assert not nothing.passed and any(m.startswith("action(") for m in nothing.missing)
+    assert not nothing.passed and any(m.startswith("question(") for m in nothing.missing)
     monkeypatch.undo()
     from engine import applier
 
@@ -154,7 +154,7 @@ def test_a_follow_on_run_that_brings_nothing_in_line_fails_and_so_does_one_whose
 def test_a_replay_that_expects_a_follow_on_run_carries_its_answer_and_an_edit_names_what_it_changes():
     with pytest.raises(ValueError, match="an edit names the record"):
         pairs._check_correction("replay x action", {"kind": "changed", "id": "EVT-1"})
-    replay = next(r for r in load_replays(DEMO_A) if r["id"] == "moving-an-entry-moves-the-action-tied-to-it")
+    replay = next(r for r in load_replays(DEMO_A) if r["id"] == "moving-an-entry-asks-about-the-actions-tied-to-it")
     assert replay["expect_follow_on"] is True
     replay["ideal"] = {}
     with pytest.raises(ValueError, match="carries ideal.follow_on"):

@@ -1,0 +1,36 @@
+id: moving-an-entry-asks-about-the-actions-tied-to-it
+title: Moving a calendar entry makes one follow-on run that asks the action's owner whether its date should change, and changes nothing, with Undo
+skills: [dates]
+received: '2026-10-14'
+given:
+- {kind: event, id: EVT-90, fields: {title: Cut-over runbook review, start: '2026-10-22', project: PRJ-1, trust: trusted}}
+- {kind: action, id: ACT-90, fields: {text: Share comments on the cut-over runbook, owners: [{person: PER-3}], project: PRJ-1, event: EVT-90, due: '2026-10-22'}}
+action:
+  kind: changed
+  id: EVT-90
+  fields: {start: '2026-10-24'}
+expect_learning: false
+expect_follow_on: true
+expect_undo: true
+expect_records:
+- kind: question
+  where: {to: PER-3, kind: decision, status: open, matters_for: ACT-90}
+  text_has: [runbook]
+  count: 1
+forbid_records:
+- kind: action
+  id: ACT-90
+  where: {due: '2026-10-24'}
+ideal:
+  follow_on:
+    summary: Asked the owner whether the date of the comments on the runbook should change with the entry.
+    ops:
+    - op: question.add
+      kind: decision
+      to: PER-3
+      title: Should the due day of the comments on the runbook move with the entry?
+      text: 'The entry moved from 2026-10-22 to 2026-10-24. The comments on the runbook is due 2026-10-22: should that day change, and to when?'
+      links: [{label: Rollout status page, url: 'https://wiki.example.com/pages/1201'}]
+      project: PRJ-1
+      event: EVT-90
+      matters_for: ACT-90
