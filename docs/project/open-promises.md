@@ -7,7 +7,7 @@ owner withdraws it. The session reads this file when it starts, resumes, or come
 
 | # | Promised | To | Where it is tracked | State |
 |---|---|---|---|---|
-| P1 | Run the golden set's "before" report on real models, then summarize it and compare it with the "after" run | owner, design author | roadmap O1 (owner) and L4 | Waiting on the owner's own computer |
+| P1 | Run the golden set's "before" report on real models, then summarize it and compare it with the "after" run | owner, design author | roadmap O1 and O2 (done), O3 (the "after" run, steps in the roadmap) | Waiting on the owner's "after" run (O3) |
 | P2 | Answer plugin rounds 34 (170, 172), 35 (173, dependency install) and 38 (183 to 186) in one weekly batch; 183 together with the dependency install; and 207 (the core's search for a pack's packets, `view.search`, logged on the run; which phase); and round 48's 209 (a `PacketContext` in the test kit) and 210 (the knowledge section against a pack's own packet cap); 208 was fixed at once in 0.3.70 | writing pack builder | task list; roadmap A2 (dependency install), C1 | Acknowledged to the builder; not started |
 | P4 | Tell the writing pack about `pm/schedule@1` when the project management pack starts | writing pack builder | roadmap C2 | Not due yet |
 | P5 | Ask the design author for a paragraph on a typical week of real input, for the day-30 history's noise | design author | roadmap L4 | Offered to the owner; optional |

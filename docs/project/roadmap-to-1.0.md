@@ -31,11 +31,13 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
     send-back packet carrying each item as it is now, and the reach in words on the Learned line. **L3 is done.**
   - Moved out of L3: the learning pairs and the switch check (L4), and a project's "what the assistant knows" and
     "Overlaps with" (phase B).
-- **Next:** L3b (the obvious next step from what came in), L4 (proving it, with the owner's "after" run), L5, L6, then
-  the "Ready for real use" items still open (the scope slice and the rest), after which real use starts. Phase B follows,
-  then phase C (the writing pack, finished completely first; owner, 2026-10-15), then phase P (the project management and
-  publishing packs), then the owner's sign-off (D).
-- **Plugin API:** 0.3.70 (see the table below).
+- **L3b, L4, L5, L6 and the rest of "Ready for real use":** built 2026-10-15. L4's 28 learning pairs found four gaps in
+  learning, each fixed with its pair. **Phase L-core's code is done.** The one step left is the owner's "after" run (O3),
+  which the comparison with O1 and O2 needs before real use starts.
+- **Next:** the owner's "after" run (O3), then real use. Phase B (the UI) is built alongside, then phase C (the writing
+  pack, finished completely first; owner, 2026-10-15), then phase P (the project management and publishing packs), then
+  the owner's sign-off (D).
+- **Plugin API:** 0.3.79 (see the table below).
 
 ## Owner actions on the critical path
 
@@ -46,6 +48,31 @@ blocks; everything else goes ahead without it.
 |---|---|---|---|---|
 | O1 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-agent.json`: 42 of 42 passed on the owner's one account, a command-line agent). **The "before" run of the golden set** on real models: today's 14 cases × 3 runs, on a low-cost and a stronger account, with today's scoring. Steps below. | The owner's computer, with their AI accounts | Only L4's last step: the "after" report and its comparison with this one. That report also has to exist before real use starts. | All of phase A, and L-core's code, including the harder set itself. The run is pinned to commit `802538e`, so changing the cases, the scoring or the packet afterwards doesn't spoil it. |
 | O2 | **Done 2026-10-14** (`docs/project/evals/2026-10-14-before-harder-agent.json`: 30 of 48 as scored at `feb6b3f`, 48 of 48 once six cases were corrected; every failure was an extra op the case hadn't allowed). **The harder set's "before" run** (the original designer's L1 check-in, 2026-10-14): the harder set (below, "L1b") on the owner's account, 3 runs per case, pinned to the commit that adds it, which is the last commit before any L2 code. The report records the agent's program version, and says plainly when every tier ran on the same account, so the run says nothing about a low-cost tier against a stronger one. Steps below, once the set lands. | The owner's computer, with their AI accounts | L4's comparison, which rests on this set. | L2's build: the run is pinned, so it can be made any time; L2 code only lands after the pinned commit. |
+| O3 | **The "after" run** (L4's last step): the golden set, the harder set and the learning pairs on the owner's account, 3 runs per case, pinned to commit `786563c` (the last L-core code). Compared case by case with O1 and O2. Steps below. | The owner's computer, with the account used for O1 and O2 | Real use: the comparison has to exist before it starts. | Phase B, which goes ahead meanwhile. |
+
+**O3 steps** (pinned to commit `786563c`, phase L-core's last code). In the owner's copy of the repository, on their
+own computer:
+```
+git fetch origin claude/tender-tesla-16a8ob
+git worktree add ../cockpit-after 786563c
+cd ../cockpit-after
+uv sync
+uv run cockpit evaluate --from workspaces/demo-b -w <your workspace folder> --account "<the account used for O1>" --runs 3 --json > after.json
+uv run cockpit evaluate --from workspaces/demo-a -w <your workspace folder> --account "<the account used for O1>" --runs 3 --json > after-harder.json
+uv run cockpit evaluate --pairs --from workspaces/demo-b -w <your workspace folder> --account "<the account used for O1>" --runs 3 --json > after-pairs.json
+uv run cockpit evaluate --pairs --from workspaces/demo-a -w <your workspace folder> --account "<the account used for O1>" --runs 3 --json > after-pairs-harder.json
+```
+- **Cost:** about 430 small runs in all on the one account: 81 and 60 for the two sets (27 and 20 cases × 3), and
+  about 280 for the pairs (30 pairs and the day-30 scenario, each about three calls, × 3). On a subscription agent it is
+  usage, and a long run may pause at the plan's limit and carry on. Run the commands one at a time if you'd rather see
+  each report first.
+- **What it shows:** each report ends with a pass rate per case and an overall line. The first two cover O1's and O2's
+  cases plus the ones added since (those have no "before" number). A pair passes only when the later input comes out
+  right with the correction not repeated, and a negative pair passes only when its later input is unchanged. A pair
+  that fails names what the later run was given, so a gap in learning shows which knowledge didn't reach it.
+- **Then:** send the four files to the session. It checks them for account names or addresses, writes the comparison
+  with O1 and O2 in `docs/project/evals/`, and turns any failing pair into a fix with its test before real use starts.
+  After that, `git worktree remove ../cockpit-after`.
 
 **O2 steps** (pinned to commit `feb6b3f`, the last before any L2 code). In the owner's copy of the repository, on their
 own computer:
@@ -95,8 +122,8 @@ Within 0.3 every change is additive: a pack built for an earlier 0.3 version kee
 | L-core: L1 | Knowledge records and ops, `source.reported`, the run's knowledge log | 0.3.64–0.3.66, done | No |
 | L-core: L2 | One call that gives a pack's packets the knowledge section; `learning: own` for a record type or task kind | 0.3.67, done | No |
 | L-core: L3 | Learning from corrections and inputs, the question ops, the changeset's `applied`/`missing`/`first_on_account`; 0.3.70 put a plugin's aliased record fields back to being stored by field name (a silent change in 0.3.64) | 0.3.68–0.3.70, done | No |
-| L-core: L4 | Packs' own evaluation cases (`provides.evals`) and domain scorers (`registrar.scorer`) | 0.3.x | No |
-| L-core: L5 | The text-extractor extension point; a connector item that carries files (mail attachments) | 0.3.x | No |
+| L-core: L4 | Packs' own evaluation cases (`provides.evals`) and domain scorers (`registrar.scorer`) | 0.3.78–0.3.79, done | No |
+| L-core: L5 | The text-extractor extension point; a connector item that carries files (mail attachments). Around it, for L3's last items, L3b, L6 and the scope slice: `action.hold`, `action.drop`, `action.unhold`, `person.contact`, `Project.roles`, `by_you` and `credited_to` on watched items, the paused tier | 0.3.74, and 0.3.71–0.3.77 around it, done | No |
 | B | Nothing planned: panels, Today lines and jobs keep their contract through the redesign | none | No |
 | C1, then P (C2, C3) | What the packs' builders ask for, answered in the weekly round (round 39: a conversation on a record, context-sized task kinds, data-form previews, a pack's value on a request, computed-column headings); interfaces between packs (such as `pm/schedule@1`) belong to the packs | 0.3.x | No |
 | C4 | The publisher and the file channel for a pack's outputs, fact lookups from configured sources, and a kind of author for edits made outside the app in a shared folder. Whether a pack's "send" changes shape is decided here; if it does, this is 0.4 | 0.3.x or 0.4 | Only if 0.4, announced a round ahead |
@@ -1155,8 +1182,11 @@ From the original designer's lessons of 2026-10-14:
 L3b. **The obvious next step from what came in** (owner, 2026-10-13: "standard obvious things"). When the assistant
 meets something new, it offers the obvious way to record it, as one click, instead of a question the person has to work
 around. Each is the person's choice, with Undo, and each answer is learned (L3). What the code does today is noted.
-- [ ] **The person's own edit closes what it fulfills** (afternoon lesson 7): when an edit by the person, in a watched
-  source they author, adds what one of their open actions asks for, the action closes with a log row and Undo.
+- [x] **The person's own edit closes what it fulfills** (afternoon lesson 7): when an edit by the person, in a watched
+  source they author, adds what one of their open actions asks for, the action closes with a log row and Undo. Built:
+  `tests/test_obvious_steps_f.py::test_a_watched_change_is_marked_in_the_packet_as_the_persons_own_work_or_the_apps_own_publish`,
+  `tests/test_obvious_steps_f.py::test_the_golden_case_passes_with_its_ideal_answer` (the case `own-edit-closes-action`),
+  `tests/test_watch.py::test_a_source_that_names_the_person_as_its_author_holds_their_own_work`.
 - [x] **"Who is this?" offers "Add a new person"** beside picking someone, filled in from the input (the name as
   written, and the organization, role or address the input gives), saved as the person's own. Built: `tests/test_next_steps.py::test_a_new_person_answers_the_question_releases_every_held_op_records_routed_and_undo_takes_it_all_back`,
   `tests/test_next_steps.py::test_the_form_starts_with_the_name_as_written_what_a_proposed_person_gives_and_the_address_in_the_header`,
@@ -1267,7 +1297,8 @@ L4. **Proving it** (from the design author's review of this plan).
   - a forwarded mail under the PM's note, where only the note is trusted.
 
   Then a report on the owner's accounts: pass rate per case per model, three runs each, before real use starts. It is
-  compared with the "before" run (owner action O1), which must exist by then; nothing else in this phase waits for it.
+  compared with the "before" runs (owner actions O1 and O2); nothing else in this phase waits for it. This is owner
+  action O3.
 - [x] **The day-30 scenario, with its expectations written before it is run.** Built: `workspaces/demo-b/scenarios/day-30.yaml`,
   `tests/test_pairs.py::test_the_scenario_lists_its_expected_differences_and_a_month_of_noise`. A month of fictional history that mixes
   every case above with ordinary noise (unrelated mail, re-saved files, a moved meeting), so the knowledge has to be found
