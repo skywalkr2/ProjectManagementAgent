@@ -33,6 +33,8 @@ from engine.ops import (
     SETTABLE,
     ActionAddOp,
     ActionCloseOp,
+    ActionDropOp,
+    ActionHoldOp,
     AnswerOp,
     ChangesetIn,
     EventAddOp,
@@ -239,7 +241,15 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 refuse(i, "targets", f"there is no action {op.id}")
             elif target.data["status"] == "done":
                 refuse(i, "targets", f"action {op.id} is already done")
+            elif target.data["status"] == "dropped":
+                refuse(i, "targets", f"action {op.id} was dropped, so it can't be closed")
             elif evidence is not None and not _shares_words(evidence.quote, target.data["text"]):
+                lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
+        if isinstance(op, (ActionHoldOp, ActionDropOp)):
+            why = action_hold_problem(view, op)
+            if why:
+                refuse(i, "targets", why)
+            elif evidence is not None and not _shares_words(evidence.quote, view.get("action", op.id).data["text"]):
                 lint(i, "evidence-fit", f"the quote doesn't seem to be about action {op.id}")
         if isinstance(op, QuestionDoneOp):
             target = view.get("question", op.id)
@@ -367,7 +377,9 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 lint(i, "run-on-list", "the action crams several items into one line; make one action per task")
             for existing in known_actions:
                 if _similar(op.text, existing.data["text"]) >= similarity:
-                    state = "done action" if existing.data["status"] == "done" else "open action"
+                    state = {"done": "done action", "dropped": "dropped action"}.get(
+                        existing.data["status"], "open action"
+                    )
                     lint(i, "near-duplicate-action", f"looks like {state} {existing.id}: {existing.data['text']}")
                     break
         # plugins' lints: soft checks on the assistant's proposals (never the person's own changes), with the
@@ -546,7 +558,7 @@ def _projects_of(op: OpModel) -> list[str]:
 
 def _texts(op: OpModel) -> list[str]:
     out = []
-    for key in ("text", "title", "answer", "summary"):
+    for key in ("text", "title", "answer", "summary", "reason", "waiting_for"):
         value = getattr(op, key, None)
         if isinstance(value, str):
             out.append(value)
@@ -558,6 +570,20 @@ _WORD = re.compile(r"[a-z0-9]{4,}")
 
 def _shares_words(a: str, b: str) -> bool:
     return bool(set(_WORD.findall(normalize(without_links(a)))) & set(_WORD.findall(normalize(without_links(b)))))
+
+
+def action_hold_problem(view: Any, op: ActionHoldOp | ActionDropOp) -> str | None:
+    """Why an action can't be put on hold or dropped, or None. It must exist and be open: one waiting for an owner is
+    given one (or folded into another action) where it waits, and a finished or dropped one is closed already."""
+    found = view.get("action", op.id)
+    if found is None:
+        return f"there is no action {op.id}"
+    status = found.data["status"]
+    if status == "held":
+        return f"action {op.id} is waiting for an owner; pick one or add it to another action first"
+    if status != "open":
+        return f"action {op.id} is already {status}"
+    return None
 
 
 def question_correction_problem(ctx: Context, view: Any, op: OpModel) -> str | None:
@@ -1269,6 +1295,18 @@ def _apply_op(
         }
         tx.update("action", op.id, credit, w, read_version=cur.version)
         made("action", op.id)
+    elif isinstance(op, ActionHoldOp):
+        cur = tx.get("action", op.id)
+        hold = {"waiting_for": " ".join(op.waiting_for.split()), "since": today.isoformat()}
+        tx.update("action", op.id, {"on_hold": hold}, w, read_version=cur.version)
+        made("action", op.id)
+    elif isinstance(op, ActionDropOp):
+        cur = tx.get("action", op.id)
+        reason = " ".join(op.reason.split())
+        tx.update("action", op.id, {"status": "dropped", "dropped_reason": reason}, w, read_version=cur.version)
+        made("action", op.id)
+        if ctx.actor == "pm":
+            _record_dropped(tx, ctx, "action", op.id, reason)
     elif isinstance(op, QuestionAddOp):
         to = ctx.people.resolve(op.to).person
         data = {
@@ -1361,7 +1399,8 @@ def _correct_question(tx: Tx, op: OpModel, ctx: Context, w: WriteContext) -> lis
         )
         changes = {"status": "sent", "sent_at": when.isoformat()}
     tx.update("question", qid, changes, w, read_version=cur.version)
-    if kind is not None:
+    # A drop the assistant proposes is its own work, not a correction; only the person's own drop is one.
+    if kind is not None and (kind != "dropped" or ctx.actor == "pm"):
         tx.create(
             "signal",
             {
@@ -1375,6 +1414,24 @@ def _correct_question(tx: Tx, op: OpModel, ctx: Context, w: WriteContext) -> lis
             WriteContext(actor="pm", trust="trusted", op=kind),
         )
     return [{"kind": "question", "id": qid}]
+
+
+def _record_dropped(tx: Tx, ctx: Context, kind: str, record_id: str, reason: str) -> None:
+    """The person's own drop of something the assistant may have made: a `dropped` signal naming it and, when the
+    assistant made it, the changeset and run. It is written apart from the change, so Undo leaves it as it was."""
+    changeset, run = _made_by(tx, kind, record_id)
+    tx.create(
+        "signal",
+        {
+            "kind": "dropped",
+            "refs": [record_id],
+            "changeset": changeset,
+            "run": run,
+            "note": reason,
+            "at": ctx.store.clock(),
+        },
+        WriteContext(actor="pm", trust="trusted", op="dropped"),
+    )
 
 
 def _standing(tx: Tx, ctx: Context) -> knowledge.Standing:
@@ -1590,6 +1647,102 @@ def pick_owner(store: Store, question_id: str, person: str) -> None:
         )
 
 
+#: The name a fold's changes are written under in the ledger. Undoing it reopens the owner question too, which
+#: undoing any other op leaves as the person answered it.
+FOLD_OP = "action.fold"
+
+
+def fold_unowned(
+    store: Store,
+    cfg: Config,
+    changeset_id: str,
+    index: int,
+    into: str,
+    read_version: int,
+    *,
+    now: datetime | None = None,
+) -> str:
+    """Add an action that waits for an owner to the open action it nearly repeats, as one change with Undo. The held
+    action is closed as dropped and its "Pick an owner" question with it, the target's notes gain a line with the
+    held action's text and the words it came from, and a `held_declined` signal records the person's choice, naming
+    the action it went into. `read_version` is the target's version as the person saw it. Returns the new changeset."""
+    now = now or datetime.now(UTC)
+    cs = store.read().get("changeset", changeset_id)
+    if cs is None:
+        raise StoreError(f"there is no changeset {changeset_id}")
+    outcomes = cs.data["ops"]
+    outcome = outcomes[index] if 0 <= index < len(outcomes) else None
+    held_id = next((r["id"] for r in (outcome or {}).get("records", []) if r["kind"] == "action"), None)
+    qid = (outcome or {}).get("question")
+    if outcome is None or outcome["op"].get("op") != "action.add" or outcome["status"] != "applied" or not held_id:
+        raise StoreError("that item isn't an action waiting for an owner")
+    words = cfg.language.messages
+    with store.transaction() as tx:
+        held = tx.get("action", held_id)
+        question = tx.get("question", qid) if qid else None
+        if held is None or held.data["status"] != "held" or question is None or question.data["status"] != "open":
+            raise StoreError("that action isn't waiting for an owner any more")
+        target = tx.get("action", into)
+        if target is None or into == held_id:
+            raise StoreError(f"there is no other action {into}")
+        if target.data["status"] != "open":
+            raise StoreError(f"action {into} isn't open")
+        if target.version != read_version:
+            raise StoreError(f"action {into} changed since it was read")
+        cs_id = tx.new_id("changeset")
+        summary = "Added an action to another one"
+        request = tx.create(
+            "request",
+            {
+                "task": "notes",
+                "origin": "pm",
+                "state": "done",
+                "note": summary,
+                "created_at": store.clock(),
+                "changeset": cs_id,
+            },
+            WriteContext("pm", "trusted", "screen.request"),
+        )
+        w = WriteContext("pm", "trusted", f"{FOLD_OP}#0", cs_id, request.id)
+        quote = ((held.data.get("evidence") or {}).get("quote")) or ""
+        line = words.folded_note.format(text=held.data["text"], quote=quote)
+        notes = f"{target.data['notes']}\n{line}" if target.data.get("notes") else line
+        tx.update("action", into, {"notes": notes}, w, read_version=target.version)
+        reason = words.folded_reason.format(text=target.data["text"])
+        tx.update("action", held_id, {"status": "dropped", "dropped_reason": reason}, w, read_version=held.version)
+        tx.update("question", qid, {"status": "dropped", "dropped_reason": reason}, w, read_version=question.version)
+        tx.create(
+            "signal",
+            {
+                "kind": "held_declined",
+                "refs": [changeset_id, held_id, into],
+                "changeset": changeset_id,
+                "run": cs.data.get("run"),
+                "note": f"{into}: {target.data['text']}",
+                "at": now.isoformat(),
+            },
+            WriteContext(actor="pm", trust="trusted", op="held_declined"),
+        )
+        records = [{"kind": "action", "id": held_id}, {"kind": "action", "id": into}, {"kind": "question", "id": qid}]
+        done = OpOutcome(0, {"op": FOLD_OP, "id": held_id, "into": into}, "applied", "op0", records=records)
+        tx.create(
+            "changeset",
+            {
+                "request": request.id,
+                "summary": summary,
+                "ops": [asdict(done)],
+                "status": "applied",
+                "trust": "trusted",
+                "reviewed": True,
+                "created_at": store.clock(),
+            },
+            WriteContext("engine", "trusted", "changeset.record"),
+            record_id=cs_id,
+        )
+    store.plugins.publish("changeset.applied", {"id": cs_id}, follows=cs_id)
+    return cs_id
+
+
 def _record_routed(
     tx: Tx, cfg: Config, now: datetime, changeset_id: str | None, question_id: str, person: str, name: str | None
 ) -> None:
@@ -1682,7 +1835,7 @@ def _with_answers(store: Store, tx: Tx, entries: list[dict[str, Any]]) -> list[d
     records (an owner picked), which belongs to the op and would otherwise read as a later change."""
     kept = []
     for e in entries:
-        if e["kind"] == "question":
+        if e["kind"] == "question" and not e["op"].startswith(f"{FOLD_OP}#"):
             q = tx.get("question", e["record_id"], include_deleted=True)
             if q is not None and q.data.get("kind") == "routing":
                 continue

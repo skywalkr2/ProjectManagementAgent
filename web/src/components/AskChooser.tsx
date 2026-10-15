@@ -8,7 +8,16 @@ import { NoteBox, useNoted } from "./NoteBox";
 import { PersonPicker } from "./PersonPicker";
 import { RowMenu } from "./RowMenu";
 
-export function AskChooser(props: { ask: S["Ask"] | { id: string; about: string; name?: string | null; options: S["Option"][] } }) {
+/** Where an unowned action came from, so it can be added to another action instead of being given an owner. */
+export interface FoldAt {
+  changeset: string;
+  index: number;
+}
+
+export function AskChooser(props: {
+  ask: S["Ask"] | { id: string; about: string; name?: string | null; options: S["Option"][]; suggestion?: S["OwnerSuggestionView"] | null };
+  fold?: FoldAt;
+}) {
   const { t } = useWords();
   const act = useAct();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
@@ -19,6 +28,15 @@ export function AskChooser(props: { ask: S["Ask"] | { id: string; about: string;
   const noted = useNoted();
   const [noting, setNoting] = useState(false);
   const word = ask.about === "owner" ? t("ask.add_owner") : t("ask.use_person");
+  const near = ask.about === "owner" && props.fold ? ask.suggestion : null;
+  const foldInto = near?.fold_into && near.fold_version != null ? { id: near.fold_into, version: near.fold_version, text: near.fold_into_text ?? "" } : null;
+  const fold = () => {
+    if (!foldInto || !props.fold) return;
+    void act(
+      () => api.foldAction(props.fold!.changeset, props.fold!.index, foldInto.id, foldInto.version),
+      (done) => ({ message: t("toast.folded", { action: foldInto.text }), undo: () => api.undo(done.changeset) }),
+    );
+  };
   // The note goes with the choice, on the same route; with no note the body is only the person.
   const choose = (note?: string) =>
     act(
@@ -34,10 +52,16 @@ export function AskChooser(props: { ask: S["Ask"] | { id: string; about: string;
         suggested={ask.options}
         people={people.data ?? []}
       />
+      {foldInto && <span className="hint">{t("ask.fold_hint")}</span>}
       <div className="row-end">
         <button type="button" className="btn primary" data-key="primary" disabled={!person} onClick={() => void choose()}>
           {word}
         </button>
+        {foldInto && (
+          <button type="button" className="btn" onClick={fold}>
+            {t("ask.fold", { action: foldInto.text })}
+          </button>
+        )}
         <RowMenu
           label={label}
           actions={[

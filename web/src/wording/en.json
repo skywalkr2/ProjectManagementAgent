@@ -7,6 +7,9 @@
   "loading": "Loading…",
 
   "action.cancel": "Cancel",
+  "action.drop": "Drop",
+  "action.drop_label": "Why isn't it needed?",
+  "action.drop_go": "Drop it",
   "action.close": "Close",
   "action.try_again": "Try again",
 
@@ -233,6 +236,9 @@
 
   "op.action.add": "Added an action",
   "op.action.close": "Closed an action",
+  "op.action.hold": "Put an action on hold",
+  "op.action.drop": "Dropped an action",
+  "op.action.fold": "Added an action to another one",
   "op.question.add": "Asked a question",
   "op.question.done": "Marked a question answered",
   "op.fact": "Recorded a fact",
@@ -293,6 +299,8 @@
   "ask.owner": "Who owns this?",
   "ask.use_person": "Use this person",
   "ask.add_owner": "Add the action",
+  "ask.fold": "Add to “{action}”",
+  "ask.fold_hint": "It is much like an action you already have. Its words are kept with that one.",
   "ask.note_needs_person": "Choose a person first.",
 
   "person.choose": "Choose a person…",
@@ -424,6 +432,8 @@
   "toast.they_finished": "Marked done for {name}.",
   "toast.followed_up": "Recorded that you followed up with {name}. It stays open.",
   "toast.action_done": "Marked done.",
+  "toast.action_dropped": "Dropped.",
+  "toast.folded": "Added to {action}.",
   "toast.stage_moved": "Moved {title} to {stage}.",
   "toast.stage_go": "Approved. {assistant} is on it.",
   "toast.go": "Approved. {assistant} is on it.",

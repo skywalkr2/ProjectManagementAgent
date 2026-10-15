@@ -18,7 +18,6 @@ invariants:
       - record.edit
       - question.update
       - question.move
-      - question.drop
       - question.mark_sent
     line: Only the person can make this change; from the assistant it is refused.
     seed: >-
@@ -33,6 +32,8 @@ invariants:
       - record.log
       - action.add
       - action.close
+      - action.hold
+      - action.drop
       - question.add
       - question.done
       - question.update
@@ -76,7 +77,17 @@ invariants:
       record that points to it. A record that is still referred to is refused. Leave it, or change what refers to it
       first.
   evidence:
-    ops: [fact, event.add, action.add, action.close, question.done, record.set, answer]
+    ops:
+      - fact
+      - event.add
+      - action.add
+      - action.close
+      - action.hold
+      - action.drop
+      - question.drop
+      - question.done
+      - record.set
+      - answer
     line: Needs the exact words from the input that justify it; a quote that isn't in the input is refused.
     seed: >-
       Every claim from an input carries a quote: the exact words, in the same order, copied from the input, with no

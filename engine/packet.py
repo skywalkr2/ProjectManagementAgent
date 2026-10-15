@@ -652,7 +652,7 @@ def _open_actions(store: Store, people: People) -> str:
     lines = []
     for a in store.read().list("action"):
         d = a.data
-        if d["status"] == "done":
+        if d["status"] in ("done", "dropped"):
             continue
         owners = ", ".join(people.name(o["person"]) for o in d.get("owners", [])) or "no owner yet"
         due = f"; due {d['due']}" if d.get("due") else ""

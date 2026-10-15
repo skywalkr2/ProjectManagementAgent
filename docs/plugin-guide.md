@@ -635,7 +635,7 @@ Something to look at on the review (an image the plugin rendered, or plain text)
 
 Previews may be: `image/gif`, `image/jpeg`, `image/png`, `image/webp`, `text/plain`.
 
-Core ops an action may propose: `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
+Core ops an action may propose: `action.drop`, `action.hold`, `answer`, `list.add`, `list.merge`, `list.rename`, `list.retire`, `mail.restore`, `note`, `person.add`, `project.add`, `question.add`, `question.drop`, `question.mark_sent`, `question.move`, `question.update`, `record.delete`, `record.edit`, `record.log`, `record.set`, `report.draft`, `rule.add`, `rule.retire`, `setting.propose`, `stage.move`, `text.edit`, `text.propose`.
 
 ## AI task kinds
 
@@ -1124,7 +1124,7 @@ A piece of work being run, possibly inside another (a book in its series). `proj
 
 ### `action` (ACT-n)
 
-Something a person will do. Added by `action.add`, closed by `action.close`; `record.set` changes text, due and notes, the person puts it on hold or takes it off, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and who said it was done.
+Something a person will do. Added by `action.add`, closed by `action.close`, dropped by `action.drop`; `record.set` changes text, due and notes, `action.hold` or the person puts it on hold and the person takes it off, and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and who said it was done; dropping records why it is no longer needed and credits no one.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
@@ -1134,7 +1134,8 @@ Something a person will do. Added by `action.add`, closed by `action.close`; `re
 | `owners[].person` | str | required | The id of the person who owns the action. |
 | `owners[].team` | str \| None | `None` | The id of the team the person acts for here, if any. |
 | `due` | datetime.date \| None | `None` | The day it is due. |
-| `status` | Literal['held', 'open', 'done'] | `'open'` | held: waiting for an owner to be picked. open: to be done. done: finished. |
+| `status` | Literal['held', 'open', 'done', 'dropped'] | `'open'` | held: waiting for an owner to be picked. open: to be done. done: finished. dropped: closed because it is no longer needed; never done, never credited, never chased. |
+| `dropped_reason` | str \| None | `None` | Why it was dropped, in plain words; set when it is dropped. |
 | `notes` | str \| None | `None` | Extra detail about the action. |
 | `on_hold` | OnHold \| None | see below | Set while the action waits for something outside the person's control; the person sets and clears it. An action on hold is never counted as due, overdue or in need of a follow-up, and keeps its due date for when it comes off hold. |
 | `on_hold.waiting_for` | str | required | What it waits for, in plain words. |
@@ -1800,6 +1801,30 @@ Close an open action the input says is done. Refused if the action doesn't exist
 | `evidence` | EvidenceIn | required | The exact words from the input that justify this op. |
 | `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
+### `action.drop`
+
+Drop an action that is no longer needed, with the reason. It stays on record as dropped: never done, never credited to its owners, never chased, and gone from to-do lists. Refused if the action doesn't exist or is already done or dropped; evidence is required (the input's words, or the person's note).
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the action that is no longer needed. |
+| `reason` | str | required | Why it is no longer needed, in plain words. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
+### `action.hold`
+
+Put an open action on hold: it waits for something outside the person's control and is never due, overdue or chased while it does. Say what it waits for in plain words. Refused if the action doesn't exist or isn't open; evidence is required (the input's words, or the person's note).
+
+| Field | Type | Default | What it is |
+|---|---|---|---|
+| `group` | str \| None | `None` | Ops that must be undone together share a group name. |
+| `id` | str | required | The id of the open action to put on hold. |
+| `waiting_for` | str | required | What it waits for, in plain words. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
+
 ### `answer`
 
 Answer the PM's question from the material given: the user guide, the settings, what this install can do and the records. Every claim the answer makes cites the exact words it comes from. Creates an answer record.
@@ -2069,13 +2094,15 @@ Record the answer to an open question and close it. Also records the answer as a
 
 ### `question.drop`
 
-Drop a question that isn't needed, with the reason. It stays on record as dropped. Only the person uses it; Undo opens it again.
+Drop a question that isn't needed, with the reason. It stays on record as dropped; Undo opens it again. Use it only when the input or the person's note says the question is no longer needed; evidence is required.
 
 | Field | Type | Default | What it is |
 |---|---|---|---|
 | `group` | str \| None | `None` | Ops that must be undone together share a group name. |
 | `id` | str | required | The id of the question. |
 | `reason` | str | required | Why it is dropped, in plain words. |
+| `evidence` | EvidenceIn \| None | see below | The exact words from the input that justify this op; required unless the person makes it. |
+| `evidence.quote` | str | required | The exact words from the input that justify this op. |
 
 ### `question.mark_sent`
 

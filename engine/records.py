@@ -335,9 +335,10 @@ class Project(Record):
 
 
 class Action(Record):
-    """Something a person will do. Added by `action.add`, closed by `action.close`; `record.set` changes text, due and
-    notes, the person puts it on hold or takes it off, and sending a notice marks who was told. A chase adds a day to
-    `followed_up`; closing records who did the work and who said it was done."""
+    """Something a person will do. Added by `action.add`, closed by `action.close`, dropped by `action.drop`;
+    `record.set` changes text, due and notes, `action.hold` or the person puts it on hold and the person takes it off,
+    and sending a notice marks who was told. A chase adds a day to `followed_up`; closing records who did the work and
+    who said it was done; dropping records why it is no longer needed and credits no one."""
 
     record_kind: ClassVar[str] = "action"
     prefix: ClassVar[str] = "ACT"
@@ -349,9 +350,12 @@ class Action(Record):
         default_factory=list, description="The people who do it; required unless the action is held."
     )
     due: date | None = Field(None, description="The day it is due.")
-    status: Literal["held", "open", "done"] = Field(
-        "open", description="held: waiting for an owner to be picked. open: to be done. done: finished."
+    status: Literal["held", "open", "done", "dropped"] = Field(
+        "open",
+        description="held: waiting for an owner to be picked. open: to be done. done: finished. dropped: closed "
+        "because it is no longer needed; never done, never credited, never chased.",
     )
+    dropped_reason: str | None = Field(None, description="Why it was dropped, in plain words; set when it is dropped.")
     notes: str | None = Field(None, description="Extra detail about the action.")
     on_hold: OnHold | None = Field(
         None,
@@ -378,8 +382,8 @@ class Action(Record):
 
     @model_validator(mode="after")
     def _owners_unless_held(self) -> Action:
-        if self.status != "held" and not self.owners:
-            raise ValueError("an action needs at least one owner unless it is held for one")
+        if self.status not in ("held", "dropped") and not self.owners:
+            raise ValueError("an action needs at least one owner unless it is held for one or dropped")
         return self
 
 

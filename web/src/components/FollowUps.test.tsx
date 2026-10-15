@@ -358,6 +358,42 @@ test("Put on hold asks what it waits for with the cursor in the field, acts at o
   await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/hold/restore")?.body).toEqual({ hold: null }));
 });
 
+test("Drop on an action row asks why with the cursor in the field, acts at once and Undo takes it back", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({
+    "GET followups": () => waitingSections(),
+    "GET people": () => [],
+    "POST actions/ACT-1/drop": () => ({ changeset: "CS-9" }),
+    "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }),
+  });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "Waiting on them" }));
+  const row = screen.getByText("Send the index").closest("li") as HTMLElement;
+  await user.click(within(row).getByRole("button", { name: "More actions for Send the index" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop" }));
+  const field = within(row).getByRole("textbox", { name: "Why isn't it needed?" });
+  expect(field).toHaveFocus();
+  expect(within(row).getByRole("button", { name: "Drop it" })).toBeDisabled();
+  await user.type(field, "The printer did it already");
+  await user.click(within(row).getByRole("button", { name: "Drop it" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/drop")?.body).toEqual({ reason: "The printer did it already" }));
+  expect(await screen.findByText("Dropped.")).toBeInTheDocument();
+  await user.click(await screen.findByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-9/undo")).toBe(true));
+});
+
+test("Escape closes the Drop form and sends nothing", async () => {
+  const user = userEvent.setup();
+  const calls = fakeApi({ "GET followups": () => sections, "GET people": () => [] });
+  renderApp(<FollowUps />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Approve the proof" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop" }));
+  const field = await screen.findByRole("textbox", { name: "Why isn't it needed?" });
+  await user.type(field, "x{Escape}");
+  expect(screen.queryByRole("textbox", { name: "Why isn't it needed?" })).toBeNull();
+  expect(calls.some((c) => c.route.startsWith("POST"))).toBe(false);
+});
+
 test("Take off hold acts at once and Undo puts the old hold back", async () => {
   const user = userEvent.setup();
   const held = waitingSections();

@@ -956,6 +956,16 @@ class MessageSettings(ConfigModel):
     greeting: str = Field("Hi {first_name},", description="The first line of a copied message.")
     actions_heading: str = Field("Action items with you:", description="The line above someone's action items.")
     closing: str = Field("Thanks!", description="The last line of a copied message.")
+    folded_note: str = Field(
+        "Also came up: {text} (\u201c{quote}\u201d)",
+        description="The line added to an action's notes when another action is added to it instead of being kept "
+        "apart: {text} is the other action and {quote} the words it came from.",
+    )
+    folded_reason: str = Field(
+        "Added to \u201c{text}\u201d instead",
+        description="Why an action that was added to another one is closed as dropped: {text} is the action it "
+        "went into.",
+    )
     date_format: str = Field("%a, %b %d", description="How dates appear in messages (strftime codes).")
     date_time_format: str = Field(
         "%a, %b %d, %Y, %H:%M",

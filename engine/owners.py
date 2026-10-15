@@ -24,13 +24,14 @@ from engine.knowledge_section import (
 @dataclass(frozen=True)
 class OwnerSuggestion:
     """`person` is the suggested owner, `entry` the routing entry that says so and `why` its own words. `fold_into` is
-    the id of the open action this one most nearly repeats, and `fold_into_text` its text."""
+    the id of the open action this one most nearly repeats, `fold_into_text` its text and `fold_version` its version."""
 
     person: str | None = None
     entry: str | None = None
     why: str | None = None
     fold_into: str | None = None
     fold_into_text: str | None = None
+    fold_version: int | None = None
 
     def shown(self, people: Any) -> dict[str, Any]:
         """The suggestion as plain data for a screen, with the suggested person's name as `people` writes it."""
@@ -41,6 +42,7 @@ class OwnerSuggestion:
             "why": self.why,
             "fold_into": self.fold_into,
             "fold_into_text": self.fold_into_text,
+            "fold_version": self.fold_version,
         }
 
 
@@ -96,4 +98,5 @@ def suggest_owner(view: Any, cfg: Any, action_id: str) -> OwnerSuggestion | None
         why=routed[0].data["text"] if routed else None,
         fold_into=near.id if near else None,
         fold_into_text=near.data["text"] if near else None,
+        fold_version=near.version if near else None,
     )

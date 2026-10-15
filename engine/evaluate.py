@@ -446,7 +446,7 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
         if "due" in e and a.get("due") != e["due"]:
             return False
         return "status" not in e or a["status"] == e["status"]
-    if op in ("action.close", "question.done"):
+    if op in ("action.close", "action.hold", "action.drop", "question.drop", "question.done"):
         return o["op"]["id"] == e["id"]
     if op == "record.set":
         same_field = o["op"]["id"] == e["id"] and o["op"]["field"] == e["field"]

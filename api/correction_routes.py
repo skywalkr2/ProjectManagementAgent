@@ -12,17 +12,19 @@ from typing import Any
 from fastapi import APIRouter, HTTPException
 
 from api.schemas import (
+    ActionDropIn,
     Applied,
     ChangeIn,
     ChangeRequested,
     DroppedQuestionView,
+    FoldIn,
     ListMergeIn,
     QuestionDropIn,
     QuestionRerouteIn,
     QuestionRewordIn,
     QuestionSentIn,
 )
-from engine.applier import apply_as_person
+from engine.applier import apply_as_person, fold_unowned
 from engine.config import Config
 from engine.corrections import CHANGEABLE, request_change
 from engine.intake import IntakeError
@@ -70,6 +72,24 @@ def build_correction_router(ws: Workspace, cfg: Config, store: Store, events: Ev
         """Drop a question with a reason, with Undo. It stays on record, listed at GET /api/questions/dropped."""
         need("question", qid)
         return person_op({"op": "question.drop", "id": qid, "reason": body.reason}, "Dropped a question")
+
+    @r.post("/actions/{action_id}/drop")
+    def drop_action(action_id: str, body: ActionDropIn) -> Applied:
+        """Drop an action that is no longer needed, with a reason and Undo. It is never done or credited, and it leaves
+        every list. Records a dropped correction naming the change and run that made it, when there was one."""
+        need("action", action_id)
+        return person_op({"op": "action.drop", "id": action_id, "reason": body.reason}, "Dropped an action")
+
+    @r.post("/changesets/{cs_id}/ops/{index}/fold")
+    def fold(cs_id: str, index: int, body: FoldIn) -> Applied:
+        """Add an action waiting for an owner to the open action it nearly repeats, as one change with Undo. The
+        waiting action closes as dropped, its words are kept in the other action's notes, and a declined correction is
+        recorded naming the action it went into."""
+        need("changeset", cs_id)
+        need("action", body.into)
+        done = guard(lambda: fold_unowned(store, cfg, cs_id, index, body.into, body.read_version))
+        events.changed()
+        return Applied(changeset=done)
 
     @r.post("/questions/{qid}/sent")
     def sent(qid: str, body: QuestionSentIn) -> Applied:

@@ -110,6 +110,15 @@ class QuestionDropIn(BaseModel):
     reason: str = Field(min_length=1, max_length=500, description="Why the question isn't needed, in plain words.")
 
 
+class ActionDropIn(BaseModel):
+    reason: str = Field(min_length=1, max_length=500, description="Why the action isn't needed, in plain words.")
+
+
+class FoldIn(BaseModel):
+    into: str = Field(min_length=1, description="The id of the open action to add the one waiting for an owner to.")
+    read_version: int = Field(description="The version of that action as the person saw it.")
+
+
 class QuestionSentIn(BaseModel):
     on: date | None = Field(None, description="The day the person sent it themselves; today when left out.")
 
@@ -284,6 +293,9 @@ class OwnerSuggestionView(BaseModel):
         None, description="The id of the open action this one most nearly repeats, to fold it into."
     )
     fold_into_text: str | None = Field(None, description="That action's text.")
+    fold_version: int | None = Field(
+        None, description="That action's version as read, to send back when adding this action to it."
+    )
 
 
 class Ask(BaseModel):

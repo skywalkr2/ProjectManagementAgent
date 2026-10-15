@@ -175,6 +175,38 @@ class ActionCloseOp(OpModel):
     evidence: EvidenceIn = Field(description="The exact words from the input that justify this op.")
 
 
+class ActionHoldOp(OpModel):
+    """Put an open action on hold: it waits for something outside the person's control and is never due, overdue or
+    chased while it does. Say what it waits for in plain words. Refused if the action doesn't exist or isn't open;
+    evidence is required (the input's words, or the person's note)."""
+
+    op: Literal["action.hold"] = "action.hold"
+    id: str = Field(description="The id of the open action to put on hold.")
+    waiting_for: str = Field(min_length=1, max_length=200, description="What it waits for, in plain words.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that justify this op; required unless the person makes it."
+    )
+
+    def describe(self) -> str | None:
+        return f"Put action {self.id} on hold"
+
+
+class ActionDropOp(OpModel):
+    """Drop an action that is no longer needed, with the reason. It stays on record as dropped: never done, never
+    credited to its owners, never chased, and gone from to-do lists. Refused if the action doesn't exist or is already
+    done or dropped; evidence is required (the input's words, or the person's note)."""
+
+    op: Literal["action.drop"] = "action.drop"
+    id: str = Field(description="The id of the action that is no longer needed.")
+    reason: str = Field(min_length=1, max_length=500, description="Why it is no longer needed, in plain words.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that justify this op; required unless the person makes it."
+    )
+
+    def describe(self) -> str | None:
+        return f"Drop action {self.id}"
+
+
 class QuestionAddOp(OpModel):
     """A question for a person, written for its reader. Decisions are questions to the PM. A question to anyone else
     needs at least one link the recipient can open."""
@@ -227,12 +259,15 @@ class QuestionMoveOp(OpModel):
 
 
 class QuestionDropOp(OpModel):
-    """Drop a question that isn't needed, with the reason. It stays on record as dropped. Only the person uses it;
-    Undo opens it again."""
+    """Drop a question that isn't needed, with the reason. It stays on record as dropped; Undo opens it again. Use it
+    only when the input or the person's note says the question is no longer needed; evidence is required."""
 
     op: Literal["question.drop"] = "question.drop"
     id: str = Field(description="The id of the question.")
     reason: str = Field(min_length=1, max_length=500, description="Why it is dropped, in plain words.")
+    evidence: EvidenceIn | None = Field(
+        None, description="The exact words from the input that justify this op; required unless the person makes it."
+    )
 
     def describe(self) -> str | None:
         return f"Drop question {self.id}"
@@ -717,6 +752,8 @@ Op = Annotated[
     | RecordLogOp
     | ActionAddOp
     | ActionCloseOp
+    | ActionHoldOp
+    | ActionDropOp
     | QuestionAddOp
     | QuestionDoneOp
     | QuestionUpdateOp
@@ -762,6 +799,8 @@ OP_MODELS: dict[str, type[OpModel]] = {
     "record.log": RecordLogOp,
     "action.add": ActionAddOp,
     "action.close": ActionCloseOp,
+    "action.hold": ActionHoldOp,
+    "action.drop": ActionDropOp,
     "question.add": QuestionAddOp,
     "question.done": QuestionDoneOp,
     "question.update": QuestionUpdateOp,
@@ -820,7 +859,6 @@ PERSON_ONLY_OPS = {
     "record.edit",
     "question.update",
     "question.move",
-    "question.drop",
     "question.mark_sent",
 }
 
@@ -841,7 +879,19 @@ TIERS: dict[str, Tier] = (
 )
 
 #: Ops whose evidence is required (record.set requires it for the fields in EVIDENCE_FIELDS).
-NEEDS_EVIDENCE = {"fact", "event.add", "action.add", "action.close", "question.done"}
+NEEDS_EVIDENCE = {
+    "fact",
+    "event.add",
+    "action.add",
+    "action.close",
+    "action.hold",
+    "action.drop",
+    "question.drop",
+    "question.done",
+}
+#: Ops that need evidence from the assistant but not when the person makes them: their own act is not a claim from an
+#: input, so a person's action or screen may use them without a quote.
+EVIDENCE_UNLESS_PERSON = {"action.hold", "action.drop", "question.drop"}
 EVIDENCE_FIELDS = {"due", "status", "owners", "target", "owner"}
 
 #: Fields record.set may change, per kind.

@@ -151,6 +151,42 @@ test("Followed up with no note sends no body", async () => {
   expect(calls.find((c) => c.route === "POST followups/PER-2/actions/ACT-1/followed-up")!.body).toBeUndefined();
 });
 
+describe("adding an action waiting for an owner to the nearest one", () => {
+  const near = { person: null, person_name: null, entry: null, why: null, fold_into: "ACT-5", fold_into_text: "Confirm the printer slot", fold_version: 4 };
+  const ask = { id: "Q-7", about: "owner", name: null, options: [], suggestion: near };
+  const routes = {
+    "GET people": () => [{ id: "PER-2", name: "Robin Sample", role: null }],
+    "POST changesets/CS-1/ops/0/fold": () => ({ changeset: "CS-2" }),
+    "POST changesets/CS-2/undo": () => ({ restored: [0], skipped: [] }),
+  };
+
+  test("Add to the nearest action sends the version read, says where it went and Undo takes it back", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi(routes);
+    renderApp(<AskChooser ask={ask} fold={{ changeset: "CS-1", index: 0 }} />);
+    expect(await screen.findByRole("button", { name: "Add the action" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add to “Confirm the printer slot”" }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST changesets/CS-1/ops/0/fold")?.body).toEqual({ into: "ACT-5", read_version: 4 }));
+    expect(await screen.findByText("Added to Confirm the printer slot.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-2/undo")).toBe(true));
+  });
+
+  test("nothing is offered without a near action", async () => {
+    fakeApi(routes);
+    renderApp(<AskChooser ask={{ ...ask, suggestion: { ...near, fold_into: null, fold_into_text: null, fold_version: null } }} fold={{ changeset: "CS-1", index: 0 }} />);
+    expect(await screen.findByRole("button", { name: "Add the action" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Add to / })).toBeNull();
+  });
+
+  test("nothing is offered where the change isn't known", async () => {
+    fakeApi(routes);
+    renderApp(<AskChooser ask={ask} />);
+    expect(await screen.findByRole("button", { name: "Add the action" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Add to / })).toBeNull();
+  });
+});
+
 describe("picking an owner", () => {
   const ask = { id: "Q-7", about: "owner", name: null, options: [{ id: "PER-2", name: "Robin Sample" }] };
   const people = () => [{ id: "PER-2", name: "Robin Sample", role: null }];

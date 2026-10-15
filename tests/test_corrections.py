@@ -282,12 +282,11 @@ def test_mark_sent_refuses_a_question_already_sent_and_a_day_that_has_not_come(e
 
 def test_the_question_ops_only_the_person_makes_are_never_offered_to_the_assistant(env):
     _, cfg, store = env
-    mine = {"question.update", "question.move", "question.drop", "question.mark_sent"}
-    assert mine <= PERSON_ONLY_OPS
+    mine = {"question.update", "question.move", "question.mark_sent"}
+    assert mine <= PERSON_ONLY_OPS and "question.drop" not in PERSON_ONLY_OPS  # a drop may be proposed, with evidence
     assert not mine & set(TASKS["notes"].ops) and not mine & set(TASKS["ask"].ops)
     for op in (
         {"op": "question.move", "id": FIXTURE_DECISION["id"], "to": other_of(cfg)},
-        {"op": "question.drop", "id": FIXTURE_DECISION["id"], "reason": "x"},
         {"op": "question.mark_sent", "id": FIXTURE_DECISION["id"]},
     ):
         assert [p.check for p in problems(env, op, "person-only")] == ["person-only"]

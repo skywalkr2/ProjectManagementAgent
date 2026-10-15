@@ -144,6 +144,22 @@
         "title": "ActionChoice",
         "type": "object"
       },
+      "ActionDropIn": {
+        "properties": {
+          "reason": {
+            "description": "Why the action isn't needed, in plain words.",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ActionDropIn",
+        "type": "object"
+      },
       "ActionGroup": {
         "properties": {
           "explanation": {
@@ -3297,6 +3313,27 @@
         "title": "FirstGoStarted",
         "type": "object"
       },
+      "FoldIn": {
+        "properties": {
+          "into": {
+            "description": "The id of the open action to add the one waiting for an owner to.",
+            "minLength": 1,
+            "title": "Into",
+            "type": "string"
+          },
+          "read_version": {
+            "description": "The version of that action as the person saw it.",
+            "title": "Read Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "into",
+          "read_version"
+        ],
+        "title": "FoldIn",
+        "type": "object"
+      },
       "FolderCheckView": {
         "properties": {
           "free_mb": {
@@ -5792,6 +5829,18 @@
             ],
             "description": "That action's text.",
             "title": "Fold Into Text"
+          },
+          "fold_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "That action's version as read, to send back when adding this action to it.",
+            "title": "Fold Version"
           },
           "person": {
             "anyOf": [
@@ -12276,6 +12325,56 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/actions/{action_id}/drop": {
+      "post": {
+        "description": "Drop an action that is no longer needed, with a reason and Undo. It is never done or credited, and it leaves\nevery list. Records a dropped correction naming the change and run that made it, when there was one.",
+        "operationId": "drop_action_api_actions__action_id__drop_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionDropIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Drop Action"
+      }
+    },
     "/api/actions/{action_id}/hold": {
       "post": {
         "description": "Put an open action on hold, waiting for something. It is never due, overdue or chased while it is.",
@@ -12965,6 +13064,65 @@
           }
         },
         "summary": "Approve"
+      }
+    },
+    "/api/changesets/{cs_id}/ops/{index}/fold": {
+      "post": {
+        "description": "Add an action waiting for an owner to the open action it nearly repeats, as one change with Undo. The\nwaiting action closes as dropped, its words are kept in the other action's notes, and a declined correction is\nrecorded naming the action it went into.",
+        "operationId": "fold_api_changesets__cs_id__ops__index__fold_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "cs_id",
+            "required": true,
+            "schema": {
+              "title": "Cs Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "title": "Index",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FoldIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Applied"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fold"
       }
     },
     "/api/changesets/{cs_id}/ops/{index}/release": {

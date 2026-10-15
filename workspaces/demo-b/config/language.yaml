@@ -21,6 +21,8 @@ reported_speech:
 messages:
   greeting: "Hi {first_name},"
   actions_heading: "Action items with you:"
+  folded_note: "Also came up: {text} (\u201c{quote}\u201d)"
+  folded_reason: "Added to \u201c{text}\u201d instead"
   closing: "Thanks so much!"
   date_format: "%a, %b %d"
   date_time_format: "%a, %b %d, %Y, %I:%M %p"

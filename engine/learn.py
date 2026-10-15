@@ -48,7 +48,7 @@ KIND_WORDS = {
     "draft_edited": "The person edited the assistant's draft before using it; the note is the text as they used it.",
     "routed": "The person answered the assistant's question about who someone is or who owns something.",
     "answered_assistant": "The person answered a question the assistant asked them; the note is their answer.",
-    "dropped": "The person dropped a question the assistant filed.",
+    "dropped": "The person dropped a question or an action the assistant filed.",
     "reworded": "The person reworded a question the assistant filed; the note is the new wording.",
     "held_declined": "The person declined something the assistant had held for them.",
     "edited": "The person changed a field the assistant had set.",

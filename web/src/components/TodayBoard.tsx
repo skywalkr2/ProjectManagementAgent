@@ -13,6 +13,7 @@ import { useWords } from "../lib/wording";
 import { useChangeThis } from "./ChangeThis";
 import { FollowUps } from "./FollowUps";
 import { LearnedLines } from "./Learned";
+import { useDropAction } from "./DropAction";
 import { HoldPill, useHold } from "./OnHold";
 import { NoteBox, useNoted } from "./NoteBox";
 import { OriginLink } from "./Origin";
@@ -330,6 +331,7 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
   const { item } = props;
   const hold = useHold({ id: item.action, on_hold: item.on_hold });
   const change = useChangeThis({ kind: "action", id: item.action }, () => row.current?.focus());
+  const drop = useDropAction({ id: item.action }, () => row.current?.focus());
   const meta = [props.project, props.showDue && item.due ? t("today.todo.due", { date: day(item.due) }) : ""]
     .filter(Boolean)
     .join(" · ");
@@ -360,7 +362,7 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
       >
         {t("followups.mark_done")}
       </button>
-      <RowMenu label={item.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry, change.entry]} />
+      <RowMenu label={item.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry, change.entry, drop.entry]} />
       {noting && (
         <NoteBox
           sends={[{ label: t("followups.mark_done"), run: done }]}
@@ -372,6 +374,7 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
       )}
       {hold.form}
       {change.form}
+      {drop.form}
       <LearnedLines records={[item.action]} />
     </li>
   );

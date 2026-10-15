@@ -12,6 +12,7 @@ import { useWords } from "../lib/wording";
 import { AskChooser } from "./AskChooser";
 import { useChangeThis, useQuestionMenu } from "./ChangeThis";
 import { LearnedLines } from "./Learned";
+import { useDropAction } from "./DropAction";
 import { HoldPill, useHold } from "./OnHold";
 import { NoteBox, useNoted } from "./NoteBox";
 import { OriginLink } from "./Origin";
@@ -206,6 +207,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
   const hold = useHold(a);
   const [noting, setNoting] = useState(false);
   const change = useChangeThis({ kind: "action", id: a.id }, () => ref.current?.focus());
+  const drop = useDropAction(a, () => ref.current?.focus());
   const done = (note?: string) =>
     act(
       () => api.actionStatus(a.id, "done", note),
@@ -226,7 +228,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
         <button type="button" className="btn primary" onClick={() => void done()}>
           {t("followups.mark_done")}
         </button>
-        <RowMenu label={a.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry, change.entry]} />
+        <RowMenu label={a.text} actions={[{ id: "note", label: t("note.add"), run: () => setNoting(true) }, hold.entry, change.entry, drop.entry]} />
       </div>
       {noting && (
         <NoteBox
@@ -239,6 +241,7 @@ function OwnActionRow(props: { action: S["FollowupAction"] }) {
       )}
       {hold.form}
       {change.form}
+      {drop.form}
       <LearnedLines records={[a.id]} />
     </li>
   );
@@ -534,6 +537,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
   const chase = a.chase_due;
   const hold = useHold(a);
   const change = useChangeThis({ kind: "action", id: a.id }, () => ref.current?.focus());
+  const drop = useDropAction(a, () => ref.current?.focus());
   const meta = a.followed_up
     ? [a.project_name, t("followups.followed_up_on", { date: day(a.followed_up) })].filter(Boolean).join(" · ")
     : sentLine(a.told, a.told_days, a.project_name, tn, t);
@@ -559,7 +563,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
         <button type="button" className="btn primary" onClick={() => void (chase ? followedUp() : finished())}>
           {t(chase ? "followups.followed_up" : "followups.they_finished")}
         </button>
-        <RowMenu label={a.text} actions={[chase ? finish : chased, note, hold.entry, change.entry]} />
+        <RowMenu label={a.text} actions={[chase ? finish : chased, note, hold.entry, change.entry, drop.entry]} />
       </div>
       {noting && (
         <NoteBox
@@ -572,6 +576,7 @@ function WaitingAction(props: { action: S["FollowupAction"]; person: string; nam
       )}
       {hold.form}
       {change.form}
+      {drop.form}
       <LearnedLines records={[a.id]} />
     </li>
   );

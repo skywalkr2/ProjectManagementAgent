@@ -1439,6 +1439,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 cur = _existing(tx, "action", action_id)
                 if cur.data["status"] == "held":
                     raise ValueError("this action needs an owner first")
+                if cur.data["status"] == "dropped":
+                    raise ValueError("this action was dropped; undo the drop to bring it back")
                 change: dict[str, Any] = {"status": body.status}
                 if body.status == "open":
                     change |= {"done_by": [], "reported_by": None}  # reopening takes the credit back

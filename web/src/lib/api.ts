@@ -153,6 +153,11 @@ export const api = {
     call<S["ChangeRequested"]>("POST", `items/${id(kind)}/${id(item)}/change`, { note }),
   rewordQuestion: (q: string, body: S["QuestionRewordIn"]) => call<S["Applied"]>("POST", `questions/${id(q)}/reword`, body),
   rerouteQuestion: (q: string, to: string) => call<S["Applied"]>("POST", `questions/${id(q)}/reroute`, { to }),
+  /** Drop an action that is no longer needed, with Undo. */
+  dropAction: (a: string, reason: string) => call<S["Applied"]>("POST", `actions/${id(a)}/drop`, { reason }),
+  /** Add an action waiting for an owner to the open action it nearly repeats; `readVersion` is that action's version as read. */
+  foldAction: (cs: string, index: number, into: string, readVersion: number) =>
+    call<S["Applied"]>("POST", `changesets/${id(cs)}/ops/${index}/fold`, { into, read_version: readVersion }),
   dropQuestion: (q: string, reason: string) => call<S["Applied"]>("POST", `questions/${id(q)}/drop`, { reason }),
   questionSent: (q: string) => call<S["Applied"]>("POST", `questions/${id(q)}/sent`, {}),
   projects: () => call<S["ProjectView"][]>("GET", "projects"),

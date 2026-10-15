@@ -449,7 +449,7 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
       {showSource && op.evidence && props.source && <SourcePanel id={props.source} quote={op.evidence.quote} />}
       {ask && (
         <div className="full">
-          <AskChooser ask={ask} />
+          <AskChooser ask={ask} fold={{ changeset: cs.id, index: op.index }} />
         </div>
       )}
     </li>

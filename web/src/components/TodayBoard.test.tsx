@@ -209,6 +209,26 @@ test("marking a to-do done uses the action path and offers Undo", async () => {
   expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
 });
 
+test("Drop on a to-do asks why with the cursor in the field, acts at once and Undo takes it back", async () => {
+  const user = userEvent.setup({ advanceTimers: () => {} });
+  const { calls } = open({
+    "POST actions/ACT-1/drop": () => ({ changeset: "CS-9" }),
+    "POST changesets/CS-9/undo": () => ({ restored: [0], skipped: [] }),
+  });
+  await user.click(await screen.findByRole("button", { name: "More actions for Send the index" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Drop" }));
+  const field = await screen.findByRole("textbox", { name: "Why isn't it needed?" });
+  expect(field).toHaveFocus();
+  const form = field.closest("form") as HTMLElement;
+  expect(within(form).getByRole("button", { name: "Drop it" })).toBeDisabled();
+  await user.type(field, "The index moved to the printer");
+  await user.click(within(form).getByRole("button", { name: "Drop it" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST actions/ACT-1/drop")?.body).toEqual({ reason: "The index moved to the printer" }));
+  expect(await screen.findByText("Dropped.")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() => expect(calls.some((c) => c.route === "POST changesets/CS-9/undo")).toBe(true));
+});
+
 test("a to-do's menu adds a note to Mark done, with the cursor in the box", async () => {
   const user = userEvent.setup({ advanceTimers: () => {} });
   const { calls } = open({
