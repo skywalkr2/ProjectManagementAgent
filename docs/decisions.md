@@ -3,6 +3,17 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: L3b, how each obvious next step is recorded
+
+**Decided by:** the technical PM, before building L3b. **What:** "Add a new person" answers the routing question with a
+person the person saves as their own, adding an unknown organization in the same change; a contact detail from a
+signature is a new op, `person.contact`, that always waits for the person (outside content never becomes a way to reach
+someone on its own); reading notes may propose `project.add`, which waits as a system op, and "It's part of" or "Not a
+project" are kept as glossary entries rather than a new alias field on projects; `action.unhold` takes an action off hold
+when an input says its blocker is gone; the rest (answered questions, dates, invitations, the person's own edit, the
+unnamed recipient) use existing ops through the notes prompt, each with a golden case. **Impact:** design 6.7, 6.9, 5.1;
+roadmap L3b. No change to scope.
+
 ## 2026-10-15: The catch-up learns once per kind, behind one go; hold is not a correction
 
 **Decided by:** the technical PM, merging L3's last part. **What:** (1) the catch-up list queues one learning run per kind

@@ -513,6 +513,23 @@ a signature's address or number is offered for the sender's record; an action ge
 that answers an open question proposes marking it answered; a meeting invitation shows on the agenda under its
 project.
 
+How each is recorded (decided 2026-10-15; *being built, L3b*):
+- **"Add a new person"** answers the routing question with a new person, filled in from the input (the name as written,
+  the organization, role and address it gives) and saved as the person's own; held ops waiting on the name are released
+  and a `routed` signal names the new person. An organization no record names is added in the same change.
+- **A contact detail from a signature** (`person.contact`: the person, the kind of detail, the value, evidence) always
+  waits for the person: a detail from outside content would otherwise become a way to reach someone (12.8).
+- **A project it hasn't heard of:** reading notes may propose `project.add` (system tier, so it waits). The held item
+  offers Add, "It's part of <a project>" and "Not a project". "Part of" files the held work under that project and keeps
+  the words as a glossary entry naming it; "Not a project" keeps them as a glossary entry saying they aren't one. Both are
+  the person's own answer, so the entries are active at once with Undo. Projects get no alias field.
+- **A blocker gone:** `action.unhold` (the action, evidence) takes an action off hold, as data with Undo.
+- **A reply that answers an open question** proposes `question.done` with the answer's words; **an action with a date**
+  gets it as `due`; **a meeting invitation** is an `event.add` under its project; **the person's own edit** in a watched
+  source they author that does what one of their open actions asks closes it (`action.close`) with Undo; **something the
+  person says they sent without naming to whom** is a decision to the person ("Who did you send this to?"), never a
+  guess from the nearest name. Each has a golden case.
+
 `event.add` (data tier, offered to reading notes) adds a calendar entry to the app's own calendar: a title, a start (a
 day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, and
 evidence, which is required. The notes prompt asks for one when an input that isn't set aside names a date or a range for
