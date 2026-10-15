@@ -82,6 +82,8 @@ Built keys, with defaults:
   `{full_name}` and may contain `{team}`, and an owner with no team is shown by the full name alone. Parsing an owner written in
   the format is *designed, not yet built, not scheduled* (6.11).
 - `language`: the language and variety work is written in, as a tag (default `en-US`). A project may set its own (5.1).
+- `contact_kinds`: the kinds of contact detail a person record keeps and the assistant may propose from a signature
+  (`person.contact`), picked from a list on screen. Default `email`, `phone`, `address`.
 - `our_accounts`: the names the PM and this app use on watched sources. A watched change by one of them is marked `by_us`
   (6.4, 6.5). Live.
 - `demo`: made-up example data; every screen says so, so nobody mistakes it for real work.

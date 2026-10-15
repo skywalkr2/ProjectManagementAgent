@@ -1145,19 +1145,26 @@ meets something new, it offers the obvious way to record it, as one click, inste
 around. Each is the person's choice, with Undo, and each answer is learned (L3). What the code does today is noted.
 - [ ] **The person's own edit closes what it fulfills** (afternoon lesson 7): when an edit by the person, in a watched
   source they author, adds what one of their open actions asks for, the action closes with a log row and Undo.
-- [ ] **"Who is this?" offers "Add a new person"** beside picking someone, filled in from the input (the name as
-  written, and the organization, role or address the input gives), saved as the person's own. Today the chooser only
-  picks an existing person.
-- [ ] **A project it hasn't heard of becomes "Add a project <name>?"**, with "It's part of <a project>" and "Not a
+- [x] **"Who is this?" offers "Add a new person"** beside picking someone, filled in from the input (the name as
+  written, and the organization, role or address the input gives), saved as the person's own. Built: `tests/test_next_steps.py::test_a_new_person_answers_the_question_releases_every_held_op_records_routed_and_undo_takes_it_all_back`,
+  `tests/test_next_steps.py::test_the_form_starts_with_the_name_as_written_what_a_proposed_person_gives_and_the_address_in_the_header`,
+  `web/src/components/NextSteps.test.tsx`. Moved to phase B: "Add a new person" on "Pick an owner" too, which needs an
+  undoable owner pick first.
+- [x] **A project it hasn't heard of becomes "Add a project <name>?"**, with "It's part of <a project>" and "Not a
   project" beside it. Reading notes may then propose `project.add`, which waits for the person as a system op (design
   6.7). Today reading notes can't propose a project at all (`NOT_FROM_NOTES`), so the work is filed with no project.
-  "Part of" and "Not a project" are learned as names for the project, or as words that aren't one.
+  "Part of" and "Not a project" are learned as names for the project, or as words that aren't one. Built:
+  `tests/test_next_steps.py::test_a_project_from_an_input_waits_and_from_the_persons_own_note_applies`,
+  `tests/test_next_steps.py::test_part_of_files_the_work_under_the_project_keeps_a_confirmed_entry_records_a_signal_and_undo_restores_it`,
+  `tests/test_next_steps.py::test_not_a_project_sets_the_proposal_aside_keeps_an_entry_saying_so_records_a_signal_and_undo_restores_it`.
+  Add files the input's other unfiled work under the new project: being built with the exit check.
 - [x] **Dates go under their project:** a date for something becomes a dated entry in the app's calendar under its
   project (L0, `event.add`), and a milestone in that project's plan when the project management pack is on (C2). Built: `tests/test_obvious_steps_f.py::test_an_entry_made_from_an_input_the_person_filed_under_a_project_carries_that_project`.
   Moved to C2: the milestone in the plan (the pack's plan item).
-- [ ] **The rest of the obvious set,** each the same way:
-  - an organization it hasn't heard of is added with the person;
-  - an address or phone number in a sender's signature is offered for their record;
+- [x] **The rest of the obvious set,** each the same way (built: `tests/test_next_steps.py::test_an_unknown_organization_is_made_once_and_a_known_name_or_alias_is_linked`, `tests/test_next_steps.py::test_a_contact_detail_waits_even_from_the_persons_own_note_and_confirming_sets_it_with_undo`, the golden cases below):
+  - an organization it hasn't heard of is added with the person (built: the golden case `new-person-with-organization`);
+  - an address or phone number in a sender's signature is offered for their record (built: `person.contact`, always
+    waiting for the person, and the golden case `signature-phone`);
   - an action with a date in the input gets that due date (built: the golden case `relative-due-date`);
   - a reply that answers an open question proposes marking it answered (built: the golden cases `answer-question`,
     `partial-answer`);

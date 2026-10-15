@@ -533,6 +533,12 @@ How each is recorded (decided 2026-10-15; *being built, L3b*):
   project takes the request's project, else the source's only one; the lint `unnamed-recipient` (default `return`)
   returns a question or action naming a recipient the input never gave when the input says something was already sent
   (`language.already_sent_phrases`). **Built:** `tests/test_obvious_steps_f.py`.
+  *As built* (E): "Add a new person" is `POST /api/questions/{qid}/new-person` on a "Who is X?" question (not yet on
+  "Pick an owner"), prefilled from a proposed `person.add` and the input's header addresses; `person.contact` waits for
+  the person even from their own note, and its kinds are `workspace.contact_kinds`; "It's part of" and "Not a project"
+  are `POST /api/changesets/{cs}/ops/{i}/part-of` and `/not-a-project`, each setting the held proposal aside, adding an
+  active confirmed glossary entry (wording in `language.messages`) and recording `held_declined`. **Built:**
+  `tests/test_next_steps.py`.
 
 `event.add` (data tier, offered to reading notes) adds a calendar entry to the app's own calendar: a title, a start (a
 day, or a date-time), an optional end (the last day or moment of a range, included), the project it belongs to, and

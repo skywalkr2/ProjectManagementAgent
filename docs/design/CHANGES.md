@@ -957,6 +957,19 @@ yet follow, that it is *designed*, with its phase.
 | Send-back (6.8) | The redo's packet didn't show the items as they are now | Each touched record as it is now, marked taken back, kept or not applied |
 | Learned line (7.18) | Reach as a pick list only | The reach in words beside it, exclusions by name |
 
+## 62. L3b: the obvious next step from what came in (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Names (6.9) | "Who is X?" picked only an existing person | "Add a new person", prefilled from the input, with an unknown organization made once |
+| Contact details (6.7, 12.8) | No way to keep a signature's details | `person.contact`, always waiting for the person; `workspace.contact_kinds` |
+| Projects (6.7) | Reading notes couldn't propose a project | `project.add` waits as a system op; "It's part of" and "Not a project" kept as glossary entries |
+| Holds (6.8) | No op to take an action off hold | `action.unhold` |
+| Recipients (6.8) | A recipient could be guessed | The lint `unnamed-recipient` and `language.already_sent_phrases` |
+| Packets (6.6) | An edit by the person's own account wasn't marked | `by_us="yes"` on its outside-content block |
+| Calendar (6.7) | An entry had a project only if the assistant named one | It takes the request's or the source's project |
+| Evaluation (6.16) | No way to expect a held op, a project or a watched item | `held: <op>`, `project`, `watched` in a case; seven new golden cases. Built: `tests/test_next_steps.py`, `tests/test_obvious_steps_f.py` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,
