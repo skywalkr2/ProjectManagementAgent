@@ -148,19 +148,38 @@ def _template() -> Path:
     return demo()
 
 
-def evaluate_on(account: str, cfg: Config, ws: Any, env: Mapping[str, str]) -> Any:
-    """The report of the golden cases and the plugins' own cases on one choice, with the person's accounts. This is
-    what `cockpit evaluate` runs for the same cases (and the learning pairs once they are part of it)."""
-    from engine.evaluate import evaluate
+#: About how many calls one learning pair makes, for its estimate.
+PAIR_CALLS = 3
 
-    return evaluate(
-        _template(),
-        account=account,
-        runs=cfg.ai.evaluation.runs,
-        ai_config=ws.config_dir / "ai.yaml",
-        packs_of=ws.root,
-        env=env,
+
+def evaluate_on(account: str, cfg: Config, ws: Any, env: Mapping[str, str]) -> Any:
+    """The report of the golden cases, the plugins' own cases and the learning pairs on one choice, with the person's
+    accounts: what `cockpit evaluate` and `cockpit evaluate --pairs` run, as one report."""
+    from engine.evaluate import Report, evaluate
+    from engine.pairs import evaluate_pairs
+
+    runs = cfg.ai.evaluation.runs
+    cases = evaluate(
+        _template(), account=account, runs=runs, ai_config=ws.config_dir / "ai.yaml", packs_of=ws.root, env=env
     )
+    pairs = evaluate_pairs(_template(), account=account, runs=runs, ai_config=ws.config_dir / "ai.yaml", env=env)
+    return Report(
+        cases.account,
+        runs,
+        [*cases.results, *pairs.results],
+        {**cases.program_versions, **pairs.program_versions},
+    )
+
+
+def titles(ws: Any) -> dict[str, str]:
+    """What each case and pair is called, by id, for the Today line."""
+    from engine.evaluate import case_titles
+    from engine.pairs import load_pairs, load_scenarios
+
+    found = case_titles(_template(), ws.root)
+    for item in (*load_pairs(_template()), *load_scenarios(_template())):
+        found[item["id"]] = item.get("title") or item["id"]
+    return found
 
 
 def estimate(
@@ -169,15 +188,18 @@ def estimate(
     """About what the check of one choice would cost in USD (None when its price isn't known), and its case count.
     `ai_config` is the accounts file to price it with (the saved one unless the change isn't saved yet)."""
     from engine.evaluate import estimate_cases
+    from engine.pairs import load_pairs, load_scenarios
 
-    return estimate_cases(
-        _template(),
-        account=ref,
-        runs=cfg.ai.evaluation.runs,
-        ai_config=ai_config or ws.config_dir / "ai.yaml",
-        packs_of=ws.root,
-        env=env,
+    runs = cfg.ai.evaluation.runs
+    price, count = estimate_cases(
+        _template(), account=ref, runs=runs, ai_config=ai_config or ws.config_dir / "ai.yaml", packs_of=ws.root, env=env
     )
+    # A pair or scenario makes about PAIR_CALLS calls (the learning run, the later input and what it proposes), each
+    # priced at the cases' average.
+    pairs = len(load_pairs(_template())) + len(load_scenarios(_template()))
+    if price is None or not count:
+        return None, count + pairs
+    return price + price / count * PAIR_CALLS * pairs, count + pairs
 
 
 def run_waiting(
@@ -189,7 +211,6 @@ def run_waiting(
     """Run every check still waiting and keep its verdict. A check that passes the configured score keeps the switch
     and leaves nothing for the person; one that doesn't, or that can't finish, is kept as failed for Today. Returns the
     tiers that were checked."""
-    from engine.evaluate import case_titles
 
     env = os.environ if env is None else env
     run = evaluator or evaluate_on
@@ -202,9 +223,9 @@ def run_waiting(
         try:
             cfg = load_config(ws.config_dir, env=dict(env))
             report = run(entry["after"], cfg, ws, env)
-            titles = case_titles(_template(), ws.root)
+            called = titles(ws)
             ran = [r for r in report.results if not r.not_run]
-            names = [titles.get(c, c) for c in report.cases() if any(not r.passed for r in ran if r.case == c)]
+            names = [called.get(c, c) for c in report.cases() if any(not r.passed for r in ran if r.case == c)]
             if not ran:
                 verdict = {"state": FAILED, "failed": [], "unfinished": True}
             elif report.pass_rate() >= cfg.ai.evaluation.min_score:

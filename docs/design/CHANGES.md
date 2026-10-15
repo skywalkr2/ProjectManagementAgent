@@ -1019,6 +1019,13 @@ yet follow, that it is *designed*, with its phase.
 | Glossary (6.22) | A learned meaning merged into "not known yet"; "part of" seen only under its project | The meaning replaces the unknown proposal; the entry is workspace-wide |
 | Routing (6.22) | Only by person, team or project | Also by the input's topic. Built: `tests/test_knowledge_section.py::test_a_routing_entry_reaches_an_input_about_its_topic_whoever_the_input_names` |
 
+## 69. L4, part 2: packs' own cases and scorers, and Switch and check (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
+| Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

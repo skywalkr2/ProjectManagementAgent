@@ -1273,10 +1273,15 @@ L4. **Proving it** (from the design author's review of this plan).
   every case above with ordinary noise (unrelated mail, re-saved files, a moved meeting), so the knowledge has to be found
   among the noise. Expected differences between day 1 and day 30 are listed first and scored like the golden set (op
   types, targets, recipients), not judged by eye afterwards.
-- [ ] Packs bring their own cases in the core's format (`provides.evals`) and register only domain scorers
-  (`registrar.scorer`); the core's exact matching covers generic scoring (plugin question 133).
-- [ ] Both run by `cockpit evaluate`, and offered with their cost on every switch of a tier's account or model, with a failed
-  check shown on Today with Switch back.
+- [x] Packs bring their own cases in the core's format (`provides.evals`) and register only domain scorers
+  (`registrar.scorer`); the core's exact matching covers generic scoring (plugin question 133). Built:
+  `tests/test_pack_evals.py::test_a_packs_case_runs_and_its_scorer_decides`,
+  `tests/test_pack_evals.py::test_a_scorer_that_fails_fails_its_case_and_nothing_else`.
+- [x] Both run by `cockpit evaluate`, and offered with their cost on every switch of a tier's account or model, with a failed
+  check shown on Today with Switch back. Built: `tests/test_switch_check.py::test_a_change_that_switches_is_offered_a_check_with_its_cost_and_one_that_does_not_is_not`,
+  `tests/test_switch_check.py::test_a_check_that_fails_is_a_line_naming_what_failed_and_switch_back_restores_the_earlier_choice`,
+  `tests/test_switch_check.py::test_the_check_runs_the_learning_pairs_with_the_cases_and_prices_them`. The check is
+  offered on the AI accounts screen; a raw edit of a tier's account in the generic settings form gets none.
 
 L5. **Reading what arrives, and protecting what is learned.**
 - [x] Text extractors in the core: documents, spreadsheets, presentations and PDFs, so mail attachments are read. The

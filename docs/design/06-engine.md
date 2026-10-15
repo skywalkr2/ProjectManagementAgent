@@ -1887,7 +1887,12 @@ product never changes its own code. The lesson stays as the record of why.
   They cost money, so the person starts them, but they are offered at the moment that matters. A switch of a tier's
   account or model shows "Switch and check (about $X)" as its primary action, and "Switch without checking" in its menu. The
   check is part of the new account's probation (6.16). A pair that fails flags the switch on Today, with Switch back. A
-  provider switch is exactly when learning can be lost silently. A fallback is a switch too (6.16).
+  provider switch is exactly when learning can be lost silently. A fallback is a switch too (6.16). *As built (L4):* the
+  check runs the shipped golden set, the person's enabled packs' cases and the learning pairs on the new choice, on the
+  worker, and passes at `ai.evaluation.min_score`; a check that can't finish never counts as a pass; the estimate prices
+  a sample of real packets and counts each pair as about three calls; the verdict and what Switch back restores are kept
+  on this computer; the Today line is `switch_failed`, with Switch back and Keep it; `dispatch.knowledge.check_on_switch`
+  (default on) turns the offer off. **Built:** `tests/test_switch_check.py`, `tests/test_pairs.py`.
 - **On real use, from the end of phase L:** fixtures prove the plumbing, but the loop shows only as real material
   accumulates. The owner's daily use starts as soon as phase L is done, while the UI and packs are built. Through the first
   month, two numbers are watched weekly: the repeat-correction rate, which should fall, and the knowledge-used rate, which

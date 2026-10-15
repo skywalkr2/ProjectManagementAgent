@@ -19,6 +19,8 @@ from engine.storage import Store
 from engine.workspace import init_workspace
 from tests.conftest import DEMO_B
 
+REAL_ESTIMATE = switch_check.estimate
+
 OTHER = "other"
 CASES = ("close-action",)
 
@@ -301,3 +303,21 @@ def test_a_failed_line_waits_across_a_restart_because_it_is_kept_on_this_compute
 def test_a_check_is_a_report_of_the_same_cases_cockpit_evaluate_runs():
     report = evaluate(DEMO_B, stub=True, runs=1, env={}, only=list(CASES))
     assert isinstance(report, Report) and report.pass_rate() == 1.0
+
+
+def test_the_check_runs_the_learning_pairs_with_the_cases_and_prices_them(env, monkeypatch):
+    import engine.pairs as pairs
+    from engine.evaluate import RunResult
+
+    ws = env[0]
+    cfg = load_config(ws.config_dir, env={})
+    monkeypatch.setattr(ev, "evaluate", lambda *a, **k: Report("acct/m", 1, [RunResult("case-a", 1, True)]))
+    monkeypatch.setattr(pairs, "evaluate_pairs", lambda *a, **k: Report("acct/m", 1, [RunResult("pair-b", 1, False)]))
+    report = switch_check.evaluate_on("acct/m", cfg, ws, {})
+    assert report.cases() == ["case-a", "pair-b"] and report.pass_rate() == 0.5
+    first = pairs.load_pairs(switch_check._template())[0]
+    assert switch_check.titles(ws)[first["id"]] == first["title"]
+    monkeypatch.setattr(ev, "estimate_cases", lambda *a, **k: (1.0, 10))
+    price, count = REAL_ESTIMATE(cfg, ws, "acct/m")
+    every = len(pairs.load_pairs(switch_check._template())) + len(pairs.load_scenarios(switch_check._template()))
+    assert count == 10 + every and price == pytest.approx(1.0 + 0.1 * switch_check.PAIR_CALLS * every)

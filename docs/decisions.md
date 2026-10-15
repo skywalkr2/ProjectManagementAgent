@@ -3,6 +3,14 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The check on a switch runs the learning pairs too
+
+**Decided by:** the technical PM, merging L4's second part. **What:** "Switch and check" runs the golden set, the person's
+enabled packs' cases and the learning pairs as one report, passing at `ai.evaluation.min_score`; the estimate counts each
+pair as about three calls at the cases' average price (a stated approximation, shown as "about"); the check is offered on
+the AI accounts screen, not on a raw edit in the generic settings form. **Impact:** design 3.3, 6.16, 6.22; roadmap L4
+(its build items done); plugin API 0.3.79. No change to scope.
+
 ## 2026-10-15: What L4's learning pairs found, and how each was fixed
 
 **Decided by:** the technical PM, merging L4's first part. **What:** 28 pairs (12 negative) instead of 15 to 20, since the

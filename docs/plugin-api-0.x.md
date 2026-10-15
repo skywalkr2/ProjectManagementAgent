@@ -10,6 +10,16 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.79 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.
+
+- **A pack's own evaluation cases:** `provides.evals` names a folder of cases in the core's format beside `plugin.yaml`
+  (ids `<plugin>/<name>`); a case may name `task:` (one of the plugin's task kinds) and `score:` (a scorer it lists in
+  `provides.scorers`). `registrar.scorer(name, fn)` registers it; `fn(case, produced, view)` returns a list of problems in
+  words, empty when the case passes. A scorer that raises fails only its case. `cockpit evaluate -w <workspace>` runs the
+  enabled plugins' cases with the golden set, and the check on a switch of account runs them too.
+
 ## What 0.3.78 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.

@@ -899,6 +899,8 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
             config_dir = Path(tmp)
             shutil.copyfile(args.ai_config, config_dir / "ai.yaml")
         settings = load_config(config_dir, env={}).ai.evaluation
+    # A plugin's own cases come with the golden set; the learning pairs are the core's.
+    how = {} if args.pairs else {"packs_of": workspace}
     report = (evaluate_pairs if args.pairs else evaluate)(
         template,
         account=args.account,
@@ -906,7 +908,7 @@ def cmd_evaluate(args: argparse.Namespace) -> int:
         stub=args.stub,
         only=args.only,
         ai_config=args.ai_config,
-        packs_of=workspace,
+        **how,
         progress=_eval_progress,
         notice=lambda line: print(line, file=sys.stderr, flush=True),
     )
