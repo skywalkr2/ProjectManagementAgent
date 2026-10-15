@@ -3,6 +3,34 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: A capability matrix: which model can do which work, measured
+
+- **Decided (owner):** "when we defined limits we need to start building capability matrixes so we know based on a
+  certain model type we will need a deeper model for certain activities."
+- **Where it goes:** a concept in the core (design 6.16 "What a model can do, measured"), with data (the skills each
+  case and pair proves, a shipped list packs extend), a setting (`ai.skills.min_score`) and per-workspace measurements.
+  Not vendor-specific: it is measured per model and program version, never assumed from a name.
+- **Why:** the backup model's pairs showed it reads and stores knowledge but often doesn't use it (a term, routing),
+  while the stronger account did; today that lives only in a report read by hand.
+- **Impact:** step 1 (skills on cases, the matrix from `cockpit evaluate`, shown in Settings) joins L7's evaluation
+  items, about half a session; step 2 (routing by measured skill) goes to L-more, after the packs.
+
+## 2026-10-15: The failing pairs again, after the fix wave
+
+- **Found:** imprint 19 of 45 (from 5), workplace 7 of 24 (from 1); seven pairs now pass every run. The report's `kept`
+  line showed lessons from a correction of reading notes limited to `ask` or `sort-mail` work: the learning packet never
+  said which kind of work was corrected, so the model guessed from the words, and the lesson never reached the next
+  input.
+- **Decided (main session):** the learning packet says which kind of work was corrected, and a learning answer whose
+  entry names kinds of work without that one goes back once with the reason; the prompt says to leave `task_kinds`
+  empty unless the lesson holds for some kinds of work and not others. Three pairs were still stricter than the design
+  and are corrected with comments.
+- **The rest is the backup model's limit:** it was given the term, the routing entry or the lesson and didn't use it.
+  Recorded in `docs/project/evals/README.md`; it is the evidence for keeping the stronger account for everyday work and
+  this one as its backup, and it is measured again on the stronger account when its quota resets (O3's last step).
+- **Impact:** design 6.22 ("Every correction proposes one piece of learning") says what the packet states and the
+  check; O3 is closed on the backup model, with the main account's pairs owed when its quota resets.
+
 ## 2026-10-15: What the pairs on the backup model found
 
 - **Found (O3, both pair sets on the low-cost backup model, `2bcff12`):** imprint 23 of 63, workplace 9 of 30. Read case

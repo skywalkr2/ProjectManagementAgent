@@ -1380,7 +1380,11 @@ found"), each with its test:
 - [x] **The pairs match the design**: a fact of what the mail states is allowed where the golden cases allow it, and
   lesson wording is checked by stems with alternatives (`a|b`), each with a comment. Built:
   `test_a_word_with_a_bar_is_met_by_any_one_of_its_alternatives`; both pair sets pass with their ideal answers.
-- [ ] **The owner runs the failing pairs again** on the same account (`--case` for each), and the results are compared.
+- [x] **The owner runs the failing pairs again** on the same account (`--case` for each), and the results are compared
+  (`docs/project/evals/README.md`, 2026-10-15): seven more pass every run; the packet now says which kind of work was
+  corrected (built: `test_a_lesson_naming_kinds_of_work_must_include_the_one_corrected_and_the_packet_says_which_it_was`);
+  what is left is the backup model not using what it was given. Owed: the pairs on the main account when its quota
+  resets.
 
 Calendar entries and dates (answers 10, 11, 13):
 - [ ] **Entries for real events only**: meetings, launches, delivery windows, appointments; never for an action's own due
@@ -1448,6 +1452,11 @@ Proving it (lesson 2; answers 2, 21):
 - [ ] **Extras weighed and tracked**: missing and forbidden stay exact; a fact or note is free, an internal action or
   entry costs a little, anything reaching another person fails; extras per run reported over time. *Today:* any extra
   not in `allow` fails the run.
+- [ ] **The capability matrix, step 1** (owner, 2026-10-15; design 6.16 "What a model can do, measured"): every golden
+  case and pair names the skills it proves (`skills:`, from a shipped list: using a term, following routing, using a
+  lesson, dates, owners, not repeating a question, …); `cockpit evaluate` adds each run to a matrix of model × skill
+  (pass rate, runs, date, program version), kept in the workspace; Settings shows it per account, in plain words, with
+  the skills below `ai.skills.min_score` marked. *Today:* reports are files, read by hand.
 - [ ] **A superseded attempt leaves nothing running** (lesson 7): a test of the exact sequence. *Today:* the exclusive
   write lock and `retire_earlier_attempts` hold it; Undo already skips a change whose records changed since (lesson 8).
 
@@ -1808,6 +1817,10 @@ private repository and builder like the other packs, and works with the project 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
 After the packs, beside real use (owner, 2026-10-12). None of it is needed for the loop to work. Each item has its own test.
+- [ ] **The capability matrix, step 2: work goes to a model that can do it** (owner, 2026-10-15; design 6.16): each task
+  kind declares the skills it needs; the router skips a model whose measured score for one of them is below
+  `ai.skills.min_score` and takes the next deeper tier, saying so on the run; a skill never measured counts as unknown,
+  not as passed, and the switch check measures it. Escalation on failed checks stays as it is.
 - [ ] **The style pair** (moved from L4): once a task kind drafts for an audience, style notes reach its packet, and a
   learning pair proves a sent version's changes (names replaced with roles, a promise cut) carry to the next draft.
 - [ ] **Loading a shared lessons file** (moved from L4, with Take my lessons): the injected-import pair runs through the

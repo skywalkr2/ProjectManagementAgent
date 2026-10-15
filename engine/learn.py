@@ -182,6 +182,28 @@ def on_signal(tx: Any, cfg: Any, signal_id: str, now: datetime) -> str | None:
     return tx.create("request", data, _ENGINE).id
 
 
+def corrected_task(reader: Any, signal: Mapping[str, Any]) -> str | None:
+    """The kind of work a correction is about (the task of the request whose work was corrected), when it is known."""
+    _, original = _original(reader, signal)
+    return original.data.get("task") if original is not None else None
+
+
+def reach_misses_correction(reader: Any, request_data: Mapping[str, Any], op: Any) -> str | None:
+    """Why a learning answer's entry can't stand as it reaches, or None: an entry that names kinds of work must include
+    the one corrected, or it would never reach the work it is meant to change."""
+    reach = getattr(op, "applies_to", None)
+    signal = reader.get("signal", signal_of(request_data) or "")
+    if reach is None or not reach.task_kinds or signal is None:
+        return None
+    corrected = corrected_task(reader, signal.data)
+    if corrected is None or corrected in reach.task_kinds:
+        return None
+    return (
+        f'this comes from a correction of "{corrected}" work, so applies_to.task_kinds must include "{corrected}" '
+        "(or be left empty); as written it would never reach the work it is meant to change"
+    )
+
+
 def _original(reader: Any, signal: Mapping[str, Any]) -> tuple[Any | None, Any | None]:
     """The changeset a correction is about and the request that asked for it, when there are any: from the signal's
     changeset, else from a request it names."""
@@ -450,6 +472,11 @@ def build(ws: Any, store: Any, cfg: Any, req: Any, kind: Any, today: date) -> An
         f"Today is {today.isoformat()} ({today.strftime('%A')}).",
         f"This is correction {signal.id}, made on {made}.",
     ]
+    if (corrected := corrected_task(view, data)) is not None:
+        parts.append(
+            f'The work corrected is the kind of work "{corrected}": a lesson that names kinds of work in '
+            "applies_to.task_kinds includes it."
+        )
 
     records = _record_ids(store, data, changeset)
     items = [_shown(store, k, i) for k, i in records[:12]]

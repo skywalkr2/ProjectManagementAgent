@@ -4,6 +4,7 @@ Names come from the imprint fixture, never written out here.
 """
 
 import json
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -564,7 +565,9 @@ def test_a_run_held_for_its_cost_shows_its_estimate_and_goes_on_the_go(gated):
     client, base, worker = gated
     item = _held_for_cost(client, base, worker)
     assert item["state"] == "needs_you" and item["approval"] == "required" and not item["stage_task"]
-    assert item["estimate_usd"] > 0.001 and f"{item['estimate_usd']:.2f}" in item["waiting"]
+    # The line rounds the full estimate to cents; the field is kept to a tenth of a cent, so they agree within a cent.
+    shown = float(re.search(r"\$(\d+\.\d\d)", item["waiting"]).group(1))
+    assert item["estimate_usd"] > 0.001 and abs(shown - item["estimate_usd"]) < 0.006
     assert client.post(f"{base}/requests/{item['id']}/retry").status_code == 409
     assert client.post(f"{base}/requests/{item['id']}/go", json={"read_version": item["version"]}).status_code == 200
     assert _item(client, base, item["id"])["approval"] == "granted"

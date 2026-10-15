@@ -37,8 +37,10 @@ What to propose:
   "lesson.update" on that lesson (its id, with the new wording, guard or reach) instead of adding a second one.
 - Write the text so it reads on its own, in one or two plain sentences, as the PM would say it. The PM reads it and
   keeps it, edits it or throws it away.
-- "applies_to" is as narrow as the correction supports: the corrected item's kind of work on its project (the project's
-  id from the list, "scope": "projects"; "records" such as "action.owners" for the field that was corrected). The PM
+- "applies_to" is as narrow as the correction supports: the corrected item's project (the project's id from the list,
+  "scope": "projects"; "records" such as "action.owners" for the field that was corrected). Leave "task_kinds" empty
+  unless the lesson holds for some kinds of work and not others; when you name any, include the kind of work the request
+  says was corrected. The PM
   widens it with one click; undoing something too broad later is much more work.
 - Evidence: where an op has an "evidence" field, give {"quote": "<exact words copied from this request>"}, a few
   words long: the PM's note, the corrected words, or the date that decides it. Copy exactly. If you can't quote it, leave

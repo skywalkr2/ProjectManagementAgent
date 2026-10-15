@@ -131,6 +131,13 @@ invariants:
     seed: >-
       This kind of work allows only a few ops in one answer, and more than that refuses the whole answer. Keep the one
       that matters most and leave the rest out.
+  learning-reach:
+    ops: [lesson.add, lesson.update, glossary.add, glossary.update, routing.add, style.add, rule.add]
+    line: Learning that names kinds of work includes the kind of work that was corrected.
+    seed: >-
+      What is learned from a correction must reach the work that was corrected. Leave applies_to.task_kinds empty
+      unless it holds for some kinds of work and not others, and when you name any, include the one the request says
+      was corrected.
   rule-not-report:
     ops: [report.draft]
     line: A report to the maintainers that is really a standing rule for the assistant is refused; propose it as a rule.

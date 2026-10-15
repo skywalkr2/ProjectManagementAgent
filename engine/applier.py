@@ -142,6 +142,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     ]
     problems += _required_ops(cs, ctx)
     problems += _too_many_ops(cs, ctx)
+    problems += _learning_reach(cs, ctx)
     view = ctx.store.read()
     plugins = ctx.store.plugins
     lints = ctx.cfg.checks.lints
@@ -1067,6 +1068,22 @@ def _too_many_ops(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             None,
             f"the answer has {len(cs.ops)} ops and this work allows at most {most}: keep the one that matters most",
         )
+    ]
+
+
+def _learning_reach(cs: ChangesetIn, ctx: Context) -> list[Problem]:
+    """A learning answer's entry that names kinds of work but not the one corrected is refused, so it gets a fix round:
+    as written it would apply to other work and never to the work it came from."""
+    if not learn.is_learning(origin_of(ctx).get("task")):
+        return []
+    view = ctx.store.read()
+    request = view.get("request", ctx.inputs.request) if ctx.inputs.request else None
+    if request is None:
+        return []
+    return [
+        Problem("learning-reach", "refuse", i, why)
+        for i, op in enumerate(cs.ops)
+        if (why := learn.reach_misses_correction(view, request.data, op)) is not None
     ]
 
 

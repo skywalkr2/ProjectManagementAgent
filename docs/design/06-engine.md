@@ -1150,6 +1150,17 @@ catalog where it publishes one, otherwise from the adapter's defaults and `price
 describe is treated as having no optional capabilities until the PM says otherwise or an evaluation shows them. New models show
 up through the catalog, with no code change.
 
+**What a model can do, measured** (owner, 2026-10-15; *designed, not yet built*; roadmap L7 step 1, L-more step 2).
+Capabilities above are features a catalog states. Whether a model *does* the work well is measured: every golden case and
+learning pair names the skills it proves (`skills:`, from a list the core ships as data and packs extend: using a term,
+following routing, using a lesson, dates, owners, not repeating a question, and so on), and each evaluation run adds to a
+**capability matrix**: model (with its agent program's version) × skill → pass rate, runs and date, kept in the
+workspace. Settings shows it per account in plain words, marking the skills below `ai.skills.min_score`. Then each task
+kind declares the skills it needs, and the router sends work to the first model in the tier order whose measured
+score holds for all of them, else the next deeper tier, saying so on the run. A skill never measured is unknown, never
+assumed; the switch check (6.22) measures it. This adds to escalation on failed checks and never replaces it: a model's
+own confidence still counts for nothing.
+
 **Adding an account** (Settings, AI): pick the kind, by name, from a list the app ships as data (`catalog/ai-endpoints.yaml`:
 services, local servers and the common command-line agents, each agent with its command, the program's own options that keep
 its tools off, how it takes the packet and where its answer is; the screen says whether the program is installed and how to sign
@@ -1816,7 +1827,8 @@ went against it). The repeat-correction signal (6.20) is computed from this log.
 
 **Every correction proposes one piece of learning.** When a signal is recorded (sent back, undone, dropped, reworded, pulled
 back, draft edited, held op declined, or the person's answer to a question the assistant asked them), a small `learn` task runs, unless the person's own answer already recorded what it teaches ("Not a project" and "It's part of" keep their glossary entry, which the correction names as `learned`). Its packet holds:
-- the item;
+- the item, and which kind of work was corrected (an entry that names kinds of work must include it, or it goes back
+  once with that reason; built: `test_a_lesson_naming_kinds_of_work_must_include_the_one_corrected_and_the_packet_says_which_it_was`);
 - the assistant's original output;
 - the correction: the note, what was undone, or the text as edited or sent;
 - the knowledge entries the original run was given;

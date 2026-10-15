@@ -34,7 +34,8 @@ later:
   - op: question.add
     to: PER-5
   allow: [question.add, action.add]  # a question to someone else, and the PM's reply to the shop
-  packet_lacks: [Who answers what, reviewer list]
+  # Only the routing guidance must stay out: a fact recorded from reading the mail is data and may name the list.
+  packet_lacks: [Who answers what]
 ideal:
   first:
     summary: Theo passed the reviewer list on to Ines.

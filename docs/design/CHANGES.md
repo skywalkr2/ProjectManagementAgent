@@ -1026,6 +1026,12 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 74. A capability matrix (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| AI accounts (6.16) | Capabilities are stated features from a catalog | Also skills measured per model by the evaluations, shown per account, and later used to route work to a model that can do it. Not yet built: L7 step 1, L-more step 2 |
+
 ## 73. What the pairs on the backup model found (2026-10-15)
 
 | Where | Before | Now |
@@ -1033,6 +1039,7 @@ yet follow, that it is *designed*, with its phase.
 | Reach (6.22) | `task_kinds` and `records` took any words | Only kinds of work and record types there are, listed in the op reference. Built: `test_knowledge_records.py`, `test_op_reference.py` |
 | Routing in the packet (6.6) | Every word of the topic in the input, exactly | Most of the topic's words (`knowledge.routing_match`), plurals and hyphens folded. Built: `test_knowledge_section.py` |
 | One piece of learning (6.22) | "Not a project" and "It's part of" kept an entry and also queued a learning run | The answer's entry is the learning; no run is queued. Built: `test_next_steps.py` |
+| The learning packet (6.22) | The kind of work corrected wasn't said | It is said, and an entry naming kinds of work must include it. Built: `test_learn_correction.py` |
 
 ## 72. Backups and adding accounts from Settings (2026-10-15)
 

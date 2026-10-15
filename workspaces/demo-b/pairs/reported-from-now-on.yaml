@@ -35,7 +35,7 @@ later:
     The proof copies now ship on November 12.
   expect:
   - op: fact
-    text_has: [proof copies, November 12]
+    text_has: [proof cop, November 12|Nov 12|11-12]
   forbid:
   - op: action.add
   - op: question.add

@@ -333,6 +333,21 @@ def test_more_than_one_proposal_refuses_the_whole_answer_and_asks_for_one(env):
     assert store.read().list("lesson") == []
 
 
+def test_a_lesson_naming_kinds_of_work_must_include_the_one_corrected_and_the_packet_says_which_it_was(env):
+    ws, cfg, store = env
+    cs_id, _, _ = interior(env)
+    send_back(store, cs_id, "Interior files go to the editor first.", now=NOW)
+    (queued,) = learning(store)
+    elsewhere = lesson_answer("go to the editor first", applies_to={"task_kinds": ["ask"]})
+    right = lesson_answer("go to the editor first", applies_to={"task_kinds": ["notes", "ask"]})
+    asked = scripted(elsewhere, right)
+    run_learning(env, queued.id)
+    assert 'The work corrected is the kind of work "notes"' in asked[0].request
+    assert len(asked) == 2 and 'must include "notes"' in asked[1].request, "the answer went back once"
+    (lesson,) = store.read().list("lesson")
+    assert lesson.data["applies_to"]["task_kinds"] == ["notes", "ask"]
+
+
 def test_a_lesson_change_from_learning_is_held_and_a_rule_from_learning_is_a_proposal(env):
     ws, cfg, store = env
     with store.transaction() as tx:
