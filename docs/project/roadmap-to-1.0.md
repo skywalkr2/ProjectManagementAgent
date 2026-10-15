@@ -1687,6 +1687,29 @@ From the functional designer's lessons of 2026-10-15 (lessons 5 and 6):
   and as an HTML table (for chat or mail). A request for "a list of X's items" points here; the assistant never asks
   for a blank file. *Today:* each group copies one message, not a table.
 
+From the UI designer's answers to questions 25 to 32 (2026-10-16; `reviews/ui-ux-2026-10/answers-25-32.md`, mockups in
+`reviews/ui-ux-2026-10/mockup-round-25-32/`; each answer has its layout, exact wording, edge cases and the test for done):
+- [ ] **25 AI accounts as one place**: the summary line, rows with a role pill in words, the person's own name for the
+  account, a state line and one next step; "What is it for?" in an add drawer and in each row's menu; removing the main
+  account says what happens in the Undo toast. Replaces the accounts items above.
+- [ ] **26 What each model can do**: a grid of kinds of work × account and model on its own page, pass rate first, then
+  cost per right answer among those that pass, the cheapest passing one marked; ⚠ with words below the minimum; old and
+  not measured as their own states with Measure and its estimate; a one-line summary on each account row.
+- [ ] **27 After a move**: one group line per move in Decide, one row inside per thing to check; questions to others go to
+  Follow-ups and are counted in the group's meta; a group of one is a normal row; a second move replaces the group.
+- [ ] **28 Held for a look**: the action as a question, reason and evidence first, the primary button names the result,
+  the other answer a visible button.
+- [ ] **29 Where a fact came from**: the source label in the meta line as the "Where it came from" link; "≈ Inferred" in a
+  dashed outline with Confirm it; no italics; never in copied or published text.
+- [ ] **30 A series page**: next meeting's open items by person, past meetings collapsed, details; item rows link "for
+  Thursday's print sync"; the agenda stays the project management pack's.
+- [ ] **31 Not now in the menu**, with its consequence; the 7.6 rule: a second answer stays a visible button, a
+  postponement goes in the menu, held lines may show two buttons, every other row one.
+- [ ] **32 Copy tables**: a Message | Table switch shows the table before copying; "Your update"/"Your answer" last and
+  widest, tinted in the HTML copy, no placeholder; the project on every row; overdue in words; page names in the HTML
+  copy, full addresses for a spreadsheet; "Copy as table" and "Copy for a spreadsheet" beside Mark sent; no title in the
+  table.
+
 From the original designer's lessons of 2026-10-14:
 - [ ] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.6 and 7.7): a project
   tag before a row's title when the screen mixes projects, left out when it holds one; toasts at the bottom left from

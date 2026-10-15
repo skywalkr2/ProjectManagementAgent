@@ -360,6 +360,10 @@ fieldset.details legend { padding: 0 var(--space-2); font-weight: var(--weight-s
 @media (min-width: 640px) {
   .today-board { height: max(26rem, calc(100dvh - var(--header-h) - 8 * var(--space-8))); }
 }
+/* While the four columns are narrow, a row's buttons sit under its title, so a title never wraps a word per line. */
+@media (min-width: 1400px) and (max-width: 1679px) {
+  .today-board .row, .today-board .row.pair, .today-board .row:has(> .kind) { grid-template-columns: minmax(0, 1fr); }
+}
 .tb-col { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
 .tb-head { display: flex; align-items: center; gap: var(--space-2); min-height: var(--space-12); padding: 0 var(--space-4); border-bottom: 1px solid var(--border); flex: none; }
 .tb-head h2 { font-size: var(--text-lg); line-height: var(--lh-lg); margin: 0; }

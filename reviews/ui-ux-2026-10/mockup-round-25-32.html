@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 25–32 mockups</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Mockups for designer questions 25-32. Fictional data; service names are placeholders. */
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--canvas); color: var(--text); font: var(--weight-regular) var(--text-md)/var(--lh-md) var(--font-ui); }
+button { font: inherit; color: inherit; }
+.page { padding: var(--space-6); display: grid; gap: var(--space-8); }
+.q { display: grid; gap: var(--space-3); }
+.q > h1 { margin: 0; font-size: var(--text-xl); line-height: var(--lh-xl); font-weight: var(--weight-semibold); }
+.q > p.ask { margin: 0; color: var(--text-muted); font-size: var(--text-sm); max-width: var(--measure); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gutter); align-items: start; }
+@media (max-width: 1100px) { .two { grid-template-columns: 1fr; } }
+
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.panel > header { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.panel > header h2 { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-semibold); }
+.panel > header .meta { color: var(--text-subtle); font-size: var(--text-sm); }
+.spacer { flex: 1; }
+.summary { padding: var(--space-4); display: grid; gap: var(--space-2); border-bottom: 1px solid var(--border); background: var(--surface); }
+.summary p { margin: 0; }
+.summary .flow { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; font-size: var(--text-md); }
+.summary .arrow { color: var(--text-subtle); }
+
+.btn { display: inline-flex; align-items: center; gap: var(--space-2); height: var(--btn-h-sm); padding: 0 var(--btn-px-sm); border-radius: var(--radius-md); border: 1px solid var(--border-strong); background: var(--surface); font-size: var(--text-sm); font-weight: var(--weight-semibold); white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
+.btn.icon { width: var(--btn-h-sm); padding: 0; justify-content: center; }
+.more::before { content: "•••"; letter-spacing: 1px; font-size: 11px; }
+
+.pill { display: inline-flex; align-items: center; gap: 4px; height: var(--pill-h); padding: 0 var(--pill-px); border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: var(--weight-semibold); white-space: nowrap; justify-self: start; align-self: start; margin-top: 2px; }
+.pill.need { background: var(--accent-soft); color: var(--accent-text); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.risk { background: var(--danger-soft); color: var(--danger); }
+.pill.neutral { background: var(--surface-sunk); color: var(--text-muted); }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.outline { background: transparent; border: 1px dashed var(--border-strong); color: var(--text-muted); }
+
+.line { display: grid; grid-template-columns: 128px 1fr auto; gap: var(--row-gap); align-items: center; padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
+.line:last-child { border-bottom: 0; }
+.line .t { font-weight: var(--weight-semibold); }
+.line .s { color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.acts { display: flex; gap: var(--space-2); align-items: center; }
+.group { padding: var(--space-2) var(--row-px); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--text-subtle); background: var(--canvas); border-bottom: 1px solid var(--border); }
+.children { grid-column: 2 / -1; display: grid; margin-top: var(--space-2); }
+.child { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); align-items: center; padding: var(--space-2) 0; border-top: 1px dashed var(--border); }
+.child .t { font-weight: var(--weight-medium); }
+.because { font-size: var(--text-sm); color: var(--text-muted); }
+.because q { font-style: italic; color: var(--text); }
+a { color: var(--accent-text); }
+.note { font-size: var(--text-xs); color: var(--text-subtle); padding: var(--space-2) var(--space-4) var(--space-3); }
+.callout { font-size: var(--text-sm); color: var(--text-muted); background: var(--surface-sunk); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); }
+
+/* 25 accounts */
+.acct { display: grid; grid-template-columns: 112px 1fr auto; gap: var(--row-gap); align-items: center; padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
+.acct .name { font-weight: var(--weight-semibold); }
+.acct .s { color: var(--text-muted); font-size: var(--text-sm); }
+.state { display: inline-flex; align-items: center; gap: 6px; font-size: var(--text-sm); color: var(--text-muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); display: inline-block; }
+.dot.warn { background: var(--warn); } .dot.off { background: var(--text-subtle); }
+.drawer { border-left: 1px solid var(--border); background: var(--surface); padding: var(--space-4); display: grid; gap: var(--space-4); }
+.field { display: grid; gap: var(--space-1); }
+.field label, .legend { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.input { height: var(--input-h); border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: 0 var(--space-3); display: flex; align-items: center; color: var(--text-subtle); max-width: 360px; }
+.hint { font-size: var(--text-xs); color: var(--text-subtle); }
+.choice { display: grid; grid-template-columns: 20px 1fr; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.choice.sel { border-color: var(--accent); background: var(--accent-soft); }
+.radio { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border-strong); margin-top: 2px; }
+.choice.sel .radio { border: 5px solid var(--accent); }
+.choice b { font-weight: var(--weight-semibold); }
+.choice small { display: block; color: var(--text-muted); font-size: var(--text-sm); }
+
+/* 26 grid */
+table { border-collapse: collapse; width: 100%; font-size: var(--text-sm); }
+th, td { text-align: left; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--text-subtle); background: var(--canvas); }
+td.num, th.num { font-variant-numeric: tabular-nums; }
+.cell b { display: block; font-size: var(--text-md); font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; }
+.cell small { color: var(--text-subtle); font-variant-numeric: tabular-nums; }
+.cell.low b { color: var(--danger); }
+.cell.best { background: var(--ok-soft); }
+.cell.best small.tag { color: var(--ok); font-weight: var(--weight-semibold); }
+.cell.stale b { color: var(--text-subtle); }
+
+/* 29 facts */
+.fact { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
+.fact .t { font-weight: var(--weight-medium); }
+.prov { font-size: var(--text-sm); color: var(--text-muted); display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+.prov a { text-decoration: underline; text-underline-offset: 2px; }
+
+/* 30 series */
+.series { display: grid; grid-template-columns: 1fr var(--rail-w); gap: var(--gutter); align-items: start; }
+.series h3 { margin: 0; font-size: var(--text-md); font-weight: var(--weight-semibold); }
+.person { padding: var(--space-2) var(--row-px); font-size: var(--text-sm); font-weight: var(--weight-semibold); border-bottom: 1px solid var(--border); background: var(--surface); }
+.kv { display: grid; grid-template-columns: 110px 1fr; gap: var(--space-2) var(--space-3); padding: var(--space-4); font-size: var(--text-sm); }
+.kv dt { color: var(--text-subtle); } .kv dd { margin: 0; }
+.past { padding: var(--space-2) var(--row-px); font-size: var(--text-sm); color: var(--text-muted); border-bottom: 1px solid var(--border); display: flex; gap: var(--space-3); }
+.past time { font-variant-numeric: tabular-nums; color: var(--text); min-width: 88px; }
+
+/* 31 menu */
+.menu { position: absolute; right: var(--space-4); top: 44px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--elev-2); padding: var(--space-1); min-width: 260px; z-index: 2; }
+.menu div { padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: var(--text-sm); }
+.menu div.hl { background: var(--surface-hover); }
+.menu small { display: block; color: var(--text-subtle); font-size: var(--text-xs); }
+.rel { position: relative; }
+
+/* 32 copy tables */
+.fill { background: var(--accent-soft); }
+td.fill { min-width: 260px; }
+th.fill { color: var(--accent-text); }
+.copybar { display: flex; gap: var(--space-2); align-items: center; padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); flex-wrap: wrap; }
+.tabs { display: inline-flex; background: var(--surface-sunk); border-radius: var(--radius-md); padding: 2px; }
+.tabs span { padding: 4px 10px; font-size: var(--text-sm); font-weight: var(--weight-semibold); border-radius: 6px; color: var(--text-muted); }
+.tabs span.on { background: var(--surface); color: var(--text); box-shadow: var(--elev-1); }
+.caption { padding: var(--space-3) var(--space-4) 0; font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.overdue { color: var(--danger); font-weight: var(--weight-semibold); }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- 25 -->
+<section class="q" id="q25">
+  <h1>25 · AI accounts, as one place</h1>
+  <p class="ask">The summary line answers “who does the work and who stands in”. Each row says its role in words, shows its state, and has one next step. The role is chosen in the add form and changed from the row’s menu, never from a hidden ⋯ alone.</p>
+  <div class="two">
+    <div class="panel">
+      <header><h2>AI accounts</h2><span class="meta">3</span><span class="spacer"></span><button class="btn">Compare what they can do</button><button class="btn primary">Add an account</button></header>
+      <div class="summary">
+        <div class="flow"><b>Main account</b> does Quill’s work <span class="arrow">→</span> if it can’t answer, <b>Second account</b> stands in.</div>
+        <div class="hint">Every kind of work has a backup. Last checked today, 9:40 AM.</div>
+      </div>
+      <div class="acct"><span class="pill need">Does the work</span><div><div class="name">Main account</div><div class="s">Pay as you go · Example AI · everyday and harder work</div><div class="state"><span class="dot"></span>Ready · answered 2 h ago · $1.20 today</div></div><div class="acts"><button class="btn">Test</button><button class="btn ghost icon more" aria-label="More"></button></div></div>
+      <div class="acct"><span class="pill neutral">Backup</span><div><div class="name">Second account</div><div class="s">Signed-in app · Second Cloud · stands in for everyday work</div><div class="state"><span class="dot"></span>Checked for every kind of work · Oct 14</div></div><div class="acts"><button class="btn">Test</button><button class="btn ghost icon more" aria-label="More"></button></div></div>
+      <div class="acct"><span class="pill warn">Not used</span><div><div class="name">Trial account</div><div class="s">Free tier · Example AI</div><div class="state"><span class="dot warn"></span>Key not found on this computer</div></div><div class="acts"><button class="btn primary">Add its key</button><button class="btn ghost icon more" aria-label="More"></button></div></div>
+      <div class="note">Row menu: Test · Make this the main account · Use as backup / Stop using as backup · Change models · Replace key · Key end date · Remove</div>
+    </div>
+    <div class="panel">
+      <header><h2>Add an account</h2><span class="spacer"></span><span class="meta">Step 3 of 3</span></header>
+      <div class="drawer">
+        <div class="field"><label>Name it</label><div class="input">Second account</div><div class="hint">How it shows in this list. You can change it later.</div></div>
+        <div class="field"><span class="legend">What is it for?</span>
+          <div class="choice"><span class="radio"></span><span><b>Quill’s work</b><small>It becomes the main account. Main account becomes its backup.</small></span></div>
+          <div class="choice sel"><span class="radio"></span><span><b>A backup</b><small>Stands in when Main account can’t answer. Checked for each kind of work first (about $0.02).</small></span></div>
+          <div class="choice"><span class="radio"></span><span><b>Nothing yet</b><small>Kept here to test or compare.</small></span></div>
+        </div>
+        <div class="acts"><button class="btn primary">Add and check (about $0.02)</button><button class="btn ghost">Cancel</button></div>
+      </div>
+      <div class="note">Removing the main account: the Undo toast says what happens next. “Removed Main account. Second account now does Quill’s work. · Undo”. With no backup: “Removed Main account. Quill has no account for its work. · Undo” and a held line on Today.</div>
+    </div>
+  </div>
+</section>
+
+<!-- 26 -->
+<section class="q" id="q26">
+  <h1>26 · What each account can do</h1>
+  <p class="ask">Pass rate first: can it do this kind of work well enough? Then cost per right answer among those that can. A grid across accounts on its own page; each row in the list keeps a one-line summary that links to it.</p>
+  <div class="panel">
+    <header><h2>Compare what accounts can do</h2><span class="meta">right answers · cost per right answer · minimum 80%</span><span class="spacer"></span><button class="btn">Measure again (about $0.40)</button></header>
+    <table>
+      <thead><tr><th style="width:28%">Kind of work</th><th>Main account · everyday</th><th>Main account · harder</th><th>Second account · everyday</th></tr></thead>
+      <tbody>
+        <tr><td>Pull actions from meeting notes</td><td class="cell best"><b>94%</b><small>$0.03 · 18 runs · 2 days ago</small><br><small class="tag">✓ Cheapest that passes</small></td><td class="cell"><b>97%</b><small>$0.11 · 18 runs · 2 days ago</small></td><td class="cell"><b>89%</b><small>$0.04 · 18 runs · 2 days ago</small></td></tr>
+        <tr><td>Route a question to who decides</td><td class="cell"><b>90%</b><small>$0.02 · 12 runs</small></td><td class="cell"><b>96%</b><small>$0.08 · 12 runs</small></td><td class="cell best"><b>85%</b><small>$0.01 · 12 runs</small><br><small class="tag">✓ Cheapest that passes</small></td></tr>
+        <tr><td>Use a known term</td><td class="cell best"><b>88%</b><small>$0.02 · 9 runs</small><br><small class="tag">✓ Cheapest that passes</small></td><td class="cell"><b>100%</b><small>$0.07 · 9 runs</small></td><td class="cell low"><b>⚠ 56%</b><small>Below 80% · 9 runs</small></td></tr>
+        <tr><td>Write an update in your voice</td><td class="cell stale"><b>— Not measured</b><small><a href="#">Measure</a> (about $0.12)</small></td><td class="cell best"><b>91%</b><small>$0.14 · 6 runs · 40 days ago (old)</small><br><small class="tag">✓ Only one that passes</small></td><td class="cell stale"><b>— Not measured</b><small><a href="#">Measure</a></small></td></tr>
+      </tbody>
+    </table>
+    <div class="note">On each account row in the list: “Good at 9 of 12 kinds of work · 1 below the minimum · 2 not measured · See all”.</div>
+  </div>
+</section>
+
+<!-- 27 + 28 + 31 -->
+<section class="q" id="q27" style="padding-bottom: 96px">
+  <h1>27 · 28 · 31 · Today: a moved meeting, held lines, the rules review</h1>
+  <p class="ask">27: one group line per move, expanded in place, with one row per thing to check. 28: the reason first, the button saying what it does, and the other answer visible because it is an answer, not a postponement. 31: “Not now” goes in the menu, because it puts the line off rather than answering it.</p>
+  <div class="panel" style="overflow: visible">
+    <header><h2>Needs you</h2><span class="meta">6 · most urgent first</span></header>
+    <div class="group">Decide</div>
+    <div class="line"><span class="pill warn">Moved</span>
+      <div><div class="t">Print sync moved to Thu, Oct 22 · 2 things to check</div><div class="s">From Sam Rivera’s calendar change · 1 question also went to Theo Brandt (in Follow-ups)</div>
+        <div class="children">
+          <div class="child"><div><div class="t">Should “Send the interior file to the printer” move to Thu, Oct 22?</div><div class="because">Yours · due Tue, Oct 20, the day before the old print sync</div></div><div class="acts"><button class="btn primary">Move it to Oct 22</button><button class="btn">Keep Oct 20</button></div></div>
+          <div class="child"><div><div class="t">Does the plan still hold?</div><div class="because">Proof approval (Nov 3) still comes after the new date · nothing else is tied to it</div></div><div class="acts"><button class="btn primary">It holds</button><button class="btn">Needs a change…</button></div></div>
+        </div></div>
+      <div class="acts" style="align-self:start"><button class="btn ghost icon more" aria-label="More"></button></div></div>
+    <div class="line"><span class="pill warn">Waiting for you</span>
+      <div><div class="t">Close “Send two spine options”?</div><div class="s">Quill inferred it’s done from Theo Brandt’s email: <q>both spines are in the shared folder</q> · not said outright</div></div>
+      <div class="acts"><button class="btn primary">Close it</button><button class="btn">Keep it open</button><button class="btn ghost icon more" aria-label="More"></button></div></div>
+    <div class="line"><span class="pill warn">Waiting for you</span>
+      <div><div class="t">Drop “Agree the trim size with the printer”?</div><div class="s">Quill thinks it’s no longer needed · <b>Sam Rivera and Theo Brandt were told on Oct 10</b>, so Quill will draft a note to them</div></div>
+      <div class="acts"><button class="btn primary">Drop it and draft the note</button><button class="btn">Keep it</button><button class="btn ghost icon more" aria-label="More"></button></div></div>
+    <div class="group">Look over</div>
+    <div class="line rel"><span class="pill neutral">Rules</span>
+      <div><div class="t">Look over 3 rules Quill never used</div><div class="s">Sent with every run for 30 days, never applied · 1,840 of 4,000 characters</div></div>
+      <div class="acts"><button class="btn primary">Look over</button><button class="btn ghost icon more" aria-label="More" style="background:var(--surface-hover)"></button></div>
+      <div class="menu"><div class="hl">Not now<small>Back on Today on Thu, Oct 22</small></div><div>Open Knowledge</div></div></div>
+  </div>
+</section>
+
+<!-- 29 -->
+<section class="q" id="q29">
+  <h1>29 · Where a fact came from</h1>
+  <p class="ask">The source label sits in the meta line and is itself the “Where it came from” link, so there is one control, not two. An inference gets a dashed-outline “Inferred” tag plus the words. No italics, because italics already mean a quote in “Because” lines.</p>
+  <div class="panel">
+    <header><h2>Facts · The Salt Orchard launch</h2></header>
+    <div class="fact"><div><div class="t">Proof copies ship on Nov 5 by courier.</div><div class="prov">Date · <a href="#">from Jun Park’s email, Oct 9</a></div></div><button class="btn ghost icon more" aria-label="More"></button></div>
+    <div class="fact"><div><div class="t">The launch reading is on Tue, Dec 1 at 7 pm.</div><div class="prov">Event · <a href="#">from you, Oct 8</a></div></div><button class="btn ghost icon more" aria-label="More"></button></div>
+    <div class="fact"><div><div class="t">The interior file is final.</div><div class="prov"><span class="pill outline">≈ Inferred</span> <a href="#">Quill inferred this from Sam Rivera’s note, Oct 12</a> · <button class="btn ghost" style="height:24px;padding:0 6px">Confirm it</button></div></div><button class="btn ghost icon more" aria-label="More"></button></div>
+    <div class="fact"><div><div class="t">The venue holds 80 people.</div><div class="prov"><a href="#">said by Maya Lindqvist (Corner Lamp Books), in Ines Duarte’s notes, Oct 11</a></div></div><button class="btn ghost icon more" aria-label="More"></button></div>
+    <div class="note">Screen-reader text for the tag: “Inferred by Quill, not stated”. Confirming turns it into “from you, today”.</div>
+  </div>
+</section>
+
+<!-- 30 -->
+<section class="q" id="q30">
+  <h1>30 · Meetings and series</h1>
+  <p class="ask">Core gets a plain series page: the next meeting with everything open on it, and the past meetings, so items that roll forward stay findable. Building and sending an agenda stays in the project management pack, which adds its buttons to this page.</p>
+  <div class="series">
+    <div class="panel">
+      <header><h2>Print sync</h2><span class="meta">Every Thursday · The Salt Orchard launch</span><span class="spacer"></span><button class="btn ghost icon more" aria-label="More"></button></header>
+      <div class="group">Next: Thu, Oct 22, 10:00 · 3 open</div>
+      <div class="person">Sam Rivera</div>
+      <div class="line"><span class="pill neutral">Action</span><div><div class="t">Send the interior file to the printer</div><div class="s">Due Tue, Oct 20 · moved from Oct 15’s print sync</div></div><div class="acts"><button class="btn ghost icon more" aria-label="More"></button></div></div>
+      <div class="person">Jun Park</div>
+      <div class="line"><span class="pill need">Question</span><div><div class="t">Can proof copies ship by Nov 3?</div><div class="s">Sent Oct 12 · waiting 3 days</div></div><div class="acts"><button class="btn ghost icon more" aria-label="More"></button></div></div>
+      <div class="person">You</div>
+      <div class="line"><span class="pill need">Decision</span><div><div class="t">Matte or soft-touch cover finish?</div><div class="s">For this meeting · from Theo Brandt</div></div><div class="acts"><button class="btn primary">Answer</button><button class="btn ghost icon more" aria-label="More"></button></div></div>
+      <div class="group">Past meetings</div>
+      <div class="past"><time>Thu, Oct 15</time><span>3 settled · 1 moved to Oct 22</span></div>
+      <div class="past"><time>Thu, Oct 8</time><span>5 settled</span></div>
+      <div class="note">An item’s row elsewhere shows “for Thursday’s print sync” as a link to this page. The pack adds “Build the agenda” and “Copy agenda” to the header.</div>
+    </div>
+    <div class="panel">
+      <header><h2>Details</h2></header>
+      <dl class="kv"><dt>Repeats</dt><dd>Every Thursday (in your words)</dd><dt>Project</dt><dd><a href="#">The Salt Orchard launch</a></dd><dt>Usually with</dt><dd>Sam Rivera, Jun Park, Theo Brandt</dd><dt>Open items</dt><dd>Roll to the next meeting when one passes unsettled</dd></dl>
+    </div>
+  </div>
+</section>
+
+<!-- 32 -->
+<section class="q" id="q32">
+  <h1>32 · Copy tables per person</h1>
+  <p class="ask">The table shows before it is copied, as everything copied does. “Your update” is the last and widest column, tinted so the reader sees where to write. No placeholder text, so there is nothing to delete. Rows run oldest-due first, with the project repeated on each row so the table sorts and filters in a spreadsheet.</p>
+  <div class="panel">
+    <header><h2>Maya Okafor</h2><span class="meta">Editor · 2 actions · 2 questions</span><span class="spacer"></span><span class="tabs"><span>Message</span><span class="on">Table</span></span></header>
+    <div class="caption">Actions</div>
+    <table>
+      <thead><tr><th style="width:18%">Project</th><th style="width:30%">Action</th><th style="width:12%">Due</th><th style="width:10%">Link</th><th class="fill">Your update</th></tr></thead>
+      <tbody>
+        <tr><td>The Salt Orchard launch</td><td>Agree on the back-cover copy with Ines</td><td class="num"><span class="overdue">Wed, Oct 14 · overdue</span></td><td><a href="#">Book page</a></td><td class="fill"></td></tr>
+        <tr><td>The Salt Orchard launch</td><td>Send the acknowledgments page</td><td class="num">Fri, Oct 23</td><td>—</td><td class="fill"></td></tr>
+      </tbody>
+    </table>
+    <div class="caption">Questions</div>
+    <table>
+      <thead><tr><th style="width:18%">Project</th><th style="width:30%">Question</th><th style="width:12%">First asked</th><th style="width:10%">Link</th><th class="fill">Your answer</th></tr></thead>
+      <tbody>
+        <tr><td>The Salt Orchard launch</td><td>Do we have written permission for the epigraph?</td><td class="num">Oct 10</td><td><a href="#">Book page</a></td><td class="fill"></td></tr>
+        <tr><td>The Salt Orchard launch</td><td>Which author bio goes on the jacket?</td><td class="num">Not sent yet</td><td>—</td><td class="fill"></td></tr>
+      </tbody>
+    </table>
+    <div class="copybar"><button class="btn primary">Copy as table</button><button class="btn">Copy for a spreadsheet</button><span class="hint">“For a spreadsheet” copies tab-separated cells with full web addresses. “As table” keeps link names for mail and chat.</span><span class="spacer"></span><button class="btn">Mark sent</button></div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
