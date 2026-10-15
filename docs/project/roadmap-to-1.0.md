@@ -1481,8 +1481,9 @@ From the original designer's lessons of 2026-10-14:
 - [ ] **Settings:** nav | form | help, save bar or autosave with Undo, "Changed · Reset", and pickers for time zone,
   language, money and dates. Appearance has the contrast warning; admin sections sit inside Settings.
 - [ ] **Add an account in Settings, in place** (owner, 2026-10-15; design 7.16): the button opens only the AI account
-  form (service, key, models, what it is for) inside Settings, never the setup guide. *Today:* it opens the setup guide
-  at its AI step.
+  form (service, key, models, what it is for) inside Settings, never the setup guide. "What it is for" offers the
+  assistant's work or a backup for it, so a backup is set in the same form (checked first, as "Use as backup" is).
+  *Today:* it opens the setup guide at its AI step, and a backup is set afterwards from the account's row.
 - [ ] **Setup guide** as steps | step.
 - [ ] **The header shows the assistant is alive** (the original designer's lessons from running, 2026-10-13): one short line, always ("The assistant ✓ last run 9:42", the
   account's own label, never a model's name), with today's runs per account, what's queued and the fallback order in its
