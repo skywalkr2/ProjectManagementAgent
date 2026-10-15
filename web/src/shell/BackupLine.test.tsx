@@ -45,3 +45,8 @@ test("it is gone while a backup is current", async () => {
   await waitFor(() => expect(calls.some((c) => c.route === "GET status")).toBe(true));
   expect(screen.queryByRole("region", { name: "Backup" })).toBeNull();
 });
+
+test("an encrypted backup says so on the line", async () => {
+  show({ configured: true, needs_attention: true, age_hours: 100, encrypted: true });
+  expect(await screen.findByRole("region", { name: "Backup" })).toHaveTextContent("The backups are encrypted.");
+});

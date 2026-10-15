@@ -59,7 +59,8 @@ class Line:
     cover), learned (proposals of what the assistant learned from inputs and from the person's corrections, to look
     over: `count` of them, `origins` counted by where they came from and `expired` how many from inputs expired since
     the person last looked), catch_up (what the assistant learned from corrections made before it could: `count`
-    waiting and `left_out`, how many kinds of correction were too many for one list), send or nudge. `count` is how
+    waiting and `left_out`, how many kinds of correction were too many for one list), extractor (a kind of file that
+    isn't being read: `file_kind` is the kind, and `text` why), send or nudge. `count` is how
     many things the line covers; `text` the decision, question or held item in one line; `title` the input the line
     is about; `outcome` what the assistant did, counted by kind; `waiting` why the work stopped, as the engine said
     it."""
@@ -101,6 +102,7 @@ class Line:
     tier: str | None = None
     model: str | None = None
     check_failed: bool | None = None
+    file_kind: str | None = None
     since: str = ""
 
 
@@ -224,6 +226,21 @@ def queue(ws: Any, store: Any, cfg: Any, now: datetime, handover: tuple[str, str
                 request=req.id,
                 waiting=d.get("waiting"),
                 since=str(d.get("created_at") or ""),
+            )
+        )
+
+    from engine.extract import health
+
+    for problem in health.problems(ws):
+        # A kind of file that can't be read is never a silent stop: nothing in such files reaches the assistant.
+        lines.append(
+            Line(
+                key=f"extractor:{problem.kind}",
+                group="risk",
+                kind="extractor",
+                text=problem.reason,
+                file_kind=problem.kind,
+                since=problem.since,
             )
         )
 
@@ -522,6 +539,7 @@ _KIND_ORDER = {
     "offline": 1,
     "overdue": 2,
     "account_check": 1,
+    "extractor": 1,
     "review": 0,
     "rule_review": 1,
     "learned": 2,

@@ -15,16 +15,16 @@ export function backupAge(b: S["BackupStatus"], t: T): string | null {
 export function backupText(b: S["BackupStatus"], t: T): string {
   if (!b.configured) return t("backup.none");
   const age = backupAge(b, t);
-  if (age === null) return b.last_error ? t("backup.failed") : t("backup.never");
-  return b.needs_attention ? t("backup.overdue", { age }) : t("backup.ok", { age });
+  const text = age === null ? (b.last_error ? t("backup.failed") : t("backup.never")) : b.needs_attention ? t("backup.overdue", { age }) : t("backup.ok", { age });
+  return b.encrypted ? `${text} · ${t("backup.encrypted")}` : text;
 }
 
 /** What Today's line says: the action first, then why. */
 export function backupLineText(b: S["BackupStatus"], t: T): string {
   if (!b.configured) return t("backup.line.none");
   const age = backupAge(b, t);
-  if (age === null) return t(b.last_error ? "backup.line.failed" : "backup.line.never");
-  return t("backup.line.overdue", { age });
+  const text = age === null ? t(b.last_error ? "backup.line.failed" : "backup.line.never") : t("backup.line.overdue", { age });
+  return b.encrypted ? `${text} ${t("backup.line.encrypted")}` : text;
 }
 
 /** What the header chip adds after its word once a backup has succeeded, so the age is always in view. */

@@ -34,8 +34,8 @@ ADD_ONS = "add-ons"
 #: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
 #: each request; where and how often backups go, for each backup; how often the readable export is written; the watched
 #: sources, for each read; whether and how corrections are learned from, for each correction and each learning run; the
-#: scan for new terms, for each input; the window and the smallest week of the quality figures, for each time
-#: they are asked for).
+#: scan for new terms, for each input; how much of a file is read, for each file; the window and the smallest week of
+#: the quality figures, for each time they are asked for).
 #: Any other change waits for a restart the person chooses.
 LIVE_KEYS = (
     "ai.",
@@ -47,6 +47,8 @@ LIVE_KEYS = (
     "storage.backups.",
     "storage.export.every_minutes",
     "storage.sync.shared",
+    "storage.files.read_max_mb",
+    "storage.files.read_max_chars",
     "watch.",
     "language.bare_confirmation_words",
     "language.rule_report_phrases",
@@ -275,7 +277,18 @@ class Worker:
         if held:
             self.events.changed()
 
+    def check_readers(self) -> None:
+        """Have each reader of files read a tiny file of its own kind; one that fails is a line on Today."""
+        from engine.extract import health
+
+        try:
+            if health.self_test(self.ws):
+                self.events.changed()
+        except Exception:  # a check that can't run must not stop the app; the readers are used and fail on their own
+            log.exception("checking the file readers failed")
+
     def start(self) -> None:
+        self.check_readers()
         if any(requeue_interrupted(self.store)):
             self.events.changed()
         self._thread = threading.Thread(target=self._loop, name="cockpit-worker", daemon=True)

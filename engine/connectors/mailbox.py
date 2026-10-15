@@ -1,6 +1,7 @@
 """The mailbox connector: new messages in one folder of a mailbox, read over IMAP with TLS, and never changed there
 (messages are fetched without being marked as read). Each message is an item keyed by its Message-ID, with its sender,
-date, subject and plain text. Only messages after the last one seen are read, so the listing is not complete.
+date, subject and plain text, and its attachments as files for the core to read. Only messages after the last one seen
+are read, so the listing is not complete.
 
 The password is a secret reference: many mail services issue an app password for this. Accounts that only allow
 sign-in through their own pages need a plugin that provides that sign-in.
@@ -21,7 +22,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from engine.connectors import ConnectorContext, ConnectorError, MessageDetails, Poll, SourceItem
+from engine.connectors import ConnectorContext, ConnectorError, ItemFile, MessageDetails, Poll, SourceItem
 from engine.connectors.feed import plain
 from engine.secrets import SecretHint
 
@@ -58,18 +59,31 @@ def message_item(raw: bytes) -> SourceItem | None:
         if message.get(header):
             lines.append(f"{header}: {' '.join(str(message.get(header)).split())}")
     lines += [f"Subject: {subject}", "", body_text(message)]
-    attached = (
-        [p.get_filename() for p in message.iter_attachments() if p.get_filename()] if message.is_multipart() else []
-    )
-    if attached:
-        lines += ["", "Attached: " + ", ".join(attached)]
+    files = attachments(message)
     received = _received(str(message.get("Date") or ""))
     details = MessageDetails(
         sender=sender, received=received, bulk=is_bulk(message), participants=participants(message)
     )
     return SourceItem(
-        key, subject[:200], "\n".join(lines).strip(), sender, str(message.get("Date") or "") or None, message=details
+        key,
+        subject[:200],
+        "\n".join(lines).strip(),
+        sender,
+        str(message.get("Date") or "") or None,
+        message=details,
+        files=files,
     )
+
+
+def attachments(message: EmailMessage) -> tuple[ItemFile, ...]:
+    """The message's attachments that have a file name, as files for the core to read; the core limits their size."""
+    found = []
+    for part in message.iter_attachments() if message.is_multipart() else []:
+        name = part.get_filename()
+        data = part.get_payload(decode=True)
+        if name and isinstance(data, bytes):
+            found.append(ItemFile(" ".join(str(name).split()), part.get_content_type(), data))
+    return tuple(found)
 
 
 def participants(message: EmailMessage) -> tuple[str, ...]:

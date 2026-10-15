@@ -2,7 +2,7 @@ import type { S } from "../lib/api";
 import { aliveState, initials, isWarn, worstState } from "./status";
 
 const status = (over: Partial<S["Status"]> = {}, backup: Partial<S["BackupStatus"]> = {}, spend: Partial<S["SpendStatus"]> = {}): S["Status"] => ({
-  backup: { configured: true, last_success: null, age_hours: 1, needs_attention: false, last_error: null, ...backup },
+  backup: { configured: true, last_success: null, age_hours: 1, needs_attention: false, last_error: null, encrypted: false, ...backup },
   ai: { state: "ok", detail: null },
   assistant: { last_run_at: null, last_run_failed: false, runs_today: [], queued: 0, oldest_queued_since: null, chains: [], paused: [] },
   spend: { today_usd: 0, month_usd: 0, per_day_usd: 2, per_month_usd: 30, warn: false, warn_today: false, warn_month: false, ...spend },
@@ -65,7 +65,7 @@ const alive = (over: Partial<S["Status"]> = {}, restartPhase = "idle", assistant
 test("the assistant's line is fine when nothing is wrong, whatever else the chip says", () => {
   expect(alive()).toEqual({ kind: "fine", tone: "ok" });
   expect(alive({}, "idle", { queued: 3 })).toEqual({ kind: "fine", tone: "ok" });
-  expect(alive({ backup: { configured: true, last_success: null, age_hours: 100, needs_attention: true, last_error: null } })).toEqual({ kind: "fine", tone: "ok" });
+  expect(alive({ backup: { configured: true, last_success: null, age_hours: 100, needs_attention: true, last_error: null, encrypted: false } })).toEqual({ kind: "fine", tone: "ok" });
 });
 
 test("the assistant's line is amber for the states that hold its work up", () => {

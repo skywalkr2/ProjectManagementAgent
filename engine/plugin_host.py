@@ -741,6 +741,56 @@ class PluginHost:
         self.succeeded(plugin, where)
         return " ".join(reason.split()) if reason else None
 
+    def read_with_plugins(self, media_type: str, data: bytes, name: str) -> tuple[str, str] | None:
+        """The text of a file from the first running plugin whose extractor takes this media type and doesn't decline
+        it, as (the extractor's label, text); None when none does, and the core's own reader follows. An extractor
+        that can't read the file raises `ExtractError` with its label as the kind; one that crashes or answers with
+        anything but text or None is contained like a job, and the file goes on to the next reader."""
+        from engine.extract.core import ExtractError
+
+        for plugin, registrar in sorted(self.registrars.items()):
+            if not self.active(plugin):
+                continue
+            for registration in registrar.extractors.values():
+                if media_type not in registration.media_types:
+                    continue
+                where = f"extractor {registration.name}"
+                try:
+                    text = registration.extract(data, name)
+                    if text is not None and not isinstance(text, str):
+                        raise ValueError("an extractor returns text or None")
+                except ExtractError as err:
+                    self.succeeded(plugin, where)
+                    raise ExtractError(err.reason, registration.label) from None
+                except Exception as err:
+                    self.failed(plugin, where, err)
+                    continue
+                self.succeeded(plugin, where)
+                if text is not None:
+                    return registration.label, text
+        return None
+
+    def file_text(self, file_id: str) -> str:
+        """A file's text by id, read the way a connector's attachment is: the plugins' extractors first, then the
+        core's. Raises `StoreError` in plain words when it can't be read."""
+        from engine.extract import read_file
+        from engine.extract.core import ExtractError
+        from engine.files import read_bytes
+
+        record, data = read_bytes(self.store, file_id)
+        limits = self.cfg.storage.files
+        try:
+            return read_file(
+                data,
+                record.data["name"],
+                record.data["media_type"],
+                max_chars=limits.read_max_chars,
+                max_bytes=int(limits.read_max_mb * 1024 * 1024),
+                plugin=self.read_with_plugins,
+            ).text
+        except ExtractError as err:
+            raise StoreError(f"{record.data['name']} can't be read: {err.reason}") from None
+
     def connector_context(self, plugin: str, workspace_root: Any) -> Any:
         """What a plugin's connector gets: a web client for its declared hosts, and its declared secrets."""
         from engine.connectors import ConnectorContext
@@ -1313,6 +1363,7 @@ class PluginHost:
             ("lints", registrar.lints),
             ("text_formats", registrar.text_formats),
             ("working_copies", registrar.working_copies),
+            ("extractors", registrar.extractors),
             ("derived_files", registrar.derived_files),
             ("panels", registrar.panels),
             ("today", registrar.today_lines),
@@ -1573,6 +1624,7 @@ class PluginHost:
         from engine.texts import read_text
 
         view.read_file = lambda file_id: read_bytes(self.store, file_id)[1]
+        view.read_file_text = self.file_text
         view.read_text = lambda sha256: read_text(self.store, sha256)
         view.read_source = lambda digest: _source_text(self.store, digest)
         plugin = getattr(view, "_ReadView__plugin", None)

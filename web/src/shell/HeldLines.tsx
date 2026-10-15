@@ -1,7 +1,7 @@
 // Today's lines for work that has stopped or that needs a look before it can go on (design 7.7, 8.5): work held until the
 // app restarts, an AI account paused until its usage limit resets, work waiting for the network, the synced folder that
-// can't be used until the person settles which copy to keep, a backup account that hasn't passed its check, and the
-// standing rules to look over.
+// can't be used until the person settles which copy to keep, a backup account that hasn't passed its check, a kind of
+// file that isn't being read, and the standing rules to look over.
 // Each is one row that says what to do first, with the one button that does it. The lines come from the Today queue; a
 // line is gone once its cause is, and only the person's own click ever restarts the app.
 import { useQuery } from "@tanstack/react-query";
@@ -18,7 +18,7 @@ import styles from "./HeldLines.module.css";
 
 type Line = S["QueueLineView"];
 
-const SHOWN: Line["kind"][] = ["restart", "paused", "offline", "handover", "account_check", "rule_review", "catch_up_go"];
+const SHOWN: Line["kind"][] = ["restart", "paused", "offline", "handover", "account_check", "extractor", "rule_review", "catch_up_go"];
 
 export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
   const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
@@ -35,6 +35,8 @@ export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover:
           <OfflineLine key={line.key} line={line} />
         ) : line.kind === "account_check" ? (
           <AccountCheckLine key={line.key} line={line} />
+        ) : line.kind === "extractor" ? (
+          <ExtractorLine key={line.key} line={line} />
         ) : line.kind === "rule_review" ? (
           <RuleReviewLine key={line.key} line={line} onOpen={props.onOpenRules} />
         ) : line.kind === "catch_up_go" ? (
@@ -177,6 +179,24 @@ function AccountCheckLine(props: { line: Line }) {
         <Button size="sm" variant="primary" loading={checking} aria-label={t("queue.account_check.run_named", { account, work })} onClick={() => void run()}>
           {t("queue.account_check.run")}
         </Button>
+      </div>
+    </section>
+  );
+}
+
+/** A kind of file that isn't being read: it says which and why. It has no button; it goes once a file of that kind reads
+ * well. */
+function ExtractorLine(props: { line: Line }) {
+  const { t, has } = useWords();
+  const { line } = props;
+  const kind = line.file_kind ?? "";
+  const named = has(`queue.extractor.kind.${kind}`) ? t(`queue.extractor.kind.${kind}`) : kind;
+  return (
+    <section className={styles.line} aria-label={t("queue.extractor.label")} data-queue-line="extractor">
+      <Pill tone="warn">{t("queue.extractor.label")}</Pill>
+      <div className={styles.body}>
+        <p className={styles.text}>{t("queue.extractor", { kind: named, reason: line.text ?? "" })}</p>
+        <p className={styles.sub}>{t("queue.extractor.sub")}</p>
       </div>
     </section>
   );

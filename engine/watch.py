@@ -24,6 +24,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from engine.connectors import CORE, Connector, ConnectorContext, ConnectorError, SourceItem
+from engine.extract.attached import with_files_read
 from engine.storage import StoreError, WriteContext
 from engine.triage import classify
 
@@ -235,8 +236,10 @@ def _compare(
     listed = set()
     entries: list[_Entry] = []
     unplaced: dict[str, dict[str, Any]] = {}
-    for item in poll.items:
-        listed.add(item.key)
+    for polled in poll.items:
+        listed.add(polled.key)
+        # Files an item carries are read as text first, so the item is compared and handed in with their words.
+        item = with_files_read(ws, store, cfg, polled, source.label or source.id)
         digest = _keep_text(ws, item.text)
         before = seen.get(item.key)
         if before is not None and before.data.get("deleted"):

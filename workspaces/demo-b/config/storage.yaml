@@ -11,9 +11,12 @@ backups:
   keep: 30
   automatic: true
   retry_minutes: 30
+  encrypt: ""   # e.g. file:~/keys/backup.key; empty: backups are not encrypted
 files:
   max_file_mb: 50
   max_total_mb: 2000
+  read_max_mb: 25
+  read_max_chars: 30000
 sync:
   folder: ""   # e.g. ~/CloudDrive/cockpit; off until set
   watch_outside_edits: true

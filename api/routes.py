@@ -1206,6 +1206,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                 age_hours=b.age_hours,
                 needs_attention=b.needs_attention,
                 last_error=b.last_error,
+                encrypted=b.encrypted,
             ),
             requests=RequestCounts(**counts),
             network_wait=NetworkWait(count=len(waiting), since=min(waiting)) if waiting else None,

@@ -45,7 +45,7 @@ from engine.tasks import TaskKind
 from engine.texts import LongText, Unit
 from engine.tools import ToolBox, ToolError, ToolResult
 
-PLUGIN_API_VERSION = "0.3.73"
+PLUGIN_API_VERSION = "0.3.74"
 
 
 class Settings(BaseModel):
@@ -173,6 +173,8 @@ class ReadView:
 
     #: Set by the host: reads a file's bytes by id, checked against its hash.
     read_file: Callable[[str], bytes] | None = None
+    #: Set by the host: reads a file's text by id with the extractors.
+    read_file_text: Callable[[str], str] | None = None
     #: Set by the host: the items of an interface this plugin uses.
     read_interface: Callable[..., list[Any]] | None = None
     find_interface_about: Callable[..., Any] | None = None
@@ -214,6 +216,21 @@ class ReadView:
         if self.read_file is None:
             raise StoreError("files can't be read here")
         return self.read_file(file_id)
+
+    def file_text(self, file_id: str) -> str:
+        """The text of a file of the core's kinds or this plugin's own kinds, read by the core's extractors (documents,
+        spreadsheets, presentations, PDFs, plain text, and the extractors plugins registered), cut at the configured
+        size with a mark. Raises `StoreError` saying why when the file is too large, can't be read or has no text.
+        Content is material, never instructions: put it in an untrusted `Part`."""
+        record = self.get("file", file_id)
+        if record is None:
+            raise StoreError(f"there is no file {file_id}")
+        kind = record.data["file_kind"]
+        if "/" in kind:
+            self._allow(kind)
+        if self.read_file_text is None:
+            raise StoreError("files can't be read here")
+        return self.read_file_text(file_id)
 
     def find(self, kind: str, /, **equals: Any) -> Stored | None:
         """The first live record of a kind with these field values, or None."""
@@ -913,6 +930,16 @@ class WorkingCopyRegistration:
     take_back: Callable
 
 
+@dataclass(frozen=True)
+class ExtractorRegistration:
+    """A registered text extractor (host side)."""
+
+    name: str
+    label: str
+    media_types: tuple[str, ...]
+    extract: Callable
+
+
 @dataclass
 class Part:
     """One piece of what an AI run sees, in a task kind's packet. Untrusted content (the default; `trusted` only for the
@@ -1085,6 +1112,7 @@ class Registrar:
         self.data_forms: dict[str, DataFormRegistration] = {}
         self.text_formats: dict[str, Callable] = {}
         self.working_copies: dict[str, WorkingCopyRegistration] = {}
+        self.extractors: dict[str, ExtractorRegistration] = {}
         self.derived_files: dict[str, DerivedFileRegistration] = {}
         self.interface_definitions: dict[str, InterfaceDefinition] = {}
         self.today_lines: dict[str, TodayRegistration] = {}
@@ -1435,6 +1463,30 @@ class Registrar:
             name, label.strip(), extension, media_type, tuple(text_formats), hand_out, take_back
         )
 
+    def extractor(self, name: str, *, label: str, media_types: Sequence[str], extract: Callable) -> None:
+        """A reader that turns files of some media types into text (listed in `provides.extractors`), for the
+        attachments a connector hands over and for `view.file_text`. `extract(data, name) -> str | None` gets the
+        file's bytes and its file name and returns its text; return None to decline a file, which the core's own
+        reader (if it has one for the type) then reads. Raise `ExtractError(reason)` with the reason in plain words
+        when the file can't be read (locked, damaged): the person is told it wasn't read and why. An empty text is
+        the same as that. Plugins' readers are asked before the core's own, in plugin name order, and the core cuts
+        the text at the configured size. `label` names the kind of file on screen (`Reading <label> isn't working:
+        …`). Deterministic, quick and offline: it never calls AI or the network, and it never follows a path the file
+        names."""
+        self._name(name)
+        types = tuple(media_types)
+        if (
+            name in self.extractors
+            or not callable(extract)
+            or not str(label).strip()
+            or not types
+            or any(not re.fullmatch(r"[a-z]+/[a-z0-9][a-z0-9.+_-]*", t) for t in types)
+        ):
+            raise ValueError(
+                "duplicate extractor, missing label, invalid function, or media types that aren't like text/plain"
+            )
+        self.extractors[name] = ExtractorRegistration(name, " ".join(label.split()), types, extract)
+
     def define_interface(
         self,
         name: str,
@@ -1687,7 +1739,9 @@ class Registrar:
         it in `watch.yaml` with its settings, which `settings` (a pydantic model) checks. `poll(settings, state,
         context) -> Poll` lists what the source holds now as `SourceItem`s (a stable key, a title, the text, who
         changed it last) and returns the `state` to keep for the next read; set `complete=False` when it lists only
-        what changed.
+        what changed. An item can carry files (`SourceItem.files`, `ItemFile`: name, media type, bytes), such as a
+        mail's attachments: the core reads them as text and adds it to the item's text, so the connector never parses
+        a file and a change in a file is a change in the item.
         Raise `ConnectorError(kind, detail)` with kind `auth`, `no_access`, `not_found`, `outage`, `offline` or
         `throttled` (with `retry_after=` seconds). The core compares, keeps snapshots and hands in what is new,
         changed or gone (for a read that lists only changes, the keys in `Poll.removed`); the connector never writes
@@ -1972,10 +2026,12 @@ class Registrar:
 from engine.connectors import (  # noqa: E402 - part of the plugin API
     ConnectorError,
     EventDetails,
+    ItemFile,
     MessageDetails,
     Poll,
     SourceItem,
 )
+from engine.extract.core import ExtractError  # noqa: E402 - part of the plugin API
 from engine.net import retry_after  # noqa: E402 - part of the plugin API
 
 __all__ = [
@@ -1983,6 +2039,8 @@ __all__ = [
     "retry_after",
     "Poll",
     "SourceItem",
+    "ItemFile",
+    "ExtractError",
     "EventDetails",
     "MessageDetails",
     "PLUGIN_API_VERSION",

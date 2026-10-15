@@ -246,3 +246,16 @@ test("catch-up runs with no price say they use the plan's allowance", async () =
     "Learn from 1 kind of earlier correction. It uses your plan's allowance.",
   );
 });
+
+test("a kind of file that isn't being read is one line with its kind and why, and no button", async () => {
+  show([line("extractor", { key: "extractor:pdf", file_kind: "pdf", text: "the PDF is locked with a password" })]);
+  const row = await screen.findByRole("region", { name: "Reading files" });
+  expect(row).toHaveTextContent("Reading PDFs isn't working: the PDF is locked with a password");
+  expect(row).toHaveTextContent("This line goes once a file of this kind reads well.");
+  expect(within(row).queryByRole("button")).toBeNull();
+});
+
+test("a kind of file an add-on named itself is shown as the add-on called it", async () => {
+  show([line("extractor", { key: "extractor:Drawings", file_kind: "Drawings", text: "it stopped" })]);
+  expect(await screen.findByRole("region", { name: "Reading files" })).toHaveTextContent("Reading Drawings isn't working: it stopped");
+});

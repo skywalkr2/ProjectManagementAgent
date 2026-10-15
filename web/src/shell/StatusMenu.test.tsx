@@ -46,6 +46,13 @@ test("all good: the chip says Live in words, and the popover says when the scree
   expect(within(dialog).getByText("Backed up less than an hour ago")).toBeInTheDocument();
 });
 
+test("the popover says the backup is encrypted when it is", async () => {
+  const user = userEvent.setup();
+  show(statusFixture({}, { backup: { configured: true, age_hours: 0.5, needs_attention: false, encrypted: true } }));
+  const dialog = await open(user);
+  expect(within(dialog).getByText("Backed up less than an hour ago · Encrypted")).toBeInTheDocument();
+});
+
 test("once a backup has succeeded the chip itself shows its age, and its name says it too", async () => {
   show(statusFixture({}, { backup: { configured: true, age_hours: 3, needs_attention: false } }));
   await chipText("Live");

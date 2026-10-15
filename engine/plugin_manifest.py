@@ -122,6 +122,9 @@ class Provides(Strict):
     lints: list[str] = Field(default_factory=list, description="Lints the plugin registers.")
     text_formats: list[str] = Field(default_factory=list, description="Long text formats the plugin registers.")
     working_copies: list[str] = Field(default_factory=list, description="Working-copy formats the plugin registers.")
+    extractors: list[str] = Field(
+        default_factory=list, description="Readers that turn files of some media types into text."
+    )
     derived_files: list[str] = Field(
         default_factory=list, description="Files the plugin generates from its records into each project's folder."
     )
@@ -255,6 +258,7 @@ class Manifest(Strict):
             "lints",
             "text_formats",
             "working_copies",
+            "extractors",
             "derived_files",
             "panels",
             "today",

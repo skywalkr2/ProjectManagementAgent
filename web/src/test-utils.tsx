@@ -51,7 +51,7 @@ export function renderApp(ui: ReactNode, overrides: Record<string, string> = {},
 /** A status answer with nothing wrong, for tests to change a part of. */
 export function statusFixture(over: Partial<S["Status"]> = {}, parts: { backup?: Partial<S["BackupStatus"]>; spend?: Partial<S["SpendStatus"]>; ai?: S["AiState"]; assistant?: Partial<S["AssistantStatus"]> } = {}): S["Status"] {
   return {
-    backup: { configured: false, last_success: null, age_hours: null, needs_attention: false, last_error: null, ...parts.backup },
+    backup: { configured: false, last_success: null, age_hours: null, needs_attention: false, last_error: null, encrypted: false, ...parts.backup },
     ai: parts.ai ?? { state: "ok", detail: null },
     assistant: { last_run_at: null, last_run_failed: false, runs_today: [], queued: 0, oldest_queued_since: null, chains: [], paused: [], ...parts.assistant },
     spend: { today_usd: 0, month_usd: 0, per_day_usd: 2, per_month_usd: 30, warn: false, warn_today: false, warn_month: false, ...parts.spend },

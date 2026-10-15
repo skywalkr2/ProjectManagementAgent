@@ -8,6 +8,7 @@ returns plain data and raises `ConnectorError` with a kind: `auth` (sign in agai
 
 from __future__ import annotations
 
+import base64
 import logging
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
@@ -16,6 +17,8 @@ from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from engine.extract import media_type_of, reader_for
 
 ErrorKind = Literal["auth", "no_access", "not_found", "outage", "offline", "throttled"]
 #: What a connector can say it reads, for the screens that offer mail and calendar services.
@@ -61,6 +64,18 @@ class MessageDetails:
 
 
 @dataclass(frozen=True)
+class ItemFile:
+    """A file an item carries (a mail's attachment, a document in a folder). `name`: its file name. `media_type`: its
+    type as the service says it; when that is missing or generic, the name's ending decides. `data`: its bytes. The
+    core reads it as text with its readers (a plugin's reader for the type first), cuts the text at the configured
+    size and adds it to the item's text, so a connector never parses a file and hands over what it has."""
+
+    name: str
+    media_type: str
+    data: bytes
+
+
+@dataclass(frozen=True)
 class SourceItem:
     """One thing a source holds. `key`: stable within the source (a message or event id), so the same thing read
     again is compared with what was seen. `title`: one line naming it. `text`: everything the assistant should read
@@ -68,7 +83,7 @@ class SourceItem:
     names them (triage rules compare it with `workspace.our_accounts`). `changed_at`: when, as the service says it.
     `link`: where the person can open it. `event` or `message` (at most one): what it is, for a calendar item or a
     mail item, so Today can show the day's agenda and what came in; the text still says everything the assistant
-    reads."""
+    reads. `files`: the files it carries (attachments), which the core reads and adds to the text."""
 
     key: str
     title: str
@@ -78,6 +93,7 @@ class SourceItem:
     link: str | None = None
     event: EventDetails | None = None
     message: MessageDetails | None = None
+    files: tuple[ItemFile, ...] = ()
 
 
 @dataclass
@@ -139,6 +155,7 @@ def checked_poll(poll: Any) -> Poll:
         if not all(isinstance(v, str) for v in (item.key, item.title, item.text)) or not item.key:
             raise ValueError("a SourceItem has a key, a title and its text, all text")
         _check_details(item)
+        _check_files(item)
     if not isinstance(poll.state, dict):
         raise ValueError("a Poll's state is a dict")
     if not all(isinstance(k, str) and k for k in poll.removed):
@@ -149,6 +166,16 @@ def checked_poll(poll: Any) -> Poll:
     if len(keys) != len(set(keys)):
         raise ValueError("a Poll lists each key once")
     return poll
+
+
+def _check_files(item: SourceItem) -> None:
+    if not isinstance(item.files, (tuple, list)):
+        raise ValueError(f"item {item.key!r}: files is a list of ItemFile")
+    for file in item.files:
+        if not isinstance(file, ItemFile):
+            raise ValueError(f"item {item.key!r}: files is a list of ItemFile")
+        if not isinstance(file.name, str) or not isinstance(file.media_type, str) or not isinstance(file.data, bytes):
+            raise ValueError(f"item {item.key!r}: a file has a name and a media type (text) and its data (bytes)")
 
 
 def moment(value: str, *, all_day: bool = False) -> datetime | date:
@@ -263,7 +290,9 @@ class FolderSettings(BaseModel):
 
     path: str = Field(min_length=1, description="The folder: a full path, or one inside the workspace's folder.")
     patterns: list[str] = Field(
-        default_factory=lambda: ["*.txt", "*.md"], description="Which files to read, as name patterns."
+        default_factory=lambda: ["*.txt", "*.md"],
+        description="Which files to read, as name patterns. Documents, spreadsheets, presentations and PDFs are read "
+        "as text too.",
     )
     subfolders: bool = Field(True, description="Read the folders inside it too.")
     max_kb: int = Field(512, ge=1, description="Files larger than this are listed as too large and not read.")
@@ -290,6 +319,21 @@ def _read_folder(settings: FolderSettings, state: dict[str, Any], context: Conne
                     SourceItem(key, path.name, f"(not read: larger than {settings.max_kb} KB)", changed_at=modified)
                 )
                 continue
+            media = media_type_of(path.name, None)
+            reader = reader_for(media)
+            if reader is not None and reader.kind != "text":
+                # A document, spreadsheet, presentation or PDF: handed over as bytes, read by the core.
+                try:
+                    data = path.read_bytes()
+                except OSError:
+                    items.append(
+                        SourceItem(key, path.name, "(not read: the file can't be opened)", changed_at=modified)
+                    )
+                    continue
+                items.append(
+                    SourceItem(key, path.name, "", changed_at=modified, files=(ItemFile(path.name, media, data),))
+                )
+                continue
             try:
                 text = path.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
@@ -306,7 +350,9 @@ class FakeSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     items: list[dict[str, Any]] = Field(
-        default_factory=list, description="What the source holds: key, title, text, and event or message details."
+        default_factory=list,
+        description="What the source holds: key, title, text, event or message details, and files (name, media type "
+        "and data as base64 text).",
     )
     error: ErrorKind | None = Field(None, description="Fail every read with this kind of error.")
 
@@ -319,9 +365,13 @@ def _read_fake(settings: FakeSettings, state: dict[str, Any], context: Connector
     for raw in settings.items:
         item = dict(raw)
         event, message = item.pop("event", None), item.pop("message", None)
+        files = tuple(
+            ItemFile(f["name"], f["media_type"], base64.b64decode(f["data"])) for f in item.pop("files", None) or []
+        )
         items.append(
             SourceItem(
                 **item,
+                files=files,
                 event=EventDetails(**event) if event else None,
                 message=MessageDetails(
                     **{

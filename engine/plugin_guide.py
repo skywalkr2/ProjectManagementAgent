@@ -324,6 +324,8 @@ def build() -> str:
             "What `registrar.connector`'s `poll` returns and raises.",
             "### SourceItem\n\n" + _para(_doc(api.SourceItem)),
             _table(["Field", "Type", "Default"], _dataclass_rows(api.SourceItem)),
+            "### ItemFile\n\n" + _para(_doc(api.ItemFile)),
+            _table(["Field", "Type", "Default"], _dataclass_rows(api.ItemFile)),
             "### EventDetails\n\n" + _para(_doc(api.EventDetails)),
             _table(["Field", "Type", "Default"], _dataclass_rows(api.EventDetails)),
             "### MessageDetails\n\n" + _para(_doc(api.MessageDetails)),

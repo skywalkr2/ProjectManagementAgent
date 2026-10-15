@@ -10,6 +10,17 @@ declare `plugin_api: '>=0.3,<0.4'`; a manifest for an earlier minor version is r
 version range alone. The complete runnable example is
 `plugins/example/`. It ships settings and records in both fictional workspaces.
 
+## What 0.3.74 adds
+
+Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.
+
+- **Text extractors:** `registrar.extractor(name, label=, media_types=, extract=)` with `provides.extractors` registers
+  a reader from a media type to text, used before the core's readers; `extract(data, name)` returns text, returns
+  `None` to decline, or raises `ExtractError(reason)`.
+- **Files on a connector's item:** `SourceItem.files` carries `ItemFile(name, media_type, data)`; the core reads them into
+  the item's text, so a connector never parses documents.
+- `view.file_text(file_id)` reads a file's text with the same readers. `ExtractError` and `ItemFile` are exported.
+
 ## What 0.3.73 adds
 
 Manifests stay `'>=0.3,<0.4'`. Nothing a plugin writes changes.

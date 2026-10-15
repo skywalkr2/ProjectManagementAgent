@@ -227,6 +227,7 @@ class BackupStatus(BaseModel):
     age_hours: float | None
     needs_attention: bool
     last_error: ScreenText | None
+    encrypted: bool = Field(False, description="Whether every backup copy is encrypted (a key is set for it).")
 
 
 class RequestCounts(BaseModel):
@@ -1220,7 +1221,8 @@ class QueueLineView(BaseModel):
     waiting), after which the work runs again by itself; `offline` is work that has waited for the network longer than
     the configured time (`count` waiting, `waiting_since`), which runs again by itself once the network is back;
     `catch_up_go` is the learning runs for the catch-up list held together for one go (`count`, `estimate_usd`,
-    `unpriced`; the go is POST /api/knowledge/catch-up/go)."""
+    `unpriced`; the go is POST /api/knowledge/catch-up/go); `extractor` is a kind of file that isn't being read
+    (`file_kind`, and `text` says why), which clears once a file of that kind reads well."""
 
     key: str = Field(description="Stable while the thing it stands for waits.")
     group: Literal["decide", "risk", "review", "send"]
@@ -1241,6 +1243,7 @@ class QueueLineView(BaseModel):
         "offline",
         "overdue",
         "account_check",
+        "extractor",
         "review",
         "rule_review",
         "learned",
@@ -1326,6 +1329,11 @@ class QueueLineView(BaseModel):
         None,
         description="For a catch_up line: how many kinds of earlier correction were too many for the list and expired "
         "unread.",
+    )
+    file_kind: str | None = Field(
+        None,
+        description="For an extractor line: the kind of file that isn't being read (document, spreadsheet, "
+        "presentation, pdf or text), or the label an add-on gave its own kind. `text` says why.",
     )
     tier: str | None = Field(
         None, description="For an account_check line: the tier whose fallback chain holds the account."

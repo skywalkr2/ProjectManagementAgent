@@ -145,6 +145,10 @@ def _parser() -> argparse.ArgumentParser:
     sp = sub.add_parser("restore", help="make a new workspace from one dated backup folder")
     sp.add_argument("--backup", type=Path, required=True, help="the dated backup folder (it holds cockpit.db)")
     sp.add_argument("path", type=Path, help="the new workspace folder; it must not hold any files")
+    sp.add_argument(
+        "--key",
+        help="for an encrypted backup, where its key is kept: env:NAME or file:/path (asked for when left out)",
+    )
     sp.set_defaults(func=cmd_restore)
 
     sp = sub.add_parser("export", help="write the readable export to data/ and commit it")
@@ -359,10 +363,26 @@ def cmd_init(args: argparse.Namespace) -> int:
 
 
 def cmd_restore(args: argparse.Namespace) -> int:
-    from engine.backup import RestoreError, restore_backup
+    from engine.backup import KeyNeeded, RestoreError, restore_backup
+    from engine.secrets import SecretError, resolve_secret
 
+    key = None
+    if args.key:
+        try:
+            key = resolve_secret(args.key)
+        except SecretError as err:
+            print(f"cockpit: the backup's key can't be read: {err}", file=sys.stderr)
+            return 1
     try:
-        restored = restore_backup(args.backup, args.path)
+        try:
+            restored = restore_backup(args.backup, args.path, key)
+        except KeyNeeded as err:
+            if key is not None or not sys.stdin.isatty():
+                print(f"cockpit: {err} Give --key with where it is kept (env:NAME or file:/path).", file=sys.stderr)
+                return 1
+            import getpass
+
+            restored = restore_backup(args.backup, args.path, getpass.getpass("Key for this backup: "))
     except RestoreError as err:
         print(f"cockpit: {err}", file=sys.stderr)
         return 1

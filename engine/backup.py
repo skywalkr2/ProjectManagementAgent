@@ -4,6 +4,9 @@ A backup is a consistent copy of the database (SQLite's online backup), the conf
 folder in each configured target. Older backups beyond `keep` are removed. The result of the last attempt per target is
 kept in the workspace's private folder, so the app can show the age of the last backup and nag until one succeeds.
 
+When `storage.backups.encrypt` names a key, every file of every copy is encrypted (`engine/backup_crypto.py`) and the
+copy's folder says so; restoring one needs the key, and a wrong key is refused before anything is written.
+
 A backup folder can be made into a new workspace (`restore_backup`): its database is checked first, nothing is written
 into a folder that already has files, and the backup itself is never changed.
 """
@@ -14,13 +17,16 @@ import json
 import shutil
 import sqlite3
 import subprocess
+import tempfile
 import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from engine import backup_crypto
 from engine.config import Config
+from engine.secrets import SecretError, resolve_secret
 from engine.state_file import write_whole
 from engine.workspace import WORKSPACE_GITIGNORE, Workspace
 
@@ -39,6 +45,7 @@ class BackupState:
     needs_attention: bool
     message: str
     last_error: str | None = None
+    encrypted: bool = False
 
 
 def run_backup(ws: Workspace, cfg: Config, now: datetime | None = None) -> dict[str, Any]:
@@ -83,6 +90,24 @@ def _hours(now: datetime, stamp: str) -> float:
 def _run(ws: Workspace, cfg: Config, now: datetime) -> dict[str, Any]:
     stamp = now.strftime("%Y%m%d-%H%M%S")
     status = _load(ws)
+    secret: str | None = None
+    if cfg.storage.backups.encrypt:
+        # With a key set, a backup is never made without it: a key that can't be read fails every target.
+        try:
+            secret = resolve_secret(cfg.storage.backups.encrypt) or ""
+            if not secret.strip():
+                raise SecretError("the key for encrypting backups is empty")
+        except SecretError as err:
+            for target in cfg.storage.backups.targets:
+                prev = status.get(target.path, {})
+                status[target.path] = {
+                    "last_success": prev.get("last_success"),
+                    "last_attempt": now.isoformat(),
+                    "last_error": f"the key for encrypting backups can't be read: {err}",
+                    "label": target.label,
+                }
+            _save(ws, status)
+            return status
     for target in cfg.storage.backups.targets:
         key = target.path
         try:
@@ -94,15 +119,10 @@ def _run(ws: Workspace, cfg: Config, now: datetime) -> dict[str, Any]:
                 raise ValueError(f"{base} isn't there; connect the drive or check the folder")
             dest = _free_folder(base, f"{ws.root.name}-{stamp}")
             dest.mkdir(exist_ok=False)
-            src = sqlite3.connect(ws.db_path)
-            dst = sqlite3.connect(dest / "cockpit.db")
-            with dst:
-                src.backup(dst)
-            src.close()
-            dst.close()
-            for name in BACKUP_FOLDERS:
-                if (ws.root / name).is_dir():
-                    shutil.copytree(ws.root / name, dest / name)
+            if secret is None:
+                _copy(ws, dest)
+            else:
+                _copy_encrypted(ws, dest, secret)
             _prune(base, ws.root.name, cfg.storage.backups.keep)
             status[key] = {
                 "last_success": now.isoformat(),
@@ -122,22 +142,60 @@ def _run(ws: Workspace, cfg: Config, now: datetime) -> dict[str, Any]:
     return status
 
 
+def _database_copy(ws: Workspace, path: Path) -> None:
+    """A consistent copy of the database at `path`, made with SQLite's online backup."""
+    src = sqlite3.connect(ws.db_path)
+    dst = sqlite3.connect(path)
+    try:
+        with dst:
+            src.backup(dst)
+    finally:
+        src.close()
+        dst.close()
+
+
+def _copy(ws: Workspace, dest: Path) -> None:
+    _database_copy(ws, dest / "cockpit.db")
+    for name in BACKUP_FOLDERS:
+        if (ws.root / name).is_dir():
+            shutil.copytree(ws.root / name, dest / name)
+
+
+def _copy_encrypted(ws: Workspace, dest: Path, secret: str) -> None:
+    """The same copy with every file sealed. The database is copied to a temporary folder first (inside the workspace's
+    private folder, which stays on this computer) and removed as soon as it is sealed."""
+    sealer, manifest = backup_crypto.create(secret)
+    backup_crypto.write_manifest(dest, manifest)
+    ws.private_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=ws.private_dir, prefix="backup-") as temporary:
+        plain = Path(temporary) / "cockpit.db"
+        _database_copy(ws, plain)
+        sealer.seal(plain, dest / "cockpit.db", "cockpit.db")
+    for name in BACKUP_FOLDERS:
+        if (ws.root / name).is_dir():
+            backup_crypto.seal_tree(sealer, ws.root / name, dest / name, name)
+
+
 def state(ws: Workspace, cfg: Config, now: datetime | None = None) -> BackupState:
     now = now or datetime.now(UTC)
     targets = cfg.storage.backups.targets
+    encrypted = bool(cfg.storage.backups.encrypt)
     if not targets:
-        return BackupState(False, None, None, True, "No off-device backup is set up.")
+        return BackupState(False, None, None, True, "No off-device backup is set up.", encrypted=encrypted)
     status = _load(ws)
     errors = [s["last_error"] for t in targets if (s := status.get(t.path)) and s.get("last_error")]
     successes = [s["last_success"] for t in targets if (s := status.get(t.path)) and s.get("last_success")]
     if not successes:
         why = f" The last try failed: {errors[0]}" if errors else ""
-        return BackupState(True, None, None, True, "No backup has succeeded yet." + why, errors[0] if errors else None)
+        return BackupState(
+            True, None, None, True, "No backup has succeeded yet." + why, errors[0] if errors else None, encrypted
+        )
     last = max(successes)
     age = (now - datetime.fromisoformat(last)).total_seconds() / 3600
     stale = age > 2 * cfg.storage.backups.every_hours
     message = f"Backed up {_ago(age)}." + (" That's overdue." if stale else "")
-    return BackupState(True, last, round(age, 2), stale, message, errors[0] if errors else None)
+    message += " Encrypted." if encrypted else ""
+    return BackupState(True, last, round(age, 2), stale, message, errors[0] if errors else None, encrypted)
 
 
 def _ago(hours: float) -> str:
@@ -174,6 +232,10 @@ class RestoreError(Exception):
     """A backup can't be made into a workspace; the message says why and nothing was written."""
 
 
+class KeyNeeded(RestoreError):
+    """The backup is encrypted and no key was given."""
+
+
 @dataclass(frozen=True)
 class Restored:
     workspace: Workspace
@@ -181,30 +243,59 @@ class Restored:
     ledger: int
 
 
-def restore_backup(source: Path, target: Path) -> Restored:
+def restore_backup(source: Path, target: Path, key: str | None = None) -> Restored:
     """Make a new workspace in `target` from one dated backup folder. The backup's database is checked first, the copy
     is made with SQLite's online backup, and the copy must open as a workspace. Locks held by the computer that made
-    the backup are dropped, so the restored workspace opens here. Raises `RestoreError` and leaves the target as it was
-    when anything fails; the source is only ever read."""
+    the backup are dropped, so the restored workspace opens here. An encrypted backup needs `key`, the secret it was
+    made with: a missing one raises `KeyNeeded` and a wrong one is refused, before anything is written. Raises
+    `RestoreError` and leaves the target as it was when anything fails; the source is only ever read."""
     source = Path(source).expanduser().resolve()
     target = Path(target).expanduser().resolve()
     database = source / "cockpit.db"
     if not database.is_file():
         raise RestoreError(f"{source} isn't a backup of a workspace: it has no database.")
+    sealer = _sealer(source, key)
     if target == source or source in target.parents:
         raise RestoreError("The new folder can't be inside the backup. Choose another folder.")
     if target.exists() and (not target.is_dir() or any(target.iterdir())):
         raise RestoreError(f"{target} isn't empty. Choose a new folder to restore into.")
-    _check_database(database)
+    if sealer is None:
+        _check_database(database)
     existed = target.is_dir()
     target.mkdir(parents=True, exist_ok=True)
     try:
-        return _restore(source, target)
+        if sealer is None:
+            return _restore(source, target)
+        # The opened copy lives in a temporary folder beside the new workspace and is removed whatever happens.
+        with tempfile.TemporaryDirectory(dir=target.parent, prefix=".restore-") as temporary:
+            opened = Path(temporary)
+            try:
+                backup_crypto.open_tree(sealer, source, opened)
+            except backup_crypto.BackupDamaged as err:
+                raise RestoreError(f"The backup can't be restored: {err}.") from None
+            _check_database(opened / "cockpit.db")
+            return _restore(opened, target)
     except Exception as err:
         _undo(target, existed)
         if isinstance(err, RestoreError):
             raise
         raise RestoreError(f"The backup couldn't be restored: {err}") from err
+
+
+def _sealer(source: Path, key: str | None) -> backup_crypto.Sealer | None:
+    """The key for an encrypted backup folder; None for a backup that isn't encrypted."""
+    if not backup_crypto.encrypted(source):
+        return None
+    if key is None or not key.strip():
+        raise KeyNeeded("This backup is encrypted, so restoring it needs the key it was made with.")
+    try:
+        return backup_crypto.open_backup(source, key)
+    except backup_crypto.BackupKeyError:
+        raise RestoreError(
+            "That key doesn't open this backup. Use the key the backup was made with; nothing was restored."
+        ) from None
+    except backup_crypto.BackupDamaged as err:
+        raise RestoreError(f"The backup can't be restored: {err}.") from None
 
 
 def _read_only(path: Path) -> sqlite3.Connection:

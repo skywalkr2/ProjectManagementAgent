@@ -255,12 +255,27 @@ class BackupSettings(ConfigModel):
         24, ge=1, description="How often a full backup is made.", json_schema_extra={"enabled_by": "automatic"}
     )
     keep: int = Field(14, ge=1, description="How many backups to keep in each target.")
+    encrypt: str = Field(
+        "",
+        description=SecretHint(
+            "Where the key that encrypts every backup copy is kept, as a reference (env:NAME or file:/path), never the "
+            "key itself. Empty: backups aren't encrypted. A lost key means a backup that can't be read: keep the key "
+            "somewhere other than the backup folder, and restoring asks for it."
+        ),
+    )
     retry_minutes: int = Field(
         60,
         ge=5,
         description="After a failed backup (a drive not connected, say), how long before trying again.",
         json_schema_extra={"enabled_by": "automatic"},
     )
+
+    @field_validator("encrypt")
+    @classmethod
+    def _key_reference(cls, value: str) -> str:
+        if value and not value.startswith(("env:", "file:")):
+            raise ValueError("the key is named as a reference to where it is kept, never the key itself")
+        return value
 
 
 class FileLimits(ConfigModel):
@@ -282,8 +297,21 @@ class FileLimits(ConfigModel):
             "font/woff",
             "font/woff2",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         ],
         description="Media types a file may have; a file kind can narrow this further.",
+    )
+    read_max_mb: float = Field(
+        25,
+        gt=0,
+        description="The largest file whose text is read, in megabytes. A larger attachment or watched file is named "
+        "as not read.",
+    )
+    read_max_chars: int = Field(
+        30000,
+        ge=1000,
+        description="The most text taken from one file. A file with more is cut there, with a mark saying so.",
     )
 
 
