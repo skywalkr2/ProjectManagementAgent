@@ -2137,6 +2137,14 @@
             "title": "Id",
             "type": "string"
           },
+          "made": {
+            "description": "The drafts and files this change made that still exist, in the order made, so its card links each without opening the details.",
+            "items": {
+              "$ref": "#/components/schemas/MadeView"
+            },
+            "title": "Made",
+            "type": "array"
+          },
           "ops": {
             "items": {
               "$ref": "#/components/schemas/OpView"
@@ -5054,6 +5062,39 @@
           "models"
         ],
         "title": "LocalServerView",
+        "type": "object"
+      },
+      "MadeView": {
+        "description": "A draft or file a change made, for the \"Made:\" link on the change's card: `label` says what it is for (the\nrecord a draft is for, or the file's name) and `record` is where the person opens it.",
+        "properties": {
+          "id": {
+            "description": "The draft's version, or the file.",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "draft",
+              "file"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "record": {
+            "$ref": "#/components/schemas/RecordRef"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "label",
+          "record"
+        ],
+        "title": "MadeView",
         "type": "object"
       },
       "MeIn": {

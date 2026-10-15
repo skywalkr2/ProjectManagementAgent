@@ -399,6 +399,16 @@ class AppliedEntryView(BaseModel):
     applies_to: Scope | None = Field(None, description="What it applies to; a fact applies to its project only.")
 
 
+class MadeView(BaseModel):
+    """A draft or file a change made, for the "Made:" link on the change's card: `label` says what it is for (the
+    record a draft is for, or the file's name) and `record` is where the person opens it."""
+
+    kind: Literal["draft", "file"]
+    id: str = Field(description="The draft's version, or the file.")
+    label: str
+    record: RecordRef
+
+
 class ChangesetView(BaseModel):
     id: str
     summary: str
@@ -406,6 +416,11 @@ class ChangesetView(BaseModel):
     reviewed: bool
     trust: Literal["trusted", "untrusted"]
     ops: list[OpView]
+    made: list[MadeView] = Field(
+        default_factory=list,
+        description="The drafts and files this change made that still exist, in the order made, so its card links "
+        "each without opening the details.",
+    )
     applied: list[AppliedEntryView] = Field(
         default_factory=list,
         description="What the run was given from what was learned and showed it applied, for the line 'Because you "

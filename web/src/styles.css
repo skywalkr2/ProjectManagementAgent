@@ -85,6 +85,7 @@ main p { max-width: var(--measure); }
 .assistant-summary p { white-space: pre-wrap; }
 .what { font-size: var(--text-sm); line-height: var(--lh-sm); color: var(--text-muted); font-weight: var(--weight-semibold); }
 .learned-inset { padding: 0 var(--space-4); }
+.made { list-style: none; padding: 0 var(--space-4) var(--space-3); margin: 0; font-size: var(--text-sm); }
 .learned-inset:empty { display: none; }
 .learned-inset:not(:empty) { padding-bottom: var(--space-3); }
 

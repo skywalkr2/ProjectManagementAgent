@@ -91,10 +91,10 @@ def test_a_blocked_phrase_inside_a_link_is_not_caught_and_one_outside_it_is(env)
     blocked = cfg.language.blocked_phrases[0]
     link = f"{HTTPS}docs.example.com/{blocked}/page?{blocked}=1&www.example.com"
     answers({"ops": [{"op": "question.add", "to": "me", "title": f"Which finish, see {link}?"}]})
-    _, cs_id = run(env, "We need a cover finish.")
+    _, cs_id = run(env, f"We need a cover finish: {link}")
     assert _problems(store, cs_id) == []
     answers({"ops": [{"op": "question.add", "to": "me", "title": f"{blocked.capitalize()} the finish, see {link}?"}]})
-    _, cs_id = run(env, "We need a cover finish, again.")
+    _, cs_id = run(env, f"We need a cover finish, again: {link}")
     assert _problems(store, cs_id) == [("blocked-wording", "warn")]
 
 

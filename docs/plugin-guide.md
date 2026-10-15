@@ -1095,6 +1095,7 @@ Someone the workspace works with or tracks. Added by `person.add`; role, org and
 | `org` | str \| None | `None` | The id of the organization they work for; its name lives on that record. |
 | `how_to_reach` | dict[str, str] | `{}` | How to reach them: a channel name mapped to the address or handle for it. |
 | `why_they_matter` | str \| None | `None` | Why this person matters to the work, in plain words. |
+| `name_verified` | bool | `False` | True when the name's spelling came from the person, a signed header address or a record the person made; false when it was read from outside content and not yet confirmed. |
 | `track_only` | bool | `False` | True for someone inside the tracked area who is only observed, not given work. |
 | `status` | Literal['active', 'left'] | `'active'` | active: still around. left: no longer part of the work. |
 

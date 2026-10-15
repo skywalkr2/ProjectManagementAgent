@@ -52,6 +52,26 @@ def without_links(text: str) -> str:
     return _BARE_DOMAIN.sub(_bare_domain, text)
 
 
+def links_in(text: str) -> list[str]:
+    """The web addresses in the text, each as written, in order: addresses with a scheme, `www.` addresses and bare
+    domains. Mail addresses and `mailto:` links are not web addresses and are left out."""
+    text = _MAIL_ADDRESS.sub(" ", text)
+    found: list[tuple[int, str]] = []
+
+    def take(pattern: re.Pattern[str], text: str) -> str:
+        for match in pattern.finditer(text):
+            if not match.group().lower().startswith("mailto:"):
+                found.append((match.start(), match.group()))
+        return pattern.sub(lambda m: " " * len(m.group()), text)
+
+    text = take(_SCHEME_LINK, text)
+    text = take(_WWW_LINK, text)
+    for match in _BARE_DOMAIN.finditer(text):
+        if _bare_domain(match) == " ":
+            found.append((match.start(), match.group()))
+    return [link for _, link in sorted(found)]
+
+
 def without_quotes(text: str, quotes: Iterable[str] = ()) -> str:
     """The text with each exact quote taken out (compared ignoring case and the kind of quotation mark)."""
     for quote in sorted({q for q in quotes if q and q.strip()}, key=len, reverse=True):

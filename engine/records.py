@@ -257,6 +257,11 @@ class Person(Record):
         default_factory=dict, description="How to reach them: a channel name mapped to the address or handle for it."
     )
     why_they_matter: str | None = Field(None, description="Why this person matters to the work, in plain words.")
+    name_verified: bool = Field(
+        False,
+        description="True when the name's spelling came from the person, a signed header address or a record the "
+        "person made; false when it was read from outside content and not yet confirmed.",
+    )
     track_only: bool = Field(
         False, description="True for someone inside the tracked area who is only observed, not given work."
     )

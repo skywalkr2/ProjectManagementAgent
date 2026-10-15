@@ -26,7 +26,7 @@ def move_identity(ws: Any, store: Any, cfg: Any) -> str | None:
     with store.transaction() as tx:
         person = tx.get("person", pid) if pid else None
         if person is None and name:
-            person = tx.create("person", {"full_name": name}, _MIGRATE)
+            person = tx.create("person", {"full_name": name, "name_verified": True}, _MIGRATE)
             pid = person.id
         if person is not None:
             known = {a.lower() for a in person.data.get("aliases", [])} | {person.data["full_name"].lower()}

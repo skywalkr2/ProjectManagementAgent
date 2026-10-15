@@ -211,10 +211,16 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         with store.transaction() as tx:
             if found.person:
                 current_person = tx.get("person", found.person)
-                tx.update("person", found.person, {"full_name": name}, ctx, read_version=current_person.version)
+                tx.update(
+                    "person",
+                    found.person,
+                    {"full_name": name, "name_verified": True},
+                    ctx,
+                    read_version=current_person.version,
+                )
                 pid = found.person
             else:
-                pid = tx.create("person", {"full_name": name}, ctx).id
+                pid = tx.create("person", {"full_name": name, "name_verified": True}, ctx).id
         events.changed()
         if not found.person:
             save(

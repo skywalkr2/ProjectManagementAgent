@@ -15,7 +15,7 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from engine import knowledge, learn
+from engine import draft_checks, knowledge, learn
 from engine import search as workspace_search
 from engine.check_text import numbered_questions, quoted_passages, without_links, words_of
 from engine.cleaning import normalize
@@ -143,6 +143,7 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
     lints = ctx.cfg.checks.lints
     known_actions = view.list("action")
     similarity = ctx.cfg.checks.tuning.near_duplicate_action.similarity
+    first_week = _FirstWeek(ctx, view)
     origin = origin_of(ctx)
     about = origin.get("about") or {}
     about_record = view.get(about["kind"], about["id"]) if about.get("kind") and about.get("id") else None
@@ -406,6 +407,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
                 "the input says it was already sent but not to whom, so this names a recipient it doesn't give; "
                 "don't pick the nearest name. Ask the person who it went to, as a decision.",
             )
+        if ctx.actor != "pm":
+            problems += first_week.problems(i, op, lints)
         # plugins' lints: soft checks on the assistant's proposals (never the person's own changes), with the
         # severity the workspace sets, or sets for this project's work (never a refusal by default)
         if ctx.actor != "pm":
@@ -442,6 +445,8 @@ def check(cs: ChangesetIn, ctx: Context) -> list[Problem]:
             else:
                 held = why if reported else "changes how the product behaves; needs your confirmation"
             problems.append(Problem("tier", "hold", i, held))
+    if ctx.actor != "pm":
+        problems += _made_problems(cs, ctx, lints)
     return problems
 
 
@@ -1446,7 +1451,14 @@ def _apply_op(
         from engine.organizations import resolve
 
         org = resolve(tx, op.org, w)
-        data = {"full_name": op.full_name, "role": op.role, "org": org, "aliases": op.aliases}
+        data = {
+            "full_name": op.full_name,
+            "role": op.role,
+            "org": org,
+            "aliases": op.aliases,
+            # The spelling is verified when the person gave it: their own change or their own note.
+            "name_verified": ctx.actor == "pm" or _from_pm(tx, ctx),
+        }
         if op.first_name:
             data["first_name"] = " ".join(op.first_name.split())
         made("person", tx.create("person", data, w).id)
@@ -2117,3 +2129,143 @@ def apply_as_person(store: Store, cfg: Config, ops: list[dict[str, Any]], summar
             read_version=current.version,
         )
     return cs_id
+
+
+# ---- the first-week lints: quotes, names, links, version numbers, summaries, things made --------------------------
+
+#: Ops that make a draft, a write-up or a file the person can open. A plugin's own op may make one too.
+MAKING_OPS = frozenset({"text.draft", "text.propose", "text.edit", "file.add", "report.draft"})
+#: The kinds of record whose text and links count as ones the workspace holds.
+LINK_KINDS = ("project", "source", "question", "fact", "note", "action", "event", "organization")
+
+
+class _FirstWeek:
+    """The lints on what a question or a draft says and on a project's summary, with what they compare against read
+    once per check: the addresses the workspace holds and the names it knows."""
+
+    def __init__(self, ctx: Context, view: Any):
+        self.ctx = ctx
+        self.view = view
+        self._links: draft_checks.KnownLinks | None = None
+        self._terms: list[str] | None = None
+        self._people: list[list[str]] | None = None
+
+    def known_links(self) -> draft_checks.KnownLinks:
+        if self._links is None:
+            known = draft_checks.KnownLinks()
+            for text in (self.ctx.inputs.raw_input, self.ctx.inputs.note):
+                known.add_text(text)
+            for kind in LINK_KINDS:
+                for record in self.view.list(kind):
+                    known.add_values(record.data)
+            for source in self.ctx.cfg.watch.sources:
+                known.add_values(source.settings)
+            known.add_text(self.ctx.cfg.server.public_url or "")
+            self._links = known
+        return self._links
+
+    def known_terms(self) -> list[str]:
+        """Names the workspace knows that aren't a person's: glossary terms, projects, organizations and teams."""
+        if self._terms is None:
+            terms = [str(e.data["term"]) for e in self.view.list("glossary_entry")]
+            terms += [str(p.data["name"]) for p in self.view.list("project")]
+            terms += [str(r.data["name"]) for kind in ("organization", "team") for r in self.view.list(kind)]
+            self._terms = terms
+        return self._terms
+
+    def people(self) -> list[list[str]]:
+        if self._people is None:
+            self._people = [draft_checks.person_names(p.data) for p in self.view.list("person")]
+        return self._people
+
+    def problems(self, i: int, op: OpModel, lints: dict[str, Any]) -> list[Problem]:
+        found: list[Problem] = []
+
+        def add(name: str, message: str, passage: str | None = None, guidance: str | None = None) -> None:
+            severity = lints.get(name, "off")
+            if severity != "off":
+                found.append(Problem(name, severity, i, message, passage, guidance))
+
+        cfg = self.ctx.cfg
+        summary = None
+        if isinstance(op, ProjectAddOp):
+            summary = op.summary
+        elif isinstance(op, RecordSetOp) and op.kind == "project" and op.field == "summary":
+            summary = op.value if isinstance(op.value, str) else None
+        if summary:
+            for reason in draft_checks.summary_problems(
+                summary, cfg.workspace.project.summary_max_lines, cfg.language.findings_words
+            ):
+                add(
+                    "summary-is-status",
+                    f"A project's summary says where the project stands, and {reason}.",
+                    guidance="Keep the summary to a few lines of status and record what was found as a fact.",
+                )
+        if isinstance(op, QuestionAddOp):
+            texts, extra = [op.title, op.text], [link.url for link in op.links]
+        elif isinstance(op, TextDraftOp):
+            texts, extra = [op.text], []
+        else:
+            return found
+        body = "\n".join(t for t in texts if t)
+        inputs = self.ctx.inputs
+        quotes = _quotes_in(op, self.ctx)
+        for passage in draft_checks.unverified_quotes(
+            body, [inputs.raw_input, inputs.note, *quotes], cfg.checks.tuning.unverified_quote.min_words
+        ):
+            add(
+                "unverified-quote",
+                "These words are in quotation marks but are not in the material you were given.",
+                passage,
+                "Quote the exact words, or say it is a paraphrase and leave the quotation marks off.",
+            )
+        for link in draft_checks.unknown_links(body, extra, self.known_links()):
+            add(
+                "unknown-link",
+                f"{link} is not a link the input, a record or a configured source holds.",
+                link,
+                "Link only pages you were given; leave out any other.",
+            )
+        if _reaches_someone_else(op, self.ctx):
+            shown = words_of(body, quotes)
+            for number in draft_checks.version_numbers(shown, cfg.language.version_patterns, self.known_terms()):
+                add(
+                    "version-number",
+                    f"{number} is a tool's version number, which doesn't belong in a message to someone else.",
+                    number,
+                    "Name the page, link it, and say what changed or when.",
+                )
+            for name in draft_checks.unverified_names(
+                shown,
+                self.people(),
+                self.known_terms(),
+                [inputs.raw_input, inputs.note],
+                cfg.language.name_skip_words,
+                cfg.language.messages.greeting,
+            ):
+                add(
+                    "unverified-name",
+                    f"{name} is not spelled as anyone on file or the input spells a name.",
+                    name,
+                    "Use a name as its person's record or the input has it; if you don't know it, ask instead.",
+                )
+        return found
+
+
+def _made_problems(cs: ChangesetIn, ctx: Context, lints: dict[str, Any]) -> list[Problem]:
+    """A change whose summary says it made a draft, a write-up or a file but holds nothing it made."""
+    severity = lints.get("unlinked-made", "off")
+    if severity == "off":
+        return []
+    phrase = draft_checks.says_it_made(cs.summary, ctx.cfg.language.made_phrases)
+    if phrase is None or any(op.op in MAKING_OPS or "/" in op.op for op in cs.ops):
+        return []
+    return [
+        Problem(
+            "unlinked-made",
+            severity,
+            None,
+            f"The summary says {phrase!r}, but nothing in this change is a draft, write-up or file it made.",
+            guidance="Make it as part of this change so the person can open it, or leave it out of the summary.",
+        )
+    ]

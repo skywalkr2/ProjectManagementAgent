@@ -43,6 +43,16 @@ class UserSettings(ConfigModel):
     )
 
 
+class ProjectSettings(ConfigModel):
+    summary_max_lines: int = Field(
+        3,
+        ge=1,
+        le=50,
+        description="The most lines a project's summary may have. A summary says where the project stands; what was "
+        "found goes to facts, and a longer one is returned to the assistant to shorten.",
+    )
+
+
 class ToolSettings(ConfigModel):
     timeout_seconds: float = Field(120, gt=0, description="How long a plugin's program may run if it sets no limit.")
     max_timeout_seconds: float = Field(
@@ -160,6 +170,7 @@ class WorkspaceFile(FileModel):
         description="The language and variety work is written in, as a language tag (en-US, en-GB, fr-CA); a project "
         "may set its own.",
     )
+    project: ProjectSettings = Field(default_factory=ProjectSettings, description="How a project's own record is kept.")
     plugins: PluginSettings = Field(default_factory=PluginSettings, description="Which plugins run in this workspace.")
     contact_kinds: list[str] = Field(
         default_factory=lambda: ["email", "phone", "address"],
@@ -892,6 +903,12 @@ def _default_lints() -> dict[str, Severity]:
         "several-questions": "return",
         "question-without-stake": "return",
         "unnamed-recipient": "return",
+        "unverified-quote": "return",
+        "unverified-name": "warn",
+        "unknown-link": "return",
+        "version-number": "return",
+        "summary-is-status": "return",
+        "unlinked-made": "return",
     }
 
 
@@ -953,6 +970,16 @@ class OwnerSuggestionTuning(ConfigModel):
     )
 
 
+class UnverifiedQuoteTuning(ConfigModel):
+    min_words: int = Field(
+        3,
+        ge=1,
+        le=50,
+        description="How many words a passage in quotation marks must have for the check that quoted words are in the "
+        "material cited: shorter ones are taken as a name or a term in quotation marks, not as a quote.",
+    )
+
+
 class LintTuning(ConfigModel):
     """Settings of the core lints that have more than a severity: one entry per lint, named as the lint is in `lints`
     with underscores for hyphens, so each setting has a plain dotted key and environment variable."""
@@ -974,6 +1001,10 @@ class LintTuning(ConfigModel):
     owner_suggestion: OwnerSuggestionTuning = Field(
         default_factory=OwnerSuggestionTuning,
         description="Settings of the suggestion made for an action that has no owner.",
+    )
+    unverified_quote: UnverifiedQuoteTuning = Field(
+        default_factory=UnverifiedQuoteTuning,
+        description="Settings of the check that words in quotation marks are in the material cited.",
     )
 
 
@@ -1066,6 +1097,29 @@ DEFAULT_NEW_TERM_IGNORE = [
 ]
 
 
+DEFAULT_VERSION_PATTERNS = [
+    r"\b[vV]\d+(?:\.\d+){0,3}\b",
+    r"\b\d{1,3}\.\d{1,3}\.\d{1,3}(?:\.\d{1,5})?\b",
+    r"(?i)\b(?:version|ver\.?|release|build)\s+\d+(?:\.\d+)*\b",
+]
+DEFAULT_FINDINGS_WORDS = [
+    *("found", "finding", "findings", "discovered", "discrepancy", "discrepancies"),
+    *("inconsistency", "inconsistencies", "mismatch", "turns out"),
+]
+DEFAULT_MADE_PHRASES = [
+    *("drafted", "wrote up", "write-up", "writeup"),
+    *("created a draft", "made a draft", "prepared a draft", "saved a draft"),
+    *("created a file", "made a file", "saved a file", "generated a file"),
+    *("created a document", "made a document", "saved a document"),
+    *("created minutes", "wrote minutes", "made minutes"),
+]
+DEFAULT_NAME_SKIP_WORDS = [
+    *("the", "a", "an", "this", "that", "these", "those", "our", "your", "my", "his", "her", "their", "its"),
+    *("hi", "hello", "hey", "dear", "thanks", "thank", "please", "also", "and", "but", "so", "if", "when", "as"),
+    *("for", "to", "from", "with", "on", "in", "at", "by", "of", "is", "are", "was", "were", "we", "i", "it", "do"),
+]
+
+
 class LanguageFile(FileModel):
     messages: MessageSettings = Field(default_factory=MessageSettings, description="Wording of copied messages.")
     self_words: list[str] = Field(
@@ -1130,6 +1184,30 @@ class LanguageFile(FileModel):
         "went to, a question or action that names a recipient for it is returned: the assistant asks the person "
         "who it went to instead of guessing.",
     )
+    version_patterns: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_VERSION_PATTERNS),
+        description="Patterns (regular expressions) for a tool's version number, such as v2.3 or build 1042. A "
+        "question or draft for someone else that holds one is returned: it names the page, links it and says what "
+        "changed or when. A version that is part of a name the workspace knows (a glossary term, a project, an "
+        "organization or a team) passes.",
+    )
+    findings_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_FINDINGS_WORDS),
+        description="Words that show a project's summary holds findings instead of its status (a discrepancy found, "
+        "a mismatch). The summary says where the project stands; what was found goes to facts. Case is ignored.",
+    )
+    made_phrases: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_MADE_PHRASES),
+        description="Phrases that say a change made a draft, a write-up or a file. When a change's summary says so "
+        "and the change holds nothing it made, it is returned: the draft or file is made where the person can open "
+        "it, or the summary stops claiming it.",
+    )
+    name_skip_words: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_NAME_SKIP_WORDS),
+        description="Everyday words that can start a sentence or a phrase and are never part of a person's name. The "
+        "check that names are spelled as the workspace has them ignores them at the edges of a capitalized phrase. "
+        "Case is ignored.",
+    )
     bare_confirmation_words: int = Field(
         4,
         ge=1,
@@ -1139,7 +1217,7 @@ class LanguageFile(FileModel):
         "longer note, or one with a link, is handed in as the person's own words.",
     )
 
-    @field_validator("title_skip", "new_term_patterns")
+    @field_validator("title_skip", "new_term_patterns", "version_patterns")
     @classmethod
     def _patterns_compile(cls, value: list[str]) -> list[str]:
         for pattern in value:

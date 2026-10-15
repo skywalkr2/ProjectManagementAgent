@@ -71,6 +71,7 @@ from api.schemas import (
     KindView,
     ListRenameIn,
     ListValueIn,
+    MadeView,
     NetworkWait,
     Noted,
     NoteIn,
@@ -101,6 +102,7 @@ from api.schemas import (
     ReadVersion,
     RecordEdit,
     RecordPageView,
+    RecordRef,
     RecordReference,
     RecordView,
     Reply,
@@ -173,6 +175,7 @@ from engine.followups import (
     unmark_sent,
 )
 from engine.intake import IntakeError, hand_in, note_as_input, source_text
+from engine.made import made_by
 from engine.names import People
 from engine.ops import StageMoveOp
 from engine.origin import origins
@@ -1281,6 +1284,12 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
                     reviewed=cs.data["reviewed"],
                     trust=cs.data["trust"],
                     ops=[_op_view(o, store, people, projects, cfg) for o in cs.data["ops"]],
+                    made=[
+                        MadeView(
+                            kind=m.kind, id=m.id, label=m.label, record=RecordRef(kind=m.record[0], id=m.record[1])
+                        )
+                        for m in made_by(store.read(), cs.data["ops"])
+                    ],
                     second_opinion=_independence(cs),
                     applied=_applied_views(cs.data.get("applied") or []),
                     first_on_account=cs.data.get("first_on_account"),
@@ -1624,7 +1633,7 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
 
         def do() -> str:
             with store.transaction() as tx:
-                return tx.create("person", body.model_dump(), _setup("person.add")).id
+                return tx.create("person", {**body.model_dump(), "name_verified": True}, _setup("person.add")).id
 
         new = guard(do)
         changed()
@@ -1639,6 +1648,8 @@ def build_router(ws: Workspace, cfg: Config, store: Store, events: Events, worke
             _same_name("person", "full_name", changes["full_name"], except_id=pid)
         if changes.get("org"):
             need("organization", changes["org"])
+        if {"full_name", "first_name", "aliases"} & changes.keys():
+            changes["name_verified"] = True  # the person wrote the spelling
         guard(lambda: _edit_on_screen(store, cfg, "person", pid, changes))
         changed()
         return Ok(ok=pid)

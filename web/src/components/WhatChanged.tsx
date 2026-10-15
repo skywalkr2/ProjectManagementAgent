@@ -7,6 +7,7 @@ import { dayAndTime, day } from "../lib/dates";
 import { firstGoOf, useFirstGoSorting } from "../lib/first-go";
 import { useRowKeys } from "../lib/keys";
 import { showRow, useReveal } from "../lib/reveal";
+import { recordView, viewHref } from "../lib/views";
 import { useEstimate } from "../lib/money";
 import { useSetAside } from "../lib/set-aside";
 import { useAfterSave } from "../lib/settings-save";
@@ -324,6 +325,7 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?:
       <div className="learned-inset">
         <LearnedLines changesets={[cs?.id, item.redoes]} />
       </div>
+      {cs && (cs.made ?? []).length > 0 && <MadeLinks made={cs.made ?? []} />}
       {open && (
         <div className="body" id={`b-${item.id}`}>
           {item.note && (
@@ -357,6 +359,24 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?:
         </div>
       )}
     </li>
+  );
+}
+
+/** The drafts and files a change made, one link each, shown without opening the change's details. A draft opens on the
+ * record it is for, where it waits for review; a file opens in the files list. */
+function MadeLinks(props: { made: S["MadeView"][] }) {
+  const { t } = useWords();
+  return (
+    <ul className="made plain-list" aria-label={t("changes.made")}>
+      {props.made.map((m) => (
+        <li key={`${m.kind}-${m.id}`}>
+          <span className="what">{t("changes.made")}</span>{" "}
+          <a href={viewHref(m.kind === "file" ? "records/files" : recordView(m.record.kind, m.record.id))}>
+            {t(`changes.made.${m.kind}`, { label: m.label })}
+          </a>
+        </li>
+      ))}
+    </ul>
   );
 }
 

@@ -138,7 +138,9 @@ def _set_identity(ws: Workspace, store: Store, you: str | None, name: str | None
     if you:
         with store.transaction() as tx:
             person = tx.create(
-                "person", {"full_name": you.strip()}, WriteContext(actor="pm", trust="trusted", op="init")
+                "person",
+                {"full_name": you.strip(), "name_verified": True},
+                WriteContext(actor="pm", trust="trusted", op="init"),
             )
         settings.user = UserSettings(person=person.id)
     if name:

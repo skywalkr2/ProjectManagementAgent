@@ -9,6 +9,8 @@ owner_format: "{team} ({full_name})"
 language: en-US
 # The kinds of contact detail a person's record can hold.
 contact_kinds: [email, phone, address]
+project:
+  summary_max_lines: 3   # the most lines a project's summary may have; what was found goes to facts
 plugins:
   enabled: [example, kit]
   actions:
