@@ -3,6 +3,21 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The functional designer's lessons from running, and where each goes
+
+**Decided by:** the owner (when, and the decision rule), the technical PM (the rest). **What:** eight lessons, checked
+against the code: (1) a moved meeting brings what's tied to it in line: a core follow-on run per save, with records able
+to name the calendar entry they belong to; the agenda and its links stay in the project management pack (design 6.24);
+(2) replay cases that start from the person's own action; (3) each fact says who it rests on; (4) a contradicting answer
+replaces the fact, a follow-up goes to whoever made the claim or owns the thing, and **a decision goes to whoever decides,
+the PM when nobody is named** (owner; this replaces "decisions are questions to the PM"); (5, 6) a Copy table per person
+in Follow-ups, from the same data and with no AI run (phase B); (7, 8) already built (the exclusive write lock, retiring
+superseded attempts, Undo skipping what changed since), with a test to pin the superseded sequence; the history-row
+exemption goes to the publisher (C4). Classified as core concepts (1-4), a screen feature (5, 6) and existing behavior
+(7, 8); none is a setting or a standing rule. **Impact:** new roadmap step L7 (about 1.5 sessions), built after the
+owner's "after" run and before phase B (owner); one phase B item; one C4 and one P item; design 5.1, 6.7, 6.8, 6.16,
+6.19; CHANGES section 70; CLAUDE.md's product rule on decisions. Scope grows by L7; nothing else moves.
+
 ## 2026-10-15: What the owner's "after" run found, and how each finding was handled
 
 **Decided by:** the technical PM, reading the owner's "after" run (O3) of the golden set. **What:** 32 of 81 runs

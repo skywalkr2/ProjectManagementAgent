@@ -1026,6 +1026,16 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 70. The functional designer's lessons from running (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Decisions (6.8, 5.1) | A decision is a question to the PM | A decision goes to whoever decides, the PM when nobody is named; an option inside an answer is a decision for them (owner). Built in L7 |
+| Follow-on changes (6.7) | None | Moving or retitling a dated record, or replacing a fact, makes one request that brings tied records in line; records can name the calendar entry they belong to. Built in L7; the agenda is the project management pack's |
+| Facts (6.19) | Source and trust only | Each fact says who it rests on: the person, the assistant's inference or someone named; a correction replaces the fact it contradicts. Built in L7 |
+| Evaluation (6.16) | Cases start from an input | Replay cases start from the person's own action and score the end state. Built in L7 |
+| Follow-ups (phase B) | One message to copy per person | A Copy table per person (tab-separated and HTML, with a reply column), from the same data, with no AI run |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

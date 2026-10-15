@@ -679,6 +679,16 @@ is per field across groups but all or nothing within a group:
 a system op, or otherwise needs a decision. Everything else is filed quietly (still findable). The change it came from closes as
 "no change needed" automatically, so the PM never clicks "Looks good" on nothing.
 
+**Follow-on changes** (functional designer's lessons from running, 2026-10-15; *not yet built*, roadmap L7). When the
+person moves or retitles a dated record (a calendar entry's day or time, or a new day typed in its notes), or a fact is
+replaced, one save makes **one** request to the assistant listing what changed, never one per field. The request asks it
+to find what is tied to the record: records that name it or its old date, open actions linked to it or due before its
+new date that are to be settled there, and anything a record says will be covered there. Each is brought in line by the
+usual ops, with Undo. Links are stored when they are made (a record names the calendar entry it belongs to), so finding
+them doesn't rest on matching words; matching words is the fallback. A date-only move writes no history entry of its own;
+marking a meeting done starts no run (its notes come in as their own input). The meeting's agenda and its items belong to
+the project management pack (6.24), which builds on these links.
+
 ## 6.8 Questions service
 
 *As built today* there is no separate questions service: a question is written by the `question.add` op (a recipient, a
@@ -694,10 +704,14 @@ is marked *designed*, with the phase.
 - Enriching links automatically from item keys and known titles found in the text is *designed, not yet built, not
   scheduled*. Today a question to anyone but the PM is refused unless it carries a link the recipient can open, and nothing
   adds links.
-- **Decisions are questions addressed to the PM.** The assistant marks each question with a kind (question, decision, and the
-  routing, impact and notice kinds), and the screen follows the stored kind: a question to the PM of kind `decision` shows as a
-  decision, and one of kind `question` shows as a question to answer. Keeping the kind makes the assistant's call checkable
-  and lets a mistaken one be corrected. Moving a question from the PM to someone else makes it an ordinary question
+- **A decision goes to whoever decides** (owner, 2026-10-15, from the functional designer's lessons from running): the
+  person the input or a routing entry names as deciding (an architect choosing between options a vendor offered), and the
+  PM when nobody is named. The assistant marks each question with a kind (question, decision, and the routing, impact and
+  notice kinds), and the screen follows the stored kind: a question of kind `decision` shows as a decision, and one of kind
+  `question` shows as a question to answer; a decision to someone else shows in the PM's follow-ups under that person.
+  Keeping the kind makes the assistant's call checkable and lets a mistaken one be corrected. An option offered inside an
+  answer ("there is a feature we can turn on") is a decision for whoever decides. *As built today, and changed in L7:*
+  decisions go only to the PM, and moving a question from the PM to someone else makes it an ordinary question
   (`question.move`, below). **Built:** `web/src/components/FollowUps.test.tsx` ("a question to the PM shows as a decision or as a question by its stored kind"), `tests/test_corrections.py::test_moving_a_decision_to_someone_else_makes_it_a_question_records_routed_and_undo_sends_it_back`.
 - Answer flow, in two kinds, as built:
   - **The PM's own answer** to a question put to them (`/answer`) is the PM's words. Learning from it applies at once
@@ -1390,6 +1404,12 @@ none is, the request goes to the PM instead. Secrets come from secret references
 **Naming.** The assistant's display name is configuration and is the only name people see; vendor and model names appear only in
 `config/ai.yaml`, the adapters, the usage reports and the evaluation reports.
 
+**Replaying the real event** (functional designer's lessons from running, 2026-10-15; *not yet built*, roadmap L7). Every
+real miss becomes a replayable case: the starting records, the person's action through the same entry point the screen
+uses (an edit, a move, a button), and the expected end state, scored on the records as they end up as well as on the ops.
+Replays run in a throwaway copy, never the person's workspace, since Undo rightly refuses to roll back a record that has
+changed since.
+
 ## 6.17 Periodic jobs (later)
 
 - **Weekly check-up:** suggested goals (the AI replaces automatic goals with 3 to 5 real ones), meetings to hold, actions due by
@@ -1441,6 +1461,18 @@ looked up.
 - **Missing:** a kind with `missing: tbd` shows "TBD" until a source has it. No question is filed; when the source fills in,
   the watcher picks it up.
 - **Enforced:** the applier refuses questions for these facts (6.7), so a model that ignores the packet can't send one.
+
+**How a fact is known** (functional designer's lessons from running, 2026-10-15; *not yet built*, roadmap L7). Every fact
+says who it rests on, with its source: the person said it, the assistant inferred it, or someone else said it (named).
+The person's own deduction is recorded as their inference, and a question it settles closes with that as the reason.
+When the person says they asked someone directly, the question is filed as already asked, so the reply has a place to
+land. What the assistant writes about a change says who made each part of it: the person's edits are never described as
+the assistant's, nor the other way round.
+
+**A correction, not a second fact.** An answer that contradicts a recorded fact replaces it (`supersedes`, which quotes
+the old fact), and the records that repeated the old fact are brought in line by a follow-on run (6.7). A follow-up
+question goes to whoever made the claim or owns the thing it is about; when neither is clear, it is a question to the
+person about who to ask, never a guess from a passing mention.
 
 ## 6.20 Quality signals
 

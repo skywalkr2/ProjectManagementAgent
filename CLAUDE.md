@@ -203,7 +203,8 @@ because one of them "handles it". Remove a line in the change that builds it.
   An action without a known owner is held for "Pick an owner".
 - Every waiting state shows why and until when. Runner errors are classified from the runner's exit code and error stream,
   never from model output. A correction is checked against the data before anything changes.
-- Questions are written for their reader and link only what the reader can open; decisions are questions to the PM.
+- Questions are written for their reader and link only what the reader can open; a decision goes to whoever decides, the PM
+  when nobody is named (design 6.8).
 - Scope is enforced, not suggested (design 6.18): only the tracked area gets actions and detailed questions. Other areas are
   observed; at most one impact question goes to that area's contact. Scope decisions come from the scope resolver only.
 - Facts a configured source holds (releases, schedule dates) are looked up, never asked (design 6.19); none found means TBD.

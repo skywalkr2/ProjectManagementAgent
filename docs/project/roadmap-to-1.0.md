@@ -34,9 +34,9 @@ Durations are estimates in working sessions. Dates are set when a phase starts a
 - **L3b, L4, L5, L6 and the rest of "Ready for real use":** built 2026-10-15. L4's 28 learning pairs found four gaps in
   learning, each fixed with its pair. **Phase L-core's code is done.** The one step left is the owner's "after" run (O3),
   which the comparison with O1 and O2 needs before real use starts.
-- **Next:** the owner's "after" run (O3), then real use. Phase B (the UI) is built alongside, then phase C (the writing
-  pack, finished completely first; owner, 2026-10-15), then phase P (the project management and publishing packs), then
-  the owner's sign-off (D).
+- **Next:** the owner's "after" run (O3), then L7 (the functional designer's lessons from running, 2026-10-15) while
+  real use starts, then phase B (the UI), then phase C (the writing pack, finished completely first; owner, 2026-10-15),
+  then phase P (the project management and publishing packs), then the owner's sign-off (D).
 - **Plugin API:** 0.3.79 (see the table below).
 
 ## Owner actions on the critical path
@@ -1346,6 +1346,35 @@ L6. **The rules that bite in the first week of real use** (design 8.8).
 - [x] Every link checked before it is shown. Built: `tests/test_first_week_lints.py::test_a_link_nothing_holds_is_returned_and_one_the_input_a_record_or_a_source_holds_passes`
   ("checked" means it came from the input, a record or a configured source; nothing is fetched).
 
+L7. **Lessons from running, 2026-10-15** (the functional designer's eight lessons; owner, 2026-10-15: built right after
+the owner's "after" run (O3), before phase B; about 1.5 sessions). Design 6.7 "Follow-on changes", 6.8, 6.16 "Replaying
+the real event", 6.19 "How a fact is known". What the code does today is said for each.
+- [ ] **One follow-on run when a dated record moves** (lesson 1). The person's move or retitle of a calendar entry, or a
+  new day typed in its notes, makes one request listing what changed (one save, one run). It finds what is tied: records
+  that name the entry or its old date, open actions linked to it or due before its new date that are settled there, and
+  anything a record says will be covered there; each is brought in line with Undo. A date-only move writes no history
+  entry; marking it done starts no run. Records can name the calendar entry they belong to, set when they are made, so
+  finding them doesn't rest on words. *Today:* an edit of an entry only records an `edited` signal; nothing links a
+  record to an entry. The agenda and its items are the project management pack's (P, C2), built on these links.
+- [ ] **A correction, not a second fact** (lesson 4). An answer that contradicts a fact replaces it (`supersedes`, quoting
+  the old fact), and a follow-on run brings in line what repeated it. *Today:* `supersedes` exists; nothing follows on.
+- [ ] **A follow-up goes to whoever made the claim or owns the thing** (lesson 4); when neither is clear, a question to
+  the person about who to ask, never a person known only from a passing mention.
+- [ ] **A decision goes to whoever decides** (lesson 4; owner, 2026-10-15): the person the input or a routing entry names
+  as deciding, the PM when nobody is named; an option offered inside an answer is a decision for them. `question.move`
+  keeps a decision a decision. *Today:* decisions go only to the PM, and moving one makes it an ordinary question.
+- [ ] **How a fact is known** (lesson 3): the person said it, the assistant inferred it, or someone else said it (named),
+  each with its source; the person's deduction closes the question it settles with that reason; "I asked X to confirm"
+  files the question as already asked. What the assistant writes about a change says who made each part. *Today:* a fact
+  carries its source and trust only, and the packet marks the person's own work only for watched sources.
+- [ ] **Replay cases** (lesson 2): an evaluation case may start from the person's own action through the screen's entry
+  point (an edit, a move, a button) and expect an end state of records as well as ops; each miss above gets one. *Today:*
+  cases and pairs start from an input; a pair's correction already goes through the screens' code, in a throwaway copy.
+- [ ] **A superseded attempt leaves nothing running** (lesson 7): a test of the exact sequence (an attempt fails, the person
+  resubmits, the resubmission applies, and the queued try for the first never runs or writes). *Today:* every write takes
+  the database's exclusive write lock, and a retry that applies retires the attempts before it with their queued tries
+  (`retire_earlier_attempts`); the test pins it. Undo already skips a change whose records changed since (lesson 8).
+
 ## Phase B: finish the UI/UX redesign (about 4 sessions)
 
 The note box on action buttons, the header's "alive" line, on hold isn't due, the follow-up rule and the "where it came
@@ -1361,6 +1390,14 @@ From L3 (design 7.18):
   confirmation such as a contact detail (L3b).
 - [ ] The Quality screen (6.20): the knowledge-used and repeat-correction rates and the weekly missing-op list, from
   `GET /api/quality` (built in L3).
+
+From the functional designer's lessons of 2026-10-15 (lessons 5 and 6):
+- [ ] **Copy table on each person's group in Follow-ups**: the same data the group shows (their open actions and the open
+  questions to them, an action notice not listed twice), copied in two forms at once: tab-separated text that pastes into
+  a spreadsheet as cells with links kept, and an HTML table that pastes into chat or mail. A blank last column for their
+  reply ("Your update", from the wording sheet). No AI run, so the list can't differ from the screen. A request for "a
+  list of X's items" is answered by pointing to it; the assistant never asks the person for a blank file. *Today:* each
+  group copies one message, not a table.
 
 From the original designer's lessons of 2026-10-14:
 - [ ] **The Today rows as the mockup review set them** (the original designer, 2026-10-14, design 7.6 and 7.7): a project
@@ -1535,7 +1572,9 @@ C1. **The writing pack, installed and reviewed.**
 
 C4. **What the packs need from the core.**
 - [ ] **The publisher and the file channel.** Approved files are saved or shared after the person approves the exact
-  content. Waiting to go out lists them, with a diff where it applies.
+  content. Waiting to go out lists them, with a diff where it applies. A page whose changes are logged as history rows
+  logs each change, except the removal of a stray history row, which needs no row of its own (the functional designer's
+  lesson 8, 2026-10-15).
 - [ ] **Writing into a shared file someone else uses** (the original designer's lessons from running, 2026-10-13): write only the target cells or parts and copy every other
   part byte for byte, with a test that validations, conditional formats and formulas survive; "is it open?" checks for a
   process holding the file, not only a lock file (autosave on a synced cloud file leaves none); when it is open, hold the
@@ -1598,6 +1637,9 @@ being done, builds schedules and tracks action items.
     through the core's publisher after the person approves the exact file (C4).
   - [ ] **The plan:** goals, phases, deliverables and milestones; a date the core files as a calendar entry under a project
     becomes a milestone in that project's plan (moved from L3b).
+  - [ ] **Meeting agendas linked to actions** (the functional designer's lesson 1, 2026-10-15): an agenda item stores the
+    action or question it covers when the agenda is written, so moving the meeting (the core's follow-on run, L7) finds
+    them by id; an item someone said they'd raise there is added if it's missing.
   - [ ] **The schedule:** work items with durations and dependencies, a critical path, dates worked out from the
     dependencies, baselines, and slips against them. Only the person rebaselines.
   - [ ] **Building it with the assistant:** from a brief, notes or another pack's milestones, the assistant drafts a
