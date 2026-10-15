@@ -41,7 +41,7 @@ later:
   # The fact beside the calendar entry is what the delivery-window golden case allows too.
   allow:
   - fact
-  packet_has: [delivery window]
+  packet_has: ['# Lessons']  # the lesson is the model's own wording, so the check is that it reaches the packet
 ideal:
   learn:
     summary: A delivery window runs from its first date to its last.

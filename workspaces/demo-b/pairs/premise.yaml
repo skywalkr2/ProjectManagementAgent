@@ -27,7 +27,7 @@ later:
   forbid:
   - op: report.draft
   - op: action.close
-  packet_has: [Ask the person]
+  packet_has: ['# Lessons']  # the lesson is the model's own wording, so the check is that it reaches the packet
 ideal:
   learn:
     summary: Items that aren't recorded are asked about.

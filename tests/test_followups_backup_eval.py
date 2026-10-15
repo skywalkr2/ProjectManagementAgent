@@ -307,6 +307,61 @@ def test_calls_the_account_refused_are_not_run_and_left_out_of_the_score():
     assert "n/a  b" in text and "not run: 1" in text
 
 
+def _spent_account(monkeypatch, *modules):
+    """A stand-in account whose plan is used up, counting the calls made to it. The harness clears the stand-in's
+    answers after a case, so in the given modules clearing keeps this account instead."""
+    from engine.ai.adapters import stub
+    from engine.ai.task import AiError
+
+    calls = []
+
+    def respond(task):
+        calls.append(task)
+        raise AiError("quota", "the plan's usage limit is reached")
+
+    for module in modules:
+        monkeypatch.setattr(module, "set_responder", lambda r: stub.set_responder(r if r is not None else respond))
+    stub.set_responder(respond)
+    return calls
+
+
+def test_once_the_account_is_out_of_quota_the_rest_are_not_run_and_never_called(monkeypatch):
+    import engine.evaluate as ev
+    from engine.ai.adapters.stub import set_responder
+
+    calls = _spent_account(monkeypatch, ev)
+    after_first: list[int] = []
+    try:
+        report = evaluate(
+            DEMO_B,
+            runs=2,
+            env={},
+            only=["close-action", "answer-question"],
+            progress=lambda result, done, total: after_first.append(len(calls)) if done == 1 else None,
+        )
+    finally:
+        set_responder(None)
+    assert [r.not_run for r in report.results] == [True, True, True, True]
+    assert "usage limit" in (report.results[0].error or "")
+    assert all("plan was used up" in (r.error or "") for r in report.results[1:])
+    assert after_first and len(calls) == after_first[0], "nothing is called after the plan is spent"
+
+
+def test_once_the_account_is_out_of_quota_the_rest_of_the_pairs_are_not_run(monkeypatch):
+    import engine.pairs as pairs_module
+    from engine.ai.adapters.stub import set_responder
+    from engine.pairs import evaluate_pairs, load_pairs
+
+    names = [p["id"] for p in load_pairs(DEMO_B) if not p.get("pending")][:2]
+    calls = _spent_account(monkeypatch, pairs_module)
+    try:
+        report = evaluate_pairs(DEMO_B, runs=1, env={}, only=names)
+    finally:
+        set_responder(None)
+    assert [r.not_run for r in report.results] == [True, True]
+    assert "plan was used up" in (report.results[1].error or "") and calls
+
+
 def test_a_failed_case_shows_what_the_model_produced():
     from engine.evaluate import Report, RunResult
 

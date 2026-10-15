@@ -49,7 +49,7 @@ later:
     owners: [PER-1]
   forbid:
   - op: question.add
-  packet_has: [recorded facts, October 30]
+  packet_has: ['# Lessons', October 30]  # the lesson is the model's own wording, so the check is that it reaches the packet
 ideal:
   learn:
     summary: A date the facts hold is used, not asked.

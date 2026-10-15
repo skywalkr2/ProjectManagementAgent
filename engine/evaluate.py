@@ -73,6 +73,7 @@ class RunResult:
     error: str | None = None
     got: list[str] = field(default_factory=list)  # what the model produced, shown when the case fails
     not_run: bool = False  # the account wouldn't take the call (rate limit, quota); says nothing about the model
+    out_of_quota: bool = False  # the account's plan was used up, so the runs after this one are not made
     accounts: list[str] = field(default_factory=list)  # provider/model of every call the case made
     given: list[str] = field(default_factory=list)  # a pair's later run: what it was given from what was learned
     negative: bool = False  # a pair whose later output must not change
@@ -268,33 +269,49 @@ def evaluate(
     found = [*load_cases(template), *load_pack_cases(packs_of or template)]
     cases = [c for c in found if not only or c["id"] in only]
     total = len(cases) * runs
-    for case in cases:
-        for n in range(1, runs + 1):
-            step = f"[{len(results) + 1}/{total}] {case['id']}"
-            if notice is not None:
-                notice(f"{step}: started")
-            waited = (
-                (lambda s, step=step: notice(f"{step}: the account asked to slow down; trying again in {s:.0f}s"))
-                if notice
-                else None
-            )
-            results.append(
-                _run_case(
-                    template,
-                    case,
-                    n,
-                    account=account,
-                    stub=stub,
-                    env=env,
-                    ai_config=ai_config,
-                    on_wait=waited,
-                    versions=versions,
-                    adapter_factory=adapter_factory,
-                )
-            )
+    for case, n in ((case, n) for case in cases for n in range(1, runs + 1)):
+        if results and results[-1].out_of_quota:
+            results.append(not_made(case["id"], n, results[-1]))
             if progress is not None:
                 progress(results[-1], len(results), total)
+            continue
+        step = f"[{len(results) + 1}/{total}] {case['id']}"
+        if notice is not None:
+            notice(f"{step}: started")
+        waited = (
+            (lambda s, step=step: notice(f"{step}: the account asked to slow down; trying again in {s:.0f}s"))
+            if notice
+            else None
+        )
+        results.append(
+            _run_case(
+                template,
+                case,
+                n,
+                account=account,
+                stub=stub,
+                env=env,
+                ai_config=ai_config,
+                on_wait=waited,
+                versions=versions,
+                adapter_factory=adapter_factory,
+            )
+        )
+        if progress is not None:
+            progress(results[-1], len(results), total)
     return Report(account or ("stub" if stub else "configured"), runs, results, versions)
+
+
+def not_made(case_id: str, n: int, spent: RunResult) -> RunResult:
+    """A run left out because the account's plan was used up during an earlier one: not run, and never called."""
+    return RunResult(
+        case_id,
+        n,
+        False,
+        error=f"Not run: the account's plan was used up during {spent.case} (run {spent.run}).",
+        not_run=True,
+        out_of_quota=True,
+    )
 
 
 def _run_case(
@@ -353,7 +370,15 @@ def _run_case(
                 last = runs[-1] if runs else {}
                 refused = last.get("error_kind") in ("rate_limited", "quota")
                 return RunResult(
-                    case["id"], n, False, error=why, cost_usd=cost, seconds=seconds, not_run=refused, accounts=accounts
+                    case["id"],
+                    n,
+                    False,
+                    error=why,
+                    cost_usd=cost,
+                    seconds=seconds,
+                    not_run=refused,
+                    out_of_quota=last.get("error_kind") == "quota",
+                    accounts=accounts,
                 )
             produced = store.read().get("changeset", cs_id).data["ops"]
             case, outcomes, own = _without_own_ops(case, produced)

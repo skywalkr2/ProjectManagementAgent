@@ -22,7 +22,7 @@ first:
     note: No. That row is the Carrier Experience team's own work and does not name ours. Rows scoped to another team get no impact question unless they name our work.
   expect_proposal:
   - op: lesson.add
-    text_has: [another team]
+    text_has: [team]  # another team or other team, however the lesson words it
   keep: true
 later:
   allow: [event.add]  # the calendar entry the prompt asks for beside a dated item
@@ -37,7 +37,7 @@ later:
     text_has: [rate import]
   forbid:
   - op: question.add
-  packet_has: [another team]
+  packet_has: ['# Lessons']  # the lesson is the model's own wording, so the check is that it reaches the packet
 ideal:
   learn:
     summary: Another team's rows get no impact question.

@@ -85,6 +85,7 @@ from engine.evaluate import (
     _read_program_versions,
     _summarize,
     _unexpected,
+    not_made,
     received_of,
     starting_records,
 )
@@ -422,8 +423,15 @@ class _Play:
         return (found.data.get("waiting") if found is not None else None) or "it did not finish"
 
     def refused(self, request: str) -> bool:
+        return self._last_error(request) in ("rate_limited", "quota")
+
+    def spent(self, request: str) -> bool:
+        """Whether the account's plan was used up on this request's last call."""
+        return self._last_error(request) == "quota"
+
+    def _last_error(self, request: str) -> str | None:
         runs = [r for r in self.store.read().list("run") if r.data.get("request") == request]
-        return bool(runs) and runs[-1].data.get("error_kind") in ("rate_limited", "quota")
+        return runs[-1].data.get("error_kind") if runs else None
 
     # -- corrections, learning, keeping
 
@@ -686,7 +694,7 @@ def _play_pair(
 
     def stopped(why: str, request_id: str | None = None, **more: Any) -> RunResult:
         if request_id is not None and play.refused(request_id):
-            return result(False, error=why, not_run=True, **more)
+            return result(False, error=why, not_run=True, out_of_quota=play.spent(request_id), **more)
         return result(False, error=why, **more)
 
     try:
@@ -862,6 +870,7 @@ def _run_scenario(
         if played:
             _versions(played[-1], versions, factory)
         refused = bool(stopped and played and played[-1].refused(request or ""))
+        spent = bool(stopped and played and played[-1].spent(request or ""))
         passed = stopped is None and not problems and not forbidden and not extra
         out = RunResult(
             scenario["id"],
@@ -872,6 +881,7 @@ def _run_scenario(
             extra,
             error=stopped,
             not_run=refused,
+            out_of_quota=spent,
             cost_usd=cost,
             seconds=seconds,
             accounts=sorted(set(accounts)),
@@ -910,30 +920,34 @@ def evaluate_pairs(
     # A pending pair is run only when it is named.
     items = [(run, item) for run, item in items if (item["id"] in only if only else not item.get("pending"))]
     total, results = len(items) * runs, []
-    for run, item in items:
-        for n in range(1, runs + 1):
-            step = f"[{len(results) + 1}/{total}] {item['id']}"
-            if notice is not None:
-                notice(f"{step}: started")
-            waited = (
-                (lambda s, step=step: notice(f"{step}: the account asked to slow down; trying again in {s:.0f}s"))
-                if notice
-                else None
-            )
-            results.append(
-                run(
-                    template,
-                    item,
-                    n,
-                    versions=versions,
-                    account=account,
-                    stub=stub,
-                    env=env,
-                    ai_config=ai_config,
-                    on_wait=waited,
-                    adapter_factory=adapter_factory,
-                )
-            )
+    for run, item, n in ((run, item, n) for run, item in items for n in range(1, runs + 1)):
+        if results and results[-1].out_of_quota:
+            results.append(not_made(item["id"], n, results[-1]))
             if progress is not None:
                 progress(results[-1], len(results), total)
+            continue
+        step = f"[{len(results) + 1}/{total}] {item['id']}"
+        if notice is not None:
+            notice(f"{step}: started")
+        waited = (
+            (lambda s, step=step: notice(f"{step}: the account asked to slow down; trying again in {s:.0f}s"))
+            if notice
+            else None
+        )
+        results.append(
+            run(
+                template,
+                item,
+                n,
+                versions=versions,
+                account=account,
+                stub=stub,
+                env=env,
+                ai_config=ai_config,
+                on_wait=waited,
+                adapter_factory=adapter_factory,
+            )
+        )
+        if progress is not None:
+            progress(results[-1], len(results), total)
     return Report(account or ("stub" if stub else "configured"), runs, results, versions)

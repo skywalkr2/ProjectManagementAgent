@@ -3,6 +3,27 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: The "after" run's last report: a spent plan, and pair checks on wording
+
+**Decided by:** the technical PM, reading the owner's reports at `b136c7d`. **What:** the golden set passed 73 of 81 and
+the harder set 55 of 57. The account's monthly quota ran out during the learning pairs, and two things in the app made
+that look like 42 failures:
+- **The quota message wasn't read.** The command-line agent presets give no error patterns, so "You have exceeded your
+  monthly quota" was an unknown failure that the app retried. The agent adapter now reads common usage-limit and
+  rate-limit wording after an account's own patterns.
+- **The evaluators kept calling.** Both evaluators now stop at a spent plan: the runs after it are marked not run and
+  never called, and the report is still written.
+- **Pair checks on wording.** Pairs that checked the later packet for a lesson's exact words, which the model writes, now
+  check that a lesson reaches the packet (the "# Lessons" heading), and match a lesson's own text by a stem. The two
+  routing pairs allow the reply action the notes prompt asks for, and `routing-only-proposed` checks only that the
+  unkept routing never sends the question to the one it named.
+- Rescored that way, 32 of the 51 pair runs that reached the model passed. The 19 real misses are listed in
+  `docs/project/evals/README.md`; several are L7's to fix.
+
+**Why:** a report must say "not run" when the account refused, and a pair must test learning, not phrasing. **Impact:**
+`engine/ai/adapters/cli_agent.py`, `engine/evaluate.py`, `engine/pairs.py`, eleven pair files; roadmap O3 stays open
+until both pair sets run once the quota resets. No change to scope.
+
 ## 2026-10-15: The functional designer's answers to the round of 2026-10-15, and the owner's timing
 
 **Decided by:** the functional designer (answers 2 to 24), the owner (timing), the technical PM (placement). **What:** every

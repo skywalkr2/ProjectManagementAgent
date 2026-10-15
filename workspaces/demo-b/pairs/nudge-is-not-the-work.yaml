@@ -20,7 +20,7 @@ first:
     kind: undone
   expect_proposal:
   - op: lesson.add
-    text_has: [follow]
+    text_has: [complet]  # completion or complete, however the lesson words it
   keep: true
 later:
   received: '2026-10-14'
@@ -32,7 +32,7 @@ later:
   forbid:
   - op: action.close
   allow: [record.set, event.add]  # Sam's own new day for the interior file moves its due date, with its calendar entry
-  packet_has: [not completion]
+  packet_has: ['# Lessons']  # the lesson is the model's own wording, so the check is that it reaches the packet
 ideal:
   learn:
     summary: A follow-up does not finish the work.

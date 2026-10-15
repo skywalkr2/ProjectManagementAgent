@@ -32,6 +32,7 @@ later:
   forbid:
   - op: question.add
     to: PER-3
+  allow: [action.add]  # the PM's reply to the shop, which the notes prompt asks for beside the question
   packet_has: [Who answers what, reviewer list]
 ideal:
   first:

@@ -59,6 +59,19 @@ class LockdownCheck:
     detail: str
 
 
+#: Error wording common to command-line agents, read after an account's own patterns.
+COMMON_ERRORS: dict[str, tuple[str, ...]] = {
+    "quota": (
+        r"exceeded (?:your|the) (?:\w+ )?quota",
+        r"quota (?:exceeded|reached)",
+        r"usage limit (?:reached|exceeded)",
+        r"hit your (?:usage )?limit",
+        r"out of (?:credits?|quota)",
+    ),
+    "rate_limited": (r"rate.?limit", r"too many requests", r"\b429\b", r"overloaded"),
+}
+
+
 class CliAgentAdapter:
     name = "cli-agent"
 
@@ -214,6 +227,12 @@ class CliAgentAdapter:
                 if any(re.search(p, tail, re.I) for p in getattr(errors, name)):
                     kind = name
                     break
+        if kind is None:
+            # After the account's own patterns, the wording most agents use for a spent plan or a request to slow
+            # down, so an account set up without patterns still stops the work instead of retrying it as unknown.
+            kind = next(
+                (name for name, pats in COMMON_ERRORS.items() if any(re.search(p, tail, re.I) for p in pats)), None
+            )
         detail = tail.strip() or f"the agent stopped with exit code {exit_code}"
         if kind == "auth":
             return AiError("auth", detail, hint=self.sign_in_hint() or None)

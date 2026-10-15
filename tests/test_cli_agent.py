@@ -155,6 +155,21 @@ def test_a_missing_program_and_a_slow_one_are_classified(agent_script):
     assert late.value.kind == "timeout"
 
 
+@pytest.mark.parametrize(
+    ("stream", "kind"),
+    [
+        ("Error: You have exceeded your monthly quota (Request ID: 0000:1111)", "quota"),
+        ("Usage limit reached for this plan.", "quota"),
+        ("429 Too Many Requests", "rate_limited"),
+    ],
+)
+def test_an_agent_with_no_error_patterns_of_its_own_still_reads_a_usage_limit(agent_script, stream, kind):
+    """An account set up with no patterns of its own gets the common ones, so a spent plan stops the work instead of
+    being retried as an unknown failure."""
+    adapter = CliAgentAdapter(settings(agent_script, "stdout"))
+    assert adapter.classify_error(1, stream, None).kind == kind
+
+
 def test_an_account_without_a_command_is_refused():
     with pytest.raises(AiError):
         CliAgentAdapter(ProviderSettings(adapter=CliAgentAdapter.name))

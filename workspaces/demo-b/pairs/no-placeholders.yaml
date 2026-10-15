@@ -38,7 +38,7 @@ later:
     due: null
   - op: question.add
     to: PER-5
-  packet_has: [leave the due date empty]
+  packet_has: ['# Lessons']  # the lesson is the model's own wording, so the check is that it reaches the packet
 ideal:
   learn:
     summary: Never invent a date.

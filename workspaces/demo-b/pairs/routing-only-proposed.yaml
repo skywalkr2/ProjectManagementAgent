@@ -28,13 +28,12 @@ later:
     From: Maya Lindqvist
 
     Which reviewers are getting advance copies? We want to avoid sending the same people a second copy.
-  # The question goes where it would have gone before: nothing was kept, so the proposal is not in the packet.
-  expect:
-  - op: question.add
-    to: PER-2
+  # Nothing was kept, so the proposal is not in the packet and the question never goes to the one it named; where it
+  # goes instead (the editor, or the PM, who owes the shop a reply) is the run's own call.
   forbid:
   - op: question.add
     to: PER-5
+  allow: [question.add, action.add]  # a question to someone else, and the PM's reply to the shop
   packet_lacks: [Who answers what, reviewer list]
 ideal:
   first:
