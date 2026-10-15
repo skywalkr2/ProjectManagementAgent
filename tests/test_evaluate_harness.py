@@ -65,9 +65,50 @@ def test_an_op_kind_the_case_allows_is_never_counted_as_extra(monkeypatch):
     assert not other.passed and other.extra == ["fact() applied"]
 
 
-def test_the_harder_set_allows_the_calendar_entry_the_notes_prompt_asks_for_beside_a_dated_action():
-    for case_id in ("forwarded-under-note", "quoted-thread-action-exists", "quoted-thread-action-missing"):
-        assert "event.add" in case_of(DEMO_A, case_id).get("allow", []), case_id
+_MONTHS = "jan|feb|mar|apr|may|jun|jul|aug|sept?|oct|nov|dec"
+_DAYS = "monday|tuesday|wednesday|thursday|friday|saturday|sunday"
+#: Words that give a date for something: an ISO day, a month and day either way round, or "by"/"next" a weekday.
+_A_DATE = re.compile(
+    rf"\b\d{{4}}-\d{{2}}-\d{{2}}\b|\b(?:{_MONTHS})[a-z]*\.? \d{{1,2}}\b|\b\d{{1,2}} (?:{_MONTHS})|"
+    rf"\bby (?:{_DAYS}|tomorrow|end of (?:the )?week)\b|\bnext (?:{_DAYS}|week)\b",
+    re.IGNORECASE,
+)
+
+
+def _names_an_entry(case) -> bool:
+    kinds = [k for e in [*case.get("expect", []), *case.get("forbid", [])] if "op" in e for k in ev._kinds(e)]
+    return "event.add" in kinds or "event.add" in case.get("allow", [])
+
+
+@pytest.mark.parametrize("template", [DEMO_A, DEMO_B], ids=["demo-a", "demo-b"])
+def test_every_case_whose_input_gives_a_date_says_what_happens_to_the_calendar_entry_the_prompt_asks_for(template):
+    """The notes prompt asks for a calendar entry beside anything the input dates. A case that neither expects, allows
+    nor forbids one fails a model for following the prompt, which the ideal answers never show."""
+    unsaid = []
+    for case in load_cases(template):
+        text = " ".join(str(case.get(key) or "") for key in ("pasted", "note"))
+        if _A_DATE.search(text) and not _names_an_entry(case):
+            unsaid.append(case["id"])
+    assert unsaid == []
+
+
+def test_an_expected_op_naming_several_kinds_is_met_by_any_one_of_them(monkeypatch):
+    case = case_of(DEMO_B, "colon-in-title")
+    assert ev._kinds(case["expect"][0]) == ["fact", "action.add"]
+    title = case["expect"][0]["text_has"][0]
+    as_action = {"op": "action.add", "text": f"Settle {title}", "evidence": {"quote": title}}
+    assert run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={"summary": "s", "ops": [as_action]}).passed
+    split = {"op": "action.add", "text": title.split(":")[0], "evidence": {"quote": title}}
+    missed = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={"summary": "s", "ops": [split]})
+    assert not missed.passed and missed.missing
+
+
+def test_an_entrys_time_matches_however_the_answer_wrote_it(monkeypatch):
+    case = case_of(DEMO_B, "invitation-event")
+    [entry] = case["stub_answer"]["ops"]
+    written = {**entry, "start": entry["start"].replace(":00+00:00", "Z")}
+    assert written["start"] != entry["start"]
+    assert run_edited(monkeypatch, DEMO_B, case["id"], stub_answer={"summary": "s", "ops": [written]}).passed
 
 
 def test_a_note_is_never_counted_as_an_unexpected_op(monkeypatch):
@@ -80,7 +121,7 @@ def test_each_expected_op_accounts_for_one_produced_op_so_a_duplicate_is_extra(m
     case = case_of(DEMO_B, "printer-proof-date")
     twice = with_ops(case, {**case["stub_answer"]["ops"][0], "text": case["stub_answer"]["ops"][0]["text"] + " Again."})
     result = run_edited(monkeypatch, DEMO_B, case["id"], stub_answer=twice)
-    assert not result.passed and result.extra == ["fact() applied"]
+    assert not result.passed and result.extra == ["fact(project=PRJ-1) applied"]
 
 
 def test_a_held_op_is_extra_unless_the_case_expects_something_held(monkeypatch):

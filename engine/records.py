@@ -1181,6 +1181,8 @@ class CalendarEntry(Record):
     def _readable_times(self) -> CalendarEntry:
         if (problem := entry_problem(self.start, self.end)) is not None:
             raise ValueError(problem)
+        self.start = canonical_time(self.start)
+        self.end = canonical_time(self.end) if self.end is not None else None
         return self
 
 
@@ -1190,6 +1192,16 @@ def entry_time(value: str) -> date | datetime:
     if len(text) == 10:
         return date.fromisoformat(text)
     return datetime.fromisoformat(text[:-1] + "+00:00" if text.endswith("Z") else text)
+
+
+def canonical_time(value: str) -> str:
+    """A day or date-time in the one form it is kept in: a day as 2026-10-12, a date-time to the second with its offset
+    written out (2026-10-12T09:30:00+00:00), or with none when it is in the person's time zone. Raises ValueError for
+    anything `entry_time` doesn't read."""
+    moment = entry_time(value)
+    if isinstance(moment, datetime):
+        return moment.isoformat(timespec="seconds" if not moment.microsecond else "auto")
+    return moment.isoformat()
 
 
 def entry_problem(start: str, end: str | None) -> str | None:

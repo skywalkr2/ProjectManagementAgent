@@ -23,6 +23,8 @@ forbid:
 - op: action.add
   text_has:
   - announcement
+allow:
+- event.add
 stub_answer:
   summary: Theo's new date for the spine options.
   ops:

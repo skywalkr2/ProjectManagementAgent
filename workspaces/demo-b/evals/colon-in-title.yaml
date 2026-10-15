@@ -17,7 +17,8 @@ pasted: 'From: Avery Lane
 
   Nothing else is open.'
 expect:
-- op: fact
+# The case checks the title stays whole; an open item kept as a fact or as an action both hold it.
+- op: [fact, action.add]
   text_has:
   - 'Team wireless: release on top'
 forbid:

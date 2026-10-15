@@ -7,6 +7,8 @@ expect:
   id: ACT-2
   field: due
   value: '2026-10-16'
+allow:
+- event.add
 stub_answer:
   summary: The back-cover copy moved to Oct 16.
   ops:

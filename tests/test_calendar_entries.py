@@ -107,6 +107,25 @@ def seed(store, **entry):
         return tx.create("event", {"trust": "trusted", **entry}, _PM).id
 
 
+@pytest.mark.parametrize(
+    ("written", "stored"),
+    [
+        ("2026-11-16T14:00Z", "2026-11-16T14:00:00+00:00"),
+        ("2026-11-16T14:00:00Z", "2026-11-16T14:00:00+00:00"),
+        ("2026-11-16T14:00+00:00", "2026-11-16T14:00:00+00:00"),
+        ("2026-11-16T09:30", "2026-11-16T09:30:00"),
+        (" 2026-11-16 ", "2026-11-16"),
+    ],
+)
+def test_an_entrys_times_are_kept_in_one_form_however_they_were_written(env, written, stored):
+    """The same moment is always the same text, so entries compare, sort and match as the moments they are."""
+    _, _, store = env
+    entry = store.read().get("event", seed(store, title="Walkthrough", start=written, end=written))
+    assert entry.data["start"] == stored and entry.data["end"] == stored
+    op = OP_MODELS["event.add"](op="event.add", title="Walkthrough", start=written, evidence={"quote": "on Monday"})
+    assert op.start == stored
+
+
 def test_the_agenda_lists_an_entry_on_each_day_of_its_range_after_the_calendar_events(env):
     _, cfg, store = env
     cfg.ui.today.agenda_days_ahead = 4

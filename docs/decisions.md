@@ -3,6 +3,29 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: What the owner's "after" run found, and how each finding was handled
+
+**Decided by:** the technical PM, reading the owner's "after" run (O3) of the golden set. **What:** 32 of 81 runs
+passed as first scored. Every failure was classified from what the run produced:
+- **Cases out of date (34 runs):** since 2026-10-13 the notes prompt asks for a calendar entry beside anything an input
+  dates, but the golden set's cases never allowed one, so a model that followed the prompt failed. Eleven golden cases
+  and one harder-set case now allow `event.add`, and four allow a `fact` beside what they expect (a schedule row, the
+  other lines of a check-in, the friendly line of a hostile mail, the body of a signed mail). A test fails any case whose
+  input gives a date and that neither expects, allows nor forbids a calendar entry, so a prompt rule can't silently
+  outdate the cases again. `colon-in-title` checks that a title stays whole, so it is met by a fact or an action that
+  holds the whole title (an expected op may now name several kinds).
+- **An app bug (likely `invitation-event`, 3 runs):** a calendar entry's times were stored exactly as written, so the
+  same moment written `14:00Z` and `14:00:00+00:00` never matched. Times are now kept in one form on the record and the
+  op (`canonical_time`), and the scorer compares times as times. Run summaries now show an entry's start and project.
+- **Real misses (12 runs):** the assistant answered a moved date with a calendar entry instead of changing the action's
+  due date (`they-finished-note`, 3 of 3), moved or closed a second action about the same thing (`date-change` 3 of 3,
+  `own-edit-closes-action` 1 of 3), and once each named an owner for a shared first name and filed a date as a held
+  action. The notes prompt now says how a new date for an open action is recorded (`record.set` on its due, the entry
+  beside it) and that an input changes only the items its words name. The two single runs are left as variance.
+**Why:** the comparison with O1 and O2 must measure the assistant, not cases that lag the prompt; each correction is
+shown beside the raw number. **Impact:** `engine/evaluate.py`, `engine/records.py`, `engine/ops.py`, the notes prompt,
+17 cases; roadmap O3 (a short rerun of the four affected cases at the fix commit). No change to scope.
+
 ## 2026-10-15: The check on a switch runs the learning pairs too
 
 **Decided by:** the technical PM, merging L4's second part. **What:** "Switch and check" runs the golden set, the person's

@@ -11,7 +11,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationInfo, field_validator, model_validator
 
-from engine.records import Scope, entry_problem
+from engine.records import Scope, canonical_time, entry_problem
 
 Tier = Literal["data", "outbound", "system"]
 
@@ -121,7 +121,7 @@ class EventAddOp(OpModel):
         text = value.strip()
         if (why := entry_problem(text, None)) is not None:
             raise ValueError(why)
-        return text
+        return canonical_time(text)
 
 
 class RecordSetOp(OpModel):

@@ -174,6 +174,16 @@ def test_the_prompt_tells_the_assistant_what_the_marks_mean(env):
     assert 'by_us="yes"' in instructions
 
 
+def test_the_prompt_says_a_new_date_moves_the_named_action_and_nothing_else(env):
+    """A moved date changes the open action it names with record.set, never only a calendar entry, and another action
+    about the same thing keeps its date (golden cases they-finished-note, date-change, own-edit-closes-action)."""
+    ws, cfg, store = env
+    handed = hand_in(ws, store, pasted=RAW, now=NOW)
+    instructions = build(ws, store, cfg, handed.request, NOW.date()).task.instructions
+    assert '"record.set" (kind "action", field "due")' in instructions
+    assert "changes only the items its words name" in instructions
+
+
 # ---- a recipient is never guessed ------------------------------------------------------------------------------------
 
 

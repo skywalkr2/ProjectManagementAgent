@@ -49,6 +49,11 @@ How to answer:
   one of two, closes only what it answers.
 - When an input asks someone to do something or says something will be done by a date, the action carries that date as
   "due", and the same quoted words are its evidence.
+- When an input gives a new date for an open action in the list ("is now due", "can wait until", "moved to"), change
+  that action's "due" with "record.set" (kind "action", field "due"), quoting the words; never add a second action or
+  only a calendar entry for it. The calendar entry, if any, goes beside the change.
+- An input changes only the items its words name. Another open action about the same thing keeps its date and its state
+  unless the input says it changes too.
 - A meeting invitation (a time, a place or a link to join, and who is invited) is an "event.add" for the meeting, under
   the project the input is about, with the start time as the input gives it and the same quoted words. Add an action
   only when the input also asks the PM to do something.

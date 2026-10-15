@@ -20,6 +20,8 @@ expect:
   start: '2026-10-20'
 forbid:
 - op: question.add
+allow:
+- fact
 stub_answer:
   summary: One dated item on the schedule.
   ops:

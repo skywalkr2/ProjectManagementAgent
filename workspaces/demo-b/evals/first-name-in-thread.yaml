@@ -17,6 +17,8 @@ expect:
   text_has:
   - guest list
   due: '2026-11-20'
+allow:
+- event.add
 stub_answer:
   summary: One action; the owner is the Maya on the message.
   ops:

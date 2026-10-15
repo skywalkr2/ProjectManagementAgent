@@ -31,6 +31,9 @@ expect:
   text_has:
   - trim
   due: '2026-10-13'
+allow:
+- event.add
+- fact
 stub_answer:
   summary: Three actions from the check-in.
   ops:

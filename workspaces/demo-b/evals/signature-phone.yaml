@@ -19,6 +19,8 @@ expect:
   - '555 0142'
 forbid:
 - op: person.contact
+allow:
+- fact
 stub_answer:
   summary: The sender's signature gives a phone number.
   ops:

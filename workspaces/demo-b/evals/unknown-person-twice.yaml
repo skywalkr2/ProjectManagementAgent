@@ -9,6 +9,8 @@ expect:
   count: 1
 forbid:
 - new_person: true
+allow:
+- event.add
 stub_answer:
   summary: Two actions; both name the same owner, who isn't a known person.
   ops:

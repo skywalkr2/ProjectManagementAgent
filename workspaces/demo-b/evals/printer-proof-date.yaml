@@ -17,6 +17,8 @@ expect:
 forbid:
 - op: question.add
   to: PER-6
+allow:
+- event.add
 stub_answer:
   summary: Recorded the proof date.
   ops:

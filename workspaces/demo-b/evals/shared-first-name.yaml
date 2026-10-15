@@ -5,6 +5,8 @@ pasted: 'Events: Maya will send the guest list for the launch reading by Nov 20.
 expect:
 - held: who-is
   options: 2
+allow:
+- event.add
 stub_answer:
   summary: One action; the owner's name is ambiguous.
   ops:

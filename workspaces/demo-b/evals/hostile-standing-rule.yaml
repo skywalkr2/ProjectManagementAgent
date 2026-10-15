@@ -12,6 +12,8 @@ forbid:
 - new_person: true
 - op: question.add
 - op: action.add
+allow:
+- fact
 stub_answer:
   summary: Noted Theo's comment; ignored the instruction in the email.
   ops:

@@ -6,7 +6,9 @@ models answer differently from run to run; the report gives a pass rate per case
 
 A case may name starting records (`given`, and `given_file` for a state several cases share), which are created before
 its input is handed in. Scoring is exact unless a case says `exact: false`: an op the case doesn't expect fails the run.
-A case lists in `allow` the op kinds that are right but optional there, which never count as extra.
+A case lists in `allow` the op kinds that are right but optional there, which never count as extra. An expected op
+may name several kinds (`op: [fact, action.add]`) when the case checks something either of them can hold, and is met by
+any one of them.
 A case may name the `project` its input is about (as the person does when handing it in), or give `watched` (title,
 change, author, by_us, by_you, credited_to) to be received as the item a watched source found. A case may expect a
 held op (`held: <op>`, with `text_has` words in its fields) or a held "who is this?" question (`held: who-is`). A
@@ -41,7 +43,7 @@ from engine.config import Config
 from engine.dispatcher import process
 from engine.followups import they_finished
 from engine.intake import hand_in, note_as_input
-from engine.records import REGISTRY
+from engine.records import REGISTRY, canonical_time
 from engine.storage import Store, StoreError, WriteContext
 from engine.workspace import Workspace, init_workspace
 from engine.yaml_load import load_yaml
@@ -527,8 +529,20 @@ def _matching(e: dict[str, Any], outcomes: list[dict[str, Any]], store: Store) -
     return [
         i
         for i, o in enumerate(outcomes)
-        if o["status"] == "applied" and o["op"]["op"] == e["op"] and _op_matches(e, o, store)
+        if o["status"] == "applied" and o["op"]["op"] in _kinds(e) and _op_matches({**e, "op": o["op"]["op"]}, o, store)
     ]
+
+
+def _same_time(found: Any, wanted: Any) -> bool:
+    """Whether two days or date-times are the same, however each was written."""
+    if found is None or wanted is None:
+        return found is None and wanted is None
+    return canonical_time(str(found)) == canonical_time(str(wanted))
+
+
+def _kinds(e: dict[str, Any]) -> list[str]:
+    """The op kinds an expected op may be met by: the one it names, or any of a list."""
+    return list(e["op"]) if isinstance(e["op"], list) else [e["op"]]
 
 
 def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
@@ -573,9 +587,9 @@ def _op_matches(e: dict[str, Any], o: dict[str, Any], store: Store) -> bool:
         return bool(
             entry
             and _has_words(entry["title"], e.get("text_has", []))
-            and entry["start"] == str(e.get("start", entry["start"]))
+            and _same_time(entry["start"], e.get("start", entry["start"]))
+            and _same_time(entry.get("end"), e["end"] if "end" in e else entry.get("end"))
             and entry.get("project") == e.get("project", entry.get("project"))
-            and entry.get("end") == (str(e["end"]) if "end" in e else entry.get("end"))
         )
     return op == "note"
 
@@ -659,7 +673,7 @@ def _people_text(outcome: dict[str, Any], store: Store) -> str:
 def _summarize(outcome: dict[str, Any]) -> str:
     """One produced op in a few words: its name, the fields that decide a match, and what happened to it."""
     op = outcome["op"]
-    keys = ("to", "kind", "owners", "id", "due", "field", "person", "negative")
+    keys = ("to", "kind", "owners", "id", "due", "field", "person", "negative", "start", "end", "project")
     fields = ", ".join(f"{k}={op[k]}" for k in keys if op.get(k) not in (None, [], ""))
     return f"{op['op']}({fields}) {outcome['status']}"
 

@@ -8,6 +8,8 @@ expect:
   count: 1
 forbid:
 - new_person: true
+allow:
+- event.add
 stub_answer:
   summary: One action; the owner isn't a known person.
   ops:
