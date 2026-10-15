@@ -206,8 +206,25 @@ def proposal_rules(
     existing = proposals.duplicate_of(tx, kind, data)
     if existing is None:
         return None
+    if kind == "glossary_entry" and _knows_more(data, existing.data):
+        # A meaning learned for a term only known to be unknown replaces the unknown while it is still a proposal; an
+        # unknown the person already kept stays, and the meaning is proposed beside it for them to keep.
+        if existing.data.get("status") != "proposed":
+            return None
+        old = existing.data.get("evidence")
+        more = [e for e in [old, *(existing.data.get("more_evidence") or [])] if e]
+        changes = {f: data[f] for f in ("text", "meaning", "confidence", "evidence") if data.get(f) is not None}
+        tx.update(kind, existing.id, {**changes, "more_evidence": more}, w, read_version=existing.version)
+        return [{"kind": kind, "id": existing.id}]
     merge_into(tx, kind, existing, data.get("evidence"), w)
     return [{"kind": kind, "id": existing.id}]
+
+
+def _knows_more(new: dict[str, Any], old: dict[str, Any]) -> bool:
+    """Whether a glossary proposal gives a meaning for a term the entry it duplicates only knows to be unknown."""
+    return old.get("confidence") == "unknown" and new.get("confidence") not in (None, "unknown") and bool(
+        new.get("meaning")
+    )
 
 
 def close_to_discard(tx: Any, kind: str, data: dict[str, Any], st: Standing) -> str | None:

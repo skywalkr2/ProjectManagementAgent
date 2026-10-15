@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-15: What L4's learning pairs found, and how each was fixed
+
+**Decided by:** the technical PM, merging L4's first part. **What:** 28 pairs (12 negative) instead of 15 to 20, since the
+roadmap lists that many cases; the pairs found four gaps in the loop, each fixed with a test: (1) a glossary proposal
+that knows a term's meaning replaces a still-proposed "not known yet" entry for it instead of merging into it (an
+unknown the person already kept stays, with the meaning proposed beside it); (2) "It's part of <project>" keeps a
+workspace-wide glossary entry, since the name turns up in inputs not yet filed under the project; (3) a routing entry
+goes with an input about its topic, not only one naming its person or team; (4) the `edited` signal existed in the
+learning code but not in the record, so the person's direct edits never taught: it is now recorded for the fields the
+assistant set, with the ledger saying who set them. The style pair and loading a shared lessons file move to L-more.
+**Impact:** design 6.20, 6.22; roadmap L3, L4, L-more; plugin API 0.3.78. No change to scope.
+
 ## 2026-10-15: GitHub Models leaves the plan
 
 **Decided by:** the owner. **What:** the service was added as a free second account before 1.0; its own documentation,

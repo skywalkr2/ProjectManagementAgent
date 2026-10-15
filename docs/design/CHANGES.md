@@ -1010,6 +1010,15 @@ yet follow, that it is *designed*, with its phase.
 | Keys (6.16, 4.8) | No end date | `credential_expires` on an account, the service-given end of a sign-in, and a Today line `ai.credential_warn_days` before, naming every place the key is used. Built: `tests/test_credential_expiry.py` |
 | Screens (7.x) | A failed read could show as empty | Today's cards, a source's row, Check now and the add-ons list say what failed and what to do |
 
+## 68. L4, part 1: learning pairs, the day-30 scenario, and the four gaps they found (2026-10-15)
+
+| Where | Before | Now |
+|---|---|---|
+| Proving it (6.22) | No pairs | 28 pairs (12 negative) and the day-30 scenario; `cockpit evaluate --pairs`. Built: `tests/test_pairs.py` |
+| Signals (6.20) | `edited` was never recorded | The person's edit of a field the assistant set records it |
+| Glossary (6.22) | A learned meaning merged into "not known yet"; "part of" seen only under its project | The meaning replaces the unknown proposal; the entry is workspace-wide |
+| Routing (6.22) | Only by person, team or project | Also by the input's topic. Built: `tests/test_knowledge_section.py::test_a_routing_entry_reaches_an_input_about_its_topic_whoever_the_input_names` |
+
 ## Plugin host, API 0.1 (2026-10-09)
 
 The first host implements the next-task brief: per-workspace registries, strict manifests and version/dependency checks,

@@ -118,6 +118,41 @@ def record(tx: Any, cfg: Any, data: dict[str, Any], write: Any, now: datetime | 
     return signal_id
 
 
+#: The fields whose edit by the person corrects the assistant, by record kind; others (a status, a note) are their own.
+EDITED_FIELDS = {
+    "action": ("text", "due", "owners", "project"),
+    "question": ("title", "text", "to", "matters_for", "project"),
+    "fact": ("key", "value", "as_of", "project"),
+    "event": ("title", "start", "end", "project"),
+}
+
+
+def record_edits(tx: Any, cfg: Any, now: datetime | str) -> list[str]:
+    """Record one `edited` signal per record the person edited in this transaction, for the fields the assistant had
+    set, naming the change and run that set them; a record a signal already names here is left alone. Returns the
+    signals' ids."""
+    by_record: dict[tuple[str, str], list[tuple[str, Any, Any, str | None]]] = {}
+    for kind, record_id, field, before, after, changeset in tx.person_edits:
+        if field in EDITED_FIELDS.get(kind, ()) and record_id not in tx.signalled:
+            by_record.setdefault((kind, record_id), []).append((field, before, after, changeset))
+    tx.person_edits = []
+    made = []
+    for (_kind, record_id), fields in by_record.items():
+        changeset = next((c for *_, c in reversed(fields) if c), None)
+        cs = tx.get("changeset", changeset) if changeset else None
+        note = "; ".join(f"{field}: was {before!r}, now {after!r}" for field, before, after, _ in fields)
+        data = {
+            "kind": "edited",
+            "refs": [record_id],
+            "changeset": changeset,
+            "run": cs.data.get("run") if cs is not None else None,
+            "note": note,
+            "at": _when(now).isoformat(),
+        }
+        made.append(record(tx, cfg, data, WriteContext(actor="pm", trust="trusted", op="edited"), now))
+    return made
+
+
 def on_signal(tx: Any, cfg: Any, signal_id: str, now: datetime) -> str | None:
     """Queue the learning for a correction that was just recorded, inside the transaction that recorded it. One that
     needs no wait is queued to run now. A silent one is queued with the time of the next batch as the reason it

@@ -496,7 +496,8 @@ def test_part_of_files_the_work_under_the_project_keeps_a_confirmed_entry_record
     assert data(store, "changeset", cs_id)["status"] == "applied"
     assert not [p for p in store.read().list("project") if p.data["name"] == NEW_PROJECT]
     (entry,) = [g.data for g in store.read().list("glossary_entry") if g.data["term"] == NEW_PROJECT]
-    assert entry["status"] == "active" and entry["confidence"] == "confirmed" and entry["project"] == PROJECT["id"]
+    # For the whole workspace: the name turns up in inputs not yet filed under the project; the meaning names it.
+    assert entry["status"] == "active" and entry["confidence"] == "confirmed" and entry["project"] is None
     assert entry["origin"] == "person" and entry["kept_by"] == cfg.workspace.user.person
     assert PROJECT["name"] in entry["meaning"]
     (signal,) = signals(store, "held_declined")

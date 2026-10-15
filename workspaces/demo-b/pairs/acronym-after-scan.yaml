@@ -1,8 +1,6 @@
 id: acronym-after-scan
-# Pending: the scan for new terms proposes "HLP: not known yet" while the first input is read, and the learned meaning
-# merges into that proposal as a duplicate, so Keep keeps "not known yet" and the correction is lost. The pair passes
-# once a learned meaning replaces an unknown one it duplicates.
-pending: A learned meaning merges into the scan's "not known yet" proposal for the same term and is lost.
+# The scan for new terms proposes "HLP: not known yet" while the first input is read; the learned meaning then replaces
+# that unknown proposal (a duplicate that knows more), so Keep keeps the meaning and the next input reads it right.
 title: An unknown term is read the wrong way, corrected once, and read right the next time
 first:
   received: '2026-10-08'

@@ -305,10 +305,14 @@ def per_input_section(
         scope = _scope(entry)
         if not passes(entry, scope):
             continue
+        topic = _overlap_words(entry.data.get("topic") or "")
         about_input = (
             entry.data.get("person") in people_set
             or (entry.data.get("team") is not None and entry.data["team"] in teams)
             or (scope.scope == "projects" and bool(set(scope.projects) & scoped))
+            # an input about the entry's topic, whoever it names: who to ask is what the run needs to know
+            or _uses(entry.data.get("topic") or "", text)
+            or bool(topic and topic <= _overlap_words(text))
         )
         if about_input:
             routing.append((entry, _entry_line(entry)))

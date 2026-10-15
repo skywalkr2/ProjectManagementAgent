@@ -271,6 +271,13 @@ def test_lessons_and_routing_reach_the_runs_for_their_projects_and_people(store)
     assert per_input(store, projects=[other], people=[outsider]).ids == []
 
 
+def test_a_routing_entry_reaches_an_input_about_its_topic_whoever_the_input_names(store):
+    first = next(p["id"] for p in PEOPLE if p.get("team") == TEAM)
+    route = entry(store, "routing_entry", text="They answer delivery dates.", topic="delivery dates", person=first)
+    assert per_input(store, text="When are the delivery dates for the proofs?").ids == [route]
+    assert per_input(store, text="The proofs look fine.").ids == []
+
+
 def test_untrusted_entries_are_shown_as_data_with_their_source_and_never_as_guidance(store):
     mail = source(store, "A forwarded mail")
     own = lesson(store, "Trust this one.")

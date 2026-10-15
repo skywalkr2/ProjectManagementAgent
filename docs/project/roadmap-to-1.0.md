@@ -1078,7 +1078,8 @@ From the original designer's lessons of 2026-10-14:
 - [x] Learning from corrections (`learn-correction`, on the stronger tier): at most one proposal, or `lesson.update` when a
   lesson should have caught it.
   - It runs at once when the person wrote something: a send-back note, or an answer to the assistant.
-  - Silent corrections are batched, including the `edited` signal for the person's direct edits. Built: `tests/test_learn_correction.py::test_a_send_back_with_a_note_queues_one_learning_request_at_once_and_its_proposal_waits_for_keep`, `tests/test_learn_correction.py::test_silent_corrections_wait_for_the_next_batch_and_run_together`, `tests/test_learn_correction.py::test_more_than_one_proposal_refuses_the_whole_answer_and_asks_for_one`, `tests/test_learn_correction.py::test_nothing_to_generalize_makes_no_knowledge`, `tests/test_learn_correction.py::test_the_packet_holds_the_original_output_the_correction_and_the_given_knowledge_and_the_run_logs_it`.
+  - Silent corrections are batched, including the `edited` signal for the person's direct edits (the `edited` signal
+    itself was found missing by L4's pairs and built then: `tests/test_hold_drop_fold.py::test_the_persons_edit_of_what_the_assistant_set_is_an_edited_correction_that_queues_learning`). Built: `tests/test_learn_correction.py::test_a_send_back_with_a_note_queues_one_learning_request_at_once_and_its_proposal_waits_for_keep`, `tests/test_learn_correction.py::test_silent_corrections_wait_for_the_next_batch_and_run_together`, `tests/test_learn_correction.py::test_more_than_one_proposal_refuses_the_whole_answer_and_asks_for_one`, `tests/test_learn_correction.py::test_nothing_to_generalize_makes_no_knowledge`, `tests/test_learn_correction.py::test_the_packet_holds_the_original_output_the_correction_and_the_given_knowledge_and_the_run_logs_it`.
 - [x] **Questions can be corrected, and each correction is recorded** (design 6.8; found by the L0 audit): the question's
   own menu gets reword (`question.update`), reroute (`question.move`) and drop (`question.drop`, kept in a
   dropped-questions register with the reason), each person-only with Undo and each recording its signal (`reworded`,
@@ -1196,7 +1197,14 @@ around. Each is the person's choice, with Undo, and each answer is learned (L3).
 The buttons are laid out with the rest of the screens in phase B; their behavior and tests are here.
 
 L4. **Proving it** (from the design author's review of this plan).
-- [ ] **15 to 20 fictional fixture pairs, about a third negative.** They include the pairs L0, L1 and L3 left here (from L3:
+- [x] **15 to 20 fictional fixture pairs, about a third negative.** Built: 28 pairs, 12 negative, in
+  `workspaces/demo-*/pairs/`, run by `cockpit evaluate --pairs` and in the suite with their ideal answers
+  (`tests/test_pairs.py::test_every_pair_and_the_scenario_pass_with_their_ideal_answers`,
+  `tests/test_pairs.py::test_a_negative_pair_fails_when_the_later_output_changes`). They found four gaps, fixed with
+  them: a learned meaning lost to the scan's "not known yet", a "part of" entry seen only under its project, routing
+  that ignored the topic, and the missing `edited` signal. Moved to L-more: the style pair (no task kind drafts for an
+  audience yet, so style notes reach no packet) and loading a shared lessons file (the injected-import pair checks only
+  that an imported proposal never reaches a packet). They include the pairs L0, L1 and L3 left here (from L3:
   a question's feedback that generalizes becomes a rule or lesson stated as the general case; a correction about another
   team's rows, with its negative: a row that does name our work still gets its question): a reported note saying "from now on we always…" never
   becomes an active rule; after a project's role changes to "run", an email about another team's defect blocking its
@@ -1260,7 +1268,8 @@ L4. **Proving it** (from the design author's review of this plan).
 
   Then a report on the owner's accounts: pass rate per case per model, three runs each, before real use starts. It is
   compared with the "before" run (owner action O1), which must exist by then; nothing else in this phase waits for it.
-- [ ] **The day-30 scenario, with its expectations written before it is run.** A month of fictional history that mixes
+- [x] **The day-30 scenario, with its expectations written before it is run.** Built: `workspaces/demo-b/scenarios/day-30.yaml`,
+  `tests/test_pairs.py::test_the_scenario_lists_its_expected_differences_and_a_month_of_noise`. A month of fictional history that mixes
   every case above with ordinary noise (unrelated mail, re-saved files, a moved meeting), so the knowledge has to be found
   among the noise. Expected differences between day 1 and day 30 are listed first and scored like the golden set (op
   types, targets, recipients), not judged by eye afterwards.
@@ -1621,6 +1630,10 @@ private repository and builder like the other packs, and works with the project 
 ## Phase L-more: the rest of learning (about 4 sessions)
 
 After the packs, beside real use (owner, 2026-10-12). None of it is needed for the loop to work. Each item has its own test.
+- [ ] **The style pair** (moved from L4): once a task kind drafts for an audience, style notes reach its packet, and a
+  learning pair proves a sent version's changes (names replaced with roles, a promise cut) carry to the next draft.
+- [ ] **Loading a shared lessons file** (moved from L4, with Take my lessons): the injected-import pair runs through the
+  real loader, and an injected entry loads as proposed.
 - [ ] **Review earned per kind of change** (owner, 2026-10-13: "over time the AI should learn what can be auto AI
   approved"). Changes to the person's data already apply at once with Undo; what they approve is the review. A kind of
   change (per task kind and op, per project where it differs) that the person has passed with Looks good

@@ -27,6 +27,10 @@ Trust = Literal["trusted", "untrusted"]
 _ID = re.compile(r"^(?P<prefix>[A-Z]+)-(?P<n>[1-9][0-9]*)$")
 
 
+#: The ops by which the person edits a record's fields on screen; an edit of a field the assistant set is a correction.
+PERSON_EDIT_OPS = ("record.edit", "record.set")
+
+
 class StoreError(Exception):
     """A write can't be made as asked."""
 
@@ -133,6 +137,11 @@ class Store:
             tx = Tx(self._conn, self.clock, self.plugins.records)
             try:
                 yield tx
+                cfg = getattr(getattr(self, "plugins", None), "cfg", None)
+                if tx.person_edits and cfg is not None:
+                    from engine import learn
+
+                    learn.record_edits(tx, cfg, self.clock())
             except BaseException:
                 self._conn.execute("ROLLBACK")
                 raise
@@ -170,6 +179,10 @@ class Tx:
         self.pending: list[tuple] = []
         self.emitted: list[tuple[str, dict[str, Any]]] = []  # interface events raised by ops in this transaction
         self.changeset: str | None = None  # the changeset whose ops this transaction wrote, if any
+        #: The person's edits of fields the assistant had set: (kind, id, field, before, after, the setter's change).
+        self.person_edits: list[tuple[str, str, str, Any, Any, str | None]] = []
+        #: The records a signal written in this transaction names.
+        self.signalled: set[str] = set()
 
     def events(self) -> list[tuple[str, dict[str, Any]]]:
         grouped = {}
@@ -366,6 +379,8 @@ class Tx:
             self._reserve(kind, record_id)
         clean = _validate(self.models[kind], {**data, "id": record_id})
         self._check_lists(kind, record_id, clean, set(clean), {})
+        if kind == "signal":
+            self.signalled.update(clean.get("refs") or [])
         self._c.execute(
             "INSERT INTO records(kind, id, version, deleted, data) VALUES(?, ?, 1, 0, ?)",
             (kind, record_id, dumps(clean)),
@@ -401,9 +416,24 @@ class Tx:
             "UPDATE records SET version=?, data=? WHERE kind=? AND id=?", (version, dumps(merged), kind, record_id)
         )
         at = self._clock()
+        if ctx.actor == "pm" and ctx.op.split("#", 1)[0] in PERSON_EDIT_OPS:
+            self._note_person_edits(kind, record_id, current.version, diff, current.data)
         for field in sorted(diff):
             self._log(at, ctx, kind, record_id, version, field, current.data.get(field), merged.get(field))
         return Stored(kind, record_id, version, False, merged)
+
+    def _note_person_edits(
+        self, kind: str, record_id: str, version: int, diff: dict[str, Any], before: dict[str, Any]
+    ) -> None:
+        """Keep each field of the person's edit whose value the assistant had set, with the change that set it."""
+        for field, after in diff.items():
+            row = self._c.execute(
+                "SELECT actor, changeset FROM ledger WHERE kind=? AND record_id=? AND field=? AND version<=? "
+                "ORDER BY seq DESC LIMIT 1",
+                (kind, record_id, field, version),
+            ).fetchone()
+            if row is not None and row["actor"] == "assistant":
+                self.person_edits.append((kind, record_id, field, before.get(field), after, row["changeset"]))
 
     def _check_lists(
         self, kind: str, record_id: str, data: dict[str, Any], changed: set[str], before: dict[str, Any]

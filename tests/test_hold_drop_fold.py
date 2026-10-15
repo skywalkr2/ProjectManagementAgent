@@ -428,3 +428,52 @@ def test_signals_are_written_only_through_the_one_place_that_queues_their_learni
         if writes.search(path.read_text(encoding="utf-8"))
     )
     assert writers == ["engine/learn.py"], writers
+
+
+def test_the_persons_edit_of_what_the_assistant_set_is_an_edited_correction_that_queues_learning(env):
+    from engine.learn import learn_request
+
+    _, cfg, store = env
+    made = {
+        "op": "action.add",
+        "text": "Book the caterer",
+        "owners": [other_of(cfg)],
+        "evidence": {"quote": "Notes for the item."},
+    }
+    cs_id, run_id, action_id = made_by_a_run(env, made, "action")
+    apply_as_person(
+        store,
+        cfg,
+        [
+            {
+                "op": "record.set",
+                "kind": "action",
+                "id": action_id,
+                "field": "text",
+                "value": "Book the caterer for Friday",
+            }
+        ],
+        "Edit",
+    )
+    (signal,) = signals(store, "edited")
+    assert signal["refs"] == [action_id] and signal["changeset"] == cs_id and signal["run"] == run_id
+    assert "Book the caterer" in signal["note"] and "for Friday" in signal["note"]
+    view = store.read()
+    edited = next(s for s in view.list("signal") if s.data["kind"] == "edited")
+    assert learn_request(view, edited.id) is not None
+    # An edit of what the person set, or a second edit of a field the person already changed, corrects nothing.
+    apply_as_person(
+        store,
+        cfg,
+        [
+            {
+                "op": "record.set",
+                "kind": "action",
+                "id": action_id,
+                "field": "text",
+                "value": "Book the caterer for Saturday",
+            }
+        ],
+        "Edit",
+    )
+    assert len(signals(store, "edited")) == 1

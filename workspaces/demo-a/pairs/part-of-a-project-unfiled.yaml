@@ -2,7 +2,6 @@ id: part-of-a-project-unfiled
 # Pending: a glossary entry that names a project reaches only the packets of inputs filed under that project, so an
 # input with no project, which is where a new name for a project turns up, never sees it. The pair passes once such an
 # entry also reaches an input that uses its term.
-pending: A glossary entry for a project is left out of the packet of an input that has no project.
 title: Words taken for a new project are filed under an existing one, and the next mention goes there with no question
 first:
   received: '2026-10-09'

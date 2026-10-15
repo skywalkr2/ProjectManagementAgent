@@ -335,12 +335,13 @@ def _set_aside(store: Store, cfg: Config, changeset_id: str, index: int, into: s
         outcomes[index].update(status="refused", reason=reason, question=None)
         status = "held" if any(o["status"] == "held" for o in outcomes) else "applied"
         tx.update("changeset", changeset_id, {"ops": outcomes, "status": status}, w, read_version=cs.version)
+        # The entry is for the whole workspace: the name matters most in an input not yet filed under the project, and
+        # its meaning names the project.
         entry = GlossaryAddOp(
             text=f"{name}: {meaning}",
             term=name,
             meaning=meaning,
             confidence="confirmed",
-            project=into,
         )
         standing = knowledge.Standing(
             person=True,
