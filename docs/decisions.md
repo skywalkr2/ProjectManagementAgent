@@ -3,6 +3,38 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: A password typed on the screen is kept in the private keys folder; a catalog's address and a read token are added on the Add-ons screen
+
+- **Decided (main session, from the owner's words: "the language setting should be a dropdown", "in imap setup we need to be
+  able to take a password and not require the user to have set it somewhere else", "they still require manual command line
+  installs instead of through the screen. the screen lists zero available plugins"; phase B; open promises P15 and P16):**
+  (1) The language setting and a project's own language are lists of language tags (the core's shipped
+  `engine/defaults/languages.yaml`), shown by name in the browser's language and stored as the tag; a value already set that
+  isn't on a named list is added to it, so no list shows a wrong value. (2) A setting whose value is a secret reference is
+  marked `secret` in its description. A source's add and change routes take pasted values apart from the settings
+  (`secrets`, by dotted field name); on a local app each is kept as a file in `<workspace>/.cockpit/keys/` (the folder 0700,
+  the file 0600) named `source-<source id>-<field>` and the source's settings hold only its `file:` reference; a hosted app
+  refuses a pasted value (the existing "keys can't be pasted" answer). A value is never written to `watch.yaml`, the ledger,
+  a log or an answer; the source list says only where each secret is read from. "Where it is kept instead" (an environment
+  variable or a file of the person's own) stays the second choice. (3) With no catalog listed, Add-ons offers an address
+  field, saved into `workspace.plugins.catalog.feeds` (https only) and read at once; the catalog list can add another and take
+  away one the person added. All of `workspace.plugins.catalog.*` is read when the screen uses it, so it is now a live key.
+  An install the release host refuses for want of a token (401, 403, 404, or a token that can't be read) answers with the
+  header `X-Cockpit-Needs: read-token`, and the row asks for the token in place; a typed token is kept like any other
+  typed secret (`release-token-<host>`) and its reference written to `release_tokens` for the host of that entry's
+  release, which the server takes from the entry, never from the request. The plugin guide's "Publishing a pack" now says to
+  attach the built wheel to the tagged release and give its address and SHA-256 in `release`, with the release asset's API
+  address for a private repository.
+- **Why:** a person setting up a mailbox or a private add-on had to leave the screen to set an environment variable or write
+  a file, and a build with no shipped catalog listed nothing. Pasted AI keys were already kept this way; the same rule now
+  covers every secret reference, with the same local-only limit. The token goes only to its release host, as before.
+- **Impact:** design 3.11, 3.14, 4.0, 4.22, 4.24, 6.29 and 7.0 (edited), `docs/design/CHANGES.md`, the plugin guide
+  (regenerated). API: `secret` and `choices` on setting items, `secrets` on the source add and change routes, `secrets` on
+  the source list, `POST /api/packs/catalogs`, `/api/packs/catalogs/remove` and `/api/packs/{id}/token`, `address`,
+  `removable` and `release_host` on the Add-ons view. No new config key; no change to scope or to the plugin API. Not
+  built: typing an add-on's own secrets (`workspace.plugins.secrets`) and the backup key on the screen (still a reference
+  box in Settings).
+
 ## 2026-10-16: AI accounts as one place, the comparison grid, "Not now" in the menu and the copy tables are built
 
 - **Decided (main session, from the UI designer's answers 25, 26, 31 and 32; phase B):** an AI account carries an optional

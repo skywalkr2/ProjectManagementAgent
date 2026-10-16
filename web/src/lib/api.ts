@@ -8,6 +8,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     public detail: string,
+    /** What the server says would fix it, when it says (the `X-Cockpit-Needs` header): "read-token". */
+    public needs: string | null = null,
   ) {
     super(detail || `HTTP ${status}`);
   }
@@ -23,7 +25,7 @@ async function send<T>(method: "GET" | "POST" | "DELETE", path: string, init: Re
     } catch {
       detail = "";
     }
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, detail, response.headers.get("X-Cockpit-Needs"));
   }
   return (await response.json()) as T;
 }
@@ -271,6 +273,11 @@ export const api = {
 
   packs: () => call<S["PacksView"]>("GET", "packs"),
   refreshPacks: () => call<S["PacksView"]>("POST", "packs/refresh"),
+  addCatalog: (address: string, fingerprint: string) =>
+    call<S["SettingsSaved"]>("POST", "packs/catalogs", { address, fingerprint } satisfies S["CatalogAddress"]),
+  removeCatalog: (address: string, fingerprint: string) =>
+    call<S["SettingsSaved"]>("POST", "packs/catalogs/remove", { address, fingerprint } satisfies S["CatalogAddress"]),
+  giveReadToken: (name: string, body: S["PackTokenIn"]) => call<S["SettingsSaved"]>("POST", `packs/${id(name)}/token`, body),
   /** Installs (or updates) an add-on from the release its catalog entry names. It isn't turned on, and it is used after a restart. */
   installPack: (name: string) => call<S["PackInstalled"]>("POST", `packs/${id(name)}/install`),
   /** Takes away an add-on the app installed from the screen; it has to be off first. Used after a restart. */

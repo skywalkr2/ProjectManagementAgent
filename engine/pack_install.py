@@ -30,6 +30,10 @@ class InstallError(Exception):
     """A pack can't be installed or removed here; the message says why in plain words."""
 
 
+class NeedsToken(InstallError):
+    """The release file can't be read without a read token for the place it is kept (or the one given doesn't work)."""
+
+
 @dataclass
 class Installed:
     name: str
@@ -55,7 +59,7 @@ def download(url: str, expected_sha256: str, token: str | None = None, client: A
     try:
         with client.stream("GET", url, headers=headers) as response:
             if response.status_code in (401, 403, 404):
-                raise InstallError(
+                raise NeedsToken(
                     "the release file couldn't be read: it may be private, so the app needs a read token for the "
                     "place it is kept, or the address is wrong"
                 )

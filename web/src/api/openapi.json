@@ -2489,6 +2489,26 @@
         "title": "BackupStatus",
         "type": "object"
       },
+      "CatalogAddress": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "description": "A catalog's address: https://, then where its list is kept.",
+            "title": "Address",
+            "type": "string"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "address",
+          "fingerprint"
+        ],
+        "title": "CatalogAddress",
+        "type": "object"
+      },
       "CatchUpStarted": {
         "properties": {
           "started": {
@@ -6968,6 +6988,18 @@
       },
       "PackFeedView": {
         "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The catalog's address, as the person gave it.",
+            "title": "Address"
+          },
           "domain": {
             "title": "Domain",
             "type": "string"
@@ -7000,6 +7032,18 @@
               }
             ],
             "title": "Read At"
+          },
+          "removable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The person added it (workspace.plugins.catalog.feeds), so it can be taken off again.",
+            "title": "Removable"
           }
         },
         "required": [
@@ -7173,6 +7217,44 @@
         "title": "PackSummary",
         "type": "object"
       },
+      "PackTokenIn": {
+        "additionalProperties": false,
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the token is kept instead: env:NAME or file:/path.",
+            "title": "Reference"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A read token typed on the screen, for the host the add-on's release file is read from. A local app keeps it in its private folder and writes only where it is kept; a hosted app refuses it. Never stored in the settings or sent back.",
+            "title": "Token"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "PackTokenIn",
+        "type": "object"
+      },
       "PackView": {
         "properties": {
           "compatible": {
@@ -7278,6 +7360,18 @@
           "publisher": {
             "title": "Publisher",
             "type": "string"
+          },
+          "release_host": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The host its release file is read from, which a read token for it is sent to; empty when it has no release.",
+            "title": "Release Host"
           },
           "removable": {
             "default": false,
@@ -10800,6 +10894,18 @@
             "title": "Basic",
             "type": "boolean"
           },
+          "choices": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The name of the list a choice setting picks from (time_zones, languages), when it has one.",
+            "title": "Choices"
+          },
           "default": {
             "title": "Default"
           },
@@ -10877,6 +10983,18 @@
             ],
             "description": "The add-on whose setting this is (its file is plugins/<name>); its name and label are in GET /api/plugins. None for the app's own settings.",
             "title": "Plugin"
+          },
+          "secret": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "True when the value is a reference to a secret (a password, a key, a private address): the screen offers a box to type it in, kept by the app, instead of asking where it is kept.",
+            "title": "Secret"
           },
           "source": {
             "enum": [
@@ -11404,6 +11522,45 @@
           "choice"
         ],
         "title": "SortingRuleIn",
+        "type": "object"
+      },
+      "SourceSecretView": {
+        "description": "Where one of a source's secret settings (a password, a private address) is read from, never its value.",
+        "properties": {
+          "field": {
+            "description": "The setting's dotted name, as in the kind's form items.",
+            "title": "Field",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The variable's name, or the file's path; empty when it is kept.",
+            "title": "Name"
+          },
+          "where": {
+            "description": "kept: typed on this screen and kept by the app on this computer; env: read from a named environment variable; file: read from a file of the person's own; other: another way of keeping it.",
+            "enum": [
+              "kept",
+              "env",
+              "file",
+              "other"
+            ],
+            "title": "Where",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "where"
+        ],
+        "title": "SourceSecretView",
         "type": "object"
       },
       "SourceView": {
@@ -13181,6 +13338,14 @@
             ],
             "title": "Label"
           },
+          "secrets": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Secret settings typed on the screen, by dotted name; see the same field when adding a source. A field not named keeps what it holds.",
+            "title": "Secrets",
+            "type": "object"
+          },
           "settings": {
             "anyOf": [
               {
@@ -13245,6 +13410,14 @@
               }
             ],
             "title": "Project"
+          },
+          "secrets": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Passwords, keys and private addresses typed on the screen, by the setting's dotted name. A local app keeps each in its private folder and writes only where it is kept into the settings; a hosted app refuses them. Never stored in the settings, the ledger or any answer.",
+            "title": "Secrets",
+            "type": "object"
           },
           "settings": {
             "additionalProperties": true,
@@ -13367,6 +13540,14 @@
               "type": "string"
             },
             "title": "Reads",
+            "type": "array"
+          },
+          "secrets": {
+            "description": "Where each secret setting it has set is read from.",
+            "items": {
+              "$ref": "#/components/schemas/SourceSecretView"
+            },
+            "title": "Secrets",
             "type": "array"
           }
         },
@@ -17250,6 +17431,84 @@
         "summary": "Listed"
       }
     },
+    "/api/packs/catalogs": {
+      "post": {
+        "description": "List another catalog of add-ons, by its address, with Undo. It is read when the screen asks to refresh.",
+        "operationId": "catalog_add_api_packs_catalogs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogAddress"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalog Add"
+      }
+    },
+    "/api/packs/catalogs/remove": {
+      "post": {
+        "description": "Take a catalog the person listed off the list, with Undo. The add-ons already installed stay.",
+        "operationId": "catalog_remove_api_packs_catalogs_remove_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogAddress"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Catalog Remove"
+      }
+    },
     "/api/packs/refresh": {
       "post": {
         "operationId": "refreshed_api_packs_refresh_post",
@@ -17406,6 +17665,56 @@
           }
         },
         "summary": "Install"
+      }
+    },
+    "/api/packs/{pack_id}/token": {
+      "post": {
+        "description": "Give the read token for the place an add-on's release file is kept, with Undo. A local app keeps a typed\ntoken in its private folder and the settings hold only where; the token is sent only to that place.",
+        "operationId": "pack_token_api_packs__pack_id__token_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pack_id",
+            "required": true,
+            "schema": {
+              "title": "Pack Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PackTokenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Pack Token"
       }
     },
     "/api/packs/{pack_id}/uninstall": {

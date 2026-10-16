@@ -400,14 +400,47 @@ def list_models(entry: dict[str, Any], base_url: str, key: str | None) -> tuple[
     return sorted(models.items()), None
 
 
+SECRET_NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,80}")
+
+
+def secret_name(*parts: str) -> str:
+    """A safe file name for a kept secret, made from the words that say what it is for (a source's id and a field's
+    name, say): lowercase letters, digits and dashes."""
+    return "-".join(w for w in re.sub(r"[^a-z0-9]+", "-", " ".join(parts).lower()).split("-") if w)
+
+
+def secret_path(ws: Any, name: str) -> Path:
+    """Where a secret of that name is kept on this computer: the workspace's private keys folder."""
+    if not SECRET_NAME.fullmatch(name):
+        raise StoreError("a kept secret's name is lowercase letters, digits and dashes")
+    return ws.private_dir / "keys" / name
+
+
+def keep_secret(ws: Any, name: str, value: str) -> str:
+    """Keep a pasted password, key or private address in the workspace's private folder on this computer, readable only
+    by this user. Returns the reference the setting holds. Keeping a name again replaces what was kept."""
+    if not value.strip():
+        raise StoreError("there is nothing to keep")
+    path = secret_path(ws, name)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(path.parent, 0o700)
+    write_whole(path, value.strip() + "\n", mode=0o600)
+    return f"file:{path.resolve()}"
+
+
+def kept_here(ws: Any, reference: str | None) -> bool:
+    """Whether a secret reference points at a file this app keeps in its own private folder."""
+    scheme, _, where = (reference or "").partition(":")
+    if scheme != "file" or not where:
+        return False
+    try:
+        return Path(where).expanduser().resolve().parent == (ws.private_dir / "keys").resolve()
+    except OSError:
+        return False
+
+
 def keep_key(ws: Any, account: str, key: str) -> str:
-    """Keep a pasted key in the workspace's private folder on this computer, readable only by this user. Returns the
-    reference `ai.yaml` holds."""
+    """Keep a pasted AI key (see `keep_secret`), under the account's name. Returns the reference `ai.yaml` holds."""
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,40}", account):
         raise StoreError("an account's name is lowercase letters, digits and dashes")
-    folder = ws.private_dir / "keys"
-    folder.mkdir(parents=True, exist_ok=True)
-    os.chmod(folder, 0o700)
-    path = folder / account
-    write_whole(path, key.strip() + "\n", mode=0o600)
-    return f"file:{path.resolve()}"
+    return keep_secret(ws, account, key)

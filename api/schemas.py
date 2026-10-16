@@ -1718,6 +1718,14 @@ class SettingItem(BaseModel):
         description="The add-on whose setting this is (its file is plugins/<name>); its name and label are in "
         "GET /api/plugins. None for the app's own settings.",
     )
+    choices: str | None = Field(
+        None, description="The name of the list a choice setting picks from (time_zones, languages), when it has one."
+    )
+    secret: bool | None = Field(
+        None,
+        description="True when the value is a reference to a secret (a password, a key, a private address): the "
+        "screen offers a box to type it in, kept by the app, instead of asking where it is kept.",
+    )
 
 
 class SettingsView(BaseModel):
@@ -2237,6 +2245,17 @@ class WatchRunView(BaseModel):
     removed: int = 0
 
 
+class SourceSecretView(BaseModel):
+    """Where one of a source's secret settings (a password, a private address) is read from, never its value."""
+
+    field: str = Field(description="The setting's dotted name, as in the kind's form items.")
+    where: Literal["kept", "env", "file", "other"] = Field(
+        description="kept: typed on this screen and kept by the app on this computer; env: read from a named "
+        "environment variable; file: read from a file of the person's own; other: another way of keeping it."
+    )
+    name: str | None = Field(None, description="The variable's name, or the file's path; empty when it is kept.")
+
+
 class WatchSourceView(BaseModel):
     """One place the assistant keeps reading, from watch.yaml, with its last read."""
 
@@ -2258,6 +2277,9 @@ class WatchSourceView(BaseModel):
     )
     failures: int = Field(0, description="Failed reads in a row.")
     problem: ScreenText | None = Field(None, description="Why it can't be read, and what to do, while it fails.")
+    secrets: list[SourceSecretView] = Field(
+        default_factory=list, description="Where each secret setting it has set is read from."
+    )
 
 
 class WatchAuthorOption(BaseModel):
@@ -2493,6 +2515,11 @@ class PackView(BaseModel):
         None, description="True when the app can install it from here (POST /api/packs/{id}/install)."
     )
     removable: bool = Field(False, description="The app installed it from this screen, so it can take it away again.")
+    release_host: str | None = Field(
+        None,
+        description="The host its release file is read from, which a read token for it is sent to; empty when it has "
+        "no release.",
+    )
 
 
 class InstalledPackView(BaseModel):
@@ -2513,6 +2540,30 @@ class PackFeedView(BaseModel):
     error: ScreenText | None
     notes: list[ScreenText]
     read_at: str | None
+    address: str | None = Field(None, description="The catalog's address, as the person gave it.")
+    removable: bool | None = Field(
+        None, description="The person added it (workspace.plugins.catalog.feeds), so it can be taken off again."
+    )
+
+
+class CatalogAddress(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    address: str = Field(description="A catalog's address: https://, then where its list is kept.")
+    fingerprint: str
+
+
+class PackTokenIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    token: str | None = Field(
+        None,
+        description="A read token typed on the screen, for the host the add-on's release file is read from. A local "
+        "app keeps it in its private folder and writes only where it is kept; a hosted app refuses it. Never stored "
+        "in the settings or sent back.",
+    )
+    reference: str | None = Field(None, description="Where the token is kept instead: env:NAME or file:/path.")
+    fingerprint: str
 
 
 class PacksView(BaseModel):
@@ -2620,6 +2671,12 @@ class WatchSourceIn(BaseModel):
     project: str | None = None
     author: str | None = Field(None, description="A person's or team's id, from GET /api/watch/authors.")
     settings: dict[str, Any] = Field(default_factory=dict, description="Its settings, by field (nested as objects).")
+    secrets: dict[str, str] = Field(
+        default_factory=dict,
+        description="Passwords, keys and private addresses typed on the screen, by the setting's dotted name. A "
+        "local app keeps each in its private folder and writes only where it is kept into the settings; a hosted app "
+        "refuses them. Never stored in the settings, the ledger or any answer.",
+    )
     fingerprint: str
 
 
@@ -2633,6 +2690,11 @@ class WatchSourceChange(BaseModel):
         None, description="A person's or team's id, from GET /api/watch/authors; empty, when sent, clears it."
     )
     settings: dict[str, Any] | None = None
+    secrets: dict[str, str] = Field(
+        default_factory=dict,
+        description="Secret settings typed on the screen, by dotted name; see the same field when adding a source. "
+        "A field not named keeps what it holds.",
+    )
     fingerprint: str
 
 

@@ -174,6 +174,7 @@ class WorkspaceFile(FileModel):
         pattern=r"^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
         description="The language and variety work is written in, as a language tag (en-US, en-GB, fr-CA); a project "
         "may set its own.",
+        json_schema_extra={"choices": "languages"},
     )
     project: ProjectSettings = Field(default_factory=ProjectSettings, description="How a project's own record is kept.")
     plugins: PluginSettings = Field(default_factory=PluginSettings, description="Which plugins run in this workspace.")

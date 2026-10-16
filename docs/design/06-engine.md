@@ -2401,6 +2401,10 @@ ends when the app closes.
   (https, at most 50 MB), checks it against the entry's checksum **before touching anything**, and installs it beside the app.
   A private pack's release host takes a read token the person gives once, kept as a secret reference
   (`workspace.plugins.catalog.release_tokens`, by host name); it is sent only to that host and never on a redirect to another.
+  `POST /api/packs/{id}/token` takes it typed (a local app keeps it with `keep_secret` and writes the `file:` reference; a
+  hosted app refuses it) or as a reference, for the host of that entry's release; a refusal that a token would fix carries the
+  header `X-Cockpit-Needs: read-token`, which is how the row knows to ask. `POST /api/packs/catalogs` (and `/remove`) add and
+  take away a feed address, https only.
   Only a wheel of pure Python whose needs the app already has (each requirement present at an allowed version) is installed
   this way; anything else is refused with what to do instead. Installing a pack's own libraries is planned (roadmap, A2).
   Paths outside the install place are refused. An earlier install of the same pack is replaced only if it was installed from

@@ -1112,6 +1112,45 @@ def test_the_time_zone_setting_is_a_list_of_known_time_zones():
     assert "UTC" in zone.options and len(zone.options) > 100
 
 
+def _described(**changes):
+    from engine.config import Config
+    from engine.config.schema import FILES
+    from engine.settings import describe
+
+    cfg = Config(files={name: model() for name, model in FILES.items()})
+    for dotted, value in changes.items():
+        *path, last = dotted.split(".")
+        target = cfg.workspace
+        for part in path[1:]:
+            target = getattr(target, part)
+        object.__setattr__(target, last, value)
+    return {s.key: s for s in describe(cfg)}
+
+
+def test_the_language_setting_is_a_list_of_language_tags_that_names_its_list():
+    language = _described()["workspace.language"]
+    assert language.type == "choice" and language.choices == "languages"
+    assert language.value in language.options and len(language.options) >= 30
+    assert {"en-US", "en-GB", "fr-CA", "pt-BR", "zh-TW"} <= set(language.options)
+    # A text setting with no named list says so.
+    assert _described()["workspace.name"].choices is None
+    assert _described()["workspace.user.timezone"].choices == "time_zones"
+
+
+def test_a_choice_list_includes_the_current_value_when_it_is_not_one_of_the_list():
+    odd = _described(**{"workspace.language": "tlh", "workspace.user.timezone": "Mars/Olympus"})
+    assert odd["workspace.language"].options[-1] == "tlh"
+    assert odd["workspace.user.timezone"].options[-1] == "Mars/Olympus"
+    # A value that is on the list isn't added twice.
+    assert _described()["workspace.language"].options.count("en-US") == 1
+
+
+def test_a_setting_whose_value_is_a_secret_reference_is_marked_secret():
+    items = _described()
+    assert items["workspace.name"].secret is False
+    assert any(s.secret for s in items.values() if s.key.startswith("workspace.plugins.catalog.release_tokens"))
+
+
 def test_setup_state_survives_changes_made_at_the_same_time(tmp_path):
     """The walkthrough's screen, the skipped steps and the decided add-ons share one small file. Changes arriving
     together (the screen sends two when it opens) each keep what the others wrote and never read it half written."""

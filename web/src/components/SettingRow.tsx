@@ -2,9 +2,11 @@
 // and by every other form built from setting items (a source's settings, an add-on's data file).
 import { useRef, useState } from "react";
 import { depthOf, fileName, formatValue, fromDraft, isOff, labelOf, switchOf, toDraft, type Draft, type Item } from "../lib/settings";
+import { languageChoices } from "../lib/languages";
 import { useWords } from "../lib/wording";
 import { FolderPicker, useFolderListing } from "./FolderPicker";
 import { restoreFocus } from "./ModalPanel";
+import { SecretField, type SecretInput } from "./SecretField";
 
 export function SettingRow(props: {
   item: Item;
@@ -19,6 +21,8 @@ export function SettingRow(props: {
   /** The switch this setting depends on, when it is off. */
   gate: Item | null;
   canList: boolean;
+  /** Where a secret setting can be typed: given, a setting that holds a secret offers a password box. */
+  secret?: SecretInput;
 }) {
   const { t, has } = useWords();
   const [picking, setPicking] = useState(false);
@@ -43,9 +47,32 @@ export function SettingRow(props: {
     .join(" ");
   const off = item.locked || props.disabled || props.gate !== null;
   const option = (o: string) => (has(`settings.option.${item.key}.${o}`) ? t(`settings.option.${item.key}.${o}`) : o);
+  // A list of languages shows each tag as its name in the browser's language, in the order of those names.
+  const choices =
+    item.choices === "languages"
+      ? languageChoices(item.options ?? []).map((c) => ({ tag: c.tag, label: c.label }))
+      : (item.options ?? []).map((o) => ({ tag: o, label: option(o) }));
 
+  const typedSecret = !!props.secret && item.secret === true && item.type === "text" && !readOnly && !item.locked;
   let control;
-  if (readOnly) {
+  if (typedSecret && props.secret) {
+    const secret = props.secret;
+    control = (
+      <SecretField
+        id={id}
+        labelId={`${id}-label`}
+        label={label}
+        local={secret.local}
+        held={secret.held[item.key] ?? null}
+        reference={String(draft)}
+        onReference={(reference) => props.onChange(reference)}
+        pasted={secret.pasted[item.key] ?? ""}
+        onPaste={(value) => secret.onPaste(item.key, value)}
+        disabled={off}
+        describedBy={describedBy}
+      />
+    );
+  } else if (readOnly) {
     control = (
       <p className="setting-value" id={id}>
         {formatValue(item.value, t)}
@@ -65,9 +92,9 @@ export function SettingRow(props: {
   } else if (item.type === "choice") {
     control = (
       <select id={id} value={String(draft)} disabled={off} aria-describedby={describedBy} onChange={(e) => props.onChange(e.target.value)}>
-        {(item.options ?? []).map((o) => (
-          <option key={o} value={o}>
-            {option(o)}
+        {choices.map((c) => (
+          <option key={c.tag} value={c.tag}>
+            {c.label}
           </option>
         ))}
       </select>
@@ -131,6 +158,10 @@ export function SettingRow(props: {
         </label>
       ) : readOnly ? (
         <span className="setting-label">{label}</span>
+      ) : typedSecret ? (
+        <span className="setting-label" id={`${id}-label`}>
+          {label}
+        </span>
       ) : (
         <label className="setting-label" htmlFor={id}>
           {label}
@@ -206,6 +237,8 @@ export function ItemFields(props: {
   onEdit: (key: string, draft: Draft) => void;
   disabled?: boolean;
   idPrefix: string;
+  /** Lets secret settings be typed (a source's form); left out, they are plain text boxes for where they are kept. */
+  secret?: SecretInput;
 }) {
   const canList = useFolderListing(props.items.some((i) => i.picker === "folder"));
   return (
@@ -224,6 +257,7 @@ export function ItemFields(props: {
             depth={depthOf(item, props.items)}
             gate={gate && isOff(gate, props.edits) ? gate : null}
             canList={canList}
+            secret={props.secret}
           />
         );
       })}

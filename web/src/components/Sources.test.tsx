@@ -551,3 +551,98 @@ describe("a source's menu", () => {
     expect(await row("Source a")).toBeInTheDocument();
   });
 });
+
+describe("a secret setting typed on the screen", () => {
+  const post = (calls: ReturnType<typeof fakeApi>, route: string) => calls.find((c) => c.route === route)?.body;
+  const MAIL = kind("demo/mailbox", "A mailbox", "demo", [
+    field("host", "text"),
+    field("password", "text", { secret: true, description: "Where the password is kept, as a reference." }),
+  ]);
+  const routes = (local = true, mine: Source[] = []) => ({
+    "GET watch/kinds": () => [MAIL],
+    "GET setup": () => ({ steps: [], finished: true, local, walkthrough: {} }),
+    "GET settings": () =>
+      stored(mine.map((s) => ({ id: s.id, settings: { host: "mail.example.com", password: "file:/home/me/.cockpit/keys/source-a-password" } }))),
+    "POST watch/sources": () => SAVED([], [{ id: "work-mail" }]),
+    "POST watch/sources/a": () => SAVED([], [{ id: "a" }]),
+  });
+
+  test("on a local app it is a password box, and what is typed goes apart from the settings", async () => {
+    const user = userEvent.setup();
+    const calls = open([], [], routes()).calls;
+    await user.click(await screen.findByRole("button", { name: "Add a source" }));
+    await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
+    await user.type(screen.getByLabelText("Name"), "Work mail");
+    await user.type(screen.getByLabelText("About host"), "mail.example.com");
+    const box = await screen.findByLabelText("Where the password is kept, as a reference.");
+    expect(box).toHaveAttribute("type", "password");
+    expect(screen.getByText(/Type or paste it\./)).toBeInTheDocument();
+    await user.type(box, "typed-value");
+    await user.click(screen.getByRole("button", { name: "Add source" }));
+    await waitFor(() => expect(post(calls, "POST watch/sources")).toBeDefined());
+    expect(post(calls, "POST watch/sources")).toMatchObject({
+      settings: { host: "mail.example.com" },
+      secrets: { password: "typed-value" },
+    });
+    expect(JSON.stringify(post(calls, "POST watch/sources"))).not.toContain('"password":"file');
+  });
+
+  test("Where it is kept instead shows a text box for the reference, and nothing typed is sent", async () => {
+    const user = userEvent.setup();
+    const calls = open([], [], routes()).calls;
+    await user.click(await screen.findByRole("button", { name: "Add a source" }));
+    await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
+    await user.type(await screen.findByLabelText("Where the password is kept, as a reference."), "abandoned");
+    await user.click(screen.getByRole("button", { name: "Where it is kept instead" }));
+    const where = screen.getByLabelText("Where the password is kept, as a reference.");
+    expect(where).toHaveAttribute("type", "text");
+    expect(where).toHaveValue("");
+    await user.type(where, "env:MAIL_PASSWORD");
+    await user.type(screen.getByLabelText("About host"), "mail.example.com");
+    await user.click(screen.getByRole("button", { name: "Add source" }));
+    await waitFor(() => expect(post(calls, "POST watch/sources")).toBeDefined());
+    const sent = post(calls, "POST watch/sources") as { settings: unknown; secrets: unknown };
+    expect(sent.settings).toEqual({ host: "mail.example.com", password: "env:MAIL_PASSWORD" });
+    expect(sent.secrets).toBeUndefined();
+  });
+
+  test("a secret the app keeps shows Kept on this computer, and Replace takes a new one", async () => {
+    const user = userEvent.setup();
+    const mine = source("a", { connector: "demo/mailbox", secrets: [{ field: "password", where: "kept", name: null }] });
+    const calls = open([mine], [], routes(true, [mine])).calls;
+    await choose(user, "Source a", "Change");
+    const form = await screen.findByRole("form", { name: /Change/ });
+    expect(await within(form).findByText("Kept on this computer")).toBeInTheDocument();
+    expect(within(form).queryByLabelText("Where the password is kept, as a reference.")).toBeNull();
+    await user.click(within(form).getByRole("button", { name: "Replace Where the password is kept, as a reference." }));
+    await user.type(within(form).getByLabelText("Where the password is kept, as a reference."), "new-value");
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(post(calls, "POST watch/sources/a")).toBeDefined());
+    const sent = post(calls, "POST watch/sources/a") as { settings: Record<string, unknown>; secrets: unknown };
+    expect(sent.secrets).toEqual({ password: "new-value" });
+    expect(sent.settings).not.toHaveProperty("password");
+  });
+
+  test("a secret read from a named place says where, never its value, and keeping the current one sends nothing new", async () => {
+    const user = userEvent.setup();
+    const mine = source("a", { connector: "demo/mailbox", secrets: [{ field: "password", where: "env", name: "MAIL_PASSWORD" }] });
+    const calls = open([mine], [], routes(true, [mine])).calls;
+    await choose(user, "Source a", "Change");
+    const form = await screen.findByRole("form", { name: /Change/ });
+    expect(await within(form).findByText("Read from the secret named MAIL_PASSWORD")).toBeInTheDocument();
+    await user.click(within(form).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(post(calls, "POST watch/sources/a")).toBeDefined());
+    expect(post(calls, "POST watch/sources/a")).not.toHaveProperty("secrets");
+  });
+
+  test("on a hosted app only the box for where it is kept is offered", async () => {
+    const user = userEvent.setup();
+    open([], [], routes(false));
+    await user.click(await screen.findByRole("button", { name: "Add a source" }));
+    await user.click(await screen.findByRole("radio", { name: "A mailbox" }));
+    const box = await screen.findByLabelText("Where the password is kept, as a reference.");
+    await waitFor(() => expect(box).toHaveAttribute("type", "text"));
+    expect(screen.getByText(/takes secrets only from its own environment/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Where it is kept instead" })).toBeNull();
+  });
+});

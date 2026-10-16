@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import os
 import re
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException
 
+from api.pack_routes import entry_in
 from api.schemas import (
     AiAccountAdd,
     AiAccountChange,
@@ -31,6 +35,7 @@ from api.schemas import (
     AiSwitchEstimate,
     AiTestResult,
     BackupFolderAdd,
+    CatalogAddress,
     ConfirmDone,
     ConfirmIn,
     DataLevelAllowed,
@@ -43,6 +48,7 @@ from api.schemas import (
     MeIn,
     MeView,
     Ok,
+    PackTokenIn,
     RestartAsked,
     SettingChangeView,
     SettingItem,
@@ -88,8 +94,9 @@ MEASURE_WHY = {
 DOMAIN_OFFER_AT = 3
 NEVER_SUGGESTED = ("ai.providers", "ai.tiers", "workspace.plugins.secrets", "workspace.plugins.enabled", "server.")
 #: Keys the guided steps write that no form shows: an AI account, the tiers it does, the backup folders.
-#: The keys the guided routes write (an AI account, a backup folder, the sources, sorting rules, add-ons on or off, the
-#: person's own name). The general save accepts them too, because a screen's Undo saves the values from before there.
+#: The keys the guided routes write (an AI account, a backup folder, the sources, sorting rules, add-ons on or off, a
+#: release's read token, the person's own name). The general save accepts them too, because a screen's Undo saves the
+#: values from before there.
 GUIDED = (
     "ai.providers.",
     "ai.tiers.",
@@ -97,6 +104,7 @@ GUIDED = (
     "watch.sources",
     "watch.triage",
     "workspace.plugins.enabled",
+    "workspace.plugins.catalog.release_tokens",
     "workspace.user.",
 )
 
@@ -114,6 +122,34 @@ def _defaults(model: Any) -> dict[str, Any]:
             default = info.get_default(call_default_factory=True)
             values[key] = default.model_dump(mode="json") if hasattr(default, "model_dump") else default
     return values
+
+
+def asked_reference(typed: str) -> str:
+    """A place a secret is kept, as the person typed it: a bare name is the name of an environment variable."""
+    text = typed.strip()
+    return text if ":" in text else f"env:{text}"
+
+
+def _nested(values: dict[str, Any], dotted: str) -> Any:
+    """The value at a dotted name in nested settings, or None where there is none or it is empty."""
+    at: Any = values
+    for part in dotted.split("."):
+        if not isinstance(at, dict) or part not in at:
+            return None
+        at = at[part]
+    return at or None
+
+
+def _put(values: dict[str, Any], dotted: str, value: Any) -> None:
+    """Set the value at a dotted name in nested settings, making the objects on the way."""
+    *parents, last = dotted.split(".")
+    at = values
+    for part in parents:
+        child = at.get(part)
+        if not isinstance(child, dict):
+            child = at[part] = {}
+        at = child
+    at[last] = value
 
 
 def _merged(current: Any, suggested: Any) -> Any:
@@ -429,16 +465,55 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             raise HTTPException(status_code=400, detail="Choose a person or a team from the list.")
         return author
 
+    def with_secrets(
+        kind: str, source_id: str, settings: dict[str, Any], pasted: dict[str, str], supplied: dict[str, Any]
+    ) -> tuple[dict[str, Any], dict[str, str]]:
+        """The settings with a reference to each pasted secret written in, and what to keep, by file name. `supplied`
+        is what the person sent as settings: a field can't be both typed and given as a reference. Nothing is written
+        here: a source that fails its checks leaves what was kept before untouched."""
+        if not pasted:
+            return settings, {}
+        if not local:
+            raise HTTPException(status_code=400, detail=HOSTED_KEY)
+        connector = source_kinds().get(kind)
+        if connector is None:
+            raise HTTPException(status_code=404, detail=f"There is no kind of source called {kind} running now.")
+        allowed = config_screens.secret_fields(connector.settings)
+        merged = copy.deepcopy(settings)
+        to_keep: dict[str, str] = {}
+        for field, value in pasted.items():
+            if field not in allowed:
+                raise HTTPException(status_code=400, detail="That isn't a setting this kind of source keeps secret.")
+            if not value.strip():
+                raise HTTPException(status_code=400, detail="Type or paste it, or give where it is kept instead.")
+            if _nested(supplied, field):
+                raise HTTPException(status_code=400, detail="Type it or give where it is kept, not both.")
+            name = setup.secret_name("source", source_id, field)
+            _put(merged, field, f"file:{setup.secret_path(ws, name).resolve()}")
+            to_keep[name] = value
+        return merged, to_keep
+
+    def keep_all(to_keep: dict[str, str]) -> list[Path]:
+        """Keep each pasted secret; returns the files that didn't exist before, to remove if the save is refused."""
+        fresh = [setup.secret_path(ws, name) for name in to_keep if not setup.secret_path(ws, name).exists()]
+        try:
+            for name, value in to_keep.items():
+                setup.keep_secret(ws, name, value)
+        except StoreError as err:
+            raise HTTPException(status_code=400, detail=str(err)) from None
+        return fresh
+
     @r.post("/watch/sources")
     def watch_add(body: WatchSourceIn) -> SettingsSaved:
         """Start reading a new source, with Undo. Its id comes from its label."""
-        settings = checked_source(body.connector, body.settings)
         sources = sources_now()
         base = re.sub(r"[^a-z0-9]+", "-", (body.label or body.connector).lower()).strip("-")[:40] or "source"
         taken = {s["id"] for s in sources}
         source_id = base
         if base in taken:
             source_id = next(f"{base}-{n}" for n in range(2, 999) if f"{base}-{n}" not in taken)
+        given, to_keep = with_secrets(body.connector, source_id, body.settings, body.secrets, body.settings)
+        settings = checked_source(body.connector, given)
         new = {
             "id": source_id,
             "connector": body.connector,
@@ -450,7 +525,13 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             new["project"] = body.project
         if body.author:
             new["author"] = checked_author(body.author)
-        done = saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
+        fresh = keep_all(to_keep)
+        try:
+            done = saved(save({"watch.sources": [*sources, new]}, [], body.fingerprint, allow=("watch.sources",)))
+        except HTTPException:
+            for path in fresh:
+                path.unlink(missing_ok=True)
+            raise
         worker.read_sources_now()  # its first read happens now, not at the next minute's check
         return done
 
@@ -461,15 +542,23 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
         found = next((s for s in sources if s["id"] == source_id), None)
         if found is None:
             raise HTTPException(status_code=404, detail=f"There is no source {source_id}.")
-        if body.settings is not None:
-            found["settings"] = checked_source(found["connector"], body.settings)
+        base = found["settings"] if body.settings is None else body.settings
+        given, to_keep = with_secrets(found["connector"], source_id, base, body.secrets, body.settings or {})
+        if body.settings is not None or body.secrets:
+            found["settings"] = checked_source(found["connector"], given)
         for key in ("label", "every_minutes", "enabled"):
             value = getattr(body, key)
             if value is not None:
                 found[key] = value
         if "author" in body.model_fields_set:
             found["author"] = checked_author(body.author) if body.author else None
-        return saved(save({"watch.sources": sources}, [], body.fingerprint, allow=("watch.sources",)))
+        fresh = keep_all(to_keep)
+        try:
+            return saved(save({"watch.sources": sources}, [], body.fingerprint, allow=("watch.sources",)))
+        except HTTPException:
+            for path in fresh:
+                path.unlink(missing_ok=True)
+            raise
 
     @r.post("/watch/sources/{source_id}/remove")
     def watch_remove(source_id: str, body: FingerprintIn) -> SettingsSaved:
@@ -581,6 +670,65 @@ def build_setup_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             return SettingsSaved(changes=[], fingerprint=body.fingerprint, needs_restart=False)
         changes = {"workspace.plugins.enabled": [n for n in enabled if n != name]}
         return saved(save(changes, [], body.fingerprint, allow=("workspace.plugins.enabled",)))
+
+    # ---- catalogs and the read tokens for private release files ---------------------------------------------------
+
+    @r.post("/packs/catalogs")
+    def catalog_add(body: CatalogAddress) -> SettingsSaved:
+        """List another catalog of add-ons, by its address, with Undo. It is read when the screen asks to refresh."""
+        address = body.address.strip()
+        parts = urlsplit(address)
+        if parts.scheme != "https" or not parts.hostname or parts.username or parts.password or " " in address:
+            raise HTTPException(
+                status_code=400, detail="Give the catalog's address, starting with https:// and no spaces."
+            )
+        listed = list(current().workspace.plugins.catalog.feeds)
+        if address in listed:
+            raise HTTPException(status_code=409, detail="That catalog is listed already.")
+        key = "workspace.plugins.catalog.feeds"
+        return saved(save({key: [*listed, address]}, [], body.fingerprint))
+
+    @r.post("/packs/catalogs/remove")
+    def catalog_remove(body: CatalogAddress) -> SettingsSaved:
+        """Take a catalog the person listed off the list, with Undo. The add-ons already installed stay."""
+        listed = list(current().workspace.plugins.catalog.feeds)
+        if body.address not in listed:
+            raise HTTPException(status_code=404, detail="That catalog isn't in the list you added.")
+        key = "workspace.plugins.catalog.feeds"
+        return saved(save({key: [a for a in listed if a != body.address]}, [], body.fingerprint))
+
+    @r.post("/packs/{pack_id}/token")
+    def pack_token(pack_id: str, body: PackTokenIn) -> SettingsSaved:
+        """Give the read token for the place an add-on's release file is kept, with Undo. A local app keeps a typed
+        token in its private folder and the settings hold only where; the token is sent only to that place."""
+        if bool(body.token and body.token.strip()) == bool(body.reference and body.reference.strip()):
+            raise HTTPException(status_code=400, detail="Type the token, or give where it is kept: one of the two.")
+        if body.token and not local:
+            raise HTTPException(status_code=400, detail=HOSTED_KEY)
+        entry = entry_in(ws, current(), pack_id)
+        host = urlsplit(entry.release.url).hostname if entry.release else None
+        if not host:
+            raise HTTPException(status_code=409, detail=f"{entry.name} has no release file that needs a token.")
+        name = setup.secret_name("release-token", host)
+        fresh = body.token is not None and not setup.secret_path(ws, name).exists()
+        try:
+            reference = setup.keep_secret(ws, name, body.token) if body.token else asked_reference(body.reference or "")
+        except StoreError as err:
+            raise HTTPException(status_code=400, detail=str(err)) from None
+        tokens = {**current().workspace.plugins.catalog.release_tokens, host: reference}
+        try:
+            return saved(
+                save(
+                    {"workspace.plugins.catalog.release_tokens": tokens},
+                    [],
+                    body.fingerprint,
+                    allow=("workspace.plugins.catalog.release_tokens",),
+                )
+            )
+        except HTTPException:
+            if fresh:
+                setup.secret_path(ws, name).unlink(missing_ok=True)
+            raise
 
     @r.post("/setup/addons/leave-off")
     def addons_leave_off() -> Ok:

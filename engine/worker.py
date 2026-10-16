@@ -34,7 +34,8 @@ ADD_ONS = "add-ons"
 #: each time it is used (AI accounts and tiers for each run; who the person is, the names and the screens' wording for
 #: each request; where and how often backups go, for each backup; how often the readable export is written; the watched
 #: sources, for each read; whether and how corrections are learned from, for each correction and each learning run; the
-#: scan for new terms, for each input; whether a switch of account is offered a check, for each switch; how much of a
+#: scan for new terms, for each input; the catalogs, tokens and refresh time of the Add-ons screen, for each time it
+#: reads them; whether a switch of account is offered a check, for each switch; how much of a
 #: file is read, for each file; the window and the smallest week of the quality figures, for each time they are asked
 #: for).
 #: Any other change waits for a restart the person chooses.
@@ -51,6 +52,7 @@ LIVE_KEYS = (
     "storage.files.read_max_mb",
     "storage.files.read_max_chars",
     "watch.",
+    "workspace.plugins.catalog.",
     "language.bare_confirmation_words",
     "language.rule_report_phrases",
     "language.new_term_patterns",

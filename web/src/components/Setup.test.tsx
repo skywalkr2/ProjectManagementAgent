@@ -110,13 +110,29 @@ const folderItem = (value: string): S["SettingItem"] => ({
   picker: "folder",
 });
 
+const languageItem = (): S["SettingItem"] => ({
+  key: "workspace.language",
+  file: "workspace",
+  group: "workspace",
+  description: "The language and variety work is written in.",
+  type: "choice",
+  options: ["en-US", "en-GB", "en-AU", "fr-CA"],
+  choices: "languages",
+  value: "en-US",
+  default: "en-US",
+  source: "default",
+  locked: false,
+  basic: true,
+  editable: true,
+});
+
 function others(routes: Routes, folder = "/shared/Cockpit") {
   return fakeApi({
     "GET people": () => [],
     "GET organizations": () => [],
     "GET projects": () => [],
     "GET notes": () => [],
-    "GET settings": () => ({ fingerprint: "fp-1", items: [folderItem(folder)] }),
+    "GET settings": () => ({ fingerprint: "fp-1", items: [folderItem(folder), languageItem()] }),
     ...routes,
   });
 }
@@ -398,18 +414,42 @@ test("the project form offers Inside (never itself), Language with the inherited
   const inside = within(row).getByRole("combobox", { name: "Inside" });
   expect(within(inside).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "The series"]);
   expect(inside).toHaveValue("PRJ-1");
-  const language = within(row).getByRole("textbox", { name: /Language/ });
+  const language = within(row).getByRole("combobox", { name: /Language/ });
   expect(language).toHaveValue("");
-  expect(language).toHaveAttribute("placeholder", "en-GB");
-  expect(within(row).getByText("(inherited; type one to set its own)")).toBeInTheDocument();
+  const labels = within(language).getAllByRole("option").map((o) => o.textContent);
+  expect(labels[0]).toBe("Same as English (United Kingdom)");
+  expect(labels.slice(1)).toEqual(["English (Australia)", "English (United Kingdom)", "English (United States)", "French (Canada)"]);
+  expect(within(row).getByText("(inherited; pick one to set its own)")).toBeInTheDocument();
   const budget = within(row).getByRole("spinbutton", { name: /Budget \(USD\)/ });
   expect(budget).toHaveValue(null);
-  await user.type(language, "en-AU");
+  await user.selectOptions(language, "en-AU");
   await user.type(budget, "120.5");
   await user.selectOptions(inside, "");
   await user.click(within(row).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-2")).toBe(true));
   expect(calls.find((c) => c.route === "POST projects/PRJ-2")?.body).toMatchObject({ parent: null, language: "en-AU", budget_usd: 120.5 });
+});
+
+test("a project with no project around it names the workspace as what an empty language follows", async () => {
+  const user = userEvent.setup();
+  others({ "GET projects": () => [], "GET sync": () => syncView({ folder: "" }), "GET jobs": () => [] });
+  renderApp(<Setup />);
+  await user.click(await screen.findByRole("button", { name: "Add a project" }));
+  const language = await screen.findByRole("combobox", { name: /Language/ });
+  expect(within(language).getAllByRole("option")[0]).toHaveTextContent("Same as the workspace");
+});
+
+test("a project's own language that isn't on the list is still shown, never replaced by another", async () => {
+  const user = userEvent.setup();
+  others({
+    "GET projects": () => [withDetails("PRJ-1", "The series", { language: "tlh", language_own: true })],
+    "GET sync": () => syncView({ folder: "" }),
+    "GET jobs": () => [],
+  });
+  renderApp(<Setup />);
+  const row = (await screen.findByText("The series")).closest("li")!;
+  await user.click(within(row).getByRole("button", { name: "Edit" }));
+  expect(within(row).getByRole("combobox", { name: /Language/ })).toHaveValue("tlh");
 });
 
 test("a project's row says when the person only watches it, and the form's Your role list changes it with Undo", async () => {
@@ -446,7 +486,7 @@ test("a project that is being added has no role to pick", async () => {
   expect(screen.queryByRole("combobox", { name: /Your role/ })).toBeNull();
 });
 
-test("an empty language and budget are sent as nothing, so the project inherits and has no cap", async () => {
+test("choosing Same as for the language and clearing the budget send nothing, so the project inherits and has no cap", async () => {
   const user = userEvent.setup();
   const calls = others({
     "GET projects": () => [withDetails("PRJ-1", "The series", { language: "en-GB", language_own: true, budget_usd: 50 })],
@@ -457,7 +497,9 @@ test("an empty language and budget are sent as nothing, so the project inherits 
   renderApp(<Setup />);
   const row = (await screen.findByText("The series")).closest("li")!;
   await user.click(within(row).getByRole("button", { name: "Edit" }));
-  await user.clear(within(row).getByRole("textbox", { name: /Language/ }));
+  const language = within(row).getByRole("combobox", { name: /Language/ });
+  expect(language).toHaveValue("en-GB");
+  await user.selectOptions(language, "");
   await user.clear(within(row).getByRole("spinbutton", { name: /Budget/ }));
   await user.click(within(row).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(calls.some((c) => c.route === "POST projects/PRJ-1")).toBe(true));

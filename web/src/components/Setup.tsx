@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api, ApiError, type S } from "../lib/api";
 import { useAct } from "../lib/act";
+import { languageChoices, languageLabel } from "../lib/languages";
 import { day, dayAndTime } from "../lib/dates";
 import { useTotal } from "../lib/money";
 import { problemText } from "../lib/problem";
@@ -521,6 +522,7 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
   const { t } = useWords();
   const act = useAct();
   const people = useQuery({ queryKey: ["people"], queryFn: api.people });
+  const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings });
   const p = props.project;
   const [name, setName] = useState(p?.name ?? "");
   const [status, setStatus] = useState(p?.status ?? "");
@@ -662,7 +664,14 @@ function ProjectForm(props: { project?: S["ProjectView"]; projects: S["ProjectVi
         <label htmlFor={`jl-${key}`}>
           {t("setup.language")} <span className="hint">{p && !p.language_own ? t("setup.language_inherited") : t("setup.language_hint")}</span>
         </label>
-        <input id={`jl-${key}`} type="text" value={language} placeholder={inherited} onChange={(e) => setLanguage(e.target.value)} />
+        <select id={`jl-${key}`} value={language} onChange={(e) => setLanguage(e.target.value)}>
+          <option value="">{inherited ? t("setup.language_same_as", { language: languageLabel(inherited) }) : t("setup.language_same_workspace")}</option>
+          {languageChoices([...(settings.data?.items.find((i) => i.key === "workspace.language")?.options ?? []), ...(language ? [language] : [])]).map((c) => (
+            <option key={c.tag} value={c.tag}>
+              {c.label}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="field">
         <label htmlFor={`jb-${key}`}>

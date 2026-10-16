@@ -15,12 +15,14 @@ from api.schemas import (
     SetAsideFolder,
     SetAsideIn,
     SetAsideView,
+    SourceSecretView,
     UnconfirmIn,
     WatchAuthorOption,
     WatchRunView,
     WatchSourceView,
 )
-from engine import set_aside, watch
+from engine import set_aside, setup, watch
+from engine import settings as settings_screens
 from engine.config import Config, ConfigError, load_config
 from engine.connectors import declared_reads, reads
 from engine.storage import Store, StoreError, WriteContext
@@ -46,6 +48,24 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             **{p.id: p.data["full_name"] for p in view.list("person")},
             **{t.id: t.data["name"] for t in view.list("team")},
         }
+
+    def secret_states(connector: object, settings: dict[str, object]) -> list[SourceSecretView]:
+        """Where each secret setting the source has set is read from: kept by the app, or a place the person named."""
+        out = []
+        for field in settings_screens.secret_fields(connector.settings) if connector else []:
+            at: object = settings
+            for part in field.split("."):
+                at = at.get(part) if isinstance(at, dict) else None
+            if not isinstance(at, str) or not at:
+                continue
+            scheme, _, name = at.partition(":")
+            if setup.kept_here(ws, at):
+                out.append(SourceSecretView(field=field, where="kept"))
+            elif scheme in ("env", "file"):
+                out.append(SourceSecretView(field=field, where=scheme, name=name))
+            else:
+                out.append(SourceSecretView(field=field, where="other"))
+        return out
 
     def view(source: object) -> WatchSourceView:
         known = watch.connectors(store)
@@ -76,6 +96,7 @@ def build_watch_router(ws: Workspace, cfg: Config, store: Store, events: Events,
             read_at=str(read.data["started_at"]) if read else None,
             failures=failures,
             problem=problem,
+            secrets=secret_states(connector, source.settings),
         )
 
     @r.get("/watch/authors")

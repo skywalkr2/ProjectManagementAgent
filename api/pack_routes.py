@@ -19,6 +19,10 @@ from engine.storage import Store
 from engine.worker import Worker
 from engine.workspace import Workspace
 
+#: The header an install refusal carries when a read token for the release's host would fix it, so the screen can ask
+#: for one in place.
+NEEDS = "X-Cockpit-Needs"
+
 
 def _sentence(text: str) -> str:
     """A refusal as a sentence: capitalized, with its full stop."""
@@ -33,6 +37,17 @@ def _saved(ws: Workspace, cfg: Config) -> Config:
         return load_config(ws.config_dir, env=dict(os.environ))
     except ConfigError:
         return cfg
+
+
+def entry_in(ws: Workspace, cfg: Config, pack_id: str) -> packs.Entry:
+    """The catalog entry for an add-on, from the catalogs as the settings list them now."""
+    settings = _saved(ws, cfg).workspace.plugins.catalog
+    feeds = packs.read_feeds(packs.feed_urls(_saved(ws, cfg), product()), ws.private_dir, settings.refresh_hours)
+    for feed in feeds:
+        for entry in feed.entries:
+            if entry.id == pack_id:
+                return entry
+    raise HTTPException(status_code=404, detail=f"No catalog lists an add-on called {pack_id}.")
 
 
 def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) -> APIRouter:
@@ -64,9 +79,10 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
             for ep in entry_points(group="pm_cockpit.plugins")
             if ep.dist is not None and pack_install.installed_here(ep.dist.name)
         }
-        settings = cfg.workspace.plugins.catalog
+        now = _saved(ws, cfg)  # a catalog added since the start is listed at once
+        settings = now.workspace.plugins.catalog
         feeds = packs.read_feeds(
-            packs.feed_urls(cfg, product()), ws.private_dir, settings.refresh_hours, refresh=refresh
+            packs.feed_urls(now, product()), ws.private_dir, settings.refresh_hours, refresh=refresh
         )
         # As saved now: an add-on just turned on shows as on (it starts after the restart the person chooses).
         try:
@@ -101,6 +117,7 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                         removable=entry.id in mine,
                         costs=costs(entry),
                         feed=urlsplit(feed.url).hostname or "",
+                        release_host=(urlsplit(entry.release.url).hostname or None) if entry.release else None,
                     )
                 )
         installed = [
@@ -126,21 +143,14 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
                     error=f.error,
                     notes=f.notes,
                     read_at=datetime.fromtimestamp(f.read_at, UTC).isoformat() if f.read_at else None,
+                    address=f.url,
+                    removable=f.url in settings.feeds,
                 )
                 for f in feeds
             ],
             available=available,
             installed=installed,
         )
-
-    def entry_for(pack_id: str) -> packs.Entry:
-        settings = cfg.workspace.plugins.catalog
-        feeds = packs.read_feeds(packs.feed_urls(cfg, product()), ws.private_dir, settings.refresh_hours)
-        for feed in feeds:
-            for entry in feed.entries:
-                if entry.id == pack_id:
-                    return entry
-        raise HTTPException(status_code=404, detail=f"No catalog lists an add-on called {pack_id}.")
 
     @r.post("/packs/{pack_id}/install")
     def install(pack_id: str) -> PackInstalled:
@@ -151,13 +161,13 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
 
         if cfg.server.mode != "local":
             raise HTTPException(status_code=400, detail="A hosted app's add-ons are installed with its deployment.")
-        entry = entry_for(pack_id)
+        entry = entry_in(ws, cfg, pack_id)
         if entry.release is None:
             raise HTTPException(
                 status_code=409, detail=f"{entry.name} has no release the app can install: {entry.install}"
             )
         host_name = urlsplit(entry.release.url).hostname or ""
-        ref = cfg.workspace.plugins.catalog.release_tokens.get(host_name)
+        ref = _saved(ws, cfg).workspace.plugins.catalog.release_tokens.get(host_name)
         try:
             token = resolve_secret(ref) if ref else None
             data = pack_install.download(entry.release.url, entry.release.sha256, token)
@@ -166,7 +176,10 @@ def build_pack_router(ws: Workspace, cfg: Config, store: Store, worker: Worker) 
             raise HTTPException(
                 status_code=409,
                 detail=f"The read token for {host_name} isn't available, so the release file can't be read.",
+                headers={NEEDS: "read-token"},
             ) from None
+        except pack_install.NeedsToken as err:
+            raise HTTPException(status_code=409, detail=_sentence(str(err)), headers={NEEDS: "read-token"}) from None
         except pack_install.InstallError as err:
             raise HTTPException(status_code=409, detail=_sentence(str(err))) from None
         if host.active(pack_id):

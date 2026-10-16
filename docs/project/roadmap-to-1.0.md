@@ -1831,7 +1831,32 @@ From the original designer's lessons of 2026-10-14:
 - [ ] **Lists, not typing** (owner, 2026-10-12: "nearly everything should have dropdowns"): every field on every screen
   whose values are known is a list to pick from. Audit each free-text field and convert it, with a test per screen. The
   time zone is done (`test_the_time_zone_setting_is_a_list_of_known_time_zones`; the Settings screen and the
-  walkthrough). Settings name their lists with `choices`.
+  walkthrough). Settings name their lists with `choices`. *Also done:* the language (owner, 2026-10-16: "the language
+  setting should be a dropdown"): Settings and a project's own language are lists of language tags shown by name, and a
+  value set outside a named list is added to it, so no list shows a wrong value
+  (`tests/test_setup.py::test_the_language_setting_is_a_list_of_language_tags_that_names_its_list`,
+  `tests/test_setup.py::test_a_choice_list_includes_the_current_value_when_it_is_not_one_of_the_list`,
+  `web/src/lib/languages.test.ts`, `web/src/components/Settings.test.tsx` (a setting that picks a language),
+  `web/src/components/Setup.test.tsx` (the project form's Language list: empty is "Same as …", picking saves the tag)).
+- [ ] **Passwords, keys and private addresses typed on the screen** (P16; owner, 2026-10-16: "in imap setup we need to be
+  able to take a password and not require the user to have set it somewhere else"). *Built:* a setting that holds a
+  secret reference is marked `secret`; a source's add and change routes take pasted values apart from the settings and a
+  local app keeps each in the private keys folder (0700, the file 0600), writing only its `file:` reference; a hosted app
+  refuses; the value never reaches `watch.yaml`, the ledger or an answer; a source's form shows a password box, "Where it
+  is kept instead", "Kept on this computer" with Replace and "Read from …"
+  (`tests/test_typed_secrets.py`, `web/src/components/Sources.test.tsx` (a secret setting typed on the screen)).
+  *Left:* typing an add-on's own secrets (`workspace.plugins.secrets`) and the backup key (`storage.backups.encrypt`),
+  which are still reference boxes in Settings.
+- [ ] **Add-ons install from the screen** (P15; owner, 2026-10-16: "they still require manual command line installs
+  instead of through the screen. the screen lists zero available plugins"). *Built:* with no catalog listed Add-ons
+  offers an address field (the cursor in it) that saves into `workspace.plugins.catalog.feeds` and reads it at once; the
+  catalog list adds another and takes away one the person added; an install refused for want of a read token asks for it
+  in place (typed and kept as in P16 on a local app, a reference on a hosted one), then Install can be pressed again;
+  the plugin guide's "Publishing a pack" says to attach the built wheel to the tagged release and give its address and
+  SHA-256 in `release` (`tests/test_catalog_screen.py`, `web/src/components/Addons.test.tsx` (adding a catalog from the
+  screen, a read token for a private release)). *Left:* telling the mail add-on's builder to attach its wheel and give
+  `release` in its next release (the main session), and an install tried against a real private release host by the
+  owner.
 - [ ] **Action items and open questions, cleaned up end to end** (owner, 2026-10-13: "the whole action items / open
   issues needs a lot of work"). Starts from L0's audit of design 6.8 to 6.11 against the code, so the list of what is
   wrong comes from the code, not memory. Then one place for each: every open action with its owner, due date, project

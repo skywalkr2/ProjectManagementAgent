@@ -14,6 +14,7 @@ export class Refuse {
   constructor(
     public status: number,
     public detail: string,
+    public headers: Record<string, string> = {},
   ) {}
 }
 
@@ -28,7 +29,7 @@ export function fakeApi(routes: Routes) {
     const handler = routes[route];
     if (!handler) return new Response(JSON.stringify({ detail: "not found" }), { status: 404 });
     const answer = handler(body);
-    if (answer instanceof Refuse) return new Response(JSON.stringify({ detail: answer.detail }), { status: answer.status });
+    if (answer instanceof Refuse) return new Response(JSON.stringify({ detail: answer.detail }), { status: answer.status, headers: answer.headers });
     return new Response(JSON.stringify(answer), { status: 200, headers: { "content-type": "application/json" } });
   });
   vi.stubGlobal("fetch", fetchMock);

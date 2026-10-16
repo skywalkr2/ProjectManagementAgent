@@ -593,3 +593,26 @@ test("the standing instructions group points to the Knowledge screen, where the 
   await user.click(within(group).getByRole("button", { name: "Open Knowledge" }));
   expect(onOpenKnowledge).toHaveBeenCalledTimes(1);
 });
+
+test("a setting that picks a language shows each tag by its name, sorted by name, and saves the tag", async () => {
+  const user = userEvent.setup();
+  const calls = api(
+    [item("demo.language", { type: "choice", choices: "languages", options: ["fr-FR", "en-US", "en-GB"], value: "en-US", default: "en-US", source: "file" })],
+    { "POST settings": () => ({ changes: [], fingerprint: "fp-2", needs_restart: false }) },
+  );
+  open();
+  const select = await screen.findByLabelText("What demo.language does");
+  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["English (United Kingdom)", "English (United States)", "French (France)"]);
+  expect(select).toHaveValue("en-US");
+  await user.selectOptions(select, "fr-FR");
+  await user.click(screen.getByRole("button", { name: /Save/ }));
+  await waitFor(() => expect(posted(calls)).toHaveLength(1));
+  expect(posted(calls)[0]).toMatchObject({ changes: { "demo.language": "fr-FR" } });
+});
+
+test("a choice setting that doesn't name a list keeps its own order and wording", async () => {
+  api();
+  open();
+  const select = await screen.findByLabelText("What demo.mode does");
+  expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["person", "rule"]);
+});

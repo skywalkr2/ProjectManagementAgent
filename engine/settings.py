@@ -29,6 +29,7 @@ from engine.config import ConfigError, load_config
 from engine.config.loader import plain_label, refusal_text
 from engine.config.schema import FILES
 from engine.config.yaml_edit import get_key, has_key, remove_key, set_key
+from engine.secrets import SecretHint
 from engine.storage import StoreError, WriteContext
 from engine.yaml_load import load_yaml
 
@@ -86,6 +87,8 @@ class Setting:
     enabled_by: str | None = None  # the switch (yes/no) or field (set or empty) this one only matters with
     picker: str | None = None  # "folder" or "file": the screen offers a chooser instead of typing a path
     plugin: str | None = None  # the add-on whose settings these are; None for the app's own
+    choices: str | None = None  # the named list a text setting picks from (a key of CHOICE_LISTS), when it has one
+    secret: bool = False  # the value is a reference to a secret (a password, a key, a private address)
 
 
 @dataclass
@@ -221,9 +224,12 @@ def _walk(
             continue
         kind, options = _kind(info.annotation)
         extra = info.json_schema_extra if isinstance(info.json_schema_extra, dict) else {}
-        named = CHOICE_LISTS.get(str(extra.get("choices"))) if extra.get("choices") else None
+        list_name = str(extra["choices"]) if extra.get("choices") else None
+        named = CHOICE_LISTS.get(list_name) if list_name else None
         if named is not None and (listed := named()):
-            kind, options = "choice", listed
+            kind, options = "choice", _with_current(listed, (values or {}).get(key))
+        else:
+            list_name = None
         switch = extra.get("enabled_by")
         if isinstance(switch, str) and "." not in switch:
             switch = ".".join([*path, switch])
@@ -245,8 +251,22 @@ def _walk(
                 editable=kind != "other" and not locked and not dotted.startswith(FILE_ONLY),
                 enabled_by=switch if isinstance(switch, str) else None,
                 picker=extra.get("picker") if isinstance(extra.get("picker"), str) else None,
+                choices=list_name,
+                secret=isinstance(info.description, SecretHint),
             )
         )
+
+
+def secret_fields(model: type[BaseModel]) -> list[str]:
+    """The dotted names of a settings model's fields whose value is a reference to a secret."""
+    found: list[Setting] = []
+    _walk(model, ["settings"], {}, {}, {}, found)
+    return [s.key.removeprefix("settings.") for s in found if s.secret]
+
+
+def _with_current(options: list[str], value: Any) -> list[str]:
+    """A named list with the setting's current value in it when it isn't there, so a list never shows a wrong value."""
+    return [*options, value] if isinstance(value, str) and value and value not in options else options
 
 
 def _time_zones() -> list[str]:
@@ -259,9 +279,18 @@ def _time_zones() -> list[str]:
         return []
 
 
+LANGUAGES_FILE = Path(__file__).parent / "defaults" / "languages.yaml"
+
+
+def _languages() -> list[str]:
+    """The language tags the core offers, from its shipped list."""
+    data = load_yaml(LANGUAGES_FILE.read_text(encoding="utf-8")) or {}
+    return [str(tag) for tag in data.get("languages") or []]
+
+
 #: Lists of choices a text setting can name (`json_schema_extra={"choices": ...}`), so the screens offer a list
 #: instead of a box to type in.
-CHOICE_LISTS = {"time_zones": _time_zones}
+CHOICE_LISTS = {"time_zones": _time_zones, "languages": _languages}
 
 
 def _source(dotted: str, sources: dict[str, str]) -> str:

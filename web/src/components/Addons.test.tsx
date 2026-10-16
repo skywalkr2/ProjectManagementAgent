@@ -820,3 +820,160 @@ test("the introduction says installing happens here and that the app never takes
   expect(intro).toHaveTextContent("never takes payment");
   expect(intro).not.toHaveTextContent("never installs");
 });
+
+describe("adding a catalog from the screen", () => {
+  const SAVED_FEEDS = (before: string[], after: string[]) => ({
+    changes: [{ key: "workspace.plugins.catalog.feeds", before, after, was_default: before.length === 0, is_default: false }],
+    fingerprint: "fp-2",
+    needs_restart: false,
+  });
+  const ADDRESS = "https://" + "catalog.example.com/packs.yaml";
+
+  test("with no catalog listed the screen offers an address field, with the cursor in it", async () => {
+    open(view({ feeds: [] }));
+    expect(await screen.findByText(/This copy of the app doesn't list a catalog/)).toBeInTheDocument();
+    const field = await screen.findByLabelText("Catalog address");
+    await waitFor(() => expect(field).toHaveFocus());
+    expect(screen.getByRole("button", { name: "Add catalog" })).toBeDisabled();
+  });
+
+  test("Add catalog saves the address, reads the catalog at once and lists its packs", async () => {
+    let listed = false;
+    const { calls, user } = open(view({ feeds: [] }), {
+      "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+      "POST packs/catalogs": () => {
+        listed = true;
+        return SAVED_FEEDS([], [ADDRESS]);
+      },
+      "POST packs/refresh": () => view({ feeds: [feed({ address: ADDRESS, removable: true, domain: "catalog.example.com" })], available: [pack("tool", { installable: true })] }),
+      "GET packs": () => (listed ? view({ feeds: [feed({ address: ADDRESS, removable: true })], available: [pack("tool", { installable: true })] }) : view({ feeds: [] })),
+    });
+    await user.type(await screen.findByLabelText("Catalog address"), ` ${ADDRESS}`);
+    await user.click(screen.getByRole("button", { name: "Add catalog" }));
+    await waitFor(() => expect(calls.some((c) => c.route === "POST packs/refresh")).toBe(true));
+    expect(calls.find((c) => c.route === "POST packs/catalogs")?.body).toEqual({ address: ADDRESS, fingerprint: "fp-1" });
+    expect(await screen.findByText("Name of tool")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Catalog address")).toBeNull();
+    expect(await screen.findByText("Added the catalog at catalog.example.com. Its add-ons are listed.")).toBeInTheDocument();
+  });
+
+  test("a refusal is shown in the server's words and what was typed stays", async () => {
+    const { user } = open(view({ feeds: [] }), {
+      "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+      "POST packs/catalogs": () => new Refuse(400, "Give the catalog's address, starting with https:// and no spaces."),
+    });
+    await user.type(await screen.findByLabelText("Catalog address"), "catalog.example.com");
+    await user.click(screen.getByRole("button", { name: "Add catalog" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("starting with https://");
+    expect(screen.getByLabelText("Catalog address")).toHaveValue("catalog.example.com");
+  });
+
+  test("where catalogs are listed, another can be added, and one the person added can be taken off", async () => {
+    const mine = feed({ address: ADDRESS, removable: true, domain: "catalog.example.com" });
+    const shipped = feed({ address: "https://" + "built-in.example.com/packs.yaml", removable: false, domain: "built-in.example.com" });
+    const { calls, user } = open(view({ feeds: [shipped, mine] }), {
+      "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+      "POST packs/catalogs/remove": () => SAVED_FEEDS([ADDRESS], []),
+      "POST packs/refresh": () => view({ feeds: [shipped] }),
+    });
+    await screen.findByText("built-in.example.com · read", { exact: false });
+    expect(screen.queryByRole("button", { name: "Remove the catalog built-in.example.com" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Add another catalog" }));
+    expect(await screen.findByLabelText("Catalog address")).toHaveFocus();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByLabelText("Catalog address")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Remove the catalog catalog.example.com" }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST packs/catalogs/remove")?.body).toEqual({ address: ADDRESS, fingerprint: "fp-1" }));
+    expect(await screen.findByText("Took the catalog at catalog.example.com off the list.")).toBeInTheDocument();
+  });
+});
+
+describe("a read token for a private release", () => {
+  const TOKEN_ROUTES = (local = true) => ({
+    "GET setup": () => ({ steps: [], finished: true, local, walkthrough: {} }),
+    "GET settings": () => ({ fingerprint: "fp-1", items: [] }),
+    "GET status": () => ({ restart_needed: null, can_restart: true, restart_for: [] }),
+  });
+  const SAVED_TOKEN = {
+    changes: [{ key: "workspace.plugins.catalog.release_tokens", before: {}, after: { "files.example.com": "file:/kept" }, was_default: true, is_default: false }],
+    fingerprint: "fp-2",
+    needs_restart: false,
+  };
+  const PRIVATE = () => pack("tool", { installable: true, release_host: "files.example.com" });
+
+  test("a refusal that a token would fix offers Add a read token in the row, and no other refusal does", async () => {
+    const user = userEvent.setup();
+    let answer: unknown = new Refuse(409, "The release file couldn't be read: it may be private.", { "X-Cockpit-Needs": "read-token" });
+    fakeApi({ ...TOKEN_ROUTES(), "GET packs": () => view({ available: [PRIVATE()] }), "POST packs/tool/install": () => answer });
+    renderApp(<Addons onBack={() => undefined} />);
+    const tool = await row("Name of tool");
+    expect(within(tool).queryByRole("button", { name: /Add a read token/ })).toBeNull();
+    await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
+    expect(await within(tool).findByRole("button", { name: "Add a read token for Name of tool" })).toBeInTheDocument();
+    answer = new Refuse(409, "The file doesn't match the checksum, so it wasn't installed.");
+    await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
+    expect(await within(tool).findByText(/doesn't match the checksum/)).toBeInTheDocument();
+    expect(within(tool).queryByRole("button", { name: /Add a read token/ })).toBeNull();
+  });
+
+  test("on a local app the token is typed into a password box, sent apart, and Install can then be pressed again", async () => {
+    const user = userEvent.setup();
+    let kept = false;
+    const calls = fakeApi({
+      ...TOKEN_ROUTES(),
+      "GET packs": () => view({ available: [PRIVATE()] }),
+      "POST packs/tool/install": () =>
+        kept ? INSTALLED("tool") : new Refuse(409, "The release file couldn't be read: it may be private.", { "X-Cockpit-Needs": "read-token" }),
+      "POST packs/tool/token": () => {
+        kept = true;
+        return SAVED_TOKEN;
+      },
+    });
+    renderApp(<Addons onBack={() => undefined} />);
+    const tool = await row("Name of tool");
+    await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
+    await user.click(await within(tool).findByRole("button", { name: "Add a read token for Name of tool" }));
+    expect(within(tool).getByText(/kept privately at files\.example\.com/)).toHaveTextContent("It needs read access only to where the add-on's files are kept, and it is sent only to files.example.com.");
+    const box = within(tool).getByLabelText("Read token");
+    expect(box).toHaveAttribute("type", "password");
+    expect(box).toHaveFocus();
+    await user.type(box, "typed-token");
+    await user.click(within(tool).getByRole("button", { name: "Save token" }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST packs/tool/token")?.body).toEqual({ token: "typed-token", fingerprint: "fp-1" }));
+    expect(await within(tool).findByText("The read token is saved. Press Install to try again.")).toBeInTheDocument();
+    expect(within(tool).queryByRole("alert")).toBeNull();
+    await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
+    await waitFor(() => expect(calls.filter((c) => c.route === "POST packs/tool/install")).toHaveLength(2));
+    expect(JSON.stringify(calls.map((c) => c.body))).not.toContain("file:/kept");
+  });
+
+  test("Where it is kept instead sends a reference, and a hosted app offers only that", async () => {
+    const user = userEvent.setup();
+    const calls = fakeApi({
+      ...TOKEN_ROUTES(false),
+      "GET packs": () => view({ available: [PRIVATE()] }),
+      "POST packs/tool/install": () => new Refuse(409, "The read token for files.example.com isn't available.", { "X-Cockpit-Needs": "read-token" }),
+      "POST packs/tool/token": () => SAVED_TOKEN,
+    });
+    renderApp(<Addons onBack={() => undefined} />);
+    const tool = await row("Name of tool");
+    await user.click(within(tool).getByRole("button", { name: "Install Name of tool" }));
+    await user.click(await within(tool).findByRole("button", { name: "Add a read token for Name of tool" }));
+    const box = within(tool).getByLabelText("Read token");
+    await waitFor(() => expect(box).toHaveAttribute("type", "text"));
+    expect(within(tool).queryByRole("button", { name: "Where it is kept instead" })).toBeNull();
+    await user.type(box, "RELEASE_TOKEN");
+    await user.click(within(tool).getByRole("button", { name: "Save token" }));
+    await waitFor(() => expect(calls.find((c) => c.route === "POST packs/tool/token")?.body).toEqual({ reference: "env:RELEASE_TOKEN", fingerprint: "fp-1" }));
+  });
+
+  test("an entry with no release keeps its own install text", async () => {
+    const user = userEvent.setup();
+    fakeApi({ ...TOKEN_ROUTES(), "GET packs": () => view({ available: [pack("bare", { installable: false, release_host: null })] }) });
+    renderApp(<Addons onBack={() => undefined} />);
+    const bare = await row("Name of bare");
+    expect(within(bare).queryByRole("button", { name: /Install|read token/ })).toBeNull();
+    await user.click(within(bare).getByRole("button", { name: "How to get Name of bare" }));
+    expect(await screen.findByText("install bare")).toBeInTheDocument();
+  });
+});

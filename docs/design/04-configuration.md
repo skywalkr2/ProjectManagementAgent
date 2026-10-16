@@ -45,7 +45,10 @@ The goal: a person changes how their installation looks, behaves, runs and is se
   description and default. Saving is described in 4.22. Keys set by an environment variable or flag show as locked, with
   where they came from. Secrets are never shown or typed into config; the form takes a reference (`env:NAME` or `file:/path`;
   `keychain:NAME` is *designed, not yet built*). A key pasted on a screen is kept on this computer (4.24) and config holds a
-  `file:` reference to it.
+  `file:` reference to it. A field whose value is a secret reference is marked `secret` in the form description, and a
+  source's form shows a password box for it ("Type or paste it") with "Where it is kept instead" as the second choice; a kept
+  one reads "Kept on this computer" with Replace, and a named place reads "Read from …", never a value (decisions, 2026-10-16,
+  "A password typed on the screen is kept in the private keys folder"). A hosted app shows only the second choice.
 - **Settings guide the person** (decisions, 2026-10-11). A setting that turns a feature on comes first in its group, and the
   settings it governs are greyed out while it is off (`enabled_by` in the schema). A folder is chosen with a folder picker
   (`picker`), a choice from a dropdown; typing a path or a value is the fallback, not the way.
@@ -103,7 +106,9 @@ Built keys, with defaults:
   - `jobs`: by job name, `enabled` (true) and `every_minutes` (unset: the plugin's default, at least 5).
   - `secrets`: by plugin and secret name, a reference (`env:NAME` or `file:/path`), never the secret.
   - `catalog` (3.11, 6.29): `enabled` (true), `shipped_feed` (true), `feeds` (more https addresses), `refresh_hours` (24),
-    and `release_tokens` (by host name, a reference to a read token for a private pack's release file).
+    and `release_tokens` (by host name, a reference to a read token for a private pack's release file). All of it is read
+    when the Add-ons screen uses it, so a change applies without a restart; the screen adds and removes feed addresses and
+    sets a release token itself (3.11, 6.29).
 
 Designed, not yet built:
 
@@ -732,8 +737,11 @@ How a setting gets from a screen into a file, and when the running app uses it (
 from the screens…" and "The app restarts only when it must, and only when the person says so").
 
 - **A form is described from the schema** (`GET /api/settings`): every key with its description, type, choices, value, default,
-  the layer that set it, whether it is locked, `basic` or advanced, the key it depends on (`enabled_by`) and a picker if it
-  has one. Plugins' settings come as their own groups (4.12).
+  the layer that set it, whether it is locked, `basic` or advanced, the key it depends on (`enabled_by`), a picker if it
+  has one, the name of the list it picks from (`choices`: `time_zones`, `languages`) and whether its value is a secret
+  reference (`secret`). A value already set that is not on its list is added to the list the form shows, so a list never shows
+  a wrong value. The language list is the core's shipped `engine/defaults/languages.yaml`; the screens name each tag in the
+  browser's language ("English (United States)") and keep the stored value a tag. Plugins' settings come as their own groups (4.12).
 - **A save names the fingerprint of the files the form was built from**, so two saves never race; if the files changed it
   says so and asks the person to look again.
 - **What can't be saved from a screen:** a key locked by an environment variable or flag, and the file-only keys: all of
@@ -769,8 +777,9 @@ Some state belongs to one computer or one person and is never in the config file
 the workspace's private folder, `<workspace>/.cockpit/`, which the workspace's git ignores:
 
 - the install token the browser presents in local mode;
-- keys pasted on a screen (an AI account's key, a plugin's app registration, a secret a plugin keeps), each a file readable
-  by its owner only, referred to from config as `file:`; a hosted app takes keys only from its environment (Part 12);
+- keys pasted on a screen (an AI account's key, a source's password or private address, an add-on's release read token, a plugin's
+  app registration, a secret a plugin keeps), each a file in `.cockpit/keys/` readable by its owner only (the folder too),
+  named from what it is for (`source-<source id>-<field>`, `release-token-<host>`), referred to from config as `file:`; a hosted app takes keys only from its environment (Part 12);
 - the tokens of each sign-in (6.27), beside the plugin's other kept secrets;
 - where each outside program is found, per plugin tool (`.cockpit/tools.yaml`); two computers can differ;
 - which setup steps were skipped, the result of the last backup per target, and which sign-ins have already had their sources

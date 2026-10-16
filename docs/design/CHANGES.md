@@ -1026,6 +1026,15 @@ yet follow, that it is *designed*, with its phase.
 | Extension points (3.3) | No pack cases or scorers | `provides.evals`, `provides.scorers`, `registrar.scorer`. Built: `tests/test_pack_evals.py` |
 | Switching (6.16, 6.22) | A switch was unchecked | "Switch and check (about $X)" on the accounts screen runs the golden set, pack cases and learning pairs; a failure is the Today line `switch_failed` with Switch back. Built: `tests/test_switch_check.py` |
 
+## 82. Languages from a list, secrets typed on the screen, and add-ons from the screen (2026-10-16)
+
+| Where | Before | Now |
+|---|---|---|
+| Language (4.22, 7.0) | A box for a language tag, in Settings and on a project | A list of language tags shown by name in the browser's language; a project's list starts with "Same as <the language it inherits>". A value set outside the list is added to it. Built: `tests/test_setup.py::test_the_language_setting_is_a_list_of_language_tags_that_names_its_list`, `web/src/components/Settings.test.tsx`, `web/src/components/Setup.test.tsx` |
+| Secrets (4.0, 4.24, 7.0) | A password or private address was `env:NAME` or `file:/path`, set up somewhere else | A password box on a local app, kept in the private keys folder; "Where it is kept instead" is the second choice; "Kept on this computer" with Replace; a hosted app refuses it. Built: `tests/test_typed_secrets.py`, `web/src/components/Sources.test.tsx` |
+| Add-ons (3.11, 6.29) | With no catalog the screen said so, and a private release needed a command line | An address field in place, adding and removing catalogs, and a read token asked for in place when a release can't be read. Built: `tests/test_catalog_screen.py`, `web/src/components/Addons.test.tsx` |
+| Publishing a pack (3.14) | The guide named the entry's `release` only by its field | Step 1 and 2 say to attach the built wheel to the tagged release and give its address and SHA-256 (the release asset's API address for a private repository) |
+
 ## 81. Today as a queue, an inspector and a rail (2026-10-16)
 
 | Where | Before | Now |

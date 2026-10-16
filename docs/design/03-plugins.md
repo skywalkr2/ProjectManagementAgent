@@ -376,8 +376,16 @@ freeze"). A pack's catalog entry says where its release is and how to check it. 
 - shows what will be added before it installs, and refuses what conflicts with the app's own libraries;
 - is matched by Update and Remove. Remove works on a pack that is turned off, takes out only what that pack needed, and leaves
   the pack's records and settings in place;
-- takes a read token for a private pack's release host, given once and kept as a secret reference;
+- takes a read token for a private pack's release host, given once and kept as a secret reference: when the install is refused
+  for want of one, the row offers "Add a read token" in place, a password box that says the token needs only read access to
+  where the add-on's files are kept and goes only to that host. A local app keeps it in the private keys folder and writes
+  its reference to `workspace.plugins.catalog.release_tokens`; a hosted app takes only a reference (6.29);
 - is for a local install only. A hosted app's add-ons are installed with its deployment.
+
+**Catalogs from the screen** (decisions, 2026-10-16, "A catalog's address and a read token are added on the Add-ons screen").
+With no catalog listed, Available shows "Add a catalog": one https address, saved into `workspace.plugins.catalog.feeds` and
+read at once; the catalog list offers adding another and taking away one the person added (never the one the build came with).
+No catalog address is committed to the repository; the build's own feed stays unset in a checkout.
 
 **Built (phase A2):** installing a single release file of pure Python whose needs the app already has, the read token,
 the Install button, Update now for a newer release, and Remove for a pack this app installed and that is off. Installing
@@ -457,9 +465,12 @@ owner chooses; a checked, repeatable path keeps entries honest about what a pack
 generated guide ("Publishing a pack"), the catalog repository's PUBLISHING.md and `docs/plugin-kickoff-template.md`.
 
 1. **Release in the pack's own repository:** raise the version in `plugin.yaml` and the package's metadata, say what changed,
-   run its tests, tag the release, and let its own checks build the package from the tag.
+   run its tests, tag the release, and let its own checks build the package from the tag, with the built wheel attached to the
+   tagged release.
 2. **Write its catalog entry** in that repository, in the catalog's format (`deploy/pack-catalog.example.yaml` shows it):
-   `provides` and `requires` copied exactly from `plugin.yaml`, its price, how to get it, its release, and its typical AI jobs.
+   `provides` and `requires` copied exactly from `plugin.yaml`, its price, how to get it, its release (the attached wheel's
+   address and its SHA-256; for a private repository the release asset's API address, read with a token the person adds on
+   Add-ons), and its typical AI jobs.
 3. **Check it** with `cockpit pack check` (3.13).
 4. **Ask for it to be published:** add a Publish request to the repository's questions file (the pack, the version and tag, what
    changed, the check's output, and whether the owner has said it may be listed publicly) and tell the host's session. A plugin

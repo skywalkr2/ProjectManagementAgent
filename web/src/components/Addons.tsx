@@ -5,7 +5,7 @@
 // with a release the app can install has an Install button; one the app installed can be removed once it is off. Both
 // need a restart before the app uses the change, and neither turns anything on.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Heading, Tab, TabList, TabPanel, Tabs } from "react-aria-components";
 import { api, ApiError, type S } from "../lib/api";
 import { whenText as when } from "../lib/dates";
@@ -23,11 +23,13 @@ import {
 } from "../lib/packs";
 import { problemText } from "../lib/problem";
 import { useRestart } from "../lib/restart";
-import { useAfterSave } from "../lib/settings-save";
+import { asReference } from "../lib/secret-ref";
+import { useAfterSave, useFreshFingerprint } from "../lib/settings-save";
 import { useToasts } from "../lib/toasts";
 import { useWords } from "../lib/wording";
 import { ModalPanel, restoreFocus } from "./ModalPanel";
 import { domainOf } from "./SafeText";
+import { SecretField } from "./SecretField";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Skeleton } from "../ui/Skeleton";
 
@@ -104,6 +106,9 @@ function usePackChange(packId: string, name: string, focusRow: () => void) {
   const client = useQueryClient();
   const [busy, setBusy] = useState<"install" | "remove" | null>(null);
   const [problem, setProblem] = useState("");
+  // The refusal says a read token for the release's host would fix it: the row asks for one in place.
+  const [needsToken, setNeedsToken] = useState(false);
+  const [tokenSaved, setTokenSaved] = useState(false);
   const restarts = useRestart().restarts;
   // What was done, and how many restarts had happened by then: once another has, the restart it asked for is over.
   const [last, setLast] = useState<{ what: "installed" | "removed"; at: number } | null>(null);
@@ -118,6 +123,8 @@ function usePackChange(packId: string, name: string, focusRow: () => void) {
   const run = async (what: "install" | "remove") => {
     setBusy(what);
     setProblem("");
+    setNeedsToken(false);
+    setTokenSaved(false);
     try {
       await (what === "install" ? api.installPack : api.removePack)(packId);
       setLast({ what: what === "install" ? "installed" : "removed", at: restarts });
@@ -128,6 +135,7 @@ function usePackChange(packId: string, name: string, focusRow: () => void) {
       focusRow();
     } catch (err) {
       setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+      setNeedsToken(err instanceof ApiError && err.needs === "read-token");
     } finally {
       setBusy(null);
     }
@@ -135,6 +143,14 @@ function usePackChange(packId: string, name: string, focusRow: () => void) {
   return {
     busy,
     problem,
+    needsToken,
+    tokenSaved,
+    /** The token is kept: the refusal is over, and Install can be pressed again. */
+    gotToken: () => {
+      setNeedsToken(false);
+      setProblem("");
+      setTokenSaved(true);
+    },
     note: done ? t(done === "installed" ? "addons.installed_note" : "addons.removed_note", { name }) : "",
     installed: done === "installed",
     install: () => run("install"),
@@ -238,6 +254,7 @@ function Available(props: { view: S["PacksView"] }) {
           ))}
         </ul>
       )}
+      {view.enabled && view.feeds.length === 0 && <AddCatalog first />}
       {view.enabled && view.feeds.length > 0 && <Catalog feeds={view.feeds} />}
       {getting !== null && view.available[getting] && (
         <GetIt
@@ -364,6 +381,14 @@ function PackRow(props: { pack: Pack; index: number; restartNeeded: boolean; onG
               {problem}
             </p>
           )}
+          {change.needsToken && pack.release_host && (
+            <ReadToken pack={pack} base={base} host={pack.release_host} onSaved={change.gotToken} />
+          )}
+          {change.tokenSaved && (
+            <p className="sub" role="status">
+              {t("addons.token.saved_note")}
+            </p>
+          )}
           {safeHomepage && (
             <span className="sub">{t("addons.homepage_line", { domain: pack.homepage_domain ?? "" })}</span>
           )}
@@ -467,11 +492,202 @@ function CopyLine(props: { text: string; label: string }) {
   );
 }
 
+/** Where a catalog address is read from, for a message: its host, or the address itself when it isn't one. */
+const hostOf = (address: string) => {
+  try {
+    return new URL(address).hostname || address;
+  } catch {
+    return address;
+  }
+};
+
+/** The form that lists a catalog by its address: shown in place when none is listed, and from "Add another catalog". */
+function AddCatalog(props: { first?: boolean; onDone?: () => void }) {
+  const { t } = useWords();
+  const client = useQueryClient();
+  const afterSave = useAfterSave();
+  const fingerprint = useFreshFingerprint();
+  const id = useId();
+  const [address, setAddress] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+  const add = async () => {
+    setBusy(true);
+    setProblem("");
+    try {
+      const saved = await api.addCatalog(address.trim(), await fingerprint());
+      // The catalog is read at once, so its add-ons are listed when the form goes.
+      client.setQueryData(["packs"], await api.refreshPacks());
+      await afterSave(saved, { message: t("addons.catalog_added", { domain: hostOf(address.trim()) }) });
+      props.onDone?.();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) void client.invalidateQueries({ queryKey: ["settings"] });
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+      setBusy(false);
+    }
+  };
+  return (
+    <form
+      className="panel catalog-add"
+      aria-labelledby={`${id}-title`}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (address.trim() && !busy) void add();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && props.onDone) props.onDone();
+      }}
+    >
+      <h3 id={`${id}-title`}>{t("addons.catalog_add_title")}</h3>
+      <div className="field">
+        <label htmlFor={`${id}-address`}>{t("addons.catalog_address")}</label>
+        <input
+          id={`${id}-address`}
+          type="text"
+          inputMode="url"
+          autoComplete="off"
+          autoFocus
+          value={address}
+          disabled={busy}
+          aria-describedby={`${id}-hint`}
+          onChange={(e) => setAddress(e.target.value)}
+        />
+        <p className="hint" id={`${id}-hint`}>
+          {t("addons.catalog_address_hint")}
+        </p>
+      </div>
+      {problem && (
+        <p className="problem-note" role="alert">
+          {problem}
+        </p>
+      )}
+      <div className="row-end">
+        {!props.first && props.onDone && (
+          <button type="button" className="btn quiet" onClick={props.onDone}>
+            {t("action.cancel")}
+          </button>
+        )}
+        <button type="submit" className="btn primary" disabled={!address.trim() || busy}>
+          {t(busy ? "addons.catalog_adding" : "addons.catalog_add")}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/** The row's way to give the read token for the place an add-on's files are kept: typed here on a local app, where the
+ * app keeps it on this computer, or as where it is kept. It goes only to that host. Saved, Install can be pressed again. */
+function ReadToken(props: { pack: Pack; base: string; host: string; onSaved: () => void }) {
+  const { t } = useWords();
+  const afterSave = useAfterSave();
+  const fingerprint = useFreshFingerprint();
+  const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
+  const local = setup.data?.local ?? true;
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  const [reference, setReference] = useState("");
+  const [how, setHow] = useState<"type" | "where" | "held">("type");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState("");
+  const { base, host } = props;
+  const byReference = !local || how === "where";
+  const ready = byReference ? reference.trim() !== "" : typed.trim() !== "";
+  const save = async () => {
+    setBusy(true);
+    setProblem("");
+    try {
+      const fp = await fingerprint();
+      const saved = await api.giveReadToken(props.pack.id, byReference ? { reference: asReference(reference), fingerprint: fp } : { token: typed.trim(), fingerprint: fp });
+      await afterSave(saved, { message: t("addons.token.saved", { host }) });
+      props.onSaved();
+    } catch (err) {
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+      setBusy(false);
+    }
+  };
+  if (!open) {
+    return (
+      <div>
+        <button type="button" className="btn small" aria-label={t("addons.token.add_named", { name: props.pack.name })} onClick={() => setOpen(true)}>
+          {t("addons.token.add")}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <form
+      className="token-prompt"
+      aria-labelledby={`${base}-token-title`}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (ready && !busy) void save();
+      }}
+    >
+      <p className="what" id={`${base}-token-title`}>
+        {t("addons.token.title", { host })}
+      </p>
+      <p className="hint" id={`${base}-token-hint`}>
+        {t("addons.token.intro", { host })}
+      </p>
+      <div className="field">
+        <span className="setting-label" id={`${base}-token-label`}>
+          {t("addons.token.label")}
+        </span>
+        <SecretField
+          id={`${base}-token`}
+          labelId={`${base}-token-label`}
+          label={t("addons.token.label")}
+          local={local}
+          held={null}
+          reference={reference}
+          onReference={setReference}
+          pasted={typed}
+          onPaste={setTyped}
+          disabled={busy}
+          describedBy={`${base}-token-hint`}
+          autoFocus
+          onMode={setHow}
+        />
+      </div>
+      {problem && (
+        <p className="problem-note" role="alert">
+          {problem}
+        </p>
+      )}
+      <div className="row-end">
+        <button type="button" className="btn quiet" disabled={busy} onClick={() => setOpen(false)}>
+          {t("action.cancel")}
+        </button>
+        <button type="submit" className="btn primary" disabled={!ready || busy}>
+          {t(busy ? "addons.token.saving" : "addons.token.save")}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function Catalog(props: { feeds: Feed[] }) {
   const { t } = useWords();
   const client = useQueryClient();
+  const afterSave = useAfterSave();
+  const fingerprint = useFreshFingerprint();
   const [busy, setBusy] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [problem, setProblem] = useState("");
+  const addButton = useRef<HTMLButtonElement>(null);
+  const take = async (feed: Feed) => {
+    if (!feed.address) return;
+    setBusy(true);
+    setProblem("");
+    try {
+      const saved = await api.removeCatalog(feed.address, await fingerprint());
+      client.setQueryData(["packs"], await api.refreshPacks());
+      await afterSave(saved, { message: t("addons.catalog_removed", { domain: feed.domain }) });
+    } catch (err) {
+      setProblem(err instanceof ApiError && err.detail ? err.detail : problemText(err, t));
+    }
+    setBusy(false);
+  };
   const refresh = async () => {
     setBusy(true);
     setProblem("");
@@ -497,14 +713,26 @@ function Catalog(props: { feeds: Feed[] }) {
       )}
       <ul className="catalog-list">
         {props.feeds.map((feed, i) => (
-          <FeedLine key={`${feed.domain}-${i}`} feed={feed} />
+          <FeedLine key={`${feed.domain}-${i}`} feed={feed} busy={busy} onRemove={() => void take(feed)} />
         ))}
       </ul>
+      {adding ? (
+        <AddCatalog
+          onDone={() => {
+            setAdding(false);
+            restoreFocus(() => addButton.current);
+          }}
+        />
+      ) : (
+        <button type="button" className="btn quiet" ref={addButton} onClick={() => setAdding(true)}>
+          {t("addons.catalog_add_another")}
+        </button>
+      )}
     </section>
   );
 }
 
-function FeedLine(props: { feed: Feed }) {
+function FeedLine(props: { feed: Feed; busy: boolean; onRemove: () => void }) {
   const { t, tn } = useWords();
   const { feed } = props;
   const read = feed.read_at ? when(feed.read_at) : "";
@@ -513,6 +741,11 @@ function FeedLine(props: { feed: Feed }) {
       <span className="hint">
         {read ? t("addons.feed.read", { domain: feed.domain, when: read }) : t("addons.feed.never", { domain: feed.domain })}
       </span>
+      {feed.removable && (
+        <button type="button" className="btn quiet small" disabled={props.busy} aria-label={t("addons.catalog_remove_named", { domain: feed.domain })} onClick={props.onRemove}>
+          {t("addons.catalog_remove")}
+        </button>
+      )}
       {feed.error && <p className="problem-note">{t("addons.feed.error", { error: feed.error })}</p>}
       {feed.notes.length > 0 && (
         <details className="feed-notes">

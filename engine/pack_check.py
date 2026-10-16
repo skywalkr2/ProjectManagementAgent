@@ -3,11 +3,16 @@
 Publishing a pack (the process every plugin repository follows; the catalog's PUBLISHING.md says the same):
 
 1. **Release it in its own repository.** Raise the version in `plugin.yaml` (and the package's own metadata), say
-   what changed, run its tests, tag the release, and let its own checks build the package from the tag.
+   what changed, run its tests, tag the release, and let its own checks build the package from the tag. Attach the
+   built wheel to the tagged release: the app installs from the Add-ons screen the file the entry's `release` names.
 
 2. **Write its catalog entry** as `catalog/pack.yaml` in that repository, in the catalog's format (the catalog
    repository's README): `provides` and `requires` copied exactly from `plugin.yaml`, its price, how to get it, and
-   its typical AI jobs.
+   its typical AI jobs. Its `release` gives the address of the attached wheel and the wheel's SHA-256, which the
+   download must match. For a private repository the address is the release asset's API address (not the page address),
+   which is read with a read token: the person adds the token on the Add-ons screen, where it is kept on their
+   computer, and it is sent only to that address's host. Leave `release` out and the screen shows the entry's own
+   install text instead of an Install button.
 
 3. **Check it:** `cockpit pack check <its plugin folder> --entry catalog/pack.yaml`, with the host at the version the
    pack declares. Every line must pass. A pack whose plugins share a helper package from the same distribution is

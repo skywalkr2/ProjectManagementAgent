@@ -309,6 +309,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const settings = useQuery({ queryKey: ["settings"], queryFn: api.settings, enabled: !adding });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects, enabled: adding });
   const authors = useQuery({ queryKey: ["watch-authors"], queryFn: api.watchAuthors });
+  // Whether the app can keep a typed secret: a hosted app takes only where it is kept.
+  const setup = useQuery({ queryKey: ["setup"], queryFn: api.setup });
 
   const available = (props.kinds ?? []).filter((k) => mode.type !== "add" || !mode.plugin || k.plugin === mode.plugin);
   const [picked, setPicked] = useState<string | null>(null);
@@ -320,6 +322,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const [project, setProject] = useState("");
   const [author, setAuthor] = useState(source?.author ?? "");
   const [edits, setEdits] = useState<Record<string, Draft>>({});
+  const [pasted, setPasted] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
 
@@ -339,6 +342,15 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
   const waitingForSettings = !adding && settings.isPending;
   const items = kind && !waitingForSettings && (adding || stored !== undefined) ? (adding ? kind.items : prefill(kind.items, stored)) : [];
   const { values, bad } = formValues(items, edits);
+  // A secret typed here is sent apart from the settings, and replaces whatever the setting held.
+  const typed = Object.fromEntries(Object.entries(pasted).filter(([key, value]) => value.trim() !== "" && items.some((i) => i.key === key)));
+  const sent = Object.fromEntries(Object.entries(values).filter(([key]) => !(key in typed)));
+  const secret = {
+    local: setup.data?.local ?? true,
+    held: Object.fromEntries((source?.secrets ?? []).map((x) => [x.field, { where: x.where, name: x.name }])),
+    pasted,
+    onPaste: (key: string, value: string) => setPasted((all) => ({ ...all, [key]: value })),
+  };
 
   const groups = (() => {
     const order: Array<{ id: string; label: string; kinds: Kind[] }> = [];
@@ -373,7 +385,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           every_minutes: minutes,
           project: project || null,
           author: author || null,
-          settings: nest(values),
+          settings: nest(sent),
+          ...(Object.keys(typed).length > 0 ? { secrets: typed } : {}),
           fingerprint: fp,
         });
         await afterSave(saved, { message: t("sources.added_toast", { label: name || kind.label, every: tn("sources.every", minutes) }) });
@@ -382,7 +395,8 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           ...(name ? { label: name } : {}),
           every_minutes: minutes,
           author: author || null,
-          ...(items.length > 0 ? { settings: nest(values) } : {}),
+          ...(items.length > 0 ? { settings: nest(sent) } : {}),
+          ...(Object.keys(typed).length > 0 ? { secrets: typed } : {}),
           fingerprint: fp,
         });
         await afterSave(saved, { message: t("sources.changed_toast", { label: name || mode.source.label }) });
@@ -438,6 +452,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
                           onChange={() => {
                             setPicked(k.name);
                             setEdits({});
+                            setPasted({});
                           }}
                         />
                         <span>
@@ -521,7 +536,7 @@ function SourceForm(props: { mode: Mode; kinds: Kind[] | undefined; kindsFailed:
           {items.length > 0 && (
             <fieldset className="details">
               <legend>{t("sources.details")}</legend>
-              <ItemFields items={items} edits={edits} onEdit={(key, draft) => setEdits((all) => ({ ...all, [key]: draft }))} disabled={busy} idPrefix={`${base}-`} />
+              <ItemFields items={items} edits={edits} onEdit={(key, draft) => setEdits((all) => ({ ...all, [key]: draft }))} disabled={busy} idPrefix={`${base}-`} secret={secret} />
             </fieldset>
           )}
         </>
