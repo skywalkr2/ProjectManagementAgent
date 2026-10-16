@@ -1130,8 +1130,10 @@ def _described(**changes):
 def test_the_language_setting_is_a_list_of_language_tags_that_names_its_list():
     language = _described()["workspace.language"]
     assert language.type == "choice" and language.choices == "languages"
-    assert language.value in language.options and len(language.options) >= 30
-    assert {"en-US", "en-GB", "fr-CA", "pt-BR", "zh-TW"} <= set(language.options)
+    assert language.value in language.options and len(language.options) >= 5
+    assert {"en-US", "en-GB", "en-CA"} <= set(language.options)
+    # Only languages the app can read notes in are offered: today the varieties of English.
+    assert all(tag.startswith("en") for tag in language.options)
     # A text setting with no named list says so.
     assert _described()["workspace.name"].choices is None
     assert _described()["workspace.user.timezone"].choices == "time_zones"

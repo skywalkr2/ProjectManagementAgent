@@ -740,8 +740,10 @@ from the screens…" and "The app restarts only when it must, and only when the 
   the layer that set it, whether it is locked, `basic` or advanced, the key it depends on (`enabled_by`), a picker if it
   has one, the name of the list it picks from (`choices`: `time_zones`, `languages`) and whether its value is a secret
   reference (`secret`). A value already set that is not on its list is added to the list the form shows, so a list never shows
-  a wrong value. The language list is the core's shipped `engine/defaults/languages.yaml`; the screens name each tag in the
-  browser's language ("English (United States)") and keep the stored value a tag. Plugins' settings come as their own groups (4.12).
+  a wrong value. The language list is the core's shipped `engine/defaults/languages.yaml`: only varieties of languages the
+  app reads notes in (today English), because the setting is how the assistant spells and writes, and the screens stay in
+  English until a translated wording sheet exists. The screens name each tag in the browser's language ("English (United
+  States)") and keep the stored value a tag. Plugins' settings come as their own groups (4.12).
 - **A save names the fingerprint of the files the form was built from**, so two saves never race; if the files changed it
   says so and asks the person to look again.
 - **What can't be saved from a screen:** a key locked by an environment variable or flag, and the file-only keys: all of

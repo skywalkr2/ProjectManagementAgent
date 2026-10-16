@@ -3,6 +3,19 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: The language setting lists only languages the app can read notes in, and says it is how the assistant writes
+
+- **Decided (owner: "the language lets you select literally all languages which indicates to a user that the screens would
+  shift to those languages"; chose the English varieties):** the setting is "How the assistant spells and writes", with a
+  note that the screens stay in English, and its list holds only varieties of languages the app reads notes in (its word
+  lists in the language settings: confirmations, reported speech, date phrases), so today the varieties of English. Another
+  language joins the list when its word lists exist; a setting for the screens' language appears only when a translated
+  wording sheet exists.
+- **Why:** the setting only steers the assistant's drafts (spelling, punctuation, dates); the screens have one wording sheet
+  and notes are read with English word lists, so a list of every language promised two things the app doesn't do.
+- **Impact:** `engine/defaults/languages.yaml` lists English varieties; a value set earlier outside the list still shows
+  (the list adds it). Design 4.22 and 7.0 say so.
+
 ## 2026-10-16: A password typed on the screen is kept in the private keys folder; a catalog's address and a read token are added on the Add-ons screen
 
 - **Decided (main session, from the owner's words: "the language setting should be a dropdown", "in imap setup we need to be

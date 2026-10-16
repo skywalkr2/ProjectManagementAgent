@@ -414,7 +414,7 @@ test("the project form offers Inside (never itself), Language with the inherited
   const inside = within(row).getByRole("combobox", { name: "Inside" });
   expect(within(inside).getAllByRole("option").map((o) => o.textContent)).toEqual(["None", "The series"]);
   expect(inside).toHaveValue("PRJ-1");
-  const language = within(row).getByRole("combobox", { name: /Language/ });
+  const language = within(row).getByRole("combobox", { name: /spells and writes/ });
   expect(language).toHaveValue("");
   const labels = within(language).getAllByRole("option").map((o) => o.textContent);
   expect(labels[0]).toBe("Same as English (United Kingdom)");
@@ -435,7 +435,7 @@ test("a project with no project around it names the workspace as what an empty l
   others({ "GET projects": () => [], "GET sync": () => syncView({ folder: "" }), "GET jobs": () => [] });
   renderApp(<Setup />);
   await user.click(await screen.findByRole("button", { name: "Add a project" }));
-  const language = await screen.findByRole("combobox", { name: /Language/ });
+  const language = await screen.findByRole("combobox", { name: /spells and writes/ });
   expect(within(language).getAllByRole("option")[0]).toHaveTextContent("Same as the workspace");
 });
 
@@ -449,7 +449,7 @@ test("a project's own language that isn't on the list is still shown, never repl
   renderApp(<Setup />);
   const row = (await screen.findByText("The series")).closest("li")!;
   await user.click(within(row).getByRole("button", { name: "Edit" }));
-  expect(within(row).getByRole("combobox", { name: /Language/ })).toHaveValue("tlh");
+  expect(within(row).getByRole("combobox", { name: /spells and writes/ })).toHaveValue("tlh");
 });
 
 test("a project's row says when the person only watches it, and the form's Your role list changes it with Undo", async () => {
@@ -497,7 +497,7 @@ test("choosing Same as for the language and clearing the budget send nothing, so
   renderApp(<Setup />);
   const row = (await screen.findByText("The series")).closest("li")!;
   await user.click(within(row).getByRole("button", { name: "Edit" }));
-  const language = within(row).getByRole("combobox", { name: /Language/ });
+  const language = within(row).getByRole("combobox", { name: /spells and writes/ });
   expect(language).toHaveValue("en-GB");
   await user.selectOptions(language, "");
   await user.clear(within(row).getByRole("spinbutton", { name: /Budget/ }));
