@@ -1987,6 +1987,18 @@ right after phase B and before phase C's plugin API release. Today a tag builds 
   runs. Signing needs an Apple Developer account (yearly fee) with notarization for macOS, and a code-signing
   certificate or signing service for Windows; the secrets live only in the repository's CI secrets. Until the owner
   decides, the builds are unsigned and the release notes say how to open them.
+- [ ] **A name and icons** (owner, 2026-10-16: "I also want to make sure we add proper icons and a good name. is PM
+  Cockpit really a good name ... it should be marketed more as a daily assistant type thing versus only for PMs"): the
+  owner picks the product name from a short list checked for clashes (app stores, trademarks, domains). The name shown on
+  screen, in the installers and in the docs comes from one place; internal names (the package, the command, the add-on
+  entry point, the environment prefix) change, if at all, in phase C's plugin API release, so add-on builders adapt
+  once. Icons: the app icon for macOS and Windows at every size, a one-color menu bar and tray icon, and the browser tab
+  icon, from the designer.
+- [ ] **Nothing made-up ships** (owner, 2026-10-16: "I want it to come with all the capabilities but without all the
+  nonsense demo setups that just make things confusing. The user can addon during setup"): the installed app has no
+  sandbox command, no fictional workspaces and no example add-on; the first launch is the walkthrough on an empty
+  workspace, and add-ons are offered in its add-ons step from the catalog. The fictional workspaces stay in the
+  repository as test fixtures only.
 - [ ] **Exit test:** on a clean Mac and a clean Windows machine, download from the release page, install, open, finish
   the walkthrough to the first result, quit, reopen with the data still there, update to the next version, uninstall
   with the data kept. Journey tests cover what CI can (launch, the server answering, the data folder), and the owner
