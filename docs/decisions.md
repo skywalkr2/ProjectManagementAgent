@@ -3,6 +3,18 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: Installers for Windows and macOS, built by CI, are a phase of their own after phase B
+
+- **Decided (owner: "I really want to be able to create windows and mac distributions so that I can send them to people for
+  testing ... installed in the appropriate places, and default the storage to the place where windows/mac typically store
+  application data"):** a new phase I after phase B and before phase C's plugin API release: a tag builds a macOS disk image
+  and a Windows installer with their own Python and the built screens; the app installs where each system expects, keeps its
+  data in the system's app-data place (a setting, never the app's own folder, kept on uninstall), starts the local server and
+  opens the browser, and installs add-ons beside the app. Signing is the owner's open decision (it costs money); until then
+  the builds are unsigned and say how to open them.
+- **Impact:** adds about two sessions before phase C; phase B's launcher item moves into it; design Part 11 (local mode)
+  gains the installed app's folders when the phase starts.
+
 ## 2026-10-16: The language setting lists only languages the app can read notes in, and says it is how the assistant writes
 
 - **Decided (owner: "the language lets you select literally all languages which indicates to a user that the screens would

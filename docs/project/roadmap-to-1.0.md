@@ -1826,8 +1826,8 @@ From the original designer's lessons of 2026-10-14:
 - [ ] **The cursor starts where you type** (owner, 2026-10-12; design 7.0): every screen, step, form and dialog opens
   with the cursor in its first main field. The walkthrough does already (`Walkthrough.test.tsx`); the redesign applies
   it everywhere, with a browser check per screen.
-- [ ] **A launcher for people who never open a terminal** (owner, 2026-10-13): an app icon (macOS) or a Start menu entry
-  (Windows) that runs `cockpit`, made by the install step.
+- [ ] **A launcher for people who never open a terminal** (owner, 2026-10-13): moved to phase I, where the macOS and
+  Windows installers give the app icon and Start menu entry.
 - [ ] **Lists, not typing** (owner, 2026-10-12: "nearly everything should have dropdowns"): every field on every screen
   whose values are known is a list to pick from. Audit each free-text field and convert it, with a test per screen. The
   time zone is done (`test_the_time_zone_setting_is_a_list_of_known_time_zones`; the Settings screen and the
@@ -1951,6 +1951,46 @@ From the original designer's lessons of 2026-10-14:
 - [ ] Words and accessibility throughout: the microcopy table in the review, and axe in light and dark at four widths.
 
 The journey tests from A3 run against the new screens as they land.
+
+## Phase I: installers for Windows and macOS (after phase B, about 2 sessions)
+
+The owner's ask (2026-10-16): "I really want to be able to create windows and mac distributions so that I can send them
+to people for testing, and they will not want to do all the command lines to build it. Can we have a CI/CD setup that
+will create windows and mac installers? Those windows/mac installers should set the program to be installed in the
+appropriate places, and default the storage to the place where windows/mac typically store application data." It comes
+right after phase B and before phase C's plugin API release. Today a tag builds the Python package with install scripts
+(`.github/workflows/release.yml`); a tester still needs a terminal.
+
+- [ ] **Built by CI from a tag:** the same `v*` tag that builds the package also builds, on macOS and Windows runners, a
+  macOS disk image (`.dmg`, Apple silicon and Intel) and a Windows installer (`.exe` setup), each with its own Python,
+  the built screens and the core's shipped files inside, so a tester needs no Python, Node or terminal. The release page
+  lists them with their SHA-256. The suite and the self-check run on each runner before anything is attached.
+- [ ] **Installed where each system expects:** macOS drags the app to Applications; Windows installs for the person
+  (no administrator rights needed) in the per-user programs folder, with a Start menu entry and an uninstaller. This
+  replaces phase B's "A launcher for people who never open a terminal".
+- [ ] **The data where each system keeps app data:** the workspace, its private folder, backups' defaults and logs go to
+  the system's own place: on macOS the person's Application Support folder (logs in their Logs folder), on Windows their
+  roaming AppData folder (logs in local AppData). The app's location is never written to. Where the folder is stays a
+  setting (`cockpit init` and the walkthrough can pick another), and uninstalling never deletes the person's data.
+- [ ] **Opening the app starts it:** the app starts the local server on loopback, opens the person's browser at it, and
+  shows a menu bar (macOS) or tray (Windows) item with Open, Restart (only when one is waiting, per the restart rule) and
+  Quit. A second launch opens the running one instead of starting another. The first launch lands in the walkthrough on
+  a new workspace in the default folder (`cockpit init` with no template).
+- [ ] **Add-ons install beside the app, not inside it:** an installed app's own folder is read-only (and signed), so
+  Install on Add-ons puts add-ons in a per-person add-ons folder in the app-data place, which the app reads at start.
+- [ ] **Updates:** the app checks the release feed it was built with (a build variable, empty in the repository) and
+  shows "A new version is ready" with what changed; the person downloads and installs it themselves; their data stays.
+- [ ] **The release build fills in its catalog and feedback addresses** from repository variables, as the package build
+  already does, so a tester's Add-ons lists packs with nothing to type.
+- [ ] **Signed so the systems let it open** (the owner's decision, open: costs money): without signing, macOS refuses
+  to open a downloaded app until the person allows it in Privacy & Security, and Windows SmartScreen warns before it
+  runs. Signing needs an Apple Developer account (yearly fee) with notarization for macOS, and a code-signing
+  certificate or signing service for Windows; the secrets live only in the repository's CI secrets. Until the owner
+  decides, the builds are unsigned and the release notes say how to open them.
+- [ ] **Exit test:** on a clean Mac and a clean Windows machine, download from the release page, install, open, finish
+  the walkthrough to the first result, quit, reopen with the data still there, update to the next version, uninstall
+  with the data kept. Journey tests cover what CI can (launch, the server answering, the data folder), and the owner
+  checks the rest by hand on both systems.
 
 ## Phase C: the writing pack in the owner's workspace
 
