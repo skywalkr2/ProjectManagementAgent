@@ -1169,3 +1169,4 @@ plugins, validates every bundled manifest against registration, and compares nes
 
 The later 1.0 extension points and reach capabilities (interfaces, panels, jobs, network, secrets and tools) are explicitly
 refused by this host, not silently ignored. The contract and current limitations are in `docs/plugin-api-0.x.md`.
+| Page width (7.0) | Not stated | Never wider than the window: no sideways page scroll at any width (owner, 2026-10-16); to build with a browser test of every main screen at several widths (open promise P19) |

@@ -171,6 +171,8 @@ the change that records it also edits the design section it affects, and `docs/d
 - Reversible actions act at once with an undo toast; only send, publish, post and spending above the configured amount confirm.
 - No hard-coded user-facing text: everything comes from the wording sheet and config. No internal terms on screen.
 - Keyboard and phone both work; WCAG 2.2 AA; status never by color alone.
+- No screen is ever wider than the window (owner): no sideways scroll bar at any window width; columns wrap, stack or
+  shrink instead. A browser test checks every main screen at several widths.
 - Never render raw HTML; links from untrusted content show their real domain. The API client is generated from OpenAPI.
 
 ## Not built yet: don't call it or assume it
