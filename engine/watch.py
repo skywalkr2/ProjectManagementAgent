@@ -63,6 +63,32 @@ def connectors(store: Any) -> dict[str, Connector]:
     return {**CORE, **store.plugins.connectors()}
 
 
+class AddonMissing(ConnectorError):
+    """The connector a source names isn't running here. The detail says which add-on and what to do, so no other
+    advice is added to it."""
+
+    def __init__(self, detail: str) -> None:
+        super().__init__("not_found", detail)
+        self.kind = "addon"  # type: ignore[assignment]
+
+
+def missing_connector(store: Any, cfg: Any, connector: str) -> str:
+    """Why a source's connector isn't running, and what to do, in plain words: the add-on that provides it isn't
+    installed, is turned off, or stopped; or this install has nothing by that name."""
+    plugin = connector.split("/", 1)[0] if "/" in connector else ""
+    if not plugin:
+        return "this install has no way to read it any more. Pick how it is read again (Change, on Sources)"
+    host = store.plugins
+    status = getattr(host, "status", {}).get(plugin)
+    if plugin not in getattr(host, "candidates", {}):
+        return f'the add-on "{plugin}" that reads it isn\'t installed here. Install it again from Add-ons'
+    if plugin not in cfg.workspace.plugins.enabled:
+        return f'the add-on "{plugin}" that reads it is turned off. Turn it on in Add-ons'
+    if status is not None and status.state == "disabled":
+        return f'the add-on "{plugin}" that reads it stopped ({status.reason}). Add-ons says more'
+    return f'the add-on "{plugin}" doesn\'t read this kind of source any more. Pick how it is read (Change, on Sources)'
+
+
 def last_run(store: Any, source: str) -> Any | None:
     runs = store.read().find("watch_run", {"source": source})
     return runs[-1] if runs else None
@@ -140,7 +166,7 @@ def _refresh(ws: Any, store: Any, cfg: Any, source_id: str, now: datetime | None
     connector = connectors(store).get(source.connector)
     try:
         if connector is None:
-            raise ConnectorError("not_found", f"no running connector is called {source.connector}")
+            raise AddonMissing(missing_connector(store, cfg, source.connector))
         try:
             settings = connector.settings.model_validate(source.settings)
         except ValidationError as err:

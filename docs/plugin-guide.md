@@ -1774,7 +1774,7 @@ One read of a watched source and what came of it. The watcher writes it; nothing
 | `seconds` | float | `0.0` | How long it took. |
 | `outcome` | Literal['ok', 'baseline', 'failed', 'offline', 'throttled'] | required | ok: read and compared. baseline: a first read that only noted what is there. failed: it couldn't be read. offline: no network here, so it wasn't tried. throttled: the service asked to wait. |
 | `retry_at` | datetime.datetime \| None | `None` | For a throttled read: not read again before this time. |
-| `error_kind` | str \| None | `None` | For a failed read: auth, no_access, not_found or outage. |
+| `error_kind` | str \| None | `None` | For a failed read: auth, no_access, not_found, outage, or addon (its add-on isn't running). |
 | `error` | str \| None | `None` | What went wrong, in the connector's words. |
 | `new` | int | `0` | Items handed in as new. |
 | `changed` | int | `0` | Items handed in as changed. |

@@ -140,8 +140,30 @@ def test_bad_settings_and_unknown_connectors_fail_with_the_reason(tmp_path):
     )
     try:
         assert "settings don't fit" in refresh(ws, store, cfg, "bad", NOW).problem
-        assert "no running connector" in refresh(ws, store, cfg, "none", NOW).problem
+        missing = refresh(ws, store, cfg, "none", NOW).problem
+        assert 'add-on "nobody" that reads it isn\'t installed here' in missing and "Change, on Sources" not in missing
     finally:
+        store.close()
+
+
+def test_a_source_whose_add_on_is_off_or_stopped_says_which_and_what_to_do(tmp_path):
+    from types import SimpleNamespace
+
+    from engine.watch import missing_connector
+
+    ws, cfg, store = make(tmp_path, [])
+    try:
+        store.plugins.candidates["mailer"] = tmp_path / "plugin.yaml"
+        assert "is turned off. Turn it on in Add-ons" in missing_connector(store, cfg, "mailer/calendar")
+        cfg.workspace.plugins.enabled.append("mailer")
+        store.plugins.status["mailer"] = SimpleNamespace(state="disabled", reason="it needs a newer app")
+        assert "stopped (it needs a newer app)" in missing_connector(store, cfg, "mailer/calendar")
+        store.plugins.status["mailer"] = SimpleNamespace(state="loaded", reason=None)
+        assert "doesn't read this kind of source" in missing_connector(store, cfg, "mailer/calendar")
+        assert "no way to read it" in missing_connector(store, cfg, "folder-gone")
+    finally:
+        store.plugins.candidates.pop("mailer", None)
+        store.plugins.status.pop("mailer", None)
         store.close()
 
 

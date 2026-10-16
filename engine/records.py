@@ -724,7 +724,10 @@ class WatchRun(Record):
         "couldn't be read. offline: no network here, so it wasn't tried. throttled: the service asked to wait."
     )
     retry_at: datetime | None = Field(None, description="For a throttled read: not read again before this time.")
-    error_kind: str | None = Field(None, description="For a failed read: auth, no_access, not_found or outage.")
+    error_kind: str | None = Field(
+        None,
+        description="For a failed read: auth, no_access, not_found, outage, or addon (its add-on isn't running).",
+    )
     error: str | None = Field(None, description="What went wrong, in the connector's words.")
     new: int = Field(0, description="Items handed in as new.")
     changed: int = Field(0, description="Items handed in as changed.")
