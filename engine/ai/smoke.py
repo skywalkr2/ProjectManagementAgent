@@ -10,7 +10,7 @@ import hashlib
 import json
 import time
 from collections.abc import Callable, Mapping
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from datetime import UTC, datetime
 from typing import Any
 
@@ -270,7 +270,7 @@ def record(ws: Workspace, results: list[SmokeResult]) -> None:
     """Keep a test's result. A test that only found no network is not kept: the last real result stands."""
     if inconclusive(results):
         return
-    passed = all(r.ok for r in results if r.main)
+    passed = tier_summary(results)[1]
     data = {
         "fingerprint": ai_fingerprint(ws),
         "passed": passed,
@@ -294,7 +294,21 @@ def untested_since_change(ws: Workspace) -> bool:
     data = last_test(ws)
     if data is None:
         return True
-    return not data.get("passed") or data.get("fingerprint") != ai_fingerprint(ws)
+    return not can_run(data) or data.get("fingerprint") != ai_fingerprint(ws)
+
+
+def can_run(test: dict[str, Any]) -> bool:
+    """Whether a recorded test left every tier able to run: its main account answered, or a backup passed every part
+    of its check and stands in. Read from the results, so a test kept before backups counted reads the same way."""
+    results = test.get("results")
+    if not isinstance(results, list) or not results:
+        return bool(test.get("passed"))
+    names = {f.name for f in fields(SmokeResult)}
+    try:
+        parsed = [SmokeResult(**{k: v for k, v in r.items() if k in names}) for r in results]
+    except (TypeError, AttributeError):
+        return bool(test.get("passed"))
+    return tier_summary(parsed)[1]
 
 
 def last_test(ws: Workspace) -> dict[str, Any] | None:
@@ -321,7 +335,7 @@ def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]
         return "stand_in", None
     test = last_test(ws)
     current = test is not None and test.get("fingerprint") == ai_fingerprint(ws)
-    if test is not None and current and not test.get("passed"):
+    if test is not None and current and not can_run(test):
         failed = [r for r in test.get("results", []) if not r.get("ok") and not r.get("offline")]
         pick = next((r for r in failed if r.get("main")), failed[0] if failed else None)
         if failed or not test.get("results"):
@@ -333,7 +347,7 @@ def ai_state(ws: Workspace, cfg: Config, store: Store) -> tuple[str, str | None]
     )
     if runs and runs[-1].data.get("outcome") == "error" and runs[-1].data.get("error_kind") == "auth":
         latest = runs[-1].data
-        passed_since = bool(test and test.get("passed") and current and str(test.get("at", "")) >= latest["started_at"])
+        passed_since = bool(test and can_run(test) and current and str(test.get("at", "")) >= latest["started_at"])
         if not passed_since:
             return "failing", (provider_reason(latest.get("error_detail") or "")[:DETAIL_LIMIT] or None)
     if untested_since_change(ws):

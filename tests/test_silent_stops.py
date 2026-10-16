@@ -536,6 +536,33 @@ def test_a_connection_test_that_finds_no_network_is_not_kept_and_leaves_the_last
     assert not last.exists() and ai_state(ws, cfg, store)[0] == "untested"
 
 
+def test_a_backup_that_passes_every_check_counts_as_set_up_while_the_main_account_is_out(env):
+    import json as _json
+
+    from engine.ai.smoke import SmokeResult, ai_fingerprint, ai_state, record
+
+    ws, cfg, store, clock = env
+    as_a_real_account(cfg)
+    tiers = list(dict.fromkeys(cfg.ai.tiers))
+
+    def results(backup_ok: bool) -> list[SmokeResult]:
+        out = []
+        for tier in tiers:
+            out.append(SmokeResult(tier, "main", True, False, "usage limit reached", ref="main/m"))
+            out.append(SmokeResult(tier, "backup", False, backup_ok, "ok" if backup_ok else "no", ref="backup/m"))
+        return out
+
+    record(ws, results(backup_ok=True))
+    assert ai_state(ws, cfg, store)[0] == "ok"
+    record(ws, results(backup_ok=False))
+    assert ai_state(ws, cfg, store)[0] == "failing"
+    # A test kept before backups counted reads the same way: what decides is the results, not the old flag.
+    kept = {"fingerprint": ai_fingerprint(ws), "passed": False, "at": "2026-10-09T13:00:00+00:00"}
+    kept["results"] = [vars(r) for r in results(backup_ok=True)]
+    (ws.private_dir / "ai-test.json").write_text(_json.dumps(kept), encoding="utf-8")
+    assert ai_state(ws, cfg, store)[0] == "ok"
+
+
 # ---- an answer lifts a pause ----------------------------------------
 
 
