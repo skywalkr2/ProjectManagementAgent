@@ -139,3 +139,13 @@ Batch.
 
 202 (the core closes a superseded request in the same transaction), 208 (fixed in 0.3.70), 192 (0.3.61) and 198
 (after 1.0, with per-role permissions for organization installs, design 11.8).
+
+## Round 52 (received 2026-10-16)
+
+**219, a pack's own tiers.** Yes: a manifest may declare tiers (`provides.tiers`: id `<plugin>/<name>`, label,
+description and the core tier it falls back to), and the pack's task kinds may name them. Settings and the setup guide
+list them under the pack for the person to map to an account and model, recommending from what the capability matrix
+says each model can do; the setup step is the "add to a setting" step of 183 and 185. The core's own work never uses a
+pack's tier. A declared tier the person hasn't mapped runs on its named fallback, with one Today line saying so and
+offering to map it; it never fails silently and never picks an account on its own (the fallback is a tier the person
+already mapped, so "no silent default provider" holds). Batch.
