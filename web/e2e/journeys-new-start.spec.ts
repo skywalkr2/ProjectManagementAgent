@@ -186,7 +186,7 @@ test.describe.serial("journey: new start", () => {
     await visit(page);
     await main.getByRole("button", { name: "Go to Today" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Today" })).toBeVisible();
-    const go = page.locator("li.line", { hasText: "Start the assistant" });
+    const go = page.locator('[data-queue-line="first_go"]');
     await expect(go).toHaveCount(1);
     await expect(go).toBeFocused();
     // Go is fully on the screen without scrolling, not clipped by the short card it sits in.
@@ -216,7 +216,7 @@ test.describe.serial("journey: new start", () => {
     await expect(go.getByRole("button", { name: "Go", exact: true })).toBeInViewport({ ratio: 1 });
     // Go: one request for each item handed in, each item once, and the line goes.
     await go.getByRole("button", { name: "Go", exact: true }).click();
-    await expect(page.locator("li.line", { hasText: "Start the assistant" })).toHaveCount(0);
+    await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0);
     await expect.poll(async () => (await requests()).work, { timeout: 60_000 }).toBe(handedIn);
     const asked = await requests();
     // The work mail the rules could not place was sorted in one run for the whole batch; it is not counted as work.
@@ -224,13 +224,12 @@ test.describe.serial("journey: new start", () => {
     for (const title of [...mail, ...events]) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(1);
     for (const title of noted) expect(asked.inputs.filter((input) => input.includes(title))).toHaveLength(0);
 
-    // The assistant's results are on Today for review, one for each item, under the group that says they arrived.
-    const changes = page.getByRole("region", { name: "What changed" });
-    const arrived = changes.getByRole("button", { name: /Show/ });
-    const firstReview = changes.locator(".kind", { hasText: "Review" });
-    await expect(arrived.or(firstReview).first()).toBeVisible({ timeout: 30_000 });
-    if (await arrived.count()) await arrived.first().click();
-    const reviews = changes.locator("li.line", { has: page.locator(".kind", { hasText: "Review" }) });
+    // The assistant's results are on Today for review, one line for each item. They wait behind "N new · Show" while the
+    // cursor is in the queue, so the list doesn't move under it.
+    const reviews = page.locator('[data-queue-line="review"]');
+    const showNew = page.getByRole("button", { name: /new · Show/ });
+    await expect(reviews.first().or(showNew)).toBeVisible({ timeout: 30_000 });
+    if (await showNew.count()) await showNew.click();
     await expect(reviews).toHaveCount(handedIn, { timeout: 30_000 });
     for (const title of [...mail, ...events]) await expect(reviews.filter({ hasText: title })).toHaveCount(1);
     await visit(page);

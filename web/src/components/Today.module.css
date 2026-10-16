@@ -1,0 +1,53 @@
+/* Today (design 7.7): the queue, the inspector from 1680px and the rail. The queue always gets the most width. */
+.today {
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--rail-w); gap: var(--gutter);
+  align-items: start; align-content: start; min-width: 0;
+}
+@media (min-width: 1680px) {
+  .today { grid-template-columns: minmax(560px, 1fr) var(--detail-w) var(--rail-w); }
+}
+/* Tablet: the rail goes under the queue, in two columns. Phone: in one. */
+@media (max-width: 1023px) {
+  .today { grid-template-columns: minmax(0, 1fr); }
+  .rail { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+}
+:global([data-narrow]) .rail { grid-template-columns: minmax(0, 1fr); }
+
+.head { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3); }
+.head p { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: var(--lh-sm); }
+.full { grid-column: 1 / -1; min-width: 0; }
+.full:empty { display: none; }
+
+/* The queue */
+.queue { min-width: 0; }
+.group { min-width: 0; }
+.groupHead {
+  margin: 0; padding: var(--space-2) var(--row-px); font-size: var(--text-xs); line-height: var(--lh-xs);
+  font-weight: var(--weight-semibold); color: var(--text-subtle); background: var(--canvas);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+}
+.group:first-child .groupHead { border-top: 0; }
+.list { list-style: none; margin: 0; padding: 0; }
+.item { min-width: 0; margin: 0; padding: 0; }
+.item[data-selected] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.empty { margin: 0; padding: var(--space-6) var(--row-px); color: var(--text-muted); font-size: var(--text-sm); }
+.empty p { margin: 0; }
+.newbar { display: flex; justify-content: center; padding: var(--space-2) var(--row-px); border-bottom: 1px solid var(--border); background: var(--surface); }
+.tag {
+  display: inline-block; margin-right: var(--space-2); padding: 0 var(--space-2); border-radius: var(--radius-sm);
+  background: var(--surface-sunk); color: var(--text-muted); font-size: var(--text-xs); line-height: var(--lh-xs);
+  font-weight: var(--weight-semibold); vertical-align: baseline;
+}
+
+/* A line's items, opened in place (under 1680px) or in the inspector (from it) */
+.detail { display: grid; gap: var(--space-3); min-width: 0; }
+.detail :global(.queue) { border: 0; border-radius: 0; }
+.detailEnd { display: flex; justify-content: flex-end; }
+.inspector { position: sticky; top: calc(var(--header-h) + var(--gutter)); max-height: calc(100dvh - var(--header-h) - 2 * var(--gutter)); overflow-y: auto; min-width: 0; }
+.inspectorBody { padding: var(--space-3) var(--space-4); }
+.inspectorEmpty { margin: 0; padding: var(--space-6) var(--space-4); color: var(--text-muted); font-size: var(--text-sm); }
+
+/* The rail */
+.rail { display: grid; gap: var(--gutter); align-content: start; min-width: 0; }
+.railBody { padding: var(--space-2) var(--space-3); display: grid; align-content: start; gap: var(--space-3); }
+.railFoot { border-top: 1px solid var(--border); padding: var(--space-2) var(--space-4); font-size: var(--text-sm); }

@@ -123,7 +123,7 @@ test.describe.serial("journeys", () => {
 
     // Today shows one line asking for my go, with a count and what it would cost. Nothing has been sent to the service.
     await page.getByRole("link", { name: /^Today/ }).first().click();
-    const go = page.locator("li.line", { hasText: "Start the assistant" });
+    const go = page.locator('[data-queue-line="first_go"]');
     await expect(go).toHaveCount(1);
     await expect(go).toContainText(/Start the assistant: 1 item, (about \$\d+\.\d\d|less than a cent)/);
     await expect(go).toContainText("Nothing is spent until you press Go.");
@@ -133,16 +133,21 @@ test.describe.serial("journeys", () => {
     // Go starts it, and the result is on Today: my action in To do, and the assistant's work to look over.
     await go.getByRole("button", { name: "Go", exact: true }).click();
     await expect(page.getByText("Send the venue list by 2026-11-02.").first()).toBeVisible({ timeout: 20_000 });
-    await expect(page.locator("li.line", { hasText: "Start the assistant" })).toHaveCount(0);
-    const review = page.locator("li.line", { hasText: "I will send the venue list" });
-    await expect(review.getByText(/Assistant did 3 things/)).toBeVisible();
+    await expect(page.locator('[data-queue-line="first_go"]')).toHaveCount(0);
+    // The assistant's work waits behind "N new · Show" while the cursor is in the queue, so the list doesn't move under it.
+    const review = page.locator('[data-queue-line="review"]');
+    const showNew = page.getByRole("button", { name: /new · Show/ });
+    await expect(review.first().or(showNew)).toBeVisible({ timeout: 20_000 });
+    if (await showNew.count()) await showNew.click();
+    await expect(review).toHaveCount(1);
+    await expect(review).toContainText(/Look over 3 things Assistant did/);
     expect((await requests()).work).toBe(1);
     await visit(page);
 
     // Opened, the review lists what the assistant did, with my name on the action it filed from my own words; the one
     // with no owner asks who it belongs to, and the hand-in did not stop anywhere.
-    const expander = review.locator(".expander").first();
-    if ((await expander.getAttribute("aria-expanded")) !== "true") await expander.click();
+    await review.getByRole("button", { name: /More actions for/ }).click();
+    await page.getByRole("menuitem", { name: "Look closer" }).click();
     await expect(review.getByText("Added an action").first()).toBeVisible();
     await expect(review.getByText(new RegExp(`${info.people[0]} · due`))).toBeVisible();
     await expect(review.getByText("Who owns this?")).toBeVisible();
@@ -215,12 +220,16 @@ test.describe.serial("journeys", () => {
       });
       expect(sent.ok).toBe(true);
     };
-    // I hand in someone else's words, and the assistant's review of them opens on Today.
+    // I hand in someone else's words; the result is a line on Today, and its card is read on What changed.
     const handIn = async (text: string, firstLine: string) => {
       await page.getByRole("link", { name: /^Today/ }).first().click();
+      const lines = page.locator('[data-queue-line="review"], [data-queue-line="who_is"]');
+      const before = await lines.count();
       await page.getByRole("button", { name: "Hand something in" }).first().click();
       await page.getByLabel("Paste or type it here").fill(text);
       await page.getByRole("button", { name: "Hand in", exact: true }).click();
+      await expect.poll(() => lines.count(), { timeout: 30_000 }).toBeGreaterThan(before);
+      await page.getByRole("link", { name: /^What changed/ }).first().click();
       const row = page.locator("li.line", { hasText: firstLine });
       await expect(row.locator(".kind").first()).toHaveText(/Review/i, { timeout: 30_000 });
       const expander = row.locator(".expander").first();
@@ -355,6 +364,8 @@ test.describe.serial("journeys", () => {
     // 6. Drop, on an action that is no longer needed: it asks why, leaves the list at once, and Undo puts it back.
     const agenda = "I will print the agenda.";
     row = await handIn(agenda, agenda);
+    // The to-do is in the rail of Today, beside the queue.
+    await page.getByRole("link", { name: /^Today/ }).first().click();
     const todo = page.locator("li", { has: page.getByRole("button", { name: "Mark done: Print the agenda." }) });
     await expect(todo).toHaveCount(1, { timeout: 20_000 });
     await todo.getByRole("button", { name: "More actions for Print the agenda." }).click();

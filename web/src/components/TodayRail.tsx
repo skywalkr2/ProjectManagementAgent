@@ -1,27 +1,24 @@
-// Today's board (design 7.7): the agenda, the person's own list, what needs them and what came in, side by side so
-// everything important shows at once. Each column scrolls on its own; narrow screens stack them and the page scrolls.
+// Today's rail (design 7.7): the agenda, the person's own list and what came in, as panels sized to their content beside
+// the queue (below it under 1024px). What needs the person is the queue, not the rail.
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api, type S } from "../lib/api";
 import { useAct } from "../lib/act";
 import { addDays, day, localDate, time, wallTime, weekday, whenText as when } from "../lib/dates";
-import { firstGoOf } from "../lib/first-go";
 import { useSetAside } from "../lib/set-aside";
 import { anyReading, failedReads, latestRead, readProblem } from "../lib/sources";
-import type { View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { useChangeThis } from "./ChangeThis";
-import { FollowUps } from "./FollowUps";
 import { LearnedLines } from "./Learned";
 import { useDropAction } from "./DropAction";
 import { HoldPill, useHold } from "./OnHold";
 import { NoteBox, useNoted } from "./NoteBox";
 import { OriginLink } from "./Origin";
-import { PluginToday } from "./PluginToday";
 import { RowMenu } from "./RowMenu";
 import { SafeLink } from "./SafeText";
-import { useStageToday } from "./StageToday";
-import { WhatChanged, needsAttention, waitsForGo } from "./WhatChanged";
+import styles from "./Today.module.css";
+import type { View } from "../lib/views";
+import { Panel } from "../ui/Panel";
 import { Skeleton } from "../ui/Skeleton";
 
 type T = ReturnType<typeof useWords>["t"];
@@ -36,28 +33,21 @@ function useNow(): Date {
   return now;
 }
 
-export function TodayBoard(props: {
-  onView: (view: View) => void;
-  /** Opens Sources with the add form open. */
-  onAddSource?: () => void;
-  onOpenRecord?: (kind: string, id: string) => void;
-  /** Opens the setup guide at a step. */
-  onOpenGuide?: (step: string) => void;
-}) {
+/** The rail's three panels. `onAddSource` opens Sources with the add form open. */
+export function TodayRail(props: { onView: (view: View) => void; onAddSource?: () => void }) {
   const { t } = useWords();
   const add = props.onAddSource ?? (() => props.onView("sources"));
   return (
-    <div className="today-board" role="group" aria-label={t("today.board.label")}>
-      <AgendaColumn onAddSource={add} />
-      <TodoColumn />
-      <NeedsColumn onOpenRecord={props.onOpenRecord} onOpenGuide={props.onOpenGuide} />
-      <ArrivedColumn onView={props.onView} onAddSource={add} />
+    <div className={styles.rail} role="group" aria-label={t("today.rail.label")}>
+      <AgendaPanel onAddSource={add} />
+      <TodoPanel />
+      <ArrivedPanel onView={props.onView} onAddSource={add} />
     </div>
   );
 }
 
-/** A column: a visible heading with its count, a body that scrolls by itself, and an optional footer line. */
-function Column(props: {
+/** A rail panel: a visible heading with its count (said in words for a screen reader) and a body sized to its content. */
+function RailPanel(props: {
   id: string;
   title: string;
   count: number | null;
@@ -67,24 +57,26 @@ function Column(props: {
   footer?: ReactNode;
   children: ReactNode;
 }) {
-  const titleId = `today-${props.id}-title`;
   return (
-    <section className="tb-col" aria-labelledby={titleId} data-col={props.id}>
-      <div className="tb-head">
-        <h2 id={titleId}>{props.title}</h2>
-        {props.count !== null && (
-          <span className="tb-count">
-            <span aria-hidden="true">{props.count}</span>
-            <span className="sr">{props.countText}</span>
-          </span>
-        )}
-        {props.action && <div className="tb-head-act">{props.action}</div>}
-      </div>
-      <div className="tb-body" tabIndex={0} role="group" aria-labelledby={titleId}>
-        {props.children}
-      </div>
-      {props.footer && <div className="tb-foot">{props.footer}</div>}
-    </section>
+    <div data-col={props.id}>
+      <Panel
+        small
+        flush
+        title={props.title}
+        count={
+          props.count === null ? null : (
+            <>
+              <span aria-hidden="true">{props.count}</span>
+              <span className="sr">{props.countText}</span>
+            </>
+          )
+        }
+        actions={props.action}
+      >
+        <div className={styles.railBody}>{props.children}</div>
+        {props.footer && <div className={styles.railFoot}>{props.footer}</div>}
+      </Panel>
+    </div>
   );
 }
 
@@ -201,7 +193,7 @@ function whenText(event: Event, date: string, t: T): string {
     : wallTime(event.start);
 }
 
-function AgendaColumn(props: { onAddSource?: () => void }) {
+function AgendaPanel(props: { onAddSource?: () => void }) {
   const { t, tn } = useWords();
   const sourceState = useSourceState(props.onAddSource, t("today.agenda.connect"), "calendar");
   const agenda = useQuery({ queryKey: ["today", "agenda"], queryFn: api.agenda });
@@ -216,7 +208,7 @@ function AgendaColumn(props: { onAddSource?: () => void }) {
     date === today ? t("today.agenda.today") : date === tomorrow ? t("today.agenda.tomorrow") : day(date);
 
   return (
-    <Column id="agenda" title={t("today.agenda.title")} count={agenda.data ? count : null} countText={tn("today.agenda.count", count)}>
+    <RailPanel id="agenda" title={t("today.agenda.title")} count={agenda.data ? count : null} countText={tn("today.agenda.count", count)}>
       {agenda.isPending ? (
         <Skeleton />
       ) : agenda.isError ? (
@@ -269,7 +261,7 @@ function AgendaColumn(props: { onAddSource?: () => void }) {
           );
         })
       )}
-    </Column>
+    </RailPanel>
   );
 }
 
@@ -302,7 +294,7 @@ function AgendaRow(props: { event: Event; when: string; past: boolean; source: s
 
 type Todo = S["TodoView"];
 
-function TodoColumn() {
+function TodoPanel() {
   const { t, tn } = useWords();
   const todo = useQuery({ queryKey: ["today", "todo"], queryFn: api.todo });
   const projects = useQuery({ queryKey: ["projects"], queryFn: api.projects });
@@ -320,7 +312,7 @@ function TodoColumn() {
   ].filter((g) => g.rows.length > 0);
 
   return (
-    <Column id="todo" title={t("today.todo.title")} count={todo.data ? items.length : null} countText={tn("today.todo.count", items.length)}>
+    <RailPanel id="todo" title={t("today.todo.title")} count={todo.data ? items.length : null} countText={tn("today.todo.count", items.length)}>
       {todo.isPending ? (
         <Skeleton />
       ) : todo.isError ? (
@@ -346,11 +338,11 @@ function TodoColumn() {
           </div>
         ))
       )}
-    </Column>
+    </RailPanel>
   );
 }
 
-function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
+export function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
   const { t } = useWords();
   const act = useAct();
   const noted = useNoted();
@@ -408,36 +400,6 @@ function TodoRow(props: { item: Todo; project: string; showDue: boolean }) {
   );
 }
 
-// ---------------------------------------------------------------- Needs you
-
-/** How many things wait on the person: work to look at, lines plugins add, decisions and messages to send. */
-function useNeedsCount(): number {
-  const changes = useQuery({ queryKey: ["changes"], queryFn: api.changes });
-  const lines = useQuery({ queryKey: ["plugin-today"], queryFn: api.pluginToday });
-  const followups = useQuery({ queryKey: ["followups"], queryFn: api.followups });
-  const stage = useStageToday();
-  const waitingGo = new Set(stage.waiting.map((w) => w.request.id));
-  const work = (changes.data ?? []).filter((c) => needsAttention(c) && !waitsForGo(c) && !waitingGo.has(c.id)).length;
-  const messages = (followups.data ?? []).reduce(
-    (n, s) => n + (s.is_pm ? s.questions.filter((q) => q.status === "open").length : s.to_send),
-    0,
-  );
-  const firstGo = firstGoOf(changes.data).count > 0 ? 1 : 0;
-  return work + firstGo + stage.count + (lines.data?.length ?? 0) + messages;
-}
-
-function NeedsColumn(props: { onOpenRecord?: (kind: string, id: string) => void; onOpenGuide?: (step: string) => void }) {
-  const { t, tn } = useWords();
-  const count = useNeedsCount();
-  return (
-    <Column id="needs" title={t("today.needs.title")} count={count} countText={tn("today.needs.count", count)}>
-      <WhatChanged compact onOpenGuide={props.onOpenGuide} />
-      <PluginToday compact onOpenRecord={props.onOpenRecord} />
-      <FollowUps compact />
-    </Column>
-  );
-}
-
 // ---------------------------------------------------------------- Came in
 
 /** What a check says in a toast: what arrived, then any source that couldn't be read or was already being read. */
@@ -492,7 +454,7 @@ function CheckNow() {
   );
 }
 
-function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () => void }) {
+function ArrivedPanel(props: { onView: (view: View) => void; onAddSource?: () => void }) {
   const { t, tn } = useWords();
   const sourceState = useSourceState(props.onAddSource, t("today.arrived.connect"), "mail");
   const watch = useQuery({ queryKey: ["watch"], queryFn: api.watchSources });
@@ -512,7 +474,7 @@ function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () =
   const received = (iso: string) => (iso.slice(0, 10) === today ? wallTime(iso) : weekday(iso));
 
   return (
-    <Column
+    <RailPanel
       id="arrived"
       title={t("today.arrived.title")}
       count={arrived.data ? items.length : null}
@@ -576,6 +538,6 @@ function ArrivedColumn(props: { onView: (view: View) => void; onAddSource?: () =
           })}
         </ul>
       )}
-    </Column>
+    </RailPanel>
   );
 }

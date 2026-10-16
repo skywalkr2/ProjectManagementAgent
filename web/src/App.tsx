@@ -10,7 +10,6 @@ import { RestartAnnouncer, RestartProvider, useRestart } from "./lib/restart";
 import { useRestartWhat } from "./lib/restart-for";
 import { useSignInReturn } from "./lib/sign-in-return";
 import { useToasts } from "./lib/toasts";
-import { longDay } from "./lib/dates";
 import { fromHash, parseView, recordView, toHash, type View } from "./lib/views";
 import { screenOf, type Screen } from "./lib/walkthrough";
 import { useWords } from "./lib/wording";
@@ -22,7 +21,6 @@ import { FollowUps } from "./components/FollowUps";
 import { HandIn } from "./components/HandIn";
 import { Handover } from "./components/Handover";
 import { Knowledge } from "./components/Knowledge";
-import { LearnedToday } from "./components/LearnedToday";
 import { Panel } from "./components/Panel";
 import { restoreFocus } from "./components/ModalPanel";
 import { RecordPage } from "./components/RecordPage";
@@ -31,16 +29,13 @@ import { Settings } from "./components/Settings";
 import { Sources, type AddRequest } from "./components/Sources";
 import { Setup } from "./components/Setup";
 import { StyleGuide } from "./components/StyleGuide";
-import { TodayBoard } from "./components/TodayBoard";
 import { Stages } from "./components/Stages";
+import { Today } from "./components/Today";
 import { ShortcutHelp } from "./components/ShortcutHelp";
 import { WhatChanged } from "./components/WhatChanged";
 import { Walkthrough } from "./components/Walkthrough";
 import { BottomBar } from "./shell/BottomBar";
 import { Header } from "./shell/Header";
-import { BackupLine } from "./shell/BackupLine";
-import { HeldLines } from "./shell/HeldLines";
-import { SetupLine } from "./shell/SetupLine";
 import { Sidebar, useSidebarMode } from "./shell/Sidebar";
 import { EmptyState } from "./ui/EmptyState";
 import shell from "./shell/Shell.module.css";
@@ -160,21 +155,13 @@ function Shell(props: { rc: S["RuntimeConfig"]; live: ReturnType<typeof useLive>
     switch (shown.view) {
       case "today":
         return (
-          <div className={shell.today}>
-            <div className={shell.todayHead}>
-              <h1>{t("nav.home")}</h1>
-              <p>{longDay(new Date())}</p>
-            </div>
-            <SetupLine workspace={rc.workspace_name} onOpenGuide={openGuide} />
-            <BackupLine onOpenGuide={openGuide} />
-            <HeldLines
-              onOpenAiAccounts={() => setView("settings")}
-              onOpenHandover={() => setView("handover")}
-              onOpenRules={() => setView("records/rules-review")}
-            />
-            <LearnedToday />
-            <TodayBoard onView={setView} onAddSource={() => openAddSource()} onOpenRecord={openRecord} onOpenGuide={openGuide} />
-          </div>
+          <Today
+            workspace={rc.workspace_name}
+            onView={setView}
+            onAddSource={() => openAddSource()}
+            onOpenRecord={openRecord}
+            onOpenGuide={openGuide}
+          />
         );
       case "work/changed":
         return <WhatChanged onOpenGuide={openGuide} />;
@@ -354,13 +341,13 @@ function useFocusFirstGo(): () => void {
     if (!asked) return;
     let tries = 0;
     const timer = window.setInterval(() => {
-      const row = document.getElementById("first-go-text")?.closest<HTMLElement>("li");
+      const row = document.querySelector<HTMLElement>('[data-queue-line="first_go"]');
       tries += 1;
       if (row) {
         window.clearInterval(timer);
         row.scrollIntoView?.({ block: "center" });
         row.focus();
-        // A row taller than the card that holds it can't be centered whole; its button must still be on the screen.
+        // A row taller than the pane that holds it can't be centered whole; its button must still be on the screen.
         row.querySelector("button")?.scrollIntoView?.({ block: "nearest" });
       } else if (tries >= 25) {
         window.clearInterval(timer);

@@ -1,8 +1,20 @@
-/* Toasts: bottom center, at most three, an inverted fill; above the bottom bar on a phone. */
+/* Toasts: at most three, an inverted fill. From 1280px they sit at the bottom left, over the navigation column and never
+   over the queue, a card or the rail (design 7.6); narrower, at the bottom center, above the bottom bar on a phone. */
 .region {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 70;
   bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); width: min(560px, calc(100% - var(--space-8)));
   pointer-events: none;
+}
+@media (min-width: 1280px) {
+  .region { left: var(--space-2); transform: none; width: calc(var(--sidebar-w) - var(--space-4)); }
+  /* In a column this narrow the words take a line of their own and the buttons wrap beneath them. The stack never grows past
+     what the navigation can spare: older toasts go under the newest ones, so the top of the navigation stays reachable. */
+  .region { max-height: 45dvh; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+  .stack { flex: none; }
+  .toast { flex-wrap: wrap; }
+  .message { flex: 1 1 100%; }
+  /* With the navigation folded to icons the column is too narrow to hold one: it keeps a width that reads. */
+  :global(body:has([data-nav="rail"])) .region { width: min(var(--toast-w-rail), calc(100% - var(--space-4))); }
 }
 :global([data-narrow]) .region { bottom: calc(var(--bottombar-h) + var(--space-3) + env(safe-area-inset-bottom, 0px)); }
 .stack { display: grid; gap: var(--space-2); }

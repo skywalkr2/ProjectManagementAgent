@@ -37,3 +37,24 @@ test("a configured key for Ask is used instead of the usual one", async () => {
   await user.keyboard("g");
   expect(ask).toHaveBeenCalledTimes(1);
 });
+
+test("on a row the arrow keys walk the rows as j and k do, and in a field they are left alone", async () => {
+  const user = userEvent.setup();
+  render(
+    <>
+      <Harness keys={{ ...SHORTCUTS, next: "j", previous: "k" }} ask={() => {}} />
+      <div data-row="" tabIndex={-1} aria-label="first" />
+      <div data-row="" tabIndex={-1} aria-label="second" />
+    </>,
+  );
+  const [first, second] = [screen.getByLabelText("first"), screen.getByLabelText("second")];
+  first.focus();
+  await user.keyboard("{ArrowDown}");
+  expect(second).toHaveFocus();
+  await user.keyboard("{ArrowUp}");
+  expect(first).toHaveFocus();
+  // In a field, the arrow keys stay the field's.
+  await user.click(screen.getByLabelText("Typing"));
+  await user.keyboard("{ArrowDown}");
+  expect(screen.getByLabelText("Typing")).toHaveFocus();
+});

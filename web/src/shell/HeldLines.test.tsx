@@ -1,11 +1,26 @@
 import "@testing-library/jest-dom/vitest";
+import { useQuery } from "@tanstack/react-query";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { S } from "../lib/api";
+import { api, type S } from "../lib/api";
 import { addDays, localDate } from "../lib/dates";
 import { RestartProvider } from "../lib/restart";
 import { fakeApi, renderApp, statusFixture } from "../test-utils";
-import { HeldLines } from "./HeldLines";
+import { HeldLine, isHeld } from "./HeldLines";
+
+/** The held lines of the queue on their own, as the Today queue draws them among the others. */
+function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
+  const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
+  const lines = (queue.data ?? []).filter(isHeld);
+  if (!lines.length) return null;
+  return (
+    <div data-held-lines="">
+      {lines.map((line) => (
+        <HeldLine key={line.key} line={line} {...props} />
+      ))}
+    </div>
+  );
+}
 
 function line(kind: S["QueueLineView"]["kind"], over: Partial<S["QueueLineView"]> = {}): S["QueueLineView"] {
   return { key: kind, group: kind === "restart" ? "decide" : "risk", kind, count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, ...over };

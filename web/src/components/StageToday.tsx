@@ -1,6 +1,4 @@
 // Today's stage rows (design 6.26, 7.3): stage tasks waiting for the person's go, and items ready to move on.
-import { useRef } from "react";
-import { useRowKeys } from "../lib/keys";
 import {
   sameItem,
   useGo,
@@ -15,6 +13,9 @@ import {
 } from "../lib/stages";
 import { useEstimate } from "../lib/money";
 import { useWords } from "../lib/wording";
+import { Button } from "../ui/Button";
+import { Pill } from "../ui/Pill";
+import { Row } from "../ui/Row";
 import { SafeText } from "./SafeText";
 
 /** The rows Today adds to what needs attention. */
@@ -48,35 +49,31 @@ function GoRow(props: { request: StageRequest; item: StageView | null }) {
   const task = useTaskWords();
   const estimate = useEstimate()(props.request.estimate_usd);
   const { error, busy, go } = useGo();
-  const ref = useRef<HTMLLIElement>(null);
   const run = () => void go(props.request);
-  useRowKeys(ref, { primary: run });
   const titleId = `go-${props.request.id}`;
   const title = props.item?.title ?? t("stages.item_unknown");
   return (
-    <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={titleId}>
-      <div className="row">
-        <span className="kind k-held">{t("changes.state.needs_you")}</span>
-        <div className="text">
-          <div id={titleId} className="name">
-            <SafeText text={t("stages.go_waiting", { title, task: task(props.request.task) })} />
-          </div>
-          {estimate && <span className="sub">{estimate}</span>}
-        </div>
-        <div className="acts">
-          <button type="button" className="btn primary" disabled={busy} onClick={run}>
-            {t("stages.go")}
-          </button>
-        </div>
-      </div>
+    <Row
+      aria-labelledby={titleId}
+      pill={<Pill tone="warn">{t("changes.state.needs_you")}</Pill>}
+      title={
+        <span id={titleId}>
+          <SafeText text={t("stages.go_waiting", { title, task: task(props.request.task) })} />
+        </span>
+      }
+      meta={estimate || undefined}
+      primary={
+        <Button size="sm" variant="primary" data-key="primary" disabled={busy} onClick={run}>
+          {t("stages.go")}
+        </Button>
+      }
+    >
       {error && (
-        <div className="body">
-          <p className="problem-note" role="alert">
-            {error}
-          </p>
-        </div>
+        <p className="problem-note" role="alert">
+          {error}
+        </p>
       )}
-    </li>
+    </Row>
   );
 }
 
@@ -84,33 +81,29 @@ function ReadyRow(props: { view: StageView }) {
   const { t } = useWords();
   const { view } = props;
   const { error, busy, move } = useMove();
-  const ref = useRef<HTMLLIElement>(null);
   const next = view.next!;
   const run = () => void move(view, next);
-  useRowKeys(ref, { primary: run });
   const titleId = `ready-${view.record.kind}-${view.record.id}`;
   return (
-    <li className="line" data-row tabIndex={-1} ref={ref} aria-labelledby={titleId}>
-      <div className="row">
-        <span className="kind k-send">{t("stages.pill_ready")}</span>
-        <div className="text">
-          <div id={titleId} className="name">
-            <SafeText text={t("stages.ready_for", { title: view.title, stage: next.label })} />
-          </div>
-        </div>
-        <div className="acts">
-          <button type="button" className="btn primary" disabled={busy} onClick={run}>
-            {t("stages.move_to", { stage: next.label })}
-          </button>
-        </div>
-      </div>
+    <Row
+      aria-labelledby={titleId}
+      pill={<Pill tone="need">{t("stages.pill_ready")}</Pill>}
+      title={
+        <span id={titleId}>
+          <SafeText text={t("stages.ready_for", { title: view.title, stage: next.label })} />
+        </span>
+      }
+      primary={
+        <Button size="sm" variant="primary" data-key="primary" disabled={busy} onClick={run}>
+          {t("stages.move_to", { stage: next.label })}
+        </Button>
+      }
+    >
       {error && (
-        <div className="body">
-          <p className="problem-note" role="alert">
-            {error}
-          </p>
-        </div>
+        <p className="problem-note" role="alert">
+          {error}
+        </p>
       )}
-    </li>
+    </Row>
   );
 }

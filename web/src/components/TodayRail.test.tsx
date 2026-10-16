@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { S } from "../lib/api";
 import { whenText } from "../lib/dates";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
-import { TodayBoard } from "./TodayBoard";
+import { TodayRail } from "./TodayRail";
 
 /** Made-up addresses are built from this, so no address is written out whole. */
 const WEB = "https" + "://";
@@ -70,19 +70,13 @@ function routes(extra: Routes = {}): Routes {
     "GET today/arrived": () => inbox,
     "GET watch": () => [],
     "GET projects": () => projects,
-    "GET changes": () => [],
-    "GET plugin-today": () => [],
-    "GET followups": () => [],
-    "GET stages/records": () => [],
-    "GET stages/ready": () => [],
-    "GET stages/requests": () => [],
     ...extra,
   };
 }
 
 function open(extra: Routes = {}, onView = vi.fn(), onAddSource?: () => void) {
   const calls = fakeApi(routes(extra));
-  renderApp(<TodayBoard onView={onView} onAddSource={onAddSource} />);
+  renderApp(<TodayRail onView={onView} onAddSource={onAddSource} />);
   return { calls, onView };
 }
 
@@ -97,22 +91,22 @@ afterEach(() => {
   document.documentElement.removeAttribute("data-today");
 });
 
-test("four columns in reading order, each with its heading and count", async () => {
+test("three panels in reading order, each with its heading and count, and nothing about what needs you", async () => {
   open();
   const agendaColumn = await column("Agenda");
   expect(await within(agendaColumn).findByText("3 events today")).toBeInTheDocument();
-  const list = await column("To do");
+  const list = await column("Your to-dos");
   await within(list).findByText("4 things to do");
   const names = screen
     .getAllByRole("region")
-    .map((r) => r.getAttribute("data-col"))
+    .map((r) => r.parentElement?.getAttribute("data-col"))
     .filter(Boolean);
-  expect(names).toEqual(["agenda", "todo", "needs", "arrived"]);
-  expect(screen.getByRole("heading", { level: 2, name: "Needs you" })).toBeInTheDocument();
+  expect(names).toEqual(["agenda", "todo", "arrived"]);
   expect(screen.getByRole("heading", { level: 2, name: "Came in" })).toBeInTheDocument();
   await within(await column("Came in")).findByText("2 messages");
-  // The pieces beside it sit one heading level down inside Needs you.
-  expect(await screen.findByRole("heading", { level: 3, name: "What changed" })).toBeInTheDocument();
+  // What needs the person is the queue, which has its own tests; the rail never draws it.
+  expect(screen.queryByRole("heading", { name: "Needs you" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "What changed" })).toBeNull();
 });
 
 test("the agenda groups by day, all-day first, with times, places, called-off labels and link domains", async () => {
@@ -172,7 +166,7 @@ test("the now line goes at the end of today's list when everything has ended, an
 
 test("to do: Overdue first with its label and count, then Today, Later and No date", async () => {
   open();
-  const col = await column("To do");
+  const col = await column("Your to-dos");
   const heads = await within(col).findAllByRole("heading", { level: 3 });
   expect(heads.map((h) => h.textContent)).toEqual(["Overdue 1", "Today 1", "Later 1", "No date 1"]);
   const overdue = within(col).getByRole("heading", { name: "Overdue 1" }).closest("[data-group]") as HTMLElement;
@@ -187,7 +181,7 @@ test("to do: Overdue first with its label and count, then Today, Later and No da
 test("to do: an action on hold leaves Overdue and sits last under On hold, saying what it waits for", async () => {
   const held: S["TodoView"] = { action: "ACT-5", text: "Sign the contract", project: null, due: "2026-10-01", overdue: false, on_hold: "legal review" };
   open({ "GET today/todo": () => [...todo, held] });
-  const col = await column("To do");
+  const col = await column("Your to-dos");
   const heads = await within(col).findAllByRole("heading", { level: 3 });
   expect(heads.map((h) => h.textContent)).toEqual(["Overdue 1", "Today 1", "Later 1", "No date 1", "On hold 1"]);
   const group = within(col).getByRole("heading", { name: "On hold 1" }).closest("[data-group]") as HTMLElement;
@@ -400,7 +394,7 @@ test("Check now reads the sources, shows the new list at once and says what arri
       },
     }),
   );
-  renderApp(<TodayBoard onView={vi.fn()} />);
+  renderApp(<TodayRail onView={vi.fn()} />);
   const col = await column("Came in");
   expect(within(col).queryByText("Fresh note")).toBeNull();
   await user.click(await within(col).findByRole("button", { name: "Check now" }));
@@ -456,7 +450,7 @@ test("Check now is offered only while a source is on", async () => {
 test("a to-do's menu has Change this, which posts the person's note about that action", async () => {
   const user = userEvent.setup({ advanceTimers: () => {} });
   const { calls } = open({ "POST items/action/ACT-2/change": () => ({ ok: "ACT-2", request: "REQ-7", signal: "SIG-1" }) });
-  const col = await column("To do");
+  const col = await column("Your to-dos");
   await user.click(await within(col).findByRole("button", { name: "More actions for Approve the proof" }));
   await user.click(screen.getByRole("menuitem", { name: "Change this" }));
   await user.type(await screen.findByRole("textbox", { name: "Your note" }), "Due on Friday instead");
@@ -490,7 +484,7 @@ test("what is being learned from a change asked for on a to-do shows on that row
       lines: [{ signal: "SIG-1", kind: "change_requested", changeset: null, refs: ["ACT-2"], state: "learning", waiting: "With the assistant, starting now" }],
     }),
   });
-  const col = await column("To do");
+  const col = await column("Your to-dos");
   const row = (await within(col).findByText("Approve the proof")).closest("li")!;
   expect(await within(row).findByRole("status")).toHaveTextContent("Learning from this…");
 });

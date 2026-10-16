@@ -366,3 +366,44 @@ test("a change asked for before this screen opened is opened once its list has l
   expect(await screen.findByText("Added the action about the proofs.")).toBeInTheDocument();
   expect(screen.queryByText("One fact.")).toBeNull();
 });
+
+test("each item in a review card has its own Change this, which sends back that item and no other", async () => {
+  const user = userEvent.setup();
+  const two = change("REQ-1");
+  two.changeset!.ops.push({
+    index: 1,
+    op: "action.add",
+    status: "applied",
+    reason: null,
+    group: "op1",
+    title: "Send two spine options",
+    meta: { owners: [] },
+    evidence: null,
+    record: { kind: "action", id: "ACT-7" },
+    ask: null,
+  });
+  const calls = fakeApi({
+    "GET changes": () => [two],
+    "POST items/action/ACT-7/change": () => ({ ok: "ACT-7", request: "REQ-9", signal: "SIG-1" }),
+  });
+  renderApp(<WhatChanged />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Send two spine options" }));
+  await user.click(await screen.findByRole("menuitem", { name: "Change this" }));
+  await user.type(await screen.findByRole("textbox", { name: "Your note" }), "Make it three options");
+  await user.click(screen.getByRole("button", { name: "Ask for the change" }));
+  await waitFor(() => expect(calls.find((c) => c.route === "POST items/action/ACT-7/change")?.body).toEqual({ note: "Make it three options" }));
+  // The fact beside it was not sent back.
+  expect(calls.some((c) => c.route.startsWith("POST items/fact/"))).toBe(false);
+  expect(calls.some((c) => c.route.endsWith("send-back"))).toBe(false);
+});
+
+test("an item that was not applied has no Change this", async () => {
+  const user = userEvent.setup();
+  const held = change("REQ-1");
+  held.changeset!.ops[0] = { ...held.changeset!.ops[0], status: "refused", reason: "No such person" };
+  fakeApi({ "GET changes": () => [held] });
+  renderApp(<WhatChanged />);
+  await user.click(await screen.findByRole("button", { name: "More actions for Proof copies ship Nov 5" }));
+  expect(await screen.findByRole("menuitem", { name: "Show source" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Change this" })).toBeNull();
+});

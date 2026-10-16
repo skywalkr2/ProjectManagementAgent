@@ -148,7 +148,7 @@ test("open goes to the record's page, through the app's own way of opening a rec
   fakeApi({ "GET plugin-today": () => [core("open")] });
   renderApp(<PluginToday onOpenRecord={open} />);
   const button = await screen.findByRole("button", { name: "Open" });
-  expect(button).toHaveClass("primary");
+  expect(button).toHaveAttribute("data-variant", "primary");
   expect(button).toHaveAccessibleDescription("Chapter 3 is ready to look at");
   await user.click(button);
   expect(open).toHaveBeenCalledWith(about.kind, about.id);

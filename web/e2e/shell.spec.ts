@@ -144,13 +144,24 @@ test.describe("the visual system", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(dialogOpener).toBeFocused();
-    // A toast sits at the bottom center.
+    // From 1280px a toast sits at the bottom left, over the navigation column, so it never covers a row's controls.
     await page.getByRole("button", { name: "Show a toast" }).click();
-    const toast = page.getByRole("region", { name: "Notifications" }).getByText("Marked as sent to Sample Person");
+    const notices = page.getByRole("region", { name: "Notifications" });
+    const toast = notices.getByText("Marked as sent to Sample Person");
     await expect(toast).toBeVisible();
+    const nav = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
     const box = (await toast.boundingBox())!;
-    expect(Math.abs(box.x + box.width / 2 - 1440 / 2)).toBeLessThan(200);
+    const region = (await notices.boundingBox())!;
+    expect(region.x).toBeLessThan(16);
+    expect(region.x + region.width).toBeLessThanOrEqual(nav.x + nav.width);
     expect(box.y).toBeGreaterThan(HEIGHT - 150);
+    // Narrower, it is at the bottom center, above the bottom bar.
+    await page.setViewportSize({ width: 390, height: HEIGHT });
+    await expect(toast).toBeVisible();
+    const phone = (await toast.boundingBox())!;
+    expect(Math.abs(phone.x + phone.width / 2 - 390 / 2)).toBeLessThan(100);
+    const bar = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
+    expect(phone.y + phone.height).toBeLessThanOrEqual(bar.y);
   });
 });
 
@@ -187,40 +198,28 @@ test.describe("screen use and the shell", () => {
     });
   }
 
-  // The first-go line waits in the short Needs-you card (design 7.8); the walkthrough's last button focuses it, and Go must
-  // then be fully on the screen, not clipped by the card.
+  // The first-go line is a line of the queue (design 7.8); the walkthrough's last button focuses it, and Go must then be
+  // fully on the screen, not clipped.
   for (const [width, height] of [
     [1280, 720],
     [390, 844],
   ]) {
     test(`after the walkthrough's last button, the first-go line's Go button is fully visible at ${width}×${height}`, async ({ page }) => {
       await page.setViewportSize({ width, height });
-      const waiting = (id: string, estimate: number | null) => ({
-        id,
-        version: 1,
-        dismissed: false,
-        stage_task: false,
-        first_go: true,
-        refused: false,
-        state: "needs_you",
-        approval: "required",
-        waiting: "Waiting for your first go.",
-        estimate_usd: estimate,
-        created_at: "2026-10-09T14:00:00Z",
-        note: null,
-        source: null,
-        source_title: `Item ${id}`,
-        changeset: null,
-      });
-      await page.route("**/api/changes", async (route) => {
+      // Three runs wait for the first go, one of them with no price: the queue has one line for them.
+      await page.route("**/api/today/queue", async (route) => {
         if (route.request().method() !== "GET") return route.fallback();
-        await route.fulfill({ json: [waiting("REQ-1", 0.1), waiting("REQ-2", null), waiting("REQ-3", 0.2)] });
+        await route.fulfill({
+          json: [
+            { key: "first_go", group: "decide", kind: "first_go", count: 3, estimate_usd: 0.3, unpriced: 1, untrusted: false, actions: [], questions: [], outcome: {} },
+          ],
+        });
       });
       await signIn(page, "setup");
       await expect(page.getByRole("heading", { level: 1, name: "Set up your workspace" })).toBeVisible();
       await page.getByRole("navigation", { name: "Setup steps" }).getByRole("button", { name: /^Done/ }).click();
       await page.getByRole("main").getByRole("button", { name: "Go to Today" }).click();
-      const line = page.locator("li.line", { hasText: "Start the assistant" });
+      const line = page.locator('[data-queue-line="first_go"]');
       await expect(line).toBeFocused();
       await expect(line).toBeInViewport({ ratio: 1 });
       await expect(line.getByRole("button", { name: "Go", exact: true })).toBeInViewport({ ratio: 1 });

@@ -355,6 +355,9 @@ describe("closing", () => {
       "GET panels": () => [],
       "GET asks": () => [],
       "GET changes": () => [waiting],
+      "GET today/queue": () => [
+        { key: "first_go", group: "decide", kind: "first_go", count: 1, estimate_usd: 0.1, unpriced: 0, untrusted: false, actions: [], questions: [], outcome: {} },
+      ],
       "GET followups": () => [],
       "GET runtime-config": () => ({ instance: null }),
       "GET today/agenda": () => [],
@@ -367,7 +370,7 @@ describe("closing", () => {
     });
     renderApp(<App rc={rcFixture()} />);
     await user.click(await screen.findByRole("button", { name: "Go to Today" }));
-    const line = await screen.findByRole("listitem", { name: /^Start the assistant: 1 item/ });
+    const line = await screen.findByRole("group", { name: /^Start the assistant: 1 item/ });
     await waitFor(() => expect(line).toHaveFocus());
     expect(screen.queryByRole("heading", { name: "Set up your workspace" })).toBeNull();
     expect(finished).toBe(true);

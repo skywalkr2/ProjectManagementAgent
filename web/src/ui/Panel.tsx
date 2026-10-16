@@ -8,7 +8,7 @@ export function Panel(props: {
   title: string;
   /** The heading level; a view's own title is the page's h1, so panes are h2 by default. */
   level?: 2 | 3;
-  count?: string | number | null;
+  count?: ReactNode;
   actions?: ReactNode;
   /** The smaller title of a rail pane. */
   small?: boolean;
@@ -23,14 +23,14 @@ export function Panel(props: {
   const Heading = props.level === 3 ? "h3" : "h2";
   return (
     <section className={[styles.panel, props.small ? styles.small : "", props.className ?? ""].filter(Boolean).join(" ")} aria-labelledby={headId}>
-      <header className={styles.head}>
+      <div className={styles.head}>
         <Heading id={headId} className={styles.title}>
           {props.title}
         </Heading>
         {props.count !== undefined && props.count !== null && props.count !== "" && <span className={styles.count}>{props.count}</span>}
         <span className={styles.spacer} />
         {props.actions && <div className={styles.actions}>{props.actions}</div>}
-      </header>
+      </div>
       {props.children !== undefined && <div className={props.flush ? styles.flush : styles.body}>{props.children}</div>}
     </section>
   );

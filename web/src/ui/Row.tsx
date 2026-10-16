@@ -1,7 +1,7 @@
 // A list row (design 7.14): [pill] title (two lines at most) and meta, then the one primary action, then the menu at the
 // right edge. The pill column is a fixed width, empty when there is no exception, so titles align on every row of every
 // list. `data-row` puts it in the keyboard loop. Rows are separated by hairlines, never cards.
-import type { HTMLAttributes, ReactNode } from "react";
+import type { HTMLAttributes, ReactNode, Ref } from "react";
 import styles from "./Row.module.css";
 
 export interface RowProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
@@ -15,6 +15,8 @@ export interface RowProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
   children?: ReactNode;
   /** Use a list item inside a list (the default) or a plain block. */
   as?: "li" | "div";
+  /** The row's element, whichever tag it is drawn as. */
+  ref?: Ref<HTMLLIElement & HTMLDivElement>;
 }
 
 export function Row(props: RowProps) {

@@ -89,10 +89,14 @@ async function signIn(page: Page) {
   });
   page.on("pageerror", (err) => problems.push(String(err)));
   await page.goto("?token=e2e-token");
-  await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
 }
 
 async function handIn(page: Page, c: Case) {
+  // The result is a line of Today's queue as soon as the assistant has made it; the card itself is read on What changed.
+  await go(page, "Today");
+  const reviews = page.locator('[data-queue-line="review"]');
+  const before = await reviews.count();
   await page.getByRole("button", { name: "Hand something in" }).first().click();
   const box = page.getByLabel("Paste or type it here");
   if (c.pasted) {
@@ -104,6 +108,8 @@ async function handIn(page: Page, c: Case) {
     await box.fill(c.note ?? "");
   }
   await page.getByRole("button", { name: "Hand in", exact: true }).click();
+  await expect(reviews).toHaveCount(before + 1, { timeout: 20_000 });
+  await go(page, "What changed");
   const row = page.locator("li.line", { hasText: firstLine(c.pasted ?? c.note ?? "") });
   await expect(row.locator(".kind").first()).toHaveText(/Review/i, { timeout: 20_000 });
   const expander = row.locator(".expander").first();
@@ -113,6 +119,9 @@ async function handIn(page: Page, c: Case) {
 
 /** Opens a view from the sidebar, or on a phone from the bottom bar's sheets. */
 async function go(page: Page, label: string) {
+  // As a person does before moving on: from 1280px the toasts sit over the navigation, and with motion reduced they stay.
+  const dismiss = page.getByRole("region", { name: "Notifications" }).getByRole("button", { name: "Dismiss" });
+  while (await dismiss.count()) await dismiss.last().click();
   const nav = page.getByRole("navigation", { name: "Views" });
   const name = new RegExp(`^${label}`);
   const link = nav.getByRole("link", { name });
@@ -272,7 +281,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.getByRole("menuitem", { name: "Hide" }).click();
     await expect(line).toHaveCount(0);
     await page.reload();
-    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
     await expect(page.getByRole("region", { name: "Setup", exact: true })).toHaveCount(0);
   });
 
@@ -544,6 +553,12 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toHaveCount(0);
     await card.getByRole("button", { name: "Mark sent" }).first().click();
     await expect(page.getByText(`Marked as sent to ${target.name}`)).toBeVisible();
+    // From 1280px the toast is at the bottom left, over the navigation column, so it never covers a row's controls.
+    const toast = (await page.getByRole("region", { name: "Notifications" }).boundingBox())!;
+    const nav = (await page.getByRole("navigation", { name: "Views" }).boundingBox())!;
+    const content = (await page.getByRole("main").boundingBox())!;
+    expect(toast.x).toBeGreaterThanOrEqual(0);
+    expect(toast.x + toast.width).toBeLessThanOrEqual(Math.max(nav.x + nav.width, content.x));
     const sent = (await getJson<Section[]>(page, "api/followups")).find((x) => x.person === target.person)!;
     for (const q of questions) {
       const now = sent.questions.find((x) => x.id === q.id)!;
@@ -568,6 +583,7 @@ test.describe.serial("acceptance scenario", () => {
 
   test("5. Undo step 2. The fact is gone and the ledger shows both the change and the undo.", async ({ page }) => {
     await signIn(page);
+    await go(page, "What changed");
     const printer = byId("printer-proof-date");
     const change = await changeOf(page, printer);
     const op = change.changeset!.ops.find((o) => o.op === "fact")!;
@@ -667,9 +683,11 @@ test.describe.serial("acceptance scenario", () => {
       const rows = page.getByRole("main").locator("[data-row]");
       await expect(rows.first()).toBeVisible();
       // A click on the row's own text (not on a button in it) focuses the row; the mouse gets no ring.
-      await page.getByRole("main").locator("[data-row] > .row > .kind, [data-row] .meta").first().click();
+      await page.getByRole("main").locator("[data-row] > .row > .kind, [data-row] .meta, [data-row] [class*='_meta_']").first().click();
       await expect(page.locator("[data-row]:focus")).toHaveCount(1);
-      expect((await focusRing(page)).shown).toBe(false);
+      // The mouse gets no ring. (On Today a click also opens the line, which marks it as selected with a bar of its own.)
+      expect(await page.evaluate(() => document.activeElement!.matches(":focus-visible"))).toBe(false);
+      if (view !== "Today") expect((await focusRing(page)).shown).toBe(false);
       // From the keyboard, every row shows a ring, drawn in its padding or outside it, never over its text.
       const count = Math.min(await rows.count(), 12);
       for (let i = 0; i < count; i++) {
@@ -742,7 +760,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await go(page, "Today");
-    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
   });
 
   test("a phone-sized screen has one column and no sideways scrolling", async ({ page }) => {
@@ -754,47 +772,57 @@ test.describe.serial("acceptance scenario", () => {
     await checkAccessibility(page);
   });
 
-  test("on a laptop-sized window Today shows its four columns at once, with no page scroll", async ({ page }) => {
+  test("on a laptop-sized window Today is the queue with the rail beside it, and the inspector waits for a wider window", async ({ page }) => {
     await page.setViewportSize({ width: 1512, height: 860 });
     await signIn(page);
-    // The setup line is on screen too: the board still fits beneath it.
     await expect(page.getByRole("region", { name: "Setup", exact: true })).toBeVisible();
-    for (const name of ["Agenda", "To do", "Needs you", "Came in"]) {
-      const heading = page.getByRole("heading", { level: 2, name, exact: true });
-      await expect(heading).toBeVisible();
-      await expect(heading).toBeInViewport({ ratio: 1 });
+    for (const name of ["Needs you", "Agenda", "Your to-dos", "Came in"]) {
+      await expect(page.getByRole("heading", { level: 2, name, exact: true })).toBeVisible();
     }
-    const boxes = await Promise.all(
-      ["agenda", "todo", "needs", "arrived"].map((id) => page.locator(`[data-col="${id}"]`).boundingBox()),
-    );
-    // Side by side, in reading order, and inside the window.
-    for (const [i, box] of boxes.entries()) {
-      expect(box).not.toBeNull();
-      expect(box!.y + box!.height).toBeLessThanOrEqual(860);
-      if (i > 0) expect(box!.x).toBeGreaterThan(boxes[i - 1]!.x);
-    }
-    expect(await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight)).toBeLessThanOrEqual(1);
+    const queue = (await page.getByRole("region", { name: "Needs you" }).boundingBox())!;
+    const rail = (await page.locator('[data-col="agenda"]').boundingBox())!;
+    // The queue is the wide pane on the left; the rail is beside it, and nothing sits between them.
+    expect(rail.x).toBeGreaterThanOrEqual(queue.x + queue.width);
+    expect(queue.width).toBeGreaterThan(rail.width * 1.5);
+    expect(queue.width).toBeGreaterThanOrEqual(560);
+    await expect(page.getByRole("complementary", { name: "Details" })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     await checkAccessibility(page);
   });
 
-  test("a mid-sized window pairs the columns, and a phone stacks them with the page scrolling", async ({ page }) => {
-    await page.setViewportSize({ width: 1100, height: 800 });
+  test("from 1680px the inspector sits between the queue and the rail, empty until a line is picked", async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1000 });
+    await signIn(page);
+    const inspector = page.getByRole("complementary", { name: "Details" });
+    await expect(inspector).toBeVisible();
+    await expect(inspector).toContainText("Pick a line to see its items here.");
+    const queue = (await page.getByRole("region", { name: "Needs you" }).boundingBox())!;
+    const box = (await inspector.boundingBox())!;
+    const rail = (await page.locator('[data-col="agenda"]').boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(queue.x + queue.width);
+    expect(rail.x).toBeGreaterThanOrEqual(box.x + box.width);
+    expect(queue.width).toBeGreaterThanOrEqual(560);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    await checkAccessibility(page);
+  });
+
+  test("a tablet puts the rail under the queue in two columns, and a phone stacks everything with no sideways scrolling", async ({ page }) => {
+    await page.setViewportSize({ width: 800, height: 900 });
     await signIn(page);
     const at = async (id: string) => (await page.locator(`[data-col="${id}"]`).boundingBox())!;
-    const [agenda, todo, needs, arrived] = [await at("agenda"), await at("todo"), await at("needs"), await at("arrived")];
-    expect(todo.x).toBe(agenda.x);
-    expect(todo.y).toBeGreaterThan(agenda.y);
-    expect(needs.x).toBeGreaterThan(agenda.x);
-    expect(arrived.x).toBe(needs.x);
-    expect(arrived.y).toBeGreaterThan(needs.y);
+    const queue = (await page.getByRole("region", { name: "Needs you" }).boundingBox())!;
+    const [agenda, todo] = [await at("agenda"), await at("todo")];
+    expect(agenda.y).toBeGreaterThanOrEqual(queue.y + queue.height - 1);
+    expect(todo.y).toBeGreaterThanOrEqual(queue.y + queue.height - 1);
+    // Two columns: the agenda and the to-dos are side by side.
+    expect(todo.x).toBeGreaterThan(agenda.x);
     await checkAccessibility(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator("html")).toHaveAttribute("data-narrow", "");
-    const column = async (id: string) => (await page.locator(`[data-col="${id}"]`).boundingBox())!;
-    const [a, b, c, d] = [await column("agenda"), await column("todo"), await column("needs"), await column("arrived")];
+    const [a, b, c] = [await at("agenda"), await at("todo"), await at("arrived")];
     expect(b.y).toBeGreaterThan(a.y + a.height - 1);
     expect(c.y).toBeGreaterThan(b.y + b.height - 1);
-    expect(d.y).toBeGreaterThan(c.y + c.height - 1);
+    expect(b.x).toBe(a.x);
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
     await checkAccessibility(page);
   });
@@ -821,7 +849,7 @@ test.describe.serial("acceptance scenario", () => {
     await page.reload();
     await expect(page.getByRole("heading", { name: "Projects" })).toBeVisible();
     await go(page, "Today");
-    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
   });
 
   test("an organization added from the person form is selected and shows by name on the person's row", async ({ page }) => {
@@ -933,14 +961,14 @@ test.describe.serial("acceptance scenario", () => {
 
     // Not started yet: Stages offers the first stage, Today stays quiet about it.
     await go(page, "Today");
-    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
-    await expect(page.locator("li.line", { hasText: `${item.title} is ready for` })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
+    await expect(page.locator("[data-row]", { hasText: `${item.title} is ready for` })).toHaveCount(0);
     await go(page, "Stages");
     await row.getByRole("button", { name: `Move to ${item.next!.label}` }).click();
     await expect(row.locator(".kind")).toHaveText(item.next!.label);
 
     await go(page, "Today");
-    const ready = page.locator("li.line", { hasText: `${item.title} is ready for ${following.label}` });
+    const ready = page.locator("[data-row]", { hasText: `${item.title} is ready for ${following.label}` });
     await expect(ready).toBeVisible();
     await ready.getByRole("button", { name: `Move to ${following.label}` }).click();
     await expect(ready).toHaveCount(0);
@@ -966,8 +994,8 @@ test.describe.serial("acceptance scenario", () => {
       (await (await page.request.get("api/stages/records")).json()) as Array<{ record: { kind: string; id: string }; title: string }>
     ).find((v) => v.record.kind === task.stage_start.kind && v.record.id === task.stage_start.record)!;
     await page.reload();
-    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
-    const today = page.locator("li.line", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for your go" });
+    await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
+    const today = page.locator("[data-row]", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for your go" });
     await expect(today).toBeVisible();
     await expect(today).not.toContainText(task.id);
     await checkAccessibility(page);
@@ -979,8 +1007,8 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByText(/Approved\./)).toBeVisible();
     await expect(here.getByRole("list", { name: "Waiting for your go" })).toHaveCount(0);
     await go(page, "Today");
-    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
-    await expect(page.locator("li.line", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for your go" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
+    await expect(page.locator("[data-row]", { hasText: `${item.title}: ` }).filter({ hasText: "is waiting for your go" })).toHaveCount(0);
   });
 
   test("a phone-sized screen shows stages in one column", async ({ page }) => {
@@ -1094,7 +1122,7 @@ test.describe.serial("acceptance scenario", () => {
     await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
     const brand = page.getByRole("banner").getByRole("link", { name: /, go to Today$/ });
     await brand.click();
-    await expect(page.getByRole("heading", { name: "What changed" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Needs you", exact: true })).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Views" }).getByRole("link", { name: /^Today/ })).toHaveAttribute("aria-current", "page");
   });
 

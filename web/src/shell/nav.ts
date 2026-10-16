@@ -6,6 +6,7 @@ import { api, type S } from "../lib/api";
 import { panelView, type View } from "../lib/views";
 import { useWords } from "../lib/wording";
 import { needsAttention } from "../components/WhatChanged";
+import { useTodayCount } from "../lib/today";
 import type { IconName } from "../ui/Icon";
 
 export interface NavEntry {
@@ -40,13 +41,13 @@ export function useNav(): NavModel {
   const { t } = useWords();
   const panels = useQuery({ queryKey: ["panels"], queryFn: () => api.panels() });
   const counts = useCounts();
+  const needsYou = useTodayCount();
   const plugin = (tab: string, group: "work" | "records"): NavEntry[] =>
     (panels.data ?? [])
       .filter((p: S["PanelView"]) => p.tab === tab)
       .map((p) => ({ view: panelView(p.name, group), label: p.title, glyph: [...p.title.trim()][0]?.toUpperCase() ?? "" }));
-  const today = (counts.changed ?? 0) + (counts.followups ?? 0);
   return {
-    today: { view: "today", label: t("nav.home"), icon: "home", count: some(today) },
+    today: { view: "today", label: t("nav.home"), icon: "home", count: some(needsYou) },
     work: [
       { view: "work/changed", label: t("nav.changed"), icon: "inbox", count: some(counts.changed) },
       { view: "work/followups", label: t("nav.followups"), icon: "send", count: some(counts.followups) },

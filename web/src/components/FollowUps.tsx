@@ -135,7 +135,7 @@ function YourSection(props: { section: S["FollowupSection"]; compact: boolean; r
   );
 }
 
-function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number }) {
+export function DecisionRow(props: { question: S["FollowupQuestion"]; reveal: number }) {
   const { t } = useWords();
   const act = useAct();
   const noted = useNoted();
@@ -254,14 +254,15 @@ function actionMeta(a: S["FollowupAction"], t: T): string {
   return [a.project_name, a.due ? t("op.meta.due", { date: day(a.due) }) : ""].filter(Boolean).join(" · ");
 }
 
-function PersonSection(props: { section: S["FollowupSection"] }) {
+/** One person's message to send. `open` shows the message box from the start (the Today inspector). */
+export function PersonSection(props: { section: S["FollowupSection"]; open?: boolean }) {
   const { t, tn } = useWords();
   const act = useAct();
   const { push } = useToasts();
   const s = props.section;
   const ref = useRef<HTMLLIElement>(null);
   const area = useRef<HTMLTextAreaElement>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!props.open);
   const [draft, setDraft] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const message = draft ?? s.message;
@@ -383,7 +384,7 @@ function PersonSection(props: { section: S["FollowupSection"] }) {
 }
 
 // What each person has already been sent or told, one line each, with the step that closes it.
-function WaitingSection(props: { section: S["FollowupSection"]; compact: boolean }) {
+export function WaitingSection(props: { section: S["FollowupSection"]; compact: boolean }) {
   const { tn } = useWords();
   const s = props.section;
   const Heading = props.compact ? "h4" : "h3";

@@ -17,6 +17,7 @@ import { ProjectProposalRow } from "./NextSteps";
 import { Because } from "./Because";
 import { LearnedLines } from "./Learned";
 import { FirstGoRow } from "./FirstGoRow";
+import { useChangeThis, type ChangeKind } from "./ChangeThis";
 import { RowMenu, type MenuAction } from "./RowMenu";
 import { Highlighted } from "./SafeText";
 import { StageTodayRows, useStageToday } from "./StageToday";
@@ -190,7 +191,9 @@ export function waitsForGo(c: S["ChangeItem"]): boolean {
   return c.approval === "required" && !c.stage_task && c.state === "needs_you" && !c.dismissed;
 }
 
-function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?: (step: string) => void }) {
+/** One change's row: what the assistant did, nested, with the buttons for it. `open` shows it expanded from the start (the
+ * Today inspector), and `sendBack` starts with the note to send it back with. */
+export function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?: (step: string) => void; open?: boolean; sendBack?: boolean }) {
   const { t, tn, has } = useWords();
   const act = useAct();
   const afterSave = useAfterSave();
@@ -199,8 +202,8 @@ function ChangeRow(props: { item: S["ChangeItem"]; reveal: number; onOpenGuide?:
   const { item } = props;
   const gated = waitsForGo(item);
   const cs = item.changeset;
-  const [open, setOpen] = useState(item.state === "review" || (item.state === "needs_you" && !gated));
-  const [sendingBack, setSendingBack] = useState(false);
+  const [open, setOpen] = useState(!!props.open || !!props.sendBack || item.state === "review" || (item.state === "needs_you" && !gated));
+  const [sendingBack, setSendingBack] = useState(!!props.sendBack);
   const [choosing, setChoosing] = useState(false);
   const ref = useRef<HTMLLIElement>(null);
   const title = item.source_title || firstLine(item.note) || t("changes.untitled");
@@ -412,6 +415,9 @@ const OP_PILL: Record<S["OpView"]["status"], string | null> = {
   undone: "k-done",
 };
 
+/** The kinds of item a review card's row can be changed as (the kinds the change route takes). */
+const CHANGEABLE: ChangeKind[] = ["action", "question", "decision", "event", "fact"];
+
 function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string | null }) {
   const { t, tn } = useWords();
   const act = useAct();
@@ -434,8 +440,12 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
       (report) => ({ message: undoMessage(report, t, tn) }),
     );
 
+  // Each item the assistant made can be changed on its own, without sending the others back.
+  const changeKind = op.record && CHANGEABLE.includes(op.record.kind as ChangeKind) ? (op.record.kind as ChangeKind) : null;
+  const change = useChangeThis({ kind: changeKind ?? "action", id: op.record?.id ?? "" }, () => ref.current?.focus());
   const menu: MenuAction[] = [];
   if (op.status === "applied") menu.push({ id: "undo", label: t("op.undo_this"), run: () => void undoThis() });
+  if (changeKind && op.status === "applied") menu.push(change.entry);
   if (op.evidence && props.source)
     menu.push({ id: "source", label: t(showSource ? "op.hide_source" : "op.show_source"), run: () => setShowSource((v) => !v) });
 
@@ -472,6 +482,7 @@ function OpRow(props: { op: S["OpView"]; cs: S["ChangesetView"]; source: string 
         </div>
       )}
       {showSource && op.evidence && props.source && <SourcePanel id={props.source} quote={op.evidence.quote} />}
+      {changeKind && change.form}
       {ask && (
         <div className="full">
           <AskChooser ask={ask} fold={{ changeset: cs.id, index: op.index }} />

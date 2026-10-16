@@ -19,46 +19,40 @@ import styles from "./Learned.module.css";
 
 type List = "daily" | "catch_up";
 
-/** The lines on Today. The counts come from the Today queue; the lists load when one is opened. */
-export function LearnedToday() {
+/** The kinds of queue line this draws: what was learned, and the catch-up list. */
+export function isLearned(line: S["QueueLineView"]): boolean {
+  return line.kind === "learned" || line.kind === "catch_up";
+}
+
+/** One learned line of the Today queue. The counts come from the queue; the list loads when it is opened. */
+export function LearnedLine(props: { line: S["QueueLineView"] }) {
   const { t, tn } = useWords();
-  const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
-  const [open, setOpen] = useState<List | null>(null);
-  const lines = (queue.data ?? []).filter((line) => line.kind === "learned" || line.kind === "catch_up");
-  if (!lines.length) return null;
-  const sub = (line: S["QueueLineView"]) => {
-    const origins = line.origins ?? {};
-    const bits = [
-      line.kind === "learned" && origins.input ? tn("learned.today.from_inputs", origins.input) : "",
-      line.kind === "learned" && origins.correction ? tn("learned.today.from_corrections", origins.correction) : "",
-      line.kind === "learned" && line.expired ? tn("learned.today.expired", line.expired) : "",
-      line.kind === "catch_up" && line.left_out ? tn("learned.today.left_out", line.left_out) : "",
-    ];
-    return bits.filter(Boolean).join(" · ");
-  };
+  const { line } = props;
+  const [open, setOpen] = useState(false);
+  const list: List = line.kind === "learned" ? "daily" : "catch_up";
+  const origins = line.origins ?? {};
+  const sub = [
+    line.kind === "learned" && origins.input ? tn("learned.today.from_inputs", origins.input) : "",
+    line.kind === "learned" && origins.correction ? tn("learned.today.from_corrections", origins.correction) : "",
+    line.kind === "learned" && line.expired ? tn("learned.today.expired", line.expired) : "",
+    line.kind === "catch_up" && line.left_out ? tn("learned.today.left_out", line.left_out) : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <div className={styles.todayLines} data-learned-lines="">
-      {lines.map((line) => {
-        const list: List = line.kind === "learned" ? "daily" : "catch_up";
-        return (
-          <section key={line.key} className={styles.todayLine} aria-label={t("learned.today.label")} data-queue-line={line.kind}>
-            <Pill tone="need">{t("learned.today.label")}</Pill>
-            <div className={styles.todayBody}>
-              <p className={styles.todayText}>
-                {line.kind === "learned" ? tn("learned.today.review", line.count) : tn("learned.today.catch_up", line.count)}
-              </p>
-              {sub(line) && <p className={styles.todaySub}>{sub(line)}</p>}
-            </div>
-            <div className={styles.todayActs}>
-              <Button size="sm" variant="primary" onClick={() => setOpen(list)}>
-                {t("learned.today.open")}
-              </Button>
-            </div>
-          </section>
-        );
-      })}
-      {open && <ReviewDrawer list={open} onClose={() => setOpen(null)} />}
-    </div>
+    <section className={styles.todayLine} aria-label={t("learned.today.label")} data-queue-line={line.kind} data-row="" tabIndex={-1}>
+      <Pill tone="need">{t("learned.today.label")}</Pill>
+      <div className={styles.todayBody}>
+        <p className={styles.todayText}>{line.kind === "learned" ? tn("learned.today.review", line.count) : tn("learned.today.catch_up", line.count)}</p>
+        {sub && <p className={styles.todaySub}>{sub}</p>}
+      </div>
+      <div className={styles.todayActs}>
+        <Button size="sm" variant="primary" data-key="primary" onClick={() => setOpen(true)}>
+          {t("learned.today.open")}
+        </Button>
+      </div>
+      {open && <ReviewDrawer list={list} onClose={() => setOpen(false)} />}
+    </section>
   );
 }
 

@@ -3,8 +3,9 @@
 // can't be used until the person settles which copy to keep, a backup account that hasn't passed its check, a kind of
 // file that isn't being read, the standing rules to look over, and a switch of account or model whose check found
 // problems.
-// Each is one row that says what to do first, with the one button that does it. The lines come from the Today queue; a
-// line is gone once its cause is, and only the person's own click ever restarts the app.
+// Each is one row of the Today queue that says what to do first, with the one button that does it (a few offer a second,
+// as design 7.6 allows for held lines). The lines come from the queue; a line is gone once its cause is, and only the
+// person's own click ever restarts the app.
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, type S } from "../lib/api";
@@ -21,41 +22,40 @@ import styles from "./HeldLines.module.css";
 
 type Line = S["QueueLineView"];
 
-const SHOWN: Line["kind"][] = ["restart", "paused", "borrow", "credential", "offline", "handover", "account_check", "switch_failed", "extractor", "rule_review", "catch_up_go"];
+/** The kinds of queue line that are a stop or a check on the assistant's own work, each drawn here with its one button. */
+export const HELD_KINDS: Line["kind"][] = ["restart", "paused", "borrow", "credential", "offline", "handover", "account_check", "switch_failed", "extractor", "rule_review", "catch_up_go"];
 
-export function HeldLines(props: { onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
-  const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
-  const lines = (queue.data ?? []).filter((line) => SHOWN.includes(line.kind));
-  if (!lines.length) return null;
-  return (
-    <div className={styles.lines} data-held-lines="">
-      {lines.map((line) =>
-        line.kind === "restart" ? (
-          <RestartLine key={line.key} line={line} />
-        ) : line.kind === "handover" ? (
-          <HandoverLine key={line.key} line={line} onOpen={props.onOpenHandover} />
-        ) : line.kind === "borrow" ? (
-          <BorrowLine key={line.key} line={line} />
-        ) : line.kind === "credential" ? (
-          <CredentialLine key={line.key} line={line} onOpenAiAccounts={props.onOpenAiAccounts} />
-        ) : line.kind === "offline" ? (
-          <OfflineLine key={line.key} line={line} />
-        ) : line.kind === "account_check" ? (
-          <AccountCheckLine key={line.key} line={line} />
-        ) : line.kind === "switch_failed" ? (
-          <SwitchFailedLine key={line.key} line={line} />
-        ) : line.kind === "extractor" ? (
-          <ExtractorLine key={line.key} line={line} />
-        ) : line.kind === "rule_review" ? (
-          <RuleReviewLine key={line.key} line={line} onOpen={props.onOpenRules} />
-        ) : line.kind === "catch_up_go" ? (
-          <CatchUpGoLine key={line.key} line={line} />
-        ) : (
-          <PausedLine key={line.key} line={line} onOpenAiAccounts={props.onOpenAiAccounts} />
-        ),
-      )}
-    </div>
-  );
+export function isHeld(line: Line): boolean {
+  return HELD_KINDS.includes(line.kind);
+}
+
+/** One held line of the Today queue, drawn by its kind. */
+export function HeldLine(props: { line: Line; onOpenAiAccounts: () => void; onOpenHandover: () => void; onOpenRules?: () => void }) {
+  const { line } = props;
+  switch (line.kind) {
+    case "restart":
+      return <RestartLine line={line} />;
+    case "handover":
+      return <HandoverLine line={line} onOpen={props.onOpenHandover} />;
+    case "borrow":
+      return <BorrowLine line={line} />;
+    case "credential":
+      return <CredentialLine line={line} onOpenAiAccounts={props.onOpenAiAccounts} />;
+    case "offline":
+      return <OfflineLine line={line} />;
+    case "account_check":
+      return <AccountCheckLine line={line} />;
+    case "switch_failed":
+      return <SwitchFailedLine line={line} />;
+    case "extractor":
+      return <ExtractorLine line={line} />;
+    case "rule_review":
+      return <RuleReviewLine line={line} onOpen={props.onOpenRules} />;
+    case "catch_up_go":
+      return <CatchUpGoLine line={line} />;
+    default:
+      return <PausedLine line={line} onOpenAiAccounts={props.onOpenAiAccounts} />;
+  }
 }
 
 function RestartLine(props: { line: Line }) {
@@ -68,7 +68,7 @@ function RestartLine(props: { line: Line }) {
   // While a restart is under way its own words replace the explanation, so the line follows the same flow as the header.
   const sub = progress && restart.phase !== "asking" ? progress : t(status.data && !canRestart ? "queue.restart.manual" : "queue.restart.sub");
   return (
-    <section className={styles.line} aria-label={t("queue.restart.label")} data-queue-line="restart">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.restart.label")} data-queue-line="restart">
       <Pill tone="warn">{t("queue.restart.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{label}</p>
@@ -76,7 +76,7 @@ function RestartLine(props: { line: Line }) {
       </div>
       {canRestart && (
         <div className={styles.actions}>
-          <Button size="sm" variant="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+          <Button size="sm" variant="primary" data-key="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
             {t("restart.now")}
           </Button>
         </div>
@@ -90,14 +90,14 @@ function PausedLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   const { line } = props;
   const label = tn("queue.paused", line.count, { account: line.account ?? "", time: line.until ? wallWhen(line.until) : "" });
   return (
-    <section className={styles.line} aria-label={t("queue.paused.label")} data-queue-line="paused">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.paused.label")} data-queue-line="paused">
       <Pill tone="warn">{t("queue.paused.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{label}</p>
         <p className={styles.sub}>{t("queue.paused.sub")}</p>
       </div>
       <div className={styles.actions}>
-        <Button size="sm" variant="primary" onClick={props.onOpenAiAccounts}>
+        <Button size="sm" variant="primary" data-key="primary" onClick={props.onOpenAiAccounts}>
           {t("queue.paused.open")}
         </Button>
       </div>
@@ -133,14 +133,14 @@ function BorrowLine(props: { line: Line }) {
     setBusy(null);
   };
   return (
-    <section className={styles.line} aria-label={t("queue.borrow.label")} data-queue-line="borrow">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.borrow.label")} data-queue-line="borrow">
       <Pill tone="warn">{t("queue.borrow.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{t("queue.borrow", { account, work, paused, time })}</p>
         <p className={styles.sub}>{sub}</p>
       </div>
       <div className={styles.actions}>
-        <Button size="sm" variant="primary" loading={busy === "yes"} disabled={busy !== null} aria-label={t("queue.borrow.yes_named", { account, work })} onClick={() => void answer(true)}>
+        <Button size="sm" variant="primary" data-key="primary" loading={busy === "yes"} disabled={busy !== null} aria-label={t("queue.borrow.yes_named", { account, work })} onClick={() => void answer(true)}>
           {t("queue.borrow.yes")}
         </Button>
         <Button size="sm" variant="secondary" loading={busy === "no"} disabled={busy !== null} onClick={() => void answer(false)}>
@@ -164,7 +164,7 @@ function CredentialLine(props: { line: Line; onOpenAiAccounts: () => void }) {
   const { start, busy, problem } = useStartSignIn(line.credential_name ?? "");
   const text = t(`queue.credential.${signIn ? "sign_in" : "account"}.${past ? "past" : "soon"}`, { thing: first, date });
   return (
-    <section className={styles.line} aria-label={t("queue.credential.label")} data-queue-line="credential">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.credential.label")} data-queue-line="credential">
       <Pill tone="warn">{t("queue.credential.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{text}</p>
@@ -184,11 +184,11 @@ function CredentialLine(props: { line: Line; onOpenAiAccounts: () => void }) {
       </div>
       <div className={styles.actions}>
         {signIn ? (
-          <Button size="sm" variant="primary" loading={busy} onClick={() => void start()}>
+          <Button size="sm" variant="primary" data-key="primary" loading={busy} onClick={() => void start()}>
             {t("queue.credential.sign_in")}
           </Button>
         ) : (
-          <Button size="sm" variant="primary" onClick={props.onOpenAiAccounts}>
+          <Button size="sm" variant="primary" data-key="primary" onClick={props.onOpenAiAccounts}>
             {t("queue.credential.open")}
           </Button>
         )}
@@ -202,7 +202,7 @@ function OfflineLine(props: { line: Line }) {
   const { line } = props;
   const label = tn("queue.offline", line.count, { time: line.waiting_since ? wallWhen(line.waiting_since) : "" });
   return (
-    <section className={styles.line} aria-label={t("queue.offline.label")} data-queue-line="offline">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.offline.label")} data-queue-line="offline">
       <Pill tone="warn">{t("queue.offline.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{label}</p>
@@ -229,7 +229,7 @@ function HandoverLine(props: { line: Line; onOpen: () => void }) {
   // Once a copy is chosen the one thing left is the restart, and only the person's click restarts.
   const canRestart = state === "chosen" && !!status.data?.can_restart;
   return (
-    <section className={styles.line} aria-label={t("queue.handover.label")} data-queue-line="handover">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.handover.label")} data-queue-line="handover">
       <Pill tone="warn">{t("queue.handover.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{text}</p>
@@ -237,11 +237,11 @@ function HandoverLine(props: { line: Line; onOpen: () => void }) {
       </div>
       <div className={styles.actions}>
         {canRestart && (
-          <Button size="sm" variant="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
+          <Button size="sm" variant="primary" data-key="primary" disabled={restart.busy || restart.waiting} onClick={() => void restart.now()}>
             {t("restart.now")}
           </Button>
         )}
-        <Button size="sm" variant={canRestart ? "secondary" : "primary"} onClick={props.onOpen}>
+        <Button size="sm" variant={canRestart ? "secondary" : "primary"} data-key={canRestart ? undefined : "primary"} onClick={props.onOpen}>
           {t(`queue.handover.open_${state}`)}
         </Button>
       </div>
@@ -270,14 +270,14 @@ function AccountCheckLine(props: { line: Line }) {
     setChecking(false);
   };
   return (
-    <section className={styles.line} aria-label={t("queue.account_check.label")} data-queue-line="account_check">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.account_check.label")} data-queue-line="account_check">
       <Pill tone="warn">{t("queue.account_check.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{t("queue.account_check", { account, work })}</p>
         <p className={styles.sub}>{t(line.check_failed ? "queue.account_check.sub_failed" : "queue.account_check.sub")}</p>
       </div>
       <div className={styles.actions}>
-        <Button size="sm" variant="primary" loading={checking} aria-label={t("queue.account_check.run_named", { account, work })} onClick={() => void run()}>
+        <Button size="sm" variant="primary" data-key="primary" loading={checking} aria-label={t("queue.account_check.run_named", { account, work })} onClick={() => void run()}>
           {t("queue.account_check.run")}
         </Button>
       </div>
@@ -316,7 +316,7 @@ function SwitchFailedLine(props: { line: Line }) {
     setBusy(null);
   };
   return (
-    <section className={styles.line} aria-label={t("queue.switch_failed.label")} data-queue-line="switch_failed">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.switch_failed.label")} data-queue-line="switch_failed">
       <Pill tone="warn">{t("queue.switch_failed.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{t("queue.switch_failed", { account, work })}</p>
@@ -330,7 +330,7 @@ function SwitchFailedLine(props: { line: Line }) {
         )}
       </div>
       <div className={styles.actions}>
-        <Button size="sm" variant="primary" loading={busy === "back"} disabled={busy !== null} aria-label={t("queue.switch_failed.back_named", { work, previous })} onClick={() => void back()}>
+        <Button size="sm" variant="primary" data-key="primary" loading={busy === "back"} disabled={busy !== null} aria-label={t("queue.switch_failed.back_named", { work, previous })} onClick={() => void back()}>
           {t("queue.switch_failed.back")}
         </Button>
         <Button size="sm" variant="secondary" loading={busy === "keep"} disabled={busy !== null} aria-label={t("queue.switch_failed.keep_named", { account, work })} onClick={() => void keep()}>
@@ -349,7 +349,7 @@ function ExtractorLine(props: { line: Line }) {
   const kind = line.file_kind ?? "";
   const named = has(`queue.extractor.kind.${kind}`) ? t(`queue.extractor.kind.${kind}`) : kind;
   return (
-    <section className={styles.line} aria-label={t("queue.extractor.label")} data-queue-line="extractor">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.extractor.label")} data-queue-line="extractor">
       <Pill tone="warn">{t("queue.extractor.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{t("queue.extractor", { kind: named, reason: line.text ?? "" })}</p>
@@ -380,14 +380,14 @@ function CatchUpGoLine(props: { line: Line }) {
     setBusy(false);
   };
   return (
-    <section className={styles.line} aria-label={t("queue.catch_up_go.label")} data-queue-line="catch_up_go">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.catch_up_go.label")} data-queue-line="catch_up_go">
       <Pill tone="warn">{t("queue.catch_up_go.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{text}</p>
         <p className={styles.sub}>{t("queue.catch_up_go.sub")}</p>
       </div>
       <div className={styles.actions}>
-        <Button size="sm" variant="primary" loading={busy} onClick={() => void go()}>
+        <Button size="sm" variant="primary" data-key="primary" loading={busy} onClick={() => void go()}>
           {t("queue.catch_up_go.run")}
         </Button>
       </div>
@@ -409,7 +409,7 @@ function RuleReviewLine(props: { line: Line; onOpen?: () => void }) {
     setBusy(false);
   };
   return (
-    <section className={styles.line} aria-label={t("queue.rule_review.label")} data-queue-line="rule_review">
+    <section className={styles.line} data-row="" tabIndex={-1} aria-label={t("queue.rule_review.label")} data-queue-line="rule_review">
       <Pill tone="neutral">{t("queue.rule_review.label")}</Pill>
       <div className={styles.body}>
         <p className={styles.text}>{text}</p>
@@ -417,7 +417,7 @@ function RuleReviewLine(props: { line: Line; onOpen?: () => void }) {
       </div>
       <div className={styles.actions}>
         {props.onOpen && (
-          <Button size="sm" variant="primary" disabled={busy} onClick={props.onOpen}>
+          <Button size="sm" variant="primary" data-key="primary" disabled={busy} onClick={props.onOpen}>
             {t("queue.rule_review.open")}
           </Button>
         )}

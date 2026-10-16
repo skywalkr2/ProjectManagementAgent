@@ -18,11 +18,19 @@ const panel = (name: string, tab: string, title: string): S["PanelView"] => ({
 
 const change = (id: string, state: string) => ({ id, state, changeset: null }) as unknown as S["ChangeItem"];
 
+const line = (key: string): S["QueueLineView"] => ({ key, group: "review", kind: "review", count: 1, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {} });
+const plugin = { plugin: "demo", id: "L-1", text: "Look at this", about: null, action: null, action_is: null, why: "", until: null };
+
 function show(opts: { current?: Parameters<typeof Sidebar>[0]["current"]; expanded?: boolean; panels?: S["PanelView"][]; onToggle?: () => void } = {}) {
   fakeApi({
     "GET panels": () => opts.panels ?? [],
     "GET changes": () => [change("a", "review"), change("b", "needs_you"), change("c", "done")],
     "GET followups": () => [{ person: "p", name: "Sam", is_pm: false, message: "", questions: [], actions: [], to_send: 3 }],
+    "GET today/queue": () => [line("a"), line("b"), line("c")],
+    "GET plugin-today": () => [plugin],
+    "GET stages/requests": () => [],
+    "GET stages/records": () => [],
+    "GET stages/ready": () => [],
   });
   renderApp(<Sidebar current={opts.current ?? "today"} expanded={opts.expanded ?? true} onToggle={opts.onToggle ?? (() => undefined)} />);
 }
@@ -79,8 +87,9 @@ test("counts show where they help and an empty count shows nothing", async () =>
   const changed = await screen.findByRole("link", { name: /^What changed/ });
   await within(changed).findByText("2");
   expect(screen.getByRole("link", { name: /^Follow-ups/ })).toHaveTextContent("3");
-  // Today adds them up; the views with no count have none.
-  expect(screen.getByRole("link", { name: /^Today/ })).toHaveTextContent("5");
+  // Today counts its own lines (the queue's and the add-ons'), the same number its heading gives; the views with no count
+  // have none.
+  await within(screen.getByRole("link", { name: /^Today/ })).findByText("4");
   expect(screen.getByRole("link", { name: "Stages" })).toHaveTextContent(/^Stages$/);
 });
 

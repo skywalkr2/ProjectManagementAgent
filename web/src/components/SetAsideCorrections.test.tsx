@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { vi } from "vitest";
 import type { S } from "../lib/api";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
-import { TodayBoard } from "./TodayBoard";
+import { TodayRail } from "./TodayRail";
 import { WhatChanged } from "./WhatChanged";
 
 const AT = "@";
@@ -38,7 +38,7 @@ function today(extra: Routes = {}, setAside = 6) {
     ...extra,
   });
   const onView = vi.fn();
-  renderApp(<TodayBoard onView={onView} />);
+  renderApp(<TodayRail onView={onView} />);
   return { calls, onView };
 }
 

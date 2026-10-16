@@ -229,7 +229,7 @@ A2. **The person's path, fixed where the review found it broken.**
   now" on Came in, with a lock so a source is never read twice at once.
   `test_check_now_reads_every_source_and_one_that_fails_never_stops_the_rest` (`tests/test_today_dashboard.py`),
   `test_a_source_already_being_read_is_not_read_twice` (`tests/test_watch.py`) and "Check now reads the sources, shows
-  the new list at once and says what arrived" (`web/src/components/TodayBoard.test.tsx`).
+  the new list at once and says what arrived" (`web/src/components/TodayRail.test.tsx`).
 - [x] With the Install button, the Add-ons screen's introduction stops saying the app never installs anything ("the introduction says installing happens
   here and that the app never takes payment" in `Addons.test.tsx`).
 - [x] **Local mode guards against other web pages** (design 12.1; `tests/test_local_guards.py`, e.g.
@@ -335,7 +335,7 @@ real use starts. The rest (L-more) comes after the packs.
   early; the open items below are built **after L6, at the end of L-core, before the owner's real use starts**, not before
   L2. The first five: things the first week of real use needs, each a small screen change built here
   with its test; phase B keeps only their final layout:
-  - [x] the note box on the action buttons: the row's menu on Mark done (Follow-ups and Today's to-do list), They finished it, Followed up and the pick of an owner has Add a note, sent with the act on the same route. Built: `web/src/components/NoteBox.test.tsx` (every button: the note is sent with the act, no note sends none, the cursor starts in the box), `web/src/components/TodayBoard.test.tsx::a to-do's menu adds a note to Mark done, with the cursor in the box`;
+  - [x] the note box on the action buttons: the row's menu on Mark done (Follow-ups and Today's to-do list), They finished it, Followed up and the pick of an owner has Add a note, sent with the act on the same route. Built: `web/src/components/NoteBox.test.tsx` (every button: the note is sent with the act, no note sends none, the cursor starts in the box), `web/src/components/TodayRail.test.tsx::a to-do's menu adds a note to Mark done, with the cursor in the box`;
   - [x] the header's "alive" line (the assistant's last run and what is queued, amber or red when something is wrong): built
     with `web/src/shell/AssistantLine.test.tsx` (fine, amber, red, the popover's contents), `web/src/shell/status.test.ts`
     (`aliveState`), `web/src/shell/Header.test.tsx` and `tests/test_assistant_status.py` (the status view). The header is
@@ -346,7 +346,7 @@ real use starts. The rest (L-more) comes after the packs.
     `tests/test_on_hold_and_follow_ups.py::test_an_action_on_hold_is_never_overdue_on_the_to_do_list_or_in_todays_queue`,
     `tests/test_on_hold_and_follow_ups.py::test_the_to_do_list_view_says_what_a_held_action_waits_for`, the component tests in
     `web/src/components/FollowUps.test.tsx` ("Put on hold asks what it waits for", "Take off hold acts at once") and
-    `web/src/components/TodayBoard.test.tsx` ("an action on hold leaves Overdue"). The counts on person cards, Top
+    `web/src/components/TodayRail.test.tsx` ("an action on hold leaves Overdue"). The counts on person cards, Top
     priorities and the weekly review aren't built yet and read the same field when they are; taking it off hold when an
     input ends the wait is L3b's);
   - [x] the follow-up rule: one function, `follow_up_due`, read by Today's lines and the Follow-ups pills; a told action
@@ -381,7 +381,7 @@ real use starts. The rest (L-more) comes after the packs.
   - [x] **A failed call never looks like an empty result** (lesson 7): wherever a list comes from a call (a connector, an
     account, a dry run), a failure shows its reason where the person is looking ("the service refused the sign-in: renew
     it in Settings"), never "0 items". Built: Today's calendar and mail cards, the source row, the Check now toast and the
-    add-ons list (`web/src/components/TodayBoard.test.tsx`, `web/src/components/Sources.test.tsx`,
+    add-ons list (`web/src/components/TodayRail.test.tsx`, `web/src/components/Sources.test.tsx`,
     `web/src/components/Addons.test.tsx`, `tests/test_today_dashboard.py`).
   - [x] **Credentials with a known lifetime carry their expiry date**, and a Today line lands a week before (a setting),
     listing every place the same credential is stored (lesson 7). Built: `tests/test_credential_expiry.py::test_a_key_ending_within_the_warning_days_is_a_line_naming_every_place_the_same_key_is_used`,
@@ -699,7 +699,7 @@ them are needed before the owner's daily use, which starts when L-core passes.
   `test_a_workspace_with_an_entry_round_trips_through_the_export`), the agenda and its route
   (`test_the_agenda_lists_an_entry_on_each_day_of_its_range_after_the_calendar_events`,
   `test_own_entries_follow_the_connected_events_and_a_removed_entry_is_gone`,
-  `test_the_agenda_route_marks_an_own_entry`; the label in `TodayBoard.test.tsx`), and the golden case
+  `test_the_agenda_route_marks_an_own_entry`; the label in `TodayRail.test.tsx`), and the golden case
   `workspaces/demo-b/evals/delivery-window.yaml` (`test_the_delivery_window_case_gives_the_fact_and_an_entry_spanning_it`).
   **The learning pair moved to L4** (with the other pairs). Knowledge isn't in packets until L-core, so a corrected date can't carry to the next
   mail yet; the pair is built with the other pairs.
@@ -1062,7 +1062,7 @@ From the original designer's lessons of 2026-10-14:
   item, and the notes prompt's rules (`tests/test_corrections.py::test_change_this_records_a_signal_and_queues_a_notes_request_whose_packet_carries_the_item_as_it_is_now`,
   `tests/test_corrections.py::test_change_this_route_queues_the_request_and_names_the_signal`). Left: the note box on each
   row (the screens), and an op for the assistant to put an action on hold or drop an item (a note asking for either gets an
-  answer that says it can't). *Built in L3 (engine and API):* `POST /api/items/{kind}/{id}/change` for the five kinds, with its signal and request (`tests/test_corrections.py`). *Built in L3 wave 3B (screens):* the note box in the menu of an action (Follow-ups, Today's to-do), a question or decision, a calendar entry of the app's own, and a fact's page, with the toast saying the assistant will look at it (`web/src/components/ChangeThis.test.tsx`, `web/src/components/TodayBoard.test.tsx`). The assistant's hold and drop: `tests/test_hold_drop_fold.py::test_reading_notes_is_offered_the_three_ops_and_a_change_this_note_for_a_hold_is_done_not_refused`, `tests/test_hold_drop_fold.py::test_action_drop_is_never_done_or_credited_records_no_signal_and_undo_opens_it_again`.
+  answer that says it can't). *Built in L3 (engine and API):* `POST /api/items/{kind}/{id}/change` for the five kinds, with its signal and request (`tests/test_corrections.py`). *Built in L3 wave 3B (screens):* the note box in the menu of an action (Follow-ups, Today's to-do), a question or decision, a calendar entry of the app's own, and a fact's page, with the toast saying the assistant will look at it (`web/src/components/ChangeThis.test.tsx`, `web/src/components/TodayRail.test.tsx`). The assistant's hold and drop: `tests/test_hold_drop_fold.py::test_reading_notes_is_offered_the_three_ops_and_a_change_this_note_for_a_hold_is_done_not_refused`, `tests/test_hold_drop_fold.py::test_action_drop_is_never_done_or_credited_records_no_signal_and_undo_opens_it_again`.
 - [x] **The missing-op list** (lesson 2, design 6.13): every "no op can do this" in a run's result and every hand fix of
   the assistant's work, listed weekly on Quality, each becoming an op with its check and Undo or a recorded "the person
   does this". Checked against the code (2026-10-14), of the designer's six hand fixes: adding a person and logging a
@@ -1744,6 +1744,22 @@ From the original designer's lessons of 2026-10-14:
   assistant did"); Followed up and They finished it in an overdue follow-up's menu; a to-do says what it waits on, linked
   to the question it depends on; the heading's count and the menu's count agree, folded lines not counted; a line that
   offers another account names it.
+  *Built (B wave 1):* the project tag, on the lines that carry a project (decisions, questions and owner questions), only
+  while the queue names more than one (`web/src/components/Today.test.tsx`: "a row names its project only when the screen
+  holds more than one", "with one project on screen the tag is left out"); toasts at the bottom left over the navigation
+  column from 1280px, and room under the last row (`web/e2e/shell.spec.ts`: "the style guide has every shared component in
+  every state"; `web/e2e/acceptance.spec.ts`, scenario 4, Mark sent); "Change this" on each applied item of a review card
+  (`web/src/components/WhatChanged.test.tsx`: "each item in a review card has its own Change this, which sends back that
+  item and no other"); a card titled by what it holds (`Today.test.tsx`: "a review card is titled by what it holds"); the
+  heading's count and the menu's count are one number (`Today.test.tsx`: "the heading says how many lines need the person,
+  and the same number is the menu's"; `web/src/shell/Sidebar.test.tsx`: "counts show where they help and an empty count
+  shows nothing"); a line that offers another account names it (`HeldLines.test.tsx`, the borrow line, built earlier).
+  *Left:* the project tag on review and send lines (the engine's queue line carries no project for them: it needs the
+  request's or the person's project on `QueueLineView`); Followed up and They finished it are in a follow-up's menu
+  already, but "Draft a nudge" as the primary has no engine behind it (no nudge message is written yet), so a nudge line's
+  primary opens the waiting items; a to-do that waits on something says what (the hold's own words) but is not linked to
+  the question it depends on, because no record ties an action to a question (a design and ops question for the main
+  session).
 - [ ] **Completed is a place, not a deletion** (lesson 6): a project whose status means done shows in a Completed group at
   the bottom of the project list, with its original program kept as a label. "Remove from the list" stays a separate act.
   The same grouping on a published portfolio page is the project management pack's (C2), through the publisher.
@@ -1755,10 +1771,23 @@ From the original designer's lessons of 2026-10-14:
 **Exit test:** the owner reviews every screen on a laptop and a phone. Checklist items C1–C46 of
 `reviews/ui-ux-2026-10/` are marked Done or explained, with screenshots in `reviews/ui-ux-2026-10/after/`.
 
-- [ ] **Today:** the ranked queue (its engine is built), the inspector from 1680px, and the rail. Held items are
+- [x] **Today:** the ranked queue (its engine is built), the inspector from 1680px, and the rail. Held items are
   top-level. Review & copy and send back are placed as designed, and the keyboard starts on the queue. The `restart` line
   (with Restart now) and the `paused` line are in the queue already (L0) and need drawing, with the wording keys
-  `queue.restart.*` and `queue.paused.*`.
+  `queue.restart.*` and `queue.paused.*`. *Built (B wave 1):* `web/src/components/Today.test.tsx` ("the queue is one
+  ranked list in the engine's order, each line starting with a verb and offering one primary" and the tests after it:
+  the heading and menu count, an empty queue, All looks good with Undo, the first go, a line that opens under itself
+  below 1680px and in the inspector from it, Review & copy, Send back from a card's menu, the overdue to-dos, the
+  restart and paused lines as rows of the queue, the cursor starting on the first line with the arrows and Enter, no
+  shortcut or arrow acting in a field, "N new · Show"), `web/src/lib/keys.test.tsx` (the arrow keys on a row),
+  `web/src/shell/HeldLines.test.tsx` (every held line, now drawn as rows), `web/src/components/TodayRail.test.tsx` (the
+  rail's three panels), `web/e2e/acceptance.spec.ts` ("on a laptop-sized window Today is the queue with the rail beside
+  it", "from 1680px the inspector sits between the queue and the rail", "a tablet puts the rail under the queue in two
+  columns"), and the journeys `web/e2e/journeys.spec.ts` (J1), `web/e2e/journeys-mail.spec.ts` (J2) and
+  `web/e2e/journeys-new-start.spec.ts` (J6), which now read the first go and the results as lines of the queue. *Left, as
+  their own items:* "This week" in the inspector's empty state and the rail (phase B, below); the heading's "next check"
+  (7.7); the plugin lines name no group of their own, so they follow the queue's lines under "More for today" until the
+  Today line registration takes a group (plugin API); no line is selected when Today opens, so the inspector starts empty.
 - [ ] **Work:** What changed and Follow-ups as list | detail, with a "to send" marker on each action row (from L0).
   Sources shows on a source's row when its mail couldn't be sorted and why (from L0). Waiting to go out is a designed screen with its empty
   state.

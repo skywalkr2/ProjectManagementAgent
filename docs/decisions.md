@@ -3,6 +3,19 @@
 Dated entries: what was decided, who decided, why. Newest first. Decisions about one deployment go in that workspace's own
 `docs/decisions.md`, not here.
 
+## 2026-10-16: Today's queue, inspector and rail are built; three readings of the design are fixed
+
+- **Decided (main session, for review; phase B wave 1):** (1) "New items arriving while the PM works wait behind a 'N new
+  · Show' pill" is read as: while the cursor is inside the queue. When it is not, a line that arrives joins the list at
+  once, since nothing can move under a cursor that is elsewhere. (2) The plugin Today lines name no group (the line
+  registration has none), so they follow the queue's own lines under "More for today" until the registration takes one.
+  (3) The toasts' column is the navigation column, so with the navigation folded to icons a toast keeps a readable
+  width (`--toast-w-rail`) at the bottom left instead of being as narrow as the icons.
+- **Why:** each is the least surprising reading that does not move a row under the person's cursor or hide a line the
+  engine ranked.
+- **Impact:** design 7.6 and 7.7 (the sentences are edited), `docs/design/CHANGES.md`. One new design token. No new
+  setting, no API change, no change to scope.
+
 ## 2026-10-16: A drafted reply is its own text on the action, changed only through `action.reply`
 
 - **Decided (main session, from the functional designer's answer, for review):** the reply to a question someone asks the

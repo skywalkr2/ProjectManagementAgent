@@ -1,9 +1,24 @@
+import { useQuery } from "@tanstack/react-query";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { S } from "../lib/api";
+import { api, type S } from "../lib/api";
 import { project, proposal } from "../lib/learned-fixtures";
 import { fakeApi, renderApp, type Routes } from "../test-utils";
-import { LearnedToday } from "./LearnedToday";
+import { LearnedLine, isLearned } from "./LearnedToday";
+
+/** The learned lines of the queue on their own, as the Today queue draws them among the others. */
+function LearnedToday() {
+  const queue = useQuery({ queryKey: ["today", "queue"], queryFn: api.todayQueue });
+  const lines = (queue.data ?? []).filter(isLearned);
+  if (!lines.length) return null;
+  return (
+    <div data-learned-lines="">
+      {lines.map((line) => (
+        <LearnedLine key={line.key} line={line} />
+      ))}
+    </div>
+  );
+}
 
 function line(kind: "learned" | "catch_up", over: Partial<S["QueueLineView"]> = {}): S["QueueLineView"] {
   return { key: kind, group: "review", kind, count: 3, untrusted: false, unpriced: 0, actions: [], questions: [], outcome: {}, ...over };

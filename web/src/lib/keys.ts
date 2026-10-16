@@ -59,6 +59,12 @@ export function useShortcuts(keys: Record<string, string>, handlers: GlobalHandl
         sendRowKey("toggle");
         return;
       }
+      // On a row, the arrow keys walk the list as j and k do; in a field or a menu they are the field's and the menu's own.
+      if ((event.key === "ArrowDown" || event.key === "ArrowUp") && event.target instanceof HTMLElement && event.target.hasAttribute("data-row")) {
+        event.preventDefault();
+        move(event.key === "ArrowDown" ? 1 : -1);
+        return;
+      }
       const action = byKey.get(event.key);
       if (!action) return;
       switch (action) {
