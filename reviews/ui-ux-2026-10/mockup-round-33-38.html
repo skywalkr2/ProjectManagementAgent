@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round 33–38 mockups</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+/* Mockups for designer questions 33-38. Fictional data. */
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--canvas); color: var(--text); font: var(--weight-regular) var(--text-md)/var(--lh-md) var(--font-ui); }
+button { font: inherit; color: inherit; }
+.page { padding: var(--space-6); display: grid; gap: var(--space-8); }
+.q { display: grid; gap: var(--space-3); }
+.q > h1 { margin: 0; font-size: var(--text-xl); line-height: var(--lh-xl); font-weight: var(--weight-semibold); }
+.q > p.ask { margin: 0; color: var(--text-muted); font-size: var(--text-sm); max-width: var(--measure); }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.panel > header { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); }
+.panel > header h2 { margin: 0; font-size: var(--text-lg); font-weight: var(--weight-semibold); }
+.meta { color: var(--text-subtle); font-size: var(--text-sm); }
+.spacer { flex: 1; }
+.btn { display: inline-flex; align-items: center; gap: var(--space-2); height: var(--btn-h-sm); padding: 0 var(--btn-px-sm); border-radius: var(--radius-md); border: 1px solid var(--border-strong); background: var(--surface); font-size: var(--text-sm); font-weight: var(--weight-semibold); white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
+.more::before { content: "•••"; font-size: 11px; letter-spacing: 1px; }
+.pill { display: inline-flex; align-items: center; height: var(--pill-h); padding: 0 var(--pill-px); border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: var(--weight-semibold); white-space: nowrap; justify-self: start; align-self: start; margin-top: 2px; }
+.pill.need { background: var(--accent-soft); color: var(--accent-text); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.risk { background: var(--danger-soft); color: var(--danger); }
+.pill.neutral { background: var(--surface-sunk); color: var(--text-muted); }
+.line { display: grid; grid-template-columns: 128px 1fr auto; gap: var(--row-gap); align-items: center; padding: var(--row-py) var(--row-px); border-bottom: 1px solid var(--border); }
+.line .t { font-weight: var(--weight-semibold); }
+.line .s { color: var(--text-muted); font-size: var(--text-sm); }
+.line.sel { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent), 0 0 0 2px var(--surface) inset, 0 0 0 4px var(--accent) inset; }
+.line.newin { background: var(--surface-hover); }
+.group { padding: var(--space-2) var(--row-px); font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--text-subtle); background: var(--canvas); border-bottom: 1px solid var(--border); }
+.acts { display: flex; gap: var(--space-2); align-items: center; }
+.body { padding: var(--space-4); display: grid; gap: var(--space-3); }
+
+/* 33/34 scene */
+.scene { position: relative; display: grid; grid-template-columns: 200px 1fr 1fr; gap: var(--gutter); background: var(--canvas); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 0 var(--gutter) 120px 0; min-height: 560px; overflow: hidden; }
+.side { background: var(--surface); border-right: 1px solid var(--border); padding: var(--space-3) var(--space-2); display: flex; flex-direction: column; gap: 2px; font-size: var(--text-sm); color: var(--text-muted); }
+.side span { padding: 8px 12px; border-radius: var(--radius-md); }
+.side span.on { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--weight-semibold); }
+.side .bottom { margin-top: auto; display: grid; gap: 2px; }
+.side span.focus { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--accent); color: var(--text); }
+.toasts { position: absolute; left: calc(200px + var(--gutter)); bottom: 16px; display: grid; gap: var(--space-2); width: 400px; }
+.toast { display: flex; align-items: center; gap: var(--space-3); background: var(--text); color: var(--canvas); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); box-shadow: var(--elev-3); font-size: var(--text-sm); }
+.toast u { font-weight: var(--weight-semibold); }
+.toast .x { margin-left: auto; opacity: .8; }
+.reserve { position: absolute; left: calc(200px + var(--gutter)); right: var(--gutter); bottom: 0; height: 120px; border-top: 1px dashed var(--border-strong); display: flex; align-items: flex-start; justify-content: flex-end; padding: 6px 8px; font-size: var(--text-xs); color: var(--text-subtle); }
+.voice { border-left: 3px solid var(--border); padding-left: var(--space-3); color: var(--text-muted); font-size: var(--text-sm); }
+.voice b { color: var(--text); }
+.opt { display: grid; grid-template-columns: 20px 1fr; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); font-size: var(--text-sm); }
+.opt b { display: block; font-size: var(--text-md); }
+.radio { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--border-strong); margin-top: 2px; }
+
+/* 36 */
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gutter); align-items: start; }
+.msg { font: var(--text-md)/1.55 var(--font-ui); white-space: pre-wrap; border: 1px solid var(--border-strong); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); max-width: var(--measure); }
+.list { display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.list div { display: flex; gap: var(--space-2); }
+.list .muted { color: var(--text-subtle); }
+
+/* 38 */
+.newpill { display: flex; justify-content: center; padding: var(--space-2); border-bottom: 1px solid var(--border); background: var(--surface); position: sticky; top: 0; }
+.newpill span { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: var(--radius-full); background: var(--accent); color: var(--text-on-accent); font-size: var(--text-sm); font-weight: var(--weight-semibold); box-shadow: var(--elev-2); }
+.gone { opacity: .55; }
+.gone .t { text-decoration: line-through; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<section class="q" id="q33">
+  <h1>33 · 34 · Toasts beside the navigation, and the details pane following the line</h1>
+  <p class="ask">Toasts sit at the bottom left of the content area, just right of the sidebar, never over it. Screens keep room under their last row, and the scroll area’s bottom padding matches the stack, so a focused row scrolls clear of it. Repeated toasts merge. The details pane shows the line that has focus, starting with the first line.</p>
+  <div class="scene">
+    <div class="side">
+      <span class="on">Today · 9</span><span>What changed</span><span>Follow-ups</span><span>Waiting to go out</span><span>Stages</span>
+      <span>Projects</span><span>People</span><span>Files</span>
+      <div class="bottom"><span>Sources</span><span>Add-ons</span><span class="focus">Settings</span></div>
+    </div>
+    <div class="panel" style="margin-top: var(--gutter)">
+      <header><h2>Needs you</h2><span class="meta">9</span></header>
+      <div class="group">Decide</div>
+      <div class="line sel"><span class="pill need">Decision</span><div><div class="t">Cover finish for the hardcover: matte or soft-touch?</div><div class="s">From Theo Brandt’s email · Oct 9</div></div><button class="btn primary">Answer</button></div>
+      <div class="line"><span class="pill need">Decision</span><div><div class="t">Launch reading on Dec 1: 6 pm or 7 pm?</div><div class="s">From Maya Lindqvist’s email · Oct 14</div></div><button class="btn primary">Answer</button></div>
+      <div class="line"><span class="pill warn">Waiting for you</span><div><div class="t">Pick who “Maya” is</div><div class="s">Send the guest list for the launch reading · two people are called Maya</div></div><button class="btn primary">Pick</button></div>
+    </div>
+    <div class="panel" style="margin-top: var(--gutter)">
+      <header><h2>Cover finish for the hardcover</h2><span class="spacer"></span><span class="meta">1 of 9 · j / k</span></header>
+      <div class="body">
+        <div class="voice"><b>Quill:</b> Theo asked you to choose. Matte is his recommendation.</div>
+        <div class="opt"><span class="radio"></span><span><b>Matte</b>Standard price; the printer’s normal 5-day finishing.</span></div>
+        <div class="opt"><span class="radio"></span><span><b>Soft-touch</b>About $0.40 more per copy; adds 3 working days.</span></div>
+        <div class="acts"><button class="btn primary">Answer</button><button class="btn ghost">Ask Theo first…</button></div>
+      </div>
+    </div>
+    <div class="reserve">room kept under the last row = the toast stack’s height</div>
+    <div class="toasts">
+      <div class="toast">Filed 3 reviews · <u>Undo last</u><span class="x">✕</span></div>
+      <div class="toast">Marked as sent to Ines Duarte · <u>Undo</u><span class="x">✕</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="q" id="q36">
+  <h1>36 · A drafted nudge: one per person, written from a template</h1>
+  <p class="ask">It needs no AI run: it is built from the same data as the first message, like Copy. It lists only what is still unanswered, reminds the reader when it was asked, and asks for the smallest useful reply. Edit in place, Copy, then Mark sent, as with every message.</p>
+  <div class="two">
+    <div class="panel">
+      <header><h2>Follow up with Maya Okafor</h2><span class="spacer"></span><span class="pill warn">Waiting 6 days</span></header>
+      <div class="body">
+        <div class="list">
+          <div>✓ <span>Do we have written permission for the epigraph?</span> <span class="muted">sent Oct 10</span></div>
+          <div>✓ <span>Agree on the back-cover copy with Ines</span> <span class="muted">due Wed, Oct 14 · overdue</span></div>
+          <div class="muted">☐ <span>Which author bio goes on the jacket?</span> <span>answered Oct 12, left out</span></div>
+        </div>
+        <div class="msg">Hi Maya,
+
+Following up on two things from my note on Oct 10:
+
+1. Do we have written permission for the epigraph?
+2. Agree on the back-cover copy with Ines (it was due Wed, Oct 14)
+
+A quick yes or no, or a date, for each is plenty.
+
+Thanks!</div>
+        <div class="acts"><button class="btn primary">Copy</button><button class="btn">Mark sent</button><span class="spacer"></span><span class="meta">1st follow-up</span></div>
+      </div>
+    </div>
+    <div class="panel">
+      <header><h2>The second follow-up, a week later</h2></header>
+      <div class="body">
+        <div class="msg">Hi Maya,
+
+Checking in again on the epigraph permission (first asked Oct 10). Is there someone else I should ask, or a date I can plan around?
+
+Thanks!</div>
+        <div class="meta">After a second follow-up with no answer, Today suggests one escalation (“Ask someone else about the epigraph? · Pick who”). It never sends it.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="q" id="q38">
+  <h1>38 · “N new · Show”: holding back new lines while the person is working in the list</h1>
+  <p class="ask">The list holds still while keyboard focus or the pointer is in it, or while a line is open. New lines wait behind a sticky pill. Lines settled elsewhere stay in place, struck through, until the person moves on. Shift+N shows the waiting lines.</p>
+  <div class="panel" style="max-width: 900px">
+    <header><h2>Needs you</h2><span class="meta">9 · 2 waiting</span></header>
+    <div class="newpill"><span>2 new · Show</span></div>
+    <div class="group">Decide</div>
+    <div class="line sel"><span class="pill need">Decision</span><div><div class="t">Cover finish for the hardcover: matte or soft-touch?</div><div class="s">From Theo Brandt’s email · Oct 9</div></div><button class="btn primary">Answer</button></div>
+    <div class="line gone"><span class="pill warn">Waiting for you</span><div><div class="t">Pick who “Maya” is</div><div class="s">Settled in Follow-ups a moment ago · leaves when you move on</div></div><span></span></div>
+    <div class="group">Review</div>
+    <div class="line"><span class="pill neutral">Review</span><div><div class="t">Look over 3 actions Quill added</div><div class="s">Production check-in, Oct 8</div></div><button class="btn primary">All looks good</button></div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
